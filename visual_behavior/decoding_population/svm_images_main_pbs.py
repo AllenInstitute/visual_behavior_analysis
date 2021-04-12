@@ -25,9 +25,9 @@ from svm_funs import *
 
 
 #%%
-def svm_main_images_pbs(data_list, experiment_ids_valid, df_data, session_trials, trial_type, dir_svm, kfold, frames_svm, numSamples, saveResults, cols_basic, cols_svm, to_decode='current', svm_blocks=-100, engagement_pupil_running = np.nan, use_events=False, same_num_neuron_all_planes=0):
+def svm_main_images_pbs(data_list, experiment_ids_valid, df_data, session_trials, trial_type, dir_svm, kfold, frames_svm, numSamples, saveResults, cols_basic, cols_svm, to_decode='current', svm_blocks=-100, engagement_pupil_running = np.nan, use_events=False, same_num_neuron_all_planes=0, use_balanced_trials=0):
     
-    def svm_run_save(traces_fut_now, image_labels_now, iblock_trials_blocks, svm_blocks, now, engagement_pupil_running, pupil_running_values): #, same_num_neuron_all_planes, norm_to_max_svm, svm_total_frs, n_neurons, numSamples, num_classes, samps_bef, regType, kfold, cre, saveResults):
+    def svm_run_save(traces_fut_now, image_labels_now, iblock_trials_blocks, svm_blocks, now, engagement_pupil_running, pupil_running_values, use_balanced_trials): #, same_num_neuron_all_planes, norm_to_max_svm, svm_total_frs, n_neurons, numSamples, num_classes, samps_bef, regType, kfold, cre, saveResults):
         '''
         #traces_fut_now = traces_fut_0
         #image_labels_now = image_labels_0
@@ -112,7 +112,13 @@ def svm_main_images_pbs(data_list, experiment_ids_valid, df_data, session_trials
 
 
         numTrials = traces_fut_now.shape[2]  # numDataPoints = X_svm.shape[1] # trials             
-        len_test = numTrials - int((kfold-1.)/kfold*numTrials) # number of testing trials   
+        
+        if num_classes==2 and use_balanced_trials==1:
+            numO = sum(image_labels_now==0) 
+            len_test = 2*len(np.arange(int((kfold-1.)/kfold*numO), numO))
+        else:
+            len_test = numTrials - int((kfold-1.)/kfold*numTrials) # number of testing trials   
+
         numDataPoints = numTrials
         print(f'\n{len_test} testing trials in SVM. {numTrials} total number of trials.\n')
 
@@ -180,7 +186,7 @@ def svm_main_images_pbs(data_list, experiment_ids_valid, df_data, session_trials
                 perClassErrorTrain, perClassErrorTest, wAllC, bAllC, cbestAll, cbest, cvect,\
                         perClassErrorTestShfl, perClassErrorTestChance, testTrInds_allSamps, Ytest_allSamps, Ytest_hat_allSampsFrs0, trsnow_allSamps \
                 = set_best_c(X_svm,Y_svm,regType,kfold,numDataPoints,numSamples,doPlots,useEqualTrNums,smallestC,shuffleTrs,cbest0,\
-                             fr2an=np.nan, shflTrLabs=0, X_svm_incorr=0, Y_svm_incorr=0, mnHRLR_acrossDays=np.nan) # outputs have size the number of shuffles in setbestc (shuffles per c value)
+                             fr2an=np.nan, shflTrLabs=0, X_svm_incorr=0, Y_svm_incorr=0, mnHRLR_acrossDays=np.nan, use_balanced_trials=use_balanced_trials) # outputs have size the number of shuffles in setbestc (shuffles per c value)
 
 
 
@@ -311,7 +317,7 @@ def svm_main_images_pbs(data_list, experiment_ids_valid, df_data, session_trials
 
         # svm output
         if same_num_neuron_all_planes:
-            svm_vars.at[index, cols_svm] = frames_svm, to_decode, thAct, numSamples, softNorm, kfold, regType, cvect, meanX_allFrs, stdX_allFrs, \
+            svm_vars.at[index, cols_svm] = frames_svm, to_decode, use_balanced_trials, thAct, numSamples, softNorm, kfold, regType, cvect, meanX_allFrs, stdX_allFrs, \
                 image_labels_now, image_indices, image_indices_previous_flash, image_indices_next_flash, \
                 num_classes, iblock, trials_blocks, engagement_pupil_running, pupil_running_values, \
                 cbest_allFrs, w_data_allFrs, b_data_allFrs, \
@@ -320,7 +326,7 @@ def svm_main_images_pbs(data_list, experiment_ids_valid, df_data, session_trials
                 inds_subselected_neurons_all, population_sizes_to_try, numShufflesN
 
         else:
-            svm_vars.at[index, cols_svm] = frames_svm, to_decode, thAct, numSamples, softNorm, kfold, regType, cvect, meanX_allFrs, stdX_allFrs, \
+            svm_vars.at[index, cols_svm] = frames_svm, to_decode, use_balanced_trials, thAct, numSamples, softNorm, kfold, regType, cvect, meanX_allFrs, stdX_allFrs, \
                 image_labels_now, image_indices, image_indices_previous_flash, image_indices_next_flash, \
                 num_classes, iblock, trials_blocks, engagement_pupil_running, pupil_running_values, \
                 cbest_allFrs, w_data_allFrs, b_data_allFrs, \
@@ -854,7 +860,7 @@ def svm_main_images_pbs(data_list, experiment_ids_valid, df_data, session_trials
                 
                 #### run svm analysis on the whole session
                 if svm_blocks==-100:
-                    svmName = svm_run_save(traces_fut_0, image_labels_0, [np.nan, []], svm_blocks, now, engagement_pupil_running, pupil_running_values) #, same_num_neuron_all_planes, norm_to_max_svm, svm_total_frs, n_neurons, numShufflesN, numSamples, num_classes, samps_bef, regType, kfold, cre, saveResults)
+                    svmName = svm_run_save(traces_fut_0, image_labels_0, [np.nan, []], svm_blocks, now, engagement_pupil_running, pupil_running_values, use_balanced_trials) #, same_num_neuron_all_planes, norm_to_max_svm, svm_total_frs, n_neurons, numShufflesN, numSamples, num_classes, samps_bef, regType, kfold, cre, saveResults)
                     
 
                 #### run svm analysis only on engaged trials
@@ -915,7 +921,7 @@ def svm_main_images_pbs(data_list, experiment_ids_valid, df_data, session_trials
                         image_labels_now = image_labels_0[trials_blocks[iblock]]
                         print(traces_fut_now.shape , image_labels_now.shape)
                         
-                        svmName = svm_run_save(traces_fut_now, image_labels_now, [iblock, trials_blocks], svm_blocks, now, engagement_pupil_running, pupil_running_values) #, same_num_neuron_all_planes, norm_to_max_svm, svm_total_frs, n_neurons, numSamples, num_classes, samps_bef, regType, kfold, cre, saveResults)
+                        svmName = svm_run_save(traces_fut_now, image_labels_now, [iblock, trials_blocks], svm_blocks, now, engagement_pupil_running, pupil_running_values, use_balanced_trials) #, same_num_neuron_all_planes, norm_to_max_svm, svm_total_frs, n_neurons, numSamples, num_classes, samps_bef, regType, kfold, cre, saveResults)
                         
         
         
@@ -945,7 +951,7 @@ def svm_main_images_pbs(data_list, experiment_ids_valid, df_data, session_trials
                         image_labels = image_labels_0[trials_blocks[iblock]]
                         print(traces_fut.shape , image_labels.shape)
                         
-                        svmName = svm_run_save(traces_fut, image_labels, [iblock, trials_blocks], svm_blocks, now, engagement_pupil_running, pupil_running_values) #, same_num_neuron_all_planes, norm_to_max_svm, svm_total_frs, n_neurons, numSamples, num_classes, samps_bef, regType, kfold, cre, saveResults)
+                        svmName = svm_run_save(traces_fut, image_labels, [iblock, trials_blocks], svm_blocks, now, engagement_pupil_running, pupil_running_values, use_balanced_trials) #, same_num_neuron_all_planes, norm_to_max_svm, svm_total_frs, n_neurons, numSamples, num_classes, samps_bef, regType, kfold, cre, saveResults)
                     
                 
                 
@@ -1053,6 +1059,10 @@ elif svm_blocks==-1:
     print(f'Dividing trials based on engagement state.')
 else:    
     print(f'Doing block-by-block analysis.')
+if use_balanced_trials==1:
+    print(f'Using equal number of trials from each class for the training and testing datasets.')
+else:    
+    print(f'Not using equal number of trials from each class for the training and testing datasets.')
     
     
 
@@ -1298,7 +1308,9 @@ experiment_ids_this_session = data_list['experiment_id'].values
 # set columns of stim_response_df to keep
 if trial_type != 'hits_vs_misses':
     c = ['stimulus_presentations_id', 'cell_specimen_id', 'trace', 'trace_timestamps', 'image_index', 'image_name', 'change', 'engagement_state', 'mean_running_speed', 'mean_pupil_area'] 
-
+else:
+    c = ['trials_id', 'cell_specimen_id', 'trace', 'trace_timestamps', 'hit', 'false_alarm', 'miss', 'stimulus_change', 'aborted', 'go', 'catch', 'auto_rewarded', 'correct_reject', 'initial_image_name', 'change_image_name', 'engagement_state', 'mean_running_speed']
+    
 stimulus_response_df_allexp = pd.DataFrame()
 
 for ophys_experiment_id in experiment_ids_this_session: # ophys_experiment_id = experiment_ids_this_session[0]
@@ -1315,7 +1327,7 @@ for ophys_experiment_id in experiment_ids_this_session: # ophys_experiment_id = 
         if trial_type == 'hits_vs_misses':
             trials_response_df = analysis.trials_response_df
             stim_response_df = trials_response_df # so it matches the naming of the rest of the code down here
-            c = stim_response_df.keys().values # get all the columns
+#             c = stim_response_df.keys().values # get all the columns
         else:
             stim_response_df = analysis.get_response_df(df_name='stimulus_response_df')
 
@@ -1456,7 +1468,7 @@ frames_svm = range(r1, r2)-samps_bef # range(-10, 30) # range(-1,1) # run svm on
 
 #%%
 cols_basic = np.array(['session_id', 'experiment_id', 'mouse_id', 'date', 'cre', 'stage', 'area', 'depth', 'n_trials', 'n_neurons', 'frame_dur', 'samps_bef', 'samps_aft']) #, 'flash_omit_dur_all', 'flash_omit_dur_fr_all'])
-cols_svm_0 = ['frames_svm', 'to_decode', 'thAct', 'numSamples', 'softNorm', 'kfold', 'regType', 'cvect', 'meanX_allFrs', 'stdX_allFrs', 
+cols_svm_0 = ['frames_svm', 'to_decode', 'use_balanced_trials', 'thAct', 'numSamples', 'softNorm', 'kfold', 'regType', 'cvect', 'meanX_allFrs', 'stdX_allFrs', 
        'image_labels', 'image_indices', 'image_indices_previous_flash', 'image_indices_next_flash',
        'num_classes', 'iblock', 'trials_blocks', 'engagement_pupil_running', 'pupil_running_values' , 
        'cbest_allFrs', 'w_data_allFrs', 'b_data_allFrs',
@@ -1476,7 +1488,7 @@ else:
 print('\n\n======================== Analyzing session %d, %d/%d ========================\n' %(session_id, isess, len(list_all_sessions_valid)))
 
 # Use below if you set session_data and session_trials above: for VIP and SST
-svm_main_images_pbs(data_list, experiment_ids_valid, df_data, session_trials, trial_type, dir_svm, kfold, frames_svm, numSamples, saveResults, cols_basic, cols_svm, to_decode, svm_blocks, engagement_pupil_running, use_events, same_num_neuron_all_planes)
+svm_main_images_pbs(data_list, experiment_ids_valid, df_data, session_trials, trial_type, dir_svm, kfold, frames_svm, numSamples, saveResults, cols_basic, cols_svm, to_decode, svm_blocks, engagement_pupil_running, use_events, same_num_neuron_all_planes, use_balanced_trials)
 # svm_main_images_pbs(data_list, df_data, session_trials, trial_type, dir_svm, kfold, frames_svm, numSamples, saveResults, cols_basic, cols_svm, to_decode, svm_blocks, use_events, same_num_neuron_all_planes)
 
 # Use below if you set stimulus_response_df_allexp above: for Slc (can be also used for other cell types too; but we need it for Slc, as the concatenated dfs could not be set for it)

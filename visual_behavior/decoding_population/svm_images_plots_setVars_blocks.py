@@ -57,6 +57,7 @@ use_same_experiments_dff_events = False #True # use the same set of experiments 
 
 to_decode = 'current' # 'current' : decode current image.    'previous': decode previous image.    'next': decode next image.
 trial_type = 'hits_vs_misses' #'changes_vs_nochanges' # 'omissions', 'images', 'changes', 'changes_vs_nochanges' # what trials to use for SVM analysis # the population activity of these trials at time time_win will be used to decode the image identity of flashes that occurred at their time 0 (if to_decode='current') or 750ms before (if to_decode='previous').
+use_balanced_trials = 1 # if 1, use same number of trials for each class; only applicable when we have 2 classes (binary classification).
 
 time_win = [0, .55] # 'frames_svm' # time_win = [0, .55] # [0., 0.093, 0.186, 0.279, 0.372, 0.465]  # set time_win to a string (any string) to use frames_svm as the window of quantification. # time window relative to trial onset to quantify image signal. Over this window class accuracy traces will be averaged.
 if trial_type=='hits_vs_misses':
@@ -94,6 +95,8 @@ elif trial_type=='hits_vs_misses':
 else:
     svmn = f'{e}svm_decode_{to_decode}_image_from_{trial_type}' # 'svm_gray_omit'
 
+if use_balanced_trials:
+    svmn = f'{svmn}_equalTrs'
 
 dir_now = svmn #'omit_across_sess'
 if use_events:

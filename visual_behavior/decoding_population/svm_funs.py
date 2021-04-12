@@ -111,7 +111,7 @@ def crossValidateModel(X, Y, modelFn, **options):
     
     # X: trials x neurons
 #     X = X.T
-    
+
     import numpy as np
     import numpy.random as rng
 #    from linearSVM import linearSVM
@@ -120,7 +120,7 @@ def crossValidateModel(X, Y, modelFn, **options):
     if options.get('kfold'):
         kfold = options.get('kfold')
     else:
-        kfold = 10;
+        kfold = 10
 
     if np.logical_or(options.get('shflTrs'), options.get('shflTrs')==0):
         shflTrs = options.get('shflTrs')
@@ -128,6 +128,14 @@ def crossValidateModel(X, Y, modelFn, **options):
         shflTrs = True
 #    print shflTrs
         
+    
+    
+    if options.get('use_balanced_trials'):
+        use_balanced_trials = options.get('use_balanced_trials')
+    else:
+        use_balanced_trials = 0
+    
+    
 #    Y = np.squeeze(np.array(Y).astype(int)); # commented so it works for svr too.
         
     if X.shape[0]>len(Y):
@@ -139,15 +147,14 @@ def crossValidateModel(X, Y, modelFn, **options):
     
     
     ## %%%%%
-    cls = [0]
+
     num_classes = len(np.unique(Y)) # 2
-    attempt = 0
-    while len(cls) < num_classes: # make sure all classes exist in YTrain    
-        attempt = attempt+1
-        if attempt==1001:
-            print(f'NOTE: reached {attempt} attempts but failed to have all classes in the training data! Only {len(cls)}/{num_classes} classes exist in the training data!')
-            # NOTE: ideally you want to set a red flag variable here so later you can exclude these data from analysis!
-            break
+        
+    if num_classes==2 and use_balanced_trials==1:
+
+        #### make sure there are equal number of trials of each class in the training and testing datasets
+        # get 90% of each class and then concatenated across classes to form YTrain
+
         if shflTrs==1: # shuffle trials to break any dependencies on the sequence of trails; Also since we take the first 90% of trials as training and the last 10% as testing, for each run of this code we want to make sure we use different sets of trials as testing and training.
             print('shuffling trials in crossValidateModel')
             shfl = rng.permutation(np.arange(0, numObservations))
@@ -158,31 +165,87 @@ def crossValidateModel(X, Y, modelFn, **options):
             shfl = np.arange(0, numObservations)
             Ys = Y
             Xs = X
-            
-        ## %%%%% divide data to training and testing sets
-        YTrain = Ys[np.arange(0, int((kfold-1.) / kfold * numObservations))] # Take the first 90% of trials as training set       
-        cls = np.unique(YTrain)        
-#         print(cls)
-    
-    
-    if len(cls)==num_classes:
-        YTest = Ys[np.arange(int((kfold-1.)/kfold*numObservations), numObservations)] # Take the last 10% of trials as testing set
-    
-        XTrain = Xs[np.arange(0, int((kfold-1.)/kfold*numObservations)), :]
-        XTest = Xs[np.arange(int((kfold-1.)/kfold*numObservations), numObservations), :]
-    
-    
-#         print(f'YTrain: n_trials of each class: {[sum(YTrain==irng) for irng in range(num_classes)]}')
-#         print(f'YTest: n_trials of each class: {[sum(YTest==irng) for irng in range(num_classes)]}')
-        
-    
+
+
+        Ys_now = Ys[Ys==0]
+        Xs_now = Xs[Ys==0]
+        numO = len(Ys_now) 
+    #     print(Ys_now.shape, Xs_now.shape)
+        YTrain_0 = Ys_now[np.arange(0, int((kfold-1.) / kfold * numO))] # Take the first 90% of trials as training set       
+        YTest_0 = Ys_now[np.arange(int((kfold-1.)/kfold*numO), numO)] # Take the last 10% of trials as testing set
+        XTrain_0 = Xs_now[np.arange(0, int((kfold-1.) / kfold * numO))] # Take the first 90% of trials as training set       
+        XTest_0 = Xs_now[np.arange(int((kfold-1.)/kfold*numO), numO)] # Take the last 10% of trials as testing set
+
+        Ys_now = Ys[Ys==1]
+        Xs_now = Xs[Ys==1]
+        numO = len(Ys_now) 
+    #     print(Ys_now.shape, Xs_now.shape)
+        YTrain_1 = Ys_now[np.arange(0, int((kfold-1.) / kfold * numO))] # Take the first 90% of trials as training set       
+        YTest_1 = Ys_now[np.arange(int((kfold-1.)/kfold*numO), numO)] # Take the last 10% of trials as testing set
+        XTrain_1 = Xs_now[np.arange(0, int((kfold-1.) / kfold * numO))] # Take the first 90% of trials as training set       
+        XTest_1 = Xs_now[np.arange(int((kfold-1.)/kfold*numO), numO)] # Take the last 10% of trials as testing set
+
+        YTrain = np.concatenate((YTrain_0, YTrain_1))
+        YTest = np.concatenate((YTest_0, YTest_1))
+        XTrain = np.concatenate((XTrain_0, XTrain_1), axis=0)
+        XTest = np.concatenate((XTest_0, XTest_1), axis=0)
+
+        print(f'YTrain: n_trials of each class: {[sum(YTrain==irng) for irng in range(num_classes)]}')
+        print(f'YTest: n_trials of each class: {[sum(YTest==irng) for irng in range(num_classes)]}')
+
         # Fit the classifier
         results = modelFn(XTrain, YTrain, XTest, YTest, **options)
-        
+
         return results, shfl # shfl includes the index of trials in X whose first 90% are used for training and the last 10% are used for testing.
 
 
+    else:
+        
+        cls = [0]
+        attempt = 0
+        while len(cls) < num_classes: # make sure all classes exist in YTrain    
+            attempt = attempt+1
+            if attempt==1001:
+                print(f'NOTE: reached {attempt} attempts but failed to have all classes in the training data! Only {len(cls)}/{num_classes} classes exist in the training data!')
+                # NOTE: ideally you want to set a red flag variable here so later you can exclude these data from analysis!
+                break
+            if shflTrs==1: # shuffle trials to break any dependencies on the sequence of trails; Also since we take the first 90% of trials as training and the last 10% as testing, for each run of this code we want to make sure we use different sets of trials as testing and training.
+                print('shuffling trials in crossValidateModel')
+                shfl = rng.permutation(np.arange(0, numObservations))
+                Ys = Y[shfl]
+                Xs = X[shfl, :]
+                testTrInds = shfl[np.arange(int((kfold-1.)/kfold*numObservations), numObservations)] # index of testing trials (that will be used in svm below)
+            else: # here, while is meaningless bc shfl is not changing from one loop to the other. but. we have already checked for the existence of all classes in Ytrain in set_bestc
+                shfl = np.arange(0, numObservations)
+                Ys = Y
+                Xs = X
 
+            ## %%%%% divide data to training and testing sets
+            YTrain = Ys[np.arange(0, int((kfold-1.) / kfold * numObservations))] # Take the first 90% of trials as training set       
+            cls = np.unique(YTrain)        
+    #         print(cls)        
+
+
+        if len(cls)==num_classes:
+            YTest = Ys[np.arange(int((kfold-1.)/kfold*numObservations), numObservations)] # Take the last 10% of trials as testing set
+
+            XTrain = Xs[np.arange(0, int((kfold-1.)/kfold*numObservations)), :]
+            XTest = Xs[np.arange(int((kfold-1.)/kfold*numObservations), numObservations), :]
+
+
+    #         print(f'YTrain: n_trials of each class: {[sum(YTrain==irng) for irng in range(num_classes)]}')
+    #         print(f'YTest: n_trials of each class: {[sum(YTest==irng) for irng in range(num_classes)]}')
+
+
+            # Fit the classifier
+            results = modelFn(XTrain, YTrain, XTest, YTest, **options)
+
+            return results, shfl # shfl includes the index of trials in X whose first 90% are used for training and the last 10% are used for testing.
+
+        
+    
+    
+    
 
 
 #%% Function to run SVM  (when X is frames x units x trials)
@@ -190,7 +253,7 @@ def crossValidateModel(X, Y, modelFn, **options):
 # Remember each numSamples will have a different set of training and testing dataset, however for each numSamples, the same set of testing/training dataset
 # will be used for all frames and all values of c (unless shuffleTrs is 1, in which case different frames and c values will have different training/testing datasets.)
 
-def set_best_c(X,Y,regType,kfold,numDataPoints,numSamples,doPlots,useEqualTrNums,smallestC,shuffleTrs,cbest=np.nan,fr2an=np.nan, shflTrLabs=0, X_svm_incorr=0, Y_svm_incorr=0, mnHRLR_acrossDays=np.nan):
+def set_best_c(X,Y,regType,kfold,numDataPoints,numSamples,doPlots,useEqualTrNums,smallestC,shuffleTrs,cbest=np.nan,fr2an=np.nan, shflTrLabs=0, X_svm_incorr=0, Y_svm_incorr=0, mnHRLR_acrossDays=np.nan, use_balanced_trials=0):
     '''
     X = X_svm
     Y = Y_svm
@@ -285,9 +348,16 @@ def set_best_c(X,Y,regType,kfold,numDataPoints,numSamples,doPlots,useEqualTrNums
     
     numTrials = X.shape[1]
     print('FINAL: %d trials; %d neurons' %(numTrials, X.shape[0]))
+        
+    if num_classes==2 and use_balanced_trials==1:    
+        numO = sum(Y==0) 
+        len_test = 2*len(np.arange(int((kfold-1.)/kfold*numO), numO))
+    else:
+        len_test = numTrials - int((kfold-1.)/kfold*numTrials) # number of testing trials   # numTrials - int((100-kfold)/100 * numTrials) 
+#     print(len_test)
+        
     
-    len_test = numTrials - int((kfold-1.)/kfold*numTrials) # number of testing trials   # numTrials - int((100-kfold)/100 * numTrials) 
-            
+    
     X0 = X + 0 # units x trials
     Y0 = Y + 0
     
@@ -495,10 +565,10 @@ def set_best_c(X,Y,regType,kfold,numDataPoints,numSamples,doPlots,useEqualTrNums
 
             # to train the classifier on shuffled data, use Y[rng.permutation(len(Y))]
             if regType == 'l1':                               
-                summary,_ =  crossValidateModel(X.transpose(), Y, linearSVM, kfold = kfold, l1 = cvect[i], shflTrs = shuffleTrs)
+                summary,_ =  crossValidateModel(X.transpose(), Y, linearSVM, kfold = kfold, l1 = cvect[i], shflTrs = shuffleTrs, use_balanced_trials = use_balanced_trials)
                 
             elif regType == 'l2':
-                summary,_ =  crossValidateModel(X.transpose(), Y, linearSVM, kfold = kfold, l2 = cvect[i], shflTrs = shuffleTrs)
+                summary,_ =  crossValidateModel(X.transpose(), Y, linearSVM, kfold = kfold, l2 = cvect[i], shflTrs = shuffleTrs, use_balanced_trials = use_balanced_trials)
                 # modelFn = linearSVM
                 # l2 = cvect[i]
                 # shflTrs = shuffleTrs

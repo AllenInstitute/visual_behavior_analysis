@@ -37,6 +37,7 @@ use_events = True #False # whether to run the analysis on detected events (infer
 
 to_decode = 'current' #'next' # 'current' (default): decode current image.    'previous': decode previous image.    'next': decode next image.
 trial_type = 'hits_vs_misses' #'changes_vs_nochanges' #'omissions' # 'omissions', 'images', 'changes' # what trials to use for SVM analysis # the population activity of these trials at time time_win will be used to decode the image identity of flashes that occurred at their time 0 (if to_decode='current') or 750ms before (if to_decode='previous').
+use_balanced_trials = 1 # if 1, use same number of trials for each class; only applicable when we have 2 classes (binary classification).
 
 time_win = [0, .55] # 'frames_svm' # set time_win to a string (any string) to use frames_svm as the window of quantification. # time window relative to trial onset to quantify image signal. Over this window class accuracy traces will be averaged.
 
@@ -218,6 +219,9 @@ for iblock in br: # iblock=0; iblock=np.nan
     else:
         svmn = f'{e}svm_decode_{to_decode}_image_from_{trial_type}' # 'svm_gray_omit'
     
+    if use_balanced_trials:
+        svmn = f'{svmn}_equalTrs'
+        
     now = (datetime.datetime.now()).strftime("%Y%m%d_%H%M%S")
 
     if same_num_neuron_all_planes:

@@ -23,12 +23,14 @@ trial_type = 'hits_vs_misses' #'changes_vs_nochanges' # 'images_omissions', 'ima
 
 use_events = True # False # whether to run the analysis on detected events (inferred spikes) or dff traces.
 svm_blocks = -100 #-100 # 2 #np.nan # -101: run the analysis only on engaged trials # -1: divide trials based on engagement # 2 # number of trial blocks to divide the session to, and run svm on. # set to -100 to run svm analysis on the whole session
-engagement_pupil_running = 1 # np.nan or 0,1,2 for engagement, pupil, running: which metric to use to define engagement? only effective if svm_blocks=-1
 use_balanced_trials = 1 # if 1, use same number of trials for each class; only applicable when we have 2 classes (binary classification).
-    
-# cre2ana = 'slc' # slc, sst, vip # will be used if session_numbers[0]<0 (we will use dataset and responseAnalysis (instead of the concatenated dfs) to set stim_response_df)
-# project_codes = ['VisualBehaviorMultiscope'] # ['VisualBehaviorMultiscope', 'VisualBehaviorTask1B', 'VisualBehavior', 'VisualBehaviorMultiscope4areasx2d']
+engagement_pupil_running = 1 # np.nan or 0,1,2 for engagement, pupil, running: which metric to use to define engagement? only effective if svm_blocks=-1
 
+
+# cre2ana = 'slc' # slc, sst, vip # will be used if session_numbers[0]<0 (we will use dataset and responseAnalysis (instead of the concatenated dfs) to set stim_response_df)
+project_codes = ['VisualBehaviorMultiscope'] # ['VisualBehaviorMultiscope', 'VisualBehaviorTask1B', 'VisualBehavior', 'VisualBehaviorMultiscope4areasx2d']
+# project_codes = ['VisualBehavior']
+# project_codes = ['VisualBehaviorMultiscope' , 'VisualBehavior']
 
 
 
@@ -37,7 +39,8 @@ use_balanced_trials = 1 # if 1, use same number of trials for each class; only a
 # experiments_table = loading.get_filtered_ophys_experiment_table()
 experiments_table = loading.get_filtered_ophys_experiment_table(release_data_only=True)
 experiments_table = experiments_table.reset_index('ophys_experiment_id')
-metadata_valid = experiments_table[experiments_table['project_code']=='VisualBehaviorMultiscope'] # multiscope sessions
+# metadata_valid = experiments_table[experiments_table['project_code']=='VisualBehaviorMultiscope'] # multiscope sessions
+metadata_valid = experiments_table[experiments_table['project_code'].isin(project_codes)]
 
 
 # Use the new list of sessions that are de-crosstalked and will be released in March 2021
