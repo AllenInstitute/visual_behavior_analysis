@@ -760,9 +760,7 @@ def add_model_outputs_to_stimulus_presentations(stimulus_presentations, behavior
         stimulus_presentations = stimulus_presentations.merge(model_outputs, right_on='stimulus_presentations_id',
                                                               left_on='stimulus_presentations_id').set_index(
             'stimulus_presentations_id')
-        stimulus_presentations['engagement_state'] = [
-            'engaged' if flash_metrics_label != 'low-lick,low-reward' else 'disengaged' for flash_metrics_label in
-            stimulus_presentations.flash_metrics_labels.values]
+        stimulus_presentations['engagement_state'] = ['engaged' if x else 'disengaged' for x in stimulus_presentations['engaged']]
         stimulus_presentations = stimulus_presentations.drop(
             columns=['hit_rate', 'miss_rate', 'false_alarm_rate', 'correct_reject_rate', 'd_prime', 'criterion'])
         return stimulus_presentations
@@ -773,7 +771,7 @@ def add_model_outputs_to_stimulus_presentations(stimulus_presentations, behavior
 
 def get_behavior_model_summary_table():
     data_dir = get_behavior_model_outputs_dir()
-    data = pd.read_csv(os.path.join(data_dir, '_summary_table.csv'))
+    data = pd.read_pkl(os.path.join(data_dir, '_summary_table.pkl'))
     return data
 
 
