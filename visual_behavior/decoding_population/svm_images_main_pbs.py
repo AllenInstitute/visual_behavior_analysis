@@ -777,29 +777,32 @@ def svm_main_images_pbs(data_list, experiment_ids_valid, df_data, session_trials
                 if hrn > lrn:
                     print('\nSubselecting hit trials so both classes have the same number of trials!\n')
                 elif lrn > hrn:
-                    print ('\nSubselecting miss trials so both classes have the same number of trials!\n')
-                
-                mn_n_trs = np.min([sum(image_labels==0) , sum(image_labels==1)])
-                ind_mn_n_trs = np.argmin([sum(image_labels==0) , sum(image_labels==1)]) # class with fewer trials
-                # which class has more trials; this is the class that we want to resample
-                ind_mx_n_trs = np.argmax([sum(image_labels==0) , sum(image_labels==1)])
+                    print('\nSubselecting miss trials so both classes have the same number of trials!\n')
+                else:
+                    print('\nTrials are balanced; no need for subselecting\n')
+                    
+                if lrn != hrn:
+                    mn_n_trs = np.min([sum(image_labels==0) , sum(image_labels==1)])
+                    ind_mn_n_trs = np.argmin([sum(image_labels==0) , sum(image_labels==1)]) # class with fewer trials
+                    # which class has more trials; this is the class that we want to resample
+                    ind_mx_n_trs = np.argmax([sum(image_labels==0) , sum(image_labels==1)])
 
-                # get random order of trials from the class with more trials
-    #             rnd.permutation(sum(image_labels==ind_mx_n_trs)) # then get the first mn_n_trs trials from the class with more trials
-                tr_inds = rnd.permutation(sum(image_labels==ind_mx_n_trs))[:mn_n_trs]
+                    # get random order of trials from the class with more trials
+        #             rnd.permutation(sum(image_labels==ind_mx_n_trs)) # then get the first mn_n_trs trials from the class with more trials
+                    tr_inds = rnd.permutation(sum(image_labels==ind_mx_n_trs))[:mn_n_trs]
 
-                traces_larger_class = traces_fut[:,:,image_labels==ind_mx_n_trs][:,:,tr_inds]
-                labels_larger_class = image_labels[image_labels==ind_mx_n_trs][tr_inds]
+                    traces_larger_class = traces_fut[:,:,image_labels==ind_mx_n_trs][:,:,tr_inds]
+                    labels_larger_class = image_labels[image_labels==ind_mx_n_trs][tr_inds]
 
-                # get the traces and labels for the smaller class
-                traces_smaller_class = traces_fut[:,:,image_labels==ind_mn_n_trs]
-                labels_smaller_class = image_labels[image_labels==ind_mn_n_trs]
+                    # get the traces and labels for the smaller class
+                    traces_smaller_class = traces_fut[:,:,image_labels==ind_mn_n_trs]
+                    labels_smaller_class = image_labels[image_labels==ind_mn_n_trs]
 
-                # concatenate the 2 classes
-                traces_fut = np.concatenate((traces_smaller_class, traces_larger_class), axis=2)
-                image_labels = np.concatenate((labels_smaller_class, labels_larger_class))
-            
-                print(traces_fut.shape , image_labels.shape)
+                    # concatenate the 2 classes
+                    traces_fut = np.concatenate((traces_smaller_class, traces_larger_class), axis=2)
+                    image_labels = np.concatenate((labels_smaller_class, labels_larger_class))
+
+                    print(traces_fut.shape , image_labels.shape)
             
             
             
