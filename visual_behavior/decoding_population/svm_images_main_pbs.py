@@ -676,7 +676,295 @@ def svm_main_images_pbs(data_list, experiment_ids_valid, df_data, session_trials
         lims_id = l[1] # experiment id 
         '''
         
- 
+        area = data_list.iloc[index]['targeted_structure'] #area
+        depth = int(data_list.iloc[index]['imaging_depth']) #depth
+        valid = sum(np.in1d(experiment_ids_valid, int(lims_id)))>0 #data_list.iloc[index]['valid']
+
+        this_sess.at[index, cols[range(8)]] = session_id, lims_id, mouse, date, cre, stage, area, depth #, valid
+        
+        if valid==False:
+            print(f'Experiment {index} is not valid; skipping analysis...')
+            
+        elif valid: # do the analysis only if the experiment is valid
+
+            # get data for a single experiment
+            image_data_this_exp = image_data[image_data['ophys_experiment_id']==lims_id]
+            
+            if trial_type=='changes_vs_nochanges':
+                # image preceding image change
+                image_data_this_exp2 = image_data2_n[image_data2_n['ophys_experiment_id']==lims_id] # (neurons x trials) # all neurons for trial 1, then all neurons for trial 2, etc            
+
+    #         image_data_this_exp.shape # (neurons x trials) # all neurons for trial 1, then all neurons for trial 2, etc
+        
+            '''
+            area = image_data_this_exp.iloc[0]['targeted_structure']
+            depth = int(image_data_this_exp.iloc[0]['imaging_depth'])
+            print(area, depth)
+
+            this_sess.at[index, cols[range(8)]] = session_id, lims_id, mouse, date, cre, stage, area, depth
+            '''
+        
+            #%% Compute frame duration
+            trace_time = image_data_this_exp['trace_timestamps'].iloc[0]
+            samps_bef = np.argwhere(trace_time==0)[0][0]
+            samps_aft = len(trace_time)-samps_bef
+            
+            frame_dur = np.mean(np.diff(trace_time)) # difference in sec between frames
+            print(f'Frame duration {frame_dur:.3f} ms')
+            
+            # for mesoscope data:
+        #     if np.logical_or(frame_dur < .09, frame_dur > .1):
+        #         print(f'\n\nWARNING:Frame duration is unexpected!! {frame_dur}ms\n\n')
+
+
+            #%% Set image-aligned traces in the format: frames x units x trials
+            # create traces_fut, ie the traces in shape f x u x t: frames x units x trials, for each experiment of a given session
+            n_frames = image_data_this_exp['trace'].values[0].shape[0]
+            n_neurons = image_data_this_exp['cell_specimen_id'].unique().shape[0]
+            n_trials = image_data_this_exp[tr_id].unique().shape[0]
+            print(f'n_frames, n_neurons, n_trials: {n_frames, n_neurons, n_trials}')
+
+            # image_data_this_exp['trace'].values.shape # (neurons x trials) # all neurons for trial 1, then all neurons for trial 2, etc
+            traces = np.concatenate((image_data_this_exp['trace'].values)) # (frames x neurons x trials)
+            traces_fut = np.reshape(traces, (n_frames,  n_neurons, n_trials), order='F')
+#             traces_fut.shape # frames x neurons x trials
+
+            
+            if trial_type=='changes_vs_nochanges':
+                # image preceding image change
+                traces2 = np.concatenate((image_data_this_exp2['trace'].values)) # (frames x neurons x trials)
+                traces_fut2 = np.reshape(traces2, (n_frames,  n_neurons, n_trials), order='F')
+                
+                #plt.figure(); plt.plot(np.nanmean(traces_fut2, axis=(1,2))); plt.plot(np.nanmean(traces_fut, axis=(1,2)), color='r')
+                
+                # concatenate change and no-change trials
+                traces_fut = np.concatenate((traces_fut, traces_fut2), axis=2)
+                #traces_fut.shape
+
+            
+            '''
+            aa_mx = np.array([np.max(traces_fut[:,i,:].flatten()) for i in range(traces_fut.shape[1])]) # neurons
+            if (aa_mx==0).any():
+#                 print(aa_mx)
+                print('\n\nSome neurons have max=0; excluding them!\n\n')
+                traces_fut = traces_fut[:, aa_mx!=0, :]
+        
+            n_neurons = traces_fut.shape[1]
+        
+            print(f'n_frames, n_neurons, n_trials: {n_frames, n_neurons, n_trials}')
+            '''
+            
+            #%% Take care of nan values in image_labels (it happens if we are decoding the previous or next image and trial_type is images), and remove them frome traces and image_labels
+            if to_decode != 'current':
+                masknan = ~np.isnan(image_labels0)
+                # remove the nan from labels and traces
+                image_labels = image_labels0[masknan]
+                traces_fut = traces_fut[:,:,masknan]
+            else:
+                image_labels = copy.deepcopy(image_labels0)
+        
+            num_classes = len(np.unique(image_labels)) # number of classes to be classified by the svm
+            print(f'Number of classes in SVM: {num_classes}')
+
+            
+            
+            ######################################################
+            # use balanced trials; same number of trials for each class 
+            if num_classes==2 and use_balanced_trials==1: # if 1, use same number of trials for each class
+                
+                hrn = (image_labels==1).sum() # hit
+                lrn = (image_labels==0).sum() # miss
+                if hrn > lrn:
+                    print('\nSubselecting hit trials so both classes have the same number of trials!\n')
+                elif lrn > hrn:
+                    print ('\nSubselecting miss trials so both classes have the same number of trials!\n')
+                
+                mn_n_trs = np.min([sum(image_labels==0) , sum(image_labels==1)])
+                ind_mn_n_trs = np.argmin([sum(image_labels==0) , sum(image_labels==1)]) # class with fewer trials
+                # which class has more trials; this is the class that we want to resample
+                ind_mx_n_trs = np.argmax([sum(image_labels==0) , sum(image_labels==1)])
+
+                # get random order of trials from the class with more trials
+    #             rnd.permutation(sum(image_labels==ind_mx_n_trs)) # then get the first mn_n_trs trials from the class with more trials
+                tr_inds = rnd.permutation(sum(image_labels==ind_mx_n_trs))[:mn_n_trs]
+
+                traces_larger_class = traces_fut[:,:,image_labels==ind_mx_n_trs][:,:,tr_inds]
+                labels_larger_class = image_labels[image_labels==ind_mx_n_trs][tr_inds]
+
+                # get the traces and labels for the smaller class
+                traces_smaller_class = traces_fut[:,:,image_labels==ind_mn_n_trs]
+                labels_smaller_class = image_labels[image_labels==ind_mn_n_trs]
+
+                # concatenate the 2 classes
+                traces_fut = np.concatenate((traces_smaller_class, traces_larger_class), axis=2)
+                image_labels = np.concatenate((labels_smaller_class, labels_larger_class))
+            
+                print(traces_fut.shape , image_labels.shape)
+            
+            
+            
+            ######################################################
+            # reset n_trials
+            n_trials = traces_fut.shape[2] 
+                
+            # double check reshape above worked fine.
+            '''
+            c_all = []
+            for itr in image_data_this_exp[tr_id].unique():
+                this_data = image_data_this_exp[image_data_this_exp[tr_id]==itr]
+                c = np.vstack(this_data['trace'].values)
+            #     c.shape # neurons x frames
+                c_all.append(c) # trials x neurons x frames
+
+            c_all = np.array(c_all)
+            c_all.shape
+
+            np.equal(traces_fut[:,-2,102], c_all[102,-2,:]).sum()
+            '''
+
+            # image_indices = []
+            # for itr in image_data_this_exp[tr_id].unique():
+            #     image_index = image_trials[image_trials[tr_id]==itr]['image_index'].values[0]
+            #     image_indices.append(image_index)
+
+            
+            
+            this_sess.at[index, ['n_trials', 'n_neurons', 'frame_dur', 'samps_bef', 'samps_aft']] = n_trials, n_neurons, frame_dur, samps_bef, samps_aft
+            print('===== plane %d: %d neurons; %d trials =====' %(index, n_neurons, n_trials))
+
+            
+            
+            ######################################################
+            #%% Do not continue the analysis if neurons or trials are too few, or if there are not enough unique classes in the data            
+            
+            continue_analysis = True
+            
+            if n_neurons==0: # some of the de-crosstalked planes don't have any neurons.
+                this_sess.at[index, 'valid'] = False
+                continue_analysis = False
+                print('0 neurons! skipping invalid experiment %d, index %d' %(int(lims_id), index))
+    
+            if n_trials < 10:
+                continue_analysis = False
+                print('Skipping; too few trials to do SVM training! omissions=%d' %(n_trials))
+
+            if n_neurons < svm_min_neurs: #np.logical_and(same_num_neuron_all_planes , n_neurons < svm_min_neurs):
+                continue_analysis = False
+                print('Skipping; too few neurons to do SVM training! neurons=%d' %(n_neurons))
+
+            if num_classes < 2:
+                continue_analysis = False
+                print('Skipping; too few classes to do SVM training! number of classes=%d' %(num_classes))
+
+
+                
+            ######################## If everything is fine, continue with the SVM analysis ########################
+            
+            if continue_analysis:
+                
+                traces_fut_0 = copy.deepcopy(traces_fut)
+                image_labels_0 = copy.deepcopy(image_labels)
+                print(traces_fut_0.shape , image_labels_0.shape)
+                
+                pupil_running_values = np.nan
+                
+                #### run svm analysis on the whole session
+                if svm_blocks==-100:
+                    svmName = svm_run_save(traces_fut_0, image_labels_0, [np.nan, []], svm_blocks, now, engagement_pupil_running, pupil_running_values, use_balanced_trials) #, same_num_neuron_all_planes, norm_to_max_svm, svm_total_frs, n_neurons, numShufflesN, numSamples, num_classes, samps_bef, regType, kfold, cre, saveResults)
+                    
+
+                #### run svm analysis only on engaged trials
+#                 if svm_blocks==-101:
+                    # only take the engaged trials
+                    
+                
+                #### divide trials based on the engagement state
+                elif svm_blocks == -1:
+                    
+                    #### engagement_state; based on lick rate and reward rate
+                    if engagement_pupil_running == 0:
+                        engaged = image_trials['engagement_state'].values
+                        engaged[engaged=='engaged'] = 1
+                        engaged[engaged=='disengaged'] = 0
+                    
+                    #### running speed or mean_pupil_area; trials above the median are called engaged
+                    else:
+                        if engagement_pupil_running == 1:
+                            metric = image_trials['mean_pupil_area'].values
+                    
+                        elif engagement_pupil_running == 2:
+                            metric = image_trials['mean_running_speed'].values
+            
+                        th_eng = np.nanmedian(metric)
+                        engaged = metric+0
+                        engaged[metric>=th_eng] = 1
+                        engaged[metric<th_eng] = 0
+
+                        pupil_running_values = metric
+                        
+#                     import matplotlib.pyplot as plt
+#                     plt.plot(metric); plt.hlines(th_eng, 0, len(metric))
+#                     plt.plot(engaged)
+                    
+    
+                    # make sure there is enough trials in each engagement state
+                    if sum(engaged==1)<10:
+                        sys.exit(f'Aborting the analysis; too few ({sum(engaged==1)}) engaged trials!')
+                        
+                    if sum(engaged==0)<10:
+                        sys.exit(f'Aborting the analysis; too few ({sum(engaged==0)}) disengaged trials!')
+                        
+                        
+            
+                    ### set trial_blocks: block0 is engaged0, block1 is engaged1
+                    blocks_int = np.unique(engaged[~np.isnan(engaged)]).astype(int)
+                    trials_blocks = []
+                    for iblock in blocks_int: 
+                        trials_blocks.append(np.argwhere(engaged==iblock).flatten())
+#                     print(trials_blocks)    
+                    
+                    ############## Loop through each trial block to run the SVM analysis ##############
+                    
+                    for iblock in blocks_int: # iblock=0
+                            
+                        traces_fut_now = traces_fut_0[:,:,trials_blocks[iblock]]
+                        image_labels_now = image_labels_0[trials_blocks[iblock]]
+                        print(traces_fut_now.shape , image_labels_now.shape)
+                        
+                        svmName = svm_run_save(traces_fut_now, image_labels_now, [iblock, trials_blocks], svm_blocks, now, engagement_pupil_running, pupil_running_values, use_balanced_trials) #, same_num_neuron_all_planes, norm_to_max_svm, svm_total_frs, n_neurons, numSamples, num_classes, samps_bef, regType, kfold, cre, saveResults)
+                        
+        
+        
+                #### do the block-by-block analysis: train SVM on blocks of trials; block 0: 1st half of the session; block 1: 2nd half of the session.
+                else:
+                    # divide the trials into a given number of blocks and take care of the last trial in the last block
+                    a = np.arange(0, n_trials, int(n_trials/svm_blocks))
+                    if len(a) < svm_blocks+1:
+                        a = np.concatenate((a, [n_trials]))
+                    if len(a) == svm_blocks+1:
+                        a[-1] = n_trials
+                    print(a)
+                    print('Number of trials per block:')
+                    print(np.diff(a))
+                    
+                    # set the range of trials for each block
+                    trials_blocks = []
+                    for iblock in range(len(a)-1): 
+                        trials_blocks.append(np.arange(a[iblock], a[iblock+1]))
+#                     print(trials_blocks)
+                        
+                    ############## Loop through each trial block to run the SVM analysis ##############
+                    
+                    for iblock in range(len(a)-1): # iblock=0        
+                            
+                        traces_fut = traces_fut_0[:,:,trials_blocks[iblock]]
+                        image_labels = image_labels_0[trials_blocks[iblock]]
+                        print(traces_fut.shape , image_labels.shape)
+                        
+                        svmName = svm_run_save(traces_fut, image_labels, [iblock, trials_blocks], svm_blocks, now, engagement_pupil_running, pupil_running_values, use_balanced_trials) #, same_num_neuron_all_planes, norm_to_max_svm, svm_total_frs, n_neurons, numSamples, num_classes, samps_bef, regType, kfold, cre, saveResults)
+                    
+                
+                
                 
 
             
