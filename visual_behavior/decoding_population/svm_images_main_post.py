@@ -25,6 +25,8 @@ np.warnings.filterwarnings('ignore', category=np.VisibleDeprecationWarning)
 
 def svm_images_main_post(session_id, data_list, svm_blocks, iblock, dir_svm, frames_svm, time_win, trial_type, to_decode, same_num_neuron_all_planes, cols, analysis_dates, use_events=False, doPlots=0):
     
+    bl_percentile = 10 #20  # for peak measurements, we subtract pre-omit baseline from the peak. bl_percentile determines what pre-omit values will be used.      
+    
     num_classes = 8 # decoding 8 images
     num_planes = 8
     
@@ -342,7 +344,7 @@ def svm_images_main_post(session_id, data_list, svm_blocks, iblock, dir_svm, fra
             # in the svm code used for flash/omission vs. gray, we would compute the baseline and subtract it out.
             # here, we are just taking the average of the 750ms time points after the image
 
-            # NOTE: if you end up using events in the decoding analysis, you should add the baseline parts of the code back. 
+            # NOTE: if you end up using events in the decoding analysis, you should add the baseline parts of the code back (bc with events we can get a clean baseline). 
             
             if np.in1d([-1,1], np.sign(frames_svm)).all(): # frames_svm includes both negative and positive values; ie svm was trained on some frames before and some frames after the trial onset.
                 samps_bef_here = -frames_svm[0] # relative to svm output traces (eg av_train_data)
@@ -358,15 +360,23 @@ def svm_images_main_post(session_id, data_list, svm_blocks, iblock, dir_svm, fra
             print(f'frames_svm: {frames_svm}')
             print(f'time_win_frames for quantification: {time_win_frames}')
             
+            
+            # baseline
+            bl_index_pre_omit = np.arange(0,samps_bef_here) # you will need for response amplitude quantification, even if you dont use it below.
+            
 
             # concatenate CA traces for training, testing, shfl, and chance data, each a column in the matrix below; to compute their peaks all at once.
             CA_traces = np.vstack((av_train_data, av_test_data, av_test_shfl, av_test_chance)).T # times x 4
 #             print(CA_traces.shape)
 
-            peak_amp_trainTestShflChance = np.nanmean(CA_traces[time_win_frames], axis=0)
+            peak_amp_trainTestShflChance = np.nanmean(CA_traces[time_win_frames], axis=0) # 4
+            
+            # compute the baseline
+            bl_preOmit = np.percentile(CA_traces[bl_index_pre_omit], bl_percentile, axis=0) # 4
+#             peak_amp_trainTestShflChance = peak_amp_trainTestShflChance - bl_preOmit   # subtract out the baseline
+            
 
-
-            this_sess.at[index, ['peak_amp_trainTestShflChance']] = [peak_amp_trainTestShflChance] # 4
+            this_sess.at[index, ['peak_amp_trainTestShflChance', 'bl_pre0']] = [peak_amp_trainTestShflChance, bl_preOmit] # 4
 
 
             this_sess.at[index, ['n_trials', 'n_neurons', 'frame_dur', 'meanX_allFrs', 'stdX_allFrs']] = [n_trials, n_neurons, frame_dur, meanX_allFrs, stdX_allFrs] 
@@ -555,6 +565,7 @@ def svm_images_main_post(session_id, data_list, svm_blocks, iblock, dir_svm, fra
             this_sess.at[index, ['av_train_data', 'av_test_data', 'av_test_shfl', 'av_test_chance', 'sd_train_data', 'sd_test_data', 'sd_test_shfl', 'sd_test_chance']] = \
                 [av_train_data, av_test_data, av_test_shfl, av_test_chance, sd_train_data, sd_test_data, sd_test_shfl, sd_test_chance]
             this_sess.at[index, ['peak_amp_trainTestShflChance']] = [np.full((4), np.nan)] # 4
+            this_sess.at[index, ['bl_pre0']] = [np.full((4), np.nan)] # 4
             
             if same_num_neuron_all_planes:
                 this_sess.at[index, ['population_sizes_to_try']] = np.nan

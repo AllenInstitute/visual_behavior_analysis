@@ -119,11 +119,15 @@ if ~np.isnan(svm_blocks):
 ##########################################################################################    
 ##########################################################################################
 
+cols_sum = ['stage', 'cre', 'block', 'depth_ave', 'resp_amp']
+summary_vars_all = pd.DataFrame([], columns=cols_sum)
+
 xgap_areas = .3
 linestyle_all = ['solid', 'dashed'] # for block 0 and 1
 fmt_all = ['o', 'x']
 cols_area_all = [cols_area , ['skyblue', 'dimgray']]
 
+cntn = 0
 for istage in np.unique(stages_all): # istage=1
 
     #%% Plot averages of all mice in each cell line
@@ -225,6 +229,17 @@ for istage in np.unique(stages_all): # istage=1
                 sh_eachDepth = svm_allMice_sessPooled['av_test_shfl_eachDepth'].values[0] # 4 x (2*sum(num_sess_per_mouse)) x 80    
 
 
+                #################################
+                #%% Keep summary vars for all ophys stages
+
+                cntn = cntn+1
+                depth_ave = np.mean(depth_eachDepth[:, cre_eachDepth[0,:]==cre], axis=1).astype(float) # 4 # average across areas and sessions
+                pallnow = pa_all[:, cre_all[0,:]==cre]
+                
+                summary_vars_all.at[cntn, cols_sum] = istage, cre, iblock, depth_ave, pallnow
+                
+                
+                
                 #%% Plot session-averaged traces for each plane; 2 subplots: 1 per area
                 ####################################################################################
                 ####################################################################################
@@ -407,7 +422,10 @@ for istage in np.unique(stages_all): # istage=1
                 #%% Image responses
 
                 # left plot: omission, response amplitude
-                ylabs = '%Classification accuracy' #'Amplitude'
+                if baseline_subtract: # subtract the baseline (CA average during baseline, ie before time 0) from the evoked CA (classification accuracy)
+                    ylabs = '% Class accuracy rel. baseline' #'Amplitude'
+                else:
+                    ylabs = '% Classification accuracy' #'Amplitude'
             #        x = np.arange(num_depth)
                 lab1 = 'V1'
                 if ~np.isnan(svm_blocks):
@@ -469,7 +487,10 @@ for istage in np.unique(stages_all): # istage=1
                 #%% Image responses
 
                 # left: omission, response amplitude
-                ylabs = '%Classification accuracy'
+                if baseline_subtract: # subtract the baseline (CA average during baseline, ie before time 0) from the evoked CA (classification accuracy)
+                    ylabs = '% Class accuracy rel. baseline' #'Amplitude'
+                else:
+                    ylabs = '% Classification accuracy'
             #        xlabs = 'Area'
             #        x = np.arange(len(distinct_areas))
             #        xticklabs = xticklabs
@@ -613,6 +634,169 @@ for istage in np.unique(stages_all): # istage=1
                 fign = os.path.join(dir0, 'svm', dir_now, nam+fmt)
 
                 plt.savefig(fign, bbox_inches='tight') # , bbox_extra_artists=(lgd,)    
+
+
+
+
+                
+                
+                
+################################################################
+################################################################
+#%% Compute ttest stats between ophys 3 and 4, for each cre line
+
+import scipy.stats as st
+
+cres = ['Slc17a7', 'Sst', 'Vip']
+
+# equal_var: If True (default), perform a standard independent 2 sample test that assumes equal population variances [1]. If False, perform Welch’s t-test, which does not assume equal population variance
+equal_var = False # needed for ttest
+sigval = .05 # value for ttest significance
+
+p_all = []
+for crenow in cres:
+    a = summary_vars_all[np.logical_and(summary_vars_all['cre']==crenow , summary_vars_all['stage']==whichStages[0])]
+    b = summary_vars_all[np.logical_and(summary_vars_all['cre']==crenow , summary_vars_all['stage']==whichStages[1])]
+    a_amp = a['resp_amp'].values[0][:,:,1]
+    b_amp = b['resp_amp'].values[0][:,:,1]
+    
+    print(a_amp.shape, b_amp.shape)
+    
+    _, p = st.ttest_ind(a_amp, b_amp, nan_policy='omit', axis=1, equal_var=equal_var)
+    
+    p_all.append(p)
+
+p_all = np.array(p_all)
+
+
+p_sigval = p_all+0 
+p_sigval[p_all <= sigval] = 1
+p_sigval[p_all > sigval] = np.nan
+
+
+###############################################################
+
+#%% Plot response amplitude (errorbars) comparing ophys stages                
+
+# whichStages = [1,3,4,6]
+whichStages = [3,4] #[1,3,4,6] # stages to plot on top of each other to compare
+
+x = np.array([0,2,4,6])
+xgapg = .15*len(whichStages)/2
+areasn = ['V1', 'LM']
+
+icre = -1
+for crenow in cres:
+
+    tc = summary_vars_all[summary_vars_all['cre'] == crenow]
+    icre = icre+1
+    
+    plt.figure(figsize=(4,2.5))  
+    gs1 = gridspec.GridSpec(1,2) #, width_ratios=[3, 1]) 
+    gs1.update(bottom=.15, top=0.8, left=0.05, right=0.95, wspace=.55, hspace=.5)
+    
+    ax1 = plt.subplot(gs1[0])
+    ax2 = plt.subplot(gs1[1])
+
+    xgap = 0
+    top_allstage = []
+    mn_mx_allstage = []
+    
+    for stagenow in whichStages:
+        pa_all = tc[tc['stage'] == stagenow]['resp_amp'].values[0] 
+        print(pa_all.shape)
+
+        top = np.nanmean(pa_all, axis=1) # 8_planes x 4_trTsShCh
+        top_sd = np.nanstd(pa_all, axis=1) / np.sqrt(pa_all.shape[1])        
+
+        depth_ave = tc[tc['stage'] == stagenow]['depth_ave'].values[0] 
+            
+#         mn = np.nanmin(top[:,1]-top_sd[:,1])
+        mn = np.nanmin(top[:,2]-top_sd[:,2])
+        mx = np.nanmax(top[:,1]+top_sd[:,1])
+        top_allstage.append(top)
+        mn_mx_allstage.append([mn, mx])
+
+        xgap = xgap+xgapg
+        
+        # test
+        ax1.errorbar(x+xgap, top[inds_v1, 1], yerr=top_sd[inds_v1, 1], fmt=fmt_now, markersize=5, capsize=0, label=f'ophys{stagenow}')
+        ax2.errorbar(x+xgap, top[inds_lm, 1], yerr=top_sd[inds_lm, 1], fmt=fmt_now, markersize=5, capsize=0, label=f'ophys{stagenow}')
+        # shuffle
+#         ax1.errorbar(x+xgap, top[inds_v1, 2], yerr=top_sd[inds_v1, 2], fmt=fmt_now, markersize=3, capsize=0, color='gray')
+#         ax2.errorbar(x+xgap, top[inds_lm, 2], yerr=top_sd[inds_lm, 2], fmt=fmt_now, markersize=3, capsize=0, color='gray')
+        
+
+    top_allstage = np.array(top_allstage)
+    mn_mx_allstage = np.array(mn_mx_allstage)
+    mn_mx = [np.nanmin(mn_mx_allstage), np.nanmax(mn_mx_allstage)]
+    xlabs = 'Depth (um)'
+    xticklabs = np.round(depth_ave).astype(int)  # x = np.arange(num_depth)
+
+    iax=0
+    for ax in [ax1,ax2]:
+        ax.hlines(0, x[0], x[-1], linestyle='dashed', color='gray')
+        ax.set_xticks(x)
+        ax.set_xticklabels(xticklabs, rotation=45)
+        ax.tick_params(labelsize=10)
+        ax.set_xlim([-.5, x[-1]+xgap+.5])
+        ax.set_xlabel(xlabs, fontsize=12)
+        ax.set_ylim(mn_mx)
+        if ax==ax1:
+            ax.set_ylabel(ylabs, fontsize=12) #, labelpad=35) # , rotation=0
+        ax.set_title(areasn[iax])
+        iax=iax+1
+        
+    ax2.legend(loc='center left', bbox_to_anchor=[bb[0]+xgapg, bb[1]], frameon=True, handlelength=1, fontsize=12)        
+    # add a star if ttest is significant (between ophys 3 and 4)
+    ax1.plot(x+xgapg*np.arange(len(x)), p_sigval[icre, inds_v1]*mn_mx[1]-np.diff(mn_mx)*.03, 'k*')
+    ax2.plot(x+xgapg*np.arange(len(x)), p_sigval[icre, inds_lm]*mn_mx[1]-np.diff(mn_mx)*.03, 'k*')
+    
+    plt.suptitle(crenow, fontsize=18)    
+    seaborn.despine()
+    
+    
+    ####
+    if dosavefig:
+
+        snn = [str(sn) for sn in whichStages]
+        snn = '_'.join(snn)
+        whatSess = f'_summaryStages_{snn}'
+
+        fgn = '' #f'{whatSess}'
+        if same_num_neuron_all_planes:
+            fgn = fgn + '_sameNumNeursAllPlanes'
+
+        if svm_blocks==-1:
+            word = 'engagement'
+        else:
+            word = 'blocks'
+
+        if use_events:
+            word = word + '_events'
+
+        fgn = f'{fgn}_{word}_frames{frames_svm[0]}to{frames_svm[-1]}'                        
+        fgn = fgn + '_ClassAccur'
+
+        nam = f'{cre[:3]}{whatSess}_aveMice_aveSessPooled{fgn}_{now}'
+        fign = os.path.join(dir0, 'svm', dir_now, nam+fmt)
+
+        plt.savefig(fign, bbox_inches='tight') # , bbox_extra_artists=(lgd,)    
+
+
+    
+                
+'''
+# heatmap
+plt.imshow(top_allstage[:,:,1].T)
+plt.colorbar()
+
+plt.imshow(np.diff(top_allstage[:,:,1], axis=0).T)
+plt.colorbar()
+'''
+
+
+
 
 
 

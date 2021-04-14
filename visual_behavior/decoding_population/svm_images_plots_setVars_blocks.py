@@ -30,6 +30,47 @@ Created on Tue Oct  20 13:56:00 2020
 @author: farzaneh
 """
 
+'''
+Relevant parts of different scripts, for quantifying response amplitudes:
+
+# average across cv samples # size perClassErrorTrain_data_allFrs: nSamples x nFrames
+av_train_data = 100-np.nanmean(perClassErrorTrain_data_allFrs, axis=0) # numFrames
+
+
+# concatenate CA traces for training, testing, shfl, and chance data, each a column in the matrix below; to compute their peaks all at once.
+CA_traces = np.vstack((av_train_data, av_test_data, av_test_shfl, av_test_chance)).T # times x 4
+#             print(CA_traces.shape)
+
+peak_amp_trainTestShflChance = np.nanmean(CA_traces[time_win_frames], axis=0)
+
+
+# peak_amp_trainTestShflChance
+y = all_sess_2an[all_sess_2an['mouse_id']==mouse_id]['peak_amp_trainTestShflChance'] # 8 * number_of_session_for_the_mouse
+peak_amp_trTsShCh_this_plane_allsess_allp = set_y_this_plane_allsess(y, num_sessions) # size: (8 x num_sessions x 4) # 4 for train, Test, Shfl, and Chance        
+
+
+aa = svm_this_plane_allsess['peak_amp_trTsShCh_this_plane_allsess_allp'].values # num_all_mice; # size of each element : 8 x num_sessions x 4
+aar = np.array([np.reshape(aa[ic], (aa[ic].shape[0] * aa[ic].shape[1] , aa[ic].shape[2]), order='F') for ic in range(len(aa))]) # aar.shape # num_all_mice; # size of each element : (8 x num_sessions) x 4
+a0 = np.concatenate((aar)) # (8*sum(num_sess_per_mouse)) x 4 # 8 planes of 1 session, then 8 planes of next session, and so on 
+pa_all = np.reshape(a0, (num_planes, int(a0.shape[0]/num_planes), a0.shape[-1]), order='F') # 8 x sum(num_sess_per_mouse) x 4 # each row is one plane, all sessions        
+
+
+pa_all = svm_allMice_sessPooled['peak_amp_allPlanes'].values[0]  # 8 x pooledSessNum x 4 (trTsShCh)
+
+top = np.nanmean(pa_all[:, cre_all[0,:]==cre], axis=1)
+top_sd = np.nanstd(pa_all[:, cre_all[0,:]==cre], axis=1) / np.sqrt(sum(cre_all[0,:]==cre))        
+
+
+# testing data
+ax1.errorbar(x, top[inds_v1, 1], yerr=top_sd[inds_v1, 1], fmt=fmt_now, markersize=3, capsize=3, label=lab1, color=cols_area_now[1])
+ax1.errorbar(x + xgap_areas, top[inds_lm, 1], yerr=top_sd[inds_lm, 1], fmt=fmt_now, markersize=3, capsize=3, label=lab2, color=cols_area_now[0])
+
+# shuffled data
+ax1.errorbar(x, top[inds_v1, 2], yerr=top_sd[inds_v1, 2], fmt=fmt_now, markersize=3, capsize=3, color='gainsboro') # label='V1',  # gray
+ax1.errorbar(x + xgap_areas, top[inds_lm, 2], yerr=top_sd[inds_lm, 2], fmt=fmt_now, markersize=3, capsize=3, color='gainsboro') # label='LM', # skyblue
+
+'''
+
 import os
 import numpy as np
 import pandas as pd
@@ -50,24 +91,31 @@ dir0 = '/home/farzaneh/OneDrive/Analysis'
 
 
 #%%
-svm_blocks = -1 #np.nan #2 # np.nan # -1: divide trials based on engagement # number of trial blocks to divide the session to, and run svm on. # set to np.nan to run svm analysis on the whole session
+svm_blocks = np.nan #-1: divide trials based on engagement # number of trial blocks to divide the session to, and run svm on. # set to np.nan to run svm analysis on the whole session
 use_events = True # False #whether to run the analysis on detected events (inferred spikes) or dff traces.
 
 to_decode = 'current' # 'current' : decode current image.    'previous': decode previous image.    'next': decode next image.
-trial_type = 'changes' #'hits_vs_misses' #'changes_vs_nochanges' # 'omissions', 'images', 'changes', 'changes_vs_nochanges' # what trials to use for SVM analysis # the population activity of these trials at time time_win will be used to decode the image identity of flashes that occurred at their time 0 (if to_decode='current') or 750ms before (if to_decode='previous').
-use_balanced_trials = 0 #1 # if 1, use same number of trials for each class; only applicable when we have 2 classes (binary classification).
+trial_type = 'hits_vs_misses' #'hits_vs_misses' #'changes_vs_nochanges' # 'omissions', 'images', 'changes', 'changes_vs_nochanges' # what trials to use for SVM analysis # the population activity of these trials at time time_win will be used to decode the image identity of flashes that occurred at their time 0 (if to_decode='current') or 750ms before (if to_decode='previous').
+use_balanced_trials = 1 #1 # if 1, use same number of trials for each class; only applicable when we have 2 classes (binary classification).
 
-time_win = [0, .55] # 'frames_svm' # time_win = [0, .55] # [0., 0.093, 0.186, 0.279, 0.372, 0.465]  # set time_win to a string (any string) to use frames_svm as the window of quantification. # time window relative to trial onset to quantify image signal. Over this window class accuracy traces will be averaged.
+baseline_subtract = 1 # subtract the baseline (CA average during baseline, ie before time 0) from the evoked CA (classification accuracy)
+    
+dosavefig = 1 # 0
+plot_single_mouse = 0 # if 1, make plots for each mouse
+fmt = '.pdf' # '.png' # '.svg'
+
+if use_events:
+    time_win = [0, .4]
+else:
+    time_win = [0, .55] # 'frames_svm' # set time_win to a string (any string) to use frames_svm as the window of quantification. # time window relative to trial onset to quantify image signal. Over this window class accuracy traces will be averaged.
+
+
 if trial_type=='hits_vs_misses':
     frames_svm = np.arange(-5,9)
 else:
     frames_svm = np.arange(-5,8) #[-3,-2,-1] # [0,1,2,3,4,5] # svm was run on how what frames relative to image onset
 
 same_num_neuron_all_planes = 0 #1 # if 1, use the same number of neurons for all planes to train svm
-
-dosavefig = 1 # 0
-plot_single_mouse = 0 # if 1, make plots for each mouse
-fmt = '.pdf' # '.png' # '.svg'
 
 samps_bef = 5
 if trial_type=='hits_vs_misses':
@@ -204,7 +252,7 @@ for iblock in br: # iblock=0 ; iblock=np.nan
 #     for cre2ana in cre2ana_all: # cre2ana = cre2ana_all[0]
         
     a = f'frames{frames_svm[0]}to{frames_svm[-1]}'
-#         a = f'{cre2ana}_frames{frames_svm[0]}to{frames_svm[-1]}'
+#     a = f'{cre2ana}_frames{frames_svm[0]}to{frames_svm[-1]}'
 
     if ~np.isnan(svm_blocks):
         if svm_blocks==-1: # divide trials into blocks based on the engagement state
@@ -448,7 +496,7 @@ for iblock in br: # iblock=0 ; iblock=np.nan
     
     #%% correlate classification accuracy with behavioral strategy
     
-    if trial_type =='changes_vs_nochanges':
+    if trial_type =='changes_vs_nochanges' or trial_type =='hits_vs_misses':
         
         import matplotlib.pyplot as plt
         
@@ -472,7 +520,7 @@ for iblock in br: # iblock=0 ; iblock=np.nan
         c, p = ma.corrcoef(ma.masked_invalid(sdi), ma.masked_invalid(testing_accur_ave_planes))
 
         # scatter plot
-        plt.figure()
+        plt.figure(figsize=(3,3))
         plt.plot(sdi, testing_accur_ave_planes, '.')
         plt.xlabel(f'{cn}')
         plt.ylabel('average decoder accuracy of 8 planes\n change vs no change')
@@ -481,13 +529,6 @@ for iblock in br: # iblock=0 ; iblock=np.nan
 
         #################################
         # color code cre lines
-        df = pd.DataFrame([], columns=['Decoder accuracy (average of 8 planes)', f'{cn}', 'cre'])
-        df['Decoder accuracy (average of 8 planes)'] = testing_accur_ave_planes
-        df[f'{cn}'] = sdi
-        df['cre'] = cre_mt
-
-        sns.lmplot(f'{cn}', 'Decoder accuracy (average of 8 planes)', data=df, hue='cre', fit_reg=False)
-
 
         # cre line for each session
         cre_mt = all_sess0_modeltable['cre'].values
@@ -497,6 +538,14 @@ for iblock in br: # iblock=0 ; iblock=np.nan
         a = np.unique(cre_mt.astype(str)); cren = a[a!='nan']
         print(cren)
 
+        df = pd.DataFrame([], columns=['Decoder accuracy (average of 8 planes)', f'{cn}', 'cre'])
+        df['Decoder accuracy (average of 8 planes)'] = testing_accur_ave_planes
+        df[f'{cn}'] = sdi
+        df['cre'] = cre_mt
+
+        sns.lmplot(f'{cn}', 'Decoder accuracy (average of 8 planes)', data=df, hue='cre', fit_reg=False, size=3)
+        
+        
         # compute corrcoeff for each cre line
         c_allcre = []
         plt.figure(figsize=(3,6))
@@ -763,8 +812,8 @@ for iblock in br: # iblock=0 ; iblock=np.nan
             inds_v1 = np.argwhere(i_areas==v1_ai).squeeze()
             inds_lm = np.argwhere(i_areas==lm_ai).squeeze()
 
-            print('V1 plane indeces: ', inds_v1) # [4, 5, 6, 7] 
-            print('LM plane indeces: ', inds_lm) # [0, 1, 2, 3]
+#             print('V1 plane indeces: ', inds_v1) # [4, 5, 6, 7] 
+#             print('LM plane indeces: ', inds_lm) # [0, 1, 2, 3]
             #inds_lm = np.arange(num_depth) # we can get these from the following vars: distinct_areas and i_areas[range(num_planes)]
             #inds_v1 = np.arange(num_depth, num_planes)
 
@@ -989,8 +1038,17 @@ for iblock in br: # iblock=0 ; iblock=np.nan
                     # peak_amp_trainTestShflChance
                     y = all_sess_2an[all_sess_2an['mouse_id']==mouse_id]['peak_amp_trainTestShflChance'] # 8 * number_of_session_for_the_mouse
                     peak_amp_trTsShCh_this_plane_allsess_allp = set_y_this_plane_allsess(y, num_sessions) # size: (8 x num_sessions x 4) # 4 for train, Test, Shfl, and Chance        
-
-
+                    
+                    # baseline 
+                    y = all_sess_2an[all_sess_2an['mouse_id']==mouse_id]['bl_pre0'] # 8 * number_of_session_for_the_mouse
+                    bl_pre0_this_plane_allsess_allp = set_y_this_plane_allsess(y, num_sessions) # size: (8 x num_sessions x 4) # 4 for train, Test, Shfl, and Chance        
+                    
+                    if baseline_subtract: # subtract the baseline (CA average during baseline, ie before time 0) from the evoked CA (classification accuracy)
+                        peak_amp_trTsShCh_this_plane_allsess_allp = peak_amp_trTsShCh_this_plane_allsess_allp - bl_pre0_this_plane_allsess_allp
+                        if im==0:
+                            print(f'Subtracting out baseline to quantify class accuracy.')
+                    
+                    
                     # av_test_data
                     y = all_sess_2an[all_sess_2an['mouse_id']==mouse_id]['av_test_data']#.values # 8 * number_of_session_for_the_mouse; each experiment: nFrames_interpolated
                     av_test_data_this_plane_allsess_allp = set_y_this_plane_allsess(y, num_sessions) # size: (8 x num_sessions x nFrames_upsampled)  # 8 is number of planes; nFrames_upsampled is the length of the upsampled time array   # Get data from a given plane across all sessions
@@ -1285,7 +1343,4 @@ exec(open('svm_images_plots_setVars_sumMice_blocks.py').read()) # here we set sv
 svm_allMice_sessPooled0 = copy.deepcopy(svm_allMice_sessPooled)
 svm_allMice_sessAvSd0 = copy.deepcopy(svm_allMice_sessAvSd)
 exec(open('svm_images_plots_sumMice_blocks.py').read()) # make mouse-averaged plots
-
-
-
 
