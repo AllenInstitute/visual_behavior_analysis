@@ -64,12 +64,12 @@ def general_info_for_id_query():
     oe.ophys_session_id,
     bs.id AS behavior_session_id,
     os.foraging_id,
-    containers.id AS ophys_container_id,
+    vbec.id AS ophys_container_id,
     os.visual_behavior_supercontainer_id AS supercontainer_id,
 
     oe.workflow_state AS experiment_workflow_state,
     os.workflow_state AS session_workflow_state,
-    containers.workflow_state AS container_workflow_state,
+    vbec.workflow_state AS container_workflow_state,
 
     os.specimen_id,
     specimens.donor_id,
@@ -83,7 +83,8 @@ def general_info_for_id_query():
     projects.code AS project,
 
     oe.storage_directory AS experiment_storage_directory,
-    os.storage_directory AS session_storage_directory
+    os.storage_directory AS session_storage_directory,
+    vbec.storage_directory AS container_storage_directory
 
     FROM
     ophys_experiments oe
@@ -97,8 +98,8 @@ def general_info_for_id_query():
     JOIN ophys_experiments_visual_behavior_experiment_containers oevbec
     ON oe.id = oevbec.ophys_experiment_id
 
-    JOIN visual_behavior_experiment_containers containers
-    ON containers.id = oevbec.visual_behavior_experiment_container_id
+    JOIN visual_behavior_experiment_containers vbec
+    ON vbec.id = oevbec.visual_behavior_experiment_container_id
 
     JOIN projects ON projects.id = os.project_id
     JOIN specimens ON specimens.id = os.specimen_id
@@ -376,8 +377,8 @@ def get_general_info_for_ophys_experiment_id(ophys_experiment_id):
     general_info = mixin.select(query)
 
     # ensure operating system compatible filepaths
-    general_info = utils.correct_dataframe_filepath(general_info, 'experiment_storage_directory')
-    general_info = utils.correct_dataframe_filepath(general_info, 'session_storage_directory')
+    general_info = lims_utils.correct_general_info_filepaths(general_info)
+
     return general_info
 
 
@@ -508,8 +509,7 @@ def get_general_info_for_ophys_session_id(ophys_session_id):
     general_info = mixin.select(query)
 
     # ensure operating system compatible filepaths
-    general_info = utils.correct_dataframe_filepath(general_info, 'experiment_storage_directory')
-    general_info = utils.correct_dataframe_filepath(general_info, 'session_storage_directory')
+    general_info = lims_utils.correct_general_info_filepaths(general_info)
 
     return general_info
 
@@ -681,8 +681,8 @@ def get_general_info_for_behavior_session_id(behavior_session_id):
     general_info = mixin.select(query)
 
     # ensure operating system compatible filepaths
-    general_info = utils.correct_dataframe_filepath(general_info, 'experiment_storage_directory')
-    general_info = utils.correct_dataframe_filepath(general_info, 'session_storage_directory')
+    general_info = lims_utils.correct_general_info_filepaths(general_info)
+
     return general_info
 
 
@@ -712,12 +712,13 @@ def get_ophys_session_ids_for_ophys_container_id(ophys_container_id):
     oe.ophys_session_id
 
     FROM
-    ophys_experiments_visual_behavior_experiment_containers container
+    ophys_experiments_visual_behavior_experiment_containers oevbec
 
-    JOIN ophys_experiments oe on oe.id = container.ophys_experiment_id
+    JOIN ophys_experiments oe
+    ON oe.id = oevbec.ophys_experiment_id
 
     WHERE
-    container.visual_behavior_experiment_container_id = {}
+    oevbec.visual_behavior_experiment_container_id = {}
     '''.format(ophys_container_id)
     ophys_session_ids = mixin.select(query)
     return ophys_session_ids
@@ -727,22 +728,23 @@ def get_behavior_session_ids_for_ophys_container_id(ophys_container_id):
     ophys_container_id = int(ophys_container_id)
     query = '''
     SELECT
-    behavior.id
+    bs.id
     AS behavior_session_id
 
     FROM
-    ophys_experiments experiments
+    ophys_experiments oe
 
-    JOIN behavior_sessions behavior
-    ON behavior.ophys_session_id = experiments.ophys_session_id
+    JOIN behavior_sessions bs
+    ON bs.ophys_session_id = oe.ophys_session_id
 
-    JOIN ophys_experiments_visual_behavior_experiment_containers container
-    ON container.ophys_experiment_id = experiments.id
+    JOIN ophys_experiments_visual_behavior_experiment_containers oevbec
+    ON oevbec.ophys_experiment_id = oe.id
 
-    JOIN ophys_sessions sessions on sessions.id = experiments.ophys_session_id
+    JOIN ophys_sessions os
+    ON sessions.id = oe.ophys_session_id
 
     WHERE
-    container.visual_behavior_experiment_container_id = {}
+    oevbec.visual_behavior_experiment_container_id = {}
     '''.format(ophys_container_id)
     behavior_session_id = mixin.select(query)
     return behavior_session_id
@@ -752,21 +754,21 @@ def get_supercontainer_id_for_ophys_container_id(ophys_container_id):
     ophys_container_id = int(ophys_container_id)
     query = '''
     SELECT
-    sessions.visual_behavior_supercontainer_id as super_container_id
+    os.visual_behavior_supercontainer_id AS super_container_id
 
     FROM
-    ophys_experiments experiments
+    ophys_experiments oe
 
-    JOIN behavior_sessions behavior
-    ON behavior.ophys_session_id = experiments.ophys_session_id
+    JOIN behavior_sessions bs
+    ON bs.ophys_session_id = oe.ophys_session_id
 
-    JOIN ophys_experiments_visual_behavior_experiment_containers container
-    ON container.ophys_experiment_id = experiments.id
+    JOIN ophys_experiments_visual_behavior_experiment_containers oevbec
+    ON oevbec.ophys_experiment_id = oe.id
 
-    JOIN ophys_sessions sessions on sessions.id = experiments.ophys_session_id
+    JOIN ophys_sessions os on os.id = oe.ophys_session_id
 
     WHERE
-    container.visual_behavior_experiment_container_id = {}
+    oevbec.visual_behavior_experiment_container_id = {}
     '''.format(ophys_container_id)
     super_container_id = mixin.select(query)
     super_container_id = int(super_container_id['super_container_id'][0])
@@ -792,14 +794,13 @@ def get_general_info_for_ophys_container_id(ophys_container_id):
 
     general_info_query = general_info_for_id_query()
     query_selection = '''
-    WHERE containers.id ={} '''.format(ophys_container_id)
+    WHERE vbec.id ={} '''.format(ophys_container_id)
     query = general_info_query + query_selection
 
     general_info = mixin.select(query)
 
     # ensure operating system compatible filepaths
-    general_info = utils.correct_dataframe_filepath(general_info, 'experiment_storage_directory')
-    general_info = utils.correct_dataframe_filepath(general_info, 'session_storage_directory')
+    general_info = lims_utils.correct_general_info_filepaths(general_info)
     return general_info
 
 
@@ -810,15 +811,16 @@ def get_ophys_experiment_ids_for_supercontainer_id(supercontainer_id):
     supercontainer_id = int(supercontainer_id)
     query = '''
     SELECT
-    experiments.id AS ophys_experiment_id
+    oe.id AS ophys_experiment_id
 
     FROM
-    ophys_experiments experiments
+    ophys_experiments oe
 
-    JOIN ophys_sessions sessions ON sessions.id = experiments.ophys_session_id
+    JOIN ophys_sessions os
+    ON os.id = oe.ophys_session_id
 
     WHERE
-    sessions.visual_behavior_supercontainer_id = {}
+    os.visual_behavior_supercontainer_id = {}
     '''.format(supercontainer_id)
     ophys_experiment_ids = mixin.select(query)
     return ophys_experiment_ids
@@ -844,16 +846,16 @@ def get_behavior_session_id_for_supercontainer_id(supercontainer_id):
     supercontainer_id = int(supercontainer_id)
     query = '''
     SELECT
-    behavior.id AS behavior_session_id
+    bs.id AS behavior_session_id
 
     FROM
-    ophys_sessions sessions
+    ophys_sessions os
 
-    JOIN behavior_sessions behavior
-    ON behavior.ophys_session_id = sessions.id
+    JOIN behavior_sessions bs
+    ON bs.ophys_session_id = os.id
 
     WHERE
-    sessions.visual_behavior_supercontainer_id = {}
+    os.visual_behavior_supercontainer_id = {}
     '''.format(supercontainer_id)
     behavior_session_ids = mixin.select(query)
     return behavior_session_ids
@@ -863,19 +865,20 @@ def get_ophys_container_ids_for_supercontainer_id(supercontainer_id):
     supercontainer_id = int(supercontainer_id)
     query = '''
     SELECT
-    container.visual_behavior_experiment_container_id
+    oevbec.visual_behavior_experiment_container_id
     AS ophys_container_id
 
     FROM
-    ophys_experiments experiments
+    ophys_experiments oe
 
-    JOIN ophys_experiments_visual_behavior_experiment_containers container
-    ON container.ophys_experiment_id = experiments.id
+    JOIN ophys_experiments_visual_behavior_experiment_containers oevbec
+    ON oevbec.ophys_experiment_id = oe.id
 
-    JOIN ophys_sessions sessions ON sessions.id = experiments.ophys_session_id
+    JOIN ophys_sessions os
+    ON os.id = oe.ophys_session_id
 
     WHERE
-    sessions.visual_behavior_supercontainer_id = {}
+    os.visual_behavior_supercontainer_id = {}
     '''.format(supercontainer_id)
     ophys_container_ids = mixin.select(query)
     return ophys_container_ids
@@ -957,8 +960,8 @@ def get_general_info_for_supercontainer_id(supercontainer_id):
     general_info = mixin.select(query)
 
     # ensure operating system compatible filepaths
-    general_info = utils.correct_dataframe_filepath(general_info, 'experiment_storage_directory')
-    general_info = utils.correct_dataframe_filepath(general_info, 'session_storage_directory')
+    general_info = lims_utils.correct_general_info_filepaths(general_info)
+
     return general_info
 
 
@@ -1009,7 +1012,7 @@ def get_ophys_experiments_table(ophys_experiment_id):
     structures.acronym AS targeted_structure,
     imaging_depths.depth AS imaging_depth,
     oe.calculated_depth,
-    container.visual_behavior_experiment_container_id AS ophys_container_id,
+    oevbec.visual_behavior_experiment_container_id AS ophys_container_id,
     oe.raw_movie_number_of_frames,
     oe.raw_movie_width,
     oe.raw_movie_height,
@@ -1017,8 +1020,11 @@ def get_ophys_experiments_table(ophys_experiment_id):
     oe.ophys_imaging_plane_group_id
 
     FROM
-    ophys_experiments_visual_behavior_experiment_containers container
-    JOIN ophys_experiments oe ON oe.id = container.ophys_experiment_id
+    ophys_experiments_visual_behavior_experiment_containers oevbec
+
+    JOIN ophys_experiments oe
+    ON oe.id = oevbec.ophys_experiment_id
+
     JOIN structures ON structures.id = oe.targeted_structure_id
     JOIN imaging_depths ON imaging_depths.id = oe.imaging_depth_id
 
@@ -1049,7 +1055,9 @@ def get_ophys_sessions_table(ophys_session_id):
 
     FROM
     ophys_sessions os
+
     JOIN equipment ON equipment.id = os.equipment_id
+
     JOIN projects ON projects.id = os.project_id
 
     WHERE
@@ -1087,17 +1095,17 @@ def get_visual_behavior_experiment_containers_table(ophys_container_id):
     ophys_container_id = int(ophys_container_id)
     query = '''
     SELECT
-    containers.id AS container_id,
+    vbec.id AS container_id,
     projects.code AS project,
-    containers.specimen_id,
-    containers.storage_directory AS container_storage_directory,
-    containers.workflow_state AS container_workflow_state
+    vbec.specimen_id,
+    vbec.storage_directory AS container_storage_directory,
+    vbec.workflow_state AS container_workflow_state
 
     FROM
-    visual_behavior_experiment_containers as containers
-    JOIN projects on projects.id = containers.project_id
+    visual_behavior_experiment_containers as vbec
+    JOIN projects on projects.id = vbec.project_id
     WHERE
-    containers.id = {}
+    vbec.id = {}
     '''.format(ophys_container_id)
     visual_behavior_experiment_containers_table = mixin.select(query)
     return visual_behavior_experiment_containers_table
