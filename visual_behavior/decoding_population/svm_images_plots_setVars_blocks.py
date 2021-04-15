@@ -95,12 +95,12 @@ svm_blocks = np.nan #-1: divide trials based on engagement # number of trial blo
 use_events = True # False #whether to run the analysis on detected events (inferred spikes) or dff traces.
 
 to_decode = 'current' # 'current' : decode current image.    'previous': decode previous image.    'next': decode next image.
-trial_type = 'hits_vs_misses' #'hits_vs_misses' #'changes_vs_nochanges' # 'omissions', 'images', 'changes', 'changes_vs_nochanges' # what trials to use for SVM analysis # the population activity of these trials at time time_win will be used to decode the image identity of flashes that occurred at their time 0 (if to_decode='current') or 750ms before (if to_decode='previous').
+trial_type = 'changes_vs_nochanges' #'hits_vs_misses' #'changes_vs_nochanges' # 'omissions', 'images', 'changes', 'changes_vs_nochanges' # what trials to use for SVM analysis # the population activity of these trials at time time_win will be used to decode the image identity of flashes that occurred at their time 0 (if to_decode='current') or 750ms before (if to_decode='previous').
 use_balanced_trials = 1 #1 # if 1, use same number of trials for each class; only applicable when we have 2 classes (binary classification).
 
 baseline_subtract = 1 # subtract the baseline (CA average during baseline, ie before time 0) from the evoked CA (classification accuracy)
     
-dosavefig = 1 # 0
+dosavefig = 0 # 0
 plot_single_mouse = 0 # if 1, make plots for each mouse
 fmt = '.pdf' # '.png' # '.svg'
 

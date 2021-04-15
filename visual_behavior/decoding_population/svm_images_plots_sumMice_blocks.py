@@ -645,12 +645,14 @@ for istage in np.unique(stages_all): # istage=1
 ################################################################
 #%% Compute ttest stats between ophys 3 and 4, for each cre line
 
+# ttest will compare whichStages[0] and whichStages[1]
+whichStages = [5,6] #[1,2] #[3,4] #[1,3,4,6] # stages to plot on top of each other to compare
+
 import scipy.stats as st
 
 cres = ['Slc17a7', 'Sst', 'Vip']
 
-# equal_var: If True (default), perform a standard independent 2 sample test that assumes equal population variances [1]. If False, perform Welch’s t-test, which does not assume equal population variance
-equal_var = False # needed for ttest
+equal_var = False # needed for ttest # equal_var: If True (default), perform a standard independent 2 sample test that assumes equal population variances [1]. If False, perform Welch’s t-test, which does not assume equal population variance
 sigval = .05 # value for ttest significance
 
 p_all = []
@@ -676,20 +678,21 @@ p_sigval[p_all > sigval] = np.nan
 
 ###############################################################
 
-#%% Plot response amplitude (errorbars) comparing ophys stages                
+#%% Plot response amplitude (errorbars) comparing ophys stages; also do anova/tukey
 
-# whichStages = [1,3,4,6]
-whichStages = [3,4] #[1,3,4,6] # stages to plot on top of each other to compare
+import anova_tukey
 
 x = np.array([0,2,4,6])
 xgapg = .15*len(whichStages)/2
 areasn = ['V1', 'LM']
+inds_now_all = [inds_v1, inds_lm]
+cols_stages = plt.rcParams['axes.prop_cycle'].by_key()['color']
 
-icre = -1
-for crenow in cres:
+# icre = -1
+for crenow in cres: #crenow = cres[0]
 
     tc = summary_vars_all[summary_vars_all['cre'] == crenow]
-    icre = icre+1
+    icre = np.argwhere(np.in1d(cres, crenow))[0][0] #icre+1
     
     plt.figure(figsize=(4,2.5))  
     gs1 = gridspec.GridSpec(1,2) #, width_ratios=[3, 1]) 
@@ -700,9 +703,11 @@ for crenow in cres:
 
     xgap = 0
     top_allstage = []
-    mn_mx_allstage = []
-    
+    mn_mx_allstage = []    
+    stcn = -1
+    xnowall = []
     for stagenow in whichStages:
+        stcn = stcn+1
         pa_all = tc[tc['stage'] == stagenow]['resp_amp'].values[0] 
         print(pa_all.shape)
 
@@ -710,30 +715,47 @@ for crenow in cres:
         top_sd = np.nanstd(pa_all, axis=1) / np.sqrt(pa_all.shape[1])        
 
         depth_ave = tc[tc['stage'] == stagenow]['depth_ave'].values[0] 
-            
+        
+        
 #         mn = np.nanmin(top[:,1]-top_sd[:,1])
         mn = np.nanmin(top[:,2]-top_sd[:,2])
         mx = np.nanmax(top[:,1]+top_sd[:,1])
         top_allstage.append(top)
         mn_mx_allstage.append([mn, mx])
 
-        xgap = xgap+xgapg
-        
+        xnow = x+xgapg*stcn
+        xnowall.append(xnow)
+#         print(x+xgap)
         # test
-        ax1.errorbar(x+xgap, top[inds_v1, 1], yerr=top_sd[inds_v1, 1], fmt=fmt_now, markersize=5, capsize=0, label=f'ophys{stagenow}')
-        ax2.errorbar(x+xgap, top[inds_lm, 1], yerr=top_sd[inds_lm, 1], fmt=fmt_now, markersize=5, capsize=0, label=f'ophys{stagenow}')
+        ax1.errorbar(xnow, top[inds_v1, 1], yerr=top_sd[inds_v1, 1], fmt=fmt_now, markersize=5, capsize=0, label=f'ophys{stagenow}', color=cols_stages[stcn])
+        ax2.errorbar(xnow, top[inds_lm, 1], yerr=top_sd[inds_lm, 1], fmt=fmt_now, markersize=5, capsize=0, label=f'ophys{stagenow}')
         # shuffle
 #         ax1.errorbar(x+xgap, top[inds_v1, 2], yerr=top_sd[inds_v1, 2], fmt=fmt_now, markersize=3, capsize=0, color='gray')
 #         ax2.errorbar(x+xgap, top[inds_lm, 2], yerr=top_sd[inds_lm, 2], fmt=fmt_now, markersize=3, capsize=0, color='gray')
-        
 
+        ####### do anova and tukey hsd for pairwise comparison of depths per area
+        tukey_all = anova_tukey.do_anova_tukey(summary_vars_all, crenow, stagenow, inds_v1, inds_lm)
+        
+        a = anova_tukey.add_tukey_lines(tukey_all, inds_v1, ax1, cols_stages[stcn], inds_v1, inds_lm, top, top_sd, xnowall[stcn])
+        b = anova_tukey.add_tukey_lines(tukey_all, inds_lm, ax2, cols_stages[stcn], inds_v1, inds_lm, top, top_sd, xnowall[stcn])
+        ylims = []        
+        ylims.append(a)        
+        ylims.append(b)
+
+            
     top_allstage = np.array(top_allstage)
     mn_mx_allstage = np.array(mn_mx_allstage)
     mn_mx = [np.nanmin(mn_mx_allstage), np.nanmax(mn_mx_allstage)]
     xlabs = 'Depth (um)'
     xticklabs = np.round(depth_ave).astype(int)  # x = np.arange(num_depth)
 
-    iax=0
+    ylims_now = [np.nanmin(ylims), np.nanmax(ylims)]
+    
+    # add a star if ttest is significant (between ophys 3 and 4)
+    ax1.plot(x+xgapg/2, p_sigval[icre, inds_v1]*mn_mx[1]-np.diff(mn_mx)*.03, 'k*')
+    ax2.plot(x+xgapg/2, p_sigval[icre, inds_lm]*mn_mx[1]-np.diff(mn_mx)*.03, 'k*')
+    
+    iax = 0 # V1, LM
     for ax in [ax1,ax2]:
         ax.hlines(0, x[0], x[-1], linestyle='dashed', color='gray')
         ax.set_xticks(x)
@@ -741,20 +763,23 @@ for crenow in cres:
         ax.tick_params(labelsize=10)
         ax.set_xlim([-.5, x[-1]+xgap+.5])
         ax.set_xlabel(xlabs, fontsize=12)
-        ax.set_ylim(mn_mx)
+        
+#         ax.set_ylim(mn_mx)
+        ax.set_ylim(ylims_now)
         if ax==ax1:
             ax.set_ylabel(ylabs, fontsize=12) #, labelpad=35) # , rotation=0
         ax.set_title(areasn[iax])
         iax=iax+1
         
+        
     ax2.legend(loc='center left', bbox_to_anchor=[bb[0]+xgapg, bb[1]], frameon=True, handlelength=1, fontsize=12)        
-    # add a star if ttest is significant (between ophys 3 and 4)
-    ax1.plot(x+xgapg*np.arange(len(x)), p_sigval[icre, inds_v1]*mn_mx[1]-np.diff(mn_mx)*.03, 'k*')
-    ax2.plot(x+xgapg*np.arange(len(x)), p_sigval[icre, inds_lm]*mn_mx[1]-np.diff(mn_mx)*.03, 'k*')
     
     plt.suptitle(crenow, fontsize=18)    
     seaborn.despine()
     
+
+    
+
     
     ####
     if dosavefig:
@@ -778,25 +803,9 @@ for crenow in cres:
         fgn = f'{fgn}_{word}_frames{frames_svm[0]}to{frames_svm[-1]}'                        
         fgn = fgn + '_ClassAccur'
 
-        nam = f'{cre[:3]}{whatSess}_aveMice_aveSessPooled{fgn}_{now}'
+        nam = f'{crenow[:3]}{whatSess}_aveMice_aveSessPooled{fgn}_{now}'
         fign = os.path.join(dir0, 'svm', dir_now, nam+fmt)
 
         plt.savefig(fign, bbox_inches='tight') # , bbox_extra_artists=(lgd,)    
 
-
-    
-                
-'''
-# heatmap
-plt.imshow(top_allstage[:,:,1].T)
-plt.colorbar()
-
-plt.imshow(np.diff(top_allstage[:,:,1], axis=0).T)
-plt.colorbar()
-'''
-
-
-
-
-
-
+        
