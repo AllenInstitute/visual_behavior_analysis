@@ -741,7 +741,7 @@ def get_behavior_session_ids_for_ophys_container_id(ophys_container_id):
     ON oevbec.ophys_experiment_id = oe.id
 
     JOIN ophys_sessions os
-    ON sessions.id = oe.ophys_session_id
+    ON os.id = oe.ophys_session_id
 
     WHERE
     oevbec.visual_behavior_experiment_container_id = {}
