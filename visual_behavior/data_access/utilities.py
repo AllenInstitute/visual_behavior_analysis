@@ -1266,7 +1266,7 @@ def build_tidy_cell_df(session):
     return pd.concat([pd.DataFrame(get_cell_timeseries_dict(session, cell_specimen_id)) for cell_specimen_id in session.dff_traces.reset_index()['cell_specimen_id']]).reset_index(drop=True)
 
 
-def correct_filepaths(filepath):
+def correct_filepath(filepath):
     """using the pathlib python module, takes in a filepath from an
     arbitrary operating system and returns a filepath that should work
     for the users operating system
@@ -1305,5 +1305,5 @@ def correct_dataframe_filepath(dataframe, column_string):
         returns the input dataframe with the filepath in the given
         column 'corrected' for the users operating system, in place
     """
-    dataframe[column_string] = dataframe[column_string].apply(lambda x: correct_filepaths(x))
+    dataframe[column_string] = dataframe[column_string].apply(lambda x: correct_filepath(x))
     return dataframe

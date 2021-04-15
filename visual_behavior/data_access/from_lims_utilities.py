@@ -1,3 +1,6 @@
+from visual_behavior.data_access import utilities as utils
+
+
 def get_filepath_from_realdict_object(realdict_object):
     """takes a RealDictRow object returned when loading well known files
        from lims and parses it to return the filepath to the well known file.
@@ -9,7 +12,7 @@ def get_filepath_from_realdict_object(realdict_object):
         filepath: [description]
     """
     filepath = realdict_object['filepath'][0]
-    filepath = filepath.replace('/allen', '//allen')  # works with windows and linux filepaths
+    filepath = utils.correct_filepath(filepath)
     return filepath
 
 
