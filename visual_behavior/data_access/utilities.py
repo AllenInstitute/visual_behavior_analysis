@@ -1,6 +1,5 @@
 import os
 import json
-import shutil
 import warnings
 import numpy as np
 import pandas as pd
@@ -395,22 +394,19 @@ def get_lims_data(lims_id):
     return lims_data
 
 
-def get_timestamps(lims_data, analysis_dir):
-    if '2P6' in analysis_dir:
+def get_timestamps(lims_data):
+    if '2P6' in lims_data.rig.values[0]:
         use_acq_trigger = True
     else:
         use_acq_trigger = False
-    sync_data = get_sync_data(lims_data, analysis_dir, use_acq_trigger)
+    sync_data = get_sync_data(lims_data, use_acq_trigger)
     timestamps = pd.DataFrame(sync_data)
     return timestamps
 
 
-def get_sync_path(lims_data, analysis_dir):
-    #    import shutil
+def get_sync_path(lims_data):
     ophys_session_dir = get_ophys_session_dir(lims_data)
-    # analysis_dir = get_analysis_dir(lims_data)
 
-    # First attempt
     sync_file = [file for file in os.listdir(ophys_session_dir) if 'sync' in file]
     if len(sync_file) > 0:
         sync_file = sync_file[0]
@@ -420,21 +416,12 @@ def get_sync_path(lims_data, analysis_dir):
             json_data = json.load(pointer_json)
             sync_file = json_data['sync_file']
     sync_path = os.path.join(ophys_session_dir, sync_file)
-
-    if sync_file not in os.listdir(analysis_dir):
-        logger.info('moving %s to analysis dir', sync_file)  # flake8: noqa: E999
-        #        print(sync_path, os.path.join(analysis_dir, sync_file))
-        try:
-            shutil.copy2(sync_path, os.path.join(analysis_dir, sync_file))
-        except:  # NOQA E722
-            print('shutil.copy2 gave an error perhaps related to copying stat data... passing!')
-            pass
     return sync_path
 
 
-def get_sync_data(lims_data, analysis_dir, use_acq_trigger):
+def get_sync_data(lims_data, use_acq_trigger):
     logger.info('getting sync data')
-    sync_path = get_sync_path(lims_data, analysis_dir)
+    sync_path = get_sync_path(lims_data)
     sync_dataset = SyncDataset(sync_path)
     # Handle mesoscope missing labels
     try:

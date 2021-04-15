@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import pandas as pd
 import seaborn as sns
@@ -23,7 +24,8 @@ bitdepth_16 = 65536
 def plot_max_intensity_projection_for_experiment(ophys_experiment_id, ax=None):
     if ax is None:
         fig, ax = plt.subplots()
-    max_projection = loading.get_sdk_max_projection(ophys_experiment_id)
+    dataset = loading.get_ophys_dataset(ophys_experiment_id)
+    max_projection = dataset.max_projection.data
     ax.imshow(max_projection, cmap='gray', vmax=np.percentile(max_projection, 99))
     ax.axis('off')
     return ax
@@ -32,8 +34,9 @@ def plot_max_intensity_projection_for_experiment(ophys_experiment_id, ax=None):
 def plot_average_image_for_experiment(ophys_experiment_id, ax=None):
     if ax is None:
         fig, ax = plt.subplots()
-    average_image = loading.get_sdk_ave_projection(ophys_experiment_id)
-    ax.imshow(average_image, cmap='gray', vmax=np.amax(average_image))
+    dataset = loading.get_ophys_dataset(ophys_experiment_id)
+    average_projection = dataset.average_projection.data
+    ax.imshow(average_projection, cmap='gray', vmax=np.amax(average_projection))
     ax.axis('off')
     return ax
 
@@ -59,7 +62,8 @@ def plot_motion_correction_max_image_for_experiment(ophys_experiment_id, ax=None
 def plot_segmentation_mask_for_experiment(ophys_experiment_id, ax=None):
     if ax is None:
         fig, ax = plt.subplots()
-    segmentation_mask = loading.get_segmentation_mask(ophys_experiment_id, valid_only=True)
+    dataset = loading.get_ophys_dataset(ophys_experiment_id)
+    segmentation_mask = dataset.segmentation_mask_image  # i am not sure if this is correct, check relevant SDK issue to see what they did
     ax.imshow(segmentation_mask, cmap='gray', vmin=0, vmax=1)
     ax.axis('off')
     return ax
@@ -70,10 +74,11 @@ def plot_valid_segmentation_mask_overlay_for_experiment(ophys_experiment_id, ax=
         fig, ax = plt.subplots()
     ax = plot_max_intensity_projection_for_experiment(ophys_experiment_id, ax=ax)
     try:
-        segmentation_mask = loading.get_segmentation_mask(ophys_experiment_id, valid_only=True)
-        mask = np.zeros(segmentation_mask.shape)
+        dataset = loading.get_ophys_dataset(ophys_experiment_id, include_invalid_rois=False)
+        segmentation_mask = dataset.segmentation_mask_image  # i am not sure if this is correct, check relevant SDK issue to see what they did
+        mask = np.zeros(segmentation_mask[0].shape)
         mask[:] = np.nan
-        mask[segmentation_mask == 1] = 1
+        mask[segmentation_mask[0] == 1] = 1
         ax.imshow(mask, cmap='hsv', vmax=1, alpha=0.5)
     except BaseException:
         pass
@@ -85,10 +90,11 @@ def plot_all_segmentation_mask_overlay_for_experiment(ophys_experiment_id, ax=No
     if ax is None:
         fig, ax = plt.subplots()
     ax = plot_max_intensity_projection_for_experiment(ophys_experiment_id, ax=ax)
-    segmentation_mask = loading.get_segmentation_mask(ophys_experiment_id, valid_only=False)
-    mask = np.zeros(segmentation_mask.shape)
+    dataset = loading.get_ophys_dataset(ophys_experiment_id)
+    segmentation_mask = dataset.segmentation_mask_image  # i am not sure if this is correct, check relevant SDK issue to see what they did
+    mask = np.zeros(segmentation_mask[0].shape)
     mask[:] = np.nan
-    mask[segmentation_mask == 1] = 1
+    mask[segmentation_mask[0] == 1] = 1
     ax.imshow(mask, cmap='hsv', vmax=1, alpha=0.5)
     ax.axis('off')
     return ax
@@ -98,9 +104,10 @@ def plot_valid_segmentation_mask_outlines_for_experiment(ophys_experiment_id, ax
     if ax is None:
         fig, ax = plt.subplots()
     ax = plot_max_intensity_projection_for_experiment(ophys_experiment_id, ax=ax)
-    segmentation_mask = loading.get_segmentation_mask(ophys_experiment_id, valid_only=True)
-    mask = np.zeros(segmentation_mask.shape)
-    mask[segmentation_mask == 1] = 1
+    dataset = loading.get_ophys_dataset(ophys_experiment_id, include_invalid_rois=False)
+    segmentation_mask = dataset.segmentation_mask_image  # i am not sure if this is correct, check relevant SDK issue to see what they did
+    mask = np.zeros(segmentation_mask[0].shape)
+    mask[segmentation_mask[0] == 1] = 1
     ax.contour(mask, levels=0, colors=['red'], linewidths=[0.6])
     ax.axis('off')
     return ax
@@ -125,7 +132,7 @@ def plot_valid_and_invalid_segmentation_mask_overlay_per_cell_for_experiment(oph
     if ax is None:
         fig, ax = plt.subplots()
     ax = plot_max_intensity_projection_for_experiment(ophys_experiment_id, ax=ax)
-    dataset = loading.get_ophys_dataset(ophys_experiment_id, include_invalid_rois=True)
+    dataset = loading.get_ophys_dataset(ophys_experiment_id)
     cell_specimen_table = dataset.cell_specimen_table.copy()
     exclusion_labels = loading.get_lims_cell_exclusion_labels(ophys_experiment_id)
     try:
@@ -152,7 +159,7 @@ def plot_valid_and_invalid_segmentation_mask_overlay_per_cell_for_experiment(oph
 
 
 def plot_traces_heatmap_for_experiment(ophys_experiment_id, ax=None):
-    dataset = loading.get_ophys_dataset(ophys_experiment_id)
+    dataset = loading.get_ophys_dataset(ophys_experiment_id)  # this means it will have invalid traces
     dff_traces = dataset.dff_traces.dff.values
     dff_traces = np.vstack(dff_traces)
     if ax is None:
@@ -221,6 +228,22 @@ def plot_motion_correction_xy_shift_for_experiment(ophys_experiment_id, ax=None)
     ax.legend(fontsize='x-small', loc='upper right')
     ax.set_xlabel('time (sec)')
     ax.set_ylabel('pixels')
+    # get metrics from saved file and add to plot title
+    save_dir = r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/motion_correction'
+    # motion_df = pd.read_csv(os.path.join(save_dir, 'motion_correction_values_passing_experiments.csv'))
+    motion_df = pd.read_hdf(os.path.join(save_dir, 'motion_correction_values_all_experiments.h5'), key='df')
+    motion_df = motion_df.set_index('ophys_experiment_id')
+    cols_to_plot = ['x_mean', 'x_min', 'x_max', 'x_range', 'x_std',
+                    'y_mean', 'y_min', 'y_max', 'y_range', 'y_std']
+    row_data = motion_df.loc[ophys_experiment_id]
+    title = str(ophys_experiment_id) + ' - '
+    for col in cols_to_plot:  # plot all metric values
+        title = title + col + ': ' + str(np.round(row_data[col], 2)) + ', '
+    if len(row_data.values_over_threshold) > 0:
+        title = title + '\n outlier for: '
+        for col in row_data.values_over_threshold:
+            title = title + col + ', '
+    ax.set_title(title)
     return ax
 
 # BEHAVIOR
@@ -251,15 +274,18 @@ def make_eye_matrix_plot(ophys_experiment_id, ax):
     return ax
 
 
-def make_pupil_area_plot(ophys_experiment_id, ax, label_x=True):
+def make_pupil_area_plot(ophys_experiment_id, ax=None, label_x=True):
     '''plot pupil area vs time'''
     try:
-        ophys_session_id = db.convert_id({'ophys_experiment_id': ophys_experiment_id}, 'ophys_session_id')
-        ed = EyeTrackingData(ophys_session_id)
-
-        time = ed.ellipse_fits['pupil']['time'] / 60.
-        area = ed.ellipse_fits['pupil']['blink_corrected_area']
-        ax.plot(time, area)
+        # ophys_session_id = db.convert_id({'ophys_experiment_id': ophys_experiment_id}, 'ophys_session_id')
+        # ed = EyeTrackingData(ophys_session_id)
+        dataset = loading.get_ophys_dataset(ophys_experiment_id)
+        ed = dataset.eye_tracking.copy()
+        time = ed['time'].values  # might need to be updated to timestamps in the future'
+        area = ed['pupil_area'].values  # this should be blink corrected - no giant spikes
+        if ax is None:
+            fig, ax = plt.subplots(figsize=(20, 4))
+            ax.plot(time, area)
         if label_x:
             ax.set_xlabel('time (minutes)')
         ax.set_ylabel('pupil diameter\n(pixels$^2$)')
@@ -275,16 +301,17 @@ def make_pupil_area_plot(ophys_experiment_id, ax, label_x=True):
     return ax
 
 
-def make_pupil_area_plot_sdk(ophys_experiment_id, ax, label_x=True):
+def make_pupil_area_plot_sdk(ophys_experiment_id, ax=None, label_x=True):
     '''plot pupil area vs time'''
     try:
-        dataset = loading.get_ophys_dataset(ophys_experiment_id, sdk_only=True)
-
+        dataset = loading.get_ophys_dataset(ophys_experiment_id)
         et = dataset.eye_tracking.copy()
-        filtered = et[et.likely_blink == False]
-        time = filtered.time.values
-        area = filtered.pupil_area.values
-        ax.plot(time, area)
+        # filtered = et[et.likely_blink == False]
+        time = et['time'].values / 60.  # might need to be updated to timestamps in the future'
+        area = et['pupil_area_raw'].values  # this will have blink artifacts in it
+        if ax is None:
+            fig, ax = plt.subplots(figsize=(20, 4))
+            ax.plot(time, area)
         if label_x:
             ax.set_xlabel('time (seconds)')
         ax.set_ylabel('pupil diameter\n(pixels$^2$)')
@@ -300,18 +327,20 @@ def make_pupil_area_plot_sdk(ophys_experiment_id, ax, label_x=True):
     return ax
 
 
-def make_pupil_position_plot(ophys_experiment_id, ax, label_x=True):
+def make_pupil_position_plot(ophys_experiment_id, ax=None, label_x=True):
     '''plot pupil position vs time'''
     try:
-        ophys_session_id = db.convert_id({'ophys_experiment_id': ophys_experiment_id}, 'ophys_session_id')
-        ed = EyeTrackingData(ophys_session_id)
+        dataset = loading.get_ophys_dataset(ophys_experiment_id)
+        ed = dataset.eye_tracking.copy()
 
-        time = ed.ellipse_fits['pupil']['time'] / 60.
-        x = ed.ellipse_fits['pupil']['blink_corrected_center_x']
-        y = ed.ellipse_fits['pupil']['blink_corrected_center_y']
+        time = ed['time'].values / 60.  # might need to be updated to timestamps in the future'
+        x = ed['pupil_center_x'].values  # i actually have no idea what these are called
+        y = ed['pupil_center_y'].values  # need to check eye_tracking table in SDK and replace with proper names
 
-        ax.plot(time, x, color='darkorange')
-        ax.plot(time, y, color='olive')
+        if ax is None:
+            fig, ax = plt.subplots(figsize=(20, 4))
+            ax.plot(time, x, color='darkorange')
+            ax.plot(time, y, color='olive')
 
         if label_x:
             ax.set_xlabel('time (minutes)')
@@ -354,20 +383,17 @@ def plot_behavior_timeseries_for_experiment(ophys_experiment_id, xlim_seconds=No
     if xlim_seconds is None:
         xlim_seconds = [dataset.stimulus_timestamps[0], dataset.stimulus_timestamps[-1]]
 
-    lick_timestamps = dataset.licks.timestamps.values
+    lick_timestamps = dataset.licks["time"].values
     licks = np.ones(len(lick_timestamps))
 
-    reward_timestamps = dataset.rewards.timestamps.values
+    reward_timestamps = dataset.rewards.index.values  # the index is "timestamps"
     rewards = np.zeros(len(reward_timestamps))
 
-    running_speed = dataset.running_speed.speed.values
-    running_timestamps = dataset.running_speed.timestamps.values
+    running_speed = dataset.running_speed["speed"].values
+    running_timestamps = dataset.running_speed["timestamps"].values
 
-    pupil_area = dataset.eye_tracking.pupil_area.values
-    pupil_timestamps = dataset.eye_tracking.timestamps.values
-
-    face_motion = dataset.behavior_movie_pc_activations[:, 0]
-    face_timestamps = dataset.timestamps['behavior_monitoring'].timestamps
+    pupil_area = dataset.eye_tracking["pupil_area"].values
+    pupil_timestamps = dataset.eye_tracking["time"].values
 
     if ax is None:
         if plot_face_motion_energy:
@@ -390,6 +416,8 @@ def plot_behavior_timeseries_for_experiment(ophys_experiment_id, xlim_seconds=No
     ax[1].set_xlim(pupil_timestamps[0], pupil_timestamps[-1])
     if plot_face_motion_energy:
         try:
+            face_motion = dataset.behavior_movie_pc_activations[:, 0]
+            face_timestamps = dataset.timestamps['behavior_monitoring'].timestamps
             ax[3].plot(face_timestamps, face_motion, label='face_motion_PC0', color=colors[3])
             ax[3].set_ylabel('face motion\n PC0 activation')
             i = 3

@@ -820,6 +820,7 @@ def dff_robust_noise(dff_trace):
 
     sigma_MAD_conversion_factor = 1.4826
 
+    dff_trace = np.asarray(dff_trace)
     # first pass removing big pos peaks
     dff_trace = dff_trace[dff_trace < 1.5 * np.abs(dff_trace.min())]
     MAD = np.median(np.abs(dff_trace - np.median(dff_trace)))  # MAD = median absolute deviation
@@ -842,6 +843,7 @@ def dff_robust_signal(dff_trace, robust_standard_deviation):
     Returns:
         [type] -- [description]
     """
+    dff_trace = np.asarray(dff_trace)
     median_deviation = np.median(dff_trace[(dff_trace - np.median(dff_trace)) > robust_standard_deviation])
     return median_deviation
 
@@ -860,8 +862,12 @@ def compute_robust_snr_on_dataframe(dataframe):
                         "robust_signal"
                         "robust_snr"
     """
-    dataframe["robust_noise"] = dataframe["dff"].apply(lambda x: dff_robust_noise(x))
-    dataframe["robust_signal"] = dataframe.apply(lambda x: dff_robust_signal(x["dff"], x["robust_noise"]), axis=1 )
+    if 'dff' in dataframe.columns:
+        column = 'dff'
+    elif 'filtered_events' in dataframe.columns:
+        column = 'filtered_events'
+    dataframe["robust_noise"] = dataframe[column].apply(lambda x: dff_robust_noise(x))
+    dataframe["robust_signal"] = dataframe.apply(lambda x: dff_robust_signal(x[column], x["robust_noise"]), axis=1 )
     dataframe["robust_snr"] = dataframe["robust_signal"] / dataframe["robust_noise"]
     return dataframe
 
@@ -1197,3 +1203,32 @@ def add_dff_stats_to_specimen_table(session):
     if 'cell_specimen_id' not in df.columns:
         df['cell_specimen_id'] = None
     return df
+
+
+def add_hits_to_licks(licks, trials):
+    """
+    Adds a column to the licks table to indicate which licks were hits, resulting in a reward
+    :param licks: BehaviorOphysSession or BehaviorSession licks dataframe
+    :param trials: BehaviorOphysSession or BehaviorSession trials dataframe
+    :return: annotated licks dataframe
+    """
+    licks['hit'] = False
+    hit_licks = [lick_time[0] for lick_time in trials[trials.hit == True].lick_times.values]
+    indices = licks[licks.timestamps.isin(hit_licks)].index.values
+    licks.at[indices, 'hit'] = True
+    return licks
+
+
+def add_bouts_to_licks(licks):
+    """
+    Adds columns to licks dataframe for inter flash lick difference and whether a lick was in a bout, given the median inter lick interval
+    :param licks: BehaviorOphysSession or BehaviorSession licks dataframe
+    :return: annotated licks dataframe
+    """
+    licks['inter_flash_lick_diff'] = [licks.iloc[row].timestamps - licks.iloc[row - 1].timestamps if row != 0 else np.nan for row in range(len(licks))]
+    lick_times = licks.timestamps.values
+    median_inter_lick_interval = np.median(np.diff(np.hstack(list(lick_times))))
+    licks['lick_in_bout'] = False
+    indices = licks[licks.inter_flash_lick_diff < median_inter_lick_interval * 3].index
+    licks.at[indices, 'lick_in_bout'] = True
+    return licks

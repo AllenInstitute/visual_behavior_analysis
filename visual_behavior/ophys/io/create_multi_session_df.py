@@ -6,7 +6,7 @@ import visual_behavior.ophys.response_analysis.utilities as ut
 from visual_behavior.data_access import loading
 
 
-def get_multi_session_df(project_code, session_number, df_name, conditions, use_events=False):
+def get_multi_session_df(project_code, session_number, df_name, conditions, use_events=False, use_extended_stimulus_presentations=True):
     if 'stimulus' in df_name:
         flashes = True
         omitted = False
@@ -35,7 +35,7 @@ def get_multi_session_df(project_code, session_number, df_name, conditions, use_
         try:
             print(experiment_id)
             dataset = loading.get_ophys_dataset(experiment_id)
-            analysis = ResponseAnalysis(dataset, use_events=use_events, use_extended_stimulus_presentations=True)
+            analysis = ResponseAnalysis(dataset, use_events=use_events, use_extended_stimulus_presentations=use_extended_stimulus_presentations)
             df = analysis.get_response_df(df_name)
             df['ophys_experiment_id'] = experiment_id
             if 'passive' in dataset.metadata['session_type']:
@@ -66,11 +66,6 @@ def get_multi_session_df(project_code, session_number, df_name, conditions, use_
             print(e)
             print('problem for', experiment_id)
 
-    # suffix is unused. Commenting out for now
-    # if use_events:
-    #     suffix = '_events'
-    # else:
-    #     suffix = ''
     if 'level_0' in mega_mdf.keys():
         mega_mdf = mega_mdf.drop(columns='level_0')
     if 'index' in mega_mdf.keys():
