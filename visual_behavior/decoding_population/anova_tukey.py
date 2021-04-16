@@ -123,7 +123,7 @@ def add_tukey_lines(tukey_all, inds_now, ax, col, inds_v1, inds_lm, top, top_sd,
         inds_v1_lm = 1
     
     tukey = tukey_all[inds_v1_lm]
-    print(tukey)
+#     print(tukey)
         
     y_new = top[inds_now, 1] + top_sd[inds_now, 1]
     mn = np.nanmin(top[:,2]-top_sd[:,2])

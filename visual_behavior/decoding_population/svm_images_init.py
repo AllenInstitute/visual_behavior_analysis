@@ -32,12 +32,12 @@ from svm_images_main_post import *
     
 #%% Get SVM output for each cell type, and each frames_svm.
 
-svm_blocks = np.nan #-1: divide trials based on engagement #2 # number of trial blocks to divide the session to, and run svm on. # set to np.nan to run svm analysis on the whole session
-use_events = True #False # whether to run the analysis on detected events (inferred spikes) or dff traces.
+svm_blocks = np.nan #np.nan # -1: divide trials based on engagement #2 # number of trial blocks to divide the session to, and run svm on. # set to np.nan to run svm analysis on the whole session
+use_events = False #False # whether to run the analysis on detected events (inferred spikes) or dff traces.
 
-to_decode = 'current' #'next' # 'current' (default): decode current image.    'previous': decode previous image.    'next': decode next image.
-trial_type = 'changes_vs_nochanges' #'changes' #'hits_vs_misses' #'changes_vs_nochanges' #'omissions' # 'omissions', 'images', 'changes' # what trials to use for SVM analysis # the population activity of these trials at time time_win will be used to decode the image identity of flashes that occurred at their time 0 (if to_decode='current') or 750ms before (if to_decode='previous').
-use_balanced_trials = 1 #1 # if 1, use same number of trials for each class; only applicable when we have 2 classes (binary classification).
+to_decode = 'next' #'next' # 'current' (default): decode current image.    'previous': decode previous image.    'next': decode next image.
+trial_type = 'omissions' #'changes' #'hits_vs_misses' #'changes_vs_nochanges' #'omissions' # 'omissions', 'images', 'changes' # what trials to use for SVM analysis # the population activity of these trials at time time_win will be used to decode the image identity of flashes that occurred at their time 0 (if to_decode='current') or 750ms before (if to_decode='previous').
+use_balanced_trials = 0 #1 # if 1, use same number of trials for each class; only applicable when we have 2 classes (binary classification).
 
 if use_events:
     time_win = [0, .4]
@@ -193,6 +193,7 @@ for iblock in br: # iblock=0; iblock=np.nan
         
         this_sess = svm_images_main_post(session_id, data_list, svm_blocks, iblock, dir_svm, frames_svm, time_win, trial_type, to_decode, same_num_neuron_all_planes, cols, analysis_dates, use_events, doPlots=0)
 
+        
         all_sess = all_sess.append(this_sess) 
 
     print(len(all_sess))    
