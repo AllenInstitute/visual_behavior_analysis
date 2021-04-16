@@ -1,7 +1,10 @@
 import os
 import json
-import shutil
+import warnings
 import numpy as np
+import pandas as pd
+from pathlib import Path
+
 from visual_behavior.data_access import loading
 from allensdk.internal.api import PostgresQueryMixin
 from visual_behavior.ophys.io.lims_database import LimsDatabase
@@ -55,9 +58,14 @@ except Exception as e:
 config = configp.ConfigParser()
 
 
+# warning
+gen_depr_str = 'this function is deprecated and will be removed in a future version, ' \
+               + 'please use {}.{} instead'
+
 # CONVENIENCE FUNCTIONS TO GET VARIOUS INFORMATION #
 
 # put functions here such as get_ophys_experiment_id_for_ophys_session_id()
+
 
 class LazyLoadable(object):
     def __init__(self, name, calculate):
@@ -425,22 +433,19 @@ def get_lims_data(lims_id):
     return lims_data
 
 
-def get_timestamps(lims_data, analysis_dir):
-    if '2P6' in analysis_dir:
+def get_timestamps(lims_data):
+    if '2P6' in lims_data.rig.values[0]:
         use_acq_trigger = True
     else:
         use_acq_trigger = False
-    sync_data = get_sync_data(lims_data, analysis_dir, use_acq_trigger)
+    sync_data = get_sync_data(lims_data, use_acq_trigger)
     timestamps = pd.DataFrame(sync_data)
     return timestamps
 
 
-def get_sync_path(lims_data, analysis_dir):
-    #    import shutil
+def get_sync_path(lims_data):
     ophys_session_dir = get_ophys_session_dir(lims_data)
-    # analysis_dir = get_analysis_dir(lims_data)
 
-    # First attempt
     sync_file = [file for file in os.listdir(ophys_session_dir) if 'sync' in file]
     if len(sync_file) > 0:
         sync_file = sync_file[0]
@@ -450,21 +455,12 @@ def get_sync_path(lims_data, analysis_dir):
             json_data = json.load(pointer_json)
             sync_file = json_data['sync_file']
     sync_path = os.path.join(ophys_session_dir, sync_file)
-
-    if sync_file not in os.listdir(analysis_dir):
-        logger.info('moving %s to analysis dir', sync_file)  # flake8: noqa: E999
-        #        print(sync_path, os.path.join(analysis_dir, sync_file))
-        try:
-            shutil.copy2(sync_path, os.path.join(analysis_dir, sync_file))
-        except:  # NOQA E722
-            print('shutil.copy2 gave an error perhaps related to copying stat data... passing!')
-            pass
     return sync_path
 
 
-def get_sync_data(lims_data, analysis_dir, use_acq_trigger):
+def get_sync_data(lims_data, use_acq_trigger):
     logger.info('getting sync data')
-    sync_path = get_sync_path(lims_data, analysis_dir)
+    sync_path = get_sync_path(lims_data)
     sync_dataset = SyncDataset(sync_path)
     # Handle mesoscope missing labels
     try:
@@ -599,6 +595,10 @@ def bsid_to_oeid(behavior_session_id):
     '''
     convert a behavior_session_id to an ophys_experiment_id
     '''
+    warn_str = gen_depr_str.format('from_lims',
+                                   'get_ophys_experiment_ids_for_behavior_session_id')
+    warnings.warn(warn_str)
+
     oeid = db.lims_query(
         '''
         select oe.id
@@ -648,6 +648,10 @@ def get_filepath_from_wkf_info(wkf_info):
     Returns:
         [type]: [description]
     """
+    warn_str = gen_depr_str.format('from_lims_utilities',
+                                   'get_filepath_from_realdict_object')
+    warnings.warn(warn_str)
+
     filepath = wkf_info[0]['?column?']  # idk why it's ?column? but it is :(
     filepath = filepath.replace('/allen', '//allen')  # works with windows and linux filepaths
     return filepath
@@ -663,6 +667,9 @@ def get_wkf_timeseries_ini_filepath(ophys_session_id):
     Returns:
 
     """
+    warn_str = gen_depr_str.format('from_lims',
+                                   'get_timeseries_ini_filepath')
+    warnings.warn(warn_str)
 
     QUERY = '''
     SELECT wkf.storage_directory || wkf.filename
@@ -712,6 +719,10 @@ def get_wkf_dff_h5_filepath(ophys_experiment_id):
         string -- filepath (directory and filename) for the dff.h5 file
                     for the given ophys_experiment_id
     """
+    warn_str = gen_depr_str.format('from_lims',
+                                   'get_dff_traces_filepath')
+    warnings.warn(warn_str)
+
     QUERY = '''
     SELECT storage_directory || filename
     FROM well_known_files
@@ -741,6 +752,10 @@ def get_wkf_roi_trace_h5_filepath(ophys_experiment_id):
         string -- filepath (directory and filename) for the roi_traces.h5 file
                     for the given ophys_experiment_id
     """
+    warn_str = gen_depr_str.format('from_lims',
+                                   'get_roi_traces_filepath')
+    warnings.warn(warn_str)
+
     QUERY = '''
     SELECT storage_directory || filename
     FROM well_known_files
@@ -770,6 +785,10 @@ def get_wkf_neuropil_trace_h5_filepath(ophys_experiment_id):
         string -- filepath (directory and filename) for the neuropil_traces.h5 file
                     for the given ophys_experiment_id
     """
+    warn_str = gen_depr_str.format('from_lims',
+                                   'get_neuropil_traces_filepath')
+    warnings.warn(warn_str)
+
     QUERY = '''
     SELECT storage_directory || filename
     FROM well_known_files
@@ -800,6 +819,10 @@ def get_wkf_extracted_trace_h5_filepath(ophys_experiment_id):
         string -- filepath (directory and filename) for the neuropil_traces.h5 file
                     for the given ophys_experiment_id
     """
+    warn_str = gen_depr_str.format('from_lims',
+                                   'get_extracted_traces_input_filepath')
+    warnings.warn(warn_str)
+
     QUERY = '''
     SELECT storage_directory || filename
     FROM well_known_files
@@ -830,6 +853,11 @@ def get_wkf_demixed_traces_h5_filepath(ophys_experiment_id):
         string -- filepath (directory and filename) for the roi_traces.h5 file
                     for the given ophys_experiment_id
     """
+
+    warn_str = gen_depr_str.format('from_lims',
+                                   'get_demixed_traces_filepath')
+    warnings.warn(warn_str)
+
     QUERY = '''
     SELECT storage_directory || filename
     FROM well_known_files
@@ -859,6 +887,10 @@ def get_wkf_events_h5_filepath(ophys_experiment_id):
         string -- filepath (directory and filename) for the event.h5 file
         for the given ophys_experiment_id
     """
+    warn_str = gen_depr_str.format('from_lims',
+                                   'get_event_trace_filepath')
+    warnings.warn(warn_str)
+
     QUERY = '''
         SELECT storage_directory || filename
         FROM well_known_files
@@ -886,7 +918,9 @@ def get_wkf_motion_corrected_movie_h5_filepath(ophys_experiment_id):
     Returns:
         [type] -- [description]
     """
-
+    warn_str = gen_depr_str.format('from_lims',
+                                   'get_motion_corrected_movie_filepath')
+    warnings.warn(warn_str)
     QUERY = '''
      SELECT storage_directory || filename
      FROM well_known_files
@@ -914,6 +948,10 @@ def get_wkf_rigid_motion_transform_csv_filepath(ophys_experiment_id):
     Returns:
         [type] -- [description]
     """
+    warn_str = gen_depr_str.format('from_lims',
+                                   'load_rigid_motion_transform')
+    warnings.warn(warn_str)
+
     QUERY = '''
      SELECT storage_directory || filename
      FROM well_known_files
@@ -941,6 +979,10 @@ def get_wkf_session_pkl_filepath(ophys_session_id):
     Returns:
         [type] -- [description]
     """
+    warn_str = gen_depr_str.format('from_lims',
+                                   'get_stimulus_pkl_filepath')
+    warnings.warn(warn_str)
+
     QUERY = '''
      SELECT storage_directory || filename
      FROM well_known_files
@@ -969,6 +1011,10 @@ def get_wkf_session_h5_filepath(ophys_session_id):
     Returns:
         [type] -- [description]
     """
+    warn_str = gen_depr_str.format('from_lims',
+                                   'get_session_h5_filepath')
+    warnings.warn(warn_str)
+
     QUERY = '''
      SELECT storage_directory || filename
      FROM well_known_files
@@ -997,6 +1043,10 @@ def get_wkf_behavior_avi_filepath(ophys_session_id):
     Returns:
         [type] -- [description]
     """
+    warn_str = gen_depr_str.format('from_lims',
+                                   'get_behavior_avi_filepath')
+    warnings.warn(warn_str)
+
     QUERY = '''
     SELECT storage_directory || filename
     FROM well_known_files
@@ -1015,6 +1065,10 @@ def get_wkf_behavior_avi_filepath(ophys_session_id):
 
 
 def get_behavior_h5_filepath(ophys_session_id):
+    warn_str = gen_depr_str.format('from_lims',
+                                   'get_behavior_h5_filepath')
+    warnings.warn(warn_str)
+
     avi_filepath = get_wkf_behavior_avi_filepath(ophys_session_id)
     h5_filepath = avi_filepath[:-3] + "h5"
     return h5_filepath
@@ -1031,6 +1085,10 @@ def get_wkf_eye_tracking_avi_filepath(ophys_session_id):
     Returns:
         [type] -- [description]
     """
+    warn_str = gen_depr_str.format('from_lims',
+                                   'get_eye_tracking_avi_filepath')
+    warnings.warn(warn_str)
+
     QUERY = '''
     SELECT storage_directory || filename
     FROM well_known_files
@@ -1065,6 +1123,10 @@ def get_wkf_ellipse_h5_filepath(ophys_session_id):
     Returns:
         [type] -- [description]
     """
+    warn_str = gen_depr_str.format('from_lims',
+                                   'get_ellipse_filepath')
+    warnings.warn(warn_str)
+
     QUERY = '''
     SELECT storage_directory || filename
     FROM well_known_files
@@ -1093,6 +1155,10 @@ def get_wkf_platform_json_filepath(ophys_session_id):
     Returns:
         [type] -- [description]
     """
+    warn_str = gen_depr_str.format('from_lims',
+                                   'get_platform_json_filepath')
+    warnings.warn(warn_str)
+
     QUERY = '''
     SELECT storage_directory || filename
     FROM well_known_files
@@ -1121,6 +1187,10 @@ def get_wkf_screen_mapping_h5_filepath(ophys_session_id):
     Returns:
         [type] -- [description]
     """
+    warn_str = gen_depr_str.format('from_lims',
+                                   'get_screen_mapping_h5_filepath')
+    warnings.warn(warn_str)
+
     QUERY = '''
      SELECT storage_directory || filename
      FROM well_known_files
@@ -1149,6 +1219,10 @@ def get_wkf_deepcut_h5_filepath(ophys_session_id):
     Returns:
         [type] -- [description]
     """
+    warn_str = gen_depr_str.format('from_lims',
+                                   'get_deepcut_h5_filepath')
+    warnings.warn(warn_str)
+
     QUERY = '''
      SELECT storage_directory || filename
      FROM well_known_files
@@ -1216,3 +1290,46 @@ def build_tidy_cell_df(session):
         pandas dataframe
     '''
     return pd.concat([pd.DataFrame(get_cell_timeseries_dict(session, cell_specimen_id)) for cell_specimen_id in session.dff_traces.reset_index()['cell_specimen_id']]).reset_index(drop=True)
+
+
+def correct_filepath(filepath):
+    """using the pathlib python module, takes in a filepath from an
+    arbitrary operating system and returns a filepath that should work
+    for the users operating system
+
+    Parameters
+    ----------
+    filepath : string
+        given filepath
+
+    Returns
+    -------
+    string
+        filepath adjusted for users operating system
+    """
+    filepath = filepath.replace('/allen', '//allen')
+    corrected_path = Path(filepath)
+    return corrected_path
+
+
+def correct_dataframe_filepath(dataframe, column_string):
+    """applies the correct_filepath function to a given dataframe
+    column, replacing the filepath in that column in place
+
+
+    Parameters
+    ----------
+    dataframe : table
+        pandas dataframe with the column
+    column_string : string
+        the name of the column that contains the filepath to be
+        replaced
+
+    Returns
+    -------
+    dataframe
+        returns the input dataframe with the filepath in the given
+        column 'corrected' for the users operating system, in place
+    """
+    dataframe[column_string] = dataframe[column_string].apply(lambda x: correct_filepath(x))
+    return dataframe

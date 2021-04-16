@@ -49,6 +49,41 @@ def add_session_type_exposure_number_to_experiments_table(experiments):
     return experiments
 
 
+def add_engagement_state_to_trials_table(trials, extended_stimulus_presentations):
+    '''
+    adds `engaged` and `engagement_state` fields to the trial table
+    both are pulled from the value of the stimulus table that is closest to the time at the start of each trial
+    '''
+    extended_stimulus_presentations = extended_stimulus_presentations
+
+    # for each trial, find the stimulus index that is closest to the trial start
+    # add to a new column called 'first_stim_presentation_index'
+    for idx, trial in trials.iterrows():
+        start_time = trial['start_time']
+        query_string = 'start_time > @start_time - 1 and start_time < @start_time + 1'
+        first_stim_presentation_index = np.argmin(
+            np.abs(
+                start_time - extended_stimulus_presentations.query(query_string)['start_time']
+            )
+        )
+        trials.at[idx, 'first_stim_presentation_index'] = first_stim_presentation_index
+
+    # define the columns from extended_stimulus_presentations that we want to merge into trials
+    cols_to_merge = [
+        'engaged',
+        'engagement_state'
+    ]
+
+    # merge the desired columns into trials on the stimulus_presentations_id indices
+    trials = trials = trials.merge(
+        extended_stimulus_presentations[cols_to_merge].reset_index(),
+        left_on='first_stim_presentation_index',
+        right_on='stimulus_presentations_id',
+    )
+
+    return trials
+
+
 def get_image_set_exposures_for_behavior_session_id(behavior_session_id, behavior_session_table):
     """
     Gets the number of sessions an image set has been presented in prior to the date of the given behavior_session_id
@@ -56,12 +91,12 @@ def get_image_set_exposures_for_behavior_session_id(behavior_session_id, behavio
     :return:
     """
     behavior_session_table = behavior_session_table[behavior_session_table.session_type.isnull() == False]  # FIX THIS - SHOULD NOT BE ANY NaNs!
-    donor_id = behavior_session_table.loc[behavior_session_id].donor_id
+    mouse_id = behavior_session_table.loc[behavior_session_id].mouse_id
     session_type = behavior_session_table.loc[behavior_session_id].session_type
     image_set = session_type.split('_')[3]
     date = behavior_session_table.loc[behavior_session_id].date_of_acquisition
     # check how many behavior sessions prior to this date had the same image set
-    cdf = behavior_session_table[(behavior_session_table.donor_id == donor_id)].copy()
+    cdf = behavior_session_table[(behavior_session_table.mouse_id == mouse_id)].copy()
     pre_expts = cdf[(cdf.date_of_acquisition < date)]
     image_set_exposures = int(len([session_type for session_type in pre_expts.session_type if 'images_' + image_set in session_type]))
     return image_set_exposures
@@ -92,15 +127,16 @@ def get_omission_exposures_for_behavior_session_id(behavior_session_id, behavior
     :param behavior_session_id:
     :return: The number of behavior sessions where omitted flashes were present, prior to the current session
     """
-
     behavior_session_table = behavior_session_table[behavior_session_table.session_type.isnull() == False]  # FIX THIS - SHOULD NOT BE ANY NaNs!
-    donor_id = behavior_session_table.loc[behavior_session_id].donor_id
+    mouse_id = behavior_session_table.loc[behavior_session_id].mouse_id
     date = behavior_session_table.loc[behavior_session_id].date_of_acquisition
     # check how many behavior sessions prior to this date had the same image set
-    cdf = behavior_session_table[(behavior_session_table.donor_id == donor_id)].copy()
+    cdf = behavior_session_table[(behavior_session_table.mouse_id == mouse_id)].copy()
     pre_expts = cdf[(cdf.date_of_acquisition < date)]
     # check how many behavior sessions prior to this date had omissions
     import datetime
+    # THIS IS A HACK, NEED TO REPLACE THIS WITH REFERENCE TO MTRAIN REGIMENS COMMIT HASH FOR WHEN THE CHANGE TO
+    # REMOVE OMISSIONS FROM HABITUATION SESSIONS OCCURED
     date_of_change = 'Feb 15 2019 12:00AM'
     date_of_change = datetime.datetime.strptime(date_of_change, '%b %d %Y %I:%M%p')
     if date < date_of_change:
