@@ -21,7 +21,7 @@ trial_type = 'omissions' #'hits_vs_misses' #'changes_vs_nochanges' # 'images_omi
 #### NOTE: svm codes will result in decoding 9 classes (8 images + omissions) when to_decode='previous' and trial_type='images'. (it wont happen when to_decode='current' because above we only include images for trial_type='images'; it also wont happen when trial_type='omissions' or 'changes', because changes and omissions are not preceded by omissions (although rarely we do see double omissions))
 # if you want to also decode omissions (in addition to the 8 images) when to_decode='current', you should set trial_type='images_omissions'; HOWEVER, I dont think it's a good idea to mix image and omission aligned traces because omission aligned traces may have prediction/error signal, so it wont be easy to interpret the results bc we wont know if the decoding reflects image-evoked or image-prediciton/error related signals.
 
-use_events = False #True # False # whether to run the analysis on detected events (inferred spikes) or dff traces.
+use_events = 0 #0 #1 # whether to run the analysis on detected events (inferred spikes) or dff traces.
 svm_blocks = -100 #-1 #-100 # 2 # -101: run the analysis only on engaged trials # -1: divide trials based on engagement # 2 # number of trial blocks to divide the session to, and run svm on. # set to -100 to run svm analysis on the whole session
 use_balanced_trials = 0 #1 # if 1, use same number of trials for each class; only applicable when we have 2 classes (binary classification).
 engagement_pupil_running = 1 # np.nan or 0,1,2 for engagement, pupil, running: which metric to use to define engagement? only effective if svm_blocks=-1
@@ -193,7 +193,7 @@ for isess in range(len(list_all_sessions_valid)): # [0,1]: # isess = -35 # sessi
     '''
 
     python_arg1 = '%s ' %isess
-    python_arg2 = '%s ' %use_events
+    python_arg2 = '%s ' %use_events # cast it as boolean!!!
     python_arg3 = '%s ' %to_decode
     python_arg4 = '%s ' %trial_type
     python_arg5 = '%s ' %svm_blocks    
