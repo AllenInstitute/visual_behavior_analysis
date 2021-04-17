@@ -1026,7 +1026,7 @@ import visual_behavior.data_access.loading as loading
 #%% Get the input arguments passed here from pbstools (in svm_init_images script)
 
 isess = int(sys.argv[1])
-use_events = bool(sys.argv[2])
+use_events = sys.argv[2] #bool(sys.argv[2]) # somehow on the cluster bool(False) = True!!! have no idea why!!!
 to_decode = str(sys.argv[3])
 trial_type = str(sys.argv[4])
 svm_blocks = int(sys.argv[5]) 
