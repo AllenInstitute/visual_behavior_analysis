@@ -27,7 +27,7 @@ def transpose_tensor(xr_sel):
     return X
 
 
-def create_container_tensor(oeids, use_events=True, filter_events=True):
+def create_container_tensor(oeids, use_events=True, filter_events=True, time_window=None):
     '''
     Creates xr tensor from datasets in one container.
     Tensor is concatinated across sessions
@@ -39,7 +39,7 @@ def create_container_tensor(oeids, use_events=True, filter_events=True):
 
     for i, oeid in enumerate(oeids):
         dataset = loading.get_ophys_dataset(oeid)
-        response_xr = rp.get_stimulus_response_xr(dataset, use_events=use_events, filter_events=filter_events)
+        response_xr = rp.get_stimulus_response_xr(dataset, use_events=use_events, filter_events=filter_events, time_window=time_window)
         response_xr.coords['eventlocked_timestamps'] = response_xr.coords['eventlocked_timestamps'].round(3)
 
         index = response_xr['trace_id'].isin(same_ids).values

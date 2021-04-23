@@ -221,8 +221,10 @@ class ResponseAnalysis(object):
             if self.use_extended_stimulus_presentations:
                 # merge in the extended stimulus presentations df on the change_time/start_time columns
                 stimulus_presentations = self.dataset.extended_stimulus_presentations.copy()
+                stimulus_presentations['trials_id'] = None
+                stimulus_presentations.at[stimulus_presentations[stimulus_presentations.is_change].index, 'trials_id'] = trials[trials.stimulus_change].index.values
                 columns_to_keep = [
-                    'start_time',
+                    'trials_id',
                     'bias',
                     'omissions1',
                     'task0',
@@ -231,16 +233,16 @@ class ResponseAnalysis(object):
                     'licked',
                     'lick_on_next_flash',
                     'lick_on_previous_flash',
-                    'mean_running_speed'
+                    'mean_running_speed',
+                    'mean_pupil_area'
                 ]
                 try:
                     df = df.merge(
                         stimulus_presentations[columns_to_keep],
-                        left_on='change_time',
-                        right_on='start_time',
+                        left_on='trials_id',
+                        right_on='trials_id',
                         how='left',
-                        suffixes=('', '_duplicate')
-                    ).drop(columns=['start_time_duplicate'])
+                        suffixes=('', '_duplicate'))
                 except KeyError:  # if it cant merge them in, make empty columns
                     for column in columns_to_keep:
                         df[column] = None
