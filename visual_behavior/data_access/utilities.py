@@ -3,6 +3,7 @@ import json
 import warnings
 import numpy as np
 import pandas as pd
+from pathlib import Path
 
 from visual_behavior.data_access import loading
 from visual_behavior.ophys.io.lims_database import LimsDatabase
@@ -1250,3 +1251,46 @@ def build_tidy_cell_df(session):
         pandas dataframe
     '''
     return pd.concat([pd.DataFrame(get_cell_timeseries_dict(session, cell_specimen_id)) for cell_specimen_id in session.dff_traces.reset_index()['cell_specimen_id']]).reset_index(drop=True)
+
+
+def correct_filepath(filepath):
+    """using the pathlib python module, takes in a filepath from an
+    arbitrary operating system and returns a filepath that should work
+    for the users operating system
+
+    Parameters
+    ----------
+    filepath : string
+        given filepath
+
+    Returns
+    -------
+    string
+        filepath adjusted for users operating system
+    """
+    filepath = filepath.replace('/allen', '//allen')
+    corrected_path = Path(filepath)
+    return corrected_path
+
+
+def correct_dataframe_filepath(dataframe, column_string):
+    """applies the correct_filepath function to a given dataframe
+    column, replacing the filepath in that column in place
+
+
+    Parameters
+    ----------
+    dataframe : table
+        pandas dataframe with the column
+    column_string : string
+        the name of the column that contains the filepath to be
+        replaced
+
+    Returns
+    -------
+    dataframe
+        returns the input dataframe with the filepath in the given
+        column 'corrected' for the users operating system, in place
+    """
+    dataframe[column_string] = dataframe[column_string].apply(lambda x: correct_filepath(x))
+    return dataframe

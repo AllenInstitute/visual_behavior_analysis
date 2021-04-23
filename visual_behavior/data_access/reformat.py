@@ -61,11 +61,7 @@ def add_engagement_state_to_trials_table(trials, extended_stimulus_presentations
     for idx, trial in trials.iterrows():
         start_time = trial['start_time']
         query_string = 'start_time > @start_time - 1 and start_time < @start_time + 1'
-        first_stim_presentation_index = np.argmin(
-            np.abs(
-                start_time - extended_stimulus_presentations.query(query_string)['start_time']
-            )
-        )
+        first_stim_presentation_index = (np.abs(start_time - extended_stimulus_presentations.query(query_string)['start_time'])).idxmin()
         trials.at[idx, 'first_stim_presentation_index'] = first_stim_presentation_index
 
     # define the columns from extended_stimulus_presentations that we want to merge into trials
@@ -75,7 +71,7 @@ def add_engagement_state_to_trials_table(trials, extended_stimulus_presentations
     ]
 
     # merge the desired columns into trials on the stimulus_presentations_id indices
-    trials = trials = trials.merge(
+    trials = trials.merge(
         extended_stimulus_presentations[cols_to_merge].reset_index(),
         left_on='first_stim_presentation_index',
         right_on='stimulus_presentations_id',

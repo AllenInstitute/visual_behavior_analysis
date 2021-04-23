@@ -6,7 +6,8 @@ import pandas as pd
 
 
 from allensdk.internal.api import PostgresQueryMixin
-from visual_behavior.data_access import from_lims_utilities as utils
+from visual_behavior.data_access import utilities as utils
+from visual_behavior.data_access import from_lims_utilities as lims_utils
 
 
 # Accessing Lims Database
@@ -25,12 +26,132 @@ try:
         port=lims_port)
 
 except Exception as e:
-    warn_string = 'failed to set up LIMS/mtrain credentials\n{}\n\ninternal AIBS users should set up \
-                   environment variables appropriately\nfunctions requiring database access will fail'.format(e)
+    warn_string = 'failed to set up LIMS/mtrain credentials\n{}\n\n \
+        internal AIBS users should set up environment variables \
+        appropriately\nfunctions requiring database access will fail'.format(e)
     warnings.warn(warn_string)
 
 # building querys
 mixin = lims_engine
+
+
+### QUERIES USED FOR MULTIPLE FUNCTIONS ###      # noqa: E266
+def general_info_for_id_query():
+    """the base query used for all the 'get_general_info_for...
+    id type' functions. can be used with the following ID types:
+    ophys_experiment_id
+    ophys_session_id
+    behavior_session_id
+    container_id
+    supercontainer_id
+
+    AND to be used in combination with a query
+    selection statment, that specifies the ID type. Example:
+    query_selection = '''
+    WHERE
+    oe.id ={}
+    '''.format(ophys_experiment_id)
+
+    Returns
+    -------
+    string
+        a string that can be used in a lims query.
+    """
+
+    general_info_for_id_query_string = '''
+    SELECT
+    oe.id AS ophys_experiment_id,
+    oe.ophys_session_id,
+    bs.id AS behavior_session_id,
+    os.foraging_id,
+    vbec.id AS ophys_container_id,
+    os.visual_behavior_supercontainer_id AS supercontainer_id,
+
+    oe.workflow_state AS experiment_workflow_state,
+    os.workflow_state AS session_workflow_state,
+    vbec.workflow_state AS container_workflow_state,
+
+    os.specimen_id,
+    specimens.donor_id,
+    specimens.name AS specimen_name,
+
+    os.date_of_acquisition,
+    os.stimulus_name AS session_type,
+    structures.acronym AS targeted_structure,
+    imaging_depths.depth,
+    equipment.name AS equipment_name,
+    projects.code AS project,
+
+    oe.storage_directory AS experiment_storage_directory,
+    os.storage_directory AS session_storage_directory,
+    vbec.storage_directory AS container_storage_directory
+
+    FROM
+    ophys_experiments oe
+
+    JOIN ophys_sessions os
+    ON os.id = oe.ophys_session_id
+
+    JOIN behavior_sessions bs
+    ON bs.foraging_id = os.foraging_id
+
+    JOIN ophys_experiments_visual_behavior_experiment_containers oevbec
+    ON oe.id = oevbec.ophys_experiment_id
+
+    JOIN visual_behavior_experiment_containers vbec
+    ON vbec.id = oevbec.visual_behavior_experiment_container_id
+
+    JOIN projects ON projects.id = os.project_id
+    JOIN specimens ON specimens.id = os.specimen_id
+    JOIN structures ON structures.id = oe.targeted_structure_id
+    JOIN imaging_depths ON imaging_depths.id = oe.imaging_depth_id
+    JOIN equipment ON equipment.id = os.equipment_id
+    '''
+    return general_info_for_id_query_string
+
+
+def all_ids_for_id_query():
+    """the base query used for all the 'get_all_ids_for...
+    id type' functions. can be used with the following ID types:
+    ophys_experiment_id
+    ophys_session_id
+    behavior_session_id
+    ophys_container_id
+    supercontainer_id
+
+    AND to be used in combination with a query
+    selection statment, that specifies the ID type. Example:
+    query_selection = '''
+    WHERE
+    oe.id ={}
+    '''.format(ophys_experiment_id)
+
+    Returns
+    -------
+    string
+        string that can be used for lims queries
+    """
+    all_ids_query_string = '''
+    SELECT
+    oe.id AS ophys_experiment_id,
+    oe.ophys_session_id,
+    bs.id AS behavior_session_id,
+    oevbec.visual_behavior_experiment_container_id AS ophys_container_id,
+    os.visual_behavior_supercontainer_id AS super_container_id
+
+    FROM
+    ophys_experiments oe
+
+    JOIN ophys_sessions os
+    ON os.id = oe.ophys_session_id
+
+    JOIN behavior_sessions bs
+    ON bs.foraging_id = os.foraging_id
+
+    JOIN ophys_experiments_visual_behavior_experiment_containers oevbec
+    ON oe.id = oevbec.ophys_experiment_id
+    '''
+    return all_ids_query_string
 
 ### ID TYPES ###      # noqa: E266
 
@@ -180,75 +301,86 @@ def get_super_container_id_for_ophys_experiment_id(ophys_experiment_id):
 
 
 def get_all_ids_for_ophys_experiment_id(ophys_experiment_id):
+    """queries LIMS and gets all of the ids for a given ophys
+    experiment id
+
+    Parameters
+    ----------
+    ophys_experiment_id : int
+        unique identifier for an ophys experiment
+        (single FOV optical physiology session)
+
+    Returns
+    -------
+    dataframe/table
+        table with the following columns:
+            ophys_experiment_id,
+            ophys_session_id,
+            behavior_session_id,
+            ophys_container_id,
+            supercontainer_id
+
+    """
     ophys_experiment_id = int(ophys_experiment_id)
-    query = '''
-    SELECT
-    experiments.id as ophys_experiment_id,
-    experiments.ophys_session_id,
-    behavior.id as behavior_session_id,
-    container.visual_behavior_experiment_container_id as ophys_container_id,
-    sessions.visual_behavior_supercontainer_id as super_container_id
 
-    FROM
-    ophys_experiments experiments
+    all_ids_query = all_ids_for_id_query()
+    query_selection = '''
+    WHERE oe.id = {} '''.format(ophys_experiment_id)
+    query = all_ids_query + query_selection
 
-    JOIN behavior_sessions behavior on behavior.ophys_session_id = experiments.ophys_session_id
-    JOIN ophys_experiments_visual_behavior_experiment_containers container on container.ophys_experiment_id = experiments.id
-    JOIN ophys_sessions sessions on sessions.id = experiments.ophys_session_id
-
-    WHERE
-    experiments.id = {}
-    '''.format(ophys_experiment_id)
     all_ids = mixin.select(query)
     return all_ids
 
 
 def get_general_info_for_ophys_experiment_id(ophys_experiment_id):
+    """queries lims to using the general_info_for_id_query() and
+    returns general information specific to a given ophys_experiment_id
+
+    Parameters
+    ----------
+    ophys_experiment_id : int
+        unique identifier for an ophys experiment (single FOV)
+
+    Returns
+    -------
+    dataframe
+        dataframe with the following columns:
+            ophys_experiment_id
+            ophys_session_id
+            behavior_session_id
+            foraging_id
+            ophys_container_id
+            supercontainer_id
+            experiment_workflow_state
+            session_workflow_state
+            container_workflow_state
+            specimen_id
+            donor_id
+            specimen_name
+            date_of_acquisition
+            session_type
+            targeted_structure
+            depth
+            equipment_name
+            project
+            experiment_storage_directory
+            session_storage_directory
+
+    """
     ophys_experiment_id = int(ophys_experiment_id)
-    query = '''
-    SELECT
-    oe.id AS ophys_experiment_id,
-    oe.ophys_session_id,
-    bs.id AS behavior_session_id,
-    os.foraging_id,
-    containers.id AS ophys_container_id,
-    os.visual_behavior_supercontainer_id AS supercontainer_id,
 
-    oe.workflow_state AS experiment_workflow_state,
-    os.workflow_state AS session_workflow_state,
-    containers.workflow_state AS container_workflow_state,
+    general_info_query = general_info_for_id_query()
+    query_selection = '''
+    WHERE oe.id ={} '''.format(ophys_experiment_id)
+    query = general_info_query + query_selection
 
-    os.specimen_id,
-    specimens.donor_id,
-    specimens.name AS specimen_name,
-
-    os.date_of_acquisition,
-    os.stimulus_name AS session_type,
-    structures.acronym AS targeted_structure,
-    imaging_depths.depth,
-    equipment.name AS rig
-
-    FROM
-    ophys_experiments oe
-
-    JOIN ophys_sessions os
-    ON os.id = oe.ophys_session_id
-    JOIN behavior_sessions bs
-    ON bs.foraging_id = os.foraging_id
-    JOIN ophys_experiments_visual_behavior_experiment_containers oevbec
-    ON oe.id = oevbec.ophys_experiment_id
-    JOIN visual_behavior_experiment_containers containers
-    ON containers.id = oevbec.visual_behavior_experiment_container_id
-    JOIN specimens ON specimens.id = os.specimen_id
-    JOIN structures ON structures.id = oe.targeted_structure_id
-    JOIN imaging_depths ON imaging_depths.id = oe.imaging_depth_id
-    JOIN equipment ON equipment.id = os.equipment_id
-
-    WHERE
-    oe.id ={}
-    '''.format(ophys_experiment_id)
     general_info = mixin.select(query)
+
+    # ensure operating system compatible filepaths
+    general_info = lims_utils.correct_general_info_filepaths(general_info)
+
     return general_info
+
 
 # for ophys_session_id
 
@@ -326,80 +458,59 @@ def get_super_container_id_for_ophys_session_id(ophys_session_id):
 
 
 def get_all_ids_for_ophys_session_id(ophys_session_id):
+    """
+
+    Parameters
+    ----------
+    ophys_session_id : int
+        unique identifier for an ophys session
+
+    Returns
+    -------
+    dataframe/table
+        table with the following columns:
+            ophys_experiment_id,
+            ophys_session_id,
+            behavior_session_id,
+            ophys_container_id,
+            supercontainer_id
+    """
     ophys_session_id = int(ophys_session_id)
-    query = '''
-    SELECT
-    experiments.id as ophys_experiment_id,
-    experiments.ophys_session_id,
-    behavior.id as behavior_session_id,
-    container.visual_behavior_experiment_container_id as ophys_container_id,
-    sessions.visual_behavior_supercontainer_id as super_container_id
 
-    FROM
-    ophys_experiments experiments
+    all_ids_query = all_ids_for_id_query()
+    query_selection = '''
+    WHERE oe.ophys_session_id ={} '''.format(ophys_session_id)
+    query = all_ids_query + query_selection
 
-    JOIN behavior_sessions behavior
-    ON behavior.ophys_session_id = experiments.ophys_session_id
-    JOIN ophys_experiments_visual_behavior_experiment_containers container
-    ON container.ophys_experiment_id = experiments.id
-    JOIN ophys_sessions sessions on sessions.id = experiments.ophys_session_id
-
-    WHERE
-    experiments.ophys_session_id = {}
-    '''.format(ophys_session_id)
     all_ids = mixin.select(query)
     return all_ids
 
 
 def get_general_info_for_ophys_session_id(ophys_session_id):
+    """[summary]
+
+    Parameters
+    ----------
+    ophys_session_id : [type]
+        [description]
+
+    Returns
+    -------
+    [type]
+        [description]
+    """
     ophys_session_id = int(ophys_session_id)
-    query = '''
-    SELECT
-    oe.id AS ophys_experiment_id,
-    oe.ophys_session_id,
-    bs.id AS behavior_session_id,
-    os.foraging_id,
-    containers.id AS ophys_container_id,
-    os.visual_behavior_supercontainer_id AS supercontainer_id,
 
-    oe.workflow_state AS experiment_workflow_state,
-    os.workflow_state AS session_workflow_state,
-    containers.workflow_state AS container_workflow_state,
+    general_info_query = general_info_for_id_query()
+    query_selection = '''
+    WHERE os.id ={} '''.format(ophys_session_id)
+    query = general_info_query + query_selection
 
-    os.specimen_id,
-    specimens.donor_id,
-    specimens.name AS specimen_name,
-
-    os.date_of_acquisition,
-    os.stimulus_name AS session_type,
-    structures.acronym AS targeted_structure,
-    imaging_depths.depth,
-    equipment.name AS rig
-
-    FROM
-    ophys_experiments oe
-
-    JOIN ophys_sessions os
-    ON os.id = oe.ophys_session_id
-
-    JOIN behavior_sessions bs
-    ON bs.foraging_id = os.foraging_id
-
-    JOIN ophys_experiments_visual_behavior_experiment_containers oevbec
-    ON oe.id = oevbec.ophys_experiment_id
-
-    JOIN visual_behavior_experiment_containers containers
-    ON containers.id = oevbec.visual_behavior_experiment_container_id
-
-    JOIN specimens ON specimens.id = os.specimen_id
-    JOIN structures ON structures.id = oe.targeted_structure_id
-    JOIN imaging_depths ON imaging_depths.id = oe.imaging_depth_id
-    JOIN equipment ON equipment.id = os.equipment_id
-
-    WHERE
-    os.id = {}
-    '''.format(ophys_session_id)
     general_info = mixin.select(query)
+
+    # ensure operating system compatible filepaths
+    general_info = lims_utils.correct_general_info_filepaths(general_info)
+
     return general_info
 
 
@@ -498,83 +609,82 @@ def get_super_container_id_for_behavior_session_id(behavior_session_id):
 
 
 def get_all_ids_for_behavior_session_id(behavior_session_id):
+    """queries LIMS and gets all of the ids for a given behavior
+    session id
+
+    Parameters
+    ----------
+    behavior_session_id : int
+        unique identifier for a behavior session
+
+    Returns
+    -------
+    dataframe/table
+        table with the following columns:
+            ophys_experiment_id,
+            ophys_session_id,
+            behavior_session_id,
+            ophys_container_id,
+            supercontainer_id
+    """
     behavior_session_id = int(behavior_session_id)
-    query = '''
-    SELECT
-    experiments.id AS ophys_experiment_id,
-    experiments.ophys_session_id,
-    behavior.id AS behavior_session_id,
-    container.visual_behavior_experiment_container_id AS ophys_container_id,
-    sessions.visual_behavior_supercontainer_id AS super_container_id
 
-    FROM
-    ophys_experiments experiments
+    all_ids_query = all_ids_for_id_query()
+    query_selection = '''
+    WHERE bs.id ={} '''.format(behavior_session_id)
+    query = all_ids_query + query_selection
 
-    JOIN behavior_sessions behavior
-    ON behavior.ophys_session_id = experiments.ophys_session_id
-
-    JOIN ophys_experiments_visual_behavior_experiment_containers container
-    ON container.ophys_experiment_id = experiments.id
-
-    JOIN ophys_sessions sessions on sessions.id = experiments.ophys_session_id
-
-    WHERE
-    behavior.id = {}
-    '''.format(behavior_session_id)
     all_ids = mixin.select(query)
     return all_ids
 
 
 def get_general_info_for_behavior_session_id(behavior_session_id):
+    """[summary]
+
+    Parameters
+    ----------
+    behavior_session_id : [type]
+        [description]
+
+    Returns
+    -------
+    dataframe
+        dataframe with the following columns:
+            ophys_experiment_id
+            ophys_session_id
+            behavior_session_id
+            foraging_id
+            ophys_container_id
+            supercontainer_id
+            experiment_workflow_state
+            session_workflow_state
+            container_workflow_state
+            specimen_id
+            donor_id
+            specimen_name
+            date_of_acquisition
+            session_type
+            targeted_structure
+            depth
+            equipment_name
+            project
+            experiment_storage_directory
+            session_storage_directory
+    """
     behavior_session_id = int(behavior_session_id)
-    query = '''
-    SELECT
-    oe.id AS ophys_experiment_id,
-    oe.ophys_session_id,
-    bs.id AS behavior_session_id,
-    os.foraging_id,
-    containers.id AS ophys_container_id,
-    os.visual_behavior_supercontainer_id AS supercontainer_id,
 
-    oe.workflow_state AS experiment_workflow_state,
-    os.workflow_state AS session_workflow_state,
-    containers.workflow_state AS container_workflow_state,
+    general_info_query = general_info_for_id_query()
+    query_selection = '''
+    WHERE bs.id ={} '''.format(behavior_session_id)
+    query = general_info_query + query_selection
 
-    os.specimen_id,
-    specimens.donor_id,
-    specimens.name AS specimen_name,
-
-    os.date_of_acquisition,
-    os.stimulus_name AS session_type,
-    structures.acronym AS targeted_structure,
-    imaging_depths.depth,
-    equipment.name AS rig
-
-    FROM
-    ophys_experiments oe
-
-    JOIN ophys_sessions os
-    ON os.id = oe.ophys_session_id
-
-    JOIN behavior_sessions bs
-    ON bs.foraging_id = os.foraging_id
-
-    JOIN ophys_experiments_visual_behavior_experiment_containers oevbec
-    ON oe.id = oevbec.ophys_experiment_id
-
-    JOIN visual_behavior_experiment_containers containers
-    ON containers.id = oevbec.visual_behavior_experiment_container_id
-
-    JOIN specimens ON specimens.id = os.specimen_id
-    JOIN structures ON structures.id = oe.targeted_structure_id
-    JOIN imaging_depths ON imaging_depths.id = oe.imaging_depth_id
-    JOIN equipment ON equipment.id = os.equipment_id
-
-    WHERE
-    bs.id = {}
-    '''.format(behavior_session_id)
     general_info = mixin.select(query)
+
+    # ensure operating system compatible filepaths
+    general_info = lims_utils.correct_general_info_filepaths(general_info)
+
     return general_info
+
 
 # for ophys_container_id
 
@@ -602,12 +712,13 @@ def get_ophys_session_ids_for_ophys_container_id(ophys_container_id):
     oe.ophys_session_id
 
     FROM
-    ophys_experiments_visual_behavior_experiment_containers container
+    ophys_experiments_visual_behavior_experiment_containers oevbec
 
-    JOIN ophys_experiments oe on oe.id = container.ophys_experiment_id
+    JOIN ophys_experiments oe
+    ON oe.id = oevbec.ophys_experiment_id
 
     WHERE
-    container.visual_behavior_experiment_container_id = {}
+    oevbec.visual_behavior_experiment_container_id = {}
     '''.format(ophys_container_id)
     ophys_session_ids = mixin.select(query)
     return ophys_session_ids
@@ -617,22 +728,23 @@ def get_behavior_session_ids_for_ophys_container_id(ophys_container_id):
     ophys_container_id = int(ophys_container_id)
     query = '''
     SELECT
-    behavior.id
+    bs.id
     AS behavior_session_id
 
     FROM
-    ophys_experiments experiments
+    ophys_experiments oe
 
-    JOIN behavior_sessions behavior
-    ON behavior.ophys_session_id = experiments.ophys_session_id
+    JOIN behavior_sessions bs
+    ON bs.ophys_session_id = oe.ophys_session_id
 
-    JOIN ophys_experiments_visual_behavior_experiment_containers container
-    ON container.ophys_experiment_id = experiments.id
+    JOIN ophys_experiments_visual_behavior_experiment_containers oevbec
+    ON oevbec.ophys_experiment_id = oe.id
 
-    JOIN ophys_sessions sessions on sessions.id = experiments.ophys_session_id
+    JOIN ophys_sessions os
+    ON os.id = oe.ophys_session_id
 
     WHERE
-    container.visual_behavior_experiment_container_id = {}
+    oevbec.visual_behavior_experiment_container_id = {}
     '''.format(ophys_container_id)
     behavior_session_id = mixin.select(query)
     return behavior_session_id
@@ -642,21 +754,21 @@ def get_supercontainer_id_for_ophys_container_id(ophys_container_id):
     ophys_container_id = int(ophys_container_id)
     query = '''
     SELECT
-    sessions.visual_behavior_supercontainer_id as super_container_id
+    os.visual_behavior_supercontainer_id AS super_container_id
 
     FROM
-    ophys_experiments experiments
+    ophys_experiments oe
 
-    JOIN behavior_sessions behavior
-    ON behavior.ophys_session_id = experiments.ophys_session_id
+    JOIN behavior_sessions bs
+    ON bs.ophys_session_id = oe.ophys_session_id
 
-    JOIN ophys_experiments_visual_behavior_experiment_containers container
-    ON container.ophys_experiment_id = experiments.id
+    JOIN ophys_experiments_visual_behavior_experiment_containers oevbec
+    ON oevbec.ophys_experiment_id = oe.id
 
-    JOIN ophys_sessions sessions on sessions.id = experiments.ophys_session_id
+    JOIN ophys_sessions os on os.id = oe.ophys_session_id
 
     WHERE
-    container.visual_behavior_experiment_container_id = {}
+    oevbec.visual_behavior_experiment_container_id = {}
     '''.format(ophys_container_id)
     super_container_id = mixin.select(query)
     super_container_id = int(super_container_id['super_container_id'][0])
@@ -665,78 +777,32 @@ def get_supercontainer_id_for_ophys_container_id(ophys_container_id):
 
 def get_all_ids_for_ophys_container_id(ophys_container_id):
     ophys_container_id = int(ophys_container_id)
-    query = '''
-    SELECT
-    experiments.id AS ophys_experiment_id,
-    experiments.ophys_session_id,
-    behavior.id AS behavior_session_id,
-    container.visual_behavior_experiment_container_id AS ophys_container_id,
-    sessions.visual_behavior_supercontainer_id AS super_container_id
 
-    FROM
-    ophys_experiments experiments
-
-    JOIN behavior_sessions behavior
-    ON behavior.ophys_session_id = experiments.ophys_session_id
-
-    JOIN ophys_experiments_visual_behavior_experiment_containers container
-    ON container.ophys_experiment_id = experiments.id
-
-    JOIN ophys_sessions sessions ON sessions.id = experiments.ophys_session_id
-
+    all_ids_query = all_ids_for_id_query()
+    query_selection = '''
     WHERE
-    container.visual_behavior_experiment_container_id = {}
+    oevbec.visual_behavior_experiment_container_id = {}
     '''.format(ophys_container_id)
+    query = all_ids_query + query_selection
+
     all_ids = mixin.select(query)
     return all_ids
 
 
 def get_general_info_for_ophys_container_id(ophys_container_id):
     ophys_container_id = int(ophys_container_id)
-    query = '''
-    SELECT
-    oe.id AS ophys_experiment_id,
-    oe.ophys_session_id,
-    bs.id AS behavior_session_id,
-    os.foraging_id,
-    containers.id AS ophys_container_id,
-    os.visual_behavior_supercontainer_id AS supercontainer_id,
 
-    oe.workflow_state AS experiment_workflow_state,
-    os.workflow_state AS session_workflow_state,
-    containers.workflow_state AS container_workflow_state,
+    general_info_query = general_info_for_id_query()
+    query_selection = '''
+    WHERE vbec.id ={} '''.format(ophys_container_id)
+    query = general_info_query + query_selection
 
-    os.specimen_id,
-    specimens.donor_id,
-    specimens.name AS specimen_name,
-
-    os.date_of_acquisition,
-    os.stimulus_name AS session_type,
-    structures.acronym AS targeted_structure,
-    imaging_depths.depth,
-    equipment.name AS rig
-
-    FROM
-    ophys_experiments oe
-
-    JOIN ophys_sessions os
-    ON os.id = oe.ophys_session_id
-    JOIN behavior_sessions bs
-    ON bs.foraging_id = os.foraging_id
-    JOIN ophys_experiments_visual_behavior_experiment_containers oevbec
-    ON oe.id = oevbec.ophys_experiment_id
-    JOIN visual_behavior_experiment_containers containers
-    ON containers.id = oevbec.visual_behavior_experiment_container_id
-    JOIN specimens ON specimens.id = os.specimen_id
-    JOIN structures ON structures.id = oe.targeted_structure_id
-    JOIN imaging_depths ON imaging_depths.id = oe.imaging_depth_id
-    JOIN equipment ON equipment.id = os.equipment_id
-
-    WHERE
-    containers.id = {}
-    '''.format(ophys_container_id)
     general_info = mixin.select(query)
+
+    # ensure operating system compatible filepaths
+    general_info = lims_utils.correct_general_info_filepaths(general_info)
     return general_info
+
 
 # for supercontainer_id
 
@@ -745,15 +811,16 @@ def get_ophys_experiment_ids_for_supercontainer_id(supercontainer_id):
     supercontainer_id = int(supercontainer_id)
     query = '''
     SELECT
-    experiments.id AS ophys_experiment_id
+    oe.id AS ophys_experiment_id
 
     FROM
-    ophys_experiments experiments
+    ophys_experiments oe
 
-    JOIN ophys_sessions sessions ON sessions.id = experiments.ophys_session_id
+    JOIN ophys_sessions os
+    ON os.id = oe.ophys_session_id
 
     WHERE
-    sessions.visual_behavior_supercontainer_id = {}
+    os.visual_behavior_supercontainer_id = {}
     '''.format(supercontainer_id)
     ophys_experiment_ids = mixin.select(query)
     return ophys_experiment_ids
@@ -779,16 +846,16 @@ def get_behavior_session_id_for_supercontainer_id(supercontainer_id):
     supercontainer_id = int(supercontainer_id)
     query = '''
     SELECT
-    behavior.id AS behavior_session_id
+    bs.id AS behavior_session_id
 
     FROM
-    ophys_sessions sessions
+    ophys_sessions os
 
-    JOIN behavior_sessions behavior
-    ON behavior.ophys_session_id = sessions.id
+    JOIN behavior_sessions bs
+    ON bs.ophys_session_id = os.id
 
     WHERE
-    sessions.visual_behavior_supercontainer_id = {}
+    os.visual_behavior_supercontainer_id = {}
     '''.format(supercontainer_id)
     behavior_session_ids = mixin.select(query)
     return behavior_session_ids
@@ -798,101 +865,108 @@ def get_ophys_container_ids_for_supercontainer_id(supercontainer_id):
     supercontainer_id = int(supercontainer_id)
     query = '''
     SELECT
-    container.visual_behavior_experiment_container_id
+    oevbec.visual_behavior_experiment_container_id
     AS ophys_container_id
 
     FROM
-    ophys_experiments experiments
+    ophys_experiments oe
 
-    JOIN ophys_experiments_visual_behavior_experiment_containers container
-    ON container.ophys_experiment_id = experiments.id
+    JOIN ophys_experiments_visual_behavior_experiment_containers oevbec
+    ON oevbec.ophys_experiment_id = oe.id
 
-    JOIN ophys_sessions sessions ON sessions.id = experiments.ophys_session_id
+    JOIN ophys_sessions os
+    ON os.id = oe.ophys_session_id
 
     WHERE
-    sessions.visual_behavior_supercontainer_id = {}
+    os.visual_behavior_supercontainer_id = {}
     '''.format(supercontainer_id)
     ophys_container_ids = mixin.select(query)
     return ophys_container_ids
 
 
 def get_all_ids_for_supercontainer_id(supercontainer_id):
+    """queries LIMS and gets all of the ids for a given
+    supercontainer id
+
+    Parameters
+    ----------
+    supercontainer_id : [type]
+        [description]
+
+    Returns
+    -------
+    dataframe/table
+        table with the following columns:
+            ophys_experiment_id,
+            ophys_session_id,
+            behavior_session_id,
+            ophys_container_id,
+            supercontainer_id
+    """
     supercontainer_id = int(supercontainer_id)
-    query = '''
-    SELECT
-    experiments.id as ophys_experiment_id,
-    experiments.ophys_session_id,
-    behavior.id as behavior_session_id,
-    container.visual_behavior_experiment_container_id as ophys_container_id,
-    sessions.visual_behavior_supercontainer_id as super_container_id
 
-    FROM
-    ophys_experiments experiments
-
-    JOIN behavior_sessions behavior
-    ON behavior.ophys_session_id = experiments.ophys_session_id
-
-    JOIN ophys_experiments_visual_behavior_experiment_containers container
-    ON container.ophys_experiment_id = experiments.id
-
-    JOIN ophys_sessions sessions on sessions.id = experiments.ophys_session_id
-
+    all_ids_query = all_ids_for_id_query()
+    query_selection = '''
     WHERE
-    sessions.visual_behavior_supercontainer_id = {}
+    os.visual_behavior_supercontainer_id = {}
     '''.format(supercontainer_id)
+    query = all_ids_query + query_selection
+
     all_ids = mixin.select(query)
     return all_ids
 
 
 def get_general_info_for_supercontainer_id(supercontainer_id):
+    """[summary]
+
+    Parameters
+    ----------
+    supercontainer_id : [type]
+        [description]
+
+    Returns
+    -------
+    dataframe
+        dataframe with the following columns:
+            ophys_experiment_id
+            ophys_session_id
+            behavior_session_id
+            foraging_id
+            ophys_container_id
+            supercontainer_id
+            experiment_workflow_state
+            session_workflow_state
+            container_workflow_state
+            specimen_id
+            donor_id
+            specimen_name
+            date_of_acquisition
+            session_type
+            targeted_structure
+            depth
+            equipment_name
+            project
+            experiment_storage_directory
+            session_storage_directory
+    """
     supercontainer_id = int(supercontainer_id)
-    query = '''
-    SELECT
-    oe.id AS ophys_experiment_id,
-    oe.ophys_session_id,
-    bs.id AS behavior_session_id,
-    os.foraging_id,
-    containers.id AS ophys_container_id,
-    os.visual_behavior_supercontainer_id AS supercontainer_id,
 
-    oe.workflow_state AS experiment_workflow_state,
-    os.workflow_state AS session_workflow_state,
-    containers.workflow_state AS container_workflow_state,
-
-    os.specimen_id,
-    specimens.donor_id,
-    specimens.name AS specimen_name,
-
-    os.date_of_acquisition,
-    os.stimulus_name AS session_type,
-    structures.acronym AS targeted_structure,
-    imaging_depths.depth,
-    equipment.name AS rig
-
-    FROM
-    ophys_experiments oe
-
-    JOIN ophys_sessions os
-    ON os.id = oe.ophys_session_id
-    JOIN behavior_sessions bs
-    ON bs.foraging_id = os.foraging_id
-    JOIN ophys_experiments_visual_behavior_experiment_containers oevbec
-    ON oe.id = oevbec.ophys_experiment_id
-    JOIN visual_behavior_experiment_containers containers
-    ON containers.id = oevbec.visual_behavior_experiment_container_id
-    JOIN specimens ON specimens.id = os.specimen_id
-    JOIN structures ON structures.id = oe.targeted_structure_id
-    JOIN imaging_depths ON imaging_depths.id = oe.imaging_depth_id
-    JOIN equipment ON equipment.id = os.equipment_id
-
+    general_info_query = general_info_for_id_query()
+    query_selection = '''
     WHERE
-    os.visual_behavior_supercontainer_id = {}
-    '''.format(supercontainer_id)
+    os.visual_behavior_supercontainer_id ={} '''.format(supercontainer_id)
+    query = general_info_query + query_selection
+
     general_info = mixin.select(query)
+
+    # ensure operating system compatible filepaths
+    general_info = lims_utils.correct_general_info_filepaths(general_info)
+
     return general_info
 
 
 ### TABLES ###    # noqa: E266
+
 
 def get_cell_segmentation_runs_table(ophys_experiment_id):
     """Queries LIMS via AllenSDK PostgresQuery function to retrieve
@@ -933,12 +1007,12 @@ def get_ophys_experiments_table(ophys_experiment_id):
     SELECT
     oe.id AS ophys_experiment_id,
     oe.workflow_state AS experiment_workflow_state,
-    oe.storage_directory,
+    oe.storage_directory AS experiment_storage_directory,
     oe.ophys_session_id,
     structures.acronym AS targeted_structure,
     imaging_depths.depth AS imaging_depth,
     oe.calculated_depth,
-    container.visual_behavior_experiment_container_id AS ophys_container_id,
+    oevbec.visual_behavior_experiment_container_id AS ophys_container_id,
     oe.raw_movie_number_of_frames,
     oe.raw_movie_width,
     oe.raw_movie_height,
@@ -946,8 +1020,11 @@ def get_ophys_experiments_table(ophys_experiment_id):
     oe.ophys_imaging_plane_group_id
 
     FROM
-    ophys_experiments_visual_behavior_experiment_containers container
-    JOIN ophys_experiments oe ON oe.id = container.ophys_experiment_id
+    ophys_experiments_visual_behavior_experiment_containers oevbec
+
+    JOIN ophys_experiments oe
+    ON oe.id = oevbec.ophys_experiment_id
+
     JOIN structures ON structures.id = oe.targeted_structure_id
     JOIN imaging_depths ON imaging_depths.id = oe.imaging_depth_id
 
@@ -962,23 +1039,25 @@ def get_ophys_sessions_table(ophys_session_id):
     ophys_session_id = int(ophys_session_id)
     query = '''
     SELECT
-    os.id as ophys_session_id,
-    os.storage_directory,
-    os.workflow_state as session_workflow_state,
+    os.id AS ophys_session_id,
+    os.storage_directory AS session_storage_directory,
+    os.workflow_state AS session_workflow_state,
     os.specimen_id,
     os.isi_experiment_id,
     os.parent_session_id,
     os.date_of_acquisition,
-    equipment.name as equipment_name,
-    projects.code as project,
-    os.stimulus_name as session_type,
+    equipment.name AS equipment_name,
+    projects.code AS project,
+    os.stimulus_name AS session_type,
     os.foraging_id,
     os.stim_delay,
-    os.visual_behavior_supercontainer_id as supercontainer_id
+    os.visual_behavior_supercontainer_id AS supercontainer_id
 
     FROM
     ophys_sessions os
+
     JOIN equipment ON equipment.id = os.equipment_id
+
     JOIN projects ON projects.id = os.project_id
 
     WHERE
@@ -1016,17 +1095,17 @@ def get_visual_behavior_experiment_containers_table(ophys_container_id):
     ophys_container_id = int(ophys_container_id)
     query = '''
     SELECT
-    containers.id AS container_id,
+    vbec.id AS container_id,
     projects.code AS project,
-    containers.specimen_id,
-    containers.storage_directory,
-    containers.workflow_state AS container_workflow_state
+    vbec.specimen_id,
+    vbec.storage_directory AS container_storage_directory,
+    vbec.workflow_state AS container_workflow_state
 
     FROM
-    visual_behavior_experiment_containers as containers
-    JOIN projects on projects.id = containers.project_id
+    visual_behavior_experiment_containers as vbec
+    JOIN projects on projects.id = vbec.project_id
     WHERE
-    containers.id = {}
+    vbec.id = {}
     '''.format(ophys_container_id)
     visual_behavior_experiment_containers_table = mixin.select(query)
     return visual_behavior_experiment_containers_table
@@ -1093,7 +1172,7 @@ def get_BehaviorOphysNWB_filepath(ophys_experiment_id):
     AND wkf.attachable_id = {}
     '''.format(ophys_experiment_id)
     RealDict_object = mixin.select(query)
-    filepath = utils.get_filepath_from_realdict_object(RealDict_object)
+    filepath = lims_utils.get_filepath_from_realdict_object(RealDict_object)
     return filepath
 
 
@@ -1128,7 +1207,7 @@ def get_demixed_traces_filepath(ophys_experiment_id):
     AND wkf.attachable_id = {}
     '''.format(ophys_experiment_id)
     RealDict_object = mixin.select(query)
-    filepath = utils.get_filepath_from_realdict_object(RealDict_object)
+    filepath = lims_utils.get_filepath_from_realdict_object(RealDict_object)
     return filepath
 
 
@@ -1151,7 +1230,7 @@ def get_motion_corrected_movie_filepath(ophys_experiment_id):
     AND wkf.attachable_id = {}
     '''.format(ophys_experiment_id)
     RealDict_object = mixin.select(query)
-    filepath = utils.get_filepath_from_realdict_object(RealDict_object)
+    filepath = lims_utils.get_filepath_from_realdict_object(RealDict_object)
     return filepath
 
 
@@ -1174,7 +1253,7 @@ def get_neuropil_correction_filepath(ophys_experiment_id):
     AND wkf.attachable_id = {}
     '''.format(ophys_experiment_id)
     RealDict_object = mixin.select(query)
-    filepath = utils.get_filepath_from_realdict_object(RealDict_object)
+    filepath = lims_utils.get_filepath_from_realdict_object(RealDict_object)
     return filepath
 
 
@@ -1209,7 +1288,7 @@ def get_average_intensity_projection_filepath(ophys_experiment_id):
     AND wkf.attachable_id = {}
     '''.format(ophys_experiment_id)
     RealDict_object = mixin.select(query)
-    filepath = utils.get_filepath_from_realdict_object(RealDict_object)
+    filepath = lims_utils.get_filepath_from_realdict_object(RealDict_object)
     return filepath
 
 
@@ -1244,7 +1323,7 @@ def get_dff_traces_filepath(ophys_experiment_id):
     AND wkf.attachable_id = {}
     '''.format(ophys_experiment_id)
     RealDict_object = mixin.select(query)
-    filepath = utils.get_filepath_from_realdict_object(RealDict_object)
+    filepath = lims_utils.get_filepath_from_realdict_object(RealDict_object)
     return filepath
 
 
@@ -1279,7 +1358,7 @@ def get_event_trace_filepath(ophys_experiment_id):
     AND wkf.attachable_id = {}
     '''.format(ophys_experiment_id)
     RealDict_object = mixin.select(query)
-    filepath = utils.get_filepath_from_realdict_object(RealDict_object)
+    filepath = lims_utils.get_filepath_from_realdict_object(RealDict_object)
     return filepath
 
 
@@ -1314,7 +1393,7 @@ def get_extracted_traces_input_filepath(ophys_experiment_id):
     AND wkf.attachable_id = {}
     '''.format(ophys_experiment_id)
     RealDict_object = mixin.select(query)
-    filepath = utils.get_filepath_from_realdict_object(RealDict_object)
+    filepath = lims_utils.get_filepath_from_realdict_object(RealDict_object)
     return filepath
 
 
@@ -1337,7 +1416,7 @@ def get_motion_preview_filepath(ophys_experiment_id):
     AND wkf.attachable_id = {}
     '''.format(ophys_experiment_id)
     RealDict_object = mixin.select(query)
-    filepath = utils.get_filepath_from_realdict_object(RealDict_object)
+    filepath = lims_utils.get_filepath_from_realdict_object(RealDict_object)
     return filepath
 
 
@@ -1360,7 +1439,7 @@ def get_motion_xy_offset_filepath(ophys_experiment_id):
     AND wkf.attachable_id = {}
     '''.format(ophys_experiment_id)
     RealDict_object = mixin.select(query)
-    filepath = utils.get_filepath_from_realdict_object(RealDict_object)
+    filepath = lims_utils.get_filepath_from_realdict_object(RealDict_object)
     return filepath
 
 
@@ -1397,7 +1476,7 @@ def get_neuropil_traces_filepath(ophys_experiment_id):
     AND wkf.attachable_id = {}
     '''.format(ophys_experiment_id)
     RealDict_object = mixin.select(query)
-    filepath = utils.get_filepath_from_realdict_object(RealDict_object)
+    filepath = lims_utils.get_filepath_from_realdict_object(RealDict_object)
     return filepath
 
 
@@ -1420,7 +1499,7 @@ def get_ophys_registration_summary_image_filepath(ophys_experiment_id):
     AND wkf.attachable_id = {}
     '''.format(ophys_experiment_id)
     RealDict_object = mixin.select(query)
-    filepath = utils.get_filepath_from_realdict_object(RealDict_object)
+    filepath = lims_utils.get_filepath_from_realdict_object(RealDict_object)
     return filepath
 
 
@@ -1456,7 +1535,7 @@ def get_roi_traces_filepath(ophys_experiment_id):
     AND wkf.attachable_id = {}
     '''.format(ophys_experiment_id)
     RealDict_object = mixin.select(query)
-    filepath = utils.get_filepath_from_realdict_object(RealDict_object)
+    filepath = lims_utils.get_filepath_from_realdict_object(RealDict_object)
     return filepath
 
 
@@ -1491,7 +1570,7 @@ def get_time_syncronization_filepath(ophys_experiment_id):
     AND wkf.attachable_id = {}
     '''.format(ophys_experiment_id)
     RealDict_object = mixin.select(query)
-    filepath = utils.get_filepath_from_realdict_object(RealDict_object)
+    filepath = lims_utils.get_filepath_from_realdict_object(RealDict_object)
     return filepath
 
 
@@ -1525,7 +1604,7 @@ def get_segmentation_objects_filepath(ophys_experiment_id):
     AND wkf.attachable_id = {}
     '''.format(current_seg_id)
     RealDict_object = mixin.select(query)
-    filepath = utils.get_filepath_from_realdict_object(RealDict_object)
+    filepath = lims_utils.get_filepath_from_realdict_object(RealDict_object)
     return filepath
 
 
@@ -1547,7 +1626,7 @@ def get_lo_segmentation_mask_filepath(ophys_experiment_id):
     AND wkf.attachable_id = {}
     '''.format(current_seg_id)
     RealDict_object = mixin.select(query)
-    filepath = utils.get_filepath_from_realdict_object(RealDict_object)
+    filepath = lims_utils.get_filepath_from_realdict_object(RealDict_object)
     return filepath
 
 
@@ -1569,7 +1648,7 @@ def get_segmentation_mask_filepath(ophys_experiment_id):
     AND wkf.attachable_id = {}
     '''.format(current_seg_id)
     RealDict_object = mixin.select(query)
-    filepath = utils.get_filepath_from_realdict_object(RealDict_object)
+    filepath = lims_utils.get_filepath_from_realdict_object(RealDict_object)
     return filepath
 
 
@@ -1591,7 +1670,7 @@ def get_segmentation_mask_image_filepath(ophys_experiment_id):
     AND wkf.attachable_id = {}
     '''.format(current_seg_id)
     RealDict_object = mixin.select(query)
-    filepath = utils.get_filepath_from_realdict_object(RealDict_object)
+    filepath = lims_utils.get_filepath_from_realdict_object(RealDict_object)
     return filepath
 
 
@@ -1613,7 +1692,7 @@ def get_ave_intensity_projection_filepath(ophys_experiment_id):
     AND wkf.attachable_id = {}
     '''.format(current_seg_id)
     RealDict_object = mixin.select(query)
-    filepath = utils.get_filepath_from_realdict_object(RealDict_object)
+    filepath = lims_utils.get_filepath_from_realdict_object(RealDict_object)
     return filepath
 
 
@@ -1635,7 +1714,7 @@ def get_max_intensity_projection_filepath(ophys_experiment_id):
     AND wkf.attachable_id = {}
     '''.format(current_seg_id)
     RealDict_object = mixin.select(query)
-    filepath = utils.get_filepath_from_realdict_object(RealDict_object)
+    filepath = lims_utils.get_filepath_from_realdict_object(RealDict_object)
     return filepath
 
 
@@ -1674,7 +1753,7 @@ def get_timeseries_ini_filepath(ophys_session_id):
 
     try:
         RealDict_object = mixin.select(query)
-        filepath = utils.get_filepath_from_realdict_object(RealDict_object)
+        filepath = lims_utils.get_filepath_from_realdict_object(RealDict_object)
         return filepath
     except KeyError:
         print("Error: Must be collected on a scientifica microscope to have timeseries ini. \n Check that equipment_name = CAM2P.2, CAM2P.3, CAM2P.4, CAM2P.5 or CAM2P.6")
@@ -1704,7 +1783,7 @@ def get_stimulus_pkl_filepath(ophys_session_id):
     AND attachable_id = {0}
     '''.format(ophys_session_id)
     RealDict_object = mixin.select(QUERY)
-    filepath = utils.get_filepath_from_realdict_object(RealDict_object)
+    filepath = lims_utils.get_filepath_from_realdict_object(RealDict_object)
     return filepath
 
 
@@ -1734,7 +1813,7 @@ def get_session_h5_filepath(ophys_session_id):
     AND attachable_id = {0}
     '''.format(ophys_session_id)
     RealDict_object = mixin.select(QUERY)
-    filepath = utils.get_filepath_from_realdict_object(RealDict_object)
+    filepath = lims_utils.get_filepath_from_realdict_object(RealDict_object)
     return filepath
 
 
@@ -1765,7 +1844,7 @@ def get_behavior_avi_filepath(ophys_session_id):
     AND attachable_id = {0}
     '''.format(ophys_session_id)
     RealDict_object = mixin.select(QUERY)
-    filepath = utils.get_filepath_from_realdict_object(RealDict_object)
+    filepath = lims_utils.get_filepath_from_realdict_object(RealDict_object)
     return filepath
 
 
@@ -1782,9 +1861,25 @@ def get_behavior_h5_filepath(ophys_session_id):
     [type]
         [description]
     """
-    avi_filepath = get_behavior_avi_filepath(ophys_session_id)
-    h5_filepath = avi_filepath[:-3] + "h5"
-    return h5_filepath
+    QUERY = '''
+    SELECT
+    storage_directory || filename
+    AS filepath
+
+    FROM
+    well_known_files
+
+    WHERE
+    well_known_file_type_id = 695808672
+    AND attachable_id = {0}
+    '''.format(ophys_session_id)
+    RealDict_object = mixin.select(QUERY)
+
+    filepath = RealDict_object['filepath'][0]
+    filepath = filepath.replace('avi', 'h5')
+    filepath = utils.correct_filepath(filepath)
+
+    return filepath
 
 
 def get_eye_tracking_avi_filepath(ophys_session_id):
@@ -1814,7 +1909,42 @@ def get_eye_tracking_avi_filepath(ophys_session_id):
     AND attachable_id = {0}
     '''.format(ophys_session_id)
     RealDict_object = mixin.select(QUERY)
-    filepath = utils.get_filepath_from_realdict_object(RealDict_object)
+    filepath = lims_utils.get_filepath_from_realdict_object(RealDict_object)
+    return filepath
+
+
+def get_eye_tracking_h5_filepath(ophys_session_id):
+    """[summary]
+
+    Parameters
+    ----------
+    ophys_session_id : [type]
+        [description]
+
+    Returns
+    -------
+    [type]
+        [description]
+    """
+
+    QUERY = '''
+    SELECT
+    storage_directory || filename
+    AS filepath
+
+    FROM
+    well_known_files
+
+    WHERE
+    well_known_file_type_id = 695808172
+    AND attachable_id = {0}
+    '''.format(ophys_session_id)
+    RealDict_object = mixin.select(QUERY)
+
+    filepath = RealDict_object['filepath'][0]
+    filepath = filepath.replace('avi', 'h5')
+    filepath = utils.correct_filepath(filepath)
+
     return filepath
 
 
@@ -1843,7 +1973,7 @@ def get_ellipse_filepath(ophys_session_id):
     AND attachable_id = {0}
     '''.format(ophys_session_id)
     RealDict_object = mixin.select(QUERY)
-    filepath = utils.get_filepath_from_realdict_object(RealDict_object)
+    filepath = lims_utils.get_filepath_from_realdict_object(RealDict_object)
     return filepath
 
 
@@ -1872,7 +2002,7 @@ def get_platform_json_filepath(ophys_session_id):
     AND attachable_id = {0}
     '''.format(ophys_session_id)
     RealDict_object = mixin.select(QUERY)
-    filepath = utils.get_filepath_from_realdict_object(RealDict_object)
+    filepath = lims_utils.get_filepath_from_realdict_object(RealDict_object)
     return filepath
 
 
@@ -1902,7 +2032,7 @@ def get_screen_mapping_h5_filepath(ophys_session_id):
     AND attachable_id = {0}
     '''.format(ophys_session_id)
     RealDict_object = mixin.select(QUERY)
-    filepath = utils.get_filepath_from_realdict_object(RealDict_object)
+    filepath = lims_utils.get_filepath_from_realdict_object(RealDict_object)
     return filepath
 
 
@@ -1930,7 +2060,7 @@ def get_deepcut_h5_filepath(ophys_session_id):
     AND attachable_id = {0}
     '''.format(ophys_session_id)
     RealDict_object = mixin.select(QUERY)
-    filepath = utils.get_filepath_from_realdict_object(RealDict_object)
+    filepath = lims_utils.get_filepath_from_realdict_object(RealDict_object)
     return filepath
 
 
@@ -2078,5 +2208,5 @@ def load_objectlist(ophys_experiment_id):
     """
     filepath = get_segmentation_objects_filepath(ophys_experiment_id)
     objectlist_dataframe = pd.read_csv(filepath)
-    objectlist_dataframe = utils.update_objectlist_column_labels(objectlist_dataframe)
+    objectlist_dataframe = lims_utils.update_objectlist_column_labels(objectlist_dataframe)
     return objectlist_dataframe
