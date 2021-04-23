@@ -97,6 +97,7 @@ def get_events_dir():
 
 
 def get_behavior_model_outputs_dir():
+    import platform
     if platform.system() == 'Linux':
         output_dir = r'\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\behavior_model_output'
     else:
