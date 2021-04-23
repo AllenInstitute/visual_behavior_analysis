@@ -97,7 +97,7 @@ def get_events_dir():
 
 
 def get_behavior_model_outputs_dir():
-    return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/behavior_model_output'
+    return r'/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/behavior_model_output'
 
 
 def get_decoding_analysis_dir():
