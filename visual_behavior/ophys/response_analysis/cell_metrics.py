@@ -423,7 +423,7 @@ def generate_metrics_table(ophys_experiment_id, ophys_experiment_table, use_even
     pref_image = get_pref_image_for_cell_specimen_ids(df)
     non_pref_image = get_non_pref_image_for_cell_specimen_ids(df)
 
-    # add pref & non pref images 
+    # add pref & non pref images
     df = add_pref_and_non_pref_stim_columns_to_df(df)
     # compute image selectivity index (diff over sum of pref and non pref images)
     image_selectivity_index = get_image_selectivity_index(df)
