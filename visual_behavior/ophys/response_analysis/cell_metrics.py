@@ -396,7 +396,8 @@ def get_trace_metrics_table(ophys_experiment_id, ophys_experiment_table, use_eve
 
 def generate_metrics_table(ophys_experiment_id, ophys_experiment_table, use_events=False,
                            condition='changes', session_subset='full_session', stimuli='pref_image'):
-    ophys_session_id = ophys_experiment_table.loc[ophys_experiment_id].ophys_session_id
+
+    ophys_session_id = ophys_experiment_table.loc[int(ophys_experiment_id)].ophys_session_id
     dataset = loading.get_ophys_dataset(ophys_experiment_id, from_lims=False, from_nwb=False)
 
     analysis = ResponseAnalysis(dataset, use_extended_stimulus_presentations=True, use_events=use_events)

@@ -12,8 +12,7 @@ from visual_behavior.ophys.response_analysis import cell_metrics
 
 if __name__ == '__main__':
     import sys
-
-    ophys_experiment_id = sys.argv[1]
+    ophys_experiment_id = int(sys.argv[1])
 
     ophys_experiment_table = loading.get_filtered_ophys_experiment_table(release_data_only=True)
 
@@ -41,6 +40,6 @@ if __name__ == '__main__':
     else:
         save_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\single_cell_metrics'
 
-    metrics_table.to_csv(os.path.join(save_dir, 'cell_metrics', 'experiment_id' + str(ophys_experiment_id) + '.csv'))
+    metrics_table.to_csv(os.path.join(save_dir, 'cell_metrics', 'experiment_id_' + str(ophys_experiment_id) + '.csv'))
 
 
