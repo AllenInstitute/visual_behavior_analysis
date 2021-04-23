@@ -404,7 +404,7 @@ class BehaviorOphysDataset(BehaviorOphysExperiment):
         stimulus_presentations['lick_rate_previous_flash'] = stimulus_presentations['lick_rate'].shift(1)
         if check_if_model_output_available(self.metadata['behavior_session_id']):
             stimulus_presentations = add_model_outputs_to_stimulus_presentations(
-                stimulus_presentations, self.metadata['behavior_session_id'])
+                stimulus_presentations, int(self.metadata['behavior_session_id']))
         else:
             print('model outputs not available')
         self._extended_stimulus_presentations = stimulus_presentations

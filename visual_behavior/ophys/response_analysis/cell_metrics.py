@@ -412,6 +412,8 @@ def generate_metrics_table(ophys_experiment_id, ophys_experiment_table, use_even
     elif condition == 'images':
         df = sdf[sdf.omitted == False]
 
+    if 'passive' in dataset.metadata['session_type']:
+        df['engaged'] = False
     if session_subset == 'engaged':
         df = df[df.engaged == True]
     elif session_subset == 'disengaged':

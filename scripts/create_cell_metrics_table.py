@@ -40,6 +40,6 @@ if __name__ == '__main__':
     else:
         save_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\single_cell_metrics'
 
-    metrics_table.to_csv(os.path.join(save_dir, 'cell_metrics', 'experiment_id_' + str(ophys_experiment_id) + '.csv'))
+    metrics_df.to_csv(os.path.join(save_dir, 'cell_metrics', 'experiment_id_' + str(ophys_experiment_id) + '.csv'))
 
 
