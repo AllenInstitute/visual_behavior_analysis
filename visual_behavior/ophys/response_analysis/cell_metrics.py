@@ -216,7 +216,7 @@ def compute_reliability(group, params, frame_rate):
     else:
         reliability = np.nan
         correlation_values = []
-    return pd.Series({'reliability': reliability, 'correlation_values': correlation_values})
+    return pd.Series({'reliability': reliability})
 
 
 def get_reliability_for_cell_specimen_ids(stimulus_response_df, frame_rate):
@@ -229,7 +229,7 @@ def get_reliability_for_cell_specimen_ids(stimulus_response_df, frame_rate):
     params = rp.get_default_stimulus_response_params()
 
     reliability = stimulus_response_df.groupby(['cell_specimen_id']).apply(compute_reliability, params, frame_rate)
-    reliability = reliability.drop(columns=['correlation_values'])
+    # reliability = reliability.drop(columns=['correlation_values'])
     return reliability
 
 
