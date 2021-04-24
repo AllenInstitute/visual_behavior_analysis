@@ -350,6 +350,7 @@ def svm_main_images_pbs(data_list, experiment_ids_valid, df_data, session_trials
             else:
                 word = 'block'
             ending = f'{ending}{word}{iblock}_'
+
             
         name = f'{cre_now}_m-{mouse}_s-{session_id}_e-{lims_id}_{svmn}_frames{frames_svm[0]}to{frames_svm[-1]}_{ending}{now}'
                     
@@ -423,6 +424,14 @@ def svm_main_images_pbs(data_list, experiment_ids_valid, df_data, session_trials
     
     #%%
     if trial_type=='hits_vs_misses':
+        
+        if svm_blocks==-101: # run svm analysis only on engaged trials; redifine df_data only including the engaged rows
+            print('\nOnly using engaged trials for SVM analysis.\n')
+            
+            df_data = df_data[df_data['engagement_state']=='engaged']            
+            svmn = f'{svmn}_only_engaged'
+            
+        
         image_data = pd.concat((df_data[df_data['hit']==1.0], df_data[df_data['miss']==1.0]))
         
         tr_id = 'trials_id'
@@ -438,11 +447,18 @@ def svm_main_images_pbs(data_list, experiment_ids_valid, df_data, session_trials
         hit_sum = sum(image_trials['hit']==1)
         miss_sum = sum(image_trials['miss']==1)
         print(f"\n{hit_sum} hit trials ; {miss_sum} miss trials\n")
-        
-        
+                
         a = np.full((hit_sum), 1)
         b = np.full((miss_sum), 0)
         image_labels = np.concatenate((a,b)) # whether it was a hit or not
+
+        
+#         # set the engagement vector for hits and misses.
+#         hit_eng = image_trials[image_trials['hit']==1]['engagement_state']
+#         miss_eng = image_trials[image_trials['miss']==1]['engagement_state']                
+#         image_trials_engagement = np.concatenate((hit_eng, miss_eng)) # whether it was engaged or not
+            
+            
         
     else:    
         
@@ -874,13 +890,16 @@ def svm_main_images_pbs(data_list, experiment_ids_valid, df_data, session_trials
                 pupil_running_values = np.nan
                 
                 #### run svm analysis on the whole session
-                if svm_blocks==-100:
+                if svm_blocks==-100 or svm_blocks==-101:
                     svmName = svm_run_save(traces_fut_0, image_labels_0, [np.nan, []], svm_blocks, now, engagement_pupil_running, pupil_running_values, use_balanced_trials) #, same_num_neuron_all_planes, norm_to_max_svm, svm_total_frs, n_neurons, numShufflesN, numSamples, num_classes, samps_bef, regType, kfold, cre, saveResults)
                     
 
                 #### run svm analysis only on engaged trials
 #                 if svm_blocks==-101:
-                    # only take the engaged trials
+#                     # only take the engaged trials
+#                     engaged = image_trials['engagement_state'].values
+#                     engaged[engaged=='engaged'] = 1
+#                     engaged[engaged=='disengaged'] = 0
                     
                 
                 #### divide trials based on the engagement state
@@ -1080,6 +1099,8 @@ elif svm_blocks==-1:
         print(f"Using pupil to define engagement state.")        
     elif engagement_pupil_running==2:
         print(f"Using running to define engagement state.")                
+elif svm_blocks==-101:
+    print(f'Running SVM only on engaged trials.')        
 else:    
     print(f'Doing block-by-block analysis.')
 if use_balanced_trials==1:

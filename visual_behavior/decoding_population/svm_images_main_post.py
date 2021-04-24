@@ -150,7 +150,13 @@ def svm_images_main_post(session_id, data_list, svm_blocks, iblock, dir_svm, fra
             n_trials = svm_vars.iloc[0]['n_trials']
             n_neurons = svm_vars.iloc[0]['n_neurons']
             print(f'{n_trials} trials; {n_neurons} neurons')
-
+            
+            try:
+                cell_specimen_id = svm_vars.iloc[0]['cell_specimen_id']
+            except Exception as e: # cell_specimen_id was added to svm code on 04/23/2021; all svm files saved before that wont have this column.
+                print(e)
+                cell_specimen_id = []
+            
             if np.in1d(svm_vars.keys(), 'frame_dur').any(): # svm code was run without setting frame_dur at first.
                 frame_dur = svm_vars.iloc[0]['frame_dur']                
                 print(f'Frame duration {frame_dur} ms')
@@ -381,7 +387,7 @@ def svm_images_main_post(session_id, data_list, svm_blocks, iblock, dir_svm, fra
             this_sess.at[index, ['peak_amp_trainTestShflChance', 'bl_pre0']] = [peak_amp_trainTestShflChance, bl_preOmit] # 4
 
 
-            this_sess.at[index, ['n_trials', 'n_neurons', 'frame_dur', 'meanX_allFrs', 'stdX_allFrs']] = [n_trials, n_neurons, frame_dur, meanX_allFrs, stdX_allFrs] 
+            this_sess.at[index, ['n_trials', 'n_neurons', 'cell_specimen_id', 'frame_dur', 'meanX_allFrs', 'stdX_allFrs']] = [n_trials, n_neurons, cell_specimen_id, frame_dur, meanX_allFrs, stdX_allFrs] 
             this_sess.at[index, ['av_train_data', 'av_test_data', 'av_test_shfl', 'av_test_chance', 'sd_train_data', 'sd_test_data', 'sd_test_shfl', 'sd_test_chance']] = [av_train_data, av_test_data, av_test_shfl, av_test_chance, sd_train_data, sd_test_data, sd_test_shfl, sd_test_chance]
 
             if same_num_neuron_all_planes:
