@@ -27,7 +27,6 @@ def plot_TCA_factors(U_r, cells_df=[], cells_color_label=None, stim_df=[], trial
     num_factors = len(U_r.factors.factors)
     num_components = U_r.factors.rank
     factors_order = sort_by_temporal(U_r)
-    print('factors sorted {}'.format(factors_order))
 
     fig, axes = plt.subplots(num_components, num_factors,
                              gridspec_kw={'width_ratios': [1.5, 1.5, 2]})

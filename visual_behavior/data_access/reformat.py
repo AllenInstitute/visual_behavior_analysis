@@ -44,7 +44,7 @@ def get_exposure_number_for_group(group):
 
 
 def add_session_type_exposure_number_to_experiments_table(experiments):
-    experiments = experiments.groupby(['super_container_id', 'container_id', 'session_type']).apply(
+    experiments = experiments.groupby(['mouse_id', 'ophys_container_id', 'session_type']).apply(
         get_exposure_number_for_group)
     return experiments
 
@@ -61,11 +61,7 @@ def add_engagement_state_to_trials_table(trials, extended_stimulus_presentations
     for idx, trial in trials.iterrows():
         start_time = trial['start_time']
         query_string = 'start_time > @start_time - 1 and start_time < @start_time + 1'
-        first_stim_presentation_index = np.argmin(
-            np.abs(
-                start_time - extended_stimulus_presentations.query(query_string)['start_time']
-            )
-        )
+        first_stim_presentation_index = (np.abs(start_time - extended_stimulus_presentations.query(query_string)['start_time'])).idxmin()
         trials.at[idx, 'first_stim_presentation_index'] = first_stim_presentation_index
 
     # define the columns from extended_stimulus_presentations that we want to merge into trials
@@ -75,7 +71,7 @@ def add_engagement_state_to_trials_table(trials, extended_stimulus_presentations
     ]
 
     # merge the desired columns into trials on the stimulus_presentations_id indices
-    trials = trials = trials.merge(
+    trials = trials.merge(
         extended_stimulus_presentations[cols_to_merge].reset_index(),
         left_on='first_stim_presentation_index',
         right_on='stimulus_presentations_id',
@@ -175,7 +171,7 @@ def add_model_outputs_availability_to_table(table):
 
 def reformat_experiments_table(experiments, behavior_session_table):
     experiments = experiments.reset_index()
-    experiments['super_container_id'] = experiments['specimen_id'].values
+    # experiments['super_container_id'] = experiments['specimen_id'].values
     # clean up cre_line naming
     # experiments['cre_line'] = [driver_line[1] if driver_line[0] == 'Camk2a-tTA' else driver_line[0] for driver_line in
     #                            experiments.driver_line.values]
@@ -233,7 +229,7 @@ def add_container_workflow_state_to_ophys_session_table(session_table, experimen
         """
     session_table = session_table.reset_index()
     session_table = session_table[session_table.ophys_session_id.isin(experiment_table.ophys_session_id.unique())]
-    experiments = experiment_table[['ophys_session_id', 'container_id', 'container_workflow_state']].drop_duplicates(
+    experiments = experiment_table[['ophys_session_id', 'ophys_container_id', 'container_workflow_state']].drop_duplicates(
         ['ophys_session_id'])
     session_table = session_table.merge(experiments, left_on='ophys_session_id', right_on='ophys_session_id')
     session_table = session_table.set_index(keys='ophys_session_id')

@@ -11,14 +11,14 @@ import visual_behavior.ophys.response_analysis.response_processing as rp
 import visual_behavior.ophys.response_analysis.utilities as ut
 
 
-def plot_across_session_responses(container_id, cell_specimen_id, use_events=False, save_figure=True):
+def plot_across_session_responses(ophys_container_id, cell_specimen_id, use_events=False, save_figure=True):
     """
     Generates plots characterizing single cell activity in response to stimulus, omissions, and changes.
     Compares across all sessions in a container for each cell, including the ROI mask across days.
     Useful to validate cell matching as well as examine changes in activity profiles over days.
     """
     experiments_table = data_loading.get_filtered_ophys_experiment_table()
-    container_expts = experiments_table[experiments_table.container_id == container_id]
+    container_expts = experiments_table[experiments_table.ophys_container_id == ophys_container_id]
     expts = np.sort(container_expts.index.values)
     if use_events:
         ylabel = 'response'
