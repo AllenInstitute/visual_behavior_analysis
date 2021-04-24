@@ -616,7 +616,7 @@ def get_behavior_dataset(behavior_session_id, from_lims=False, from_nwb=False):
 def get_ophys_container_ids(release_data_only=False):
     """Get container_ids that meet the criteria in get_filtered_ophys_experiment_table(). """
     experiments = get_filtered_ophys_experiment_table(release_data_only=release_data_only)
-    container_ids = np.sort(experiments.container_id.unique())
+    container_ids = np.sort(experiments.ophys_container_id.unique())
     return container_ids
 
 
@@ -630,7 +630,7 @@ def get_ophys_session_ids_for_ophys_container_id(ophys_container_id):
                 ophys_session_ids -- list of ophys_session_ids that meet filtering criteria
             """
     experiments = get_filtered_ophys_experiment_table()
-    ophys_session_ids = np.sort(experiments[(experiments.container_id == ophys_container_id)].ophys_session_id.unique())
+    ophys_session_ids = np.sort(experiments[(experiments.ophys_container_id == ophys_container_id)].ophys_session_id.unique())
     return ophys_session_ids
 
 
@@ -645,7 +645,7 @@ def get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id):
                     ophys_experiment_ids -- list of ophys_experiment_ids that meet filtering criteria
                 """
     experiments = get_filtered_ophys_experiment_table()
-    ophys_experiment_ids = np.sort(experiments[(experiments.container_id == ophys_container_id)].index.values)
+    ophys_experiment_ids = np.sort(experiments[(experiments.ophys_container_id == ophys_container_id)].index.values)
     return ophys_experiment_ids
 
 
@@ -2126,7 +2126,7 @@ def get_unique_cell_specimen_ids_for_container(container_id):
     :return: list of cell_specimen_ids for a given container
     """
     experiments_table = get_filtered_ophys_experiment_table()
-    container_expts = experiments_table[experiments_table.container_id == container_id]
+    container_expts = experiments_table[experiments_table.ophys_container_id == container_id]
     experiment_ids = np.sort(container_expts.index.values)
     cell_specimen_table = pd.DataFrame()
     for experiment_id in experiment_ids:
@@ -2163,15 +2163,15 @@ def build_container_df(experiment_table):
     '''
     table = experiment_table.copy()
     # table = get_filtered_ophys_experiment_table().sort_values(by='date_of_acquisition', ascending=False).reset_index()
-    container_ids = table['container_id'].unique()
+    ophys_container_ids = table['ophys_container_id'].unique()
     list_of_dicts = []
-    for container_id in container_ids:
-        subset = table.query('container_id == @container_id').sort_values(by='date_of_acquisition',
+    for ophys_container_id in ophys_container_ids:
+        subset = table.query('ophys_container_id == @ophys_container_id').sort_values(by='date_of_acquisition',
                                                                           ascending=True).drop_duplicates(
             'ophys_session_id').reset_index()
         temp_dict = {
-            'container_id': container_id,
-            # 'container_workflow_state': table.query('container_id == @container_id')['container_workflow_state'].unique()[0],
+            'ophys_container_id': ophys_container_id,
+            # 'container_workflow_state': table.query('ophys_container_id == @ophys_container_id')['container_workflow_state'].unique()[0],
             'project_code': subset['project_code'].unique()[0],
             'mouse_id': subset['mouse_id'].unique()[0],
             'sex': subset['sex'].unique()[0],
@@ -2188,8 +2188,8 @@ def build_container_df(experiment_table):
                 {'session_{}'.format(idx): '{} experiment_id:{}'.format(row['session_type'], row['ophys_experiment_id'])})
 
         list_of_dicts.append(temp_dict)
-    container_df = pd.DataFrame(list_of_dicts).sort_values(by='container_id', ascending=False)
-    container_df = container_df.set_index(['container_id'])
+    container_df = pd.DataFrame(list_of_dicts).sort_values(by='ophys_container_id', ascending=False)
+    container_df = container_df.set_index(['ophys_container_id'])
     return container_df
 
 
@@ -2370,7 +2370,7 @@ def get_multi_session_df(cache_dir, df_name, conditions, experiments_table, remo
             df = pd.read_hdf(filepath, key='df')
             df = df.merge(expts[['ophys_experiment_id', 'cre_line', 'location', 'location_layer',
                                  'layer', 'ophys_session_id', 'project_code', 'session_type',
-                                 'specimen_id', 'depth', 'exposure_number', 'container_id']], on='ophys_experiment_id')
+                                 'specimen_id', 'depth', 'exposure_number', 'ophys_container_id']], on='ophys_experiment_id')
             if remove_outliers:
                 outlier_cells = df[df.mean_response > 5].cell_specimen_id.unique()
             df = df[df.cell_specimen_id.isin(outlier_cells) == False]
@@ -2611,14 +2611,14 @@ def get_cell_info(cell_specimen_ids=None, ophys_experiment_ids=None):
     return db.lims_query(query.format(search_key, search_vals))
 
 
-def get_container_response_df(container_id, df_name='omission_response_df', use_events=False):
+def get_container_response_df(ophys_container_id, df_name='omission_response_df', use_events=False):
     """
     get concatenated dataframe of response_df type specificied by df_name, across all experiments from a container,
     using the ResponseAnalysis class to build event locked response dataframes
     """
     from visual_behavior.ophys.response_analysis.response_analysis import ResponseAnalysis
     experiments_table = get_filtered_ophys_experiment_table()
-    container_expts = experiments_table[experiments_table.container_id == container_id]
+    container_expts = experiments_table[experiments_table.ophys_container_id == ophys_container_id]
     container_df = pd.DataFrame()
     for ophys_experiment_id in container_expts.index.values:
         dataset = get_ophys_dataset(ophys_experiment_id)
