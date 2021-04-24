@@ -26,6 +26,7 @@ def get_pref_image_for_cell_specimen_ids(stimulus_response_df):
     returns a dataframe with index cell_specimen_id and column pref_image indicating
     which image_name evoked the largest response for each cell
     """
+    stimulus_response_df = stimulus_response_df[stimulus_response_df.omitted==False] # do not include omissions
     pref_images = stimulus_response_df.groupby(['cell_specimen_id', 'image_name']).mean().reset_index().groupby(
         'cell_specimen_id').apply(get_pref_image_for_group)
     return pref_images
@@ -108,7 +109,7 @@ def add_pref_and_non_pref_stim_columns_to_df(stimulus_response_df):
     return stimulus_response_df
 
 
-def get_image_selectivity_index(stimulus_response_df):
+def get_image_selectivity_index_pref_non_pref(stimulus_response_df):
     """
     computes the difference over the sum of each cells preferred and non-preferred images.
     takes stimulus_response_df as input, must have columns 'pref_image' and 'non_pref_image'
@@ -121,9 +122,36 @@ def get_image_selectivity_index(stimulus_response_df):
     mean_response_non_pref_image = non_pref_image_df.groupby(['cell_specimen_id']).mean()[['mean_response']]
 
     image_selectivity_index = (mean_response_pref_image - mean_response_non_pref_image) / (
-    mean_response_non_pref_image + mean_response_non_pref_image)
+    mean_response_pref_image + mean_response_non_pref_image)
     image_selectivity_index = image_selectivity_index.rename(columns={'mean_response': 'image_selectivity_index'})
     return image_selectivity_index
+
+
+def get_image_selectivity_index_one_vs_all(stimulus_response_df):
+    """
+    computes the difference over the sum of each cells preferred image vs. all other images.
+    takes stimulus_response_df as input, must have column 'pref_image'
+    returns a dataframe with index cell_specimen_id and column 'image_selectivity_index_one_vs_all'
+    """
+    pref_image_df = stimulus_response_df[stimulus_response_df.pref_image == True]
+    mean_response_pref_image = pref_image_df.groupby(['cell_specimen_id']).mean()[['mean_response']]
+
+    non_pref_images_df = stimulus_response_df[(stimulus_response_df.pref_image == False) &
+                                              (stimulus_response_df.omitted == False)]
+    mean_response_non_pref_images = non_pref_images_df.groupby(['cell_specimen_id']).mean()[['mean_response']]
+
+    image_selectivity_index = (mean_response_pref_image - mean_response_non_pref_images) / (
+    mean_response_pref_image + mean_response_non_pref_images)
+    image_selectivity_index = image_selectivity_index.rename(
+        columns={'mean_response': 'image_selectivity_index_one_vs_all'})
+    return image_selectivity_index
+
+
+def get_image_selectivity_index(stimulus_response_df):
+    tmp1 = get_image_selectivity_index_pref_non_pref(stimulus_response_df)
+    tmp2 = get_image_selectivity_index_one_vs_all(stimulus_response_df)
+    image_selectivity = pd.concat([tmp1, tmp2])
+    return image_selectivity
 
 
 def compute_lifetime_sparseness(image_responses):

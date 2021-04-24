@@ -25,10 +25,14 @@ if __name__ == '__main__':
         for stimulus in stimuli:
             for session_subset in session_subsets:
                 for use_events in [True, False]:
-                    tmp = cell_metrics.generate_metrics_table(ophys_experiment_id, ophys_experiment_table, use_events=use_events,
-                                                 condition=condition, session_subset=session_subset, stimuli=stimulus)
-                    tmp = tmp.reset_index()
-                    metrics_df = pd.concat([metrics_df, tmp])
+                    try: # code will not always run, such as in the case of passive sessions (no trials that are 'engaged')
+                        tmp = cell_metrics.generate_metrics_table(ophys_experiment_id, ophys_experiment_table, use_events=use_events,
+                                                     condition=condition, session_subset=session_subset, stimuli=stimulus)
+                        tmp = tmp.reset_index()
+                        metrics_df = pd.concat([metrics_df, tmp])
+                    except Exception as e:
+                        print('metrics not generated for', condition, stimulus, session_subset, 'events', use_events)
+                        print(e)
 
     trace_metrics = cell_metrics.get_trace_metrics_table(ophys_experiment_id, ophys_experiment_table, use_events=use_events)
 
