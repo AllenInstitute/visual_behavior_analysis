@@ -545,6 +545,7 @@ for istage in np.unique(stages_all): # istage=1
             a = areas[[inds_v1[0], inds_lm[0]], 0]
     #         lims = lims_v1lm
             lims = [np.min(np.min(lims_v1lm, axis=1)), np.max(np.max(lims_v1lm, axis=1))]
+            # i commented below bc for hits_vs_misses it was plotting a weird yellow box, and i didnt spend enough time to figure out why it happens only for hits_vs_misses
             plot_flashLines_ticks_legend(lims, h1v1, flashes_win_trace_index_unq_time, grays_win_trace_index_unq_time, time_trace, xmjn=xmjn, bbox_to_anchor=bb, ylab=ylabel)
             plt.xlim(xlim);
             plt.title(a[0], fontsize=13, y=1); # np.unique(area)
@@ -556,6 +557,7 @@ for istage in np.unique(stages_all): # istage=1
 
             plt.subplot(gs1[1])            
     #         lims = lims_v1lm
+            # i commented below bc for hits_vs_misses it was plotting a weird yellow box, and i didnt spend enough time to figure out why it happens only for hits_vs_misses
             plot_flashLines_ticks_legend(lims, h1lm, flashes_win_trace_index_unq_time, grays_win_trace_index_unq_time, time_trace, xmjn=xmjn, ylab=ylabel)
         #    plt.ylabel('')
             plt.xlim(xlim);
@@ -570,6 +572,7 @@ for istage in np.unique(stages_all): # istage=1
             # add flash lines, ticks and legend
             plt.subplot(gs2[0])
             lims = []
+            # i commented below bc for hits_vs_misses it was plotting a weird yellow box, and i didnt spend enough time to figure out why it happens only for hits_vs_misses
             plot_flashLines_ticks_legend(lims, h1a, flashes_win_trace_index_unq_time, grays_win_trace_index_unq_time, time_trace, xmjn=xmjn, bbox_to_anchor=bb, ylab=ylabel)
             #    plt.ylabel('')
             plt.xlim(xlim);
@@ -581,6 +584,7 @@ for istage in np.unique(stages_all): # istage=1
 
             plt.subplot(gs2[1])
             lims = []
+            # i commented below bc for hits_vs_misses it was plotting a weird yellow box, and i didnt spend enough time to figure out why it happens only for hits_vs_misses
             plot_flashLines_ticks_legend(lims, h1d, flashes_win_trace_index_unq_time, grays_win_trace_index_unq_time, time_trace, xmjn=xmjn, bbox_to_anchor=bb, ylab=ylabel)
         #    plt.ylabel('')
             plt.xlim(xlim);
@@ -653,44 +657,135 @@ for istage in np.unique(stages_all): # istage=1
 import scipy.stats as st
 import anova_tukey
 
-fmt_now = fmt_all[0]
 cres = ['Slc17a7', 'Sst', 'Vip']
-equal_var = False # needed for ttest # equal_var: If True (default), perform a standard independent 2 sample test that assumes equal population variances [1]. If False, perform Welch’s t-test, which does not assume equal population variance
 sigval = .05 # value for ttest significance
+equal_var = False # needed for ttest # equal_var: If True (default), perform a standard independent 2 sample test that assumes equal population variances [1]. If False, perform Welch’s t-test, which does not assume equal population variance
 
-# ttest will compare whichStages[0] and whichStages[1]
-whichStages = [1,2,3] #[1,2] #[3,4] #[1,3,4,6] # stages to plot on top of each other to compare
 
-if np.isnan(svm_blocks):
+#%% Compute ttest stats between actual and shuffled 
 
-    #%% Compute ttest stats between ophys 3 and 4, for each cre line
-    
-    p_all = []
-    for crenow in cres:
-        
-        a = summary_vars_all[np.logical_and(summary_vars_all['cre']==crenow , summary_vars_all['stage']==whichStages[0])]
-        b = summary_vars_all[np.logical_and(summary_vars_all['cre']==crenow , summary_vars_all['stage']==whichStages[1])]
-        a_amp = a['resp_amp'].values[0][:,:,1]
-        b_amp = b['resp_amp'].values[0][:,:,1]
+if trial_type == 'hits_vs_misses':
+    stages_alln = [1,3,4,6]
+else:
+    stages_alln = [1,2,3,4,5,6]
+p_act_shfl = np.full((len(cres), len(stages_alln), 8), np.nan)
+icre = -1
+for crenow in cres:
+    icre = icre+1
+    istage = -1
+    for which_stage in stages_alln: # which_stage = 1 
+        istage = istage+1
+        a = summary_vars_all[np.logical_and(summary_vars_all['cre']==crenow , summary_vars_all['stage']==which_stage)]
+        a_amp = a['resp_amp'].values[0][:,:,1] # actual
+        b_amp = a['resp_amp'].values[0][:,:,2] # shuffled
 
         print(a_amp.shape, b_amp.shape)
 
         _, p = st.ttest_ind(a_amp, b_amp, nan_policy='omit', axis=1, equal_var=equal_var)
 
-        p_all.append(p)
-
-    p_all = np.array(p_all)
+        p_act_shfl[icre, istage, :] = p
 
 
-    p_sigval = p_all+0 
-    p_sigval[p_all <= sigval] = 1
-    p_sigval[p_all > sigval] = np.nan
+p_act_shfl_sigval = p_act_shfl+0 
+p_act_shfl_sigval[p_act_shfl <= sigval] = 1
+p_act_shfl_sigval[p_act_shfl > sigval] = np.nan
+print(p_act_shfl_sigval)
+
+    
+    
+    
+###############################################################
+###############################################################
+###############################################################
+
+# ttest will compare whichStages[0] and whichStages[1]
+whichStages = [1] #[1,2,3] #[1,2] #[3,4] #[1,3,4,6] # stages to plot on top of each other to compare
+
+ttest_actShfl_stages = 2 # 0: plot ttet comparison of actual and shuffled; 1: plot ttest comparison between ophys stages
+show_depth_stats = 1 # if 1, plot the bars that show anova/tukey comparison across depths
+
+import visual_behavior.visualization.utils as utils
+colors = utils.get_colors_for_session_numbers()
+# familiar: colors[0]
+# novel: colors[3]
+
+if len(whichStages)==1:
+    ttest_actShfl_stages = 0
+
+fmt_now = fmt_all[0]
 
 
-    ###############################################################
 
-    #%% Plot response amplitude (errorbars) comparing ophys stages; also do anova/tukey
+#%% Compute ttest stats between ophys 3 and 4, for each cre line
 
+if len(whichStages)>1:
+    if np.isnan(svm_blocks):
+
+        p_all = []
+        for crenow in cres:
+
+            a = summary_vars_all[np.logical_and(summary_vars_all['cre']==crenow , summary_vars_all['stage']==whichStages[0])]
+            b = summary_vars_all[np.logical_and(summary_vars_all['cre']==crenow , summary_vars_all['stage']==whichStages[1])]
+            a_amp = a['resp_amp'].values[0][:,:,1]
+            b_amp = b['resp_amp'].values[0][:,:,1]
+
+            print(a_amp.shape, b_amp.shape)
+
+            _, p = st.ttest_ind(a_amp, b_amp, nan_policy='omit', axis=1, equal_var=equal_var)
+
+            p_all.append(p)
+
+        p_all = np.array(p_all)
+
+
+        p_sigval = p_all+0 
+        p_sigval[p_all <= sigval] = 1
+        p_sigval[p_all > sigval] = np.nan
+    print(p_sigval)
+
+
+
+###############################################################
+###############################################################
+#%% Plot response amplitude (errorbars) comparing ophys stages; also do anova/tukey
+
+###############################################################
+#%% Set min and max for each cre line across all ophys stages that will be plotted below
+if np.isnan(svm_blocks):
+    
+    mn_mx_allcre = np.full((len(cres), 2), np.nan)
+    for crenow in cres: # crenow = cres[0]
+        
+        tc = summary_vars_all[summary_vars_all['cre'] == crenow]
+        
+        icre = np.argwhere(np.in1d(cres, crenow))[0][0] #icre+1
+        mn_mx_allstage = []
+        
+        for stagenow in whichStages: # stagenow = whichStages[0]
+            tc_stage = tc[tc['stage'] == stagenow]
+
+            pa_all = tc_stage['resp_amp'].values[0] 
+
+            top = np.nanmean(pa_all, axis=1) # 8_planes x 4_trTsShCh
+            top_sd = np.nanstd(pa_all, axis=1) / np.sqrt(pa_all.shape[1])        
+
+            mn = np.nanmin(top[:,2]-top_sd[:,2])
+            mx = np.nanmax(top[:,1]+top_sd[:,1])
+            mn_mx_allstage.append([mn, mx])
+    #         top_allstage.append(top)
+
+        # top_allstage = np.array(top_allstage)
+        mn_mx_allstage = np.array(mn_mx_allstage)
+        mn_mx = [np.nanmin(mn_mx_allstage), np.nanmax(mn_mx_allstage)]
+
+        mn_mx_allcre[icre,:] = mn_mx
+    
+    
+    
+###############################################################
+#%% Plot response amplitude (errorbars) comparing ophys stages; also do anova/tukey
+if np.isnan(svm_blocks):
+    
     x = np.array([0,2,4,6])
     xgapg = .15*len(whichStages)/2
     areasn = ['V1', 'LM']
@@ -716,7 +811,7 @@ if np.isnan(svm_blocks):
         stcn = -1
         xnowall = []
 
-        for stagenow in whichStages:
+        for stagenow in whichStages: # stagenow = whichStages[0]
 
             stcn = stcn+1
             tc_stage = tc[tc['stage'] == stagenow]
@@ -731,7 +826,7 @@ if np.isnan(svm_blocks):
             depth_ave = tc_stage['depth_ave'].values[0] 
 
 
-    #         mn = np.nanmin(top[:,1]-top_sd[:,1])
+#             mn = np.nanmin(top[:,1]-top_sd[:,1])
             mn = np.nanmin(top[:,2]-top_sd[:,2])
             mx = np.nanmax(top[:,1]+top_sd[:,1])
             top_allstage.append(top)
@@ -741,20 +836,29 @@ if np.isnan(svm_blocks):
             xnowall.append(xnow)
     #         print(x+xgap)
             # test
-            ax1.errorbar(xnow, top[inds_v1, 1], yerr=top_sd[inds_v1, 1], fmt=fmt_now, markersize=5, capsize=0, label=f'ophys{stagenow}', color=cols_stages[stcn])
-            ax2.errorbar(xnow, top[inds_lm, 1], yerr=top_sd[inds_lm, 1], fmt=fmt_now, markersize=5, capsize=0, label=f'ophys{stagenow}', color=cols_stages[stcn])
+            ax1.errorbar(xnow, top[inds_v1, 1], yerr=top_sd[inds_v1, 1], fmt=fmt_now, markersize=5, capsize=0, label=f'ophys{stagenow}', color=colors[stagenow-1]) #cols_stages[stcn]
+            ax2.errorbar(xnow, top[inds_lm, 1], yerr=top_sd[inds_lm, 1], fmt=fmt_now, markersize=5, capsize=0, label=f'ophys{stagenow}', color=colors[stagenow-1])
             # shuffle
-            ax1.errorbar(x+xgap, top[inds_v1, 2], yerr=top_sd[inds_v1, 2], fmt=fmt_now, markersize=3, capsize=0, color='gray')
-            ax2.errorbar(x+xgap, top[inds_lm, 2], yerr=top_sd[inds_lm, 2], fmt=fmt_now, markersize=3, capsize=0, color='gray')
+            ax1.errorbar(xnow, top[inds_v1, 2], yerr=top_sd[inds_v1, 2], fmt=fmt_now, markersize=3, capsize=0, color='gray')
+            ax2.errorbar(xnow, top[inds_lm, 2], yerr=top_sd[inds_lm, 2], fmt=fmt_now, markersize=3, capsize=0, color='gray')
 
             ####### do anova and tukey hsd for pairwise comparison of depths per area
             tukey_all = anova_tukey.do_anova_tukey(summary_vars_all, crenow, stagenow, inds_v1, inds_lm)
-
-            a = anova_tukey.add_tukey_lines(tukey_all, inds_v1, ax1, cols_stages[stcn], inds_v1, inds_lm, top, top_sd, xnowall[stcn])
-            b = anova_tukey.add_tukey_lines(tukey_all, inds_lm, ax2, cols_stages[stcn], inds_v1, inds_lm, top, top_sd, xnowall[stcn])
-            ylims = []        
-            ylims.append(a)        
-            ylims.append(b)
+            ylims = []
+            if show_depth_stats:
+                a = anova_tukey.add_tukey_lines(tukey_all, inds_v1, ax1, colors[stagenow-1], inds_v1, inds_lm, top, top_sd, xnowall[stcn]) # cols_stages[stcn]
+                b = anova_tukey.add_tukey_lines(tukey_all, inds_lm, ax2, colors[stagenow-1], inds_v1, inds_lm, top, top_sd, xnowall[stcn]) # cols_stages[stcn]
+                ylims.append(a)        
+                ylims.append(b)
+            else:
+                ylims.append(ax1.get_ylim())
+                ylims.append(ax2.get_ylim())
+                
+                
+            ####### compare actual and shuffled for each ophys stage
+            if ttest_actShfl_stages == 0: 
+                ax1.plot(xnow, p_act_shfl_sigval[icre, stagenow-1, inds_v1]*mn_mx_allcre[icre][1]-np.diff(mn_mx_allcre[icre])*.03, color=colors[stagenow-1], marker='*', linestyle='') # cols_stages[stcn]
+                ax2.plot(xnow, p_act_shfl_sigval[icre, stagenow-1, inds_lm]*mn_mx_allcre[icre][1]-np.diff(mn_mx_allcre[icre])*.03, color=colors[stagenow-1], marker='*', linestyle='')
 
 
         top_allstage = np.array(top_allstage)
@@ -766,16 +870,18 @@ if np.isnan(svm_blocks):
         ylims_now = [np.nanmin(ylims), np.nanmax(ylims)]
 
         # add a star if ttest is significant (between ophys 3 and 4)
-        ax1.plot(x+xgapg/2, p_sigval[icre, inds_v1]*mn_mx[1]-np.diff(mn_mx)*.03, 'k*')
-        ax2.plot(x+xgapg/2, p_sigval[icre, inds_lm]*mn_mx[1]-np.diff(mn_mx)*.03, 'k*')
-
+        if ttest_actShfl_stages == 1: # compare ophys stages
+            ax1.plot(x+xgapg/2, p_sigval[icre, inds_v1]*mn_mx[1]-np.diff(mn_mx)*.03, 'k*')
+            ax2.plot(x+xgapg/2, p_sigval[icre, inds_lm]*mn_mx[1]-np.diff(mn_mx)*.03, 'k*')
+        
+        
         iax = 0 # V1, LM
         for ax in [ax1,ax2]:
-            ax.hlines(0, x[0], x[-1], linestyle='dashed', color='gray')
+#             ax.hlines(0, x[0], x[-1], linestyle='dashed', color='gray')
             ax.set_xticks(x)
             ax.set_xticklabels(xticklabs, rotation=45)
             ax.tick_params(labelsize=10)
-            ax.set_xlim([-.5, x[-1]+xgap+.5])
+            ax.set_xlim([-.5, xnowall[-1][-1]+.5]) # x[-1]+xgap+.5
             ax.set_xlabel(xlabs, fontsize=12)
 
     #         ax.set_ylim(mn_mx)
@@ -807,13 +913,16 @@ if np.isnan(svm_blocks):
                 fgn = fgn + '_sameNumNeursAllPlanes'
 
             if svm_blocks==-1:
-                word = 'engagement'
+                word = 'engagement_'
             else:
-                word = 'blocks'
-
+                word = ''
+            
             if use_events:
-                word = word + '_events'
-
+                word = word + 'events'
+            
+            if show_depth_stats:
+                word = word + '_anova'
+                
             fgn = f'{fgn}_{word}_frames{frames_svm[0]}to{frames_svm[-1]}'                        
             fgn = fgn + '_ClassAccur'
 

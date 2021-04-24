@@ -134,7 +134,9 @@ def flash_gray_onset_relOmit(samps_bef, samps_aft, frame_dur, flash_dur=.25, gra
 
 
 
-def plot_flashLines_ticks_legend(lims, H, flashes_win_trace_index_unq_time, grays_win_trace_index_unq_time, x='', xmjn='', bbox_to_anchor=(1, .7), ylab='% Classification accuracy', xlab='Time rel. trial onset (sec)'):
+def plot_flashLines_ticks_legend(lims, H, flashes_win_trace_index_unq_time, grays_win_trace_index_unq_time, x='', xmjn='', bbox_to_anchor=(1, .7), ylab='% Classification accuracy', xlab='Time rel. trial onset (sec)', omit_aligned=0):
+    ### NOTE: there is also this same code in def_funs
+    
     #%% Add to the plots the following: flash/ gray screen lines , proper tick marks, and legend
 #     h1 = plt.plot()
 #     plot_flashLines_ticks_legend([], h1, flashes_win_trace_index_unq_time, grays_win_trace_index_unq_time, time_trace, bbox_to_anchor=bb, ylab=ylabel, xmjn=xmjn)        
@@ -161,11 +163,14 @@ def plot_flashLines_ticks_legend(lims, H, flashes_win_trace_index_unq_time, gray
     # mark flash duration with a shaded area ### NOTE: you should remove 0 from flashes_win_trace_index_unq_time because at time 0, there is no flash, there is omission!!    
     flashes_win_trace_index_unq_time0 = flashes_win_trace_index_unq_time
     
-    flash_dur = np.unique(grays_win_trace_index_unq_time - flashes_win_trace_index_unq_time0)
-    omit_ind = np.argwhere(flashes_win_trace_index_unq_time0==0).squeeze()
-#    flashes_win_trace_index_unq_time = np.delete(flashes_win_trace_index_unq_time, omit_ind)
-    flashes_win_trace_index_unq_time_new = np.delete(flashes_win_trace_index_unq_time0, omit_ind)
-    
+    flash_dur = .25 #np.unique(grays_win_trace_index_unq_time - flashes_win_trace_index_unq_time0)
+    if omit_aligned:
+        omit_ind = np.argwhere(flashes_win_trace_index_unq_time0==0).squeeze()
+    #    flashes_win_trace_index_unq_time = np.delete(flashes_win_trace_index_unq_time, omit_ind)
+        flashes_win_trace_index_unq_time_new = np.delete(flashes_win_trace_index_unq_time0, omit_ind)
+    else:
+        flashes_win_trace_index_unq_time_new = flashes_win_trace_index_unq_time0
+                                                         
     for i in range(len(flashes_win_trace_index_unq_time_new)):
         plt.axvspan(flashes_win_trace_index_unq_time_new[i], flashes_win_trace_index_unq_time_new[i] + flash_dur, alpha=0.2, facecolor='y')
     
@@ -205,4 +210,41 @@ def plot_flashLines_ticks_legend(lims, H, flashes_win_trace_index_unq_time, gray
     seaborn.despine()#left=True, bottom=True, right=False, top=False)
 
     
+    
+    
+
+def makeNicePlots(ax, rmv2ndXtickLabel=0, rmv2ndYtickLabel=0):
+    # Hide the right and top spines
+    ax.spines['right'].set_visible(False)
+    ax.spines['top'].set_visible(False)
+    # Only show ticks on the left and bottom spines
+    ax.yaxis.set_ticks_position('left')
+    ax.xaxis.set_ticks_position('bottom')
+    
+    # Make tick directions outward    
+    ax.tick_params(direction='out')    
+    # Tweak spacing between subplots to prevent labels from overlapping
+    #plt.subplots_adjust(hspace=0.5)
+#    ymin, ymax = ax.get_ylim()
+
+    # Remove every other tick label
+    if rmv2ndXtickLabel:
+        [label.set_visible(False) for label in ax.xaxis.get_ticklabels()[::2]]
+        
+    if rmv2ndYtickLabel:
+        [label.set_visible(False) for label in ax.yaxis.get_ticklabels()[::2]]
+#        a = np.array(ax.yaxis.get_ticklabels())[np.arange(0,len(ax.yaxis.get_ticklabels()),2).astype(int).flatten()]
+#        [label.set_visible(False) for label in a]
+    
+    plt.grid(False)
+        
+    ax.tick_params(labelsize=12)
+
+    # gap between tick labeles and axis
+#    ax.tick_params(axis='x', pad=30)
+
+#    plt.xticks(x, labels, rotation='vertical')
+    #ax.xaxis.label.set_color('red')    
+#    plt.gca().spines['left'].set_color('white')
+    #plt.gca().yaxis.set_visible(False)
     

@@ -881,7 +881,7 @@ def pool_sesss_areas_eachDepth(planes_allsess, y, num_depth=4):
     
 #%% Add to the plots the following: flash/ gray screen lines , proper tick marks, and legend
 
-def plot_flashLines_ticks_legend(lims, H, flashes_win_trace_index_unq_time, grays_win_trace_index_unq_time, x='', bbox_to_anchor=(1, .7), ylab='% Classification accuracy', xmjn='', xlab='Time after omission (sec)'):
+def plot_flashLines_ticks_legend(lims, H, flashes_win_trace_index_unq_time, grays_win_trace_index_unq_time, x='', bbox_to_anchor=(1, .7), ylab='% Classification accuracy', xmjn='', xlab='Time after omission (sec)', omit_aligned=0):
 #     h1 = plt.plot()
 #     plot_flashLines_ticks_legend([], h1, flashes_win_trace_index_unq_time, grays_win_trace_index_unq_time, time_trace, bbox_to_anchor=bb, ylab=ylabel, xmjn=xmjn)        
     
@@ -901,10 +901,14 @@ def plot_flashLines_ticks_legend(lims, H, flashes_win_trace_index_unq_time, gray
     ### because at time 0, there is no flash, there is omission!!    
     flashes_win_trace_index_unq_time0 = flashes_win_trace_index_unq_time
     
-    flash_dur = np.unique(grays_win_trace_index_unq_time - flashes_win_trace_index_unq_time0)
-    omit_ind = np.argwhere(flashes_win_trace_index_unq_time0==0).squeeze()
-#    flashes_win_trace_index_unq_time = np.delete(flashes_win_trace_index_unq_time, omit_ind)
-    flashes_win_trace_index_unq_time_new = np.delete(flashes_win_trace_index_unq_time0, omit_ind)
+    flash_dur = .25 #np.unique(grays_win_trace_index_unq_time - flashes_win_trace_index_unq_time0)
+
+    if omit_aligned:
+        omit_ind = np.argwhere(flashes_win_trace_index_unq_time0==0).squeeze()
+    #    flashes_win_trace_index_unq_time = np.delete(flashes_win_trace_index_unq_time, omit_ind)
+        flashes_win_trace_index_unq_time_new = np.delete(flashes_win_trace_index_unq_time0, omit_ind)
+    else:
+        flashes_win_trace_index_unq_time_new = flashes_win_trace_index_unq_time0
     
     for i in range(len(flashes_win_trace_index_unq_time_new)):
         plt.axvspan(flashes_win_trace_index_unq_time_new[i], flashes_win_trace_index_unq_time_new[i] + flash_dur, alpha=0.2, facecolor='y')
@@ -945,6 +949,7 @@ def plot_flashLines_ticks_legend(lims, H, flashes_win_trace_index_unq_time, gray
     seaborn.despine()#left=True, bottom=True, right=False, top=False)
 
 
+    
 #%% Look for a file in a directory; if desired, sort by modification time, and only return the latest file.
 
 # example inputs:

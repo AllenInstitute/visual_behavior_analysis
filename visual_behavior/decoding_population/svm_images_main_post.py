@@ -372,9 +372,11 @@ def svm_images_main_post(session_id, data_list, svm_blocks, iblock, dir_svm, fra
             peak_amp_trainTestShflChance = np.nanmean(CA_traces[time_win_frames], axis=0) # 4
             
             # compute the baseline
-            bl_preOmit = np.percentile(CA_traces[bl_index_pre_omit], bl_percentile, axis=0) # 4
+            if use_events==0: # bc of the dff decay from the previous image, take the dff value at time 0 as baseline.
+                bl_preOmit = CA_traces[samps_bef_here]
+            else:
+                bl_preOmit = np.percentile(CA_traces[bl_index_pre_omit], bl_percentile, axis=0) # 4
 #             peak_amp_trainTestShflChance = peak_amp_trainTestShflChance - bl_preOmit   # subtract out the baseline
-            
 
             this_sess.at[index, ['peak_amp_trainTestShflChance', 'bl_pre0']] = [peak_amp_trainTestShflChance, bl_preOmit] # 4
 

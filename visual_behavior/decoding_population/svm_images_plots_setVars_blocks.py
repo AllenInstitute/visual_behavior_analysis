@@ -92,11 +92,11 @@ dir0 = '/home/farzaneh/OneDrive/Analysis'
 
 #%%
 svm_blocks = np.nan #-1: divide trials based on engagement # number of trial blocks to divide the session to, and run svm on. # set to np.nan to run svm analysis on the whole session
-use_events = False # False #whether to run the analysis on detected events (inferred spikes) or dff traces.
+use_events = True # False #whether to run the analysis on detected events (inferred spikes) or dff traces.
 
-to_decode = 'next' # 'current' : decode current image.    'previous': decode previous image.    'next': decode next image.
-trial_type = 'omissions' #'hits_vs_misses' #'changes_vs_nochanges' # 'omissions', 'images', 'changes', 'changes_vs_nochanges' # what trials to use for SVM analysis # the population activity of these trials at time time_win will be used to decode the image identity of flashes that occurred at their time 0 (if to_decode='current') or 750ms before (if to_decode='previous').
-use_balanced_trials = 0 #1 # if 1, use same number of trials for each class; only applicable when we have 2 classes (binary classification).
+to_decode = 'current' # 'current' : decode current image.    'previous': decode previous image.    'next': decode next image.
+trial_type = 'hits_vs_misses' #'hits_vs_misses' #'changes_vs_nochanges' # 'omissions', 'images', 'changes', 'changes_vs_nochanges' # what trials to use for SVM analysis # the population activity of these trials at time time_win will be used to decode the image identity of flashes that occurred at their time 0 (if to_decode='current') or 750ms before (if to_decode='previous').
+use_balanced_trials = 1 #1 # if 1, use same number of trials for each class; only applicable when we have 2 classes (binary classification).
 
 baseline_subtract = 1 # subtract the baseline (CA average during baseline, ie before time 0) from the evoked CA (classification accuracy)
     
@@ -508,116 +508,213 @@ for iblock in br: # iblock=0 ; iblock=np.nan
         model_table_allsess = model_table[model_table['ophys_session_id'].isin(all_sess0['session_id'])]    
         cn = 'strategy_dropout_index'  # 'visual_only_dropout_index' # 'timing_only_dropout_index'  # 'strategy_dropout_index'
         sdi = model_table_allsess[cn].values
-
-        # testing data class accuracy
-        all_sess0_modeltable = all_sess0[all_sess0['session_id'].isin(model_table['ophys_session_id'])]
-        peak_amp_test = np.vstack(all_sess0_modeltable['peak_amp_trainTestShflChance'].values)[:,1]
-        # compute average of the 8 planes
-        a = np.reshape(peak_amp_test, (num_planes, len(model_table_allsess)), order='F')
-        testing_accur_ave_planes = np.nanmean(a, axis=0)
-
-        # compute, for each session, corrcoef between strategy dropout index and average testing_class_accuracy across the 8 planes
-        c, p = ma.corrcoef(ma.masked_invalid(sdi), ma.masked_invalid(testing_accur_ave_planes))
-
-        # scatter plot
-        plt.figure(figsize=(3,3))
-        plt.plot(sdi, testing_accur_ave_planes, '.')
-        plt.xlabel(f'{cn}')
-        plt.ylabel('average decoder accuracy of 8 planes\n change vs no change')
-        plt.title(f'corrcoef = {p[0]}');
-
-
-        #################################
-        # color code cre lines
-
-        # cre line for each session
-        cre_mt = all_sess0_modeltable['cre'].values
-        cre_mt = np.reshape(cre_mt, (num_planes, len(model_table_allsess)), order='F')[0,:] # len sessions
-
-        # cre names
-        a = np.unique(cre_mt.astype(str)); cren = a[a!='nan']
-        print(cren)
-
-        df = pd.DataFrame([], columns=['Decoder accuracy (average of 8 planes)', f'{cn}', 'cre'])
-        df['Decoder accuracy (average of 8 planes)'] = testing_accur_ave_planes
-        df[f'{cn}'] = sdi
-        df['cre'] = cre_mt
-
-        sns.lmplot(f'{cn}', 'Decoder accuracy (average of 8 planes)', data=df, hue='cre', fit_reg=False, size=3)
+        sdi0 = sdi +0
         
+        print(f'{len(model_table_allsess)} / {len(all_sess0)/8.} sessions of all_sess have behavioral strategy data')
+
         
-        # compute corrcoeff for each cre line
-        c_allcre = []
-        plt.figure(figsize=(3,6))
-        for icremt in range(len(cren)):
-            sdin = sdi[cre_mt == cren[icremt]]
-            tan = testing_accur_ave_planes[cre_mt == cren[icremt]]
+        # set allsess for sessions in model table, and get some vars out of it
+        all_sess0_modeltable = all_sess0[all_sess0['session_id'].isin(model_table['ophys_session_id'])]        
+        peak_amp_all = np.vstack(all_sess0_modeltable['peak_amp_trainTestShflChance'].values) # 744 x 4        
+        bl_all = np.vstack(all_sess0_modeltable['bl_pre0'].values) # 744 x 4
+        stages = np.vstack(all_sess0_modeltable['stage'].values).flatten() # 744 
+        
+        stages_each = np.reshape(stages, (num_planes, len(model_table_allsess)), order='F') # 8 x 93
+        # np.unique(stages_each) # 'OPHYS_1_images_A', 'OPHYS_3_images_A', 'OPHYS_4_images_B', 'OPHYS_6_images_A', 'OPHYS_6_images_B'
+        
+        if trial_type =='changes_vs_nochanges':
+            stagesall = [1,2,3,4,5,6]
+        elif trial_type =='hits_vs_misses':
+            stagesall = [1,3,4,6]
+            
+            
+        ##### loop over each ophys stage
+        for stage_2_analyze in stagesall: # stage_2_analyze = 1
+            
+            stinds = np.array([stages[istage].find(str(stage_2_analyze)) for istage in range(len(stages))])
+            stages2an = (stinds != -1)
+            nsnow = int(sum(stages2an) / num_planes)
+            print(f'{nsnow} sessions are ophys {stage_2_analyze}')
+                
+            sessionsNow = np.reshape(stages2an, (num_planes, len(model_table_allsess)), order='F') # 8 x 93
+            sessionsNow = sessionsNow[0,:] # get values from only 1 plane
+        
+            # get sdi for sessions in the current stage
+            sdi = sdi0[sessionsNow]
+        
+            # testing data class accuracy
+            peak_amp_test = peak_amp_all[stages2an, 1]
+            bl_now = bl_all[stages2an, 1]
+            # compute average of the 8 planes
+            a = np.reshape(peak_amp_test, (num_planes, nsnow), order='F') # 8 x 93
+            b = np.reshape(bl_now, (num_planes, nsnow), order='F')
+            testing_accur_ave_planes = np.nanmean(a, axis=0)
+            bl_avp = np.nanmean(b, axis=0)
 
-            c, p = ma.corrcoef(ma.masked_invalid(sdin), ma.masked_invalid(tan))    
-            c_allcre.append(p[0])
-
-            plt.subplot(3,1,icremt+1)
-            plt.plot(sdin, tan, '.')
-            if icremt==2:
-                plt.xlabel(f'{cn}')
-            if icremt==1:
-                plt.ylabel('average decoder accuracy of 8 planes\n change vs no change')
-            plt.title(f'{cren[icremt]}: corrcoef = {p[0]:.2f}')
-
-        plt.subplots_adjust(hspace=0.5)
-
-
-        #################################
-        # color code by area
-
-        # repeat strategy index for each plane
-        a = np.tile(sdi, (num_planes,1)) # 8 x num_sess
-        sdi_rep = np.reshape(a, (num_planes*a.shape[1]), order='F')
-    #     a.shape
-
-        cre_rep = all_sess0_modeltable['cre'].values
-        area_rep = all_sess0_modeltable['area'].values
-    #     peak_amp_test.shape
-
-
-        ##### plot all cre lines
-        df = pd.DataFrame([], columns=['Decoder accuracy (each plane)', f'{cn}', 'cre', 'area'])
-        df['Decoder accuracy (each plane)'] = peak_amp_test
-        df[f'{cn}'] = sdi_rep
-        df['cre'] = cre_rep
-        df['area'] = area_rep
-
-        # all cre lines
-        dfn = df
-        # a single cre line
-    #     dfn = df[df['cre']==cren[2]]    
-        sns.lmplot(f'{cn}', 'Decoder accuracy (each plane)', data=dfn, hue='area', fit_reg=False)
+            if baseline_subtract: # subtract the baseline (CA average during baseline, ie before time 0) from the evoked CA (classification accuracy)
+                testing_accur_ave_planes = testing_accur_ave_planes - bl_avp
 
 
-        ##### plot each cre line separately
-        plt.figure(figsize=(3,6))
-        for icremt in range(len(cren)):
-            sdin = sdi_rep[cre_rep == cren[icremt]]
-            tan = peak_amp_test[cre_rep == cren[icremt]]
-            aan = area_rep[cre_rep == cren[icremt]]
 
-            plt.subplot(3,1,icremt+1)
-            plt.plot(sdin[aan=='VISl'], tan[aan=='VISl'], 'b.', label='VISl')
-            plt.plot(sdin[aan=='VISp'], tan[aan=='VISp'], 'r.', label='VISp')
-            if icremt==0:
-                plt.legend(loc='center left', bbox_to_anchor=(1, .7), frameon=False)
-            if icremt==2:
-                plt.xlabel(f'{cn}')
-            if icremt==1:
-                plt.ylabel('Decoder accuracy of each plane\n change vs no change')
+            # shuffled data class accuracy
+            peak_amp_shfl = peak_amp_all[stages2an, 2]
+            bl_now = bl_all[stages2an, 2]
+            # compute average of the 8 planes
+            a = np.reshape(peak_amp_shfl, (num_planes, nsnow), order='F')
+            b = np.reshape(bl_now, (num_planes, nsnow), order='F')
+            shfl_accur_ave_planes = np.nanmean(a, axis=0)
+            bl_avp = np.nanmean(b, axis=0)
 
-        plt.subplots_adjust(hspace=0.5)
+            if baseline_subtract: # subtract the baseline (CA average during baseline, ie before time 0) from the evoked CA (classification accuracy)
+                shfl_accur_ave_planes = shfl_accur_ave_planes - bl_avp
+
+                
+            ##############################
+            ### get r2 values (corr coeffs) between decoder accuracy and behavioral strategy across all sessions
+            ### all cre lines
+            topn = testing_accur_ave_planes # testing data class accuracy
+    #         topn = testing_accur_ave_planes - shfl_accur_ave_planes # testing-shuffled data class accuracy
+
+            # compute, for each session, corrcoef between strategy dropout index and average testing_class_accuracy across the 8 planes
+            c, p = ma.corrcoef(ma.masked_invalid(sdi), ma.masked_invalid(topn))
+            pallcre = p
+
+            #### cre line for each session
+            cre_mt = all_sess0_modeltable['cre'].values
+            cre_mt = np.reshape(cre_mt, (num_planes, len(model_table_allsess)), order='F')[0,:] # len sessions
+            cre_mt = cre_mt[sessionsNow]
+            
+            
+            #### compute r2 for each cre line separately
+            c_allcre = []
+            for icremt in range(len(cren)):
+                sdin = sdi[cre_mt == cren[icremt]]
+                tan = topn[cre_mt == cren[icremt]]
+
+                c, p = ma.corrcoef(ma.masked_invalid(sdin), ma.masked_invalid(tan))    
+                c_allcre.append(p[0])
+            print(cren, c_allcre)
 
 
-        #################################
-        # color code by depth
+            #################################
+            ############## plots ############
+            #################################
+                
+
+            #################################
+            # lmplot: Plot all cre lines; color code by cre line
+            
+            # cre names
+            a = np.unique(cre_mt.astype(str)); cren = a[a!='nan']
+            print(cren)
+
+            df = pd.DataFrame([], columns=['Decoder accuracy (average of 8 planes)', f'{cn}', 'cre'])
+            df['Decoder accuracy (average of 8 planes)'] = topn #testing_accur_ave_planes
+            df[f'{cn}'] = sdi
+            df['cre'] = cre_mt
+
+            g = sns.lmplot(f'{cn}', 'Decoder accuracy (average of 8 planes)', data=df, hue='cre', size=2.5, scatter_kws={"s": 20}, col='cre', fit_reg=False)
+            ii = -1
+            for icremt in [1,0,2]:
+                ii = ii+1
+                g.axes[0][ii].set_title(f'{cren[icremt][:3]}, r2 = {c_allcre[icremt]:.2f}')
+            plt.suptitle(f'ophys{stage_2_analyze}, r2={pallcre[0]:.2f}', y=1.1);
+            
+            
+
+            #################################
+            # Plot all cre lines        
+            # scatter plot
+            plt.figure(figsize=(3,3))
+            plt.plot(sdi, topn, '.')
+            plt.xlabel(f'{cn}')
+            plt.ylabel('average decoder accuracy of 8 planes\n rel. baseline')
+            plt.title(f'ophys{stage_2_analyze}, r2={pallcre[0]:.2f}');
+
+            
+            
+            #################################
+            # Plot each cre line in a separate figure
+            # compute corrcoeff for each cre line
+#             c_allcre = []
+            plt.figure(figsize=(3,9))
+            for icremt in range(len(cren)):
+                sdin = sdi[cre_mt == cren[icremt]]
+                tan = topn[cre_mt == cren[icremt]]
+
+#                 c, p = ma.corrcoef(ma.masked_invalid(sdin), ma.masked_invalid(tan))    
+#                 c_allcre.append(p[0])
+
+                plt.subplot(3,1,icremt+1)
+                plt.plot(sdin, tan, '.')
+                if icremt==2:
+                    plt.xlabel(f'{cn}')
+                if icremt==1:
+                    plt.ylabel('Average decoder accuracy of 8 planes\n rel. baseline')
+                plt.title(f'ophys{stage_2_analyze}, {cren[icremt][:3]}, r2={c_allcre[icremt]:.2f}')
+                makeNicePlots(plt.gca())
+
+            plt.subplots_adjust(hspace=0.5)
 
 
+
+
+            #################################
+            # color code by area
+
+            # repeat strategy index for each plane
+            a = np.tile(sdi, (num_planes,1)) # 8 x num_sess
+            sdi_rep = np.reshape(a, (num_planes*a.shape[1]), order='F')
+        #     a.shape
+
+            cre_rep = all_sess0_modeltable['cre'].values
+            area_rep = all_sess0_modeltable['area'].values
+        #     peak_amp_test.shape
+
+
+            ##### plot all cre lines
+            df = pd.DataFrame([], columns=['Decoder accuracy (each plane)', f'{cn}', 'cre', 'area'])
+            df['Decoder accuracy (each plane)'] = peak_amp_test
+            df[f'{cn}'] = sdi_rep
+            df['cre'] = cre_rep
+            df['area'] = area_rep
+
+            # all cre lines
+            dfn = df
+            # a single cre line
+        #     dfn = df[df['cre']==cren[2]]    
+            sns.lmplot(f'{cn}', 'Decoder accuracy (each plane)', data=dfn, hue='area', fit_reg=False)
+
+
+            ##### plot each cre line separately
+            plt.figure(figsize=(3,6))
+            for icremt in range(len(cren)):
+                sdin = sdi_rep[cre_rep == cren[icremt]]
+                tan = peak_amp_test[cre_rep == cren[icremt]]
+                aan = area_rep[cre_rep == cren[icremt]]
+
+                plt.subplot(3,1,icremt+1)
+                plt.plot(sdin[aan=='VISl'], tan[aan=='VISl'], 'b.', label='VISl')
+                plt.plot(sdin[aan=='VISp'], tan[aan=='VISp'], 'r.', label='VISp')
+                if icremt==0:
+                    plt.legend(loc='center left', bbox_to_anchor=(1, .7), frameon=False)
+                if icremt==2:
+                    plt.xlabel(f'{cn}')
+                if icremt==1:
+                    plt.ylabel('Decoder accuracy of each plane\n change vs no change')
+
+            plt.subplots_adjust(hspace=0.5)
+
+
+            #################################
+            # color code by depth
+
+
+    
+    
+    
+    
+    
     
     
     

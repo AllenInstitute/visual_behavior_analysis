@@ -724,6 +724,8 @@ def svm_main_images_pbs(data_list, experiment_ids_valid, df_data, session_trials
             n_trials = image_data_this_exp[tr_id].unique().shape[0]
             print(f'n_frames, n_neurons, n_trials: {n_frames, n_neurons, n_trials}')
 
+            cell_specimen_id = image_data_this_exp['cell_specimen_id'].unique()
+            
             # image_data_this_exp['trace'].values.shape # (neurons x trials) # all neurons for trial 1, then all neurons for trial 2, etc
             traces = np.concatenate((image_data_this_exp['trace'].values)) # (frames x neurons x trials)
             traces_fut = np.reshape(traces, (n_frames,  n_neurons, n_trials), order='F')
@@ -832,7 +834,7 @@ def svm_main_images_pbs(data_list, experiment_ids_valid, df_data, session_trials
 
             
             
-            this_sess.at[index, ['n_trials', 'n_neurons', 'frame_dur', 'samps_bef', 'samps_aft']] = n_trials, n_neurons, frame_dur, samps_bef, samps_aft
+            this_sess.at[index, ['n_trials', 'n_neurons', 'cell_specimen_id', 'frame_dur', 'samps_bef', 'samps_aft']] = n_trials, n_neurons, cell_specimen_id, frame_dur, samps_bef, samps_aft
             print('===== plane %d: %d neurons; %d trials =====' %(index, n_neurons, n_trials))
 
             
@@ -1343,10 +1345,20 @@ for ophys_experiment_id in experiment_ids_this_session: # ophys_experiment_id = 
     
         dataset = loading.get_ophys_dataset(ophys_experiment_id)
 #         analysis = ResponseAnalysis(dataset, use_extended_stimulus_presentations=True) # False # use_extended_stimulus_presentations flag is set to False, meaning that only the main stimulus metadata will be present (image name, whether it is a change or omitted, and a few other things). If you need other columns (like engagement_state or anything from the behavior strategy model), you have to set that to True        
-        analysis = ResponseAnalysis(dataset, use_extended_stimulus_presentations=True, use_events=use_events)        
+        analysis = ResponseAnalysis(dataset, use_extended_stimulus_presentations=True, use_events=use_events)                
         
         if trial_type == 'hits_vs_misses':
             trials_response_df = analysis.trials_response_df #(use_extended_stimulus_presentations=True)
+            
+            #### add engagement state from trials_df to trials_response_df
+            trials_df = dataset.extended_trials
+
+            for itrid in trials_df.index.values: # itrid = trials_df.index.values[4]
+                thistr = trials_response_df['trials_id']==itrid
+                if sum(thistr)>0:# it's not an aborted trial
+                    trials_response_df.loc[thistr, 'engagement_state'] = trials_df.iloc[itrid]['engagement_state']
+            
+            
             stim_response_df = trials_response_df # so it matches the naming of the rest of the code down here
 #             c = stim_response_df.keys().values # get all the columns
         else:
@@ -1488,7 +1500,7 @@ frames_svm = range(r1, r2)-samps_bef # range(-10, 30) # range(-1,1) # run svm on
 
 
 #%%
-cols_basic = np.array(['session_id', 'experiment_id', 'mouse_id', 'date', 'cre', 'stage', 'area', 'depth', 'n_trials', 'n_neurons', 'frame_dur', 'samps_bef', 'samps_aft']) #, 'flash_omit_dur_all', 'flash_omit_dur_fr_all'])
+cols_basic = np.array(['session_id', 'experiment_id', 'mouse_id', 'date', 'cre', 'stage', 'area', 'depth', 'n_trials', 'n_neurons', 'cell_specimen_id', 'frame_dur', 'samps_bef', 'samps_aft']) #, 'flash_omit_dur_all', 'flash_omit_dur_fr_all'])
 cols_svm_0 = ['frames_svm', 'to_decode', 'use_balanced_trials', 'thAct', 'numSamples', 'softNorm', 'kfold', 'regType', 'cvect', 'meanX_allFrs', 'stdX_allFrs', 
        'image_labels', 'image_indices', 'image_indices_previous_flash', 'image_indices_next_flash',
        'num_classes', 'iblock', 'trials_blocks', 'engagement_pupil_running', 'pupil_running_values' , 
