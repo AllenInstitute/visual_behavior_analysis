@@ -40,7 +40,7 @@ def plot_across_session_responses(ophys_container_id, cell_specimen_id, use_even
             if cell_specimen_id in dataset.dff_traces.index:
                 analysis = ResponseAnalysis(dataset, use_events=use_events, use_extended_stimulus_presentations=False)
                 sdf = ut.get_mean_df(analysis.get_response_df(df_name='stimulus_response_df'), analysis=analysis,
-                                     conditions=['cell_specimen_id', 'change', 'image_name'], flashes=True, omitted=False,
+                                     conditions=['cell_specimen_id', 'is_change', 'image_name'], flashes=True, omitted=False,
                                      get_reliability=False, get_pref_stim=True, exclude_omitted_from_pref_stim=True)
                 odf = ut.get_mean_df(analysis.get_response_df(df_name='omission_response_df'), analysis=analysis,
                                      conditions=['cell_specimen_id'], flashes=False, omitted=True,
@@ -58,7 +58,7 @@ def plot_across_session_responses(ophys_container_id, cell_specimen_id, use_even
                 colors = sns.color_palette('hls', 8) + [(0.5, 0.5, 0.5)]
 
                 window = rp.get_default_stimulus_response_params()["window_around_timepoint_seconds"]
-                cell_data = sdf[(sdf.cell_specimen_id == cell_specimen_id) & (sdf.change == False)]
+                cell_data = sdf[(sdf.cell_specimen_id == cell_specimen_id) & (sdf.is_change == False)]
                 for c, image_name in enumerate(np.sort(cell_data.image_name.unique())):
                     ax[i + n] = sf.plot_mean_trace_from_mean_df(cell_data[cell_data.image_name == image_name],
                                                                 frame_rate=analysis.ophys_frame_rate, ylabel=ylabel,
@@ -71,10 +71,10 @@ def plot_across_session_responses(ophys_container_id, cell_specimen_id, use_even
                 tmp = analysis.get_response_df(df_name='stimulus_response_df')
                 tmp['running'] = [True if run_speed > 2 else False for run_speed in tmp.mean_running_speed.values]
                 sdf = ut.get_mean_df(tmp, analysis=analysis,
-                                     conditions=['cell_specimen_id', 'change', 'image_name', 'running'], flashes=True, omitted=False,
+                                     conditions=['cell_specimen_id', 'is_change', 'image_name', 'running'], flashes=True, omitted=False,
                                      get_reliability=False, get_pref_stim=True, exclude_omitted_from_pref_stim=False)
 
-                cell_data = sdf[(sdf.cell_specimen_id == cell_specimen_id) & (sdf.change == False) & (sdf.pref_stim == True)]
+                cell_data = sdf[(sdf.cell_specimen_id == cell_specimen_id) & (sdf.is_change == False) & (sdf.pref_stim == True)]
                 run_colors = [sns.color_palette()[3], sns.color_palette()[2]]
                 for c, running in enumerate(np.sort(cell_data.running.unique())):
                     if len(cell_data[cell_data.running == running]) > 0:
