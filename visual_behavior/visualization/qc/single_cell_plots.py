@@ -67,7 +67,7 @@ def plot_across_session_responses(ophys_container_id, cell_specimen_id, use_even
                 ax[i + n] = sf.plot_flashes_on_trace(ax[i + n], analysis, window=window, trial_type=None, omitted=False, alpha=0.15, facecolor='gray')
                 ax[i + n].set_title(container_expts.loc[ophys_experiment_id].session_type[6:] + '\n image response')
 
-                analysis = ResponseAnalysis(dataset, use_events=False, use_extended_stimulus_presentations=False)
+                analysis = ResponseAnalysis(dataset, use_events=False, use_extended_stimulus_presentations=True)
                 tmp = analysis.get_response_df(df_name='stimulus_response_df')
                 tmp['running'] = [True if run_speed > 2 else False for run_speed in tmp.mean_running_speed.values]
                 sdf = ut.get_mean_df(tmp, analysis=analysis,
