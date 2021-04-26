@@ -26,7 +26,6 @@ def get_pref_image_for_cell_specimen_ids(stimulus_response_df):
     returns a dataframe with index cell_specimen_id and column pref_image indicating
     which image_name evoked the largest response for each cell
     """
-    stimulus_response_df = stimulus_response_df[stimulus_response_df.omitted==False] # do not include omissions
     pref_images = stimulus_response_df.groupby(['cell_specimen_id', 'image_name']).mean().reset_index().groupby(
         'cell_specimen_id').apply(get_pref_image_for_group)
     return pref_images
@@ -136,8 +135,7 @@ def get_image_selectivity_index_one_vs_all(stimulus_response_df):
     pref_image_df = stimulus_response_df[stimulus_response_df.pref_image == True]
     mean_response_pref_image = pref_image_df.groupby(['cell_specimen_id']).mean()[['mean_response']]
 
-    non_pref_images_df = stimulus_response_df[(stimulus_response_df.pref_image == False) &
-                                              (stimulus_response_df.omitted == False)]
+    non_pref_images_df = stimulus_response_df[(stimulus_response_df.pref_image == False)]
     mean_response_non_pref_images = non_pref_images_df.groupby(['cell_specimen_id']).mean()[['mean_response']]
 
     image_selectivity_index = (mean_response_pref_image - mean_response_non_pref_images) / (
@@ -148,9 +146,9 @@ def get_image_selectivity_index_one_vs_all(stimulus_response_df):
 
 
 def get_image_selectivity_index(stimulus_response_df):
-    tmp1 = get_image_selectivity_index_pref_non_pref(stimulus_response_df)
-    tmp2 = get_image_selectivity_index_one_vs_all(stimulus_response_df)
-    image_selectivity = pd.concat([tmp1, tmp2])
+    image_selectivity = get_image_selectivity_index_pref_non_pref(stimulus_response_df)
+    tmp = get_image_selectivity_index_one_vs_all(stimulus_response_df)
+    image_selectivity = image_selectivity.merge(tmp, on='cell_specimen_id')
     return image_selectivity
 
 
@@ -502,6 +500,8 @@ def generate_metrics_table(ophys_experiment_id, ophys_experiment_table, use_even
     metrics_table['stimuli'] = stimuli
     metrics_table['events'] = use_events
 
+    metrics_table = metrics_table.rename(columns={'variable':'metric'})
+
     return metrics_table
 
 
@@ -532,5 +532,5 @@ if __name__ == '__main__':
     metrics_df = pd.concat([metrics_df, trace_metrics])
 
     save_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\single_cell_metrics'
-    metrics_table.to_csv(os.path.join(save_dir, 'cell_metrics', 'experiment_id' + str(ophys_experiment_id) + '.csv'))
+    metrics_table.to_hdf(os.path.join(save_dir, 'cell_metrics', 'experiment_id' + str(ophys_experiment_id) + '.h5'), key='df')
 
