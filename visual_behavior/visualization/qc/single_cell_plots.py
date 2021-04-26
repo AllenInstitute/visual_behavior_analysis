@@ -17,7 +17,7 @@ def plot_across_session_responses(ophys_container_id, cell_specimen_id, use_even
     Compares across all sessions in a container for each cell, including the ROI mask across days.
     Useful to validate cell matching as well as examine changes in activity profiles over days.
     """
-    experiments_table = data_loading.get_filtered_ophys_experiment_table()
+    experiments_table = data_loading.get_filtered_ophys_experiment_table(release_data_only=True)
     container_expts = experiments_table[experiments_table.ophys_container_id == ophys_container_id]
     expts = np.sort(container_expts.index.values)
     if use_events:
@@ -31,12 +31,12 @@ def plot_across_session_responses(ophys_container_id, cell_specimen_id, use_even
     figsize = (25, 20)
     fig, ax = plt.subplots(6, n, figsize=figsize)
     ax = ax.ravel()
-
+    print('ophys_container_id:', ophys_container_id)
     for i, ophys_experiment_id in enumerate(expts):
+        print('ophys_experiment_id:', ophys_experiment_id)
         try:
 
             dataset = data_loading.get_ophys_dataset(ophys_experiment_id, include_invalid_rois=False)
-            print(dataset.dff_traces.index.values[0])
             if cell_specimen_id in dataset.dff_traces.index:
                 analysis = ResponseAnalysis(dataset, use_events=use_events, use_extended_stimulus_presentations=False)
                 sdf = ut.get_mean_df(analysis.get_response_df(df_name='stimulus_response_df'), analysis=analysis,
@@ -112,7 +112,7 @@ def plot_across_session_responses(ophys_container_id, cell_specimen_id, use_even
                 fig.suptitle(str(cell_specimen_id) + '_' + dataset.metadata_string, x=0.5, y=1.01,
                              horizontalalignment='center')
         except Exception as e:
-            print('problem for cell_specimen_id:', cell_specimen_id)
+            print('problem for cell_specimen_id:', cell_specimen_id, ', ophys_experiment_id:', ophys_experiment_id)
             print(e)
     if save_figure:
         save_dir = utils.get_single_cell_plots_dir()
