@@ -33,11 +33,12 @@ def plot_max_projection_image(dataset, save_dir=None, folder='max_projection'):
         save_figure(fig, figsize, save_dir, folder, str(dataset.experiment_id))
 
 
-def plot_cell_zoom(roi_mask_dict, max_projection, cell_specimen_id, spacex=10, spacey=10, show_mask=False, ax=None):
-    if isinstance(list(roi_mask_dict.keys())[0], str):
-        m = roi_mask_dict[str(cell_specimen_id)]
-    else:
-        m = roi_mask_dict[int(cell_specimen_id)]
+def plot_cell_zoom(roi_masks, max_projection, cell_specimen_id, spacex=10, spacey=10, show_mask=False, ax=None):
+    # if isinstance(list(roi_mask_dict.keys())[0], str):
+    #     m = roi_mask_dict[str(cell_specimen_id)]
+    # else:
+    #     m = roi_mask_dict[int(cell_specimen_id)]
+    m = roi_masks.loc[cell_specimen_id].roi_mask
     (y, x) = np.where(m == 1)
     xmin = np.min(x)
     xmax = np.max(x)
@@ -1669,7 +1670,7 @@ def plot_cell_summary_figure(analysis, cell_index, save=False, show=False, cache
     ax.set_title(dataset.analysis_folder)
 
     ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.0, .20), yspan=(0, .22))
-    ax = plot_cell_zoom(dataset.roi_mask_dict, dataset.max_projection, cell_specimen_id, spacex=25, spacey=25,
+    ax = plot_cell_zoom(dataset.roi_masks, dataset.max_projection, cell_specimen_id, spacex=25, spacey=25,
                         show_mask=True, ax=ax)
     ax.set_title('cell ' + str(cell_index) + ' - ' + str(cell_specimen_id))
 
