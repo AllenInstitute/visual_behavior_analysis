@@ -28,7 +28,6 @@ if __name__ == '__main__':
                     try: # code will not always run, such as in the case of passive sessions (no trials that are 'engaged')
                         tmp = cell_metrics.generate_metrics_table(ophys_experiment_id, ophys_experiment_table, use_events=use_events,
                                                      condition=condition, session_subset=session_subset, stimuli=stimulus)
-                        tmp = tmp.reset_index()
                         metrics_df = pd.concat([metrics_df, tmp])
                     except Exception as e:
                         print('metrics not generated for', condition, stimulus, session_subset, 'events', use_events)
@@ -44,6 +43,11 @@ if __name__ == '__main__':
     else:
         save_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\single_cell_metrics'
 
-    metrics_df.to_csv(os.path.join(save_dir, 'cell_metrics', 'experiment_id_' + str(ophys_experiment_id) + '.csv'))
+    # metrics_df.to_csv(os.path.join(save_dir, 'cell_metrics', 'experiment_id_' + str(ophys_experiment_id) + '.csv'))
+    filepath = os.path.join(save_dir, 'cell_metrics', 'experiment_id_' + str(ophys_experiment_id) + '.h5')
+    if os.path.exists(filepath):
+        os.remove(filepath)
+        print('h5 file exists for', ophys_experiment_id, ' - overwriting')
+    metrics_df.to_hdf(filepath, key='df')
 
 
