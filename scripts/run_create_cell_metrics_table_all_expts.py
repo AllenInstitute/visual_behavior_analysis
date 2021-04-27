@@ -18,12 +18,11 @@ job_settings = {'queue': 'braintv',
                 'jobdir': jobdir,
                 }
 
-for ophys_experiment_id in ophys_experiment_ids:
-    PythonJob(
-        python_file,
-        python_executable='/home/marinag/anaconda2/envs/visual_behavior_sdk/bin/python',
-        python_args=None,
-        conda_env=None,
-        jobname='process_{}'.format(ophys_experiment_id),
-        **job_settings
-    ).run(dryrun=False)
+PythonJob(
+    python_file,
+    python_executable='/home/marinag/anaconda2/envs/visual_behavior_sdk/bin/python',
+    python_args=None,
+    conda_env=None,
+    jobname='process_all_expts',
+    **job_settings
+).run(dryrun=False)
