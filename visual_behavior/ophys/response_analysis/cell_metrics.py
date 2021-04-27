@@ -411,7 +411,7 @@ def get_trace_metrics_table(ophys_experiment_id, ophys_experiment_table, use_eve
     trace_metrics['ophys_session_id'] = ophys_session_id
 
     trace_metrics = trace_metrics.reset_index()
-    trace_metrics = trace_metrics.melt(id_vars=['cell_specimen_id', 'ophys_experiment_id', 'ophys_session_id'])
+    # trace_metrics = trace_metrics.melt(id_vars=['cell_specimen_id', 'ophys_experiment_id', 'ophys_session_id'])
     trace_metrics['condition'] = 'full_trace'
     trace_metrics['session_subset'] = 'full_session'
     trace_metrics['stimuli'] = 'None'
@@ -494,7 +494,7 @@ def generate_metrics_table(ophys_experiment_id, ophys_experiment_table, use_even
     metrics_table['ophys_session_id'] = ophys_session_id
 
     metrics_table = metrics_table.reset_index()
-    metrics_table = metrics_table.melt(id_vars=['cell_specimen_id', 'ophys_experiment_id', 'ophys_session_id'])
+    # metrics_table = metrics_table.melt(id_vars=['cell_specimen_id', 'ophys_experiment_id', 'ophys_session_id'])
     metrics_table['condition'] = condition
     metrics_table['session_subset'] = session_subset
     metrics_table['stimuli'] = stimuli
@@ -505,7 +505,13 @@ def generate_metrics_table(ophys_experiment_id, ophys_experiment_table, use_even
     return metrics_table
 
 
-
+def get_metrics_df_filename(ophys_experiment_id, condition, stimuli, session_subset, use_events):
+    if use_events:
+        trace_type = 'events'
+    else:
+        trace_type = 'dFF'
+    filename = 'experiment_id_' + str(ophys_experiment_id) + '_' + condition + '_' + stimuli + '_' + session_subset + '_' + trace_type
+    return filename
 
 
 if __name__ == '__main__':
