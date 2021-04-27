@@ -12,8 +12,8 @@ python_file = r"/home/marinag/visual_behavior_analysis/scripts/create_cell_metri
 jobdir = '/allen/programs/braintv/workgroups/nc-ophys/Marina/ClusterJobs/JobRecords'
 
 job_settings = {'queue': 'braintv',
-                'mem': '60g',
-                'walltime': '8:00:00',
+                'mem': '120g',
+                'walltime': '10:00:00',
                 'ppn': 1,
                 'jobdir': jobdir,
                 }

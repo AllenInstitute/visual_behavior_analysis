@@ -22,7 +22,7 @@ if __name__ == '__main__':
         save_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\single_cell_metrics'
 
     ### trace metrics ###
-    for use_events in [True, False]:
+    for use_events in [False]:
         trace_metrics = pd.DataFrame()
         for ophys_experiment_id in ophys_experiment_ids:
             try:
@@ -30,6 +30,7 @@ if __name__ == '__main__':
                                                                  ophys_experiment_table,
                                                                  use_events=use_events)
                 trace_metrics = pd.concat([trace_metrics, tmp])
+                print(ophys_experiment_id)
             except Exception as e:
                 print('trace metrics not generated for', ophys_experiment_id)
                 print(e)
@@ -52,6 +53,7 @@ if __name__ == '__main__':
             for session_subset in session_subsets:
                 for use_events in [True, False]:
                     metrics_df = pd.DataFrame()
+                    print(condition, stimulus, session_subset, use_events)
                     for ophys_experiment_id in ophys_experiment_ids:
                         try: # code will not always run, such as in the case of passive sessions (no trials that are 'engaged')
                             tmp = cell_metrics.generate_metrics_table(ophys_experiment_id, ophys_experiment_table, use_events=use_events,

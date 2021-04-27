@@ -34,6 +34,7 @@ if __name__ == '__main__':
                 os.remove(filepath)
                 print('h5 file exists for', ophys_experiment_id, ' - overwriting')
             trace_metrics.to_hdf(filepath, key='df')
+            print('trace metrics saved for', ophys_experiment_id)
         except Exception as e:
             print('metrics not generated for', condition, stimulus, session_subset, 'events', use_events)
             print(e)
