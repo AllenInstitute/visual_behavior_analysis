@@ -17,7 +17,6 @@ if __name__ == '__main__':
     ophys_experiment_table = loading.get_filtered_ophys_experiment_table(release_data_only=True)
 
     import platform
-
     if platform.system() == 'Linux':
         save_dir = r'/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/single_cell_metrics'
     else:
@@ -25,15 +24,19 @@ if __name__ == '__main__':
 
     ### trace metrics ###
     for use_events in [True, False]:
-        trace_metrics = cell_metrics.get_trace_metrics_table(ophys_experiment_id,
-                                                         ophys_experiment_table,
-                                                         use_events=use_events)
-        filename = cell_metrics.get_metrics_df_filename(ophys_experiment_id, 'traces', 'none', 'full_session', use_events)
-        filepath = os.path.join(save_dir, 'cell_metrics', filename + '.h5')
-        if os.path.exists(filepath):
-            os.remove(filepath)
-            print('h5 file exists for', ophys_experiment_id, ' - overwriting')
-        trace_metrics.to_hdf(filepath, key='df')
+        try:
+            trace_metrics = cell_metrics.get_trace_metrics_table(ophys_experiment_id,
+                                                             ophys_experiment_table,
+                                                             use_events=use_events)
+            filename = cell_metrics.get_metrics_df_filename(ophys_experiment_id, 'traces', 'none', 'full_session', use_events)
+            filepath = os.path.join(save_dir, 'cell_metrics', filename + '.h5')
+            if os.path.exists(filepath):
+                os.remove(filepath)
+                print('h5 file exists for', ophys_experiment_id, ' - overwriting')
+            trace_metrics.to_hdf(filepath, key='df')
+        except Exception as e:
+            print('metrics not generated for', condition, stimulus, session_subset, 'events', use_events)
+            print(e)
 
 
     ### event locked response metrics ###
