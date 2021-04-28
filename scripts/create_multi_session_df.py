@@ -14,11 +14,11 @@ if __name__ == '__main__':
     print(project_code, session_number)
 
     df_name = 'trials_response_df'
-    conditions = ['cell_specimen_id', 'go', 'hit', 'change_image_name']
+    conditions = ['cell_specimen_id', 'change_image_name', 'go']
 
-    df = io.get_multi_session_df(project_code, session_number, df_name, conditions, use_events=False, use_extended_stimulus_presentations=True)
+    df = io.get_multi_session_df(project_code, session_number, df_name, conditions, use_events=False, use_extended_stimulus_presentations=False)
     print('done')
-    #
+
     # df_name = 'omission_response_df'
     # conditions = ['cell_specimen_id']
     #
