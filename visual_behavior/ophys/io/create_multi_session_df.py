@@ -43,9 +43,9 @@ def get_multi_session_df(project_code, session_number, df_name, conditions, use_
             if 'passive' in dataset.metadata['session_type']:
                 df['lick_on_next_flash'] = False
                 df['engaged'] = False
-            if ('engaged' in conditions) and ('passive' not in dataset.metadata['session_type']) and \
-                    ('engaged' not in df.keys()):
-                df['engaged'] = [True if reward_rate > 2 else False for reward_rate in df.reward_rate.values]
+            # if ('engaged' in conditions) and ('passive' not in dataset.metadata['session_type']) and \
+            #         ('engaged' not in df.keys()):
+            #     df['engaged'] = [True if reward_rate > 2 else False for reward_rate in df.reward_rate.values]
             if 'running' in conditions:
                 df['running'] = [True if mean_running_speed > 2 else False for mean_running_speed in df.mean_running_speed.values]
             if 'large_pupil' in conditions:
