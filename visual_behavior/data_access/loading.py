@@ -763,7 +763,7 @@ def add_model_outputs_to_stimulus_presentations(stimulus_presentations, behavior
 
 def get_behavior_model_summary_table():
     data_dir = get_behavior_model_outputs_dir()
-    data = pd.read_pkl(os.path.join(data_dir, '_summary_table.pkl'))
+    data = pd.read_pickle(os.path.join(data_dir, '_summary_table.pkl'))
     return data
 
 
@@ -2277,6 +2277,27 @@ def get_annotated_experiments_table():
     return experiments_table
 
 
+def add_superficial_deep_to_experiments_table(experiments_table):
+    experiments_table['depth'] = ['superficial' if experiments_table.loc[expt].imaging_depth <= 250 else 'deep' for expt
+                                  in experiments_table.index]  # 355
+    experiments_table['location'] = [experiments_table.loc[expt].cre_line.split('-')[0] + '_' +
+                                     experiments_table.loc[expt].depth for expt in experiments_table.index]
+    indices = experiments_table[experiments_table.location == 'Slc17a7_superficial'].index.values
+    experiments_table.at[indices, 'location'] = 'Excitatory superficial'
+    indices = experiments_table[experiments_table.location == 'Slc17a7_deep'].index.values
+    experiments_table.at[indices, 'location'] = 'Excitatory deep'
+    indices = experiments_table[experiments_table.location == 'Vip_superficial'].index.values
+    experiments_table.at[indices, 'location'] = 'Vip'
+    indices = experiments_table[experiments_table.location == 'Sst_superficial'].index.values
+    experiments_table.at[indices, 'location'] = 'Sst'
+    indices = experiments_table[experiments_table.location == 'Vip_deep'].index.values
+    experiments_table.at[indices, 'location'] = 'Vip'
+    indices = experiments_table[experiments_table.location == 'Sst_deep'].index.values
+    experiments_table.at[indices, 'location'] = 'Sst'
+
+    return experiments_table
+
+
 def get_file_name_for_multi_session_df_no_session_type(df_name, project_code, conditions, use_events):
     if use_events:
         suffix = '_events'
@@ -2386,23 +2407,11 @@ def remove_outlier_traces_from_multi_session_df(multi_session_df):
     return multi_session_df
 
 
-def remove_first_novel_session_retakes_from_multi_session_df(multi_session_df):
-    multi_session_df = multi_session_df.reset_index()
-    multi_session_df = multi_session_df.drop(columns=['index'])
-
-    indices = multi_session_df[(multi_session_df.session_number == 4) & (multi_session_df.exposure_number != 0)].index
-    multi_session_df = multi_session_df.drop(index=indices)
-
-    multi_session_df = multi_session_df.reset_index()
-    multi_session_df = multi_session_df.drop(columns=['index'])
-
-    indices = multi_session_df[(multi_session_df.session_number == 1) & (multi_session_df.exposure_number != 0)].index
-    multi_session_df = multi_session_df.drop(index=indices)
-
-    multi_session_df = multi_session_df.reset_index()
-    multi_session_df = multi_session_df.drop(columns=['index'])
-
-    return multi_session_df
+def remove_first_novel_session_retakes_from_df(df):
+    indices = df[(df.session_number == 4) & (df.prior_exposures_to_image_set != 0)].index
+    df = df.drop(index=indices)
+    df = df.reset_index(drop=True)
+    return df
 
 
 def remove_problematic_data_from_multi_session_df(multi_session_df):
