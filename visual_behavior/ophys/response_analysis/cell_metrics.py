@@ -525,6 +525,42 @@ def get_metrics_df_filepath(ophys_experiment_id, condition, stimuli, session_sub
     return filepath
 
 
+def get_cell_metrics_table_for_experiment(ophys_experiment_id, condition, stimulus, session_subset, use_events):
+    filepath = get_metrics_df_filepath(ophys_experiment_id, condition, stimulus,
+                                                    session_subset, use_events)
+    metrics_table = pd.read_hdf(filepath, key='df')
+    return metrics_table
+
+
+def load_cell_metrics_table_for_experiments(ophys_experiment_ids, condition, stimulus, session_subset, use_events):
+    import visual_behavior.data_access.loading as loading
+    ophys_experiment_table = loading.get_filtered_ophys_experiment_table(release_data_only=True)
+    ophys_experiment_table = loading.add_superficial_deep_to_experiments_table(ophys_experiment_table)
+
+    problem_expts = []
+    metrics_table = pd.DataFrame()
+    if ophys_experiment_ids == 'all_experiments':
+        try:
+            metrics_table = get_cell_metrics_table_for_experiment(ophys_experiment_ids, condition, stimulus, session_subset,
+                                                        use_events)
+        except:
+            print('problem for experiment', ophys_experiment_id)
+    else:
+        for ophys_experiment_id in ophys_experiment_ids:
+            print(np.where(ophys_experiment_ids == ophys_experiment_id)[0][0], 'out of', len(ophys_experiment_ids))
+            try:
+                tmp = get_cell_metrics_table_for_experiment(ophys_experiment_id, condition, stimulus, session_subset,
+                                                            use_events)
+            except:
+                print('problem for experiment', ophys_experiment_id)
+                problem_expts.append(ophys_experiment_id)
+            metrics_table = pd.concat([metrics_table, tmp])
+
+    metrics_table = metrics_table.merge(ophys_experiment_table, on=['ophys_experiment_id', 'ophys_session_id'])
+
+    return metrics_table
+
+
 if __name__ == '__main__':
 
     ophys_experiment_table = loading.get_filtered_ophys_experiment_table(release_data_only=True)
