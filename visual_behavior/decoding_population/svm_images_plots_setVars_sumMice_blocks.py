@@ -48,7 +48,7 @@ else:
 svm_allMice_sessAvSd = pd.DataFrame([], columns=cols)
 
 
-if ~np.isnan(svm_blocks):
+if ~np.isnan(svm_blocks) and svm_blocks!=-101:
     br = np.unique(blocks_all)
 else:
     br = [np.nan]
@@ -60,7 +60,7 @@ cntall2 = 0
 for istage in np.unique(stages_all): # istage=1
     for iblock in br: # iblock=0 ; iblock=np.nan
         
-        if ~np.isnan(svm_blocks):
+        if ~np.isnan(svm_blocks) and svm_blocks!=-101:
             svm_this_plane_allsess = svm_this_plane_allsess0[np.logical_and(stages_all==istage , blocks_all==iblock)]
         else:
             svm_this_plane_allsess = svm_this_plane_allsess0[stages_all==istage]

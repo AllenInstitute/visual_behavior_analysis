@@ -91,16 +91,23 @@ dir0 = '/home/farzaneh/OneDrive/Analysis'
 
 
 #%%
-svm_blocks = np.nan #-1: divide trials based on engagement # number of trial blocks to divide the session to, and run svm on. # set to np.nan to run svm analysis on the whole session
+svm_blocks = np.nan #-1: divide trials based on engagement # -101: use only engaged epochs for svm analysis # number of trial blocks to divide the session to, and run svm on. # set to np.nan to run svm analysis on the whole session
 use_events = True # False #whether to run the analysis on detected events (inferred spikes) or dff traces.
 
 to_decode = 'current' # 'current' : decode current image.    'previous': decode previous image.    'next': decode next image.
-trial_type = 'hits_vs_misses' #'hits_vs_misses' #'changes_vs_nochanges' # 'omissions', 'images', 'changes', 'changes_vs_nochanges' # what trials to use for SVM analysis # the population activity of these trials at time time_win will be used to decode the image identity of flashes that occurred at their time 0 (if to_decode='current') or 750ms before (if to_decode='previous').
-use_balanced_trials = 1 #1 # if 1, use same number of trials for each class; only applicable when we have 2 classes (binary classification).
+trial_type = 'changes' #'hits_vs_misses' #'changes_vs_nochanges' # 'omissions', 'images', 'changes', 'changes_vs_nochanges' # what trials to use for SVM analysis # the population activity of these trials at time time_win will be used to decode the image identity of flashes that occurred at their time 0 (if to_decode='current') or 750ms before (if to_decode='previous').
+use_balanced_trials = 0 #1 # if 1, use same number of trials for each class; only applicable when we have 2 classes (binary classification).
 
 baseline_subtract = 1 # subtract the baseline (CA average during baseline, ie before time 0) from the evoked CA (classification accuracy)
-    
-dosavefig = 1 # 0
+
+# the following 3 vars will be used for plots to correlate classification accuracy with behavioral strategy, and only if trial_type =='changes_vs_nochanges' or trial_type =='hits_vs_misses'
+pool_all_stages = True #True
+fit_reg = False # lmplots: add the fitted line to the catter plot or not
+superimpose_all_cre = False # plot all cre lines on the same figure
+plot_testing_shufl = 0 # if 0 correlate testing data with strategy dropout index; if 1, correlated shuffled data with strategy dropout index
+
+
+dosavefig = 0 # 0
 plot_single_mouse = 0 # if 1, make plots for each mouse
 fmt = '.pdf' # '.png' # '.svg'
 
@@ -127,7 +134,7 @@ num_planes = 8
 cre2ana_all = 'slc', 'sst', 'vip'
 use_same_experiments_dff_events = False #True # use the same set of experiments for both events and dff analysis (Note: for this to work you need to get both ea_evs and ev_dff; for this run the code until line ~300 twice once setting use_events to True and once to False.)
 
-
+    
 #%% Initialize variables
 
 # numFrames = samps_bef + samps_aft
@@ -142,6 +149,9 @@ elif trial_type=='hits_vs_misses':
 else:
     svmn = f'{e}svm_decode_{to_decode}_image_from_{trial_type}' # 'svm_gray_omit'
 
+if svm_blocks==-101: # run svm analysis only on engaged trials; redifine df_data only including the engaged rows
+    svmn = f'{svmn}_only_engaged'    
+    
 if use_balanced_trials:
     svmn = f'{svmn}_equalTrs'
 
@@ -222,7 +232,10 @@ else:
 svm_this_plane_allsess = pd.DataFrame([], columns=columns)
 cntall = 0
 
-if ~np.isnan(svm_blocks):
+
+if svm_blocks==-101:
+    br = [np.nan]    
+elif ~np.isnan(svm_blocks):
     if svm_blocks==-1: # divide trials into blocks based on the engagement state
         svmb = 2
     else:
@@ -254,7 +267,7 @@ for iblock in br: # iblock=0 ; iblock=np.nan
     a = f'frames{frames_svm[0]}to{frames_svm[-1]}'
 #     a = f'{cre2ana}_frames{frames_svm[0]}to{frames_svm[-1]}'
 
-    if ~np.isnan(svm_blocks):
+    if ~np.isnan(svm_blocks) and svm_blocks!=-101:
         if svm_blocks==-1: # divide trials into blocks based on the engagement state
             word = 'engaged'
         else:
@@ -498,218 +511,7 @@ for iblock in br: # iblock=0 ; iblock=np.nan
     
     if trial_type =='changes_vs_nochanges' or trial_type =='hits_vs_misses':
         
-        import matplotlib.pyplot as plt
-        
-#         loading.get_behavior_model_summary_table()
-        directory = '/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/behavior_model_output/'
-        model_table = pd.read_csv(directory+'_summary_table.csv')
-
-        # strategy dropout
-        model_table_allsess = model_table[model_table['ophys_session_id'].isin(all_sess0['session_id'])]    
-        cn = 'strategy_dropout_index'  # 'visual_only_dropout_index' # 'timing_only_dropout_index'  # 'strategy_dropout_index'
-        sdi = model_table_allsess[cn].values
-        sdi0 = sdi +0
-        
-        print(f'{len(model_table_allsess)} / {len(all_sess0)/8.} sessions of all_sess have behavioral strategy data')
-
-        
-        # set allsess for sessions in model table, and get some vars out of it
-        all_sess0_modeltable = all_sess0[all_sess0['session_id'].isin(model_table['ophys_session_id'])]        
-        peak_amp_all = np.vstack(all_sess0_modeltable['peak_amp_trainTestShflChance'].values) # 744 x 4        
-        bl_all = np.vstack(all_sess0_modeltable['bl_pre0'].values) # 744 x 4
-        stages = np.vstack(all_sess0_modeltable['stage'].values).flatten() # 744 
-        
-        stages_each = np.reshape(stages, (num_planes, len(model_table_allsess)), order='F') # 8 x 93
-        # np.unique(stages_each) # 'OPHYS_1_images_A', 'OPHYS_3_images_A', 'OPHYS_4_images_B', 'OPHYS_6_images_A', 'OPHYS_6_images_B'
-        
-        if trial_type =='changes_vs_nochanges':
-            stagesall = [1,2,3,4,5,6]
-        elif trial_type =='hits_vs_misses':
-            stagesall = [1,3,4,6]
-            
-            
-        ##### loop over each ophys stage
-        for stage_2_analyze in stagesall: # stage_2_analyze = 1
-            
-            stinds = np.array([stages[istage].find(str(stage_2_analyze)) for istage in range(len(stages))])
-            stages2an = (stinds != -1)
-            nsnow = int(sum(stages2an) / num_planes)
-            print(f'{nsnow} sessions are ophys {stage_2_analyze}')
-                
-            sessionsNow = np.reshape(stages2an, (num_planes, len(model_table_allsess)), order='F') # 8 x 93
-            sessionsNow = sessionsNow[0,:] # get values from only 1 plane
-        
-            # get sdi for sessions in the current stage
-            sdi = sdi0[sessionsNow]
-        
-            # testing data class accuracy
-            peak_amp_test = peak_amp_all[stages2an, 1]
-            bl_now = bl_all[stages2an, 1]
-            # compute average of the 8 planes
-            a = np.reshape(peak_amp_test, (num_planes, nsnow), order='F') # 8 x 93
-            b = np.reshape(bl_now, (num_planes, nsnow), order='F')
-            testing_accur_ave_planes = np.nanmean(a, axis=0)
-            bl_avp = np.nanmean(b, axis=0)
-
-            if baseline_subtract: # subtract the baseline (CA average during baseline, ie before time 0) from the evoked CA (classification accuracy)
-                testing_accur_ave_planes = testing_accur_ave_planes - bl_avp
-
-
-
-            # shuffled data class accuracy
-            peak_amp_shfl = peak_amp_all[stages2an, 2]
-            bl_now = bl_all[stages2an, 2]
-            # compute average of the 8 planes
-            a = np.reshape(peak_amp_shfl, (num_planes, nsnow), order='F')
-            b = np.reshape(bl_now, (num_planes, nsnow), order='F')
-            shfl_accur_ave_planes = np.nanmean(a, axis=0)
-            bl_avp = np.nanmean(b, axis=0)
-
-            if baseline_subtract: # subtract the baseline (CA average during baseline, ie before time 0) from the evoked CA (classification accuracy)
-                shfl_accur_ave_planes = shfl_accur_ave_planes - bl_avp
-
-                
-            ##############################
-            ### get r2 values (corr coeffs) between decoder accuracy and behavioral strategy across all sessions
-            ### all cre lines
-            topn = testing_accur_ave_planes # testing data class accuracy
-    #         topn = testing_accur_ave_planes - shfl_accur_ave_planes # testing-shuffled data class accuracy
-
-            # compute, for each session, corrcoef between strategy dropout index and average testing_class_accuracy across the 8 planes
-            c, p = ma.corrcoef(ma.masked_invalid(sdi), ma.masked_invalid(topn))
-            pallcre = p
-
-            #### cre line for each session
-            cre_mt = all_sess0_modeltable['cre'].values
-            cre_mt = np.reshape(cre_mt, (num_planes, len(model_table_allsess)), order='F')[0,:] # len sessions
-            cre_mt = cre_mt[sessionsNow]
-            
-            
-            #### compute r2 for each cre line separately
-            c_allcre = []
-            for icremt in range(len(cren)):
-                sdin = sdi[cre_mt == cren[icremt]]
-                tan = topn[cre_mt == cren[icremt]]
-
-                c, p = ma.corrcoef(ma.masked_invalid(sdin), ma.masked_invalid(tan))    
-                c_allcre.append(p[0])
-            print(cren, c_allcre)
-
-
-            #################################
-            ############## plots ############
-            #################################
-                
-
-            #################################
-            # lmplot: Plot all cre lines; color code by cre line
-            
-            # cre names
-            a = np.unique(cre_mt.astype(str)); cren = a[a!='nan']
-            print(cren)
-
-            df = pd.DataFrame([], columns=['Decoder accuracy (average of 8 planes)', f'{cn}', 'cre'])
-            df['Decoder accuracy (average of 8 planes)'] = topn #testing_accur_ave_planes
-            df[f'{cn}'] = sdi
-            df['cre'] = cre_mt
-
-            g = sns.lmplot(f'{cn}', 'Decoder accuracy (average of 8 planes)', data=df, hue='cre', size=2.5, scatter_kws={"s": 20}, col='cre', fit_reg=False)
-            ii = -1
-            for icremt in [1,0,2]:
-                ii = ii+1
-                g.axes[0][ii].set_title(f'{cren[icremt][:3]}, r2 = {c_allcre[icremt]:.2f}')
-            plt.suptitle(f'ophys{stage_2_analyze}, r2={pallcre[0]:.2f}', y=1.1);
-            
-            
-
-            #################################
-            # Plot all cre lines        
-            # scatter plot
-            plt.figure(figsize=(3,3))
-            plt.plot(sdi, topn, '.')
-            plt.xlabel(f'{cn}')
-            plt.ylabel('average decoder accuracy of 8 planes\n rel. baseline')
-            plt.title(f'ophys{stage_2_analyze}, r2={pallcre[0]:.2f}');
-
-            
-            
-            #################################
-            # Plot each cre line in a separate figure
-            # compute corrcoeff for each cre line
-#             c_allcre = []
-            plt.figure(figsize=(3,9))
-            for icremt in range(len(cren)):
-                sdin = sdi[cre_mt == cren[icremt]]
-                tan = topn[cre_mt == cren[icremt]]
-
-#                 c, p = ma.corrcoef(ma.masked_invalid(sdin), ma.masked_invalid(tan))    
-#                 c_allcre.append(p[0])
-
-                plt.subplot(3,1,icremt+1)
-                plt.plot(sdin, tan, '.')
-                if icremt==2:
-                    plt.xlabel(f'{cn}')
-                if icremt==1:
-                    plt.ylabel('Average decoder accuracy of 8 planes\n rel. baseline')
-                plt.title(f'ophys{stage_2_analyze}, {cren[icremt][:3]}, r2={c_allcre[icremt]:.2f}')
-                makeNicePlots(plt.gca())
-
-            plt.subplots_adjust(hspace=0.5)
-
-
-
-
-            #################################
-            # color code by area
-
-            # repeat strategy index for each plane
-            a = np.tile(sdi, (num_planes,1)) # 8 x num_sess
-            sdi_rep = np.reshape(a, (num_planes*a.shape[1]), order='F')
-        #     a.shape
-
-            cre_rep = all_sess0_modeltable['cre'].values
-            area_rep = all_sess0_modeltable['area'].values
-        #     peak_amp_test.shape
-
-
-            ##### plot all cre lines
-            df = pd.DataFrame([], columns=['Decoder accuracy (each plane)', f'{cn}', 'cre', 'area'])
-            df['Decoder accuracy (each plane)'] = peak_amp_test
-            df[f'{cn}'] = sdi_rep
-            df['cre'] = cre_rep
-            df['area'] = area_rep
-
-            # all cre lines
-            dfn = df
-            # a single cre line
-        #     dfn = df[df['cre']==cren[2]]    
-            sns.lmplot(f'{cn}', 'Decoder accuracy (each plane)', data=dfn, hue='area', fit_reg=False)
-
-
-            ##### plot each cre line separately
-            plt.figure(figsize=(3,6))
-            for icremt in range(len(cren)):
-                sdin = sdi_rep[cre_rep == cren[icremt]]
-                tan = peak_amp_test[cre_rep == cren[icremt]]
-                aan = area_rep[cre_rep == cren[icremt]]
-
-                plt.subplot(3,1,icremt+1)
-                plt.plot(sdin[aan=='VISl'], tan[aan=='VISl'], 'b.', label='VISl')
-                plt.plot(sdin[aan=='VISp'], tan[aan=='VISp'], 'r.', label='VISp')
-                if icremt==0:
-                    plt.legend(loc='center left', bbox_to_anchor=(1, .7), frameon=False)
-                if icremt==2:
-                    plt.xlabel(f'{cn}')
-                if icremt==1:
-                    plt.ylabel('Decoder accuracy of each plane\n change vs no change')
-
-            plt.subplots_adjust(hspace=0.5)
-
-
-            #################################
-            # color code by depth
-
-
+        exec(open('svm_images_plots_corr_beh_strategy.py').read()) 
     
     
     
@@ -1437,7 +1239,92 @@ svm_this_plane_allsess
 svm_this_plane_allsess0 = copy.deepcopy(svm_this_plane_allsess)
 exec(open('svm_images_plots_setVars_sumMice_blocks.py').read()) # here we set svm_allMice_sessPooled and svm_allMice_sessAvSd
 
+# plot traces and quantifications for each ophys stage
 svm_allMice_sessPooled0 = copy.deepcopy(svm_allMice_sessPooled)
 svm_allMice_sessAvSd0 = copy.deepcopy(svm_allMice_sessAvSd)
 exec(open('svm_images_plots_sumMice_blocks.py').read()) # make mouse-averaged plots
 
+# compare quantifications across ophys stages
+exec(open('svm_images_plots_compare_ophys_stages.py').read())
+
+
+
+############################################################
+#%% Plot svm weight distributions
+
+
+ifr = [4,6]
+plt.figure(figsize = (10,6))
+icre = 0
+for cren in ['Slc17a7-IRES2-Cre', 'Sst-IRES-Cre', 'Vip-IRES-Cre']:
+    icre = icre+1
+    bb = all_sess[all_sess['cre']==cren]; 
+    c = np.concatenate((bb['av_w_data'].values), axis=(1)) # (8, 730, 13)
+#     cc = c[:,:,ifr] # frame after image onset
+    cc = c[:,:,ifr[1]] - c[:,:,ifr[0]]
+
+    a = cc.flatten() # pool all the 8 decoders
+#     a = np.nanmean(cc, axis=0); # get average of the 8 decoders
+#     a = cc[di] # only take one decoder
+
+    print(bb.shape, a.shape)
+
+    # plot weights
+    plt.subplot(2, 3, icre)    
+    plt.hist(a, 50) #, density=True); 
+    plt.xlabel('svm weights'); plt.ylabel('number of neurons'); 
+    plt.title(f'{cren[:3]}, mean={np.nanmean(a):.4f}')    
+
+    # plot absolute weights
+    plt.subplot(2, 3, icre+3)
+    plt.hist(np.abs(a), 50) #, density=True); 
+    plt.xlabel('svm absolute weights'); plt.ylabel('number of neurons'); 
+    plt.title(f'{cren[:3]}, mean={np.nanmean(np.abs(a)):.4f}')
+
+    plt.subplots_adjust(wspace=0.5, hspace=0.5)
+
+    plt.suptitle(f'frame {ifr}, 8 decoders pooled')
+    plt.suptitle(f'Average of 8 decoders')
+#     plt.suptitle(f'Decoder {di}')
+
+
+
+
+### plot distributions for individual decoders (the 8 decoders)
+'''
+ifr = 4 #6
+for di in range(8):
+    plt.figure(figsize = (10,6))
+    icre = 0
+    for cren in ['Slc17a7-IRES2-Cre', 'Sst-IRES-Cre', 'Vip-IRES-Cre']:
+        icre = icre+1
+        bb = all_sess[all_sess['cre']==cren]; 
+        c = np.concatenate((bb['av_w_data'].values), axis=(1)) # (8, 730, 13)
+        cc = c[:,:,ifr] # frame after image onset
+#         cc = c[:,:,6] - c[:,:,4]
+
+        a = cc.flatten() # pool all the 8 decoders
+#         a = np.nanmean(cc, axis=0); # get average of the 8 decoders
+        a = cc[di] # only take one decoder
+    
+        print(bb.shape, a.shape)
+
+        # plot weights
+        plt.subplot(2, 3, icre)    
+        plt.hist(a, 50) #, density=True); 
+        plt.xlabel('svm weights'); plt.ylabel('number of neurons'); 
+        plt.title(f'{cren[:3]}, mean={np.nanmean(a):.4f}')    
+
+        # plot absolute weights
+        plt.subplot(2, 3, icre+3)
+        plt.hist(np.abs(a), 50) #, density=True); 
+        plt.xlabel('svm absolute weights'); plt.ylabel('number of neurons'); 
+        plt.title(f'{cren[:3]}, mean={np.nanmean(np.abs(a)):.4f}')
+
+        plt.subplots_adjust(wspace=0.5, hspace=0.5)
+
+    plt.suptitle(f'frame {ifr}, 8 decoders pooled')
+    plt.suptitle(f'Average of 8 decoders')
+    plt.suptitle(f'Decoder {di}')
+'''    
+    

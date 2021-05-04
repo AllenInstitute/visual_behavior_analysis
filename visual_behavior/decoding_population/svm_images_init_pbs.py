@@ -28,8 +28,8 @@ engagement_pupil_running = 1 # np.nan or 0,1,2 for engagement, pupil, running: w
 
 
 # cre2ana = 'slc' # slc, sst, vip # will be used if session_numbers[0]<0 (we will use dataset and responseAnalysis (instead of the concatenated dfs) to set stim_response_df)
-project_codes = ['VisualBehaviorMultiscope'] # ['VisualBehaviorMultiscope', 'VisualBehaviorTask1B', 'VisualBehavior', 'VisualBehaviorMultiscope4areasx2d']
-# project_codes = ['VisualBehavior']
+# project_codes = ['VisualBehaviorMultiscope'] # ['VisualBehaviorMultiscope', 'VisualBehaviorTask1B', 'VisualBehavior', 'VisualBehaviorMultiscope4areasx2d']
+project_codes = ['VisualBehavior']
 # project_codes = ['VisualBehaviorMultiscope' , 'VisualBehavior']
 
 
@@ -40,6 +40,8 @@ project_codes = ['VisualBehaviorMultiscope'] # ['VisualBehaviorMultiscope', 'Vis
 experiments_table = loading.get_filtered_ophys_experiment_table(release_data_only=True)
 experiments_table = experiments_table.reset_index('ophys_experiment_id')
 # metadata_valid = experiments_table[experiments_table['project_code']=='VisualBehaviorMultiscope'] # multiscope sessions
+
+# get those rows of experiments_table that are for a specific project code
 metadata_valid = experiments_table[experiments_table['project_code'].isin(project_codes)]
 
 
@@ -64,35 +66,38 @@ metadata_all.shape
 metadata_all.shape[0]/8
 
 
-
 # set the list of experiments for each session in list_all_sessions_valid
-try:
-    list_all_experiments = np.reshape(metadata_all['ophys_experiment_id'].values, (8, len(list_all_sessions_valid)), order='F').T    
+if project_codes == ['VisualBehavior']:
+    list_all_experiments = metadata_all['ophys_experiment_id'].values
+                                  
+else:
+    try:
+        list_all_experiments = np.reshape(metadata_all['ophys_experiment_id'].values, (8, len(list_all_sessions_valid)), order='F').T    
 
-except Exception as E:
-    print(E)
+    except Exception as E:
+        print(E)
+
+        list_all_experiments = []
+        for sess in list_all_sessions_valid: # sess = list_all_sessions_valid[0]
+            es = metadata_all[metadata_all['ophys_session_id']==sess]['ophys_experiment_id'].values
+            list_all_experiments.append(es)
+        list_all_experiments = np.array(list_all_experiments)
+
+        list_all_experiments.shape
+
+        b = np.array([len(list_all_experiments[i]) for i in range(len(list_all_experiments))])
+        no8 = list_all_sessions_valid[b!=8]
+        if len(no8)>0:
+            print(f'The following sessions dont have all the 8 experiments, excluding them! {no8}')    
+            list_all_sessions_valid = list_all_sessions_valid[b==8]
+            list_all_experiments = list_all_experiments[b==8]
+
+            print(list_all_sessions_valid.shape, list_all_experiments.shape)
+
+        list_all_experiments = np.vstack(list_all_experiments)
+
+    list_all_experiments = np.sort(list_all_experiments) # sorts across axis 1, ie experiments within each session (does not change the order of sessions!)
     
-    list_all_experiments = []
-    for sess in list_all_sessions_valid: # sess = list_all_sessions_valid[0]
-        es = metadata_all[metadata_all['ophys_session_id']==sess]['ophys_experiment_id'].values
-        list_all_experiments.append(es)
-    list_all_experiments = np.array(list_all_experiments)
-
-    list_all_experiments.shape
-
-    b = np.array([len(list_all_experiments[i]) for i in range(len(list_all_experiments))])
-    no8 = list_all_sessions_valid[b!=8]
-    if len(no8)>0:
-        print(f'The following sessions dont have all the 8 experiments, excluding them! {no8}')    
-        list_all_sessions_valid = list_all_sessions_valid[b==8]
-        list_all_experiments = list_all_experiments[b==8]
-
-        print(list_all_sessions_valid.shape, list_all_experiments.shape)
-
-    list_all_experiments = np.vstack(list_all_experiments)
-
-
-list_all_experiments = np.sort(list_all_experiments)
 print(list_all_experiments.shape)
 
 

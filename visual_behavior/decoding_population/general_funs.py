@@ -7,6 +7,7 @@ Created on Tue Oct 13 21:23:43 2019
 """
 
 import numpy as np
+import matplotlib.pyplot as plt
 
 def set_frame_window_flash_omit(time_win, samps_bef, frame_dur):
     # Convert a time window (relative to trial onset) to frames units, relative to "trace" begining; i.e. index on the trace whose time 0 is trace[samps_bef]. 
@@ -214,6 +215,7 @@ def plot_flashLines_ticks_legend(lims, H, flashes_win_trace_index_unq_time, gray
     
 
 def makeNicePlots(ax, rmv2ndXtickLabel=0, rmv2ndYtickLabel=0):
+    
     # Hide the right and top spines
     ax.spines['right'].set_visible(False)
     ax.spines['top'].set_visible(False)

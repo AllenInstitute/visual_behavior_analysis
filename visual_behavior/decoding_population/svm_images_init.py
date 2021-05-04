@@ -32,12 +32,12 @@ from svm_images_main_post import *
     
 #%% Get SVM output for each cell type, and each frames_svm.
 
-svm_blocks = np.nan #np.nan # -1: divide trials based on engagement #2 # number of trial blocks to divide the session to, and run svm on. # set to np.nan to run svm analysis on the whole session
+svm_blocks = -101 #np.nan # -1: divide trials based on engagement #2 # number of trial blocks to divide the session to, and run svm on. # set to np.nan to run svm analysis on the whole session
 use_events = True #False # whether to run the analysis on detected events (inferred spikes) or dff traces.
 
 to_decode = 'current' #'next' # 'current' (default): decode current image.    'previous': decode previous image.    'next': decode next image.
-trial_type = 'changes' #'changes' #'hits_vs_misses' #'changes_vs_nochanges' #'omissions' # 'omissions', 'images', 'changes' # what trials to use for SVM analysis # the population activity of these trials at time time_win will be used to decode the image identity of flashes that occurred at their time 0 (if to_decode='current') or 750ms before (if to_decode='previous').
-use_balanced_trials = 0 #1 # if 1, use same number of trials for each class; only applicable when we have 2 classes (binary classification).
+trial_type = 'hits_vs_misses' #'changes' #'hits_vs_misses' #'changes_vs_nochanges' #'omissions' # 'omissions', 'images', 'changes' # what trials to use for SVM analysis # the population activity of these trials at time time_win will be used to decode the image identity of flashes that occurred at their time 0 (if to_decode='current') or 750ms before (if to_decode='previous').
+use_balanced_trials = 1 #1 # if 1, use same number of trials for each class; only applicable when we have 2 classes (binary classification).
 
 if use_events:
     time_win = [0, .4]
@@ -125,7 +125,9 @@ if same_num_neuron_all_planes:
 else:
     cols = np.concatenate((cols0, ['av_w_data', 'av_b_data']))
 
-if ~np.isnan(svm_blocks):
+if svm_blocks==-101:
+    br = [np.nan]    
+elif ~np.isnan(svm_blocks):
     if svm_blocks==-1: # divide trials into blocks based on the engagement state
         svmb = 2
     else:
@@ -223,7 +225,10 @@ for iblock in br: # iblock=0; iblock=np.nan
         svmn = f'{e}svm_decode_hits_from_misses'                
     else:
         svmn = f'{e}svm_decode_{to_decode}_image_from_{trial_type}' # 'svm_gray_omit'
-    
+
+    if svm_blocks==-101: # run svm analysis only on engaged trials; redifine df_data only including the engaged rows
+        svmn = f'{svmn}_only_engaged'
+        
     if use_balanced_trials:
         svmn = f'{svmn}_equalTrs'
         
@@ -238,7 +243,7 @@ for iblock in br: # iblock=0; iblock=np.nan
     a = f'frames{frames_svm[0]}to{frames_svm[-1]}'
 #     a = f'{cre2ana}_frames{frames_svm[0]}to{frames_svm[-1]}'  # b = '_'.join([str(session_numbers[i]) for i in range(len(session_numbers))])
 
-    if ~np.isnan(svm_blocks):
+    if ~np.isnan(svm_blocks) and svm_blocks!=-101:
         if svm_blocks==-1: # divide trials into blocks based on the engagement state
             word = 'engaged'
         else:

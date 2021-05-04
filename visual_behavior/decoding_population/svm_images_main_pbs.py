@@ -25,9 +25,9 @@ from svm_funs import *
 
 
 #%%
-def svm_main_images_pbs(data_list, experiment_ids_valid, df_data, session_trials, trial_type, dir_svm, kfold, frames_svm, numSamples, saveResults, cols_basic, cols_svm, to_decode='current', svm_blocks=-100, engagement_pupil_running = np.nan, use_events=False, same_num_neuron_all_planes=0, use_balanced_trials=0):
+def svm_main_images_pbs(data_list, experiment_ids_valid, df_data, session_trials, trial_type, dir_svm, kfold, frames_svm, numSamples, saveResults, cols_basic, cols_svm, project_codes, to_decode='current', svm_blocks=-100, engagement_pupil_running = np.nan, use_events=False, same_num_neuron_all_planes=0, use_balanced_trials=0):
     
-    def svm_run_save(traces_fut_now, image_labels_now, iblock_trials_blocks, svm_blocks, now, engagement_pupil_running, pupil_running_values, use_balanced_trials): #, same_num_neuron_all_planes, norm_to_max_svm, svm_total_frs, n_neurons, numSamples, num_classes, samps_bef, regType, kfold, cre, saveResults):
+    def svm_run_save(traces_fut_now, image_labels_now, iblock_trials_blocks, svm_blocks, now, engagement_pupil_running, pupil_running_values, use_balanced_trials, project_codes): #, same_num_neuron_all_planes, norm_to_max_svm, svm_total_frs, n_neurons, numSamples, num_classes, samps_bef, regType, kfold, cre, saveResults):
         '''
         #traces_fut_now = traces_fut_0
         #image_labels_now = image_labels_0
@@ -352,8 +352,14 @@ def svm_main_images_pbs(data_list, experiment_ids_valid, df_data, session_trials
             ending = f'{ending}{word}{iblock}_'
 
             
-        name = f'{cre_now}_m-{mouse}_s-{session_id}_e-{lims_id}_{svmn}_frames{frames_svm[0]}to{frames_svm[-1]}_{ending}{now}'
-                    
+        name = f'{cre_now}_m-{mouse}_s-{session_id}_e-{lims_id}_{svmn}_frames{frames_svm[0]}to{frames_svm[-1]}_{ending}'
+
+        if project_codes == ['VisualBehavior']:
+            name = f'{name}{project_codes[0]}_'
+        
+        name = f'{name}{now}'
+        
+        
         if saveResults:    
             svmName = os.path.join(dir_svm, name + '.h5') # os.path.join(d, svmn+os.path.basename(pnevFileName))
             print(svmName)
@@ -823,7 +829,8 @@ def svm_main_images_pbs(data_list, experiment_ids_valid, df_data, session_trials
                     print(traces_fut.shape , image_labels.shape)
             
             
-            
+#             plt.plot(trace_time[samps_bef+frames_svm[0] : samps_bef+frames_svm[-1]], m[samps_bef+frames_svm[0] : samps_bef+frames_svm[-1]])
+
             ######################################################
             # reset n_trials
             n_trials = traces_fut.shape[2] 
@@ -891,7 +898,7 @@ def svm_main_images_pbs(data_list, experiment_ids_valid, df_data, session_trials
                 
                 #### run svm analysis on the whole session
                 if svm_blocks==-100 or svm_blocks==-101:
-                    svmName = svm_run_save(traces_fut_0, image_labels_0, [np.nan, []], svm_blocks, now, engagement_pupil_running, pupil_running_values, use_balanced_trials) #, same_num_neuron_all_planes, norm_to_max_svm, svm_total_frs, n_neurons, numShufflesN, numSamples, num_classes, samps_bef, regType, kfold, cre, saveResults)
+                    svmName = svm_run_save(traces_fut_0, image_labels_0, [np.nan, []], svm_blocks, now, engagement_pupil_running, pupil_running_values, use_balanced_trials, project_codes) #, same_num_neuron_all_planes, norm_to_max_svm, svm_total_frs, n_neurons, numShufflesN, numSamples, num_classes, samps_bef, regType, kfold, cre, saveResults)
                     
 
                 #### run svm analysis only on engaged trials
@@ -955,7 +962,7 @@ def svm_main_images_pbs(data_list, experiment_ids_valid, df_data, session_trials
                         image_labels_now = image_labels_0[trials_blocks[iblock]]
                         print(traces_fut_now.shape , image_labels_now.shape)
                         
-                        svmName = svm_run_save(traces_fut_now, image_labels_now, [iblock, trials_blocks], svm_blocks, now, engagement_pupil_running, pupil_running_values, use_balanced_trials) #, same_num_neuron_all_planes, norm_to_max_svm, svm_total_frs, n_neurons, numSamples, num_classes, samps_bef, regType, kfold, cre, saveResults)
+                        svmName = svm_run_save(traces_fut_now, image_labels_now, [iblock, trials_blocks], svm_blocks, now, engagement_pupil_running, pupil_running_values, use_balanced_trials, project_codes) #, same_num_neuron_all_planes, norm_to_max_svm, svm_total_frs, n_neurons, numSamples, num_classes, samps_bef, regType, kfold, cre, saveResults)
                         
         
         
@@ -985,7 +992,7 @@ def svm_main_images_pbs(data_list, experiment_ids_valid, df_data, session_trials
                         image_labels = image_labels_0[trials_blocks[iblock]]
                         print(traces_fut.shape , image_labels.shape)
                         
-                        svmName = svm_run_save(traces_fut, image_labels, [iblock, trials_blocks], svm_blocks, now, engagement_pupil_running, pupil_running_values, use_balanced_trials) #, same_num_neuron_all_planes, norm_to_max_svm, svm_total_frs, n_neurons, numSamples, num_classes, samps_bef, regType, kfold, cre, saveResults)
+                        svmName = svm_run_save(traces_fut, image_labels, [iblock, trials_blocks], svm_blocks, now, engagement_pupil_running, pupil_running_values, use_balanced_trials, project_codes) #, same_num_neuron_all_planes, norm_to_max_svm, svm_total_frs, n_neurons, numSamples, num_classes, samps_bef, regType, kfold, cre, saveResults)
                     
                 
                 
@@ -1043,7 +1050,6 @@ import visual_behavior.data_access.loading as loading
 
 
     
-    
 #%% Get the input arguments passed here from pbstools (in svm_init_images script)
 
 isess = int(sys.argv[1])
@@ -1066,6 +1072,9 @@ print('\n\n======== Analyzing session index %d ========\n' %(isess))
 
 #%% Set SVM vars # NOTE: Pay special attention to the following vars before running the SVM:
 
+# project_codes = ['VisualBehaviorMultiscope'] # session_numbers = [4]
+project_codes = ['VisualBehavior']
+
 time_win = [-.5, .75] # [-.3, 0] # timewindow (relative to trial onset) to run svm; this will be used to set frames_svm # analyze image-evoked responses
 # time_trace goes from -.5 to .65sec in the image-aligned traces.
 
@@ -1074,10 +1083,10 @@ numSamples = 50 # numSamples = 2
 same_num_neuron_all_planes = 0 # if 1, use the same number of neurons for all planes to train svm
 saveResults = 1 # 0 #
 
-project_codes = ['VisualBehaviorMultiscope'] # session_numbers = [4]
 
+#%% Print some params
 
-#%% print some params
+print(f'Analyzing {project_codes} data')
 if trial_type=='changes_vs_nochanges':
     print(f'Decoding changs from no-changes, activity at {time_win} ms!')
 elif trial_type=='hits_vs_misses':
@@ -1207,7 +1216,9 @@ print(filen)
 # experiments_table = loading.get_filtered_ophys_experiment_table()
 experiments_table = loading.get_filtered_ophys_experiment_table(release_data_only=True)
 experiments_table = experiments_table.reset_index('ophys_experiment_id')
-metadata_valid = experiments_table[experiments_table['project_code']=='VisualBehaviorMultiscope'] # multiscope sessions
+
+# get those rows of experiments_table that are for a specific project code
+metadata_valid = experiments_table[experiments_table['project_code']==project_codes[0]] #'VisualBehaviorMultiscope'] # multiscope sessions
 
 
 # Use the new list of sessions that are de-crosstalked and will be released in March 2021
@@ -1230,33 +1241,37 @@ metadata_all.shape[0]/8
 
 
 # set the list of experiments for each session in list_all_sessions_valid
-try:
-    list_all_experiments = np.reshape(metadata_all['ophys_experiment_id'].values, (8, len(list_all_sessions_valid)), order='F').T    
+if project_codes == ['VisualBehavior']:
+    list_all_experiments = metadata_all['ophys_experiment_id'].values
+                                  
+else:
+    try:
+        list_all_experiments = np.reshape(metadata_all['ophys_experiment_id'].values, (8, len(list_all_sessions_valid)), order='F').T    
 
-except Exception as E:
-    print(E)
+    except Exception as E:
+        print(E)
+
+        list_all_experiments = []
+        for sess in list_all_sessions_valid: # sess = list_all_sessions_valid[0]
+            es = metadata_all[metadata_all['ophys_session_id']==sess]['ophys_experiment_id'].values
+            list_all_experiments.append(es)
+        list_all_experiments = np.array(list_all_experiments)
+
+        list_all_experiments.shape
+
+        b = np.array([len(list_all_experiments[i]) for i in range(len(list_all_experiments))])
+        no8 = list_all_sessions_valid[b!=8]
+        if len(no8)>0:
+            print(f'The following sessions dont have all the 8 experiments, excluding them! {no8}')    
+            list_all_sessions_valid = list_all_sessions_valid[b==8]
+            list_all_experiments = list_all_experiments[b==8]
+
+            print(list_all_sessions_valid.shape, list_all_experiments.shape)
+
+        list_all_experiments = np.vstack(list_all_experiments)
+
+    list_all_experiments = np.sort(list_all_experiments) # sorts across axis 1, ie experiments within each session (does not change the order of sessions!)
     
-    list_all_experiments = []
-    for sess in list_all_sessions_valid: # sess = list_all_sessions_valid[0]
-        es = metadata_all[metadata_all['ophys_session_id']==sess]['ophys_experiment_id'].values
-        list_all_experiments.append(es)
-    list_all_experiments = np.array(list_all_experiments)
-
-    list_all_experiments.shape
-
-    b = np.array([len(list_all_experiments[i]) for i in range(len(list_all_experiments))])
-    no8 = list_all_sessions_valid[b!=8]
-    if len(no8)>0:
-        print(f'The following sessions dont have all the 8 experiments, excluding them! {no8}')    
-        list_all_sessions_valid = list_all_sessions_valid[b==8]
-        list_all_experiments = list_all_experiments[b==8]
-
-        print(list_all_sessions_valid.shape, list_all_experiments.shape)
-
-    list_all_experiments = np.vstack(list_all_experiments)
-
-
-list_all_experiments = np.sort(list_all_experiments)
 print(list_all_experiments.shape)
 
 
@@ -1333,7 +1348,10 @@ data_list.loc[data_list['ophys_experiment_id'].isin(experiment_ids_valid), 'vali
 # sort by area and depth
 data_list = data_list.sort_values(by=['targeted_structure', 'imaging_depth'])
 
-experiment_ids_this_session = experiment_ids
+if project_codes == ['VisualBehavior']:
+    experiment_ids_this_session = [experiment_ids]
+else:
+    experiment_ids_this_session = experiment_ids
 
 
 
@@ -1542,7 +1560,8 @@ else:
 print('\n\n======================== Analyzing session %d, %d/%d ========================\n' %(session_id, isess, len(list_all_sessions_valid)))
 
 # Use below if you set session_data and session_trials above: for VIP and SST
-svm_main_images_pbs(data_list, experiment_ids_valid, df_data, session_trials, trial_type, dir_svm, kfold, frames_svm, numSamples, saveResults, cols_basic, cols_svm, to_decode, svm_blocks, engagement_pupil_running, use_events, same_num_neuron_all_planes, use_balanced_trials)
+svm_main_images_pbs(data_list, experiment_ids_valid, df_data, session_trials, trial_type, dir_svm, kfold, frames_svm, numSamples, saveResults, cols_basic, cols_svm, project_codes, to_decode, svm_blocks, engagement_pupil_running, use_events, same_num_neuron_all_planes, use_balanced_trials)
+
 # svm_main_images_pbs(data_list, df_data, session_trials, trial_type, dir_svm, kfold, frames_svm, numSamples, saveResults, cols_basic, cols_svm, to_decode, svm_blocks, use_events, same_num_neuron_all_planes)
 
 # Use below if you set stimulus_response_df_allexp above: for Slc (can be also used for other cell types too; but we need it for Slc, as the concatenated dfs could not be set for it)

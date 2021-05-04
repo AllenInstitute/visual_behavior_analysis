@@ -15,17 +15,17 @@ import numpy as np
 import pandas as pd
 
 
-def do_anova_tukey(summary_vars_all, crenow, stagenow, inds_v1, inds_lm):
+def do_anova_tukey(summary_vars_all, crenow, stagenow, inds_v1, inds_lm, inds_pooled):
     
-    print(f'_______________')
-    print(f'\n{crenow}, ophys {stagenow}\n')
+#     print(f'_______________')
+#     print(f'\n{crenow}, ophys {stagenow}\n')
 
     tc = summary_vars_all[summary_vars_all['cre'] == crenow]
     tc = tc[tc['stage'] == stagenow]
 
     pa_all = tc['resp_amp'].values[0] 
     aa = pa_all[:,:,1] # testing data
-#         aa.shape # 8 x sessions
+#     aa.shape # 8 x sessions
 
     depth_ave = tc['depth_ave'].values[0]
 
@@ -56,14 +56,25 @@ def do_anova_tukey(summary_vars_all, crenow, stagenow, inds_v1, inds_lm):
             a_data.at[i_at, 'idepth'] = i_depth
             a_data.at[i_at, 'value'] = a_now[i_a]
     a_data.at[:,'value'] = a_data['value'].values.astype(float)
+
+    inds_now = inds_pooled        
+    for i_depth in range(4):
+        a_now = aa[inds_now[i_depth],:].flatten()[~np.isnan(aa[inds_now[i_depth]].flatten())]
+#         print(a_now.shape) # number of valid sessions per depth    
+        for i_a in range(len(a_now)):
+            i_at = i_at+1
+            a_data.at[i_at, 'area'] = 'V1-LM'
+            a_data.at[i_at, 'depth'] = int(depth_ave[i_depth])
+            a_data.at[i_at, 'idepth'] = i_depth
+            a_data.at[i_at, 'value'] = a_now[i_a]
+    a_data.at[:,'value'] = a_data['value'].values.astype(float)
     a_data
 
-
-
+    
     ########### Do anova and tukey for each area
     tukey_all = []
-    for ars in ['V1', 'LM']: # ars = 'V1'
-        print(ars)
+    for ars in ['V1', 'LM', 'V1-LM']: # ars = 'V1'
+#         print(ars)
         a_data_now = a_data[a_data['area'].values==ars]
     #     a_data_now = a_data
 
@@ -85,8 +96,10 @@ def do_anova_tukey(summary_vars_all, crenow, stagenow, inds_v1, inds_lm):
         model = ols('value ~ C(depth)', data=a_data_now).fit() 
     #         anova_table = sm.stats.anova_lm(model, typ=3)
         anova_table = sm.stats.anova_lm(model, typ=2)
-        print(anova_table)        
-        print('\n')
+        
+#         print(anova_table)        
+#         print('\n')
+        
         # scipy anova: same result as above
     #                 a = aa[inds_v1,:]
     #                 fvalue, pvalue = st.f_oneway(a[0][~np.isnan(a[0])], a[1][~np.isnan(a[1])], a[2][~np.isnan(a[2])], a[3][~np.isnan(a[3])])
@@ -104,7 +117,7 @@ def do_anova_tukey(summary_vars_all, crenow, stagenow, inds_v1, inds_lm):
 #         f = a_data_now['idepth'] # if you want to have depth (instead of depth index) in the summary table use this. it's easier to go with depth index because sometimes some depth are nan and missing, and matching depth is harder than matching depth indices.
         
         MultiComp = MultiComparison(v, f)
-        print(MultiComp.tukeyhsd().summary()) # Show all pair-wise comparisons
+#         print(MultiComp.tukeyhsd().summary()) # Show all pair-wise comparisons
 
         tukey_all.append(MultiComp.tukeyhsd().summary())
      
@@ -114,14 +127,29 @@ def do_anova_tukey(summary_vars_all, crenow, stagenow, inds_v1, inds_lm):
 
 ##################################################    
 
-def add_tukey_lines(tukey_all, inds_now, ax, col, inds_v1, inds_lm, top, top_sd, x_new): 
-        
+def add_tukey_lines(tukey_all, toana, ax, col, inds_v1, inds_lm, inds_pooled, top, top_sd, x_new): 
+    # toana = 'v1', or 'lm', or 'v1-lm'
+    
     # ['V1', 'LM']    this is the order of indices in tukey_all
+    '''
     if (inds_now == inds_v1).all():
         inds_v1_lm = 0
     elif (inds_now == inds_lm).all():
         inds_v1_lm = 1
+    '''
     
+    if toana == 'v1':
+        inds_v1_lm = 0
+        inds_now = inds_v1
+    elif toana == 'lm':
+        inds_v1_lm = 1
+        inds_now = inds_lm
+    elif toana == 'v1-lm':
+        inds_v1_lm = 2
+        inds_now = range(4)
+        
+        
+    #####    
     tukey = tukey_all[inds_v1_lm]
 #     print(tukey)
         

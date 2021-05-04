@@ -39,6 +39,10 @@ def svm_images_main_post(session_id, data_list, svm_blocks, iblock, dir_svm, fra
     else:
         svmn = f'{e}svm_decode_{to_decode}_image_from_{trial_type}' # 'svm_gray_omit'
         
+    if svm_blocks==-101: # run svm analysis only on engaged trials; redifine df_data only including the engaged rows
+        svmn = f'{svmn}_only_engaged'
+         
+            
     exp_ids = data_list['ophys_experiment_id'].values
 #     frame_dur = np.array([0.093]) # sec (~10.7 Hz; each pair of planes that are recorded simultaneously have time resolution frame_dur)    
     
