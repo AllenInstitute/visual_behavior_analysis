@@ -36,8 +36,6 @@ except Exception as e:
     warnings.warn(warn_string)
 
 
-
-
 ### QUERIES USED FOR MULTIPLE FUNCTIONS ###      # noqa: E266
 def general_info_for_id_query():
     """the base query used for all the 'get_general_info_for...
