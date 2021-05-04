@@ -385,7 +385,7 @@ def get_ssim(img0, img1):
 
 
 def get_lims_data(lims_id):
-    ld = LimsDatabase(lims_id)
+    ld = LimsDatabase(int(lims_id))
     lims_data = ld.get_qc_param()
     lims_data.insert(loc=2, column='experiment_id', value=lims_data.lims_id.values[0])
     lims_data.insert(loc=2, column='session_type',
@@ -491,7 +491,6 @@ def get_sync_data(lims_data, use_acq_trigger):
         frames_2p = frames_2p[frames_2p > trigger[0]]
     # print(len(frames_2p))
     if lims_data.rig.values[0][0] == 'M':  # if Mesoscope
-        print('resampling mesoscope 2P frame times')
         roi_group = get_roi_group(lims_data)  # get roi_group order
         frames_2p = frames_2p[roi_group::4]  # resample sync times
     # print(len(frames_2p))

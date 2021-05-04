@@ -480,7 +480,7 @@ def get_ophys_dataset(ophys_experiment_id, include_invalid_rois=False, from_lims
         object -- BehaviorOphysSession or BehaviorOphysDataset instance, which inherits attributes & methods from SDK BehaviorOphysSession
     """
     if from_lims:
-        dataset = BehaviorOphysExperiment.from_lims(ophys_experiment_id)
+        dataset = BehaviorOphysExperiment.from_lims(int(ophys_experiment_id))
     elif from_nwb:
         nwb_files = get_release_ophys_nwb_file_paths()
         nwb_file = [file for file in nwb_files.nwb_file.values if str(ophys_experiment_id) in file]
@@ -492,7 +492,7 @@ def get_ophys_dataset(ophys_experiment_id, include_invalid_rois=False, from_lims
         else:
             print('no NWB file path found for', ophys_experiment_id)
     else:
-        api = BehaviorOphysLimsApi(ophys_experiment_id)
+        api = BehaviorOphysLimsApi(int(ophys_experiment_id))
         dataset = BehaviorOphysDataset(api, include_invalid_rois)
     return dataset
 
