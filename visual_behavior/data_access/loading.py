@@ -8,6 +8,7 @@ from allensdk.brain_observatory.behavior.behavior_project_cache import VisualBeh
 from visual_behavior.data_access import filtering
 from visual_behavior.data_access import reformat
 from visual_behavior.data_access import utilities
+from visual_behavior.data_access import from_lims
 import visual_behavior.database as db
 
 import os
@@ -425,22 +426,19 @@ class BehaviorOphysDataset(BehaviorOphysExperiment):
 
     @property
     def behavior_movie_pc_masks(self):
-        cache = get_visual_behavior_cache()
-        ophys_session_id = utilities.get_ophys_session_id_from_ophys_experiment_id(self.ophys_experiment_id, cache)
+        ophys_session_id = from_lims.get_ophys_session_id_for_ophys_experiment_id(self.ophys_experiment_id)
         self._behavior_movie_pc_masks = get_pc_masks_for_session(ophys_session_id)
         return self._behavior_movie_pc_masks
 
     @property
     def behavior_movie_pc_activations(self):
-        cache = get_visual_behavior_cache()
-        ophys_session_id = utilities.get_ophys_session_id_from_ophys_experiment_id(self.ophys_experiment_id, cache)
+        ophys_session_id = from_lims.get_ophys_session_id_for_ophys_experiment_id(self.ophys_experiment_id)
         self._behavior_movie_pc_activations = get_pc_activations_for_session(ophys_session_id)
         return self._behavior_movie_pc_activations
 
     @property
     def behavior_movie_predictions(self):
-        cache = get_visual_behavior_cache()
-        ophys_session_id = utilities.get_ophys_session_id_from_ophys_experiment_id(self.ophys_experiment_id, cache)
+        ophys_session_id = from_lims.get_ophys_session_id_for_ophys_experiment_id(self.ophys_experiment_id)
         movie_predictions = get_behavior_movie_predictions_for_session(ophys_session_id)
         movie_predictions.index.name = 'frame_index'
         movie_predictions['timestamps'] = self.behavior_movie_timestamps[:len(
@@ -482,7 +480,7 @@ def get_ophys_dataset(ophys_experiment_id, include_invalid_rois=False, from_lims
         object -- BehaviorOphysSession or BehaviorOphysDataset instance, which inherits attributes & methods from SDK BehaviorOphysSession
     """
     if from_lims:
-        dataset = BehaviorOphysExperiment.from_lims(ophys_experiment_id)
+        dataset = BehaviorOphysExperiment.from_lims(int(ophys_experiment_id))
     elif from_nwb:
         nwb_files = get_release_ophys_nwb_file_paths()
         nwb_file = [file for file in nwb_files.nwb_file.values if str(ophys_experiment_id) in file]
@@ -494,7 +492,7 @@ def get_ophys_dataset(ophys_experiment_id, include_invalid_rois=False, from_lims
         else:
             print('no NWB file path found for', ophys_experiment_id)
     else:
-        api = BehaviorOphysLimsApi(ophys_experiment_id)
+        api = BehaviorOphysLimsApi(int(ophys_experiment_id))
         dataset = BehaviorOphysDataset(api, include_invalid_rois)
     return dataset
 
@@ -1438,7 +1436,6 @@ def get_average_depth_image(experiment_id):
     session_dir = utilities.get_ophys_session_dir(utilities.get_lims_data(experiment_id))
     experiment_table = get_filtered_ophys_experiment_table(include_failed_data=True)
     session_id = experiment_table.loc[experiment_id].ophys_session_id
-    # session_id = utilities.get_ophys_session_id_from_ophys_experiment_id(experiment_id, cache)
 
     # try all combinations of potential file path locations...
     if os.path.isfile(os.path.join(session_dir, str(experiment_id) + '_averaged_depth.tif')):

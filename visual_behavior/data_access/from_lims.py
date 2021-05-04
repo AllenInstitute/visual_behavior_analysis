@@ -23,16 +23,17 @@ try:
         user=lims_user,
         host=lims_host,
         password=lims_password,
-        port=lims_port)
+        port=lims_port
+    )
+
+    # building querys
+    mixin = lims_engine
 
 except Exception as e:
     warn_string = 'failed to set up LIMS/mtrain credentials\n{}\n\n \
         internal AIBS users should set up environment variables \
         appropriately\nfunctions requiring database access will fail'.format(e)
     warnings.warn(warn_string)
-
-# building querys
-mixin = lims_engine
 
 
 ### QUERIES USED FOR MULTIPLE FUNCTIONS ###      # noqa: E266
