@@ -2466,7 +2466,7 @@ def annotate_and_clean_multi_session_df(multi_session_df):
     multi_session_df['session_name'] = [get_session_labels()[session_number - 1] for session_number in
                                         multi_session_df.session_number.values]
 
-    multi_session_df = remove_first_novel_session_retakes_from_multi_session_df(multi_session_df)
+    multi_session_df = remove_first_novel_session_retakes_from_df(multi_session_df)
     multi_session_df = remove_outlier_traces_from_multi_session_df(multi_session_df)
     # multi_session_df = remove_problematic_data_from_multi_session_df(multi_session_df)
 

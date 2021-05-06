@@ -3,7 +3,6 @@ import numpy as np
 import pandas as pd
 
 import visual_behavior.data_access.loading as loading
-import visual_behavior.visualization.utils as utils
 
 from visual_behavior.ophys.response_analysis.response_analysis import ResponseAnalysis
 
@@ -238,10 +237,9 @@ def compute_reliability(group, params, frame_rate):
     traces = np.vstack(traces)
     if traces.shape[0] > 5:
         traces = traces[:, response_window[0]:response_window[1]]  # limit to response window
-        reliability, correlation_values = compute_reliability_vectorized(traces)
+        reliability, _ = compute_reliability_vectorized(traces)
     else:
         reliability = np.nan
-        correlation_values = []
     return pd.Series({'reliability': reliability})
 
 
@@ -309,35 +307,6 @@ def get_hit_miss_modulation_index(stimulus_response_df):
     hit_miss_index = stimulus_response_df.groupby(['cell_specimen_id', 'hit']).mean()[['mean_response']].reset_index().groupby('cell_specimen_id').apply(get_hit_miss_modulation_index_for_group)
     hit_miss_index['hit_miss_index'] = [np.nan if len(index) == 0 else index[0] for index in hit_miss_index.hit_miss_index.values]
     return hit_miss_index
-
-
-def get_population_coupling_for_cell_specimen_ids(traces):
-    """
-    input is dataframe of dff_traces or events where index is cell_specimen_id
-    computes population coupling value for each cell_specimen_id, where population coupling is the
-    pearson correlation of each cell's trace with the population average trace of all other cells
-    returns a dataframe with index cell_specimen_id and columns population_coupling_r_value and population_coupling_p_value
-    """
-    from scipy.stats import pearsonr
-
-    if 'dff' in traces.keys():
-        trace_column = 'dff'
-    elif 'filtered_events' in traces.keys():
-        trace_column = 'filtered_events'
-
-    cell_specimen_ids = traces.index.values
-    pc_list = []
-    for cell_specimen_id in cell_specimen_ids:
-        cell_trace = traces.loc[cell_specimen_id][trace_column]
-        population_trace = traces.loc[cell_specimen_ids[cell_specimen_ids != cell_specimen_id]][trace_column].mean()
-        r, p_value = pearsonr(cell_trace, population_trace)
-
-        pc_list.append([cell_specimen_id, r, p_value])
-    columns = ['cell_specimen_id', 'population_coupling_r_value', 'population_coupling_p_value']
-    population_coupling = pd.DataFrame(pc_list, columns=columns)
-    population_coupling = population_coupling.set_index('cell_specimen_id')
-
-    return population_coupling
 
 
 def get_population_coupling_for_cell_specimen_ids(traces):
@@ -582,7 +551,7 @@ if __name__ == '__main__':
 
     trace_metrics = get_trace_metrics_table(ophys_experiment_id, ophys_experiment_table, use_events=False)
 
-    metrics_df = pd.concat([metrics_df, trace_metrics])
+    metrics_table = pd.concat([metrics_table, trace_metrics])
 
     save_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\single_cell_metrics'
-    metrics_table.to_hdf(os.path.join(save_dir, 'cell_metrics', 'experiment_id' + str(ophys_experiment_id) + '.h5'), key='df')
+    # metrics_table.to_hdf(os.path.join(save_dir, 'cell_metrics', 'experiment_id' + str(ophys_experiment_id) + '.h5'), key='df')

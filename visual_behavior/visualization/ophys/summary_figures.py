@@ -38,7 +38,7 @@ def plot_cell_zoom(roi_masks, max_projection, cell_roi_id, spacex=10, spacey=10,
     #     m = roi_mask_dict[str(cell_specimen_id)]
     # else:
     #     m = roi_mask_dict[int(cell_specimen_id)]
-    m = roi_masks[roi_masks.cell_roi_id==cell_roi_id].roi_mask.values[0]
+    m = roi_masks[roi_masks.cell_roi_id == cell_roi_id].roi_mask.values[0]
     (y, x) = np.where(m == 1)
     xmin = np.min(x)
     xmax = np.max(x)
