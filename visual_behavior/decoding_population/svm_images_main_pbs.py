@@ -426,17 +426,18 @@ def svm_main_images_pbs(data_list, experiment_ids_valid, df_data, session_trials
 #    num_planes = 8           
         
 
-    
+
+    #%% If desired, run svm analysis only on engaged trials; redifine df_data only including the engaged rows    
+    if svm_blocks==-101:
+        print('\nOnly using engaged trials for SVM analysis.\n')
+
+        df_data = df_data[df_data['engagement_state']=='engaged']            
+        svmn = f'{svmn}_only_engaged'
+        
+        
     
     #%%
     if trial_type=='hits_vs_misses':
-        
-        if svm_blocks==-101: # run svm analysis only on engaged trials; redifine df_data only including the engaged rows
-            print('\nOnly using engaged trials for SVM analysis.\n')
-            
-            df_data = df_data[df_data['engagement_state']=='engaged']            
-            svmn = f'{svmn}_only_engaged'
-            
         
         image_data = pd.concat((df_data[df_data['hit']==1.0], df_data[df_data['miss']==1.0]))
         
@@ -828,7 +829,8 @@ def svm_main_images_pbs(data_list, experiment_ids_valid, df_data, session_trials
 
                     print(traces_fut.shape , image_labels.shape)
             
-            
+#             import matplotlib.pyplot as plt
+#             m = np.mean(traces_fut, axis=(1,2))
 #             plt.plot(trace_time[samps_bef+frames_svm[0] : samps_bef+frames_svm[-1]], m[samps_bef+frames_svm[0] : samps_bef+frames_svm[-1]])
 
             ######################################################
@@ -1528,7 +1530,7 @@ else:
     r2 = len(trace_time)
              
 frames_svm = range(r1, r2)-samps_bef # range(-10, 30) # range(-1,1) # run svm on these frames relative to trial (image/omission) onset.
-# print(frames_svm)
+print(frames_svm)
 
 # samps_bef (=40) frames before omission ; index: 0:39
 # omission frame ; index: 40
