@@ -97,7 +97,7 @@ def get_events_dir():
 
 
 def get_behavior_model_outputs_dir():
-    return r'/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/behavior_model_output'
+    return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/behavior_model_output'
 
 
 def get_decoding_analysis_dir():
@@ -2167,7 +2167,7 @@ def build_container_df(experiment_table):
     list_of_dicts = []
     for ophys_container_id in ophys_container_ids:
         subset = table.query('ophys_container_id == @ophys_container_id').sort_values(by='date_of_acquisition',
-                                                                          ascending=True).drop_duplicates(
+                                                                                      ascending=True).drop_duplicates(
             'ophys_session_id').reset_index()
         temp_dict = {
             'ophys_container_id': ophys_container_id,

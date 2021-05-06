@@ -46,7 +46,7 @@ def add_pref_image(stimulus_response_df, pref_images):
     for cell_specimen_id in stimulus_response_df.cell_specimen_id.unique():
         pref_image_name = pref_images.loc[cell_specimen_id].pref_image
         indices = stimulus_response_df[(stimulus_response_df.cell_specimen_id == cell_specimen_id) & (
-        stimulus_response_df.image_name == pref_image_name)].index
+            stimulus_response_df.image_name == pref_image_name)].index
         stimulus_response_df.at[indices, 'pref_image'] = True
     return stimulus_response_df
 
@@ -89,7 +89,7 @@ def add_non_pref_image(stimulus_response_df, non_pref_images):
     for cell_specimen_id in stimulus_response_df.cell_specimen_id.unique():
         non_pref_image_name = non_pref_images.loc[cell_specimen_id].non_pref_image
         indices = stimulus_response_df[(stimulus_response_df.cell_specimen_id == cell_specimen_id) & (
-        stimulus_response_df.image_name == non_pref_image_name)].index
+            stimulus_response_df.image_name == non_pref_image_name)].index
         stimulus_response_df.at[indices, 'non_pref_image'] = True
     return stimulus_response_df
 
@@ -121,7 +121,7 @@ def get_image_selectivity_index_pref_non_pref(stimulus_response_df):
     mean_response_non_pref_image = non_pref_image_df.groupby(['cell_specimen_id']).mean()[['mean_response']]
 
     image_selectivity_index = (mean_response_pref_image - mean_response_non_pref_image) / (
-    mean_response_pref_image + mean_response_non_pref_image)
+        mean_response_pref_image + mean_response_non_pref_image)
     image_selectivity_index = image_selectivity_index.rename(columns={'mean_response': 'image_selectivity_index'})
     return image_selectivity_index
 
@@ -139,7 +139,7 @@ def get_image_selectivity_index_one_vs_all(stimulus_response_df):
     mean_response_non_pref_images = non_pref_images_df.groupby(['cell_specimen_id']).mean()[['mean_response']]
 
     image_selectivity_index = (mean_response_pref_image - mean_response_non_pref_images) / (
-    mean_response_pref_image + mean_response_non_pref_images)
+        mean_response_pref_image + mean_response_non_pref_images)
     image_selectivity_index = image_selectivity_index.rename(
         columns={'mean_response': 'image_selectivity_index_one_vs_all'})
     return image_selectivity_index
@@ -265,7 +265,7 @@ def add_running_to_df(stimulus_df):
     and returns the same df with a column 'running' which is a Boolean that is True if the mean_running_speed
     for the given row is greater than 2 cm/s and False if not
     """
-    stimulus_df['running'] = [True if mean_running_speed>2 else False for mean_running_speed in stimulus_df.mean_running_speed.values]
+    stimulus_df['running'] = [True if mean_running_speed > 2 else False for mean_running_speed in stimulus_df.mean_running_speed.values]
     return stimulus_df
 
 
@@ -274,10 +274,10 @@ def get_running_modulation_index_for_group(group):
     takes group with index cell_specimen_id, column 'running' that is a Boolean, and 'mean_response' column
     computes the difference over sum of running vs not running mean response values
     """
-    running = group[group.running==True].mean_response.values
-    not_running = group[group.running==False].mean_response.values
-    running_modulation_index = (running-not_running)/(running+not_running)
-    return pd.Series({'running_modulation_index':running_modulation_index})
+    running = group[group.running == True].mean_response.values
+    not_running = group[group.running == False].mean_response.values
+    running_modulation_index = (running - not_running) / (running + not_running)
+    return pd.Series({'running_modulation_index': running_modulation_index})
 
 
 def get_running_modulation_index_for_cell_specimen_ids(stimulus_response_df):
@@ -288,26 +288,26 @@ def get_running_modulation_index_for_cell_specimen_ids(stimulus_response_df):
     """
     stimulus_response_df = add_running_to_df(stimulus_response_df)
     running_modulation_index = stimulus_response_df.groupby(['cell_specimen_id', 'running']).mean()[['mean_response']].reset_index().groupby('cell_specimen_id').apply(get_running_modulation_index_for_group)
-    running_modulation_index['running_modulation_index'] = [np.nan if len(index)==0 else index[0] for index in running_modulation_index.running_modulation_index.values]
+    running_modulation_index['running_modulation_index'] = [np.nan if len(index) == 0 else index[0] for index in running_modulation_index.running_modulation_index.values]
     return running_modulation_index
 
 
 def get_hit_miss_modulation_index_for_group(group):
     """
     """
-    hit = group[group.hit==True].mean_response.values
-    miss = group[group.hit==False].mean_response.values
-    hit_miss_index = (hit-miss)/(hit+miss)
-    return pd.Series({'hit_miss_index':hit_miss_index})
+    hit = group[group.hit == True].mean_response.values
+    miss = group[group.hit == False].mean_response.values
+    hit_miss_index = (hit - miss) / (hit + miss)
+    return pd.Series({'hit_miss_index': hit_miss_index})
 
 
 def get_hit_miss_modulation_index(stimulus_response_df):
     """
 
     """
-    stimulus_response_df['hit'] = [True if (stimulus_response_df.iloc[row].is_change==True and stimulus_response_df.iloc[row].licked==True) else False for row in range(len(stimulus_response_df))]
+    stimulus_response_df['hit'] = [True if (stimulus_response_df.iloc[row].is_change == True and stimulus_response_df.iloc[row].licked == True) else False for row in range(len(stimulus_response_df))]
     hit_miss_index = stimulus_response_df.groupby(['cell_specimen_id', 'hit']).mean()[['mean_response']].reset_index().groupby('cell_specimen_id').apply(get_hit_miss_modulation_index_for_group)
-    hit_miss_index['hit_miss_index'] = [np.nan if len(index)==0 else index[0] for index in hit_miss_index.hit_miss_index.values]
+    hit_miss_index['hit_miss_index'] = [np.nan if len(index) == 0 else index[0] for index in hit_miss_index.hit_miss_index.values]
     return hit_miss_index
 
 
@@ -378,8 +378,8 @@ def compute_trace_metrics(traces):
     traces["trace_max"] = traces[column].apply(lambda x: np.nanmax(x))
     traces["trace_var"] = traces[column].apply(lambda x: np.nanvar(x))
     traces["trace_std"] = traces[column].apply(lambda x: np.nanstd(x))
-    traces["trace_max_over_std"] = traces["trace_max"]/traces["trace_std"]
-    traces["trace_mean_over_std"] = traces["trace_mean"]/traces["trace_std"]
+    traces["trace_max_over_std"] = traces["trace_max"] / traces["trace_std"]
+    traces["trace_mean_over_std"] = traces["trace_mean"] / traces["trace_std"]
     return traces
 
 
@@ -500,7 +500,7 @@ def generate_metrics_table(ophys_experiment_id, ophys_experiment_table, use_even
     metrics_table['stimuli'] = stimuli
     metrics_table['events'] = use_events
 
-    metrics_table = metrics_table.rename(columns={'variable':'metric'})
+    metrics_table = metrics_table.rename(columns={'variable': 'metric'})
 
     return metrics_table
 
@@ -521,13 +521,13 @@ def get_metrics_df_filepath(ophys_experiment_id, condition, stimuli, session_sub
     else:
         save_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\single_cell_metrics'
     filename = get_metrics_df_filename(ophys_experiment_id, condition, stimuli, session_subset, use_events)
-    filepath = os.path.join(save_dir, 'cell_metrics', filename+'.h5')
+    filepath = os.path.join(save_dir, 'cell_metrics', filename + '.h5')
     return filepath
 
 
 def get_cell_metrics_table_for_experiment(ophys_experiment_id, condition, stimulus, session_subset, use_events):
     filepath = get_metrics_df_filepath(ophys_experiment_id, condition, stimulus,
-                                                    session_subset, use_events)
+                                       session_subset, use_events)
     metrics_table = pd.read_hdf(filepath, key='df')
     return metrics_table
 
@@ -542,8 +542,8 @@ def load_cell_metrics_table_for_experiments(ophys_experiment_ids, condition, sti
     if ophys_experiment_ids == 'all_experiments':
         try:
             metrics_table = get_cell_metrics_table_for_experiment(ophys_experiment_ids, condition, stimulus, session_subset,
-                                                        use_events)
-        except:
+                                                                  use_events)
+        except BaseException:
             print('problem for experiment', ophys_experiment_id)
     else:
         for ophys_experiment_id in ophys_experiment_ids:
@@ -551,7 +551,7 @@ def load_cell_metrics_table_for_experiments(ophys_experiment_ids, condition, sti
             try:
                 tmp = get_cell_metrics_table_for_experiment(ophys_experiment_id, condition, stimulus, session_subset,
                                                             use_events)
-            except:
+            except BaseException:
                 print('problem for experiment', ophys_experiment_id)
                 problem_expts.append(ophys_experiment_id)
             metrics_table = pd.concat([metrics_table, tmp])
@@ -586,4 +586,3 @@ if __name__ == '__main__':
 
     save_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\single_cell_metrics'
     metrics_table.to_hdf(os.path.join(save_dir, 'cell_metrics', 'experiment_id' + str(ophys_experiment_id) + '.h5'), key='df')
-

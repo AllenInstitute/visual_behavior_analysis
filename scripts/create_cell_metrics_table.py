@@ -26,8 +26,8 @@ if __name__ == '__main__':
     for use_events in [True, False]:
         try:
             trace_metrics = cell_metrics.get_trace_metrics_table(ophys_experiment_id,
-                                                             ophys_experiment_table,
-                                                             use_events=use_events)
+                                                                 ophys_experiment_table,
+                                                                 use_events=use_events)
             filename = cell_metrics.get_metrics_df_filename(ophys_experiment_id, 'traces', 'none', 'full_session', use_events)
             filepath = os.path.join(save_dir, 'cell_metrics', filename + '.h5')
             if os.path.exists(filepath):
@@ -39,7 +39,6 @@ if __name__ == '__main__':
             print('metrics not generated for', condition, stimulus, session_subset, 'events', use_events)
             print(e)
 
-
     ### event locked response metrics ###
     conditions = ['changes', 'omissions', 'images']
     stimuli = ['all_images', 'pref_image']
@@ -50,12 +49,12 @@ if __name__ == '__main__':
         for stimulus in stimuli:
             for session_subset in session_subsets:
                 for use_events in [True, False]:
-                    try: # code will not always run, such as in the case of passive sessions (no trials that are 'engaged')
+                    try:  # code will not always run, such as in the case of passive sessions (no trials that are 'engaged')
                         metrics_df = cell_metrics.generate_metrics_table(ophys_experiment_id, ophys_experiment_table, use_events=use_events,
-                                                     condition=condition, session_subset=session_subset, stimuli=stimulus)
+                                                                         condition=condition, session_subset=session_subset, stimuli=stimulus)
 
                         filename = cell_metrics.get_metrics_df_filename(ophys_experiment_id, condition, stimulus, session_subset, use_events)
-                        filepath = os.path.join(save_dir, 'cell_metrics', filename+'.h5')
+                        filepath = os.path.join(save_dir, 'cell_metrics', filename + '.h5')
                         if os.path.exists(filepath):
                             os.remove(filepath)
                             print('h5 file exists for', ophys_experiment_id, ' - overwriting')
@@ -64,7 +63,6 @@ if __name__ == '__main__':
                     except Exception as e:
                         print('metrics not generated for', condition, stimulus, session_subset, 'events', use_events)
                         print(e)
-
 
                         # trace_metrics = cell_metrics.get_trace_metrics_table(ophys_experiment_id, ophys_experiment_table, use_events=use_events)
     #
@@ -82,5 +80,3 @@ if __name__ == '__main__':
     #     os.remove(filepath)
     #     print('h5 file exists for', ophys_experiment_id, ' - overwriting')
     # metrics_df.to_hdf(filepath, key='df')
-
-
