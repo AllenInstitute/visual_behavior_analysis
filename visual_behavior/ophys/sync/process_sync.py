@@ -31,7 +31,7 @@ def filter_digital(rising, falling, threshold=0.0001):
     return rising_f, falling_f
 
 
-def calculate_delay(sync_data, stim_vsync_fall, sample_frequency):
+def calculate_delay(sync_data, stim_vsync_fall, sample_frequency, verbose=False):
     # from http://stash.corp.alleninstitute.org/projects/INF/repos/lims2_modules/browse/CAM/ophys_time_sync/ophys_time_sync.py
     ASSUMED_DELAY = 0.0351
     DELAY_THRESHOLD = 0.001
@@ -111,7 +111,8 @@ def calculate_delay(sync_data, stim_vsync_fall, sample_frequency):
 
             if (delay > DELAY_THRESHOLD or np.isnan(delay)):
                 delay = ASSUMED_DELAY
-                logger.error("Sync photodiode error needs to be fixed. Using assumed monitor delay: {}".format(round(delay, ROUND_PRECISION)))
+                if verbose:
+                    logger.error("Sync photodiode error needs to be fixed. Using assumed monitor delay: {}".format(round(delay, ROUND_PRECISION)))
 
         # assume delay
         else:
@@ -119,6 +120,7 @@ def calculate_delay(sync_data, stim_vsync_fall, sample_frequency):
     except Exception as e:
         logger.info(e)
         delay = ASSUMED_DELAY
-        logger.error("Process without photodiode signal. Assumed delay: {}".format(round(delay, ROUND_PRECISION)))
+        if verbose:
+            logger.error("Process without photodiode signal. Assumed delay: {}".format(round(delay, ROUND_PRECISION)))
 
     return delay
