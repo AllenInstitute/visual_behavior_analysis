@@ -513,7 +513,7 @@ def load_cell_metrics_table_for_experiments(ophys_experiment_ids, condition, sti
             metrics_table = get_cell_metrics_table_for_experiment(ophys_experiment_ids, condition, stimulus, session_subset,
                                                                   use_events)
         except BaseException:
-            print('problem for experiment', ophys_experiment_id)
+            print('problem for all experiments metrics table generation')
     else:
         for ophys_experiment_id in ophys_experiment_ids:
             print(np.where(ophys_experiment_ids == ophys_experiment_id)[0][0], 'out of', len(ophys_experiment_ids))
