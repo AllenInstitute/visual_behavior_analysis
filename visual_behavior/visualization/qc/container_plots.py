@@ -34,7 +34,7 @@ def ax_to_array(ax):
 
 def plot_container_session_sequence(ophys_container_id, save_figure=True):
     experiments_table = loading.get_filtered_ophys_experiment_table(include_failed_data=True)
-    expts = experiments_table[experiments_table.container_id == ophys_container_id].sort_values('date_of_acquisition')
+    expts = experiments_table[experiments_table.ophys_container_id == ophys_container_id].sort_values('date_of_acquisition')
     specimen_id = expts.specimen_id.unique()[0]
     experiment_ids = expts.index.values
     session_type_color_map = ut.get_session_type_color_map()
@@ -70,7 +70,7 @@ def plot_container_session_sequence(ophys_container_id, save_figure=True):
         fail_string = 'Failure: ' + str(fail_tags[ind_fail])
         ax.text(x=8.5, y=x, s=fail_string, ha='left', va='center', fontsize=20)
 
-    plt.suptitle('specimen_id: {}'.format(specimen_id) + ', container_id: {}'.format(ophys_container_id),
+    plt.suptitle('specimen_id: {}'.format(specimen_id) + ', ophys_container_id: {}'.format(ophys_container_id),
                  fontsize=25, ha='left', x=0.06, y=.97)
     fig.subplots_adjust(left=0.05)
     fig.subplots_adjust(right=0.1)
@@ -201,7 +201,7 @@ def plot_movie_average_images_for_container(ophys_container_id, save_figure=True
 def plot_eye_tracking_sample_frames(ophys_container_id, save_figure=True):
     table = loading.get_filtered_ophys_experiment_table()
     table = table.reset_index()
-    ophys_experiment_ids = table.query('container_id == {}'.format(ophys_container_id)).sort_values(by='date_of_acquisition')['ophys_experiment_id']
+    ophys_experiment_ids = table.query('ophys_container_id == {}'.format(ophys_container_id)).sort_values(by='date_of_acquisition')['ophys_experiment_id']
 
     figsize = (16, 5 * len(ophys_experiment_ids))
     fig = plt.figure(figsize=figsize)
@@ -694,7 +694,7 @@ def plot_cell_matching_registration_overlay_grid(ophys_container_id, save_figure
     import visual_behavior.data_access.utilities as utilities
 
     experiments_table = loading.get_filtered_ophys_experiment_table()
-    container_expts = experiments_table[experiments_table.container_id == ophys_container_id]
+    container_expts = experiments_table[experiments_table.ophys_container_id == ophys_container_id]
     ophys_experiment_ids = container_expts.index.values
 
     dataset_dict = {}
@@ -762,7 +762,7 @@ def plot_cell_matching_registration_output(ophys_container_id, save_figure=True)
     import visual_behavior.data_access.utilities as utilities
 
     experiments_table = loading.get_filtered_ophys_experiment_table()
-    container_expts = experiments_table[experiments_table.container_id == ophys_container_id]
+    container_expts = experiments_table[experiments_table.ophys_container_id == ophys_container_id]
     ophys_experiment_ids = container_expts.index.values
 
     dataset_dict = {}
@@ -869,26 +869,26 @@ def plot_flashes_on_trace(ax, timestamps, trial_type=None, omitted=False, alpha=
     return ax
 
 
-def get_metadata_string(container_id):
+def get_metadata_string(ophys_container_id):
     """
     Create a string of metadata information to be used in filenames and figure titles.
     Includes information such as experiment_id, cre_line, acquisition_date, rig_id, etc
-    :param container_id:
+    :param ophys_container_id:
     :return:
     """
-    ophys_experiment_ids = loading.get_ophys_experiment_ids_for_ophys_container_id(container_id)
+    ophys_experiment_ids = loading.get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id)
     dataset = loading.get_ophys_dataset(ophys_experiment_ids[0])
     title = dataset.analysis_folder
     m = title.split('_')  # dataset.analysis_folder.split('_')
-    metadata_string = str(container_id) + '_' + m[1] + '_' + m[2] + '_' + m[3] + '_' + m[4] + '_' + m[5] + '_' + m[6]
+    metadata_string = str(ophys_container_id) + '_' + m[1] + '_' + m[2] + '_' + m[3] + '_' + m[4] + '_' + m[5] + '_' + m[6]
     return metadata_string
 
 
-def plot_population_average_across_sessions(container_df, container_id, df_name, trials=False, omitted=False, save_figure=True):
+def plot_population_average_across_sessions(container_df, ophys_container_id, df_name, trials=False, omitted=False, save_figure=True):
     """
     Plots population average response across all sessions within a container
     :param container_df: response dataframe for all sessions in a container, can be stimulus_response_df, omission_response_df, etc
-    :param container_id: ID of container being analyzed
+    :param ophys_container_id: ID of container being analyzed
     :param df_name: name of response dataframe, ex: 'stimulus_response_df', 'omission_response_df', etc
     :param trials: Boolean, whether or not a trial_response_df is being used, determines how image & change times are shaded in plot
     :param omitted: Boolean, whether or not an omission_response_df is being used, determines how image & change times are shaded in plot
@@ -901,16 +901,16 @@ def plot_population_average_across_sessions(container_df, container_id, df_name,
     if omitted:
         figsize = (12, 5)
         m = title.split('_')  # dataset.analysis_folder.split('_')
-        title = str(container_id) + '_' + m[1] + '_' + m[2] + '_' + m[3] + '_' + m[4] + '_' + m[5] + '_' + m[6]
+        title = str(ophys_container_id) + '_' + m[1] + '_' + m[2] + '_' + m[3] + '_' + m[4] + '_' + m[5] + '_' + m[6]
     elif trials:
         figsize = (12, 5)
         container_df = container_df[container_df.go == True]
         m = title.split('_')  # dataset.analysis_folder.split('_')
-        title = str(container_id) + '_' + m[1] + '_' + m[2] + '_' + m[3] + '_' + m[4] + '_' + m[5] + '_' + m[6]
+        title = str(ophys_container_id) + '_' + m[1] + '_' + m[2] + '_' + m[3] + '_' + m[4] + '_' + m[5] + '_' + m[6]
     else:
         figsize = (6, 4)
         container_df = container_df[container_df.image_name != 'omitted']
-        title = str(container_id)
+        title = str(ophys_container_id)
     fig, ax = plt.subplots(figsize=figsize)
     colors = ut.get_colors_for_session_numbers()
 
@@ -944,45 +944,45 @@ def plot_population_average_across_sessions(container_df, container_id, df_name,
     if save_figure:
         ut.save_figure(fig, figsize, loading.get_container_plots_dir(),
                        'population_average_by_session_' + df_name.split('_')[0],
-                       'container_' + str(container_id))
+                       'container_' + str(ophys_container_id))
 
 
-def plot_omission_population_average_across_sessions(container_id, save_figure=True):
+def plot_omission_population_average_across_sessions(ophys_container_id, save_figure=True):
     """
     Plot population average response to omissions, across all cells in a session, for each session type in the container
-    :param container_id:
+    :param ophys_container_id:
     :param save_figure:
     :return:
     """
     df_name = 'omission_response_df'
-    container_df = loading.get_container_response_df(container_id, df_name, use_events=False)
-    plot_population_average_across_sessions(container_df, container_id, df_name, trials=False, omitted=True,
+    container_df = loading.get_container_response_df(ophys_container_id, df_name, use_events=False)
+    plot_population_average_across_sessions(container_df, ophys_container_id, df_name, trials=False, omitted=True,
                                             save_figure=save_figure)
 
 
-def plot_trials_population_average_across_sessions(container_id, save_figure=True):
+def plot_trials_population_average_across_sessions(ophys_container_id, save_figure=True):
     """
     Plot population average response to change trials, across all cells in a session, for each session type in the container
-    :param container_id:
+    :param ophys_container_id:
     :param save_figure:
     :return:
     """
     df_name = 'trials_response_df'
-    container_df = loading.get_container_response_df(container_id, df_name, use_events=False)
-    plot_population_average_across_sessions(container_df, container_id, df_name, trials=True, omitted=False,
+    container_df = loading.get_container_response_df(ophys_container_id, df_name, use_events=False)
+    plot_population_average_across_sessions(container_df, ophys_container_id, df_name, trials=True, omitted=False,
                                             save_figure=save_figure)
 
 
-def plot_stimulus_population_average_across_sessions(container_id, save_figure=True):
+def plot_stimulus_population_average_across_sessions(ophys_container_id, save_figure=True):
     """
     Plot population average response across all stimuli, for all cells in a session, for each session type in the container
-    :param container_id:
+    :param ophys_container_id:
     :param save_figure:
     :return:
     """
     df_name = 'stimulus_response_df'
-    container_df = loading.get_container_response_df(container_id, df_name, use_events=False)
-    plot_population_average_across_sessions(container_df, container_id, df_name, trials=False, omitted=False,
+    container_df = loading.get_container_response_df(ophys_container_id, df_name, use_events=False)
+    plot_population_average_across_sessions(container_df, ophys_container_id, df_name, trials=False, omitted=False,
                                             save_figure=save_figure)
 
 
@@ -1059,7 +1059,7 @@ def plot_lick_rasters_for_container(ophys_container_id, save_figure=True):
 def plot_pupil_area_sdk(ophys_container_id, save_figure=True):
     table = loading.get_filtered_ophys_experiment_table()
     table = table.reset_index()
-    ophys_experiment_ids = table.query('container_id == {}'.format(ophys_container_id)).sort_values(by='date_of_acquisition')['ophys_experiment_id']
+    ophys_experiment_ids = table.query('ophys_container_id == {}'.format(ophys_container_id)).sort_values(by='date_of_acquisition')['ophys_experiment_id']
 
     figsize = (16, 4 * len(ophys_experiment_ids))
     fig = plt.figure(figsize=figsize)
@@ -1086,7 +1086,7 @@ def plot_pupil_area_sdk(ophys_container_id, save_figure=True):
 def plot_pupil_area(ophys_container_id, save_figure=True):
     table = loading.get_filtered_ophys_experiment_table()
     table = table.reset_index()
-    ophys_experiment_ids = table.query('container_id == {}'.format(ophys_container_id)).sort_values(by='date_of_acquisition')['ophys_experiment_id']
+    ophys_experiment_ids = table.query('ophys_container_id == {}'.format(ophys_container_id)).sort_values(by='date_of_acquisition')['ophys_experiment_id']
 
     figsize = (16, 4 * len(ophys_experiment_ids))
     fig = plt.figure(figsize=figsize)
@@ -1113,7 +1113,7 @@ def plot_pupil_area(ophys_container_id, save_figure=True):
 def plot_pupil_position(ophys_container_id, save_figure=True):
     table = loading.get_filtered_ophys_experiment_table()
     table = table.reset_index()
-    ophys_experiment_ids = table.query('container_id == {}'.format(ophys_container_id)).sort_values(by='date_of_acquisition')['ophys_experiment_id']
+    ophys_experiment_ids = table.query('ophys_container_id == {}'.format(ophys_container_id)).sort_values(by='date_of_acquisition')['ophys_experiment_id']
 
     figsize = (16, 4 * len(ophys_experiment_ids))
     fig = plt.figure(figsize=figsize)
@@ -1160,7 +1160,7 @@ def plot_behavior_summary(ophys_container_id, save_figure=True):
     '''
     table = loading.get_filtered_ophys_experiment_table()
     table = table.reset_index()
-    ophys_experiment_ids = table.query('container_id == {}'.format(ophys_container_id)).sort_values(by='date_of_acquisition')['ophys_experiment_id']
+    ophys_experiment_ids = table.query('ophys_container_id == {}'.format(ophys_container_id)).sort_values(by='date_of_acquisition')['ophys_experiment_id']
 
     vals_to_plot = {
         'd_prime_peak': [],
@@ -1181,7 +1181,7 @@ def plot_behavior_summary(ophys_container_id, save_figure=True):
 
     for ii, oeid in enumerate(ophys_experiment_ids):
         uuid = oeid_to_uuid(oeid)
-        session_type = table.query('container_id == {} and ophys_experiment_id == {}'.format(
+        session_type = table.query('ophys_container_id == {} and ophys_experiment_id == {}'.format(
             ophys_container_id, oeid))['session_type'].iloc[0]
         y_labels.append('expt_id = {}\n{}'.format(oeid, session_type))
         for key in vals_to_plot.keys():
@@ -1250,7 +1250,7 @@ def plot_event_detection_for_container(ophys_container_id, save_figure=True):
     :return:
     """
     experiments_table = loading.get_filtered_ophys_experiment_table()
-    ophys_experiments = experiments_table[experiments_table.container_id == ophys_container_id].sort_values(by='date_of_acquisition')
+    ophys_experiments = experiments_table[experiments_table.ophys_container_id == ophys_container_id].sort_values(by='date_of_acquisition')
     ophys_experiment_ids = ophys_experiments.index.values
 
     for ophys_experiment_id in ophys_experiment_ids:
@@ -1275,7 +1275,7 @@ def plot_dff_trace_and_behavior_for_container(ophys_container_id, save_figure=Tr
     Useful to visualize whether the dFF trace tracks the behavior variables
     """
     experiments_table = loading.get_filtered_ophys_experiment_table()
-    ophys_experiments = experiments_table[experiments_table.container_id == ophys_container_id].sort_values(by='date_of_acquisition')
+    ophys_experiments = experiments_table[experiments_table.ophys_container_id == ophys_container_id].sort_values(by='date_of_acquisition')
     ophys_experiment_ids = ophys_experiments.index.values
 
     for ophys_experiment_id in ophys_experiment_ids:
@@ -1292,7 +1292,7 @@ def plot_classifier_validation_for_container(ophys_container_id, save_figure=Tru
     :return:
     """
     experiments_table = loading.get_filtered_ophys_experiment_table()
-    ophys_experiments = experiments_table[experiments_table.container_id == ophys_container_id].sort_values(by='date_of_acquisition')
+    ophys_experiments = experiments_table[experiments_table.ophys_container_id == ophys_container_id].sort_values(by='date_of_acquisition')
     ophys_experiment_ids = ophys_experiments.index.values
 
     for ophys_experiment_id in ophys_experiment_ids:
@@ -1327,7 +1327,7 @@ def system_friendly_filename(fname: str) -> str:
 
 def plot_OphysRegistrationSummaryImage(ophys_container_id, save_figure=True):
     experiments_table = loading.get_filtered_ophys_experiment_table()
-    ophys_experiments = experiments_table[experiments_table.container_id == ophys_container_id].sort_values(by='date_of_acquisition')
+    ophys_experiments = experiments_table[experiments_table.ophys_container_id == ophys_container_id].sort_values(by='date_of_acquisition')
     oeids = ophys_experiments.index.values
 
     figsize = (15, 10 * len(oeids))
@@ -1352,7 +1352,7 @@ def plot_OphysRegistrationSummaryImage(ophys_container_id, save_figure=True):
 
 def plot_nway_match_fraction(ophys_container_id, save_figure=True):
     experiments_table = loading.get_filtered_ophys_experiment_table()
-    ophys_experiments = experiments_table[experiments_table.container_id == ophys_container_id].sort_values(by='date_of_acquisition')
+    ophys_experiments = experiments_table[experiments_table.ophys_container_id == ophys_container_id].sort_values(by='date_of_acquisition')
     ophys_experiment_id = ophys_experiments.index.values[0]
     cell_matching_output_dir = utilities.get_cell_matching_output_dir_for_container(ophys_experiment_id)
     file_to_plot = [file for file in os.listdir(cell_matching_output_dir) if 'nway_match_fraction' in file]
@@ -1371,7 +1371,7 @@ def plot_nway_match_fraction(ophys_container_id, save_figure=True):
 
 def plot_nway_warp_overlay(ophys_container_id, save_figure=True):
     experiments_table = loading.get_filtered_ophys_experiment_table()
-    ophys_experiments = experiments_table[experiments_table.container_id == ophys_container_id].sort_values(by='date_of_acquisition')
+    ophys_experiments = experiments_table[experiments_table.ophys_container_id == ophys_container_id].sort_values(by='date_of_acquisition')
     ophys_experiment_id = ophys_experiments.index.values[0]
     cell_matching_output_dir = utilities.get_cell_matching_output_dir_for_container(ophys_experiment_id)
     file_to_plot = [file for file in os.listdir(cell_matching_output_dir) if 'nway_warp_overlay_plot' in file]
@@ -1390,7 +1390,7 @@ def plot_nway_warp_overlay(ophys_container_id, save_figure=True):
 
 def plot_nway_warp_summary(ophys_container_id, save_figure=True):
     experiments_table = loading.get_filtered_ophys_experiment_table()
-    ophys_experiments = experiments_table[experiments_table.container_id == ophys_container_id].sort_values(by='date_of_acquisition')
+    ophys_experiments = experiments_table[experiments_table.ophys_container_id == ophys_container_id].sort_values(by='date_of_acquisition')
     ophys_experiment_id = ophys_experiments.index.values[0]
     cell_matching_output_dir = utilities.get_cell_matching_output_dir_for_container(ophys_experiment_id)
     file_to_plot = [file for file in os.listdir(cell_matching_output_dir) if 'nway_warp_summary_plot' in file]
@@ -1410,7 +1410,7 @@ def plot_nway_warp_summary(ophys_container_id, save_figure=True):
 def plot_experiment_summary_figure_for_container(ophys_container_id, save_figure=True):
     import visual_behavior.visualization.qc.experiment_summary as es
     experiments_table = loading.get_filtered_ophys_experiment_table()
-    ophys_experiments = experiments_table[experiments_table.container_id == ophys_container_id].sort_values(
+    ophys_experiments = experiments_table[experiments_table.ophys_container_id == ophys_container_id].sort_values(
         by='date_of_acquisition')
     for ophys_experiment_id in ophys_experiments.index.values:
         # try:
@@ -1422,7 +1422,7 @@ def plot_experiment_summary_figure_for_container(ophys_container_id, save_figure
 def generate_snr_metrics_df_for_container(ophys_container_id):
     import visual_behavior.visualization.qc.compute_snr_metrics as snr_metrics
     experiments_table = loading.get_filtered_ophys_experiment_table()
-    ophys_experiments = experiments_table[experiments_table.container_id == ophys_container_id].sort_values(
+    ophys_experiments = experiments_table[experiments_table.ophys_container_id == ophys_container_id].sort_values(
         by='date_of_acquisition')
     metrics_df, problems_list = snr_metrics.get_snr_metrics_df_for_experiments(ophys_experiments.index.values)
     save_dir = r'/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/snr_metrics'

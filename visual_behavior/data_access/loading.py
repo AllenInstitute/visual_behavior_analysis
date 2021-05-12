@@ -401,7 +401,7 @@ class BehaviorOphysDataset(BehaviorOphysExperiment):
         stimulus_presentations['lick_rate_previous_flash'] = stimulus_presentations['lick_rate'].shift(1)
         if check_if_model_output_available(self.metadata['behavior_session_id']):
             stimulus_presentations = add_model_outputs_to_stimulus_presentations(
-                stimulus_presentations, self.metadata['behavior_session_id'])
+                stimulus_presentations, int(self.metadata['behavior_session_id']))
         else:
             print('model outputs not available')
         self._extended_stimulus_presentations = stimulus_presentations
@@ -614,7 +614,7 @@ def get_behavior_dataset(behavior_session_id, from_lims=False, from_nwb=False):
 def get_ophys_container_ids(release_data_only=False):
     """Get container_ids that meet the criteria in get_filtered_ophys_experiment_table(). """
     experiments = get_filtered_ophys_experiment_table(release_data_only=release_data_only)
-    container_ids = np.sort(experiments.container_id.unique())
+    container_ids = np.sort(experiments.ophys_container_id.unique())
     return container_ids
 
 
@@ -628,7 +628,7 @@ def get_ophys_session_ids_for_ophys_container_id(ophys_container_id):
                 ophys_session_ids -- list of ophys_session_ids that meet filtering criteria
             """
     experiments = get_filtered_ophys_experiment_table()
-    ophys_session_ids = np.sort(experiments[(experiments.container_id == ophys_container_id)].ophys_session_id.unique())
+    ophys_session_ids = np.sort(experiments[(experiments.ophys_container_id == ophys_container_id)].ophys_session_id.unique())
     return ophys_session_ids
 
 
@@ -643,7 +643,7 @@ def get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id):
                     ophys_experiment_ids -- list of ophys_experiment_ids that meet filtering criteria
                 """
     experiments = get_filtered_ophys_experiment_table()
-    ophys_experiment_ids = np.sort(experiments[(experiments.container_id == ophys_container_id)].index.values)
+    ophys_experiment_ids = np.sort(experiments[(experiments.ophys_container_id == ophys_container_id)].index.values)
     return ophys_experiment_ids
 
 
@@ -761,7 +761,7 @@ def add_model_outputs_to_stimulus_presentations(stimulus_presentations, behavior
 
 def get_behavior_model_summary_table():
     data_dir = get_behavior_model_outputs_dir()
-    data = pd.read_pkl(os.path.join(data_dir, '_summary_table.pkl'))
+    data = pd.read_pickle(os.path.join(data_dir, '_summary_table.pkl'))
     return data
 
 
@@ -2123,7 +2123,7 @@ def get_unique_cell_specimen_ids_for_container(container_id):
     :return: list of cell_specimen_ids for a given container
     """
     experiments_table = get_filtered_ophys_experiment_table()
-    container_expts = experiments_table[experiments_table.container_id == container_id]
+    container_expts = experiments_table[experiments_table.ophys_container_id == container_id]
     experiment_ids = np.sort(container_expts.index.values)
     cell_specimen_table = pd.DataFrame()
     for experiment_id in experiment_ids:
@@ -2160,15 +2160,15 @@ def build_container_df(experiment_table):
     '''
     table = experiment_table.copy()
     # table = get_filtered_ophys_experiment_table().sort_values(by='date_of_acquisition', ascending=False).reset_index()
-    container_ids = table['container_id'].unique()
+    ophys_container_ids = table['ophys_container_id'].unique()
     list_of_dicts = []
-    for container_id in container_ids:
-        subset = table.query('container_id == @container_id').sort_values(by='date_of_acquisition',
-                                                                          ascending=True).drop_duplicates(
+    for ophys_container_id in ophys_container_ids:
+        subset = table.query('ophys_container_id == @ophys_container_id').sort_values(by='date_of_acquisition',
+                                                                                      ascending=True).drop_duplicates(
             'ophys_session_id').reset_index()
         temp_dict = {
-            'container_id': container_id,
-            # 'container_workflow_state': table.query('container_id == @container_id')['container_workflow_state'].unique()[0],
+            'ophys_container_id': ophys_container_id,
+            # 'container_workflow_state': table.query('ophys_container_id == @ophys_container_id')['container_workflow_state'].unique()[0],
             'project_code': subset['project_code'].unique()[0],
             'mouse_id': subset['mouse_id'].unique()[0],
             'sex': subset['sex'].unique()[0],
@@ -2185,8 +2185,8 @@ def build_container_df(experiment_table):
                 {'session_{}'.format(idx): '{} experiment_id:{}'.format(row['session_type'], row['ophys_experiment_id'])})
 
         list_of_dicts.append(temp_dict)
-    container_df = pd.DataFrame(list_of_dicts).sort_values(by='container_id', ascending=False)
-    container_df = container_df.set_index(['container_id'])
+    container_df = pd.DataFrame(list_of_dicts).sort_values(by='ophys_container_id', ascending=False)
+    container_df = container_df.set_index(['ophys_container_id'])
     return container_df
 
 
@@ -2270,6 +2270,27 @@ def get_annotated_experiments_table():
     experiments_table['session_number'] = [int(session_type[6]) for session_type in
                                            experiments_table.session_type.values]
     experiments_table['cre'] = [cre.split('-')[0] for cre in experiments_table.cre_line.values]
+
+    return experiments_table
+
+
+def add_superficial_deep_to_experiments_table(experiments_table):
+    experiments_table['depth'] = ['superficial' if experiments_table.loc[expt].imaging_depth <= 250 else 'deep' for expt
+                                  in experiments_table.index]  # 355
+    experiments_table['location'] = [experiments_table.loc[expt].cre_line.split('-')[0] + '_' +
+                                     experiments_table.loc[expt].depth for expt in experiments_table.index]
+    indices = experiments_table[experiments_table.location == 'Slc17a7_superficial'].index.values
+    experiments_table.at[indices, 'location'] = 'Excitatory superficial'
+    indices = experiments_table[experiments_table.location == 'Slc17a7_deep'].index.values
+    experiments_table.at[indices, 'location'] = 'Excitatory deep'
+    indices = experiments_table[experiments_table.location == 'Vip_superficial'].index.values
+    experiments_table.at[indices, 'location'] = 'Vip'
+    indices = experiments_table[experiments_table.location == 'Sst_superficial'].index.values
+    experiments_table.at[indices, 'location'] = 'Sst'
+    indices = experiments_table[experiments_table.location == 'Vip_deep'].index.values
+    experiments_table.at[indices, 'location'] = 'Vip'
+    indices = experiments_table[experiments_table.location == 'Sst_deep'].index.values
+    experiments_table.at[indices, 'location'] = 'Sst'
 
     return experiments_table
 
@@ -2367,7 +2388,7 @@ def get_multi_session_df(cache_dir, df_name, conditions, experiments_table, remo
             df = pd.read_hdf(filepath, key='df')
             df = df.merge(expts[['ophys_experiment_id', 'cre_line', 'location', 'location_layer',
                                  'layer', 'ophys_session_id', 'project_code', 'session_type',
-                                 'specimen_id', 'depth', 'exposure_number', 'container_id']], on='ophys_experiment_id')
+                                 'specimen_id', 'depth', 'exposure_number', 'ophys_container_id']], on='ophys_experiment_id')
             if remove_outliers:
                 outlier_cells = df[df.mean_response > 5].cell_specimen_id.unique()
             df = df[df.cell_specimen_id.isin(outlier_cells) == False]
@@ -2383,23 +2404,11 @@ def remove_outlier_traces_from_multi_session_df(multi_session_df):
     return multi_session_df
 
 
-def remove_first_novel_session_retakes_from_multi_session_df(multi_session_df):
-    multi_session_df = multi_session_df.reset_index()
-    multi_session_df = multi_session_df.drop(columns=['index'])
-
-    indices = multi_session_df[(multi_session_df.session_number == 4) & (multi_session_df.exposure_number != 0)].index
-    multi_session_df = multi_session_df.drop(index=indices)
-
-    multi_session_df = multi_session_df.reset_index()
-    multi_session_df = multi_session_df.drop(columns=['index'])
-
-    indices = multi_session_df[(multi_session_df.session_number == 1) & (multi_session_df.exposure_number != 0)].index
-    multi_session_df = multi_session_df.drop(index=indices)
-
-    multi_session_df = multi_session_df.reset_index()
-    multi_session_df = multi_session_df.drop(columns=['index'])
-
-    return multi_session_df
+def remove_first_novel_session_retakes_from_df(df):
+    indices = df[(df.session_number == 4) & (df.prior_exposures_to_image_set != 0)].index
+    df = df.drop(index=indices)
+    df = df.reset_index(drop=True)
+    return df
 
 
 def remove_problematic_data_from_multi_session_df(multi_session_df):
@@ -2454,7 +2463,7 @@ def annotate_and_clean_multi_session_df(multi_session_df):
     multi_session_df['session_name'] = [get_session_labels()[session_number - 1] for session_number in
                                         multi_session_df.session_number.values]
 
-    multi_session_df = remove_first_novel_session_retakes_from_multi_session_df(multi_session_df)
+    multi_session_df = remove_first_novel_session_retakes_from_df(multi_session_df)
     multi_session_df = remove_outlier_traces_from_multi_session_df(multi_session_df)
     # multi_session_df = remove_problematic_data_from_multi_session_df(multi_session_df)
 
@@ -2608,14 +2617,14 @@ def get_cell_info(cell_specimen_ids=None, ophys_experiment_ids=None):
     return db.lims_query(query.format(search_key, search_vals))
 
 
-def get_container_response_df(container_id, df_name='omission_response_df', use_events=False):
+def get_container_response_df(ophys_container_id, df_name='omission_response_df', use_events=False):
     """
     get concatenated dataframe of response_df type specificied by df_name, across all experiments from a container,
     using the ResponseAnalysis class to build event locked response dataframes
     """
     from visual_behavior.ophys.response_analysis.response_analysis import ResponseAnalysis
     experiments_table = get_filtered_ophys_experiment_table()
-    container_expts = experiments_table[experiments_table.container_id == container_id]
+    container_expts = experiments_table[experiments_table.ophys_container_id == ophys_container_id]
     container_df = pd.DataFrame()
     for ophys_experiment_id in container_expts.index.values:
         dataset = get_ophys_dataset(ophys_experiment_id)
