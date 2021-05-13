@@ -11,14 +11,14 @@ import visual_behavior.ophys.response_analysis.response_processing as rp
 import visual_behavior.ophys.response_analysis.utilities as ut
 
 
-def plot_across_session_responses(container_id, cell_specimen_id, use_events=False, save_figure=True):
+def plot_across_session_responses(ophys_container_id, cell_specimen_id, use_events=False, save_figure=True):
     """
     Generates plots characterizing single cell activity in response to stimulus, omissions, and changes.
     Compares across all sessions in a container for each cell, including the ROI mask across days.
     Useful to validate cell matching as well as examine changes in activity profiles over days.
     """
-    experiments_table = data_loading.get_filtered_ophys_experiment_table()
-    container_expts = experiments_table[experiments_table.container_id == container_id]
+    experiments_table = data_loading.get_filtered_ophys_experiment_table(release_data_only=True)
+    container_expts = experiments_table[experiments_table.ophys_container_id == ophys_container_id]
     expts = np.sort(container_expts.index.values)
     if use_events:
         ylabel = 'response'
@@ -31,16 +31,16 @@ def plot_across_session_responses(container_id, cell_specimen_id, use_events=Fal
     figsize = (25, 20)
     fig, ax = plt.subplots(6, n, figsize=figsize)
     ax = ax.ravel()
-
+    print('ophys_container_id:', ophys_container_id)
     for i, ophys_experiment_id in enumerate(expts):
+        print('ophys_experiment_id:', ophys_experiment_id)
         try:
 
             dataset = data_loading.get_ophys_dataset(ophys_experiment_id, include_invalid_rois=False)
-            print(dataset.dff_traces.index.values[0])
             if cell_specimen_id in dataset.dff_traces.index:
                 analysis = ResponseAnalysis(dataset, use_events=use_events, use_extended_stimulus_presentations=False)
                 sdf = ut.get_mean_df(analysis.get_response_df(df_name='stimulus_response_df'), analysis=analysis,
-                                     conditions=['cell_specimen_id', 'change', 'image_name'], flashes=True, omitted=False,
+                                     conditions=['cell_specimen_id', 'is_change', 'image_name'], flashes=True, omitted=False,
                                      get_reliability=False, get_pref_stim=True, exclude_omitted_from_pref_stim=True)
                 odf = ut.get_mean_df(analysis.get_response_df(df_name='omission_response_df'), analysis=analysis,
                                      conditions=['cell_specimen_id'], flashes=False, omitted=True,
@@ -58,7 +58,7 @@ def plot_across_session_responses(container_id, cell_specimen_id, use_events=Fal
                 colors = sns.color_palette('hls', 8) + [(0.5, 0.5, 0.5)]
 
                 window = rp.get_default_stimulus_response_params()["window_around_timepoint_seconds"]
-                cell_data = sdf[(sdf.cell_specimen_id == cell_specimen_id) & (sdf.change == False)]
+                cell_data = sdf[(sdf.cell_specimen_id == cell_specimen_id) & (sdf.is_change == False)]
                 for c, image_name in enumerate(np.sort(cell_data.image_name.unique())):
                     ax[i + n] = sf.plot_mean_trace_from_mean_df(cell_data[cell_data.image_name == image_name],
                                                                 frame_rate=analysis.ophys_frame_rate, ylabel=ylabel,
@@ -67,14 +67,14 @@ def plot_across_session_responses(container_id, cell_specimen_id, use_events=Fal
                 ax[i + n] = sf.plot_flashes_on_trace(ax[i + n], analysis, window=window, trial_type=None, omitted=False, alpha=0.15, facecolor='gray')
                 ax[i + n].set_title(container_expts.loc[ophys_experiment_id].session_type[6:] + '\n image response')
 
-                analysis = ResponseAnalysis(dataset, use_events=False, use_extended_stimulus_presentations=False)
+                analysis = ResponseAnalysis(dataset, use_events=False, use_extended_stimulus_presentations=True)
                 tmp = analysis.get_response_df(df_name='stimulus_response_df')
                 tmp['running'] = [True if run_speed > 2 else False for run_speed in tmp.mean_running_speed.values]
                 sdf = ut.get_mean_df(tmp, analysis=analysis,
-                                     conditions=['cell_specimen_id', 'change', 'image_name', 'running'], flashes=True, omitted=False,
+                                     conditions=['cell_specimen_id', 'is_change', 'image_name', 'running'], flashes=True, omitted=False,
                                      get_reliability=False, get_pref_stim=True, exclude_omitted_from_pref_stim=False)
 
-                cell_data = sdf[(sdf.cell_specimen_id == cell_specimen_id) & (sdf.change == False) & (sdf.pref_stim == True)]
+                cell_data = sdf[(sdf.cell_specimen_id == cell_specimen_id) & (sdf.is_change == False) & (sdf.pref_stim == True)]
                 run_colors = [sns.color_palette()[3], sns.color_palette()[2]]
                 for c, running in enumerate(np.sort(cell_data.running.unique())):
                     if len(cell_data[cell_data.running == running]) > 0:
@@ -112,7 +112,7 @@ def plot_across_session_responses(container_id, cell_specimen_id, use_events=Fal
                 fig.suptitle(str(cell_specimen_id) + '_' + dataset.metadata_string, x=0.5, y=1.01,
                              horizontalalignment='center')
         except Exception as e:
-            print('problem for cell_specimen_id:', cell_specimen_id)
+            print('problem for cell_specimen_id:', cell_specimen_id, ', ophys_experiment_id:', ophys_experiment_id)
             print(e)
     if save_figure:
         save_dir = utils.get_single_cell_plots_dir()
