@@ -2745,7 +2745,7 @@ def get_cell_table(ophys_session_ids=None, columns_to_return='*'):
         ophys_session_ids = experiment_table['ophys_experiment_id'].unique()
 
     if columns_to_return != '*':
-        columns_to_return = ', '.join(columns_to_return)
+        columns_to_return = ', '.join(columns_to_return).replace('cell_roi_id', 'id')
 
     query = '''
         select {}
