@@ -143,7 +143,7 @@ def get_released_ophys_experiment_table(exclude_ai94=True):
     Returns:
         experiment_table -- returns a dataframe with ophys_experiment_id as the index and metadata as columns.
     '''
-    data_storage_directory = '/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/production_cache'
+    data_storage_directory = '//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/production_cache'
 
     cache = bpc.from_s3_cache(cache_dir=data_storage_directory)
 
