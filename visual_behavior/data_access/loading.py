@@ -133,7 +133,7 @@ def get_visual_behavior_cache(manifest_path=None):
     return cache
 
 
-def get_ophys_experiment_table(exclude_ai94=True):
+def get_released_ophys_experiment_table(exclude_ai94=True):
     '''
     gets the released ophys experiment table from AWS
 
@@ -194,11 +194,7 @@ def get_filtered_ophys_experiment_table(include_failed_data=False, release_data_
         experiments = filtering.limit_to_valid_ophys_session_types(experiments)
         experiments = filtering.remove_failed_containers(experiments)
     if release_data_only:
-        experiments = experiments[experiments.project_code.isin(['VisualBehavior',
-                                                                 'VisualBehaviorTask1B',
-                                                                 'VisualBehaviorMultiscope'])]
-        experiments = experiments[experiments.container_workflow_state == 'published']
-        experiments = experiments[experiments.experiment_workflow_state == 'passed']
+        experiments = get_ophys_experiment_table(exclude_ai94=exclude_ai94)
     if exclude_ai94:
         experiments = experiments[experiments.full_genotype != 'Slc17a7-IRES2-Cre/wt;Camk2a-tTA/wt;Ai94(TITL-GCaMP6s)/wt']
     experiments['session_number'] = [int(session_type[6]) if 'OPHYS' in session_type else None for session_type in
