@@ -133,6 +133,28 @@ def get_visual_behavior_cache(manifest_path=None):
     return cache
 
 
+def get_ophys_experiment_table(exclude_ai94=True):
+    '''
+    gets the released ophys experiment table from AWS
+
+    Keyword Arguments:
+        exclude_ai94 {bool} -- If True, exclude data from mice with Ai94(GCaMP6s) as the reporter line. (default: {True})
+
+    Returns:
+        experiment_table -- returns a dataframe with ophys_experiment_id as the index and metadata as columns.
+    '''
+    data_storage_directory = '/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/production_cache'
+
+    cache = bpc.from_s3_cache(cache_dir=data_storage_directory)
+
+    experiment_table = cache.get_ophys_experiment_table()
+
+    if exclude_ai94:
+        experiment_table = experiment_table.query('reporter_line != "Ai94(TITL-GCaMP6s)"')
+
+    return experiment_table
+
+
 def get_filtered_ophys_experiment_table(include_failed_data=False, release_data_only=False, exclude_ai94=True):
     """
     Loads a list of available ophys experiments and adds additional useful columns to the table. By default, loads from a saved cached file.
