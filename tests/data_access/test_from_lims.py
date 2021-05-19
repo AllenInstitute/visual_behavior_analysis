@@ -5,8 +5,8 @@ import visual_behavior.data_access import from_lims
 
 # CONSTANTS
 
-# SPECIMEN_ID = 
-# DONOR_ID    = 
+SPECIMEN_ID = 850862430
+DONOR_ID    = 850862423
 
 # MESOSCOPE IDS
 OPHYS_EXPERIMENT_ID_MESO = 960410026
@@ -92,4 +92,23 @@ def test_get_general_info_for_ophys_experiment_id_columns():
 @pytest.mark.onprem
 def test_get_general_info_for_ophys_experiment_id():
     meso_table = from_lims.get_general_info_ophys_experiment_id(OPHYS_EXPERIMENT_ID_MESO)
+    assert meso_table["ophys_experiment_id"][0] == OPHYS_EXPERIMENT_ID_MESO
+    assert meso_table["ophys_session_id"][0]    == OPHYS_SESSION_ID_MESO
+    assert meso_table["behavior_session_id"][0] == BEHAVIOR_SESSION_ID_MESO
+    assert meso_table["ophys_container_id"][0]  == CONTAINER_ID_MESO
+    assert meso_table["super_container_id"][0]  == SUPERCONTAINER_ID_MESO
+    
+    assert meso_table["experiment_workflow_state"][0] == "passed"
+    assert meso_table["session_workflow_state"][0]    == "uploaded"
+    assert meso_table["container_workflow_state"][0]  == "published"
+    
+    assert meso_table["specimen_id"][0]   == 850862430
+    assert meso_table["donor_id"][0]      == 850862423
+    assert meso_table["specimen_name"][0] == 'Sst-IRES-Cre;Ai148-457841'
+
+    assert meso_table["session_type"][0]       == 'OPHYS_6_images_B'
+    assert meso_table["targeted_structure"][0] == 'VISp'
+    assert meso_table["depth"][0]              == 225
+    assert meso_table["equipment_name"][0]     == 'MESO.1'
+    assert meso_table["project"][0]            == 'VisualBehaviorMultiscope'
     
