@@ -133,6 +133,28 @@ def get_visual_behavior_cache(manifest_path=None):
     return cache
 
 
+def get_released_ophys_experiment_table(exclude_ai94=True):
+    '''
+    gets the released ophys experiment table from AWS
+
+    Keyword Arguments:
+        exclude_ai94 {bool} -- If True, exclude data from mice with Ai94(GCaMP6s) as the reporter line. (default: {True})
+
+    Returns:
+        experiment_table -- returns a dataframe with ophys_experiment_id as the index and metadata as columns.
+    '''
+    data_storage_directory = '//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/production_cache'
+
+    cache = bpc.from_s3_cache(cache_dir=data_storage_directory)
+
+    experiment_table = cache.get_ophys_experiment_table()
+
+    if exclude_ai94:
+        experiment_table = experiment_table.query('reporter_line != "Ai94(TITL-GCaMP6s)"')
+
+    return experiment_table
+
+
 def get_filtered_ophys_experiment_table(include_failed_data=False, release_data_only=False, exclude_ai94=True):
     """
     Loads a list of available ophys experiments and adds additional useful columns to the table. By default, loads from a saved cached file.
@@ -172,11 +194,7 @@ def get_filtered_ophys_experiment_table(include_failed_data=False, release_data_
         experiments = filtering.limit_to_valid_ophys_session_types(experiments)
         experiments = filtering.remove_failed_containers(experiments)
     if release_data_only:
-        experiments = experiments[experiments.project_code.isin(['VisualBehavior',
-                                                                 'VisualBehaviorTask1B',
-                                                                 'VisualBehaviorMultiscope'])]
-        experiments = experiments[experiments.container_workflow_state == 'published']
-        experiments = experiments[experiments.experiment_workflow_state == 'passed']
+        experiments = get_released_ophys_experiment_table(exclude_ai94=exclude_ai94)
     if exclude_ai94:
         experiments = experiments[experiments.full_genotype != 'Slc17a7-IRES2-Cre/wt;Camk2a-tTA/wt;Ai94(TITL-GCaMP6s)/wt']
     experiments['session_number'] = [int(session_type[6]) if 'OPHYS' in session_type else None for session_type in
@@ -2672,3 +2690,90 @@ def get_remaining_crosstalk_amount_dict(experiment_id):
         remaining_crosstalk_dict[int(key)] = crosstalk_dict[key][1]
 
     return remaining_crosstalk_dict
+
+
+def get_cell_table(ophys_session_ids=None, columns_to_return='*'):
+    '''
+    retrieves the full cell_specimen table from LIMS for the specified ophys_experiment_ids
+    if no ophys_experiment_ids are passed, all experiments from the `VisualBehaviorOphysProjectCache` will be retrieved
+
+    Parameters
+    ----------
+    ophys_session_ids : list
+        A list of ophys_experiment_ids for which to retrieve the associated cells.
+        If None, all experiments from the `VisualBehaviorOphysProjectCache` will be retrieved.
+        Default = None
+    columns_to_return
+        A list of which colums to return.
+        If "*" is passed, all columns will be returned.
+        Queries will be faster if fewer columns are returned.
+        Possible columns that can be returned:
+            cell_roi_id
+            cell_specimen_id
+            ophys_experiment_id
+            x
+            y
+            width
+            height
+            valid_roi
+            mask_matrix
+            max_correction_up
+            max_correction_down
+            max_correction_right
+            max_correction_left
+            mask_image_plane
+            ophys_cell_segmentation_run_id
+        default = '*'
+
+    Returns
+    -------
+    pandas.DataFrame
+        A dataframe with one row per cell and each of the requested columns
+
+
+    Examples:
+    -------
+    This will return all columns for all released experiments
+    This takes about 5 seconds
+    >> cell_table = get_cell_table()
+
+    This will return only the columns ['ophys_experiment_id','cell_specimen_id'] for all released experiments
+    This takes about 1.5 seconds
+    >> get_cell_table(columns_to_return = ['ophys_experiment_id','cell_specimen_id'])
+
+    This will return only the columns ['ophys_experiment_id','cell_specimen_id'] for the specified experiments
+    This takes about 20 ms
+    >> oeids = [792813858, 888876943, 986518885, 942596355, 908381680]
+    >> cell_table = get_cell_table(ophys_session_ids = oeids, columns_to_return = ['ophys_experiment_id','cell_specimen_id'])
+
+    This will return all columns for the specified experiments
+    This takes about 50 ms
+    >> oeids = [792813858, 888876943, 986518885, 942596355, 908381680]
+    >> cell_table = get_cell_table(ophys_session_ids = oeids)
+
+
+    '''
+    # get ophys_session_ids from S3 if they were not passed
+    if ophys_session_ids is None:
+        data_storage_directory = '/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/production_cache'
+        cache = bpc.from_s3_cache(cache_dir=data_storage_directory)
+
+        experiment_table = cache.get_ophys_experiment_table().reset_index()
+
+        ophys_session_ids = experiment_table['ophys_experiment_id'].unique()
+
+    if columns_to_return != '*':
+        columns_to_return = ', '.join(columns_to_return).replace('cell_roi_id', 'id')
+
+    query = '''
+        select {}
+        from cell_rois
+        where ophys_experiment_id in {} and cell_specimen_id is not null and valid_roi = True
+    '''
+
+    # Since we are querying from the 'cell_rois' table, the 'id' column is actually 'cell_roi_id'. Rename.
+    lims_rois = db.lims_query(
+        query.format(columns_to_return, tuple(ophys_session_ids))
+    ).rename(columns={'id': 'cell_roi_id'})
+
+    return lims_rois
