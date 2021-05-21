@@ -87,6 +87,7 @@ def test_get_general_info_for_ophys_experiment_id_columns():
     sci_gi_columns = from_lims.get_general_info_ophys_experiment_id(OPHYS_EXPERIMENT_ID_SCI).columns
     assert any(sci_gi_columns == GENERAL_INFO_COLUMNS)
 
+
 @pytest.mark.onprem
 def test_get_general_info_for_ophys_experiment_id():
     meso_table = from_lims.get_general_info_ophys_experiment_id(OPHYS_EXPERIMENT_ID_MESO)
@@ -169,6 +170,7 @@ def test_get_all_ids_for_ophys_session_id():
     assert meso_table["ophys_container_id"][5]  == 1018028357
     assert meso_table["super_container_id"][7]  == 1027966320
 
+
 @pytest.mark.onprem
 def test_get_general_info_for_ophys_session_id():
     meso_table = from_lims.get_general_info_ophys_experiment_id(OPHYS_EXPERIMENT_ID_MESO)
@@ -202,25 +204,70 @@ def test_get_ophys_experiment_ids_for_behavior_session_id():
     assert meso_table["ophys_experiment_id"][4] == 960410035
 
 
+@pytest.mark.onprem
+def test_get_ophys_session_id_for_behavior_session_id():
+    assert from_lims.get_ophys_session_id_for_behavior_session_id(BEHAVIOR_SESSION_ID_MESO) == OPHYS_SESSION_ID_MESO
 
 
+@pytest.mark.onprem
+def test_get_ophys_container_ids_for_behavior_session_id():
+    meso_table = from_lims.get_ophys_container_ids_for_behavior_session_id(BEHAVIOR_SESSION_ID_MESO)
+    meso_table["ophys_container_id"][0] == 1018028360
+    meso_table["ophys_container_id"][4] == 1018028348
+    meso_table["ophys_container_id"][7] == 1018028342
 
 
+@pytest.mark.onprem
+def test_get_supercontainer_id_for_behavior_session_id():
+    assert from_lims.get_super_container_id_for_behavior_session_id(BEHAVIOR_SESSION_ID_SCI)  == None
+    assert from_lims.get_super_container_id_for_behavior_session_id(BEHAVIOR_SESSION_ID_MESO) == 1027966320
 
 
+@pytest.mark.onprem
+def test_get_all_ids_for_behavior_session_id():
+    sci_table = from_lims.get_all_ids_for_behavior_session_id(BEHAVIOR_SESSION_ID_SCI)
+    assert sci_table["ophys_experiment_id"][0] == OPHYS_EXPERIMENT_ID_SCI
+    assert sci_table["ophys_session_id"][0]    == OPHYS_SESSION_ID_SCI
+    assert sci_table["behavior_session_id"][0] == BEHAVIOR_SESSION_ID_SCI
+    assert sci_table["ophys_container_id"][0]  == CONTAINER_ID_SCI
+    assert sci_table["super_container_id"][0]  == None
+
+    meso_table = from_lims.get_all_ids_for_behavior_session_id(OPHYS_EXPERIMENT_ID_MESO)
+    assert meso_table["ophys_experiment_id"][0] == 960410042
+    assert meso_table["ophys_session_id"][2]    == 959458018
+    assert meso_table["behavior_session_id"][4] == 959681045
+    assert meso_table["ophys_container_id"][5]  == 1018028339
+    assert meso_table["super_container_id"][7]  == 1027966320
 
 
-
-
-
-
-
-
- 
-
-
-
-
-
+@pytest.mark.onprem
+def test_get_general_info_for_behavior_session_id():
+    meso_table = from_lims.get_general_info_for_behavior_session_id(BEHAVIOR_SESSION_ID_MESO)
+    assert meso_table["ophys_experiment_id"][0] == 960410042
+    assert meso_table["ophys_session_id"][1]    == 959458018
+    assert meso_table["behavior_session_id"][2] == 959681045
+    assert meso_table["ophys_container_id"][2]  == 1018028357
+    assert meso_table["super_container_id"][2]  == 1027966320
     
+    assert meso_table["experiment_workflow_state"][0] == "passed"
+    assert meso_table["session_workflow_state"][0]    == "uploaded"
+    assert meso_table["container_workflow_state"][0]  == "published"
     
+    assert meso_table["specimen_id"][0]   == 850862430
+    assert meso_table["donor_id"][0]      == 850862423
+    assert meso_table["specimen_name"][0] == 'Sst-IRES-Cre;Ai148-457841'
+
+    assert meso_table["session_type"][0]       == 'OPHYS_6_images_B'
+    assert meso_table["targeted_structure"][0] == 'VISl'
+    assert meso_table["depth"][0]              == 300
+    assert meso_table["equipment_name"][0]     == 'MESO.1'
+    assert meso_table["project"][0]            == 'VisualBehaviorMultiscope'
+
+
+
+
+
+
+
+
+
