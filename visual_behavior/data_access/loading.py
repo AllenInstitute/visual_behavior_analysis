@@ -194,7 +194,7 @@ def get_filtered_ophys_experiment_table(include_failed_data=False, release_data_
         experiments = filtering.limit_to_valid_ophys_session_types(experiments)
         experiments = filtering.remove_failed_containers(experiments)
     if release_data_only:
-        experiments = get_released_ophys_experiment_table(exclude_ai94=exclude_ai94)
+        experiments = get_released_ophys_experiment_table(exclude_ai94=exclude_ai94).reset_index()
     if exclude_ai94:
         experiments = experiments[experiments.full_genotype != 'Slc17a7-IRES2-Cre/wt;Camk2a-tTA/wt;Ai94(TITL-GCaMP6s)/wt']
     experiments['session_number'] = [int(session_type[6]) if 'OPHYS' in session_type else None for session_type in
