@@ -480,7 +480,7 @@ class BehaviorOphysDataset(BehaviorOphysExperiment):
         return cell_specimen_id
 
 
-def get_ophys_dataset(ophys_experiment_id, include_invalid_rois=False, from_lims=False, from_nwb=False):
+def get_ophys_dataset(ophys_experiment_id, include_invalid_rois=False, load_from_lims=False, load_from_nwb=False):
     """
     Gets behavior + ophys data for one experiment (single imaging plane), either using the SDK LIMS API,
     SDK NWB API, or using BehaviorOphysDataset wrapper which inherits the LIMS API BehaviorOphysSession object,
@@ -489,17 +489,24 @@ def get_ophys_dataset(ophys_experiment_id, include_invalid_rois=False, from_lims
     Arguments:
         ophys_experiment_id {int} -- 9 digit ophys experiment ID
         include_invalid_rois {Boolean} -- if True, return all ROIs including invalid. If False, filter out invalid ROIs
-        from_lims -- if True, loads dataset directly from BehaviorOphysSession.from_lims(). Invalid ROIs will be included.
-        from_nwb -- if True, loads dataset directly from BehaviorOphysSession.from_nwb_path(). Invalid ROIs will not be included.
+        load_from_lims -- if True, loads dataset directly from BehaviorOphysSession.from_lims(). Invalid ROIs will be included.
+        load_from_nwb -- if True, loads dataset directly from BehaviorOphysSession.from_nwb_path(). Invalid ROIs will not be included.
 
         If both from_lims and from_nwb are set to False, data will be loaded using the LIMS API then passed to the BehaviorOphysDataset class which allows invalid ROIs to be filtered out, and allows access to extended_stimulus_presentations, and face movie data.
 
     Returns:
         object -- BehaviorOphysSession or BehaviorOphysDataset instance, which inherits attributes & methods from SDK BehaviorOphysSession
     """
-    if from_lims:
+
+    id_type = from_lims.get_id_type(ophys_experiment_id)
+    if id_type != 'ophys_experiment_id':
+        warnings.warn('It looks like you passed an id of type {} instead of an ophys_experiment_id'.format(id_type))
+
+    assert id_type == 'ophys_experiment_id', "The passed ID type is {}. It must be an ophys_experiment_id".format(id_type)
+
+    if load_from_lims:
         dataset = BehaviorOphysExperiment.from_lims(int(ophys_experiment_id))
-    elif from_nwb:
+    elif load_from_nwb:
         nwb_files = get_release_ophys_nwb_file_paths()
         nwb_file = [file for file in nwb_files.nwb_file.values if str(ophys_experiment_id) in file]
         if len(nwb_file) > 0:
