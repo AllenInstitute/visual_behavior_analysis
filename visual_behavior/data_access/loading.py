@@ -762,6 +762,22 @@ def check_if_model_output_available(behavior_session_id):
         return False
 
 
+def load_model_outputs(behavior_session_id):
+    '''
+    loads the behavior model outputs from their default save location on the /allen filesystem
+
+    Parameters:
+    -----------
+    behavior_session_id : int
+        desired behavior session ID
+
+    Returns:
+    --------
+    Pandas.DataFrame
+        dataframe containing behavior model outputs
+    '''
+
+
 def add_model_outputs_to_stimulus_presentations(stimulus_presentations, behavior_session_id):
     '''
        Adds additional columns to stimulus table for model weights and related metrics
