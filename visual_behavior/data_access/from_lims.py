@@ -2249,6 +2249,8 @@ def get_id_type(input_id):
         The ID type, or 'unknown_id' if the ID type cannot be determined
     '''
 
+    found_id_types = []
+
     # set up a general query string
     query = 'select * from {} where id = {} limit 1'
 
@@ -2257,14 +2259,21 @@ def get_id_type(input_id):
 
         # check to see if the id is an index in the table
         if len(db.lims_query(query.format(table, input_id))) > 0:
-            # return if so
-            return table[:-1] + '_id'
+            # add to list of found IDs
+            found_id_types.append(table[:-1] + '_id')
 
-        # a special case for cell_specimen_id given that there is no cell_specimens table
-        cell_specimen_id_query = 'select * from cell_rois where cell_specimen_id = {} limit 1'
-        if len(db.lims_query(cell_specimen_id_query.format(input_id))) > 0:
-            # return if id is cell_specimen_id
-            return 'cell_specimen_id'
+    # a special case for cell_specimen_id given that there is no cell_specimens table
+    cell_specimen_id_query = 'select * from cell_rois where cell_specimen_id = {} limit 1'
+    if len(db.lims_query(cell_specimen_id_query.format(input_id))) > 0:
+        # return if id is cell_specimen_id
+        found_id_types.append('cell_specimen_id')
 
-    # return 'unknown_id' if id was not found
-    return 'unknown_id'
+    # assert that no more than one ID type was found (they should be unique)
+    assert len(found_id_types) <= 1, 'found ID in multiple tables: {}'.format(found_id_types)
+
+    if len(found_id_types) == 1:
+        # if only one id type was found, return it
+        return found_id_types[0]
+    else:
+        # return 'unknown_id' if id was not found
+        return 'unknown_id'
