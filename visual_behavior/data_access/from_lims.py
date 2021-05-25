@@ -8,6 +8,7 @@ import pandas as pd
 from allensdk.internal.api import PostgresQueryMixin
 from visual_behavior.data_access import utilities as utils
 from visual_behavior.data_access import from_lims_utilities as lims_utils
+import visual_behavior.database as db
 
 
 # Accessing Lims Database
@@ -2211,3 +2212,59 @@ def load_objectlist(ophys_experiment_id):
     objectlist_dataframe = pd.read_csv(filepath)
     objectlist_dataframe = lims_utils.update_objectlist_column_labels(objectlist_dataframe)
     return objectlist_dataframe
+
+
+def get_id_type(input_id):
+    '''
+    a function to get the id type for a given input ID
+
+    Examples:
+
+    >> get_id_type(914580664)
+    'ophys_experiment_id'
+
+    >> get_id_type(914211263)
+    'behavior_session_id'
+
+    >> get_id_type(1086515263)
+    'cell_specimen_id'
+
+    >> get_id_type(914161594)
+    'ophys_session_id'
+
+    >> get_id_type(1080784881)
+    'cell_roi_id'
+
+    >> get_id_type(1234)
+    'unknown_id'
+
+    Parameters:
+    -----------
+    input_id : int
+        id to search
+
+    Returns:
+    --------
+    string
+        The ID type, or 'unknown_id' if the ID type cannot be determined
+    '''
+
+    # set up a general query string
+    query = 'select * from {} where id = {} limit 1'
+
+    # iterate over tables
+    for table in ['ophys_experiments', 'ophys_sessions', 'behavior_sessions', 'cell_rois']:
+
+        # check to see if the id is an index in the table
+        if len(db.lims_query(query.format(table, input_id))) > 0:
+            # return if so
+            return table[:-1] + '_id'
+
+        # a special case for cell_specimen_id given that there is no cell_specimens table
+        cell_specimen_id_query = 'select * from cell_rois where cell_specimen_id = {} limit 1'
+        if len(db.lims_query(cell_specimen_id_query.format(input_id))) > 0:
+            # return if id is cell_specimen_id
+            return 'cell_specimen_id'
+
+    # return 'unknown_id' if id was not found
+    return 'unknown_id'
