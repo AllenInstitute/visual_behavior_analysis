@@ -780,6 +780,10 @@ def load_behavior_model_outputs(behavior_session_id):
     # cast ID to int
     behavior_session_id = int(behavior_session_id)
 
+    # check ID type to ensure that it is a behavior_session_id
+    id_type = from_lims.get_id_type(behavior_session_id)
+    assert id_type == 'behavior_session_id', "passed ID must be a behavior_session_id. A {} was passed instead".format(id_type)
+
     if check_if_model_output_available(behavior_session_id):
         model_outputs = pd.read_csv(
             os.path.join(
