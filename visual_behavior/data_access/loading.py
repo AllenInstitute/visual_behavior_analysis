@@ -194,7 +194,7 @@ def get_filtered_ophys_experiment_table(include_failed_data=False, release_data_
         experiments = filtering.limit_to_valid_ophys_session_types(experiments)
         experiments = filtering.remove_failed_containers(experiments)
     if release_data_only:
-        experiments = get_released_ophys_experiment_table(exclude_ai94=exclude_ai94)
+        experiments = get_released_ophys_experiment_table(exclude_ai94=exclude_ai94).reset_index()
     if exclude_ai94:
         experiments = experiments[experiments.full_genotype != 'Slc17a7-IRES2-Cre/wt;Camk2a-tTA/wt;Ai94(TITL-GCaMP6s)/wt']
     experiments['session_number'] = [int(session_type[6]) if 'OPHYS' in session_type else None for session_type in
@@ -480,7 +480,7 @@ class BehaviorOphysDataset(BehaviorOphysExperiment):
         return cell_specimen_id
 
 
-def get_ophys_dataset(ophys_experiment_id, include_invalid_rois=False, from_lims=False, from_nwb=False):
+def get_ophys_dataset(ophys_experiment_id, include_invalid_rois=False, load_from_lims=False, load_from_nwb=False):
     """
     Gets behavior + ophys data for one experiment (single imaging plane), either using the SDK LIMS API,
     SDK NWB API, or using BehaviorOphysDataset wrapper which inherits the LIMS API BehaviorOphysSession object,
@@ -489,17 +489,24 @@ def get_ophys_dataset(ophys_experiment_id, include_invalid_rois=False, from_lims
     Arguments:
         ophys_experiment_id {int} -- 9 digit ophys experiment ID
         include_invalid_rois {Boolean} -- if True, return all ROIs including invalid. If False, filter out invalid ROIs
-        from_lims -- if True, loads dataset directly from BehaviorOphysSession.from_lims(). Invalid ROIs will be included.
-        from_nwb -- if True, loads dataset directly from BehaviorOphysSession.from_nwb_path(). Invalid ROIs will not be included.
+        load_from_lims -- if True, loads dataset directly from BehaviorOphysSession.from_lims(). Invalid ROIs will be included.
+        load_from_nwb -- if True, loads dataset directly from BehaviorOphysSession.from_nwb_path(). Invalid ROIs will not be included.
 
         If both from_lims and from_nwb are set to False, data will be loaded using the LIMS API then passed to the BehaviorOphysDataset class which allows invalid ROIs to be filtered out, and allows access to extended_stimulus_presentations, and face movie data.
 
     Returns:
         object -- BehaviorOphysSession or BehaviorOphysDataset instance, which inherits attributes & methods from SDK BehaviorOphysSession
     """
-    if from_lims:
+
+    id_type = from_lims.get_id_type(ophys_experiment_id)
+    if id_type != 'ophys_experiment_id':
+        warnings.warn('It looks like you passed an id of type {} instead of an ophys_experiment_id'.format(id_type))
+
+    assert id_type == 'ophys_experiment_id', "The passed ID type is {}. It must be an ophys_experiment_id".format(id_type)
+
+    if load_from_lims:
         dataset = BehaviorOphysExperiment.from_lims(int(ophys_experiment_id))
-    elif from_nwb:
+    elif load_from_nwb:
         nwb_files = get_release_ophys_nwb_file_paths()
         nwb_file = [file for file in nwb_files.nwb_file.values if str(ophys_experiment_id) in file]
         if len(nwb_file) > 0:
@@ -755,16 +762,63 @@ def check_if_model_output_available(behavior_session_id):
         return False
 
 
+def load_behavior_model_outputs(behavior_session_id):
+    '''
+    loads the behavior model outputs from their default save location on the /allen filesystem
+
+    Parameters:
+    -----------
+    behavior_session_id : int
+        desired behavior session ID
+
+    Returns:
+    --------
+    Pandas.DataFrame
+        dataframe containing behavior model outputs
+    '''
+
+    # cast ID to int
+    behavior_session_id = int(behavior_session_id)
+
+    # check ID type to ensure that it is a behavior_session_id
+    id_type = from_lims.get_id_type(behavior_session_id)
+    assert id_type == 'behavior_session_id', "passed ID must be a behavior_session_id. A {} was passed instead".format(id_type)
+
+    if check_if_model_output_available(behavior_session_id):
+        model_outputs = pd.read_csv(
+            os.path.join(
+                get_behavior_model_outputs_dir(),
+                get_model_output_file(behavior_session_id)[0]
+            )
+        )
+        cols_to_drop = [
+            'image_index',
+            'image_name',
+            'omitted',
+            'change',
+            'licked',
+            'lick_rate',
+            'rewarded',
+            'reward_rate',
+            'is_change'
+        ]
+        model_outputs.drop(columns=cols_to_drop, inplace=True)
+
+    else:
+        warnings.warn('no model outputs saved for behavior_session_id: {}'.format(behavior_session_id))
+        model_outputs = None
+
+    return model_outputs
+
+
 def add_model_outputs_to_stimulus_presentations(stimulus_presentations, behavior_session_id):
     '''
        Adds additional columns to stimulus table for model weights and related metrics
     '''
 
-    if check_if_model_output_available(behavior_session_id):
-        model_outputs = pd.read_csv(
-            os.path.join(get_behavior_model_outputs_dir(), get_model_output_file(behavior_session_id)[0]))
-        model_outputs.drop(columns=['image_index', 'image_name', 'omitted', 'change',
-                                    'licked', 'lick_rate', 'rewarded', 'reward_rate', 'is_change'], inplace=True)
+    model_outputs = load_behavior_model_outputs(behavior_session_id)
+
+    if model_outputs is not None:
         stimulus_presentations = stimulus_presentations.merge(model_outputs, right_on='stimulus_presentations_id',
                                                               left_on='stimulus_presentations_id').set_index(
             'stimulus_presentations_id')
@@ -772,8 +826,7 @@ def add_model_outputs_to_stimulus_presentations(stimulus_presentations, behavior
         stimulus_presentations = stimulus_presentations.drop(
             columns=['hit_rate', 'miss_rate', 'false_alarm_rate', 'correct_reject_rate', 'd_prime', 'criterion'])
         return stimulus_presentations
-    else:
-        print('no model outputs saved for behavior_session_id:', behavior_session_id)
+
     return stimulus_presentations
 
 
