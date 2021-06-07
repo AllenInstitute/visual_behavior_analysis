@@ -1,8 +1,7 @@
-<<<<<<< HEAD
 import os
 import pytest
 
-import visual_behavior.data_access import from_lims
+from visual_behavior.data_access import from_lims
 
 # CONSTANTS
 
@@ -82,16 +81,16 @@ def test_get_all_ids_for_ophys_experiment_id():
 
 @pytest.mark.onprem
 def test_get_general_info_for_ophys_experiment_id_columns():
-    meso_gi_columns = from_lims.get_general_info_ophys_experiment_id(OPHYS_EXPERIMENT_ID_MESO).columns
+    meso_gi_columns = from_lims.get_general_info_for_ophys_experiment_id(OPHYS_EXPERIMENT_ID_MESO).columns
     assert any(meso_gi_columns == GENERAL_INFO_COLUMNS)
 
-    sci_gi_columns = from_lims.get_general_info_ophys_experiment_id(OPHYS_EXPERIMENT_ID_SCI).columns
+    sci_gi_columns = from_lims.get_general_info_for_ophys_experiment_id(OPHYS_EXPERIMENT_ID_SCI).columns
     assert any(sci_gi_columns == GENERAL_INFO_COLUMNS)
 
 
 @pytest.mark.onprem
 def test_get_general_info_for_ophys_experiment_id():
-    meso_table = from_lims.get_general_info_ophys_experiment_id(OPHYS_EXPERIMENT_ID_MESO)
+    meso_table = from_lims.get_general_info_for_ophys_experiment_id(OPHYS_EXPERIMENT_ID_MESO)
     assert meso_table["ophys_experiment_id"][0] == OPHYS_EXPERIMENT_ID_MESO
     assert meso_table["ophys_session_id"][0]    == OPHYS_SESSION_ID_MESO
     assert meso_table["behavior_session_id"][0] == BEHAVIOR_SESSION_ID_MESO
@@ -174,7 +173,7 @@ def test_get_all_ids_for_ophys_session_id():
 
 @pytest.mark.onprem
 def test_get_general_info_for_ophys_session_id():
-    meso_table = from_lims.get_general_info_ophys_experiment_id(OPHYS_EXPERIMENT_ID_MESO)
+    meso_table = from_lims.get_general_info_for_ophys_session_id(OPHYS_EXPERIMENT_ID_MESO)
     assert meso_table["ophys_experiment_id"][0] == 960410042
     assert meso_table["ophys_session_id"][1]    == 959458018
     assert meso_table["behavior_session_id"][2] == 959681045
@@ -265,16 +264,6 @@ def test_get_general_info_for_behavior_session_id():
     assert meso_table["project"][0]            == 'VisualBehaviorMultiscope'
 
 
-
-
-
-
-
-
-
-=======
-import pytest
-
 @pytest.mark.onprem
 def test_get_filtered_ophys_session_table():
     from visual_behavior.data_access. from_lims import get_id_type
@@ -284,4 +273,3 @@ def test_get_filtered_ophys_session_table():
     assert get_id_type(914161594) == 'ophys_session_id'
     assert get_id_type(1080784881) == 'cell_roi_id'
     assert get_id_type(1234) == 'unknown_id'
->>>>>>> master
