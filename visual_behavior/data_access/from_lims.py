@@ -139,7 +139,7 @@ def all_ids_for_id_query():
     oe.ophys_session_id,
     bs.id AS behavior_session_id,
     oevbec.visual_behavior_experiment_container_id AS ophys_container_id,
-    os.visual_behavior_supercontainer_id AS super_container_id
+    os.visual_behavior_supercontainer_id AS supercontainer_id
 
     FROM
     ophys_experiments oe
@@ -282,7 +282,7 @@ def get_ophys_container_id_for_ophys_experiment_id(ophys_experiment_id):
     return ophys_container_id
 
 
-def get_super_container_id_for_ophys_experiment_id(ophys_experiment_id):
+def get_supercontainer_id_for_ophys_experiment_id(ophys_experiment_id):
     ophys_experiment_id = int(ophys_experiment_id)
     query = '''
     SELECT
@@ -442,21 +442,21 @@ def get_ophys_container_ids_for_ophys_session_id(ophys_session_id):
     return ophys_container_ids
 
 
-def get_super_container_id_for_ophys_session_id(ophys_session_id):
+def get_supercontainer_id_for_ophys_session_id(ophys_session_id):
     ophys_session_id = int(ophys_session_id)
     query = '''
     SELECT
     visual_behavior_supercontainer_id
-    AS super_container_id
+    AS supercontainer_id
 
     FROM
     ophys_sessions
 
     WHERE id = {}
     '''.format(ophys_session_id)
-    super_container_id = mixin.select(query)
-    super_container_id = super_container_id["super_container_id"][0]
-    return super_container_id
+    supercontainer_id = mixin.select(query)
+    supercontainer_id = supercontainer_id["supercontainer_id"][0]
+    return supercontainer_id
 
 
 def get_all_ids_for_ophys_session_id(ophys_session_id):
@@ -585,11 +585,11 @@ def get_ophys_container_ids_for_behavior_session_id(behavior_session_id):
     return container_id
 
 
-def get_super_container_id_for_behavior_session_id(behavior_session_id):
+def get_supercontainer_id_for_behavior_session_id(behavior_session_id):
     behavior_session_id = int(behavior_session_id)
     query = '''
     SELECT
-    sessions.visual_behavior_supercontainer_id AS super_container_id
+    sessions.visual_behavior_supercontainer_id AS supercontainer_id
 
     FROM
     ophys_experiments experiments
@@ -605,9 +605,9 @@ def get_super_container_id_for_behavior_session_id(behavior_session_id):
     WHERE
     behavior.id = {}
     '''.format(behavior_session_id)
-    super_container_id = mixin.select(query)
-    super_container_id = super_container_id["super_container_id"][0]
-    return super_container_id
+    supercontainer_id = mixin.select(query)
+    supercontainer_id = supercontainer_id["supercontainer_id"][0]
+    return supercontainer_id
 
 
 def get_all_ids_for_behavior_session_id(behavior_session_id):
@@ -756,7 +756,7 @@ def get_supercontainer_id_for_ophys_container_id(ophys_container_id):
     ophys_container_id = int(ophys_container_id)
     query = '''
     SELECT
-    os.visual_behavior_supercontainer_id AS super_container_id
+    os.visual_behavior_supercontainer_id AS supercontainer_id
 
     FROM
     ophys_experiments oe
@@ -772,9 +772,9 @@ def get_supercontainer_id_for_ophys_container_id(ophys_container_id):
     WHERE
     oevbec.visual_behavior_experiment_container_id = {}
     '''.format(ophys_container_id)
-    super_container_id = mixin.select(query)
-    super_container_id = int(super_container_id['super_container_id'][0])
-    return super_container_id
+    supercontainer_id = mixin.select(query)
+    supercontainer_id = int(supercontainer_id['supercontainer_id'][0])
+    return supercontainer_id
 
 
 def get_all_ids_for_ophys_container_id(ophys_container_id):
