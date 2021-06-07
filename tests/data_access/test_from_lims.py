@@ -69,14 +69,14 @@ def test_get_all_ids_for_ophys_experiment_id():
     assert sci_table["ophys_session_id"][0]    == OPHYS_SESSION_ID_SCI
     assert sci_table["behavior_session_id"][0] == BEHAVIOR_SESSION_ID_SCI
     assert sci_table["ophys_container_id"][0]  == CONTAINER_ID_SCI
-    assert sci_table["supercontainer_id"][0]  == None
+    assert sci_table["supercontainer_id"][0]   == None
     
     meso_table = from_lims.get_all_ids_for_ophys_experiment_id(OPHYS_EXPERIMENT_ID_MESO)
     assert meso_table["ophys_experiment_id"][0] == OPHYS_EXPERIMENT_ID_MESO
     assert meso_table["ophys_session_id"][0]    == OPHYS_SESSION_ID_MESO
     assert meso_table["behavior_session_id"][0] == BEHAVIOR_SESSION_ID_MESO
     assert meso_table["ophys_container_id"][0]  == CONTAINER_ID_MESO
-    assert meso_table["supercontainer_id"][0]  == SUPERCONTAINER_ID_MESO
+    assert meso_table["supercontainer_id"][0]   == SUPERCONTAINER_ID_MESO
 
 
 @pytest.mark.onprem
@@ -264,10 +264,9 @@ def test_get_general_info_for_behavior_session_id():
 
 @pytest.mark.onprem
 def test_get_filtered_ophys_session_table():
-    from visual_behavior.data_access. from_lims import get_id_type
-    assert get_id_type(914580664) == 'ophys_experiment_id'
-    assert get_id_type(914211263) == 'behavior_session_id'
-    assert get_id_type(1086515263) == 'cell_specimen_id'
-    assert get_id_type(914161594) == 'ophys_session_id'
-    assert get_id_type(1080784881) == 'cell_roi_id'
-    assert get_id_type(1234) == 'unknown_id'
+    assert from_lims.get_id_type(914580664)  == 'ophys_experiment_id'
+    assert from_lims.get_id_type(914211263)  == 'behavior_session_id'
+    assert from_lims.get_id_type(1086515263) == 'cell_specimen_id'
+    assert from_lims.get_id_type(914161594)  == 'ophys_session_id'
+    assert from_lims.get_id_type(1080784881) == 'cell_roi_id'
+    assert from_lims.get_id_type(1234)       == 'unknown_id'
