@@ -58,8 +58,8 @@ def test_get_ophys_container_id_for_ophys_experiment_id():
 
 @pytest.mark.onprem
 def test_get_supercontainer_id_for_ophys_experiment_id():
-    assert from_lims.get_super_container_id_for_ophys_experiment_id(OPHYS_EXPERIMENT_ID_MESO) == SUPERCONTAINER_ID_MESO
-    assert from_lims.get_super_container_id_for_ophys_experiment_id(OPHYS_EXPERIMENT_ID_SCI)  == None
+    assert from_lims.get_supercontainer_id_for_ophys_experiment_id(OPHYS_EXPERIMENT_ID_MESO) == SUPERCONTAINER_ID_MESO
+    assert from_lims.get_supercontainer_id_for_ophys_experiment_id(OPHYS_EXPERIMENT_ID_SCI)  == None
 
 
 @pytest.mark.onprem
@@ -69,14 +69,14 @@ def test_get_all_ids_for_ophys_experiment_id():
     assert sci_table["ophys_session_id"][0]    == OPHYS_SESSION_ID_SCI
     assert sci_table["behavior_session_id"][0] == BEHAVIOR_SESSION_ID_SCI
     assert sci_table["ophys_container_id"][0]  == CONTAINER_ID_SCI
-    assert sci_table["super_container_id"][0]  == None
+    assert sci_table["supercontainer_id"][0]  == None
     
     meso_table = from_lims.get_all_ids_for_ophys_experiment_id(OPHYS_EXPERIMENT_ID_MESO)
     assert meso_table["ophys_experiment_id"][0] == OPHYS_EXPERIMENT_ID_MESO
     assert meso_table["ophys_session_id"][0]    == OPHYS_SESSION_ID_MESO
     assert meso_table["behavior_session_id"][0] == BEHAVIOR_SESSION_ID_MESO
     assert meso_table["ophys_container_id"][0]  == CONTAINER_ID_MESO
-    assert meso_table["super_container_id"][0]  == SUPERCONTAINER_ID_MESO
+    assert meso_table["supercontainer_id"][0]  == SUPERCONTAINER_ID_MESO
 
 
 @pytest.mark.onprem
@@ -95,7 +95,7 @@ def test_get_general_info_for_ophys_experiment_id():
     assert meso_table["ophys_session_id"][0]    == OPHYS_SESSION_ID_MESO
     assert meso_table["behavior_session_id"][0] == BEHAVIOR_SESSION_ID_MESO
     assert meso_table["ophys_container_id"][0]  == CONTAINER_ID_MESO
-    assert meso_table["super_container_id"][0]  == SUPERCONTAINER_ID_MESO
+    assert meso_table["supercontainer_id"][0]  == SUPERCONTAINER_ID_MESO
     
     assert meso_table["experiment_workflow_state"][0] == "passed"
     assert meso_table["session_workflow_state"][0]    == "uploaded"
@@ -113,7 +113,7 @@ def test_get_general_info_for_ophys_experiment_id():
 
 
 @pytest.mark.onprem
-def test_get_ophys_eperiment_ids_for_ophys_session_id():
+def test_get_ophys_experiment_ids_for_ophys_session_id():
     assert from_lims.get_ophys_experiment_ids_for_ophys_session_id(OPHYS_SESSION_ID_SCI) == OPHYS_EXPERIMENT_ID_SCI
     
     meso_table = from_lims.get_ophys_experiment_ids_for_ophys_session_id(OPHYS_SESSION_ID_MESO)
@@ -150,8 +150,8 @@ def test_get_ophys_container_ids_for_ophys_session_id():
 
 @pytest.mark.onprem
 def test_get_supercontainer_id_for_ophys_session_id():
-    assert from_lims.get_super_container_id_for_ophys_session_id(OPHYS_SESSION_ID_SCI)  == None
-    assert from_lims.get_super_container_id_for_ophys_session_id(OPHYS_SESSION_ID_MESO) == 1027966320
+    assert from_lims.get_supercontainer_id_for_ophys_session_id(OPHYS_SESSION_ID_SCI)  == None
+    assert from_lims.get_supercontainer_id_for_ophys_session_id(OPHYS_SESSION_ID_MESO) == 1027966320
 
 
 @pytest.mark.onprem
@@ -161,14 +161,14 @@ def test_get_all_ids_for_ophys_session_id():
     assert sci_table["ophys_session_id"][0]    == OPHYS_SESSION_ID_SCI
     assert sci_table["behavior_session_id"][0] == BEHAVIOR_SESSION_ID_SCI
     assert sci_table["ophys_container_id"][0]  == CONTAINER_ID_SCI
-    assert sci_table["super_container_id"][0]  == None
+    assert sci_table["supercontainer_id"][0]   == None
 
     meso_table = from_lims.get_all_ids_for_ophys_experiment_id(OPHYS_EXPERIMENT_ID_MESO)
     assert meso_table["ophys_experiment_id"][0] == 960410023
     assert meso_table["ophys_session_id"][2]    == 959458018
     assert meso_table["behavior_session_id"][4] == 959681045
     assert meso_table["ophys_container_id"][5]  == 1018028357
-    assert meso_table["super_container_id"][7]  == 1027966320
+    assert meso_table["supercontainer_id"][7]   == 1027966320
 
 
 @pytest.mark.onprem
@@ -178,7 +178,7 @@ def test_get_general_info_for_ophys_session_id():
     assert meso_table["ophys_session_id"][1]    == 959458018
     assert meso_table["behavior_session_id"][2] == 959681045
     assert meso_table["ophys_container_id"][2]  == 1018028357
-    assert meso_table["super_container_id"][2]  == 1027966320
+    assert meso_table["supercontainer_id"][2]   == 1027966320
     
     assert meso_table["experiment_workflow_state"][0] == "passed"
     assert meso_table["session_workflow_state"][0]    == "uploaded"
@@ -219,8 +219,8 @@ def test_get_ophys_container_ids_for_behavior_session_id():
 
 @pytest.mark.onprem
 def test_get_supercontainer_id_for_behavior_session_id():
-    assert from_lims.get_super_container_id_for_behavior_session_id(BEHAVIOR_SESSION_ID_SCI)  == None
-    assert from_lims.get_super_container_id_for_behavior_session_id(BEHAVIOR_SESSION_ID_MESO) == 1027966320
+    assert from_lims.get_supercontainer_id_for_behavior_session_id(BEHAVIOR_SESSION_ID_SCI)  == None
+    assert from_lims.get_supercontainer_id_for_behavior_session_id(BEHAVIOR_SESSION_ID_MESO) == 1027966320
 
 
 @pytest.mark.onprem
@@ -230,14 +230,14 @@ def test_get_all_ids_for_behavior_session_id():
     assert sci_table["ophys_session_id"][0]    == OPHYS_SESSION_ID_SCI
     assert sci_table["behavior_session_id"][0] == BEHAVIOR_SESSION_ID_SCI
     assert sci_table["ophys_container_id"][0]  == CONTAINER_ID_SCI
-    assert sci_table["super_container_id"][0]  == None
+    assert sci_table["supercontainer_id"][0]   == None
 
     meso_table = from_lims.get_all_ids_for_behavior_session_id(OPHYS_EXPERIMENT_ID_MESO)
     assert meso_table["ophys_experiment_id"][0] == 960410042
     assert meso_table["ophys_session_id"][2]    == 959458018
     assert meso_table["behavior_session_id"][4] == 959681045
     assert meso_table["ophys_container_id"][5]  == 1018028339
-    assert meso_table["super_container_id"][7]  == 1027966320
+    assert meso_table["supercontainer_id"][7]   == 1027966320
 
 
 @pytest.mark.onprem
@@ -247,7 +247,7 @@ def test_get_general_info_for_behavior_session_id():
     assert meso_table["ophys_session_id"][1]    == 959458018
     assert meso_table["behavior_session_id"][2] == 959681045
     assert meso_table["ophys_container_id"][2]  == 1018028357
-    assert meso_table["super_container_id"][2]  == 1027966320
+    assert meso_table["supercontainer_id"][2]   == 1027966320
     
     assert meso_table["experiment_workflow_state"][0] == "passed"
     assert meso_table["session_workflow_state"][0]    == "uploaded"
