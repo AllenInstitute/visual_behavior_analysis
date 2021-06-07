@@ -115,14 +115,14 @@ def test_get_general_info_for_ophys_experiment_id():
 @pytest.mark.onprem
 def test_get_ophys_experiment_ids_for_ophys_session_id():
     meso_table = from_lims.get_ophys_experiment_ids_for_ophys_session_id(OPHYS_SESSION_ID_MESO)
-    assert meso_table[0] == 960410023
-    assert meso_table[1] == 960410026
-    assert meso_table[2] == 960410028
-    assert meso_table[3] == 960410032
-    assert meso_table[4] == 960410035
-    assert meso_table[5] == 960410038
-    assert meso_table[6] == 960410040
-    assert meso_table[7] == 960410042
+    assert meso_table["ophys_experiment_id"][0] == 960410023
+    assert meso_table["ophys_experiment_id"][1] == 960410026
+    assert meso_table["ophys_experiment_id"][2] == 960410028
+    assert meso_table["ophys_experiment_id"][3] == 960410032
+    assert meso_table["ophys_experiment_id"][4] == 960410035
+    assert meso_table["ophys_experiment_id"][5] == 960410038
+    assert meso_table["ophys_experiment_id"][6] == 960410040
+    assert meso_table["ophys_experiment_id"][7] == 960410042
 
 
 @pytest.mark.onprem
