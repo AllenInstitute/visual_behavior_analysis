@@ -23,7 +23,7 @@ from general_funs import *
 np.warnings.filterwarnings('ignore', category=np.VisibleDeprecationWarning)
 
 
-def svm_images_main_post(session_id, data_list, svm_blocks, iblock, dir_svm, frames_svm, time_win, trial_type, to_decode, same_num_neuron_all_planes, cols, analysis_dates, use_events=False, doPlots=0):
+def svm_images_main_post(session_id, data_list, svm_blocks, iblock, dir_svm, frames_svm, time_win, trial_type, to_decode, same_num_neuron_all_planes, cols, analysis_dates, project_codes, use_events=False, doPlots=0):
     
     bl_percentile = 10 #20  # for peak measurements, we subtract pre-omit baseline from the peak. bl_percentile determines what pre-omit values will be used.      
     
@@ -107,8 +107,13 @@ def svm_images_main_post(session_id, data_list, svm_blocks, iblock, dir_svm, fra
                     word = 'block'
                 ending = f'{ending}{word}{iblock}_'
 
-            name = f'(.*)_s-{session_id}_e-{lims_id}_{svmn}_frames{frames_svm[0]}to{frames_svm[-1]}_{ending}{nown}'
-        
+            name = f'(.*)_s-{session_id}_e-{lims_id}_{svmn}_frames{frames_svm[0]}to{frames_svm[-1]}_{ending}'
+
+            if project_codes == ['VisualBehavior']:
+                name = f'{name}{project_codes[0]}_'
+
+            name = f'{name}{nown}'
+            
         
             svmName ,_ = all_sess_set_h5_fileName(name, dir_svm, all_files=0)
             
@@ -424,7 +429,7 @@ def svm_images_main_post(session_id, data_list, svm_blocks, iblock, dir_svm, fra
                 # mean
                 plt.subplot(211)
                 plt.plot(frames_svm, meanX_allFrs)
-                plt.title('meanX (half omit & half gray trials), eachN')
+                plt.title('meanX, eachN') #  (half omit & half gray trials)
 
                 mn = np.min(meanX_allFrs)
                 mx = np.max(meanX_allFrs)
@@ -439,7 +444,7 @@ def svm_images_main_post(session_id, data_list, svm_blocks, iblock, dir_svm, fra
                 ## std
                 plt.subplot(212)
                 plt.plot(frames_svm, stdX_allFrs)
-                plt.title('stdX (half omit & half gray trials), eachN')
+                plt.title('stdX, eachN') #  (half omit & half gray trials)
                 plt.subplots_adjust(hspace=.55)
 
                 mn = np.min(stdX_allFrs)

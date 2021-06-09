@@ -899,7 +899,7 @@ def svm_main_images_pbs(data_list, experiment_ids_valid, df_data, session_trials
                 pupil_running_values = np.nan
                 
                 #### run svm analysis on the whole session
-                if svm_blocks==-100 or svm_blocks==-101:
+                if svm_blocks == -100 or svm_blocks == -101:
                     svmName = svm_run_save(traces_fut_0, image_labels_0, [np.nan, []], svm_blocks, now, engagement_pupil_running, pupil_running_values, use_balanced_trials, project_codes) #, same_num_neuron_all_planes, norm_to_max_svm, svm_total_frs, n_neurons, numShufflesN, numSamples, num_classes, samps_bef, regType, kfold, cre, saveResults)
                     
 
@@ -1512,9 +1512,20 @@ stim_response_df[dd[1]]
 
 #%% Set frames_svm
 
+# Note: trials df has a much longer time_trace (goes up to 4.97) compared to stimulus df (goes up to .71), so frames_svm ends up being 1 element longer for trials df (ie when decoding hits from misses) compared to stimulus df (ie when decoding the images)
+
 # trace_time = np.array([-0.46631438, -0.3730515 , -0.27978863, -0.18652575, -0.09326288,
 #         0.        ,  0.09326288,  0.18652575,  0.27978863,  0.3730515 ,
 #         0.46631438,  0.55957726,  0.65284013])
+
+# trace_time = array([-0.48482431, -0.45250269, -0.42018107, -0.38785944, -0.35553782,
+#        -0.3232162 , -0.29089458, -0.25857296, -0.22625134, -0.19392972,
+#        -0.1616081 , -0.12928648, -0.09696486, -0.06464324, -0.03232162,
+#         0.        ,  0.03232162,  0.06464324,  0.09696486,  0.12928648,
+#         0.1616081 ,  0.19392972,  0.22625134,  0.25857296,  0.29089458,
+#         0.3232162 ,  0.35553782,  0.38785944,  0.42018107,  0.45250269,
+#         0.48482431,  0.51714593,  0.54946755,  0.58178917,  0.61411079,
+#         0.64643241,  0.67875403,  0.71107565,  0.74339727])
 
 trace_time = df_data.iloc[0]['trace_timestamps']
 # set samps_bef and samps_aft: on the image-aligned traces, samps_bef frames were before the image, and samps_aft-1 frames were after the image

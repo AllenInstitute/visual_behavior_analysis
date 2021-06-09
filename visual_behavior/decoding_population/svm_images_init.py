@@ -32,6 +32,8 @@ from svm_images_main_post import *
     
 #%% Get SVM output for each cell type, and each frames_svm.
 
+project_codes = ['VisualBehavior'] # ['VisualBehaviorMultiscope'] # ['VisualBehaviorMultiscope', 'VisualBehaviorTask1B', 'VisualBehavior', 'VisualBehaviorMultiscope4areasx2d']
+
 svm_blocks = -101 #np.nan # -1: divide trials based on engagement #2 # number of trial blocks to divide the session to, and run svm on. # set to np.nan to run svm analysis on the whole session
 use_events = True #False # whether to run the analysis on detected events (inferred spikes) or dff traces.
 
@@ -39,17 +41,25 @@ to_decode = 'current' #'next' # 'current' (default): decode current image.    'p
 trial_type = 'hits_vs_misses' #'changes' #'hits_vs_misses' #'changes_vs_nochanges' #'omissions' # 'omissions', 'images', 'changes' # what trials to use for SVM analysis # the population activity of these trials at time time_win will be used to decode the image identity of flashes that occurred at their time 0 (if to_decode='current') or 750ms before (if to_decode='previous').
 use_balanced_trials = 1 #1 # if 1, use same number of trials for each class; only applicable when we have 2 classes (binary classification).
 
+
+# set window for quantifying the responses
 if use_events:
     time_win = [0, .4]
 else:
     time_win = [0, .55] # 'frames_svm' # set time_win to a string (any string) to use frames_svm as the window of quantification. # time window relative to trial onset to quantify image signal. Over this window class accuracy traces will be averaged.
 
     
-if trial_type=='hits_vs_misses':
-    frames_svm_all = [np.arange(-5,9)]
+# Note: trials df has a much longer time_trace (goes up to 4.97) compared to stimulus df (goes up to .71), so frames_svm ends up being 1 element longer for trials df (ie when decoding hits from misses) compared to stimulus df (ie when decoding the images)    
+if project_codes == ['VisualBehavior']:
+    frames_svm_all = [np.arange(-15,23)] #[[-3,-2,-1], [0,1,2,3,4,5]]
 else:
-    frames_svm_all = [np.arange(-5,8)] #[[-3,-2,-1], [0,1,2,3,4,5]]
+    frames_svm_all = [np.arange(-5,8)]
+    
+if trial_type=='hits_vs_misses':
+#     frames_svm_all[0][-1] = frames_svm_all[0][-1] + 1
+    frames_svm_all[0] = np.concatenate((frames_svm_all[0], [frames_svm_all[0][-1] + 1]))
 
+    
 same_num_neuron_all_planes = 0
 
 saveResults = 1
@@ -58,11 +68,22 @@ cre2ana_all = 'slc', 'sst', 'vip'
 
 
 #%%
-project_codes = ['VisualBehaviorMultiscope'] # ['VisualBehaviorMultiscope', 'VisualBehaviorTask1B', 'VisualBehavior', 'VisualBehaviorMultiscope4areasx2d']
 num_planes = 8
 analysis_dates = [''] # ['2020507'] #set to [''] if you want to load the latest file. # the date on which the svm files were saved.
-frame_dur = np.array([.093])
+
+if project_codes == ['VisualBehavior']:
+    frame_dur = np.array([.032])
+else:
+    frame_dur = np.array([.093])
 # trace_time = np.array([-0.46631438, -0.3730515 , -0.27978863, -0.18652575, -0.09326288, 0.,  0.09326288,  0.18652575,  0.27978863,  0.3730515 , 0.46631438,  0.55957726,  0.65284013])
+# trace_time = array([-0.48482431, -0.45250269, -0.42018107, -0.38785944, -0.35553782,
+#        -0.3232162 , -0.29089458, -0.25857296, -0.22625134, -0.19392972,
+#        -0.1616081 , -0.12928648, -0.09696486, -0.06464324, -0.03232162,
+#         0.        ,  0.03232162,  0.06464324,  0.09696486,  0.12928648,
+#         0.1616081 ,  0.19392972,  0.22625134,  0.25857296,  0.29089458,
+#         0.3232162 ,  0.35553782,  0.38785944,  0.42018107,  0.45250269,
+#         0.48482431,  0.51714593,  0.54946755,  0.58178917,  0.61411079,
+#         0.64643241,  0.67875403,  0.71107565,  0.74339727])
 # samps_bef = 5 #np.argwhere(trace_time==0)[0][0] # 
 # samps_aft = 8 #len(trace_time)-samps_bef #
 
@@ -89,6 +110,7 @@ if ~np.isnan(svm_blocks):
     dir_svm = os.path.join(dir_svm, f'trial_blocks')
 
 
+    
 
 #%% Use March 2021 data release sessions
 
@@ -96,7 +118,7 @@ if ~np.isnan(svm_blocks):
 # experiments_table = loading.get_filtered_ophys_experiment_table()
 experiments_table = loading.get_filtered_ophys_experiment_table(release_data_only=True)
 experiments_table = experiments_table.reset_index('ophys_experiment_id')
-metadata_valid = experiments_table[experiments_table['project_code']=='VisualBehaviorMultiscope'] # multiscope sessions
+metadata_valid = experiments_table[experiments_table['project_code']==project_codes[0]] # multiscope sessions
 
 list_all_sessions_valid = metadata_valid['ophys_session_id'].unique()
 print(f'{len(list_all_sessions_valid)}: Number of de-crosstalked sessions for analysis')
@@ -111,10 +133,14 @@ metadata_all.shape
 metadata_all.shape[0]/8
 
 # set the list of experiments for each session in list_all_sessions_valid
-list_all_experiments = np.reshape(metadata_all['ophys_experiment_id'].values, (8, len(list_all_sessions_valid)), order='F').T    
+if project_codes == ['VisualBehavior']:
+    list_all_experiments = metadata_all['ophys_experiment_id'].values
+                                  
+else:
+    list_all_experiments = np.reshape(metadata_all['ophys_experiment_id'].values, (8, len(list_all_sessions_valid)), order='F').T    
+# list_all_experiments.shape
 
 
-    
 
 
 #%% Set the columns in dataframe all_sess
@@ -193,7 +219,7 @@ for iblock in br: # iblock=0; iblock=np.nan
 
         #%% Run the main function
         
-        this_sess = svm_images_main_post(session_id, data_list, svm_blocks, iblock, dir_svm, frames_svm, time_win, trial_type, to_decode, same_num_neuron_all_planes, cols, analysis_dates, use_events, doPlots=0)
+        this_sess = svm_images_main_post(session_id, data_list, svm_blocks, iblock, dir_svm, frames_svm, time_win, trial_type, to_decode, same_num_neuron_all_planes, cols, analysis_dates, project_codes, use_events, doPlots=0)
 
         
         all_sess = all_sess.append(this_sess) 

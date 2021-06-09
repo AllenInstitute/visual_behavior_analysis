@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 
 '''
 pool_all_stages = True #True
-fit_reg = True # lmplots: add the fitted line to the catter plot or not
+fit_reg = False # lmplots: add the fitted line to the catter plot or not
 superimpose_all_cre = False
 plot_testing_shufl = 0 # if 0 correlate testing data with strategy dropout index; if 1, correlated shuffled data with strategy dropout index
 '''
@@ -30,7 +30,10 @@ cn = 'strategy_dropout_index'  # 'visual_only_dropout_index' # 'timing_only_drop
 sdi = model_table_allsess[cn].values
 sdi0 = sdi +0
 
-print(f'{len(model_table_allsess)} / {len(all_sess0)/8.} sessions of all_sess have behavioral strategy data')
+if project_codes == ['VisualBehavior']:
+    print(f'{len(model_table_allsess)} / {len(all_sess0)} sessions of all_sess have behavioral strategy data')
+else:    
+    print(f'{len(model_table_allsess)} / {len(all_sess0)/num_planes} sessions of all_sess have behavioral strategy data')
 
 
 # set allsess for sessions in model table, and get some vars out of it
@@ -40,7 +43,7 @@ bl_all = np.vstack(all_sess0_modeltable['bl_pre0'].values) # 744 x 4
 stages = np.vstack(all_sess0_modeltable['stage'].values).flatten() # 744 
 
 stages_each = np.reshape(stages, (num_planes, len(model_table_allsess)), order='F') # 8 x 93
-# np.unique(stages_each) # 'OPHYS_1_images_A', 'OPHYS_3_images_A', 'OPHYS_4_images_B', 'OPHYS_6_images_A', 'OPHYS_6_images_B'
+#     np.unique(stages_each) # 'OPHYS_1_images_A', 'OPHYS_3_images_A', 'OPHYS_4_images_B', 'OPHYS_6_images_A', 'OPHYS_6_images_B'
 
 if trial_type =='changes_vs_nochanges':
     stagesall = [1,2,3,4,5,6]
@@ -52,7 +55,7 @@ if pool_all_stages:
     stagesall = [0]
 
 ##### loop over each ophys stage
-for stage_2_analyze in stagesall: # stage_2_analyze = 1
+for stage_2_analyze in stagesall: # stage_2_analyze = stagesall[0]
 
     if stage_2_analyze==0: # pool all stages
         stinds = np.full((len(stages)), 6)
@@ -149,12 +152,17 @@ for stage_2_analyze in stagesall: # stage_2_analyze = 1
     #################################
     # lmplot: Plot each cre line in a separate subplot; color code by cre line
 
-    df = pd.DataFrame([], columns=['Decoder accuracy (average of 8 planes)', f'{cn}', 'cre'])
-    df['Decoder accuracy (average of 8 planes)'] = topn #testing_accur_ave_planes
+    if project_codes == ['VisualBehavior']:
+        vb_ms = ''
+    else:
+        vb_ms = '(average of 8 planes)'
+    
+    df = pd.DataFrame([], columns=[f'Decoder accuracy {vb_ms}', f'{cn}', 'cre'])
+    df[f'Decoder accuracy {vb_ms}'] = topn #testing_accur_ave_planes
     df[f'{cn}'] = sdi
     df['cre'] = cre_mt
 
-    g = sns.lmplot(f'{cn}', 'Decoder accuracy (average of 8 planes)', data=df, hue='cre', size=2.5, scatter_kws={"s": 20}, col='cre', fit_reg=fit_reg)
+    g = sns.lmplot(f'{cn}', f'Decoder accuracy {vb_ms}', data=df, hue='cre', size=2.5, scatter_kws={"s": 20}, col='cre', fit_reg=fit_reg)
 
     #### add cc to the titles
     # lmplot plots cre lines in the same order as cre_mt; lets get that array of cre lines
@@ -180,6 +188,7 @@ for stage_2_analyze in stagesall: # stage_2_analyze = 1
 
 #         snn = [str(sn) for sn in whichStages]
 #         snn = '_'.join(snn)
+
         whatSess = ophys_title #f'_summaryStages_{snn}'
 
         fgn = '' #f'{whatSess}'
@@ -198,11 +207,14 @@ for stage_2_analyze in stagesall: # stage_2_analyze = 1
 
         fgn = f'{fgn}_{word}_frames{frames_svm[0]}to{frames_svm[-1]}'                        
         fgn = fgn + '_ClassAccur'
-
+        if project_codes == ['VisualBehavior']:
+            fgn = f'{fgn}_{project_codes[0]}'
+        
         nam = f'{whatSess}_{fignamets}beh_strategy_corr_{trial_type}{fgn}_{now}' # {crenow[:3]}
         fign = os.path.join(dir0, 'svm', dir_now, nam+fmt)
         print(fign)
 
+        
         plt.savefig(fign, bbox_inches='tight') # , bbox_extra_artists=(lgd,)    
 
     
@@ -216,7 +228,7 @@ for stage_2_analyze in stagesall: # stage_2_analyze = 1
     if superimpose_all_cre:
     #     plt.figure(figsize=(3,3))
     #     plt.plot(sdi, topn, '.')
-        g = sns.lmplot(f'{cn}', 'Decoder accuracy (average of 8 planes)', data=df, hue='cre', size=2.5, scatter_kws={"s": 20}, fit_reg=False)            
+        g = sns.lmplot(f'{cn}', f'Decoder accuracy {vb_ms}', data=df, hue='cre', size=2.5, scatter_kws={"s": 20}, fit_reg=False)            
         plt.xlabel(f'{cn}')
         plt.ylabel('average decoder accuracy of 8 planes\n rel. baseline')
         plt.title(f'{ophys_title}, r2={pallcre[0]:.2f}');

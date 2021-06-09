@@ -25,22 +25,35 @@ blocks_all = svm_this_plane_allsess0['block'].values # weird: 70 block 0s, and 6
 
 #%% Loop through svm_this_plane_allsess0 and get those rows of it that belong to a given session stage and block; for each one set svm_allMice_sessPooled and svm_allMice_sessAvSd
 
-indexes = ['cre_allPlanes', 'mouse_id_allPlanes', 'session_ids', 'area_allPlanes', 'depth_allPlanes', 'block_all', 'session_labs', \
-           'av_test_data_allPlanes', 'av_test_shfl_allPlanes', 'peak_amp_allPlanes', \
-           'cre_eachArea', 'av_test_data_eachArea', 'av_test_shfl_eachArea', 'peak_amp_eachArea', \
-           'cre_eachDepth', 'depth_eachDepth', 'av_test_data_eachDepth', 'av_test_shfl_eachDepth', 'peak_amp_eachDepth']
+if project_codes == ['VisualBehavior']: # remove area/layer pooled columns
+    indexes = ['cre_allPlanes', 'mouse_id_allPlanes', 'session_ids', 'area_allPlanes', 'depth_allPlanes', 'block_all', 'session_labs', \
+               'av_test_data_allPlanes', 'av_test_shfl_allPlanes', 'peak_amp_allPlanes']
+else:
+    indexes = ['cre_allPlanes', 'mouse_id_allPlanes', 'session_ids', 'area_allPlanes', 'depth_allPlanes', 'block_all', 'session_labs', \
+               'av_test_data_allPlanes', 'av_test_shfl_allPlanes', 'peak_amp_allPlanes', \
+               'cre_eachArea', 'av_test_data_eachArea', 'av_test_shfl_eachArea', 'peak_amp_eachArea', \
+               'cre_eachDepth', 'depth_eachDepth', 'av_test_data_eachDepth', 'av_test_shfl_eachDepth', 'peak_amp_eachDepth']
+
 svm_allMice_sessPooled = pd.DataFrame([], columns=indexes)
 
 
-cols0 = ['mouse_id', 'cre', 'block', 'session_ids', 'session_stages', 'session_labs', 'area', 'depth', 'plane', \
-        'av_depth_avSess_eachP', 'sd_depth_avSess_eachP', 'av_n_neurons_avSess_eachP', 'sd_n_neurons_avSess_eachP', \
-        'av_n_trials_avSess_eachP', 'sd_n_trials_avSess_eachP', 'av_test_data_avSess_eachP', 'sd_test_data_avSess_eachP', 'av_test_shfl_avSess_eachP', 'sd_test_shfl_avSess_eachP', \
-        'av_peak_amp_trTsShCh_avSess_eachP', 'sd_peak_amp_trTsShCh_avSess_eachP', \
-        'num_sessLayers_valid_eachArea', 'av_test_data_pooledSessPlanes_eachArea', 'sd_test_data_pooledSessPlanes_eachArea', 'av_test_shfl_pooledSessPlanes_eachArea', 'sd_test_shfl_pooledSessPlanes_eachArea', \
-        'av_pao_trTsShCh_pooledSessPlanes_eachArea', 'sd_pao_trTsShCh_pooledSessPlanes_eachArea', \
-        'num_sessAreas_valid_eachDepth', 'depth_ave', \
-        'av_test_data_pooledSessAreas_eachDepth', 'sd_test_data_pooledSessAreas_eachDepth', 'av_test_shfl_pooledSessAreas_eachDepth', 'sd_test_shfl_pooledSessAreas_eachDepth', \
-        'av_pao_trTsShCh_pooledSessAreas_eachDepth', 'sd_pao_trTsShCh_pooledSessAreas_eachDepth']
+if project_codes == ['VisualBehavior']: # remove area/layer pooled columns
+    cols0 = ['mouse_id', 'cre', 'block', 'session_ids', 'session_stages', 'session_labs', 'area', 'depth', 'plane', \
+            'av_depth_avSess_eachP', 'sd_depth_avSess_eachP', 'av_n_neurons_avSess_eachP', 'sd_n_neurons_avSess_eachP', \
+            'av_n_trials_avSess_eachP', 'sd_n_trials_avSess_eachP', 'av_test_data_avSess_eachP', 'sd_test_data_avSess_eachP', 'av_test_shfl_avSess_eachP', 'sd_test_shfl_avSess_eachP', \
+            'av_peak_amp_trTsShCh_avSess_eachP', 'sd_peak_amp_trTsShCh_avSess_eachP']
+
+else:
+    cols0 = ['mouse_id', 'cre', 'block', 'session_ids', 'session_stages', 'session_labs', 'area', 'depth', 'plane', \
+            'av_depth_avSess_eachP', 'sd_depth_avSess_eachP', 'av_n_neurons_avSess_eachP', 'sd_n_neurons_avSess_eachP', \
+            'av_n_trials_avSess_eachP', 'sd_n_trials_avSess_eachP', 'av_test_data_avSess_eachP', 'sd_test_data_avSess_eachP', 'av_test_shfl_avSess_eachP', 'sd_test_shfl_avSess_eachP', \
+            'av_peak_amp_trTsShCh_avSess_eachP', 'sd_peak_amp_trTsShCh_avSess_eachP', \
+            'num_sessLayers_valid_eachArea', 'av_test_data_pooledSessPlanes_eachArea', 'sd_test_data_pooledSessPlanes_eachArea', 'av_test_shfl_pooledSessPlanes_eachArea', 'sd_test_shfl_pooledSessPlanes_eachArea', \
+            'av_pao_trTsShCh_pooledSessPlanes_eachArea', 'sd_pao_trTsShCh_pooledSessPlanes_eachArea', \
+            'num_sessAreas_valid_eachDepth', 'depth_ave', \
+            'av_test_data_pooledSessAreas_eachDepth', 'sd_test_data_pooledSessAreas_eachDepth', 'av_test_shfl_pooledSessAreas_eachDepth', 'sd_test_shfl_pooledSessAreas_eachDepth', \
+            'av_pao_trTsShCh_pooledSessAreas_eachDepth', 'sd_pao_trTsShCh_pooledSessAreas_eachDepth']
+
 if same_num_neuron_all_planes:
     cols = np.concatenate((cols0, ['av_n_neurons_svm_trained_avSess_eachP', 'sd_n_neurons_svm_trained_avSess_eachP'])) 
 else:
@@ -130,41 +143,50 @@ for istage in np.unique(stages_all): # istage=1
         pa_all = np.reshape(a0, (num_planes, int(a0.shape[0]/num_planes), a0.shape[-1]), order='F') # 8 x sum(num_sess_per_mouse) x 4 # each row is one plane, all sessions        
 
 
-        ########## Each area: layers pooled ########## 
+        
+        if project_codes == ['VisualBehaviorMultiscope']:
+            ########## Each area: layers pooled ########## 
 
-        cre_all_eachArea = np.concatenate((svm_this_plane_allsess['cre_pooled_sesss_planes_eachArea'].values), axis=1) # 2 x (4*sum(num_sess_per_mouse))
-        ts_all_eachArea = np.concatenate((svm_this_plane_allsess['av_test_data_pooled_sesss_planes_eachArea'].values), axis=1) # 2 x (4*sum(num_sess_per_mouse)) x 1270
-        sh_all_eachArea = np.concatenate((svm_this_plane_allsess['av_test_shfl_pooled_sesss_planes_eachArea'].values), axis=1) # 2 x (4*sum(num_sess_per_mouse)) x 1270    
-        pao_all_eachArea = np.concatenate((svm_this_plane_allsess['peak_amp_trTsShCh_pooled_sesss_planes_eachArea'].values), axis=1) # 2 x (4*sum(num_sess_per_mouse)) x 4(train,test,shuffle,chance)
-
-
-        ########## Each layer: areas pooled ########## svm_this_plane_allsess['trace_pooled_eachDepth']
-
-        cre_all_eachDepth = np.concatenate((svm_this_plane_allsess['cre_pooled_sesss_areas_eachDepth'].values), axis=1) # 4 x (2*sum(num_sess_per_mouse))
-        ts_all_eachDepth = np.concatenate((svm_this_plane_allsess['av_test_data_pooled_sesss_areas_eachDepth'].values), axis=1) # 4 x (2*sum(num_sess_per_mouse)) x 1270
-        sh_all_eachDepth = np.concatenate((svm_this_plane_allsess['av_test_shfl_pooled_sesss_areas_eachDepth'].values), axis=1) # 4 x (2*sum(num_sess_per_mouse)) x 1270    
-        pao_all_eachDepth = np.concatenate((svm_this_plane_allsess['peak_amp_trTsShCh_pooled_sesss_areas_eachDepth'].values), axis=1) # 4 x (2*sum(num_sess_per_mouse)) x 4(train,test,shuffle,chance)
-
-        depth_all_eachDepth = np.concatenate((svm_this_plane_allsess['depth_pooled_sesss_areas_eachDepth'].values), axis=1) # 4 x (2*sum(num_sess_per_mouse))    
+            cre_all_eachArea = np.concatenate((svm_this_plane_allsess['cre_pooled_sesss_planes_eachArea'].values), axis=1) # 2 x (4*sum(num_sess_per_mouse))
+            ts_all_eachArea = np.concatenate((svm_this_plane_allsess['av_test_data_pooled_sesss_planes_eachArea'].values), axis=1) # 2 x (4*sum(num_sess_per_mouse)) x 1270
+            sh_all_eachArea = np.concatenate((svm_this_plane_allsess['av_test_shfl_pooled_sesss_planes_eachArea'].values), axis=1) # 2 x (4*sum(num_sess_per_mouse)) x 1270    
+            pao_all_eachArea = np.concatenate((svm_this_plane_allsess['peak_amp_trTsShCh_pooled_sesss_planes_eachArea'].values), axis=1) # 2 x (4*sum(num_sess_per_mouse)) x 4(train,test,shuffle,chance)
 
 
-        '''        
-        ########### Make a pandas series to keep the pooled session data of all mice ########### 
+            ########## Each layer: areas pooled ########## svm_this_plane_allsess['trace_pooled_eachDepth']
 
-        svm_allMice_sessPooled = pd.Series([cre_all, mouse_id_all, area_all, depth_all, block_all, session_labs_all, \
-           ts_all, sh_all, pa_all, \
-           cre_all_eachArea, ts_all_eachArea, sh_all_eachArea, pao_all_eachArea, \
-           cre_all_eachDepth, depth_all_eachDepth, ts_all_eachDepth, sh_all_eachDepth, pao_all_eachDepth],\
-           index=indexes)
-        '''
+            cre_all_eachDepth = np.concatenate((svm_this_plane_allsess['cre_pooled_sesss_areas_eachDepth'].values), axis=1) # 4 x (2*sum(num_sess_per_mouse))
+            ts_all_eachDepth = np.concatenate((svm_this_plane_allsess['av_test_data_pooled_sesss_areas_eachDepth'].values), axis=1) # 4 x (2*sum(num_sess_per_mouse)) x 1270
+            sh_all_eachDepth = np.concatenate((svm_this_plane_allsess['av_test_shfl_pooled_sesss_areas_eachDepth'].values), axis=1) # 4 x (2*sum(num_sess_per_mouse)) x 1270    
+            pao_all_eachDepth = np.concatenate((svm_this_plane_allsess['peak_amp_trTsShCh_pooled_sesss_areas_eachDepth'].values), axis=1) # 4 x (2*sum(num_sess_per_mouse)) x 4(train,test,shuffle,chance)
 
-        svm_allMice_sessPooled.at[cntall, indexes] = cre_all, mouse_id_all, session_ids_all, area_all, depth_all, block_all, session_labs_all, \
-           ts_all, sh_all, pa_all, \
-           cre_all_eachArea, ts_all_eachArea, sh_all_eachArea, pao_all_eachArea, \
-           cre_all_eachDepth, depth_all_eachDepth, ts_all_eachDepth, sh_all_eachDepth, pao_all_eachDepth
+            depth_all_eachDepth = np.concatenate((svm_this_plane_allsess['depth_pooled_sesss_areas_eachDepth'].values), axis=1) # 4 x (2*sum(num_sess_per_mouse))    
+
+
+            '''        
+            ########### Make a pandas series to keep the pooled session data of all mice ########### 
+
+            svm_allMice_sessPooled = pd.Series([cre_all, mouse_id_all, area_all, depth_all, block_all, session_labs_all, \
+               ts_all, sh_all, pa_all, \
+               cre_all_eachArea, ts_all_eachArea, sh_all_eachArea, pao_all_eachArea, \
+               cre_all_eachDepth, depth_all_eachDepth, ts_all_eachDepth, sh_all_eachDepth, pao_all_eachDepth],\
+               index=indexes)
+            '''
+
+            svm_allMice_sessPooled.at[cntall, indexes] = cre_all, mouse_id_all, session_ids_all, area_all, depth_all, block_all, session_labs_all, \
+               ts_all, sh_all, pa_all, \
+               cre_all_eachArea, ts_all_eachArea, sh_all_eachArea, pao_all_eachArea, \
+               cre_all_eachDepth, depth_all_eachDepth, ts_all_eachDepth, sh_all_eachDepth, pao_all_eachDepth
+
+        else:
+            
+            svm_allMice_sessPooled.at[cntall, indexes] = cre_all, mouse_id_all, session_ids_all, area_all, depth_all, block_all, session_labs_all, \
+               ts_all, sh_all, pa_all
+            
 
         print(svm_allMice_sessPooled.shape)        
 #         print(svm_allMice_sessPooled)
+
 
 
 
@@ -229,94 +251,111 @@ for istage in np.unique(stages_all): # istage=1
             sd_n_trials_avSess_eachP = np.nanstd(a,axis=1).squeeze() / np.sqrt(num_sessions_valid) # num_planes # st error across sessions, for each plane
 
 
+            if project_codes == ['VisualBehavior']:
+                sqnv = np.sqrt(num_sessions_valid)
+            else:
+                sqnv = np.sqrt(num_sessions_valid)[:, np.newaxis]
+            
             # av_test_data
             a = svm_this_plane_allsess.iloc[im]['av_test_data_this_plane_allsess_allp'] # size: (8 x num_sessions x nFrames_upsampled)
             av_test_data_avSess_eachP = np.nanmean(a,axis=1) # num_planes x nFrames_upsampled (interpolated times) 
-            sd_test_data_avSess_eachP = np.nanstd(a,axis=1) / np.sqrt(num_sessions_valid)[:, np.newaxis] # num_planes x nFrames_upsampled # st error across sessions, for each plane
+            sd_test_data_avSess_eachP = np.nanstd(a,axis=1) / sqnv # num_planes x nFrames_upsampled # st error across sessions, for each plane
 
             # av_test_shfl
             a = svm_this_plane_allsess.iloc[im]['av_test_shfl_this_plane_allsess_allp'] # size: (8 x num_sessions x nFrames_upsampled)
             av_test_shfl_avSess_eachP = np.nanmean(a,axis=1) # num_planes x nFrames_upsampled (interpolated times) 
-            sd_test_shfl_avSess_eachP = np.nanstd(a,axis=1) / np.sqrt(num_sessions_valid)[:, np.newaxis] # num_planes x nFrames_upsampled # st error across sessions, for each plane
+            sd_test_shfl_avSess_eachP = np.nanstd(a,axis=1) / sqnv # num_planes x nFrames_upsampled # st error across sessions, for each plane
 
 
             # peak_amp_trTsShCh
             a = svm_this_plane_allsess.iloc[im]['peak_amp_trTsShCh_this_plane_allsess_allp'] # size: (8 x num_sessions x 4)
             av_peak_amp_trTsShCh_avSess_eachP = np.nanmean(a,axis=1).squeeze() # num_planes x 4
-            sd_peak_amp_trTsShCh_avSess_eachP = np.nanstd(a,axis=1).squeeze() / np.sqrt(num_sessions_valid)[:, np.newaxis] # num_planes x 4 # st error across sessions, for each plane
+            sd_peak_amp_trTsShCh_avSess_eachP = np.nanstd(a,axis=1).squeeze() / sqnv # num_planes x 4 # st error across sessions, for each plane
 
 
-            ################################################################
-            #%% Data per area: pooled across sessions and layers for each area
-            # Question 1: is there a difference between areas (V1 vs LM) # for each mouse pool across sessions and layers (for each area)
+            if project_codes == ['VisualBehaviorMultiscope']:
+                ################################################################
+                #%% Data per area: pooled across sessions and layers for each area
+                # Question 1: is there a difference between areas (V1 vs LM) # for each mouse pool across sessions and layers (for each area)
 
-            # Get the total number of valid sessions and layers for each area        
-            num_sessions_valid_eachArea = svm_this_plane_allsess.iloc[im]['num_sessions_valid_eachArea']
-            num_sessLayers_valid_eachArea = np.sum(num_sessions_valid_eachArea, axis=1)
+                # Get the total number of valid sessions and layers for each area        
+                num_sessions_valid_eachArea = svm_this_plane_allsess.iloc[im]['num_sessions_valid_eachArea']
+                num_sessLayers_valid_eachArea = np.sum(num_sessions_valid_eachArea, axis=1)
 
-            # Average across layers and sessions for each area
-            # test_data
-            a = svm_this_plane_allsess.iloc[im]['av_test_data_pooled_sesss_planes_eachArea'] # 2 x (4 x num_sessions) x nFrames_upsampled
-            av_test_data_pooledSessPlanes_eachArea = np.nanmean(a, axis=1) # 2 x nFrames_upsampled 
-            sd_test_data_pooledSessPlanes_eachArea = np.nanstd(a, axis=1) / np.sqrt(num_sessLayers_valid_eachArea)[:,np.newaxis] # 2 x nFrames_upsampled 
+                # Average across layers and sessions for each area
+                # test_data
+                a = svm_this_plane_allsess.iloc[im]['av_test_data_pooled_sesss_planes_eachArea'] # 2 x (4 x num_sessions) x nFrames_upsampled
+                av_test_data_pooledSessPlanes_eachArea = np.nanmean(a, axis=1) # 2 x nFrames_upsampled 
+                sd_test_data_pooledSessPlanes_eachArea = np.nanstd(a, axis=1) / np.sqrt(num_sessLayers_valid_eachArea)[:,np.newaxis] # 2 x nFrames_upsampled 
 
-            # test_shfl
-            a = svm_this_plane_allsess.iloc[im]['av_test_shfl_pooled_sesss_planes_eachArea'] # 2 x (4 x num_sessions) x nFrames_upsampled
-            av_test_shfl_pooledSessPlanes_eachArea = np.nanmean(a, axis=1) # 2 x nFrames_upsampled 
-            sd_test_shfl_pooledSessPlanes_eachArea = np.nanstd(a, axis=1) / np.sqrt(num_sessLayers_valid_eachArea)[:,np.newaxis] # 2 x nFrames_upsampled 
-
-
-            # peak_amp
-            a = svm_this_plane_allsess.iloc[im]['peak_amp_trTsShCh_pooled_sesss_planes_eachArea'] # 2 x (4 x num_sessions) x 4(train, test, shuffle, chance)
-        #        num_sessLayers_valid_eachArea = a.shape[1]
-            av_pao_trTsShCh_pooledSessPlanes_eachArea = np.nanmean(a, axis=1) # 2 x 4 
-            sd_pao_trTsShCh_pooledSessPlanes_eachArea = np.nanstd(a, axis=1) / np.sqrt(num_sessLayers_valid_eachArea)[:,np.newaxis] # 2 x 4(train, test, shuffle, chance) 
+                # test_shfl
+                a = svm_this_plane_allsess.iloc[im]['av_test_shfl_pooled_sesss_planes_eachArea'] # 2 x (4 x num_sessions) x nFrames_upsampled
+                av_test_shfl_pooledSessPlanes_eachArea = np.nanmean(a, axis=1) # 2 x nFrames_upsampled 
+                sd_test_shfl_pooledSessPlanes_eachArea = np.nanstd(a, axis=1) / np.sqrt(num_sessLayers_valid_eachArea)[:,np.newaxis] # 2 x nFrames_upsampled 
 
 
-            ################################################################
-            #%% Data per depth: pooled across sessions and areas for each depth
-            # Question 2: is there a difference between superficial and deep layers # for each mouse pool across sessions and area (for each layer)... also pool 2 superifical (deep) layers into 1         
-
-            # set average depth across sessions and areas            
-            d = svm_this_plane_allsess.iloc[im]['depth_pooled_sesss_areas_eachDepth'] # 4 x (2 x num_sessions)
-            depth_ave = np.mean(d, axis=1) # average across areas and sessions
-        #    b, _,_ = pool_sesss_planes_eachArea(area, area)
-
-            # Get the total number of valid sessions and layers for each depth
-            num_sessAreas_valid_eachDepth = np.sum(num_sessions_valid_eachArea, axis=0)
-
-            # Average across areas and sessions for each depth
-            # test_data
-            a = svm_this_plane_allsess.iloc[im]['av_test_data_pooled_sesss_areas_eachDepth'] # 4 x (2 x num_sessions) x nFrames_upsampled
-            av_test_data_pooledSessAreas_eachDepth = np.nanmean(a, axis=1) # 4 x nFrames_upsampled 
-            sd_test_data_pooledSessAreas_eachDepth = np.nanstd(a, axis=1) / np.sqrt(num_sessAreas_valid_eachDepth)[:,np.newaxis] # 4 x nFrames_upsampled 
-
-            # test_shfl
-            a = svm_this_plane_allsess.iloc[im]['av_test_shfl_pooled_sesss_areas_eachDepth'] # 4 x (2 x num_sessions) x nFrames_upsampled
-            av_test_shfl_pooledSessAreas_eachDepth = np.nanmean(a, axis=1) # 4 x nFrames_upsampled 
-            sd_test_shfl_pooledSessAreas_eachDepth = np.nanstd(a, axis=1) / np.sqrt(num_sessAreas_valid_eachDepth)[:,np.newaxis] # 4 x nFrames_upsampled 
+                # peak_amp
+                a = svm_this_plane_allsess.iloc[im]['peak_amp_trTsShCh_pooled_sesss_planes_eachArea'] # 2 x (4 x num_sessions) x 4(train, test, shuffle, chance)
+            #        num_sessLayers_valid_eachArea = a.shape[1]
+                av_pao_trTsShCh_pooledSessPlanes_eachArea = np.nanmean(a, axis=1) # 2 x 4 
+                sd_pao_trTsShCh_pooledSessPlanes_eachArea = np.nanstd(a, axis=1) / np.sqrt(num_sessLayers_valid_eachArea)[:,np.newaxis] # 2 x 4(train, test, shuffle, chance) 
 
 
-            # peak_amp
-            a = svm_this_plane_allsess.iloc[im]['peak_amp_trTsShCh_pooled_sesss_areas_eachDepth'] # 4 x (2 x num_sessions) x 4(train, test, shuffle, chance)
-        #        num_sessLayers_valid_eachArea = a.shape[1]
-            av_pao_trTsShCh_pooledSessAreas_eachDepth = np.nanmean(a, axis=1) # 4 x 4 
-            sd_pao_trTsShCh_pooledSessAreas_eachDepth = np.nanstd(a, axis=1) / np.sqrt(num_sessAreas_valid_eachDepth)[:,np.newaxis] # 4 x 4(train, test, shuffle, chance) 
+                ################################################################
+                #%% Data per depth: pooled across sessions and areas for each depth
+                # Question 2: is there a difference between superficial and deep layers # for each mouse pool across sessions and area (for each layer)... also pool 2 superifical (deep) layers into 1         
+
+                # set average depth across sessions and areas            
+                d = svm_this_plane_allsess.iloc[im]['depth_pooled_sesss_areas_eachDepth'] # 4 x (2 x num_sessions)
+                depth_ave = np.mean(d, axis=1) # average across areas and sessions
+            #    b, _,_ = pool_sesss_planes_eachArea(area, area)
+
+                # Get the total number of valid sessions and layers for each depth
+                num_sessAreas_valid_eachDepth = np.sum(num_sessions_valid_eachArea, axis=0)
+
+                # Average across areas and sessions for each depth
+                # test_data
+                a = svm_this_plane_allsess.iloc[im]['av_test_data_pooled_sesss_areas_eachDepth'] # 4 x (2 x num_sessions) x nFrames_upsampled
+                av_test_data_pooledSessAreas_eachDepth = np.nanmean(a, axis=1) # 4 x nFrames_upsampled 
+                sd_test_data_pooledSessAreas_eachDepth = np.nanstd(a, axis=1) / np.sqrt(num_sessAreas_valid_eachDepth)[:,np.newaxis] # 4 x nFrames_upsampled 
+
+                # test_shfl
+                a = svm_this_plane_allsess.iloc[im]['av_test_shfl_pooled_sesss_areas_eachDepth'] # 4 x (2 x num_sessions) x nFrames_upsampled
+                av_test_shfl_pooledSessAreas_eachDepth = np.nanmean(a, axis=1) # 4 x nFrames_upsampled 
+                sd_test_shfl_pooledSessAreas_eachDepth = np.nanstd(a, axis=1) / np.sqrt(num_sessAreas_valid_eachDepth)[:,np.newaxis] # 4 x nFrames_upsampled 
 
 
-            #%% Keep vars (session averaged, each plane, also eachArea, eachDepth vars) for all mice
+                # peak_amp
+                a = svm_this_plane_allsess.iloc[im]['peak_amp_trTsShCh_pooled_sesss_areas_eachDepth'] # 4 x (2 x num_sessions) x 4(train, test, shuffle, chance)
+            #        num_sessLayers_valid_eachArea = a.shape[1]
+                av_pao_trTsShCh_pooledSessAreas_eachDepth = np.nanmean(a, axis=1) # 4 x 4 
+                sd_pao_trTsShCh_pooledSessAreas_eachDepth = np.nanstd(a, axis=1) / np.sqrt(num_sessAreas_valid_eachDepth)[:,np.newaxis] # 4 x 4(train, test, shuffle, chance) 
 
-            svm_allMice_sessAvSd.at[cntall2, cols0] = \
-                mouse_id, cre, block, session_ids_now, session_stages, session_labs, areas, depths, planes, \
-                av_depth_avSess_eachP, sd_depth_avSess_eachP, av_n_neurons_avSess_eachP, sd_n_neurons_avSess_eachP, \
-                av_n_trials_avSess_eachP, sd_n_trials_avSess_eachP, av_test_data_avSess_eachP, sd_test_data_avSess_eachP, av_test_shfl_avSess_eachP, sd_test_shfl_avSess_eachP, \
-                av_peak_amp_trTsShCh_avSess_eachP, sd_peak_amp_trTsShCh_avSess_eachP, \
-                num_sessLayers_valid_eachArea, av_test_data_pooledSessPlanes_eachArea, sd_test_data_pooledSessPlanes_eachArea, av_test_shfl_pooledSessPlanes_eachArea, sd_test_shfl_pooledSessPlanes_eachArea, \
-                av_pao_trTsShCh_pooledSessPlanes_eachArea, sd_pao_trTsShCh_pooledSessPlanes_eachArea, \
-                num_sessAreas_valid_eachDepth, depth_ave, \
-                av_test_data_pooledSessAreas_eachDepth, sd_test_data_pooledSessAreas_eachDepth, av_test_shfl_pooledSessAreas_eachDepth, sd_test_shfl_pooledSessAreas_eachDepth, \
-                av_pao_trTsShCh_pooledSessAreas_eachDepth, sd_pao_trTsShCh_pooledSessAreas_eachDepth
 
+                #%% Keep vars (session averaged, each plane, also eachArea, eachDepth vars) for all mice
+
+                svm_allMice_sessAvSd.at[cntall2, cols0] = \
+                    mouse_id, cre, block, session_ids_now, session_stages, session_labs, areas, depths, planes, \
+                    av_depth_avSess_eachP, sd_depth_avSess_eachP, av_n_neurons_avSess_eachP, sd_n_neurons_avSess_eachP, \
+                    av_n_trials_avSess_eachP, sd_n_trials_avSess_eachP, av_test_data_avSess_eachP, sd_test_data_avSess_eachP, av_test_shfl_avSess_eachP, sd_test_shfl_avSess_eachP, \
+                    av_peak_amp_trTsShCh_avSess_eachP, sd_peak_amp_trTsShCh_avSess_eachP, \
+                    num_sessLayers_valid_eachArea, av_test_data_pooledSessPlanes_eachArea, sd_test_data_pooledSessPlanes_eachArea, av_test_shfl_pooledSessPlanes_eachArea, sd_test_shfl_pooledSessPlanes_eachArea, \
+                    av_pao_trTsShCh_pooledSessPlanes_eachArea, sd_pao_trTsShCh_pooledSessPlanes_eachArea, \
+                    num_sessAreas_valid_eachDepth, depth_ave, \
+                    av_test_data_pooledSessAreas_eachDepth, sd_test_data_pooledSessAreas_eachDepth, av_test_shfl_pooledSessAreas_eachDepth, sd_test_shfl_pooledSessAreas_eachDepth, \
+                    av_pao_trTsShCh_pooledSessAreas_eachDepth, sd_pao_trTsShCh_pooledSessAreas_eachDepth
+
+            else:
+                
+                #%% Keep vars (session averaged, each plane, also eachArea, eachDepth vars) for all mice
+
+                svm_allMice_sessAvSd.at[cntall2, cols0] = \
+                    mouse_id, cre, block, session_ids_now, session_stages, session_labs, areas, depths, planes, \
+                    av_depth_avSess_eachP, sd_depth_avSess_eachP, av_n_neurons_avSess_eachP, sd_n_neurons_avSess_eachP, \
+                    av_n_trials_avSess_eachP, sd_n_trials_avSess_eachP, av_test_data_avSess_eachP, sd_test_data_avSess_eachP, av_test_shfl_avSess_eachP, sd_test_shfl_avSess_eachP, \
+                    av_peak_amp_trTsShCh_avSess_eachP, sd_peak_amp_trTsShCh_avSess_eachP                
+                
+                
             if same_num_neuron_all_planes:
                 svm_allMice_sessAvSd.at[cntall2, ['av_n_neurons_svm_trained_avSess_eachP']] = [av_n_neurons_svm_trained_avSess_eachP]
                 svm_allMice_sessAvSd.at[cntall2, ['sd_n_neurons_svm_trained_avSess_eachP']] = [sd_n_neurons_svm_trained_avSess_eachP]
