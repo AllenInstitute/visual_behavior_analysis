@@ -140,13 +140,19 @@ def add_event_triggered_averages(experiment, cell_specimen_id):
     for image_index in image_indices:
         # avoid adding the etr for this cell/event twice
         if len(experiment.event_triggered_responses.query('cell_specimen_id == @cell_specimen_id and image_index == @image_index')) == 0:
+            if experiment.stimulus_presentations.query('image_index == @image_index')['image_name'].iloc[0] == 'omitted':
+                # get all omission times
+                event_query = 'image_index == @image_index'
+            else:
+                # get only change times for other images
+                event_query = 'image_index == @image_index and is_change'
             this_etr = mindscope_utilities.event_triggered_response(
                 data=experiment.tidy_neural_data.query('cell_specimen_id == @cell_specimen_id'),
                 t='timestamps',
                 y='dff',
-                event_times=stim_table.query('image_index == @image_index')['start_time'],
-                t_before=2,
-                t_after=2,
+                event_times=stim_table.query(event_query)['start_time'],
+                t_before=1.5,
+                t_after=1.5,
             )
             this_etr['cell_specimen_id'] = cell_specimen_id
             this_etr['image_index'] = image_index
@@ -280,7 +286,7 @@ def assemble_plot(experiments, cell_specimen_id, glm_version, disable_progress_b
                 vbp.designate_flashes(
                     axes[ophys_experiment_id]['visual_responses'][col],
                     omit=0 if image_name == 'omitted' else None,
-                    pre_color='blue',
+                    pre_color='gray',
                     post_color='blue'
                 )
                 axes[ophys_experiment_id]['visual_responses'][col].set_title(image_name)
