@@ -51,7 +51,7 @@ def get_text(cell_specimen_id, experiment, glm_version):
     return text
 
 
-def get_experiments(ophys_experiment_ids, disable_progress_bar = False):
+def get_experiments(ophys_experiment_ids, disable_progress_bar=False):
     '''
     gets experiment objects for a list of experiment IDs
     '''
@@ -199,7 +199,7 @@ def show_dropout_summary(ophys_experiment_id, cell_specimen_id, glm_version, ax)
     return bp
 
 
-def append_event_triggered_averages_to_experiments(experiments, cell_specimen_id, disable_progress_bar = False):
+def append_event_triggered_averages_to_experiments(experiments, cell_specimen_id, disable_progress_bar=False):
     '''
     adds tidy neural data and event triggered average attributes to each experiment
     experiments should be a dictionary with keys: experiment_ids and values: experiment objects
@@ -216,7 +216,7 @@ def append_event_triggered_averages_to_experiments(experiments, cell_specimen_id
             add_event_triggered_averages(experiment, cell_specimen_id)
 
 
-def assemble_plot(experiments, cell_specimen_id, glm_version, disable_progress_bar = False):
+def assemble_plot(experiments, cell_specimen_id, glm_version, disable_progress_bar=False):
     row_buffer = 0.025
 
     ophys_experiment_ids = list(experiments.keys())
@@ -322,6 +322,7 @@ def make_single_cell_across_experiment_plot(cell_specimen_id, glm_version, disab
 
     return fig, ax
 
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='make a single cell plot')
     parser.add_argument('--csid', type=int, default=0, metavar='cell_specimen_id')
@@ -333,8 +334,8 @@ if __name__ == "__main__":
     print(args.csid, args.glm_version, args.suppress_progressbar)
 
     make_single_cell_across_experiment_plot(
-        args.csid, 
-        args.glm_version, 
+        args.csid,
+        args.glm_version,
         disable_progress_bars=args.suppress_progressbar,
-        saveloc = args.save_loc
+        saveloc=args.save_loc
     )
