@@ -299,6 +299,19 @@ def assemble_plot(experiments, cell_specimen_id, glm_version, disable_progress_b
         else:
             axes[ophys_experiment_id]['model_dropout_summary'].axis('off')
 
+    # get ylims extremes across all event triggered plots
+    ylim_extrema = [np.inf, -np.inf]
+    for ophys_experiment_id in ophys_experiment_ids:
+        for ii in range(9):
+            ylims = axes[ophys_experiment_id]['visual_responses'][ii].get_ylim()
+            ylim_extrema = [func((ylim_extrema[i], ylims[i])) for i,func in zip(range(2),[np.min, np.max])]
+
+    # apply ylims to all plots
+    for ophys_experiment_id in ophys_experiment_ids:
+        for ii in range(9):
+            axes[ophys_experiment_id]['visual_responses'][ii].set_ylim(*ylim_extrema)
+
+
     cell_session_plot.suptitle('cell specimen ID = {}\ngenotype = {}\nGLM Version = {}'.format(
         cell_specimen_id,
         experiment.metadata['cre_line'],
