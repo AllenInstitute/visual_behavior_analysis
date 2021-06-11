@@ -290,7 +290,7 @@ def assemble_plot(experiments, cell_specimen_id, glm_version, disable_progress_b
                     post_color='blue'
                 )
                 axes[ophys_experiment_id]['visual_responses'][col].set_title(image_name)
-                axes[ophys_experiment_id]['visual_responses'][col].set_xlim(-2, 2)
+                axes[ophys_experiment_id]['visual_responses'][col].set_xlim(-1.5, 1.5)
         else:
             axes[ophys_experiment_id]['visual_responses'][0].text(0, 0, 'ROI is not in experiment', ha='left', va='bottom')
             for col in range(9):
@@ -327,7 +327,7 @@ def assemble_plot(experiments, cell_specimen_id, glm_version, disable_progress_b
     return cell_session_plot, axes
 
 
-def make_single_cell_across_experiment_plot(cell_specimen_id, glm_version, disable_progress_bars=False):
+def make_single_cell_across_experiment_plot(cell_specimen_id, glm_version, disable_progress_bars=False, saveloc=''):
     '''
     performs all steps to build the plot for a single cell
     '''
@@ -337,6 +337,9 @@ def make_single_cell_across_experiment_plot(cell_specimen_id, glm_version, disab
     append_event_triggered_averages_to_experiments(experiments, cell_specimen_id, disable_progress_bar=disable_progress_bars)
 
     fig, ax = assemble_plot(experiments, cell_specimen_id, glm_version, disable_progress_bar=disable_progress_bars)
+
+    if saveloc is not '':
+
 
     return fig, ax
 
