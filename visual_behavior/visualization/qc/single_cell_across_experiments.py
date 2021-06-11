@@ -14,6 +14,7 @@ from tqdm import tqdm
 import pandas as pd
 import seaborn as sns
 import numpy as np
+import os
 
 import warnings
 warnings.filterwarnings("ignore")
@@ -43,7 +44,7 @@ def get_text(cell_specimen_id, experiment, glm_version):
     text = 'ophys_experiment_id = {}, session_type = {}, date = {}, equipment = {}  | cell in experiment? {}\nFull model var explained = {:0.3f}'.format(
         experiment.ophys_experiment_id,
         metadata['session_type'],
-        metadata['date_of_acquisition'],
+        experiment.metadata['date_of_acquisition'].strftime('%m-%d-%Y'),
         metadata['equipment_name'],
         is_cell_in_experiment(cell_specimen_id, experiment),
         glm_var_explained
@@ -64,6 +65,21 @@ def get_experiments(ophys_experiment_ids, disable_progress_bar=False):
     return experiments
 
 
+def get_container_id_for_cell_id(cell_specimen_id):
+    '''
+    gets container ID associated with a given cell specimen ID
+    '''
+
+    query_string = '''
+        select * from cell_rois
+        where cell_specimen_id = {}
+    '''
+
+    single_oeid = db.lims_query(query_string.format(cell_specimen_id)).iloc[0]['ophys_experiment_id']
+    all_ids = from_lims.get_all_ids_for_ophys_experiment_id(single_oeid)
+    return all_ids.iloc[0]['ophys_container_id']
+
+
 def get_all_experiments_ids_for_cell(cell_specimen_id):
     '''
     gets all associated experiment_ids for a given cell
@@ -76,13 +92,8 @@ def get_all_experiments_ids_for_cell(cell_specimen_id):
     cache = bpc.VisualBehaviorOphysProjectCache.from_lims()
     experiment_table = cache.get_ophys_experiment_table()
 
-    query_string = '''
-        select * from cell_rois
-        where cell_specimen_id = {}
-    '''
-    single_oeid = db.lims_query(query_string.format(cell_specimen_id)).iloc[0]['ophys_experiment_id']
-    all_ids = from_lims.get_all_ids_for_ophys_experiment_id(single_oeid)
-    ophys_experiment_ids = from_lims.get_ophys_experiment_ids_for_ophys_container_id(all_ids.iloc[0]['ophys_container_id'])['ophys_experiment_id']
+    container_id = get_container_id_for_cell_id(cell_specimen_id)
+    ophys_experiment_ids = from_lims.get_ophys_experiment_ids_for_ophys_container_id(container_id)['ophys_experiment_id']
     ophys_experiment_ids = [ophys_experiment_id for ophys_experiment_id in ophys_experiment_ids if ophys_experiment_id in experiment_table.index and experiment_table.loc[ophys_experiment_id]['experiment_workflow_state'] == 'passed']
 
     return ophys_experiment_ids
@@ -152,7 +163,7 @@ def add_event_triggered_averages(experiment, cell_specimen_id):
                 y='dff',
                 event_times=stim_table.query(event_query)['start_time'],
                 t_before=1.5,
-                t_after=1.5,
+                t_after=3,
             )
             this_etr['cell_specimen_id'] = cell_specimen_id
             this_etr['image_index'] = image_index
@@ -290,7 +301,7 @@ def assemble_plot(experiments, cell_specimen_id, glm_version, disable_progress_b
                     post_color='blue'
                 )
                 axes[ophys_experiment_id]['visual_responses'][col].set_title(image_name)
-                axes[ophys_experiment_id]['visual_responses'][col].set_xlim(-1.5, 1.5)
+                axes[ophys_experiment_id]['visual_responses'][col].set_xlim(-1.5, 3)
         else:
             axes[ophys_experiment_id]['visual_responses'][0].text(0, 0, 'ROI is not in experiment', ha='left', va='bottom')
             for col in range(9):
@@ -317,8 +328,9 @@ def assemble_plot(experiments, cell_specimen_id, glm_version, disable_progress_b
         for ii in range(9):
             axes[ophys_experiment_id]['visual_responses'][ii].set_ylim(*ylim_extrema)
 
-    cell_session_plot.suptitle('cell specimen ID = {}\ngenotype = {}\nGLM Version = {}'.format(
+    cell_session_plot.suptitle('cell specimen ID = {}\ncontainer_id = {}\ngenotype = {}\nGLM Version = {}'.format(
         cell_specimen_id,
+        get_container_id_for_cell_id(cell_specimen_id),
         experiment.metadata['cre_line'],
         glm_version
     ))
@@ -327,10 +339,11 @@ def assemble_plot(experiments, cell_specimen_id, glm_version, disable_progress_b
     return cell_session_plot, axes
 
 
-def make_single_cell_across_experiment_plot(cell_specimen_id, glm_version, disable_progress_bars=False, saveloc=''):
+def make_single_cell_across_experiment_plot(cell_specimen_id, glm_version, disable_progress_bars=False, saveloc='', return_fig=True):
     '''
     performs all steps to build the plot for a single cell
     '''
+    cell_specimen_id = int(cell_specimen_id)
     ophys_experiment_ids = get_all_experiments_ids_for_cell(cell_specimen_id)
     experiments = get_experiments(ophys_experiment_ids, disable_progress_bar=disable_progress_bars)
 
@@ -340,16 +353,24 @@ def make_single_cell_across_experiment_plot(cell_specimen_id, glm_version, disab
 
     if saveloc is not '':
 
+        fn = 'csid={}_container={}_cre_line={}_glm_version={}.png'.format(
+            cell_specimen_id,
+            get_container_id_for_cell_id(cell_specimen_id),
+            experiments[ophys_experiment_ids[0]].metadata['cre_line'],
+            glm_version,
+        )
+        fig.savefig(os.path.join(saveloc, fn))
 
-    return fig, ax
+    if return_fig:
+        return fig, ax
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='make a single cell plot')
     parser.add_argument('--csid', type=int, default=0, metavar='cell_specimen_id')
     parser.add_argument('--glm-version', type=str, default='', metavar='glm_version')
-    parser.add_argument('--save-loc', type=str, default='', metavar='path in which to save file')
-    parser.add_argument('--disable-progress-bars', dest='suppress_progressbar', action='store_true')
+    parser.add_argument('--saveloc', type=str, default='', metavar='path in which to save file')
+    parser.add_argument('--disable-progress-bars', dest='disable_progress_bars', action='store_true')
     args = parser.parse_args()
 
     print(args.csid, args.glm_version, args.suppress_progressbar)
@@ -357,6 +378,6 @@ if __name__ == "__main__":
     make_single_cell_across_experiment_plot(
         args.csid,
         args.glm_version,
-        disable_progress_bars=args.suppress_progressbar,
-        saveloc=args.save_loc
+        disable_progress_bars=args.disable_progress_bars,
+        saveloc=args.saveloc
     )
