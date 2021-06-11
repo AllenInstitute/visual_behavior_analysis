@@ -343,6 +343,7 @@ def make_single_cell_across_experiment_plot(cell_specimen_id, glm_version, disab
     '''
     performs all steps to build the plot for a single cell
     '''
+    print('making plot for cell_specimen_id = {}'.format(cell_specimen_id))
     cell_specimen_id = int(cell_specimen_id)
     ophys_experiment_ids = get_all_experiments_ids_for_cell(cell_specimen_id)
     experiments = get_experiments(ophys_experiment_ids, disable_progress_bar=disable_progress_bars)
@@ -351,7 +352,7 @@ def make_single_cell_across_experiment_plot(cell_specimen_id, glm_version, disab
 
     fig, ax = assemble_plot(experiments, cell_specimen_id, glm_version, disable_progress_bar=disable_progress_bars)
 
-    if saveloc is not '':
+    if saveloc != '':
 
         fn = 'csid={}_container={}_cre_line={}_glm_version={}.png'.format(
             cell_specimen_id,
