@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 from visual_behavior.data_access import from_lims
 import visual_behavior.database as db
+import argparse
 
 from tqdm import tqdm
 import pandas as pd
@@ -50,7 +51,7 @@ def get_text(cell_specimen_id, experiment, glm_version):
     return text
 
 
-def get_experiments(ophys_experiment_ids):
+def get_experiments(ophys_experiment_ids, disable_progress_bar = False):
     '''
     gets experiment objects for a list of experiment IDs
     '''
@@ -58,7 +59,7 @@ def get_experiments(ophys_experiment_ids):
     cache = bpc.VisualBehaviorOphysProjectCache.from_lims()
 
     experiments = {}
-    for ophys_experiment_id in tqdm(ophys_experiment_ids, desc='loading experiments'):
+    for ophys_experiment_id in tqdm(ophys_experiment_ids, desc='loading experiments', disable=disable_progress_bar):
         experiments[ophys_experiment_id] = cache.get_behavior_ophys_experiment(ophys_experiment_id)
     return experiments
 
@@ -198,7 +199,7 @@ def show_dropout_summary(ophys_experiment_id, cell_specimen_id, glm_version, ax)
     return bp
 
 
-def append_event_triggered_averages_to_experiments(experiments, cell_specimen_id):
+def append_event_triggered_averages_to_experiments(experiments, cell_specimen_id, disable_progress_bar = False):
     '''
     adds tidy neural data and event triggered average attributes to each experiment
     experiments should be a dictionary with keys: experiment_ids and values: experiment objects
@@ -208,23 +209,23 @@ def append_event_triggered_averages_to_experiments(experiments, cell_specimen_id
     experiment_table = cache.get_ophys_experiment_table()
 
     ophys_experiment_ids = list(experiments.keys())
-    for ophys_experiment_id in tqdm(ophys_experiment_ids, desc='adding tidy neural data and event triggered averages to each experiment'):
+    for ophys_experiment_id in tqdm(ophys_experiment_ids, desc='adding tidy neural data and event triggered averages to each experiment', disable=disable_progress_bar):
         experiment = experiments[ophys_experiment_id]
         if cell_specimen_id in experiment.cell_specimen_table.index and ophys_experiment_id in experiment_table.index and experiment_table.loc[ophys_experiment_id]['experiment_workflow_state'] == 'passed':
             add_tidy_neural_data(experiment)
             add_event_triggered_averages(experiment, cell_specimen_id)
 
 
-def assemble_plot(experiments, cell_specimen_id, glm_version):
-    row_buffer = 0.03
+def assemble_plot(experiments, cell_specimen_id, glm_version, disable_progress_bar = False):
+    row_buffer = 0.025
 
     ophys_experiment_ids = list(experiments.keys())
 
     n_rows = len(ophys_experiment_ids)
 
-    cell_session_plot = plt.figure(figsize=(16, 3 * len(ophys_experiment_ids)))
+    cell_session_plot = plt.figure(figsize=(16, 4 * len(ophys_experiment_ids)))
     axes = {}
-    for row, ophys_experiment_id in tqdm(enumerate(ophys_experiment_ids), total=len(ophys_experiment_ids), desc='populating plot axes for each experiment'):
+    for row, ophys_experiment_id in tqdm(enumerate(ophys_experiment_ids), total=len(ophys_experiment_ids), desc='populating plot axes for each experiment', disable=disable_progress_bar):
 
         experiment = experiments[ophys_experiment_id]
 
@@ -308,13 +309,32 @@ def assemble_plot(experiments, cell_specimen_id, glm_version):
     return cell_session_plot, axes
 
 
-def make_single_cell_across_experiment_plot(cell_specimen_id, glm_version):
+def make_single_cell_across_experiment_plot(cell_specimen_id, glm_version, disable_progress_bars=False):
     '''
     performs all steps to build the plot for a single cell
     '''
     ophys_experiment_ids = get_all_experiments_ids_for_cell(cell_specimen_id)
-    experiments = get_experiments(ophys_experiment_ids)
+    experiments = get_experiments(ophys_experiment_ids, disable_progress_bar=disable_progress_bars)
 
-    append_event_triggered_averages_to_experiments(experiments, cell_specimen_id)
+    append_event_triggered_averages_to_experiments(experiments, cell_specimen_id, disable_progress_bar=disable_progress_bars)
 
-    fig, ax = assemble_plot(experiments, cell_specimen_id, glm_version)
+    fig, ax = assemble_plot(experiments, cell_specimen_id, glm_version, disable_progress_bar=disable_progress_bars)
+
+    return fig, ax
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='make a single cell plot')
+    parser.add_argument('--csid', type=int, default=0, metavar='cell_specimen_id')
+    parser.add_argument('--glm-version', type=str, default='', metavar='glm_version')
+    parser.add_argument('--save-loc', type=str, default='', metavar='path in which to save file')
+    parser.add_argument('--disable-progress-bars', dest='suppress_progressbar', action='store_true')
+    args = parser.parse_args()
+
+    print(args.csid, args.glm_version, args.suppress_progressbar)
+
+    make_single_cell_across_experiment_plot(
+        args.csid, 
+        args.glm_version, 
+        disable_progress_bars=args.suppress_progressbar,
+        saveloc = args.save_loc
+    )
