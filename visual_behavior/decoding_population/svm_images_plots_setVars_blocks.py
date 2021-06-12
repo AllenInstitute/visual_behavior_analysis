@@ -93,11 +93,11 @@ dir0 = '/home/farzaneh/OneDrive/Analysis'
 #%%
 project_codes = ['VisualBehavior'] # ['VisualBehaviorMultiscope'] # ['VisualBehaviorMultiscope', 'VisualBehaviorTask1B', 'VisualBehavior', 'VisualBehaviorMultiscope4areasx2d']
 
-svm_blocks = -101 #np.nan #-1: divide trials based on engagement # -101: use only engaged epochs for svm analysis # number of trial blocks to divide the session to, and run svm on. # set to np.nan to run svm analysis on the whole session
+svm_blocks = np.nan #-101 #-1: divide trials based on engagement # -101: use only engaged epochs for svm analysis # number of trial blocks to divide the session to, and run svm on. # set to np.nan to run svm analysis on the whole session
 use_events = True # False #whether to run the analysis on detected events (inferred spikes) or dff traces.
 
 to_decode = 'current' # 'current' : decode current image.    'previous': decode previous image.    'next': decode next image.
-trial_type = 'hits_vs_misses' #'hits_vs_misses' #'changes_vs_nochanges' # 'omissions', 'images', 'changes', 'changes_vs_nochanges' # what trials to use for SVM analysis # the population activity of these trials at time time_win will be used to decode the image identity of flashes that occurred at their time 0 (if to_decode='current') or 750ms before (if to_decode='previous').
+trial_type = 'changes_vs_nochanges' #'hits_vs_misses' #'changes_vs_nochanges' # 'omissions', 'images', 'changes', 'changes_vs_nochanges' # what trials to use for SVM analysis # the population activity of these trials at time time_win will be used to decode the image identity of flashes that occurred at their time 0 (if to_decode='current') or 750ms before (if to_decode='previous').
 use_balanced_trials = 1 #1 # if 1, use same number of trials for each class; only applicable when we have 2 classes (binary classification).
 
 baseline_subtract = 1 # subtract the baseline (CA average during baseline, ie before time 0) from the evoked CA (classification accuracy)
@@ -109,7 +109,7 @@ superimpose_all_cre = False # plot all cre lines on the same figure
 plot_testing_shufl = 0 # if 0 correlate testing data with strategy dropout index; if 1, correlated shuffled data with strategy dropout index
 
 
-dosavefig = 0 # 0
+dosavefig = 1 # 0
 plot_single_mouse = 0 # if 1, make plots for each mouse
 fmt = '.pdf' # '.png' # '.svg'
 
@@ -1324,40 +1324,41 @@ exec(open('svm_images_plots_compare_ophys_stages.py').read())
 ############################################################
 #%% Plot svm weight distributions
 
+if project_codes == ['VisualBehaviorMultiscope']:
 
-ifr = [4,6]
-plt.figure(figsize = (10,6))
-icre = 0
-for cren in ['Slc17a7-IRES2-Cre', 'Sst-IRES-Cre', 'Vip-IRES-Cre']:
-    icre = icre+1
-    bb = all_sess[all_sess['cre']==cren]; 
-    c = np.concatenate((bb['av_w_data'].values), axis=(1)) # (8, 730, 13)
-#     cc = c[:,:,ifr] # frame after image onset
-    cc = c[:,:,ifr[1]] - c[:,:,ifr[0]]
+    ifr = [4,6]
+    plt.figure(figsize = (10,6))
+    icre = 0
+    for cren in ['Slc17a7-IRES2-Cre', 'Sst-IRES-Cre', 'Vip-IRES-Cre']:
+        icre = icre+1
+        bb = all_sess[all_sess['cre']==cren]; 
+        c = np.concatenate((bb['av_w_data'].values), axis=(1)) # (8, 730, 13)
+    #     cc = c[:,:,ifr] # frame after image onset
+        cc = c[:,:,ifr[1]] - c[:,:,ifr[0]]
 
-    a = cc.flatten() # pool all the 8 decoders
-#     a = np.nanmean(cc, axis=0); # get average of the 8 decoders
-#     a = cc[di] # only take one decoder
+        a = cc.flatten() # pool all the 8 decoders
+    #     a = np.nanmean(cc, axis=0); # get average of the 8 decoders
+    #     a = cc[di] # only take one decoder
 
-    print(bb.shape, a.shape)
+        print(bb.shape, a.shape)
 
-    # plot weights
-    plt.subplot(2, 3, icre)    
-    plt.hist(a, 50) #, density=True); 
-    plt.xlabel('svm weights'); plt.ylabel('number of neurons'); 
-    plt.title(f'{cren[:3]}, mean={np.nanmean(a):.4f}')    
+        # plot weights
+        plt.subplot(2, 3, icre)    
+        plt.hist(a, 50) #, density=True); 
+        plt.xlabel('svm weights'); plt.ylabel('number of neurons'); 
+        plt.title(f'{cren[:3]}, mean={np.nanmean(a):.4f}')    
 
-    # plot absolute weights
-    plt.subplot(2, 3, icre+3)
-    plt.hist(np.abs(a), 50) #, density=True); 
-    plt.xlabel('svm absolute weights'); plt.ylabel('number of neurons'); 
-    plt.title(f'{cren[:3]}, mean={np.nanmean(np.abs(a)):.4f}')
+        # plot absolute weights
+        plt.subplot(2, 3, icre+3)
+        plt.hist(np.abs(a), 50) #, density=True); 
+        plt.xlabel('svm absolute weights'); plt.ylabel('number of neurons'); 
+        plt.title(f'{cren[:3]}, mean={np.nanmean(np.abs(a)):.4f}')
 
-    plt.subplots_adjust(wspace=0.5, hspace=0.5)
+        plt.subplots_adjust(wspace=0.5, hspace=0.5)
 
-    plt.suptitle(f'frame {ifr}, 8 decoders pooled')
-    plt.suptitle(f'Average of 8 decoders')
-#     plt.suptitle(f'Decoder {di}')
+        plt.suptitle(f'frame {ifr}, 8 decoders pooled')
+        plt.suptitle(f'Average of 8 decoders')
+    #     plt.suptitle(f'Decoder {di}')
 
 
 

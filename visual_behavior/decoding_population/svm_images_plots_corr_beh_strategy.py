@@ -199,7 +199,7 @@ for stage_2_analyze in stagesall: # stage_2_analyze = stagesall[0]
             word = 'engagement'
         elif svm_blocks==-101:
             word = 'only_engaged'
-        else:
+        elif ~np.isnan(svm_blocks):
             word = 'blocks'
 
         if use_events:

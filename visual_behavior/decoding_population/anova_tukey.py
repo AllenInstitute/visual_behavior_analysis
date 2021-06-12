@@ -14,6 +14,8 @@ Created on Wed Apr 14 19:10:05 2021
 import numpy as np
 import pandas as pd
 
+import statsmodels.api as sm
+from statsmodels.formula.api import ols
 
 def do_anova_tukey(summary_vars_all, crenow, stagenow, inds_v1, inds_lm, inds_pooled):
     
@@ -35,9 +37,9 @@ def do_anova_tukey(summary_vars_all, crenow, stagenow, inds_v1, inds_lm, inds_po
 
     inds_now = inds_v1
     i_at = -1
-    for i_depth in range(4): # i_depth=0
+    for i_depth in range(len(inds_now)): # i_depth=0
         a_now = aa[inds_now[i_depth],:][~np.isnan(aa[inds_now[i_depth]])]
-#             print(a_now.shape) # number of valid sessions per depth
+#         print(a_now.shape) # number of valid sessions per depth
         for i_a in range(len(a_now)):
             i_at = i_at+1
             a_data.at[i_at, 'area'] = 'V1'
@@ -45,18 +47,22 @@ def do_anova_tukey(summary_vars_all, crenow, stagenow, inds_v1, inds_lm, inds_po
             a_data.at[i_at, 'idepth'] = i_depth
             a_data.at[i_at, 'value'] = a_now[i_a]
 
-    inds_now = inds_lm        
-    for i_depth in range(4):
-        a_now = aa[inds_now[i_depth],:][~np.isnan(aa[inds_now[i_depth]])]
-#             print(a_now.shape) # number of valid sessions per depth    
-        for i_a in range(len(a_now)):
-            i_at = i_at+1
-            a_data.at[i_at, 'area'] = 'LM'
-            a_data.at[i_at, 'depth'] = int(depth_ave[i_depth])
-            a_data.at[i_at, 'idepth'] = i_depth
-            a_data.at[i_at, 'value'] = a_now[i_a]
-    a_data.at[:,'value'] = a_data['value'].values.astype(float)
+            
+    if ~np.isnan(inds_lm[0]):
+        inds_now = inds_lm        
+        for i_depth in range(len(inds_now)):
+            a_now = aa[inds_now[i_depth],:][~np.isnan(aa[inds_now[i_depth]])]
+    #             print(a_now.shape) # number of valid sessions per depth    
+            for i_a in range(len(a_now)):
+                i_at = i_at+1
+                a_data.at[i_at, 'area'] = 'LM'
+                a_data.at[i_at, 'depth'] = int(depth_ave[i_depth])
+                a_data.at[i_at, 'idepth'] = i_depth
+                a_data.at[i_at, 'value'] = a_now[i_a]
+        a_data.at[:,'value'] = a_data['value'].values.astype(float)
 
+        
+#     if project_codes == ['VisualBehaviorMultiscope']:        
     inds_now = inds_pooled        
     for i_depth in range(4):
         a_now = aa[inds_now[i_depth],:].flatten()[~np.isnan(aa[inds_now[i_depth]].flatten())]
@@ -71,8 +77,10 @@ def do_anova_tukey(summary_vars_all, crenow, stagenow, inds_v1, inds_lm, inds_po
     a_data
 
     
+    
     ########### Do anova and tukey for each area
     tukey_all = []
+#     if project_codes == ['VisualBehaviorMultiscope']:
     for ars in ['V1', 'LM', 'V1-LM']: # ars = 'V1'
 #         print(ars)
         a_data_now = a_data[a_data['area'].values==ars]
@@ -84,9 +92,6 @@ def do_anova_tukey(summary_vars_all, crenow, stagenow, inds_v1, inds_lm, inds_po
         # https://help.xlstat.com/s/article/how-to-interpret-contradictory-results-between-anova-and-multiple-pairwise-comparisons?language=es
         # https://pythonhealthcare.org/2018/04/13/55-statistics-multi-comparison-with-tukeys-test-and-the-holm-bonferroni-method/
 
-        import statsmodels.api as sm
-        from statsmodels.formula.api import ols
-
         # Ordinary Least Squares (OLS) model
         # 2-way
         # C(Genotype):C(years) represent interaction term        
@@ -96,10 +101,10 @@ def do_anova_tukey(summary_vars_all, crenow, stagenow, inds_v1, inds_lm, inds_po
         model = ols('value ~ C(depth)', data=a_data_now).fit() 
     #         anova_table = sm.stats.anova_lm(model, typ=3)
         anova_table = sm.stats.anova_lm(model, typ=2)
-        
+
 #         print(anova_table)        
 #         print('\n')
-        
+
         # scipy anova: same result as above
     #                 a = aa[inds_v1,:]
     #                 fvalue, pvalue = st.f_oneway(a[0][~np.isnan(a[0])], a[1][~np.isnan(a[1])], a[2][~np.isnan(a[2])], a[3][~np.isnan(a[3])])
@@ -115,17 +120,20 @@ def do_anova_tukey(summary_vars_all, crenow, stagenow, inds_v1, inds_lm, inds_po
         v = a_data_now['value'] #a_data['value']
         f = a_data_now['idepth'] #a_data['depth']
 #         f = a_data_now['idepth'] # if you want to have depth (instead of depth index) in the summary table use this. it's easier to go with depth index because sometimes some depth are nan and missing, and matching depth is harder than matching depth indices.
-        
+
         MultiComp = MultiComparison(v, f)
 #         print(MultiComp.tukeyhsd().summary()) # Show all pair-wise comparisons
 
         tukey_all.append(MultiComp.tukeyhsd().summary())
-     
+
+        
     return tukey_all
 
 
 
-##################################################    
+
+####################################################################################################
+####################################################################################################
 
 def add_tukey_lines(tukey_all, toana, ax, col, inds_v1, inds_lm, inds_pooled, top, top_sd, x_new): 
     # toana = 'v1', or 'lm', or 'v1-lm'
@@ -190,6 +198,7 @@ def add_tukey_lines(tukey_all, toana, ax, col, inds_v1, inds_lm, inds_pooled, to
 #                 https://stackoverflow.com/questions/47597534/how-to-add-horizontal-lines-as-annotations-outside-of-axes-in-matplotlib
                 
     ylim = ax.get_ylim()
+    
     
     return ylim
 

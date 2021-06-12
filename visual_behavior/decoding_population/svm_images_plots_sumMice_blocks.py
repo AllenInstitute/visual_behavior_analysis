@@ -47,6 +47,13 @@ else:
     br = [np.nan]
     
 
+if baseline_subtract: # subtract the baseline (CA average during baseline, ie before time 0) from the evoked CA (classification accuracy)
+    ylabs = '% Class accuracy rel. baseline' #'Amplitude'
+else:
+    ylabs = '% Classification accuracy' #'Amplitude'    
+    
+    
+    
 #%% Make sure for each mouse we have data from both blocks
 '''
 for istage in np.unique(stages_all): # istage=1
@@ -233,7 +240,7 @@ for istage in np.unique(stages_all): # istage=1
                     depth_ave = np.mean(depth_eachDepth[:, cre_eachDepth[0,:]==cre], axis=1).astype(float) # 4 # average across areas and sessions
                 
                 else:
-                    depth_ave = np.mean(d_all, axis=1).astype(float) # 4 # average across areas and sessions
+                    depth_ave = np.mean(d_all[:,cre_all[0,:]==cre], axis=1).astype(float) # 4 # average across areas and sessions
                     
 
                 #################################
@@ -440,10 +447,10 @@ for istage in np.unique(stages_all): # istage=1
                     #%% Image responses
 
                     # left plot: omission, response amplitude
-                    if baseline_subtract: # subtract the baseline (CA average during baseline, ie before time 0) from the evoked CA (classification accuracy)
-                        ylabs = '% Class accuracy rel. baseline' #'Amplitude'
-                    else:
-                        ylabs = '% Classification accuracy' #'Amplitude'
+#                     if baseline_subtract: # subtract the baseline (CA average during baseline, ie before time 0) from the evoked CA (classification accuracy)
+#                         ylabs = '% Class accuracy rel. baseline' #'Amplitude'
+#                     else:
+#                         ylabs = '% Classification accuracy' #'Amplitude'
                 #        x = np.arange(num_depth)
                     lab1 = 'V1'
                     if ~np.isnan(svm_blocks) and svm_blocks!=-101:
@@ -505,10 +512,10 @@ for istage in np.unique(stages_all): # istage=1
                     #%% Image responses
 
                     # left: omission, response amplitude
-                    if baseline_subtract: # subtract the baseline (CA average during baseline, ie before time 0) from the evoked CA (classification accuracy)
-                        ylabs = '% Class accuracy rel. baseline' #'Amplitude'
-                    else:
-                        ylabs = '% Classification accuracy'
+#                     if baseline_subtract: # subtract the baseline (CA average during baseline, ie before time 0) from the evoked CA (classification accuracy)
+#                         ylabs = '% Class accuracy rel. baseline' #'Amplitude'
+#                     else:
+#                         ylabs = '% Classification accuracy'
     #                     xlabs = 'Area'
     #                     x = np.arange(len(distinct_areas))
     #                     xticklabs = xticklabs
@@ -593,40 +600,41 @@ for istage in np.unique(stages_all): # istage=1
 
 
 
-            # add flash lines, ticks and legend
-            plt.subplot(gs2[0])
-            lims = []
-            # i commented below bc for hits_vs_misses it was plotting a weird yellow box, and i didnt spend enough time to figure out why it happens only for hits_vs_misses
-            plot_flashLines_ticks_legend(lims, h1a, flashes_win_trace_index_unq_time, grays_win_trace_index_unq_time, time_trace, xmjn=xmjn, bbox_to_anchor=bb, ylab=ylabel)
+            if project_codes == ['VisualBehaviorMultiscope']:
+                # add flash lines, ticks and legend
+                plt.subplot(gs2[0])
+                lims = []
+                # i commented below bc for hits_vs_misses it was plotting a weird yellow box, and i didnt spend enough time to figure out why it happens only for hits_vs_misses
+                plot_flashLines_ticks_legend(lims, h1a, flashes_win_trace_index_unq_time, grays_win_trace_index_unq_time, time_trace, xmjn=xmjn, bbox_to_anchor=bb, ylab=ylabel)
+                #    plt.ylabel('')
+                plt.xlim(xlim);
+                # mark time_win: the window over which the response quantification (peak or mean) was computed 
+                lims = plt.gca().get_ylim();
+                plt.hlines(lims[1], time_win[0], time_win[1], color='gray')
+    #             plt.hlines(lims[1], flash_win[0], flash_win[1], color='green')
+
+
+                plt.subplot(gs2[1])
+                lims = []
+                # i commented below bc for hits_vs_misses it was plotting a weird yellow box, and i didnt spend enough time to figure out why it happens only for hits_vs_misses
+                plot_flashLines_ticks_legend(lims, h1d, flashes_win_trace_index_unq_time, grays_win_trace_index_unq_time, time_trace, xmjn=xmjn, bbox_to_anchor=bb, ylab=ylabel)
             #    plt.ylabel('')
-            plt.xlim(xlim);
-            # mark time_win: the window over which the response quantification (peak or mean) was computed 
-            lims = plt.gca().get_ylim();
-            plt.hlines(lims[1], time_win[0], time_win[1], color='gray')
-#             plt.hlines(lims[1], flash_win[0], flash_win[1], color='green')
-
-
-            plt.subplot(gs2[1])
-            lims = []
-            # i commented below bc for hits_vs_misses it was plotting a weird yellow box, and i didnt spend enough time to figure out why it happens only for hits_vs_misses
-            plot_flashLines_ticks_legend(lims, h1d, flashes_win_trace_index_unq_time, grays_win_trace_index_unq_time, time_trace, xmjn=xmjn, bbox_to_anchor=bb, ylab=ylabel)
-        #    plt.ylabel('')
-            plt.xlim(xlim);
-        #     plt.ylim([10, 55]); # use the same y axis scale for all cell types
-            # mark time_win: the window over which the response quantification (peak or mean) was computed 
-            lims = plt.gca().get_ylim();        
-            plt.hlines(lims[1], time_win[0], time_win[1], color='gray')
-#             plt.hlines(lims[1], flash_win[0], flash_win[1], color='green')
+                plt.xlim(xlim);
+            #     plt.ylim([10, 55]); # use the same y axis scale for all cell types
+                # mark time_win: the window over which the response quantification (peak or mean) was computed 
+                lims = plt.gca().get_ylim();        
+                plt.hlines(lims[1], time_win[0], time_win[1], color='gray')
+    #             plt.hlines(lims[1], flash_win[0], flash_win[1], color='green')
 
 
 
-            plt.subplot(gs3[0])
-            plt.legend(loc='center left', bbox_to_anchor=(.97,.8), frameon=False, handlelength=1, fontsize=12)
+                plt.subplot(gs3[0])
+                plt.legend(loc='center left', bbox_to_anchor=(.97,.8), frameon=False, handlelength=1, fontsize=12)
 
 
 
-            plt.subplot(gs5[0])
-            plt.legend(loc='center left', bbox_to_anchor=bb, frameon=False, handlelength=1, fontsize=12)        
+                plt.subplot(gs5[0])
+                plt.legend(loc='center left', bbox_to_anchor=bb, frameon=False, handlelength=1, fontsize=12)        
 
 
 
@@ -635,8 +643,8 @@ for istage in np.unique(stages_all): # istage=1
             #%%
             if dosavefig:
                 # set figure name
-    #             snn = [str(sn) for sn in session_numbers]
-    #             snn = '_'.join(snn)
+#                 snn = [str(sn) for sn in session_numbers]
+#                 snn = '_'.join(snn)
                 snn = istage
                 whatSess = f'_ophys{snn}'
 
@@ -649,7 +657,9 @@ for istage in np.unique(stages_all): # istage=1
 
                 if svm_blocks==-1:
                     word = 'engagement'
-                else:
+                elif svm_blocks==-101:
+                    word = 'only_engaged'
+                elif ~np.isnan(svm_blocks):
                     word = 'blocks'
                 
                 if use_events:
@@ -657,10 +667,13 @@ for istage in np.unique(stages_all): # istage=1
                     
                 fgn = f'{fgn}_{word}_frames{frames_svm[0]}to{frames_svm[-1]}'                        
                 fgn = fgn + '_ClassAccur'
+                if project_codes == ['VisualBehavior']:
+                    fgn = f'{fgn}_{project_codes[0]}'
 
                 nam = f'{cre[:3]}_aveMice_aveSessPooled{fgn}_{now}'
                 fign = os.path.join(dir0, 'svm', dir_now, nam+fmt)
-
+                print(fign)
+                
                 
                 plt.savefig(fign, bbox_inches='tight') # , bbox_extra_artists=(lgd,)    
 
