@@ -1,5 +1,5 @@
 import mindscope_utilities
-import mindscope_utilities.ophys
+import mindscope_utilities.ophys as ophys
 import visual_behavior_glm.GLM_analysis_tools as gat
 import visual_behavior_glm.GLM_visualization_tools as gvt
 import allensdk.brain_observatory.behavior.behavior_project_cache as bpc
@@ -15,6 +15,7 @@ import pandas as pd
 import seaborn as sns
 import numpy as np
 import os
+import glob
 
 import warnings
 warnings.filterwarnings("ignore")
@@ -135,7 +136,7 @@ def add_tidy_neural_data(experiment):
     adds an attribute to the experiment object that contains cell activity in tidy format
     '''
     if not hasattr(experiment, 'event_triggered_responses'):
-        experiment.tidy_neural_data = mindscope_utilities.ophys.build_tidy_cell_df(experiment, exclude_invalid_rois=False)
+        experiment.tidy_neural_data = ophys.build_tidy_cell_df(experiment, exclude_invalid_rois=False)
 
 
 def add_event_triggered_averages(experiment, cell_specimen_id):
@@ -339,31 +340,45 @@ def assemble_plot(experiments, cell_specimen_id, glm_version, disable_progress_b
     return cell_session_plot, axes
 
 
+def is_csid_in_folder(csid, folder):
+    '''
+    checks to see if cell_specimen_id exists in specified folder
+    '''
+    csids = []
+    for fn in glob.glob(os.path.join(folder,'csid*.png')):
+        csids.append(int(fn.split('csid=')[1].split('_')[0]))
+    return csid in csids
+
+
 def make_single_cell_across_experiment_plot(cell_specimen_id, glm_version, disable_progress_bars=False, saveloc='', return_fig=True):
     '''
     performs all steps to build the plot for a single cell
     '''
-    print('making plot for cell_specimen_id = {}'.format(cell_specimen_id))
-    cell_specimen_id = int(cell_specimen_id)
-    ophys_experiment_ids = get_all_experiments_ids_for_cell(cell_specimen_id)
-    experiments = get_experiments(ophys_experiment_ids, disable_progress_bar=disable_progress_bars)
+    if not is_csid_in_folder(cell_specimen_id, saveloc):
+        print('making plot for cell_specimen_id = {}'.format(cell_specimen_id))
+        cell_specimen_id = int(cell_specimen_id)
+        ophys_experiment_ids = get_all_experiments_ids_for_cell(cell_specimen_id)
+        experiments = get_experiments(ophys_experiment_ids, disable_progress_bar=disable_progress_bars)
 
-    append_event_triggered_averages_to_experiments(experiments, cell_specimen_id, disable_progress_bar=disable_progress_bars)
+        append_event_triggered_averages_to_experiments(experiments, cell_specimen_id, disable_progress_bar=disable_progress_bars)
 
-    fig, ax = assemble_plot(experiments, cell_specimen_id, glm_version, disable_progress_bar=disable_progress_bars)
+        fig, ax = assemble_plot(experiments, cell_specimen_id, glm_version, disable_progress_bar=disable_progress_bars)
 
-    if saveloc != '':
+        if saveloc != '':
 
-        fn = 'csid={}_container={}_cre_line={}_glm_version={}.png'.format(
-            cell_specimen_id,
-            get_container_id_for_cell_id(cell_specimen_id),
-            experiments[ophys_experiment_ids[0]].metadata['cre_line'],
-            glm_version,
-        )
-        fig.savefig(os.path.join(saveloc, fn))
+            fn = 'csid={}_container={}_cre_line={}_glm_version={}.png'.format(
+                cell_specimen_id,
+                get_container_id_for_cell_id(cell_specimen_id),
+                experiments[ophys_experiment_ids[0]].metadata['cre_line'],
+                glm_version,
+            )
+            fig.savefig(os.path.join(saveloc, fn))
 
-    if return_fig:
-        return fig, ax
+        if return_fig:
+            return fig, ax
+
+    else:
+        print('plot for csid {} already exists in {}'.format(cell_specimen_id, saveloc))
 
 
 if __name__ == "__main__":
