@@ -183,6 +183,7 @@ if np.isnan(svm_blocks) or svm_blocks==-101:
 
 ###############################################################
 #%% Plot response amplitude (errorbars) comparing ophys stages; also do anova/tukey
+
 if np.isnan(svm_blocks) or svm_blocks==-101:
     
     if project_codes == ['VisualBehaviorMultiscope']:

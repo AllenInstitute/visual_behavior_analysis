@@ -168,6 +168,7 @@ def svm_main_images_pbs(data_list, experiment_ids_valid, df_data, session_trials
 
             # soft normalziation : neurons with sd<thAct wont have too large values after normalization                    
             if softNorm==1:
+                # Gamal: soft normalization is needed for numerical stability (i.e., to avoid division by zero). If you are worried about introducing inaccuracies you could try to lower the threshold. You can base the threshold on the typical values you get for std. Maybe make the threshold 1e-6 lower than that; ie. if a typical std value is x then set the threshold at x*1e-6
                 print(f'Using soft normalization. {thAct} will be added to std!')
                 s = s + thAct     
 
@@ -405,6 +406,7 @@ def svm_main_images_pbs(data_list, experiment_ids_valid, df_data, session_trials
     thAct = 5e-4 # will be used for soft normalization #1e-5 
     # you did soft normalization when using inferred spikes ... i'm not sure if it makes sense here (using df/f trace); but we should take care of non-active neurons: 
     # Set NsExcluded : Identify neurons that did not fire in any of the trials (during ep) and then exclude them. Otherwise they cause problem for feature normalization.
+    # Gamal: soft normalization is needed for numerical stability (i.e., to avoid division by zero). If you are worried about introducing inaccuracies you could try to lower the threshold. You can base the threshold on the typical values you get for std. Maybe make the threshold 1e-6 lower than that; ie. if a typical std value is x then set the threshold at x*1e-6
     
     smallestC = 0   
     shuffleTrs = False # set to 0 so for each iteration of numSamples, all frames are trained and tested on the same trials# If 1 shuffle trials to break any dependencies on the sequence of trials 

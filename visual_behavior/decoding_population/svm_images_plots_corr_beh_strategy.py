@@ -196,14 +196,16 @@ for stage_2_analyze in stagesall: # stage_2_analyze = stagesall[0]
             fgn = fgn + '_sameNumNeursAllPlanes'
 
         if svm_blocks==-1:
-            word = 'engagement'
+            word = 'engagement_'
         elif svm_blocks==-101:
-            word = 'only_engaged'
+            word = 'only_engaged_'
         elif ~np.isnan(svm_blocks):
-            word = 'blocks'
+            word = 'blocks_'
+        else:
+            word = ''
 
         if use_events:
-            word = word + '_events'
+            word = word + 'events'
 
         fgn = f'{fgn}_{word}_frames{frames_svm[0]}to{frames_svm[-1]}'                        
         fgn = fgn + '_ClassAccur'
