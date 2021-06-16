@@ -8,6 +8,7 @@ import pandas as pd
 from allensdk.internal.api import PostgresQueryMixin
 from visual_behavior.data_access import utilities as utils
 from visual_behavior.data_access import from_lims_utilities as lims_utils
+import visual_behavior.database as db
 
 
 # Accessing Lims Database
@@ -23,16 +24,17 @@ try:
         user=lims_user,
         host=lims_host,
         password=lims_password,
-        port=lims_port)
+        port=lims_port
+    )
+
+    # building querys
+    mixin = lims_engine
 
 except Exception as e:
     warn_string = 'failed to set up LIMS/mtrain credentials\n{}\n\n \
         internal AIBS users should set up environment variables \
         appropriately\nfunctions requiring database access will fail'.format(e)
     warnings.warn(warn_string)
-
-# building querys
-mixin = lims_engine
 
 
 ### QUERIES USED FOR MULTIPLE FUNCTIONS ###      # noqa: E266
@@ -137,7 +139,7 @@ def all_ids_for_id_query():
     oe.ophys_session_id,
     bs.id AS behavior_session_id,
     oevbec.visual_behavior_experiment_container_id AS ophys_container_id,
-    os.visual_behavior_supercontainer_id AS super_container_id
+    os.visual_behavior_supercontainer_id AS supercontainer_id
 
     FROM
     ophys_experiments oe
@@ -280,7 +282,7 @@ def get_ophys_container_id_for_ophys_experiment_id(ophys_experiment_id):
     return ophys_container_id
 
 
-def get_super_container_id_for_ophys_experiment_id(ophys_experiment_id):
+def get_supercontainer_id_for_ophys_experiment_id(ophys_experiment_id):
     ophys_experiment_id = int(ophys_experiment_id)
     query = '''
     SELECT
@@ -440,21 +442,21 @@ def get_ophys_container_ids_for_ophys_session_id(ophys_session_id):
     return ophys_container_ids
 
 
-def get_super_container_id_for_ophys_session_id(ophys_session_id):
+def get_supercontainer_id_for_ophys_session_id(ophys_session_id):
     ophys_session_id = int(ophys_session_id)
     query = '''
     SELECT
     visual_behavior_supercontainer_id
-    AS super_container_id
+    AS supercontainer_id
 
     FROM
     ophys_sessions
 
     WHERE id = {}
     '''.format(ophys_session_id)
-    super_container_id = mixin.select(query)
-    super_container_id = super_container_id["super_container_id"][0]
-    return super_container_id
+    supercontainer_id = mixin.select(query)
+    supercontainer_id = supercontainer_id["supercontainer_id"][0]
+    return supercontainer_id
 
 
 def get_all_ids_for_ophys_session_id(ophys_session_id):
@@ -583,11 +585,11 @@ def get_ophys_container_ids_for_behavior_session_id(behavior_session_id):
     return container_id
 
 
-def get_super_container_id_for_behavior_session_id(behavior_session_id):
+def get_supercontainer_id_for_behavior_session_id(behavior_session_id):
     behavior_session_id = int(behavior_session_id)
     query = '''
     SELECT
-    sessions.visual_behavior_supercontainer_id AS super_container_id
+    sessions.visual_behavior_supercontainer_id AS supercontainer_id
 
     FROM
     ophys_experiments experiments
@@ -603,9 +605,9 @@ def get_super_container_id_for_behavior_session_id(behavior_session_id):
     WHERE
     behavior.id = {}
     '''.format(behavior_session_id)
-    super_container_id = mixin.select(query)
-    super_container_id = super_container_id["super_container_id"][0]
-    return super_container_id
+    supercontainer_id = mixin.select(query)
+    supercontainer_id = supercontainer_id["supercontainer_id"][0]
+    return supercontainer_id
 
 
 def get_all_ids_for_behavior_session_id(behavior_session_id):
@@ -754,7 +756,7 @@ def get_supercontainer_id_for_ophys_container_id(ophys_container_id):
     ophys_container_id = int(ophys_container_id)
     query = '''
     SELECT
-    os.visual_behavior_supercontainer_id AS super_container_id
+    os.visual_behavior_supercontainer_id AS supercontainer_id
 
     FROM
     ophys_experiments oe
@@ -770,9 +772,9 @@ def get_supercontainer_id_for_ophys_container_id(ophys_container_id):
     WHERE
     oevbec.visual_behavior_experiment_container_id = {}
     '''.format(ophys_container_id)
-    super_container_id = mixin.select(query)
-    super_container_id = int(super_container_id['super_container_id'][0])
-    return super_container_id
+    supercontainer_id = mixin.select(query)
+    supercontainer_id = int(supercontainer_id['supercontainer_id'][0])
+    return supercontainer_id
 
 
 def get_all_ids_for_ophys_container_id(ophys_container_id):
@@ -2210,3 +2212,68 @@ def load_objectlist(ophys_experiment_id):
     objectlist_dataframe = pd.read_csv(filepath)
     objectlist_dataframe = lims_utils.update_objectlist_column_labels(objectlist_dataframe)
     return objectlist_dataframe
+
+
+def get_id_type(input_id):
+    '''
+    a function to get the id type for a given input ID
+
+    Examples:
+
+    >> get_id_type(914580664)
+    'ophys_experiment_id'
+
+    >> get_id_type(914211263)
+    'behavior_session_id'
+
+    >> get_id_type(1086515263)
+    'cell_specimen_id'
+
+    >> get_id_type(914161594)
+    'ophys_session_id'
+
+    >> get_id_type(1080784881)
+    'cell_roi_id'
+
+    >> get_id_type(1234)
+    'unknown_id'
+
+    Parameters:
+    -----------
+    input_id : int
+        id to search
+
+    Returns:
+    --------
+    string
+        The ID type, or 'unknown_id' if the ID type cannot be determined
+    '''
+
+    found_id_types = []
+
+    # set up a general query string
+    query = 'select * from {} where id = {} limit 1'
+
+    # iterate over tables
+    for table in ['ophys_experiments', 'ophys_sessions', 'behavior_sessions', 'cell_rois']:
+
+        # check to see if the id is an index in the table
+        if len(db.lims_query(query.format(table, input_id))) > 0:
+            # add to list of found IDs
+            found_id_types.append(table[:-1] + '_id')
+
+    # a special case for cell_specimen_id given that there is no cell_specimens table
+    cell_specimen_id_query = 'select * from cell_rois where cell_specimen_id = {} limit 1'
+    if len(db.lims_query(cell_specimen_id_query.format(input_id))) > 0:
+        # return if id is cell_specimen_id
+        found_id_types.append('cell_specimen_id')
+
+    # assert that no more than one ID type was found (they should be unique)
+    assert len(found_id_types) <= 1, 'found ID in multiple tables: {}'.format(found_id_types)
+
+    if len(found_id_types) == 1:
+        # if only one id type was found, return it
+        return found_id_types[0]
+    else:
+        # return 'unknown_id' if id was not found
+        return 'unknown_id'
