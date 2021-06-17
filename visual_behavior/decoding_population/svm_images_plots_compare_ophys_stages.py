@@ -13,7 +13,7 @@ Created on Tue Apr 27 12:09:05 2021
 # ttest will compare whichStages[0] and whichStages[1]
 whichStages = [1,2,3,4,5,6] #[1,3,4,6] #[1,2,3] #[1,2] #[3,4] #stages to plot on top of each other to compare
 
-ttest_actShfl_stages = 1 # 0: plot ttet comparison of actual and shuffled (it will be the default when len(whichStages)=1)); 1: plot ttest comparison between ophys stages
+ttest_actShfl_stages = 1 # 0: plot ttet comparison of actual and shuffled (it will be the default when len(whichStages)=1)); 1: plot ttest comparison between ophys stages, as long as len(whichStages)=2
 show_depth_stats = 1 # if 1, plot the bars that show anova/tukey comparison across depths
 
 
@@ -61,12 +61,29 @@ for crenow in cres: # crenow = cres[0]
     istage = -1
     for which_stage in stages_alln: # which_stage = 1 
         istage = istage+1
-        a = summary_vars_all[np.logical_and(summary_vars_all['cre']==crenow , summary_vars_all['stage']==which_stage)]
-        a_amp = a['resp_amp'].values[0][:,:,1] # actual # 8depths x sessions
-        b_amp = a['resp_amp'].values[0][:,:,2] # shuffled
 
+        a = summary_vars_all[np.logical_and(summary_vars_all['cre']==crenow , summary_vars_all['stage']==which_stage)]
+        
+        if len(project_codes_all)==1:
+            a_amp = a['resp_amp'].values[0][:,:,1] # actual # 8depths x sessions
+            b_amp = a['resp_amp'].values[0][:,:,2] # shuffled
+        else:
+            a_amp_allpr = []
+            b_amp_allpr = []
+            for ipc in range(len(project_codes_all)):
+                apr = np.hstack(a['resp_amp'].values[ipc][:,:,1]) # data from 1 plane, all sessions; then 2nd plane all sessions, etc are vectorized.
+                bpr = np.hstack(a['resp_amp'].values[ipc][:,:,2]) # data from 1 plane, all sessions; then 2nd plane all sessions, etc are vectorized.
+                a_amp_allpr.append(apr) # actual # 8depths x sessions
+                b_amp_allpr.append(bpr) # shuffled
+            a_amp = np.concatenate((a_amp_allpr))[np.newaxis, :]
+            b_amp = np.concatenate((b_amp_allpr))[np.newaxis, :]
+            
+#         a_amp.shape, b_amp.shape
+        
+        
+        
         # pool areas
-        if project_codes == ['VisualBehaviorMultiscope']:
+        if project_codes_all == ['VisualBehaviorMultiscope']:
             a_amp_pooled = np.array([a_amp[inds_pooled[idepth]].flatten() for idepth in range(num_depth)])
             b_amp_pooled = np.array([b_amp[inds_pooled[idepth]].flatten() for idepth in range(num_depth)])
         
@@ -76,7 +93,7 @@ for crenow in cres: # crenow = cres[0]
         p_act_shfl[icre, istage, :] = p
         
         # pooled areas
-        if project_codes == ['VisualBehaviorMultiscope']:
+        if project_codes_all == ['VisualBehaviorMultiscope']:
             _, p = st.ttest_ind(a_amp_pooled, b_amp_pooled, nan_policy='omit', axis=1, equal_var=equal_var)
             p_act_shfl_pooled[icre, istage, :] = p
         
@@ -86,7 +103,7 @@ p_act_shfl_sigval[p_act_shfl <= sigval] = 1
 p_act_shfl_sigval[p_act_shfl > sigval] = np.nan
 # print(p_act_shfl_sigval)
 
-if project_codes == ['VisualBehaviorMultiscope']:
+if project_codes_all == ['VisualBehaviorMultiscope']:
     p_act_shfl_sigval_pooled = p_act_shfl_pooled+0 
     p_act_shfl_sigval_pooled[p_act_shfl_pooled <= sigval] = 1
     p_act_shfl_sigval_pooled[p_act_shfl_pooled > sigval] = np.nan
@@ -98,9 +115,9 @@ if project_codes == ['VisualBehaviorMultiscope']:
 ###############################################################
 ###############################################################
 
-#%% Compute ttest stats between ophys 3 and 4, for each cre line
+#%% Compute ttest stats between the 2 ophys stages in whichStages (eg between ophys 3 and 4), for each cre line
 
-if len(whichStages)>1:
+if len(whichStages)==2:
     if np.isnan(svm_blocks) or svm_blocks==-101:
 
         p_all = []
@@ -109,11 +126,26 @@ if len(whichStages)>1:
 
             a = summary_vars_all[np.logical_and(summary_vars_all['cre']==crenow , summary_vars_all['stage']==whichStages[0])]
             b = summary_vars_all[np.logical_and(summary_vars_all['cre']==crenow , summary_vars_all['stage']==whichStages[1])]
-            a_amp = a['resp_amp'].values[0][:,:,1] # 8depths x sessions
-            b_amp = b['resp_amp'].values[0][:,:,1] 
+                        
+            if len(project_codes_all)==1:
+                a_amp = a['resp_amp'].values[0][:,:,1] # actual # 8depths x sessions
+                b_amp = b['resp_amp'].values[0][:,:,1] # shuffled
+            else:
+                a_amp_allpr = []
+                b_amp_allpr = []
+                for ipc in range(len(project_codes_all)):
+                    apr = np.hstack(a['resp_amp'].values[ipc][:,:,1]) # data from 1 plane, all sessions; then 2nd plane all sessions, etc are vectorized.
+                    bpr = np.hstack(b['resp_amp'].values[ipc][:,:,1]) # data from 1 plane, all sessions; then 2nd plane all sessions, etc are vectorized.
+                    a_amp_allpr.append(apr) # actual # 8depths x sessions
+                    b_amp_allpr.append(bpr) # shuffled
+                a_amp = np.concatenate((a_amp_allpr))[np.newaxis, :]
+                b_amp = np.concatenate((b_amp_allpr))[np.newaxis, :]
 
+#             a_amp.shape, b_amp.shape
+
+            
             # pool areas # 4pooled depths x sessions
-            if project_codes == ['VisualBehaviorMultiscope']:
+            if project_codes_all == ['VisualBehaviorMultiscope']:
                 a_amp_pooled = np.array([a_amp[inds_pooled[idepth]].flatten() for idepth in range(num_depth)])
                 b_amp_pooled = np.array([b_amp[inds_pooled[idepth]].flatten() for idepth in range(num_depth)])
             
@@ -123,12 +155,15 @@ if len(whichStages)>1:
             p_all.append(p)
             
             # shuffled
-            if project_codes == ['VisualBehaviorMultiscope']:
+            if project_codes_all == ['VisualBehaviorMultiscope']:
                 _, p = st.ttest_ind(a_amp_pooled, b_amp_pooled, nan_policy='omit', axis=1, equal_var=equal_var)
                 p_all_pooled.append(p)
             
         p_all = np.array(p_all)
         p_all_pooled = np.array(p_all_pooled)
+#         p_all.shape
+        if np.ndim(p_all)==1:
+            p_all = p_all[:, np.newaxis]
 
         p_sigval = p_all+0 
         p_sigval[p_all <= sigval] = 1
@@ -155,23 +190,24 @@ if np.isnan(svm_blocks) or svm_blocks==-101:
     mn_mx_allcre = np.full((len(cres), 2), np.nan)
     for crenow in cres: # crenow = cres[0]
         
-        tc = summary_vars_all[summary_vars_all['cre'] == crenow]
-        
+        tc = summary_vars_all[summary_vars_all['cre'] == crenow]        
         icre = np.argwhere(np.in1d(cres, crenow))[0][0] #icre+1
         mn_mx_allstage = []
         
         for stagenow in whichStages: # stagenow = whichStages[0]
             tc_stage = tc[tc['stage'] == stagenow]
+        
+            for ipc in range(len(project_codes_all)):
+                pa_all = tc_stage['resp_amp'].values[ipc] # 8_planes x sessions x 4_trTsShCh
 
-            pa_all = tc_stage['resp_amp'].values[0] 
+                # average across sessions
+                top = np.nanmean(pa_all, axis=1) # 8_planes x 4_trTsShCh
+                top_sd = np.nanstd(pa_all, axis=1) / np.sqrt(pa_all.shape[1])        
 
-            top = np.nanmean(pa_all, axis=1) # 8_planes x 4_trTsShCh
-            top_sd = np.nanstd(pa_all, axis=1) / np.sqrt(pa_all.shape[1])        
-
-            mn = np.nanmin(top[:,2]-top_sd[:,2])
-            mx = np.nanmax(top[:,1]+top_sd[:,1])
-            mn_mx_allstage.append([mn, mx])
-    #         top_allstage.append(top)
+                mn = np.nanmin(top[:,2]-top_sd[:,2])
+                mx = np.nanmax(top[:,1]+top_sd[:,1])
+                mn_mx_allstage.append([mn, mx])
+        #         top_allstage.append(top)
 
         # top_allstage = np.array(top_allstage)
         mn_mx_allstage = np.array(mn_mx_allstage)
@@ -186,15 +222,20 @@ if np.isnan(svm_blocks) or svm_blocks==-101:
 
 if np.isnan(svm_blocks) or svm_blocks==-101:
     
-    if project_codes == ['VisualBehaviorMultiscope']:
+    if project_codes_all == ['VisualBehaviorMultiscope']:
         x = np.array([0,2,4,6])
     else:
         x = np.array([0])
-    xgapg = .15*len(whichStages)/2
-    areasn = ['V1', 'LM', 'V1-LM']
+    xgapg = .15*len(whichStages)/2    
 #     inds_now_all = [inds_v1, inds_lm]
     cols_stages = plt.rcParams['axes.prop_cycle'].by_key()['color']
 
+    if len(project_codes_all)==1:
+        areasn = ['V1', 'LM', 'V1-LM']
+    else:
+        areasn = ['V1-LM', 'V1-LM', 'V1-LM'] # distinct_areas  #['VISp']
+    
+    
     # icre = -1
     for crenow in cres: # crenow = cres[0]
 
@@ -220,19 +261,40 @@ if np.isnan(svm_blocks) or svm_blocks==-101:
             stcn = stcn+1
             tc_stage = tc[tc['stage'] == stagenow]
 
+            if len(project_codes_all)==1:
+                pa_all = tc_stage['resp_amp'].values[0] # 8_planes x sessions x 4_trTsShCh
+    #             print(pa_all.shape)
+                depth_ave = tc_stage['depth_ave'].values[0]
+        
+            else:
+                # reshape data from each project to to (planes x sessions) x 4
+                r_allpr = []
+                for ipc in range(len(project_codes_all)):
+                    pa_all = tc_stage['resp_amp'].values[ipc] # 8_planes x sessions x 4_trTsShCh
+                    # reshape to (planes x sessions) x 4
+                    r = np.reshape(pa_all, (pa_all.shape[0] * pa_all.shape[1], pa_all.shape[2]), order='F') # first all planes of session 1, then all planes of session 2, etc  # r[:,-3], pa_all[:,1,-3]
+                    r_allpr.append(r)
 
-            pa_all = tc_stage['resp_amp'].values[0] 
-    #         print(pa_all.shape)
+                # concatenate data from both projects
+                rr = np.concatenate((r_allpr)) # (planes x sessions) x 4
+                pa_all = rr[np.newaxis, :] # 1 x (planes x sessions) x 4
+                
+                # pool and average depths across both projects
+                depth_ave = [np.nanmean(np.concatenate((tc_stage['depth_ave'].values)))]
+                
+                inds_v1 = [0]
+                inds_lm = [np.nan]
+#             pa_all.shape
+
 
             # average across both sessions and areas
-            if project_codes == ['VisualBehaviorMultiscope']:
+            if project_codes_all == ['VisualBehaviorMultiscope']:
                 top_pooled = np.array([np.nanmean(pa_all[inds_pooled[idepth]], axis=(0,1)) for idepth in range(num_depth)]) # 4depth (pooled areas) x 4_trTsShCh
                 top_sd_pooled = np.array([np.nanstd(pa_all[inds_pooled[idepth]], axis=(0,1)) / np.sqrt(2*pa_all.shape[1]) for idepth in range(num_depth)]) # 4depth (pooled areas) x 4_trTsShCh
 
+            # average across sessions
             top = np.nanmean(pa_all, axis=1) # 8_planes x 4_trTsShCh
             top_sd = np.nanstd(pa_all, axis=1) / np.sqrt(pa_all.shape[1])        
-
-            depth_ave = tc_stage['depth_ave'].values[0] 
 
 
 #             mn = np.nanmin(top[:,1]-top_sd[:,1])
@@ -245,6 +307,7 @@ if np.isnan(svm_blocks) or svm_blocks==-101:
             xnowall.append(xnow)
     #         print(x+xgap)
 
+    
             # test
             ax1.errorbar(xnow, top[inds_v1, 1], yerr=top_sd[inds_v1, 1], fmt=fmt_now, markersize=5, capsize=0, label=f'{ophys_stage_labels[stagenow-1]}', color=colors[stagenow-1]) #cols_stages[stcn]
             if ~np.isnan(inds_lm[0]):
@@ -255,7 +318,7 @@ if np.isnan(svm_blocks) or svm_blocks==-101:
                 ax2.errorbar(xnow, top[inds_lm, 2], yerr=top_sd[inds_lm, 2], fmt=fmt_now, markersize=3, capsize=0, color='gray')
             
             ##### areas pooled
-            if project_codes == ['VisualBehaviorMultiscope']:
+            if project_codes_all == ['VisualBehaviorMultiscope']:
                 # test
                 ax3.errorbar(xnow, top_pooled[:, 1], yerr=top_sd_pooled[:, 1], fmt=fmt_now, markersize=5, capsize=0, label=f'{ophys_stage_labels[stagenow-1]}', color=colors[stagenow-1]) #cols_stages[stcn]
                 # shuffle
@@ -264,7 +327,7 @@ if np.isnan(svm_blocks) or svm_blocks==-101:
                 
             ####### do anova and tukey hsd for pairwise comparison of depths per area
             ylims = []
-            if project_codes == ['VisualBehaviorMultiscope'] and show_depth_stats:
+            if project_codes_all == ['VisualBehaviorMultiscope'] and show_depth_stats:
                 tukey_all = anova_tukey.do_anova_tukey(summary_vars_all, crenow, stagenow, inds_v1, inds_lm, inds_pooled)
 #                 if show_depth_stats:
                 a = anova_tukey.add_tukey_lines(tukey_all, 'v1', ax1, colors[stagenow-1], inds_v1, inds_lm, inds_pooled, top, top_sd, xnowall[stcn]) # cols_stages[stcn]
@@ -291,17 +354,20 @@ if np.isnan(svm_blocks) or svm_blocks==-101:
         top_allstage = np.array(top_allstage)
         mn_mx_allstage = np.array(mn_mx_allstage)
         mn_mx = [np.nanmin(mn_mx_allstage), np.nanmax(mn_mx_allstage)]
-        xlabs = 'Depth (um)'
+        if project_codes_all == ['VisualBehaviorMultiscope']:
+            xlabs = 'Depth (um)'
+        else:
+            xlabs = 'Session'
         xticklabs = np.round(depth_ave).astype(int)  # x = np.arange(num_depth)
 
         ylims_now = [np.nanmin(ylims), np.nanmax(ylims)]
 
         # add a star if ttest is significant (between ophys 3 and 4)
-        if ttest_actShfl_stages == 1: # compare ophys stages
+        if len(whichStages)==2 and ttest_actShfl_stages == 1: # compare ophys stages
             ax1.plot(x+xgapg/2, p_sigval[icre, inds_v1]*mn_mx[1]-np.diff(mn_mx)*.03, 'k*')
             if ~np.isnan(inds_lm[0]):
                 ax2.plot(x+xgapg/2, p_sigval[icre, inds_lm]*mn_mx[1]-np.diff(mn_mx)*.03, 'k*')
-            if project_codes == ['VisualBehaviorMultiscope']:
+            if project_codes_all == ['VisualBehaviorMultiscope']:
                 ax3.plot(x+xgapg/2, p_sigval_pooled[icre, :]*mn_mx[1]-np.diff(mn_mx)*.03, 'k*')
         
         
@@ -322,7 +388,11 @@ if np.isnan(svm_blocks) or svm_blocks==-101:
             iax=iax+1
 
         bb = (.97,.8)
-        ax3.legend(loc='center left', bbox_to_anchor=[bb[0]+xgapg, bb[1]], frameon=True, handlelength=1, fontsize=12)        
+        if project_codes_all == ['VisualBehaviorMultiscope']:
+            ax = ax3
+        else:
+            ax = ax1
+        ax.legend(loc='center left', bbox_to_anchor=[bb[0]+xgapg, bb[1]], frameon=True, handlelength=1, fontsize=12)        
 
         plt.suptitle(crenow, fontsize=18, y=1.1)    
         seaborn.despine()
@@ -355,8 +425,8 @@ if np.isnan(svm_blocks) or svm_blocks==-101:
                 
             fgn = f'{fgn}_{word}_frames{frames_svm[0]}to{frames_svm[-1]}'                        
             fgn = fgn + '_ClassAccur'
-            if project_codes == ['VisualBehavior']:
-                fgn = f'{fgn}_{project_codes[0]}'
+            if project_codes_all == ['VisualBehavior']:
+                fgn = f'{fgn}_{project_codes_all[0]}'
 
             nam = f'{crenow[:3]}{whatSess}_aveMice_aveSessPooled{fgn}_{now}'
             fign = os.path.join(dir0, 'svm', dir_now, nam+fmt)
@@ -584,8 +654,8 @@ if ~np.isnan(svm_blocks) and svm_blocks!=-101:
 
                 fgn = f'{fgn}_{word}_frames{frames_svm[0]}to{frames_svm[-1]}'                        
                 fgn = fgn + '_ClassAccur'
-                if project_codes == ['VisualBehavior']:
-                    fgn = f'{fgn}_{project_codes[0]}'
+                if project_codes_all == ['VisualBehavior']:
+                    fgn = f'{fgn}_{project_codes_all[0]}'
 
                 nam = f'{crenow[:3]}{whatSess}_aveMice_aveSessPooled{fgn}_{now}'
                 fign = os.path.join(dir0, 'svm', dir_now, nam+fmt)

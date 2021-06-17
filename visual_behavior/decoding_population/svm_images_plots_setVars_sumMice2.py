@@ -287,7 +287,8 @@ for istage in np.unique(stages_all): # istage=1
                 
                 plots_make_finalize = [1,0]
                 
-                exec(open('svm_images_plots_sumMice.py').read())
+                if len(project_codes_all)==1:
+                    exec(open('svm_images_plots_sumMice.py').read())
                 
 
 
@@ -297,7 +298,8 @@ for istage in np.unique(stages_all): # istage=1
             
             plots_make_finalize = [0,1]
 
-            exec(open('svm_images_plots_sumMice.py').read())
+            if len(project_codes_all)==1:
+                exec(open('svm_images_plots_sumMice.py').read())
             
             
 

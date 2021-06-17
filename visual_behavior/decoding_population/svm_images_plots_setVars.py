@@ -201,12 +201,14 @@ else:
     br = [np.nan]
 
 
+project_codes_all = copy.deepcopy(project_codes)
+
 
 #####################################################################################
 #%% Follow this script by "svm_images_plots_setVars_sumMice.py" to set vars for making average plots across mice (for each cre line).
 #####################################################################################
 
-if len(project_codes)==1:
+if len(project_codes_all)==1:
 
     #%% Set frames_svm, samps_bef and samps_aft
     # Note: trials df has a much longer time_trace (goes up to 4.97) compared to stimulus df (goes up to .71), so frames_svm ends up being 1 element longer for trials df (ie when decoding hits from misses) compared to stimulus df (ie when decoding the images)    
@@ -294,7 +296,7 @@ if len(project_codes)==1:
     svm_allMice_sessPooled0 = copy.deepcopy(svm_allMice_sessPooled)
     svm_allMice_sessAvSd0 = copy.deepcopy(svm_allMice_sessAvSd)
 
-    ######### plot traces and quantifications for each ophys stage
+    ######### set vars and plot traces and quantifications for each ophys stage
 
     # set vars to make mouse-averaged plots
     exec(open('svm_images_plots_setVars_sumMice2.py').read()) 
@@ -394,9 +396,7 @@ if len(project_codes)==1:
 #####################################################################################
 #####################################################################################
 
-else:
-    
-    project_codes_all = copy.deepcopy(project_codes)
+else: # pooling data from multiple project codes    
     
     svm_allMice_sessPooled_allprojects = []
     svm_allMice_sessAvSd_allprojects = []
@@ -522,6 +522,35 @@ else:
     pa_pooled_projects = np.concatenate((pa_allpr), axis=0) # pooled_session_planes_projects x 4
     pa_pooled_projects.shape
 
+    
+    
+    ######################################################
+    #%% set vars and plot traces and quantifications for each ophys stage
+    
+    # for each project code: set vars to make mouse-averaged plots
+    summary_vars_allpr = []
+    for ipc in range(len(project_codes_all)):
+        
+        svm_allMice_sessPooled0 = svm_allMice_sessPooled_allprojects[ipc]
+        svm_allMice_sessAvSd0 = svm_allMice_sessAvSd_allprojects[ipc]
+
+        project_codes = project_codes_all[ipc]
+        
+        exec(open('svm_images_plots_setVars_sumMice2.py').read()) 
+
+        summary_vars_allpr.append(summary_vars_all)
+        
+        
+    # make mouse-averaged plots
+#     exec(open('svm_images_plots_sumMice.py').read()) 
 
 
+    ######### compare quantifications across ophys stages
+    
+    # pool summary_vars_all of the 2 projects
+    
+    summary_vars_all = pd.concat((summary_vars_allpr))
+    summary_vars_all.shape
+    
+    exec(open('svm_images_plots_compare_ophys_stages.py').read())
     
