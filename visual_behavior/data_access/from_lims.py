@@ -2236,7 +2236,7 @@ def get_well_known_file_path(id, attachable_type, asset_name):
     assert asset_name in wkf.index.to_list(), 'only assets {} are available for {}'.format(wkf.index.to_list(), attachable_type)
 
     return ''.join([wkf.loc[asset_name]['storage_directory'], wkf.loc[asset_name]['filename']])
-        
+
 
 def get_ophys_experiment_id_for_cell_roi_id(cell_roi_id):
     '''
@@ -2245,7 +2245,7 @@ def get_ophys_experiment_id_for_cell_roi_id(cell_roi_id):
     -----------
     cell_roi_id: int
         cell_roi_id of interest
-    
+
     Returns:
     --------
     int
