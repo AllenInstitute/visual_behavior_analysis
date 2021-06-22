@@ -22,6 +22,7 @@ job_settings = {'queue': 'braintv',
 
 container_ids = data_loading.get_ophys_container_ids(release_data_only=True)
 
+import pandas as pd
 df = pd.read_csv(r"/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/experiments_to_consider.csv")
 container_ids = df.ophys_container_id.unique()
 
