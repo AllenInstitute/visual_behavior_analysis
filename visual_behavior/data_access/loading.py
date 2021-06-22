@@ -384,6 +384,7 @@ class BehaviorOphysDataset(BehaviorOphysExperiment):
                                                                           'phase', 'spatial_frequency'])
         stimulus_presentations = reformat.add_change_each_flash(stimulus_presentations)
         stimulus_presentations['pre_change'] = stimulus_presentations['change'].shift(-1)
+        stimulus_presentations['pre_omitted'] = stimulus_presentations['omitted'].shift(-1)
         stimulus_presentations = reformat.add_epoch_times(stimulus_presentations)
         stimulus_presentations = reformat.add_mean_running_speed(stimulus_presentations, self.running_speed)
         try:  # if eye tracking data is not present or cant be loaded
@@ -559,6 +560,7 @@ class BehaviorDataset(BehaviorSession):
         stimulus_presentations = self.stimulus_presentations.copy()
         stimulus_presentations = reformat.add_change_each_flash(stimulus_presentations)
         stimulus_presentations['pre_change'] = stimulus_presentations['change'].shift(-1)
+        stimulus_presentations['pre_omitted'] = stimulus_presentations['omitted'].shift(-1)
         stimulus_presentations = reformat.add_epoch_times(stimulus_presentations)
         stimulus_presentations = reformat.add_mean_running_speed(stimulus_presentations, self.running_speed)
         stimulus_presentations = reformat.add_licks_each_flash(stimulus_presentations, self.licks)
