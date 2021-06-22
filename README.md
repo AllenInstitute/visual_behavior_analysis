@@ -90,23 +90,57 @@ extended_trials = create_extended_dataframe(
 
 Before committing and/or submitting a pull request, it is ideal to run tests.  
 
-Tests are currently run against Python 3.6.12 and 3.7.7 on github using CircleCI. You can replicate those tests locally as follows:  
+Tests are currently run against Python 3.6.12 and 3.7.7 on github using CircleCI. You can replicate those tests locally as follows:
 
-    conda create -n test_36 python=3.6.12
-    conda activate test_36
+**Creating test virtual environments**
+
+    CD {your local VBA directory}
+    conda create -n VBA_test_36 python=3.6.12
+    conda activate VBA_test_36
     pip install .[DEV]
-    pytest -m "not onprem"
 
-    conda create -n test_37 python=3.7.7
+Then deactivate VBA_test_36 to create the 3.7 virtual environment:
+
+    conda create -n VBA_test_37 python=3.7.7
     conda activate test_37
     pip install .[DEV]
-    pytest -m "not onprem"
 
-The `not onprem` argument will skip all tests that can only be run on internal Allen Institute servers and are marked as `onprem`. Alternatively, for internal Allen Institute users, the call to pytest could be called without an argument, which would run all tests.
+**Basic testing (external users):**
+Baseline tests consist of tests that can be run from outside of the Allen Institute and do not require access to any internal databases such as LIMS.  The `not onprem` argument will skip all tests that can only be run on internal Allen Institute servers and are marked as onprem.  To run these tests, do the following: 
+
+    CD {your local VBA directory}
+    conda activate VBA_test_36
+    pytest -m "not onprem" 
+
+
+**On Premises Testing + Basic testing (internal Allen Institute Users):**
+Some tests may only be run on premises (at the Allen Institute) because they must access our internal databases such as LIMS. For internal Allen Institute users, the call to pytest could be called without an onprem argument, which would run ALL tests. To run these tests, do the following: 
+
+    CD {your local VBA directory}
+    conda activate VBA_test_36
+    pytest 
+
+**Linting / Circle CI Testing (all users):**
 
 CircleCI also tests that all files meet Pep 8 style requirements using the Flake8 module - a process referred to as 'linting'. Linting can be performed locally before commiting using Flake8 as follows:
 
     flake8 {FILE_TO_CHECK}
+
+**Running a subset of tests:**
+You can run a subset of test by doing the following
+
+All tests in a sub directory:
+
+    CD {subfolder of VBA that contains the tests you'd like to run}
+    conda activate VBA_test_36
+    pytest {add -m "not onprem" as necessary}
+
+All test in a single .py file:
+
+    CD {subfolder of VBA that contains the file with the tests you'd like to run}
+    conda activate VBA_test_36
+    pytest fileWithTests.py  {add -m "not onprem" as necessary}
+
 
 ## Contributing
 
