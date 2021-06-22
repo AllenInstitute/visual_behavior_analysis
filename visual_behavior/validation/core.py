@@ -4,8 +4,7 @@ import numpy as np
 import pandas as pd
 from .extended_trials import get_first_lick_relative_to_scheduled_change
 from visual_behavior.change_detection.running.metrics import count_wraps
-from scipy.signal import medfilt
-
+from scipy.ndimage import median_filter as medfilt
 
 def parse_log(log_record):
     """ Parses a log record.
