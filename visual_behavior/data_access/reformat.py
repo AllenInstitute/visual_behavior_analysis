@@ -16,7 +16,8 @@ import visual_behavior.ophys.dataset.extended_stimulus_processing as esp
 
 def add_mouse_seeks_fail_tags_to_experiments_table(experiments):
     mouse_seeks_report_file_base = r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots'
-    report_file = 'ophys_session_log_011221.xlsx'
+    # report_file = 'ophys_session_log_011221.xlsx'
+    report_file = 'ophys_session_log_06162021.xlsx'
     vb_report_path = os.path.join(mouse_seeks_report_file_base, report_file)
     vb_report_df = pd.read_excel(vb_report_path)
 
@@ -26,8 +27,10 @@ def add_mouse_seeks_fail_tags_to_experiments_table(experiments):
     vb_report_df.columns = clean_columns(vb_report_df.columns)
     vb_report_df = vb_report_df.rename(columns={'session_id': 'ophys_session_id'})
     # merge fail tags into all_experiments manifest
+    experiments = experiments.reset_index()
     experiments = experiments.merge(vb_report_df[['ophys_session_id', 'session_tags', 'failure_tags']],
                                     right_on='ophys_session_id', left_on='ophys_session_id')
+    experiments = experiments.set_index('ophys_experiment_id')
     return experiments
 
 
