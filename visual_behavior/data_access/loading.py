@@ -2840,3 +2840,38 @@ def get_cell_table(ophys_session_ids=None, columns_to_return='*', valid_rois_onl
     ).rename(columns={'id': 'cell_roi_id'})
 
     return lims_rois
+
+
+def get_dff_traces_for_roi(cell_roi_id):
+    '''
+    gets dff trace for desired cell_roi_id
+    gets data directly from well_known_file h5 file, which is faster than opening the BehaviorOphysExperiment
+
+    Parameters:
+    -----------
+    cell_roi_id: int
+        desired cell_roi_id
+
+    Returns:
+    --------
+    array
+        1D array of dff values for the desired cell_roi_id
+    '''
+    # get associated experiment_id
+    ophys_experiment_id = from_lims.get_ophys_experiment_id_for_cell_roi_id(cell_roi_id)
+
+    # get roi_traces filepath
+    roi_traces_filename = from_lims.get_well_known_file_path(ophys_experiment_id, 'OphysExperiment', 'OphysDffTraceFile')
+
+    # open file for reading
+    with h5py.File(roi_traces_filename, "r") as f:
+
+        # get index for associated roi
+        roi_ids = [roi_name.decode("utf-8") for roi_name in f.get('roi_names')]
+        roi_index = roi_ids.index(str(cell_roi_id))
+
+        # get corresponding data
+        dff_data = f.get('data')
+        dff = dff_data[roi_index]
+
+    return dff

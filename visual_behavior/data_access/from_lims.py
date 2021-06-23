@@ -2214,6 +2214,53 @@ def load_objectlist(ophys_experiment_id):
     return objectlist_dataframe
 
 
+def get_well_known_file_path(id, attachable_type, asset_name):
+    '''
+    returns the filepath for a given well known file asset
+    Parameters:
+    -----------
+    id: int
+        the id of the attachable_type
+    attachable_type: str
+        attachable type (e.g. 'OphysExperiment', 'OphysSession', 'BehaviorSession')
+    asset_name: str
+        the name of the desired asset (e.g. 'OphysRoiTraces'). Must exist for the given attachable type
+
+    Returns:
+    --------
+    str
+        filepath to asset
+    '''
+    wkf = db.get_well_known_files(id, attachable_id_type=attachable_type)
+
+    assert asset_name in wkf.index.to_list(), 'only assets {} are available for {}'.format(wkf.index.to_list(), attachable_type)
+
+    return '/' + ''.join([wkf.loc[asset_name]['storage_directory'], wkf.loc[asset_name]['filename']])
+
+
+def get_ophys_experiment_id_for_cell_roi_id(cell_roi_id):
+    '''
+    returns the ophys experiment ID from which a given cell_roi_id was recorded
+    Parameters:
+    -----------
+    cell_roi_id: int
+        cell_roi_id of interest
+
+    Returns:
+    --------
+    int
+        ophys_experiment_id
+    '''
+    cell_roi_id = int(cell_roi_id)
+    query_string = '''
+    select ophys_experiment_id
+    from cell_rois
+    where id = {}
+    '''
+
+    return db.lims_query(query_string.format(cell_roi_id))
+
+
 def get_id_type(input_id):
     '''
     a function to get the id type for a given input ID

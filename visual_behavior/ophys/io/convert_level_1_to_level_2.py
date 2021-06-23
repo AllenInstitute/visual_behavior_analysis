@@ -13,7 +13,7 @@ import shutil
 import platform
 import numpy as np
 import pandas as pd
-from scipy.signal import medfilt
+from scipy.ndimage import median_filter as medfilt
 from collections import OrderedDict
 
 import matplotlib.image as mpimg  # NOQA: E402
@@ -339,7 +339,7 @@ def save_core_data_components(core_data, lims_data, stimulus_timestamps):
     running = core_data['running']
     running_speed = running.rename(columns={'speed': 'running_speed'})
     # filter to get rid of encoder spikes
-    running_speed['running_speed'] = medfilt(running_speed.running_speed.values, kernel_size=5)
+    running_speed['running_speed'] = medfilt(running_speed.running_speed.values, size=5)
     save_dataframe_as_h5(running_speed, 'running_speed', get_analysis_dir(lims_data))
 
     licks = core_data['licks']
