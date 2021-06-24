@@ -11,7 +11,10 @@ Created on Tue Apr 27 12:09:05 2021
 
 # whichStages: compare svm class accuracy for which stages?
 # ttest will compare whichStages[0] and whichStages[1]
-whichStages = [1,2,3,4,5,6] #[1,3,4,6] #[1,2,3] #[1,2] #[3,4] #stages to plot on top of each other to compare
+if trial_type =='hits_vs_misses':
+    whichStages = [1,3,4,6]
+else:    
+    whichStages = [1,2,3,4,5,6] #[1,3,4,6] #[1,2,3] #[1,2] #[3,4] #stages to plot on top of each other to compare
 
 ttest_actShfl_stages = 1 # 0: plot ttet comparison of actual and shuffled (it will be the default when len(whichStages)=1)); 1: plot ttest comparison between ophys stages, as long as len(whichStages)=2
 show_depth_stats = 1 # if 1, plot the bars that show anova/tukey comparison across depths
@@ -356,9 +359,9 @@ if np.isnan(svm_blocks) or svm_blocks==-101:
         mn_mx = [np.nanmin(mn_mx_allstage), np.nanmax(mn_mx_allstage)]
         if project_codes_all == ['VisualBehaviorMultiscope']:
             xlabs = 'Depth (um)'
+            xticklabs = np.round(depth_ave).astype(int)  # x = np.arange(num_depth)
         else:
             xlabs = 'Session'
-        xticklabs = np.round(depth_ave).astype(int)  # x = np.arange(num_depth)
 
         ylims_now = [np.nanmin(ylims), np.nanmax(ylims)]
 
@@ -374,8 +377,13 @@ if np.isnan(svm_blocks) or svm_blocks==-101:
         iax = 0 # V1, LM
         for ax in [ax1,ax2,ax3]:
 #             ax.hlines(0, x[0], x[-1], linestyle='dashed', color='gray')
-            ax.set_xticks(x)
-            ax.set_xticklabels(xticklabs, rotation=45)
+            if project_codes_all == ['VisualBehaviorMultiscope']:
+                ax.set_xticks(x) # depth
+                ax.set_xticklabels(xticklabs, rotation=45)
+            else:
+                ax.set_xticks(np.array(xnowall).flatten()) # stages
+                ax.set_xticklabels(whichStages, rotation=45)
+                
             ax.tick_params(labelsize=10)
             ax.set_xlim([-.5, xnowall[-1][-1]+.5]) # x[-1]+xgap+.5
             ax.set_xlabel(xlabs, fontsize=12)
@@ -413,7 +421,11 @@ if np.isnan(svm_blocks) or svm_blocks==-101:
                 fgn = fgn + '_sameNumNeursAllPlanes'
 
             if svm_blocks==-1:
-                word = 'engagement_'
+                word = 'engaged_disengaged_blocks_'
+            elif svm_blocks==-101:
+                word = 'only_engaged_'
+            elif ~np.isnan(svm_blocks):
+                word = 'blocks_'
             else:
                 word = ''
             
@@ -423,14 +435,28 @@ if np.isnan(svm_blocks) or svm_blocks==-101:
             if show_depth_stats:
                 word = word + '_anova'
                 
-            fgn = f'{fgn}_{word}_frames{frames_svm[0]}to{frames_svm[-1]}'                        
+            fgn = f'{fgn}_{word}'
+            if len(project_codes_all)==1:
+                fgn = f'{fgn}_frames{frames_svm[0]}to{frames_svm[-1]}'                        
             fgn = fgn + '_ClassAccur'
-            if project_codes_all == ['VisualBehavior']:
-                fgn = f'{fgn}_{project_codes_all[0]}'
+#             if project_codes_all == ['VisualBehavior']:
+#             fgn = f'{fgn}_{project_codes_all[0]}'
 
+            if len(project_codes_all)==1:
+                pcn = project_codes_all[0] + '_'
+            else:
+                pcn = ''
+                for ipc in range(len(project_codes_all)):
+                    pcn = pcn + project_codes_all[ipc][0] + '_'
+                pcn = pcn[:-1]
+            
+            fgn = f'{fgn}_{pcn}'            
+                
             nam = f'{crenow[:3]}{whatSess}_aveMice_aveSessPooled{fgn}_{now}'
+            
             fign = os.path.join(dir0, 'svm', dir_now, nam+fmt)
-
+            print(fign)
+            
             plt.savefig(fign, bbox_inches='tight') # , bbox_extra_artists=(lgd,)    
 
         

@@ -19,6 +19,11 @@ Created on Mon Sep 23 15:58:29 2019
 @author: farzaneh
 """
 
+'''
+NOTE: the reason p12_peak_sessAv_allMice_thisCre_flash might be negative is that it shows the difference in fraction significant neurons during stimulus window vs. baseline
+
+'''
+
 # vars below apply to average-mouse plots
 plot_cc_traces = 0
 plot_cc_peaks = 0
@@ -916,3 +921,150 @@ for icre in range(len(cre_lines)): # icre = 0
     
 
     
+    
+    
+    #%%
+    ####################################################################################
+    ####################################################################################
+    ### ANOVA on response quantifications (image and omission evoked response amplitudes)
+    ####################################################################################
+    ####################################################################################    
+    
+    import statsmodels.api as sm
+    from statsmodels.formula.api import ols
+    from statsmodels.stats.multicomp import (pairwise_tukeyhsd, MultiComparison)
+        
+#     cc12_peak_sessAv_allMice_thisCre_flash  # mice x depth x depth
+#     p12_peak_sessAv_allMice_thisCre_flash  # mice x depth x depth
+
+    # 2 x 8 x sessions
+#     aa_all = [pa_all[:, cre_all[0,:]==cre], paf_all[:, cre_all[0,:]==cre]] # 2 x 8 x sessions
+    
+    
+    area_pairs = 'LM-V1', 'V1-V1', 'LM-LM'
+    flts = cc12_peak_sessAv_allMice_thisCre_flash, cc22_peak_sessAv_allMice_thisCre_flash, cc11_peak_sessAv_allMice_thisCre_flash
+    omts = cc12_peak_sessAv_allMice_thisCre_omit, cc22_peak_sessAv_allMice_thisCre_omit, cc11_peak_sessAv_allMice_thisCre_omit
+
+    cols = ['cre', 'area_pair', 'depth_pair', 'value']
+    a_data = pd.DataFrame([], columns = cols)    
+    i_at = -1
+    for iap in range(len(area_pairs)): # iap=0
+
+        # flash: pool across depth pairs for each mouse    
+        # first 4 elements: V1 depth 0 with LM depth 0-3. Next 4 elements: V1 depth 1 with LM depth 0-3; and so on
+        ff = np.reshape(flts[iap], (flts[iap].shape[0], num_depth*num_depth), order = 'F')
+        ff.shape # mice x 16
+
+        # flash: pool across depth pairs for each mouse    
+        oo = np.reshape(omts[iap], (omts[iap].shape[0], num_depth*num_depth), order = 'F')
+        oo.shape # mice x 16
+
+
+        # now concat omit and flash, also turn the size to 2 x 16 x sess
+        aa_all = [oo.T, ff.T]
+        np.shape(aa_all) # 2 x 16 x session
+
+
+        ##############################################################################################
+        # set the data frame to be used for ANOVA        
+#         print(f'\n\n==============================\n========== {cre} --- {area_pairs[iap]} ==========\n==============================\n\n')
+
+        aan = 'omission', 'image'
+
+        for of in range(2): # omission, image # of=0
+#             print(f'\n========== {aan[of]} ==========')
+            aa = aa_all[of]
+            ####
+#             cols = ['area_pair', 'depth_pair', 'event', 'value']
+#             a_data = pd.DataFrame([], columns = cols)
+#             i_at = -1
+            for i_depth_pair in range(aa.shape[0]): # i_depth_pair=0
+                a_now = aa[i_depth_pair,:][~np.isnan(aa[i_depth_pair])]
+                for i_a in range(len(a_now)): # i_a=0
+                    i_at = i_at+1
+                    a_data.at[i_at, 'cre'] = cre 
+                    a_data.at[i_at, 'area_pair'] = area_pairs[iap] 
+                    a_data.at[i_at, 'depth_pair'] = i_depth_pair
+                    a_data.at[i_at, 'event'] = aan[of]
+                    a_data.at[i_at, 'value'] = a_now[i_a]
+
+            a_data.at[:,'value'] = a_data['value'].values.astype(float)
+#             a_data
+
+
+
+    #######################################################
+    #######################################################
+    # Do anova and tukey for each area: compare depths
+    #######################################################
+    #######################################################
+
+    for ars in area_pairs: # ars = 'LM-V1' # ars = 'V1-V1' #, 'LM-LM'
+        for of in range(2): # omission, image # of=0
+            print(f'\n========== {cre} -- {ars} -- {aan[of]} ==========')
+            print(ars)
+            a_data_now = a_data[np.logical_and(a_data['area_pair'].values==ars , a_data['event'].values==aan[of])]
+#                 a_data_now = a_data
+
+            ### ANOVA
+            # https://reneshbedre.github.io/blog/anova.html        
+            # https://pythonhealthcare.org/2018/04/13/55-statistics-multi-comparison-with-tukeys-test-and-the-holm-bonferroni-method/
+            # https://help.xlstat.com/s/article/how-to-interpret-contradictory-results-between-anova-and-multiple-pairwise-comparisons?language=es
+            # https://pythonhealthcare.org/2018/04/13/55-statistics-multi-comparison-with-tukeys-test-and-the-holm-bonferroni-method/
+
+            ######## ANOVA: compare depths for a given area
+            # Ordinary Least Squares (OLS) model
+            # 2-way
+            # C(Genotype):C(years) represent interaction term        
+    #         model = ols('value ~ C(area) + C(depth) + C(area):C(depth)', data=a_data).fit()
+            # 1-way
+            model = ols('value ~ C(depth_pair)', data=a_data_now).fit() 
+    #         anova_table = sm.stats.anova_lm(model, typ=3)
+            anova_table = sm.stats.anova_lm(model, typ=2)
+            print(anova_table)        
+            print('\n')
+            # scipy anova: same result as above
+    #                 a = aa[inds_v1,:]
+    #                 fvalue, pvalue = st.f_oneway(a[0][~np.isnan(a[0])], a[1][~np.isnan(a[1])], a[2][~np.isnan(a[2])], a[3][~np.isnan(a[3])])
+    #                 print(fvalue, pvalue)
+
+
+            ######### TUKEY HSD: compare depths for a given area #########        
+
+    #         v = a_data['value']
+    #         f = a_data['depth']
+            v = a_data_now['value'] #a_data['value']
+            f = a_data_now['depth_pair'] #a_data['depth']
+
+            MultiComp = MultiComparison(v, f)
+            mcs = MultiComp.tukeyhsd().summary()
+#                 print(mcs) # Show all pair-wise comparisons
+
+            # show only significant rows
+            a = np.array(mcs.data)
+            # columns names:
+            # ['group1' 'group2' 'meandiff' 'p-adj' 'lower' 'upper' 'reject']
+            aa = a[1:,:] # remove the column names
+            print(sum(aa[:,-1]=='True'))
+            sigpairs = np.concatenate((a[0][np.newaxis,:], aa[aa[:,-1]=='True', :]), axis=0)
+            print(sigpairs)
+
+            # get all pair indices of the significant pairs
+            pair_inds_sig = sigpairs[1:,:2]
+            a3 = pair_inds_sig.flatten() # flattens horizontally; ie 1st row of pair_inds_sig, then 2nd row of it, etc
+            ints = [int(a3[iint]) for iint in range(len(a3))] # convert to int (they are strings in pair_inds_sig)
+            pair_inds_sig = np.reshape(ints, pair_inds_sig.shape) # reshape it back to n x 2; same as pair_inds_sig except it's int not str
+            
+            # convert pair inds to depth inds
+            depth_inds_sig = convert_pair_index_to_area_depth_index(ints, num_depth=4)
+            
+            depth_inds_sig_ineraction_pairs = np.reshape(depth_inds_sig, (int(depth_inds_sig.shape[0]/2), 4))
+            
+            for ir in np.arange(0, depth_inds_sig.shape[0], 2):
+                a = f'{depth_inds_sig[ir]} vs {depth_inds_sig[ir+1]}'
+                print(a)
+                
+                
+                
+            
+            

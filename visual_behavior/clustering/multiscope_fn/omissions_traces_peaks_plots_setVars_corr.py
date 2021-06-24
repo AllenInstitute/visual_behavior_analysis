@@ -2812,5 +2812,3 @@ corr_trace_peak_allMice #.iloc[:2]
 # exec(open("omissions_traces_peaks_plots_setVars_corr_eachCre.py").read())    
     
     
-    
-    

@@ -100,8 +100,10 @@ for stage_2_analyze in stagesall: # stage_2_analyze = stagesall[0]
     shfl_accur_ave_planes = np.nanmean(a, axis=0)
     bl_avp = np.nanmean(b, axis=0)
 
+    yls = 'Decoder accuracy'
     if baseline_subtract: # subtract the baseline (CA average during baseline, ie before time 0) from the evoked CA (classification accuracy)
         shfl_accur_ave_planes = shfl_accur_ave_planes - bl_avp
+        yls = f'{yls} (rel. baseline)'
 
 
     ##############################
@@ -157,12 +159,12 @@ for stage_2_analyze in stagesall: # stage_2_analyze = stagesall[0]
     else:
         vb_ms = '(average of 8 planes)'
     
-    df = pd.DataFrame([], columns=[f'Decoder accuracy {vb_ms}', f'{cn}', 'cre'])
-    df[f'Decoder accuracy {vb_ms}'] = topn #testing_accur_ave_planes
+    df = pd.DataFrame([], columns=[f'{yls} {vb_ms}', f'{cn}', 'cre'])
+    df[f'{yls} {vb_ms}'] = topn #testing_accur_ave_planes
     df[f'{cn}'] = sdi
     df['cre'] = cre_mt
 
-    g = sns.lmplot(f'{cn}', f'Decoder accuracy {vb_ms}', data=df, hue='cre', size=2.5, scatter_kws={"s": 20}, col='cre', fit_reg=fit_reg)
+    g = sns.lmplot(f'{cn}', f'{yls} {vb_ms}', data=df, hue='cre', size=2.5, scatter_kws={"s": 20}, col='cre', fit_reg=fit_reg)
 
     #### add cc to the titles
     # lmplot plots cre lines in the same order as cre_mt; lets get that array of cre lines
@@ -196,7 +198,7 @@ for stage_2_analyze in stagesall: # stage_2_analyze = stagesall[0]
             fgn = fgn + '_sameNumNeursAllPlanes'
 
         if svm_blocks==-1:
-            word = 'engagement_'
+            word = 'engaged_disengaged_blocks_'
         elif svm_blocks==-101:
             word = 'only_engaged_'
         elif ~np.isnan(svm_blocks):
@@ -207,12 +209,14 @@ for stage_2_analyze in stagesall: # stage_2_analyze = stagesall[0]
         if use_events:
             word = word + 'events'
 
-        fgn = f'{fgn}_{word}_frames{frames_svm[0]}to{frames_svm[-1]}'                        
+        fgn = f'{fgn}_{word}_frames{frames_svm[0]}to{frames_svm[-1]}'   
+            
         fgn = fgn + '_ClassAccur'
-        if project_codes == ['VisualBehavior']:
-            fgn = f'{fgn}_{project_codes[0]}'
+#         if project_codes == ['VisualBehavior']:
+        fgn = f'{fgn}_{project_codes[0]}'
         
         nam = f'{whatSess}_{fignamets}beh_strategy_corr_{trial_type}{fgn}_{now}' # {crenow[:3]}
+
         fign = os.path.join(dir0, 'svm', dir_now, nam+fmt)
         print(fign)
 

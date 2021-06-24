@@ -3777,6 +3777,46 @@ def map_inds(train_data_inds, len_win, inds_final_all, neuron_y, doPlots=0):
 
 
 
+
+#%% Convert pair index to area, depth index (eg pair 5 to 1st area depth 1 and 2nd area depth 1 ; or pair 11 to 1st area depth 3 and 2nd area depth 2); based on the following configuration: (note: this is used for pair-wise interactions)
+# columns and rows are depths of each area:
+# 0,4,8,12
+# 1,5,9,13
+# 2,6,10,14
+# 3,7,11,15
+
+# eg:
+'''
+pair_inds = [3, 5, 11, 8]
+area12_depths = convert_pair_index_to_area_depth_index(pair_inds, num_depth=4)
+print(area12_depths) # 1st column shows area 1 depth, 2nd column shows area 2 depth
+# [[3. 0.]
+#  [1. 1.]
+#  [3. 2.]
+#  [0. 2.]]
+'''
+
+def convert_pair_index_to_area_depth_index(pair_inds, num_depth=4):
+    
+    pair_inds = np.array(pair_inds)
+    a = np.arange(0, num_depth*num_depth+1, num_depth)
+    area12_depths = np.full((len(pair_inds),2), np.nan) # 1st column shows area 1 depth, 2nd column shows area 2 depth
+    for pi in range(len(pair_inds)): # go through rows (area 1)
+        pair_index = pair_inds[pi]
+        # find the depth for area 1 (rows of pair_inds)
+        area12_depths[pi, 0] = np.mod(pair_index, num_depth)
+        
+        # find the depth for area 2 (columns of pair_inds)
+        hist, bin_edges = np.histogram(pair_index, a)
+        area12_depths[pi, 1] = np.argwhere(hist)[0][0]
+
+    area12_depths = area12_depths.astype(int)
+    
+    return area12_depths # 1st column shows area 1 depth, 2nd column shows area 2 depth
+
+
+
+
 #%%
 '''
 def set_frame_window_flash_omit(time_win, samps_bef, frame_dur):

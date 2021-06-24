@@ -91,7 +91,7 @@ dir0 = '/home/farzaneh/OneDrive/Analysis'
 
 
 #%%
-project_codes = ['VisualBehavior'], ['VisualBehaviorMultiscope'] # ['VisualBehaviorMultiscope'] # ['VisualBehaviorMultiscope', 'VisualBehaviorTask1B', 'VisualBehavior', 'VisualBehaviorMultiscope4areasx2d']
+project_codes = ['VisualBehaviorMultiscope'] #['VisualBehavior'], ['VisualBehaviorMultiscope'] # ['VisualBehaviorMultiscope'] # ['VisualBehaviorMultiscope', 'VisualBehaviorTask1B', 'VisualBehavior', 'VisualBehaviorMultiscope4areasx2d']
 
 svm_blocks = np.nan #-101 #-1: divide trials based on engagement # -101: use only engaged epochs for svm analysis # number of trial blocks to divide the session to, and run svm on. # set to np.nan to run svm analysis on the whole session
 use_events = True # False #whether to run the analysis on detected events (inferred spikes) or dff traces.
@@ -145,11 +145,18 @@ if use_balanced_trials:
 dir_now = svmn #'omit_across_sess'
 if use_events:
     dir_now = 'svm_' + svmn[len('events_svm_'):] + '_events' # so all the folders start with svm
-if ~np.isnan(svm_blocks):
-    dir_now = os.path.join(dir_now, f'trial_blocks')
 
-#     fmt = '.pdf' # '.png' # '.svg'
+if svm_blocks==-1:
+    dir_now = os.path.join(dir_now, f'engaged_disengaged_blocks')
+elif svm_blocks==-101:
+    dir_now = os.path.join(dir_now, f'only_engaged')
+elif ~np.isnan(svm_blocks):
+    dir_now = os.path.join(dir_now, f'trial_blocks')
+    
+    
+# fmt = '.pdf' # '.png' # '.svg'
 dd = os.path.join(dir0, 'svm', dir_now)
+
 if not os.path.exists(dd):
     os.makedirs(dd)
 
@@ -395,6 +402,15 @@ if len(project_codes_all)==1:
 
 #####################################################################################
 #####################################################################################
+#####################################################################################
+#####################################################################################
+#####################################################################################
+#####################################################################################
+#####################################################################################
+#####################################################################################
+#####################################################################################
+#####################################################################################
+
 
 else: # pooling data from multiple project codes    
     
@@ -553,4 +569,8 @@ else: # pooling data from multiple project codes
     summary_vars_all.shape
     
     exec(open('svm_images_plots_compare_ophys_stages.py').read())
+    
+    
+    
+    
     
