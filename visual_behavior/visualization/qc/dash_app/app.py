@@ -74,6 +74,8 @@ app.layout = html.Div(
         html.H4('Data Table:'),
         html.I('Adjust number of rows to display in the data table:'),
         components.table_row_selection,
+        components.reload_data_button,
+        components.update_data_button,
         # data table
         components.data_table,
         # dropdown for plot selection
@@ -181,21 +183,22 @@ app.layout = html.Div(
                   Input('display_level_selection', 'value'),
                   Input('data_table', 'selected_rows'),
                   Input('feedback_popup_ok', 'n_clicks'),
-                  Input("stored_feedback", "children")
+                  Input("stored_feedback", "children"),
+                  Input('update_data_button', 'n_clicks'),
+                  Input('reload_data_button', 'n_clicks'),
 ]
 )
-def update_data(data_display_level, selected_rows, n_clicks, stored_feedback):
+def update_data(data_display_level, selected_rows, n_clicks, stored_feedback, update_data_nclicks, reload_data_nclicks):
     print('updating data table at {}'.format(time.time()))
     print('data_display_level = {}'.format(data_display_level))
     if data_display_level == 'container':
-        # container_table = functions.load_container_data().sort_values('first_acquistion_date')
+        container_table = functions.load_container_data().sort_values('first_acquistion_date')
         data = container_table.to_dict('records')
     elif data_display_level == 'session':
         # session_table = functions.load_session_data()
-        data_to_display = session_table.copy()
-        data_to_display = functions.update_session_table(data_to_display)
-        
-        data_to_display['ophys_experiment_ids, paired'] = data_to_display['ophys_experiment_ids, paired'].astype(str)
+        data_to_display = functions.load_session_data()
+        print('casting exps to string!!!!!!!')
+        data_to_display = data_to_display.drop(columns=['ophys_experiment_ids, paired'])
         data = data_to_display.to_dict('records')
     return data
 
@@ -207,7 +210,9 @@ def update_data_columns(data_display_level):
     if data_display_level == 'container':
         columns = [{"name": i.replace('_', ' '), "id": i} for i in container_table.columns]
     elif data_display_level == 'session':
-        columns = [{"name": i.replace('_', ' '), "id": i} for i in session_table.columns]
+        data_to_display = functions.load_session_data()
+        data_to_display = data_to_display.drop(columns=['ophys_experiment_ids, paired'])
+        columns = [{"name": i.replace('_', ' '), "id": i} for i in data_to_display.columns]
     return columns
 
 # toggle motion correction link visibility
@@ -336,9 +341,6 @@ def log_feedback(n1, timestamp, username, _id, experiment_ids, qc_attribute, mot
     }
     print(feedback)
     functions.log_feedback(feedback, display_level)
-    if display_level == 'container':
-        print('trying to update set_qc_complete_flags')
-        functions.set_qc_complete_flags(feedback)
     print('logging feedback at {}'.format(time.time()))
     return 'TEMP'
 
@@ -801,9 +803,13 @@ def update_session_id_header(row_index, display_level_selection):
 
 def update_exp_link_text_N(row_index, display_level_selection, path_style, input_id):
     if display_level_selection == 'session':
+        print('IN update_exp_link_text_N')
+        print('\t row_index = {}'.format(row_index))
+        print('\t input_id = {}'.format(input_id))
         idx = int(input_id.split('exp_link_')[1])
+        print('\t idx = {}'.format(idx))
         session_id = session_table.iloc[row_index[0]]['ophys_session_id']
-        exp_list = functions.get_experiment_ids_for_session_id(session_id)
+        exp_list = functions.get_experiment_ids_for_session_id(int(session_id))
         try:
             return exp_list[idx]
         except IndexError:

@@ -81,6 +81,10 @@ table_row_selection = dcc.Input(
 next_button = html.Button('Next', id='next_button')
 previous_button = html.Button('Previous', id='previous_button')
 
+# next/previous buttons
+reload_data_button = html.Button('Reload Data', id='reload_data_button')
+update_data_button = html.Button('Update Data', id='update_data_button')
+
 # data table
 data_table = dash_table.DataTable(
     id='data_table',
