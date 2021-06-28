@@ -16,36 +16,36 @@ def oeid_to_uuid(oeid):
     return db.convert_id({'ophys_experiment_id': oeid}, 'behavior_session_uuid')
 
 
-def get_oeid(container_df, container_id, session_number):
-    entry_string = container_df.query('container_id == @container_id')['session_{}'.format(session_number)].iloc[0]
+def get_oeid(container_df, ophys_container_id, session_number):
+    entry_string = container_df.query('ophys_container_id == @ophys_container_id')['session_{}'.format(session_number)].iloc[0]
     if pd.notnull(entry_string):
         return int(entry_string.split(' ')[1])
 
 
-def get_uuid(container_df, container_id, session_number):
-    oeid = get_oeid(container_df, container_id, session_number)
+def get_uuid(container_df, ophys_container_id, session_number):
+    oeid = get_oeid(container_df, ophys_container_id, session_number)
     if pd.notnull(oeid):
         return oeid_to_uuid(oeid)
     else:
         return None
 
 
-def get_session_stats(container_df, container_id, session_number):
+def get_session_stats(container_df, ophys_container_id, session_number):
     vb = db.Database('visual_behavior_data')
-    behavior_session_uuid = get_uuid(container_df, container_id, session_number)
+    behavior_session_uuid = get_uuid(container_df, ophys_container_id, session_number)
     stats = vb.behavior_data['summary'].find_one({'behavior_session_uuid': behavior_session_uuid})
     vb.close()
     return stats
 
 
-def get_value(container_df, container_id, session_number, value):
+def get_value(container_df, ophys_container_id, session_number, value):
     '''
     get summary value from visual behavior database
     '''
-    behavior_session_uuid = get_uuid(container_df, container_id, session_number)
-    session_stats = get_session_stats(container_df, container_id, session_number)
+    behavior_session_uuid = get_uuid(container_df, ophys_container_id, session_number)
+    session_stats = get_session_stats(container_df, ophys_container_id, session_number)
     if value == 'session_prefix':
-        oeid = get_oeid(container_df, container_id, session_number)
+        oeid = get_oeid(container_df, ophys_container_id, session_number)
         return data_loading.get_session_type_for_ophys_experiment_id(oeid)[:7]
     elif value == 'ophys_experiment_id' or value == 'ophys_session_id':
         return db.convert_id({'behavior_session_uuid': behavior_session_uuid}, value)
@@ -75,7 +75,7 @@ def rewrite_record(uuid):
 def load_data():
     container_df = data_loading.build_container_df()
     filtered_container_list = data_loading.get_filtered_ophys_container_ids()  # NOQA F841
-    return container_df.query('container_id in @filtered_container_list')
+    return container_df.query('ophys_container_id in @filtered_container_list')
 
 
 def populate_xarray(values=['d_prime_peak', 'number_of_licks', 'num_contingent_trials']):
@@ -84,47 +84,47 @@ def populate_xarray(values=['d_prime_peak', 'number_of_licks', 'num_contingent_t
     container_df['line'] = container_df['driver_line'].map(lambda s: ';'.join(s))
 
     container_df = container_df.sort_values(by=['line', 'targeted_structure', 'first_acquistion_date'])
-    container_ids = container_df.container_id.values
+    ophys_container_ids = container_df.ophys_container_id.values
     sessions = ['session_{}'.format(i) for i in range(6)]
 
     session_prefixes = []
-    for container_id in container_ids:
-        session_prefixes += [s.split(' ')[0][:7] for s in container_df[container_df['container_id'] == container_id][sessions].values[0] if pd.notnull(s)]
+    for ophys_container_id in ophys_container_ids:
+        session_prefixes += [s.split(' ')[0][:7] for s in container_df[container_df['ophys_container_id'] == ophys_container_id][sessions].values[0] if pd.notnull(s)]
     session_prefixes = np.sort(np.unique(np.array(session_prefixes)))
 
     val_array = xr.DataArray(
-        np.zeros((len(container_ids), len(sessions), len(values))),
-        dims=('container_id', 'session_prefix', 'value'),
-        coords={'container_id': container_ids, 'session_prefix': session_prefixes, 'value': values}
+        np.zeros((len(ophys_container_ids), len(sessions), len(values))),
+        dims=('ophys_container_id', 'session_prefix', 'value'),
+        coords={'ophys_container_id': ophys_container_ids, 'session_prefix': session_prefixes, 'value': values}
     ) * np.nan
 
-    for container_id in container_ids:
+    for ophys_container_id in ophys_container_ids:
         for session_number in range(6):
-            bs_uuid = get_uuid(container_df, container_id, session_number)
+            bs_uuid = get_uuid(container_df, ophys_container_id, session_number)
             if pd.notnull(bs_uuid):
-                session_stats = get_session_stats(container_df, container_id, session_number)
+                session_stats = get_session_stats(container_df, ophys_container_id, session_number)
                 if 'error_on_load' in session_stats.keys() and session_stats['error_on_load'] == 1:
                     rewrite_record(bs_uuid)
-                session_prefix = get_value(container_df, container_id, session_number, 'session_prefix')
+                session_prefix = get_value(container_df, ophys_container_id, session_number, 'session_prefix')
 
                 for value in values:
-                    v = get_value(container_df, container_id, session_number, value)
-                    val_array.loc[{'container_id': container_id, 'session_prefix': session_prefix, 'value': value}] = v
+                    v = get_value(container_df, ophys_container_id, session_number, value)
+                    val_array.loc[{'ophys_container_id': ophys_container_id, 'session_prefix': session_prefix, 'value': value}] = v
 
     return val_array
 
 
 def make_container_overview_plots(values=['d_prime_peak', 'number_of_licks', 'num_contingent_trials']):
     val_array = populate_xarray(values)
-    container_ids = None
+    ophys_container_ids = None
     for value in values:
         print('making plot for {}'.format(value))
         fig = go.Figure(
             data=go.Heatmap(
                 z=val_array.loc[{'value': value}].values,
                 # x=session_prefixes,
-                #         y = [str(i) for i in range(len(container_ids))],
-                # y=container_ids,
+                #         y = [str(i) for i in range(len(ophys_container_ids))],
+                # y=ophys_container_ids,
                 hoverongaps=True,
                 colorbar={'title': value},
                 colorscale='viridis',
@@ -134,7 +134,7 @@ def make_container_overview_plots(values=['d_prime_peak', 'number_of_licks', 'nu
         fig.update_layout(
             autosize=False,
             width=700,
-            height=20 * len(container_ids),
+            height=20 * len(ophys_container_ids),
             margin=dict(
                 l=0, # NOQA E741
                 r=0,

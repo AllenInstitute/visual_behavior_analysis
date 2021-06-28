@@ -274,9 +274,11 @@ def get_mean_sem_trace(group):
     sem_baseline = np.std(group['baseline_response'].values) / np.sqrt(len(group['baseline_response'].values))
     mean_trace = np.mean(group['trace'], axis=0)
     sem_trace = np.std(group['trace'].values) / np.sqrt(len(group['trace'].values))
+    trace_timestamps = np.mean(group['trace_timestamps'], axis=0)
     return pd.Series({'mean_response': mean_response, 'sem_response': sem_response,
                       'mean_baseline': mean_baseline, 'sem_baseline': sem_baseline,
                       'mean_trace': mean_trace, 'sem_trace': sem_trace,
+                      'trace_timestamps': trace_timestamps,
                       'mean_responses': mean_responses})
 
 
@@ -407,7 +409,7 @@ def get_mean_df(response_df, analysis=None, conditions=['cell', 'change_image_na
 
     mdf = rdf.groupby(conditions).apply(get_mean_sem_trace)
     mdf = mdf[
-        ['mean_response', 'sem_response', 'mean_trace', 'sem_trace', 'mean_responses', 'mean_baseline', 'sem_baseline']]
+        ['mean_response', 'sem_response', 'mean_trace', 'sem_trace', 'trace_timestamps', 'mean_responses', 'mean_baseline', 'sem_baseline']]
     mdf = mdf.reset_index()
     if get_pref_stim:
         if ('image_name' in conditions) or ('change_image_name' in conditions) or ('prior_image_name' in conditions):
@@ -494,6 +496,7 @@ def get_image_names(mean_df):
 
 
 def get_color_for_image_name(image_names, image_name):
+    image_names = np.sort(image_names)
     if 'omitted' in image_names:
         if image_name == 'omitted':
             color = 'gray'

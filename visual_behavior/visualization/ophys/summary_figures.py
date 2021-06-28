@@ -33,11 +33,12 @@ def plot_max_projection_image(dataset, save_dir=None, folder='max_projection'):
         save_figure(fig, figsize, save_dir, folder, str(dataset.experiment_id))
 
 
-def plot_cell_zoom(roi_mask_dict, max_projection, cell_specimen_id, spacex=10, spacey=10, show_mask=False, ax=None):
-    if type(list(roi_mask_dict.keys())[0]) == int:
-        m = roi_mask_dict[int(cell_specimen_id)]
-    else:
-        m = roi_mask_dict[str(cell_specimen_id)]
+def plot_cell_zoom(roi_masks, max_projection, cell_roi_id, spacex=10, spacey=10, show_mask=False, ax=None):
+    # if isinstance(list(roi_mask_dict.keys())[0], str):
+    #     m = roi_mask_dict[str(cell_specimen_id)]
+    # else:
+    #     m = roi_mask_dict[int(cell_specimen_id)]
+    m = roi_masks[roi_masks.cell_roi_id == cell_roi_id].roi_mask.values[0]
     (y, x) = np.where(m == 1)
     xmin = np.min(x)
     xmax = np.max(x)
@@ -52,8 +53,8 @@ def plot_cell_zoom(roi_mask_dict, max_projection, cell_specimen_id, spacex=10, s
     if show_mask:
         ax.imshow(mask, cmap='jet', alpha=0.3, vmin=0, vmax=1)
     ax.set_xlim(xmin - spacex, xmax + spacex)
-    ax.set_ylim(ymin + spacey, ymax - spacey)
-    ax.set_title('cell ' + str(cell_specimen_id))
+    ax.set_ylim(ymin - spacey, ymax + spacey)
+    ax.set_title('cell_roi_id ' + str(cell_roi_id))
     ax.grid(False)
     ax.axis('off')
     return ax
@@ -364,7 +365,7 @@ def plot_image_change_response(analysis, cell_index, cell_order, legend=False, s
         figsize = (5, 3)
         fig, ax = plt.subplots(figsize=figsize)
     for c, change_image_name in enumerate(images):
-        color = get_color_for_image_name(analysis.dataset, change_image_name)
+        color = get_color_for_image_name(analysis.dataset.stimulus_presentations, change_image_name)
         selected_trials = trials[(trials.change_image_name == change_image_name)].trial.values
         traces = df[(df.cell == cell_index) & (df.trial.isin(selected_trials))].trace.values
         ax = plot_mean_trace(traces, analysis.ophys_frame_rate, legend_label=None, color=color,
@@ -566,8 +567,8 @@ def get_ylabel_and_suffix(use_events):
 #     color = colors[image_index]
 #     return color
 
-def get_color_for_image_name(dataset, image_name):
-    images = np.sort(dataset.stimulus_presentations.image_name.unique())
+def get_color_for_image_name(stim_table, image_name):
+    images = np.sort(stim_table.image_name.unique())
     if 'omitted' in images:
         images = images[images != 'omitted']
     colors = sns.color_palette("hls", len(images))
@@ -596,7 +597,8 @@ def add_stim_color_span(dataset, ax, xlim=None):
         start_time = stim_table.loc[idx]['start_time']
         stop_time = stim_table.loc[idx]['stop_time']
         image_name = stim_table.loc[idx]['image_name']
-        color = get_color_for_image_name(dataset, image_name)
+        color = get_color_for_image_name(stim_table, image_name)
+        # color = ut.get_color_for_image_name(image_names, image_name)
         addSpan(ax, start_time, stop_time, color=color)
     return ax
 
@@ -1668,7 +1670,7 @@ def plot_cell_summary_figure(analysis, cell_index, save=False, show=False, cache
     ax.set_title(dataset.analysis_folder)
 
     ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.0, .20), yspan=(0, .22))
-    ax = plot_cell_zoom(dataset.roi_mask_dict, dataset.max_projection, cell_specimen_id, spacex=25, spacey=25,
+    ax = plot_cell_zoom(dataset.roi_masks, dataset.max_projection, cell_specimen_id, spacex=25, spacey=25,
                         show_mask=True, ax=ax)
     ax.set_title('cell ' + str(cell_index) + ' - ' + str(cell_specimen_id))
 

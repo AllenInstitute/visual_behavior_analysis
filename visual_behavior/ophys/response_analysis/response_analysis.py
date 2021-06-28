@@ -7,7 +7,6 @@ Created on Sunday July 15 2018
 
 import os
 import pandas as pd
-import visual_behavior.data_access.loading as loading
 import visual_behavior.ophys.response_analysis.response_processing as rp
 
 
@@ -33,6 +32,10 @@ class LazyLoadable(object):
         if not hasattr(obj, self.name):
             setattr(obj, self.name, self.calculate(obj))
         return getattr(obj, self.name)
+
+
+def get_analysis_cache_dir():
+    return '//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/visual_behavior_production_analysis'
 
 
 class ResponseAnalysis(object):
@@ -75,7 +78,7 @@ class ResponseAnalysis(object):
 
     """
 
-    def __init__(self, dataset, analysis_cache_dir=None, load_from_cache=False, use_events=False,
+    def __init__(self, dataset, analysis_cache_dir=None, load_from_cache=False, use_events=False, filter_events=False,
                  use_extended_stimulus_presentations=False, overwrite_analysis_files=False, dataframe_format='wide'):
         self.dataset = dataset
         # promote ophys timestamps up to the top level
@@ -89,8 +92,9 @@ class ResponseAnalysis(object):
         # promote metadata to the top level
         self.metadata = self.dataset.metadata.copy()
         self.use_events = use_events
+        self.filter_events = filter_events
         if analysis_cache_dir is None:
-            self.analysis_cache_dir = loading.get_analysis_cache_dir()
+            self.analysis_cache_dir = get_analysis_cache_dir()
         else:
             self.analysis_cache_dir = analysis_cache_dir
         self.ophys_experiment_id = self.dataset.ophys_experiment_id
@@ -109,7 +113,7 @@ class ResponseAnalysis(object):
         if 'blank_duration_sec' in task_parameters.keys():
             self.blank_duration = task_parameters['blank_duration_sec'][0]
         else:
-            self.blank_duration = task_parameters['blank_duration'][0]
+            self.blank_duration = self.dataset.task_parameters['blank_duration'][0]
 
     def get_analysis_folder(self):
         candidates = [file for file in os.listdir(self.analysis_cache_dir) if str(self.ophys_experiment_id) in file]
@@ -119,7 +123,7 @@ class ResponseAnalysis(object):
             print('unable to locate analysis folder for experiment {} in {}'.format(self.ophys_experiment_id,
                                                                                     self.analysis_cache_dir))
             print('creating new analysis folder')
-            m = self.metadata
+            m = self.dataset.metadata
             date = m['experiment_datetime']
             date = str(date)[:10]
             date = date[2:4] + date[5:7] + date[8:10]
@@ -147,7 +151,8 @@ class ResponseAnalysis(object):
             else:
                 path = os.path.join(self.dataset.analysis_dir, df_name + '.h5')
         else:
-            path = os.path.join(self.dataset.analysis_dir, df_name + '.h5')
+            # path = os.path.join(self.dataset.analysis_dir, df_name + '.h5')
+            path = os.path.join(self.dataset.analysis_dir, df_name + '_post_decrosstalk.h5')
         return path
 
     def save_response_df(self, df, df_name):
@@ -156,11 +161,11 @@ class ResponseAnalysis(object):
 
     def get_df_for_df_name(self, df_name, df_format):
         if df_name == 'trials_response_df':
-            df = rp.get_trials_response_df(self.dataset, self.use_events, df_format=df_format)
+            df = rp.get_trials_response_df(self.dataset, self.use_events, self.filter_events, df_format=df_format)
         elif df_name == 'stimulus_response_df':
-            df = rp.get_stimulus_response_df(self.dataset, self.use_events, df_format=df_format)
+            df = rp.get_stimulus_response_df(self.dataset, self.use_events, self.filter_events, df_format=df_format)
         elif df_name == 'omission_response_df':
-            df = rp.get_omission_response_df(self.dataset, self.use_events, df_format=df_format)
+            df = rp.get_omission_response_df(self.dataset, self.use_events, self.filter_events, df_format=df_format)
         elif df_name == 'trials_run_speed_df':
             df = rp.get_trials_run_speed_df(self.dataset, df_format=df_format)
         elif df_name == 'stimulus_run_speed_df':
@@ -173,15 +178,22 @@ class ResponseAnalysis(object):
             df = rp.get_stimulus_pupil_area_df(self.dataset, df_format=df_format)
         elif df_name == 'omission_pupil_area_df':
             df = rp.get_omission_pupil_area_df(self.dataset, df_format=df_format)
+        elif df_name == 'stimulus_licks_df':
+            df = rp.get_stimulus_licks_df(self.dataset, df_format=df_format)
+        elif df_name == 'trials_licks_df':
+            df = rp.get_trials_licks_df(self.dataset, df_format=df_format)
         elif df_name == 'omission_licks_df':
             df = rp.get_omission_licks_df(self.dataset, df_format=df_format)
+        elif df_name == 'lick_triggered_response_df':
+            df = rp.get_lick_triggered_response_df(self.dataset, df_format=df_format)
         return df
 
     def get_response_df_types(self):
         return ['trials_response_df', 'stimulus_response_df', 'omission_response_df',
                 'trials_run_speed_df', 'stimulus_run_speed_df', 'omission_run_speed_df',
                 'trials_pupil_area_df', 'stimulus_pupil_area_df', 'omission_pupil_area_df',
-                'omission_licks_df']
+                'trials_licks_df', 'stimulus_licks_df', 'omission_licks_df',
+                'lick_triggered_response_df']
 
     def get_response_df(self, df_name='trials_response_df', df_format=None):
         if self.load_from_cache:  # get saved response df
@@ -209,8 +221,10 @@ class ResponseAnalysis(object):
             if self.use_extended_stimulus_presentations:
                 # merge in the extended stimulus presentations df on the change_time/start_time columns
                 stimulus_presentations = self.dataset.extended_stimulus_presentations.copy()
+                stimulus_presentations['trials_id'] = None
+                stimulus_presentations.at[stimulus_presentations[stimulus_presentations.is_change].index, 'trials_id'] = trials[trials.stimulus_change].index.values
                 columns_to_keep = [
-                    'start_time',
+                    'trials_id',
                     'bias',
                     'omissions1',
                     'task0',
@@ -219,16 +233,16 @@ class ResponseAnalysis(object):
                     'licked',
                     'lick_on_next_flash',
                     'lick_on_previous_flash',
-                    'mean_running_speed'
+                    'mean_running_speed',
+                    'mean_pupil_area'
                 ]
                 try:
                     df = df.merge(
                         stimulus_presentations[columns_to_keep],
-                        left_on='change_time',
-                        right_on='start_time',
+                        left_on='trials_id',
+                        right_on='trials_id',
                         how='left',
-                        suffixes=('', '_duplicate')
-                    ).drop(columns=['start_time_duplicate'])
+                        suffixes=('', '_duplicate'))
                 except KeyError:  # if it cant merge them in, make empty columns
                     for column in columns_to_keep:
                         df[column] = None

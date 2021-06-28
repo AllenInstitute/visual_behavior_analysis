@@ -1,7 +1,7 @@
 import warnings
 import pandas as pd
 import numpy as np
-from scipy.signal import medfilt
+from scipy.ndimage import median_filter as medfilt
 from .extract import get_end_time
 from .extract_images import get_image_data, get_image_metadata
 from ...utilities import calc_deriv, deg_to_dist, local_time, ListHandler, DoubleColonFormatter
@@ -317,7 +317,7 @@ def load_running_speed(data, smooth=False, time=None):
         time = load_time(data)
 
     dx_raw = np.array(data['dx'])
-    dx = medfilt(dx_raw, kernel_size=5)  # remove big, single frame spikes in encoder values
+    dx = medfilt(dx_raw, size=5)  # remove big, single frame spikes in encoder values
     dx = np.cumsum(dx)  # wheel rotations
 
     time = time[:len(dx)]

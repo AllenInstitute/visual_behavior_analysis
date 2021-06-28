@@ -588,9 +588,13 @@ def container_cell_matching_percent_heatmap_df(ophys_container_id):
     stage_order = [valid_container_csid_df[valid_container_csid_df.ophys_experiment_id == expt].stage_name_lims.values[0] for expt
                    in expt_order]
     stage_order = ['None' if stage == np.nan else stage for stage in stage_order]
-    pivot_perc = container_exp_pair_matching_df.pivot_table(index="exp1_stage_name", columns="exp2_stage_name", values="perc_matched")
-    pivot_perc = pivot_perc.reindex(stage_order, axis=1)
-    pivot_perc = pivot_perc.reindex(stage_order)
+    # pivot_perc = container_exp_pair_matching_df.pivot_table(index="exp1_stage_name", columns="exp2_stage_name", values="perc_matched")
+    # pivot_perc = pivot_perc.reindex(stage_order, axis=1)
+    # pivot_perc = pivot_perc.reindex(stage_order)
+    pivot_perc = container_exp_pair_matching_df.pivot_table(index="exp1", columns="exp2",
+                                                            values="perc_matched")
+    pivot_perc = pivot_perc.reindex(expt_order, axis=1)
+    pivot_perc = pivot_perc.reindex(expt_order)
     return pivot_perc
 
 
@@ -609,11 +613,16 @@ def container_cell_matching_count_heatmap_df(ophys_container_id):
     """
     container_exp_pair_matching_df = container_experiment_pairs_valid_cell_matching(ophys_container_id)
     valid_container_csid_df = get_valid_csids_from_lims_for_container(ophys_container_id)
-    stage_order = stage_name_ordered_list(valid_container_csid_df, stage_name_column="stage_name_lims")
-    pivot_count = container_exp_pair_matching_df.pivot_table(index="exp1_stage_name", columns="exp2_stage_name", values="matched_count")
-    pivot_count = pivot_count.reindex(stage_order, axis=1)
-    pivot_count = pivot_count.reindex(stage_order)
-    return pivot_count
+    # stage_order = stage_name_ordered_list(valid_container_csid_df, stage_name_column="stage_name_lims")
+    expt_order = np.sort(valid_container_csid_df.ophys_experiment_id.unique())
+    # pivot_count = container_exp_pair_matching_df.pivot_table(index="exp1_stage_name", columns="exp2_stage_name", values="matched_count")
+    # pivot_count = pivot_count.reindex(stage_order, axis=1)
+    # pivot_count = pivot_count.reindex(stage_order)
+    pivot_perc = container_exp_pair_matching_df.pivot_table(index="exp1", columns="exp2",
+                                                            values="matched_count")
+    pivot_perc = pivot_perc.reindex(expt_order, axis=1)
+    pivot_perc = pivot_perc.reindex(expt_order)
+    return pivot_perc
 
 
 # ROI PROCESSING (EXP AND CONTAINER, SEG & CELL MATCHING, DFF)
@@ -811,6 +820,7 @@ def dff_robust_noise(dff_trace):
 
     sigma_MAD_conversion_factor = 1.4826
 
+    dff_trace = np.asarray(dff_trace)
     # first pass removing big pos peaks
     dff_trace = dff_trace[dff_trace < 1.5 * np.abs(dff_trace.min())]
     MAD = np.median(np.abs(dff_trace - np.median(dff_trace)))  # MAD = median absolute deviation
@@ -833,6 +843,7 @@ def dff_robust_signal(dff_trace, robust_standard_deviation):
     Returns:
         [type] -- [description]
     """
+    dff_trace = np.asarray(dff_trace)
     median_deviation = np.median(dff_trace[(dff_trace - np.median(dff_trace)) > robust_standard_deviation])
     return median_deviation
 
@@ -851,8 +862,12 @@ def compute_robust_snr_on_dataframe(dataframe):
                         "robust_signal"
                         "robust_snr"
     """
-    dataframe["robust_noise"] = dataframe["dff"].apply(lambda x: dff_robust_noise(x))
-    dataframe["robust_signal"] = dataframe.apply(lambda x: dff_robust_signal(x["dff"], x["robust_noise"]), axis=1 )
+    if 'dff' in dataframe.columns:
+        column = 'dff'
+    elif 'filtered_events' in dataframe.columns:
+        column = 'filtered_events'
+    dataframe["robust_noise"] = dataframe[column].apply(lambda x: dff_robust_noise(x))
+    dataframe["robust_signal"] = dataframe.apply(lambda x: dff_robust_signal(x[column], x["robust_noise"]), axis=1 )
     dataframe["robust_snr"] = dataframe["robust_signal"] / dataframe["robust_noise"]
     return dataframe
 
@@ -1162,3 +1177,58 @@ def container_FOV_information(ophys_container_id):
     dfs = [pmt_settings, intensity_info, snr_summary]
     merged_df = reduce(lambda left, right: pd.merge(left, right, on=["ophys_experiment_id", "ophys_container_id"]), dfs)
     return merged_df
+
+
+def add_dff_stats_to_specimen_table(session):
+    '''
+    merges statistics about df/f to the cell specimen table
+    input is session object
+    returns the cell_specimen_table with additional columns describing dff trace stats
+    '''
+    dff_stats = []
+    for idx, row in session.cell_specimen_table.reset_index().iterrows():
+        roi_id = row['cell_roi_id']
+        dff = session.dff_traces.query('cell_roi_id == @roi_id')['dff'].iloc[0]
+        dff_stats_single = pd.Series(dff).describe().to_dict()
+        dff_stats_single.update({
+            'cell_roi_id': roi_id
+        })
+        dff_stats.append(dff_stats_single)
+    dff_stats = pd.DataFrame(dff_stats)
+    df = session.cell_specimen_table.reset_index().merge(
+        dff_stats,
+        left_on='cell_roi_id',
+        right_on='cell_roi_id'
+    )
+    if 'cell_specimen_id' not in df.columns:
+        df['cell_specimen_id'] = None
+    return df
+
+
+def add_hits_to_licks(licks, trials):
+    """
+    Adds a column to the licks table to indicate which licks were hits, resulting in a reward
+    :param licks: BehaviorOphysSession or BehaviorSession licks dataframe
+    :param trials: BehaviorOphysSession or BehaviorSession trials dataframe
+    :return: annotated licks dataframe
+    """
+    licks['hit'] = False
+    hit_licks = [lick_time[0] for lick_time in trials[trials.hit == True].lick_times.values]
+    indices = licks[licks.timestamps.isin(hit_licks)].index.values
+    licks.at[indices, 'hit'] = True
+    return licks
+
+
+def add_bouts_to_licks(licks):
+    """
+    Adds columns to licks dataframe for inter flash lick difference and whether a lick was in a bout, given the median inter lick interval
+    :param licks: BehaviorOphysSession or BehaviorSession licks dataframe
+    :return: annotated licks dataframe
+    """
+    licks['inter_flash_lick_diff'] = [licks.iloc[row].timestamps - licks.iloc[row - 1].timestamps if row != 0 else np.nan for row in range(len(licks))]
+    lick_times = licks.timestamps.values
+    median_inter_lick_interval = np.median(np.diff(np.hstack(list(lick_times))))
+    licks['lick_in_bout'] = False
+    indices = licks[licks.inter_flash_lick_diff < median_inter_lick_interval * 3].index
+    licks.at[indices, 'lick_in_bout'] = True
+    return licks
