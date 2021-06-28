@@ -4,8 +4,6 @@ import numpy as np
 import pytest
 from visual_behavior.ophys.dataset import extended_stimulus_processing as esp
 
-CIRCLECI = os.environ.get('PYTHONPATH', '').startswith('/home/circleci')
-
 @pytest.mark.parametrize('flash_times, other_times, expected', [
     (
         np.array([1, 2, 3, 4, 5], dtype=float),

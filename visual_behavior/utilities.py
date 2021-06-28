@@ -113,40 +113,211 @@ class RisingEdge():
         return self.firstall
 
 
-# -> metrics
-def trial_number_limit(p, N):
+def trial_number_limit(P, N):
+    '''
+    Parameters
+    ----------
+    P : float
+        response probability, bounded by 0 and 1
+    N : int
+        number of trials used in the response probability calculation
+
+    Returns
+    -------
+    P_corrected : float
+        The response probability after adjusting for the trial count
+
+    An important point to note about d' is that the metric will be infinite with
+    perfect performance, given that Z(0) = -infinity and Z(1) = infinity.
+    Low trial counts exacerbate this issue. For example, with only one sample of a go-trial,
+    the hit rate will either be 1 or 0. Macmillan and Creelman [1] offer a correction on the hit and false
+    alarm rates to avoid infinite values whereby the response probabilities (P) are bounded by
+    functions of the trial count, N:
+
+        1/(2N) < P < 1 - 1/(2N)
+
+    Thus, for the example of just a single trial, the trial-corrected hit rate would be 0.5.
+    Or after only two trials, the hit rate could take on the values of 0.25, 0.5, or 0.75.
+
+    [1] Macmillan, Neil A., and C. Douglas Creelman. Detection theory: A user's guide. Psychology press, 2004.
+
+    Examples
+    --------
+    Passing in a response probability of 1 and trial count of 10 will lead to a reduced
+    estimate of the response probability:
+
+    >>> trial_number_limit(1, 10)
+    0.95
+
+    A higher trial count increases the bounds on the estimate:
+
+    >>> trial_number_limit(1, 50)
+    0.99
+
+    At the limit, the bounds are 0 and 1:
+
+    >>> trial_number_limit(1, np.inf)
+    1.0
+
+    The bounds apply for estimates near 0 also:
+
+    >>> trial_number_limit(0, 1)
+    0.5
+
+    >>> trial_number_limit(0, 2)
+    0.25
+
+    >>> trial_number_limit(0, 3)
+    0.16666666666666666
+
+    Note that passing a probality that is inside of the bounds
+    results in no change to the passed probability:
+
+    >>> trial_number_limit(0.25, 3)
+    0.25
+    '''
     if N == 0:
         return np.nan
-    if not pd.isnull(p):
-        p = np.max((p, 1. / (2 * N)))
-        p = np.min((p, 1 - 1. / (2 * N)))
-    return p
+    if not pd.isnull(P):
+        P = np.max((P, 1. / (2 * N)))
+        P = np.min((P, 1 - 1. / (2 * N)))
+    return P
 
 
-def dprime(hit_rate, fa_rate, limits=(0.01, 0.99)):
-    """ calculates the d-prime for a given hit rate and false alarm rate
+def dprime(hit_rate=None, fa_rate=None, go_trials=None, catch_trials=None, limits=False):
+    '''
+    calculates the d-prime for a given hit rate and false alarm rate
 
     https://en.wikipedia.org/wiki/Sensitivity_index
 
     Parameters
     ----------
-    hit_rate : float
+    hit_rate : float or vector of floats
         rate of hits in the True class
-    fa_rate : float
+    fa_rate : float or vector of floats
         rate of false alarms in the False class
-    limits : tuple, optional
-        limits on extreme values, which distort. default: (0.01,0.99)
+    go_trials: vector of booleans
+        responses on all go trials (hit = True, miss = False)
+    catch_trials: vector of booleans
+        responses on all catch trials (false alarm = True, correct reject = False)
+    limits : boolean or tuple, optional
+        limits on extreme values, which can cause d' to overestimate on low trial counts.
+        False (default) results in limits of (0.01,0.99) to avoid infinite calculations
+        True results in limits being calculated based on trial count (only applicable if go_trials and catch_trials are passed)
+        (limits[0], limits[1]) results in specified limits being applied
+
+    Note: user must pass EITHER hit_rate and fa_rate OR go_trials and catch trials
 
     Returns
     -------
     d_prime
 
-    """
+    Examples
+    --------
+    With hit and false alarm rates of 0 and 1, if we pass in limits of (0, 1) we are
+    allowing the raw probabilities to be used in the dprime calculation.
+    This will result in an infinite dprime:
+
+    >> dprime(hit_rate = 1.0, fa_rate = 0.0, limits = (0, 1))
+    np.inf
+
+    If we do not pass limits, the default limits of 0.01 and 0.99 will be used
+    which will convert the hit rate of 1 to 0.99 and the false alarm rate of 0 to 0.01.
+    This will prevent the d' calcluation from being infinite:
+
+    >>> dprime(hit_rate = 1.0, fa_rate = 0.0)
+    4.6526957480816815
+
+    If the hit and false alarm rates are already within the limits, the limits don't apply
+    >>> dprime(hit_rate = 0.6, fa_rate = 0.4)
+    0.5066942062715994
+
+    Alternately, instead of passing in pre-computed hit and false alarm rates,
+    we can pass in a vector of results on go-trials and catch-trials.
+    Then, if we call `limits = True`, the limits will be calculated based
+    on the number of trials in both the go and catch trial vectors
+    using the `trial_number_limit` function.
+
+    For example, for low trial counts, even perfect performance (hit rate = 1, false alarm rate = 0)
+    leads to a lower estimate of d', given that we have low confidence in the hit and false alarm rates;
+
+    >>> dprime(
+            go_trials = [1, 1, 1],
+            catch_trials = [0, 0],
+            limits = True
+            )
+    1.6419113162977828
+
+    At the limit, if we have only one sample of both trial types, the `trial_number_limit`
+    pushes our estimated response probability to 0.5 for both the hit and false alarm rates,
+    giving us a d' value of 0:
+
+    >>> dprime(
+            go_trials = [1],
+            catch_trials = [0],
+            limits = True
+            )
+    0.0
+
+    And with higher trial counts, the `trial_number_limit` allows the hit and false alarm
+    rates to get asymptotically closer to 0 and 1, leading to higher values of d'.
+    For example, for 10 trials of each type:
+
+    >>> dprime(
+            go_trials = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+            catch_trials = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            limits = True
+        )
+    3.289707253902945
+
+    Or, if we had 20 hit trials and 10 false alarm trials:
+
+    >>> dprime(
+            go_trials = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+            catch_trials = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            limits = True
+        )
+    3.604817611491527
+
+    Note also that Boolean vectors can be passed:
+
+    >>> dprime(
+            go_trials = [True, False, True, True, False],
+            catch_trials = [False, True, False, False, False],
+            limits = True
+        )
+    1.094968336708714
+    '''
+
+    assert hit_rate is not None or go_trials is not None, 'must either a specify `hit_rate` or pass a boolean vector of `go_trials`'
+    assert fa_rate is not None or catch_trials is not None, 'must either a specify `fa_rate` or pass a boolean vector of `catch_trials`'
+
+    assert hit_rate is None or go_trials is None, 'do not pass both `hit_rate` and a boolean vector of `go_trials`'
+    assert fa_rate is None or catch_trials is None, 'do not pass both `fa_rate` and a boolean vector of `catch_trials`'
+
+    assert not (hit_rate is not None and limits == True), 'limits can only be calculated if a go_trials vector is passed, not a hit_rate'
+    assert not (fa_rate is not None and limits == True), 'limits can only be calculated if a catch_trials vector is passed, not a fa_rate'
+
+    # calculate hit and fa rates as mean of boolean vectors
+    if hit_rate is None:
+        hit_rate = np.mean(go_trials)
+    if fa_rate is None:
+        fa_rate = np.mean(catch_trials)
+
     Z = norm.ppf
 
-    # Limit values in order to avoid d' infinity
-    hit_rate = np.clip(hit_rate, limits[0], limits[1])
-    fa_rate = np.clip(fa_rate, limits[0], limits[1])
+    if limits == False:
+        # if limits are False, apply default
+        limits = (0.01, 0.99)
+    elif limits == True:
+        # clip the hit and fa rate based on trial count
+        hit_rate = trial_number_limit(hit_rate, len(go_trials))
+        fa_rate = trial_number_limit(fa_rate, len(catch_trials))
+
+    if limits != True:
+        # Limit values in order to avoid d' infinity
+        hit_rate = np.clip(hit_rate, limits[0], limits[1])
+        fa_rate = np.clip(fa_rate, limits[0], limits[1])
 
     # keep track of nan locations
     hit_rate = pd.Series(hit_rate)
@@ -698,3 +869,63 @@ def event_triggered_response(df, parameter, event_times, time_key=None, t_before
         melted['event_number'] = melted['variable'].map(lambda s: s.split('event_')[1].split('_')[0])
         melted['event_time'] = melted['variable'].map(lambda s: s.split('t=')[1])
         return melted.drop(columns=['variable']).rename(columns={'value': parameter})
+
+
+def annotate_licks(dataset, inplace=False, lick_bout_ili=0.7):
+    '''
+    annotates the licks dataframe with some additional columns
+
+    arguments:
+        dataset (BehaviorSession or BehaviorOphysSession object): an SDK session object
+        inplace (boolean): If True, operates in place (default = False)
+        lick_bout_ili (float): interval between licks required to label a lick as the start/end of a licking bout (default = 0.7)
+
+    returns (only if inplace=False):
+        pandas.DataFrame with columns:
+            timestamps (float): timestamp of every lick
+            frame (int): frame of every lick
+            pre_ili (float): time without any licks before current lick
+            post_ili (float): time without any licks after current lick
+            bout_start (boolean): True if licks is first in bout, False otherwise
+            bout_end (boolean): True if licks is last in bout, False otherwise
+            licks_in_bout (int): Number of licks in current lick bout
+            lick_bout_number (int): A count of the number of discrete lick bouts. All licks in a given bout share a value
+            bout_rewarded (bool): True if a reward was delivered within the current bout
+            hit (bool): True if the lick was a hit lick (lick that triggered a reward)
+    '''
+    if inplace:
+        licks_df = dataset.licks
+    else:
+        licks_df = dataset.licks.copy()
+
+    licks_df['pre_ili'] = licks_df['timestamps'] - licks_df['timestamps'].shift(fill_value=0)
+    licks_df['post_ili'] = licks_df['timestamps'].shift(periods=-1, fill_value=np.inf) - licks_df['timestamps']
+    licks_df['bout_start'] = licks_df['pre_ili'] > lick_bout_ili
+    licks_df['bout_end'] = licks_df['post_ili'] > lick_bout_ili
+
+    # count licks in every bout, add a lick bout number
+    licks_df['licks_in_bout'] = np.nan
+    licks_df['lick_bout_number'] = np.nan
+    licks_df['bout_rewarded'] = np.nan
+    lick_bout_number = 0
+    for bout_start_index, row in licks_df.query('bout_start').iterrows():
+        bout_end_index = licks_df.iloc[bout_start_index:].query('bout_end').index[0]
+        licks_df.at[bout_start_index, 'licks_in_bout'] = bout_end_index - bout_start_index + 1
+
+        licks_df.at[bout_start_index, 'lick_bout_number'] = lick_bout_number
+        lick_bout_number += 1
+
+        bout_start_time = licks_df.loc[bout_start_index]['timestamps']  # NOQA F841
+        bout_end_time = licks_df.loc[bout_end_index]['timestamps']  # NOQA F841
+        licks_df.at[bout_start_index, 'bout_rewarded'] = float(len(dataset.rewards.query('timestamps >= @bout_start_time and timestamps <= @bout_end_time')) >= 1)
+
+    licks_df['licks_in_bout'] = licks_df['licks_in_bout'].fillna(method='ffill').astype(int)
+    licks_df['lick_bout_number'] = licks_df['lick_bout_number'].fillna(method='ffill').astype(int)
+    licks_df['bout_rewarded'] = licks_df['bout_rewarded'].fillna(method='ffill').astype(bool)
+
+    # add a column that designates hit licks (lick that triggers reward)
+    licks_df['hit'] = False
+    licks_df.loc[licks_df.query('bout_rewarded').drop_duplicates(subset='lick_bout_number').index, 'hit'] = True
+
+    if inplace == False:
+        return licks_df
