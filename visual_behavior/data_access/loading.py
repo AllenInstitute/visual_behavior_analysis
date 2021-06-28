@@ -2233,18 +2233,11 @@ def build_container_df(experiment_table):
     # table = get_filtered_ophys_experiment_table().sort_values(by='date_of_acquisition', ascending=False).reset_index()
     ophys_container_ids = table['ophys_container_id'].unique()
     list_of_dicts = []
-<<<<<<< HEAD
     for container_id in container_ids:
         subset = table.query('container_id == @container_id').sort_values(
             by='date_of_acquisition',
             ascending=True
         ).drop_duplicates('ophys_session_id').reset_index()
-=======
-    for ophys_container_id in ophys_container_ids:
-        subset = table.query('ophys_container_id == @ophys_container_id').sort_values(by='date_of_acquisition',
-                                                                                      ascending=True).drop_duplicates(
-            'ophys_session_id').reset_index()
->>>>>>> master
         temp_dict = {
             'ophys_container_id': ophys_container_id,
             # 'container_workflow_state': table.query('ophys_container_id == @ophys_container_id')['container_workflow_state'].unique()[0],
