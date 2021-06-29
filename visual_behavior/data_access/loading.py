@@ -183,7 +183,7 @@ def get_filtered_ophys_experiment_table(include_failed_data=False, release_data_
         behavior_session_table = cache.get_behavior_session_table()
         experiments = reformat.reformat_experiments_table(experiments, behavior_session_table)
         experiments = filtering.limit_to_production_project_codes(experiments)
-        experiments = experiments.set_index('ophys_experiment_id')
+        # experiments = experiments.set_index('ophys_experiment_id')
         experiments.to_csv(os.path.join(get_cache_dir(), 'filtered_ophys_experiment_table.csv'))
         experiments = experiments.reset_index()
         experiments = experiments.drop(columns='index', errors='ignore')
