@@ -505,10 +505,10 @@ def plot_pref_stim_responses(df, vmax=0.3, colorbar=False, ax=None, save_dir=Non
     xticks, xticklabels = sf.get_xticks_xticklabels(trace, frame_rate, interval_sec=interval_sec, window=window)
     ax.set_xticks(xticks)
     ax.set_xticklabels([int(xticklabel) for xticklabel in xticklabels])
-    if response_array.shape[0] > 500:
-        interval = 500
-    else:
-        interval = 50
+    # if response_array.shape[0] > 500:
+    #     interval = 500
+    # else:
+    #     interval = 50
     ax.set_yticks((0, response_array.shape[0]))
     ax.set_yticklabels((0, response_array.shape[0]), fontsize=14)
     ax.set_xlabel('time after change (s)', fontsize=16)

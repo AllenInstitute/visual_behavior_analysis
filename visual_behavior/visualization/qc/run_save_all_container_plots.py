@@ -1,7 +1,9 @@
 import os
-from visual_behavior.data_access import loading as data_loading
-import argparse
 import sys
+import argparse
+import numpy as np
+from visual_behavior.data_access import loading as loading
+
 sys.path.append('/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/src/')
 from pbstools import pbstools # NOQA E402
 

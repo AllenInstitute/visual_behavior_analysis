@@ -286,6 +286,7 @@ def get_filtered_behavior_session_table(release_data_only=True):
     behavior_sessions = behavior_sessions.set_index('behavior_session_id')
     return behavior_sessions
 
+
 def get_second_release_candidates():
     full_cache = bpc.from_lims()
     full_experiment_table = full_cache.get_ophys_experiment_table()
@@ -296,17 +297,15 @@ def get_second_release_candidates():
         (full_experiment_table.experiment_workflow_state == 'passed')]
     print(len(unreleased_complete_multiscope), 'un-released VisualBehaviorMultiscope where container_workflow_state == completed')
 
-
-    unreleased_not_failed_4x2 = full_experiment_table[(full_experiment_table.project_code.isin(['VisualBehaviorMultiscope4areasx2d'])&
-                                                   (full_experiment_table.container_workflow_state!='failed')&
-                                                   (full_experiment_table.experiment_workflow_state=='passed'))]
+    unreleased_not_failed_4x2 = full_experiment_table[(full_experiment_table.project_code.isin(['VisualBehaviorMultiscope4areasx2d']) &
+                                                       (full_experiment_table.container_workflow_state != 'failed') &
+                                                       (full_experiment_table.experiment_workflow_state == 'passed'))]
     print(len(unreleased_not_failed_4x2), 'un-released VisualBehaviorMultiscope4areasx2d where container_workflow_state != failed')
 
     release_candidates = pd.concat([unreleased_complete_multiscope, unreleased_not_failed_4x2])
     print(len(release_candidates), 'release candidates')
 
     return release_candidates
-
 
 
 # LOAD OPHYS DATA FROM SDK AND EDIT OR ADD METHODS/ATTRIBUTES WITH BUGS OR INCOMPLETE FEATURES #
