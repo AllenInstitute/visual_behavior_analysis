@@ -102,7 +102,7 @@ def get_plot(_id, plot_type, display_level):
     try:
         encoded_image = base64.b64encode(open(plot_image_path, 'rb').read())
     except FileNotFoundError:
-        print('not found, container_id = {}, plot_type = {}'.format(_id, plot_type))
+        print('not found, ophys_container_id = {}, plot_type = {}'.format(_id, plot_type))
         qc_plot_folder = '/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots'
         plot_folder = os.path.join(qc_plot_folder, '{}_plots'.format(display_level))
 
@@ -124,13 +124,13 @@ def generate_plot_inventory():
     container_table = CONTAINER_TABLE
     plots = load_container_plot_options()
     list_of_dicts = []
-    for container_id in container_table['container_id'].values:
-        d = {'container_id': container_id}
+    for ophys_container_id in container_table['ophys_container_id'].values:
+        d = {'ophys_container_id': ophys_container_id}
         for entry in plots:
             plot_type = entry['value']
-            d.update({plot_type: os.path.exists(get_plot_path(container_id, plot_type, 'container'))})
+            d.update({plot_type: os.path.exists(get_plot_path(ophys_container_id, plot_type, 'container'))})
         list_of_dicts.append(d)
-    return pd.DataFrame(list_of_dicts).set_index('container_id').sort_index()
+    return pd.DataFrame(list_of_dicts).set_index('ophys_container_id').sort_index()
 
 
 def make_plot_inventory_heatmap(plot_inventory):
@@ -183,20 +183,20 @@ def get_motion_corrected_movie_path(oeid):
     except Exception as e:
         return e
 
-def get_motion_corrected_movie_paths(container_id):
+def get_motion_corrected_movie_paths(ophys_container_id):
     et = loading.get_filtered_ophys_experiment_table().reset_index()
     paths = []
-    for oeid in et.query('container_id == @container_id').sort_values(by='ophys_experiment_id')['ophys_experiment_id']:
+    for oeid in et.query('ophys_container_id == @ophys_container_id').sort_values(by='ophys_experiment_id')['ophys_experiment_id']:
         paths.append(
             '/'+get_motion_corrected_movie_path(oeid)
         )
     return paths
 
 
-def print_motion_corrected_movie_paths(container_id):
+def print_motion_corrected_movie_paths(ophys_container_id):
     et = loading.get_filtered_ophys_experiment_table().reset_index()
     lines = []
-    for oeid in et.query('container_id == @container_id')['ophys_experiment_id']:
+    for oeid in et.query('ophys_container_id == @ophys_container_id')['ophys_experiment_id']:
         movie_path = loading.get_motion_corrected_movie_h5_location(oeid).replace('motion_corrected_video.h5', 'motion_preview.10x.mp4')
         lines.append('ophys experiment ID = {}\n'.format(oeid))
         lines.append("LINUX PATH:")

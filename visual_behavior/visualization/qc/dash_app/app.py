@@ -263,7 +263,7 @@ def look_up_container(oeid):
         if len(res) == 0:
             return 'Not Found'
         else:
-            return res.iloc[0]['container_id']
+            return res.iloc[0]['ophys_container_id']
     except ValueError:
         return ''
 
@@ -375,7 +375,7 @@ def toggle_modal(n1, n2, n3, is_open):
 def fill_container_id(selected_rows, display_level):
     idx = selected_rows[0]
     if display_level == 'container':
-        return container_table.iloc[idx]['container_id']
+        return container_table.iloc[idx]['ophys_container_id']
     elif display_level == 'session':
         return session_table.iloc[idx]['ophys_session_id']
 
@@ -404,8 +404,8 @@ def update_qc_attributes(display_level):
 )
 def experiment_id_checklist(row_index, display_level):
     if display_level == 'container':
-        container_id = container_table.iloc[row_index[0]]['container_id']  # noqa: F841 - Flake8 doesn't recognize the variable being used below
-        subset = experiment_table.query('container_id == @container_id').sort_values(by='ophys_experiment_id')[['session_type', 'ophys_experiment_id']].reset_index(drop=True)
+        ophys_container_id = container_table.iloc[row_index[0]]['ophys_container_id']  # noqa: F841 - Flake8 doesn't recognize the variable being used below
+        subset = experiment_table.query('ophys_container_id == @ophys_container_id').sort_values(by='ophys_experiment_id')[['session_type', 'ophys_experiment_id']].reset_index(drop=True)
         options = [{'label': '{} {}'.format(subset.loc[i]['session_type'], subset.loc[i]['ophys_experiment_id']), 'value': subset.loc[i]['ophys_experiment_id']} for i in range(len(subset))]
     elif display_level == 'session':
         experiments = list(np.array(session_table.iloc[row_index[0]]['ophys_experiment_ids, paired']).flatten())
@@ -712,7 +712,7 @@ def update_frame_N(row_index, plot_types, display_level, input_id):
     try:
         plot_type = plot_types[idx]
         if display_level == 'container':
-            _id = container_table.iloc[row_index[0]]['container_id']
+            _id = container_table.iloc[row_index[0]]['ophys_container_id']
         elif display_level == 'session':
             _id = session_table.iloc[row_index[0]]['ophys_session_id']
 
@@ -735,8 +735,8 @@ for i in range(10):
 def update_link_text_N(row_index, path_style, input_id):
     '''a function to update plot titles'''
     idx = int(input_id.split('link_')[1])
-    container_id = container_table.iloc[row_index[0]]['container_id']
-    link_list = functions.get_motion_corrected_movie_paths(container_id)
+    ophys_container_id = container_table.iloc[row_index[0]]['ophys_container_id']
+    link_list = functions.get_motion_corrected_movie_paths(ophys_container_id)
     if path_style == 'windows':
         link_list = [v.replace('/','\\') for v in link_list]
     try:
@@ -757,8 +757,8 @@ for i in range(10):
 def update_link_destination_N(row_index, input_id):
     '''a function to update plot titles'''
     idx = int(input_id.split('link_')[1])
-    container_id = container_table.iloc[row_index[0]]['container_id']
-    link_list = functions.get_motion_corrected_movie_paths(container_id)
+    ophys_container_id = container_table.iloc[row_index[0]]['ophys_container_id']
+    link_list = functions.get_motion_corrected_movie_paths(ophys_container_id)
     try:
         return 'file:{}'.format(link_list[idx])
     except IndexError:
@@ -773,8 +773,8 @@ for i in range(10):
 def update_link_visibility_N(row_index, input_id):
     '''a function to update plot titles'''
     idx = int(input_id.split('link_')[1])
-    container_id = container_table.iloc[row_index[0]]['container_id']
-    link_list = functions.get_motion_corrected_movie_paths(container_id)
+    ophys_container_id = container_table.iloc[row_index[0]]['ophys_container_id']
+    link_list = functions.get_motion_corrected_movie_paths(ophys_container_id)
     try:
         link_text = link_list[idx]
         print("Returning True, idx = {}".format(idx))
@@ -854,7 +854,7 @@ if __name__ == '__main__':
                Input('plot_selection_dropdown', 'value'),
                ])
 def print_movie_paths(row_index, plot_types):
-    container_id = container_table.iloc[row_index[0]]['container_id']
-    output_text = functions.print_motion_corrected_movie_paths(container_id)
+    ophys_container_id = container_table.iloc[row_index[0]]['ophys_container_id']
+    output_text = functions.print_motion_corrected_movie_paths(ophys_container_id)
     print(output_text)
     return output_text
