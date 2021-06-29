@@ -17,7 +17,7 @@ import visual_behavior.ophys.dataset.extended_stimulus_processing as esp
 def add_mouse_seeks_fail_tags_to_experiments_table(experiments):
     mouse_seeks_report_file_base = r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots'
     # report_file = 'ophys_session_log_011221.xlsx'
-    report_file = 'ophys_session_log_06162021.xlsx'
+    report_file = 'ophys_session_log_210629.xlsx'
     vb_report_path = os.path.join(mouse_seeks_report_file_base, report_file)
     vb_report_df = pd.read_excel(vb_report_path)
 
@@ -186,9 +186,9 @@ def reformat_experiments_table(experiments, behavior_session_table):
     # replace session types that are NaN with string None
     experiments.at[experiments[experiments.session_type.isnull()].index.values, 'session_type'] = 'None'
     experiments = add_mouse_seeks_fail_tags_to_experiments_table(experiments)
-    experiments = add_session_type_exposure_number_to_experiments_table(experiments)
-    experiments = add_image_set_exposure_number_to_experiments_table(experiments, behavior_session_table)
-    experiments = add_omission_exposure_number_to_experiments_table(experiments, behavior_session_table)
+    # experiments = add_session_type_exposure_number_to_experiments_table(experiments)
+    # experiments = add_image_set_exposure_number_to_experiments_table(experiments, behavior_session_table)
+    # experiments = add_omission_exposure_number_to_experiments_table(experiments, behavior_session_table)
     experiments = add_model_outputs_availability_to_table(experiments)
     if 'level_0' in experiments.columns:
         experiments = experiments.drop(columns='level_0')
