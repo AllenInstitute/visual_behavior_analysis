@@ -77,37 +77,3 @@ def test_foraging2_translator_schema(foraging2_data_stage4_2018_05_10):
     trials = create_extended_dataframe(**core_data)
     make_daily_figure(trials)
     make_summary_figure(trials,core_data['metadata']['mouseid'])
-
-
-@pytest.mark.slow
-def test_foraging_translator_schema(behavioral_session_output_fixture):
-
-    core_data = foraging.data_to_change_detection_core(
-        behavioral_session_output_fixture
-    )
-
-    core_data['metadata']['behavior_session_uuid'] = create_session_uuid(
-        str(core_data['metadata']['mouseid']),
-        core_data['metadata']['startdatetime'],
-    )
-
-    _test_core_data_schemas(core_data)
-
-
-    behavioral_session_output_fixture.pop('image_dict')
-
-    core_data = foraging.data_to_change_detection_core(
-        behavioral_session_output_fixture
-    )
-
-    core_data['metadata']['behavior_session_uuid'] = create_session_uuid(
-        str(core_data['metadata']['mouseid']),
-        core_data['metadata']['startdatetime'],
-    )
-
-    _test_core_data_schemas(core_data)
-    generate_qc_report(core_data)
-    change_detection_metrics(core_data)
-    trials = create_extended_dataframe(**core_data)
-    make_daily_figure(trials)
-    make_summary_figure(trials,core_data['metadata']['mouseid'])
