@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 from visual_behavior.data_access import from_lims
 import visual_behavior.database as db
+from visual_behavior.data_access import loading
 import argparse
 
 from tqdm import tqdm
@@ -350,6 +351,14 @@ def is_csid_in_folder(csid, folder):
     return csid in csids
 
 
+def roi_has_dff(cell_roi_id):
+    '''
+    checks to see if a given ROI has deltaF/F (or is NaN)
+    '''
+    dff = loading.get_dff_traces_for_roi(cell_roi_id)
+    return np.all(pd.notnull(dff))
+
+
 def make_single_cell_across_experiment_plot(cell_specimen_id, glm_version, disable_progress_bars=False, saveloc='', return_fig=True):
     '''
     performs all steps to build the plot for a single cell
@@ -411,9 +420,10 @@ def make_cell_matching_across_experiment_plot(cell_specimen_id, experiment_id_to
             'zoomed_mask': vbp.placeAxesOnGrid(cell_session_plot, xspan=[0.55, 1], yspan=[row_start + row_buffer, row_end]),
         }
 
-        text = 'experiment_id = {}, cell in experiment? {}'.format(
-            ophys_experiment_id, 
-            is_cell_in_experiment(cell_specimen_id, experiment)
+        text = 'experiment_id = {}, cell in experiment? {}, valid = {}'.format(
+            ophys_experiment_id,
+            is_cell_in_experiment(cell_specimen_id, experiment),
+            experiment.cell_specimen_table.loc[cell_specimen_id]['valid_roi']
         )
         axes[ophys_experiment_id]['text'].text(0, 0, text, ha='left', va='bottom')
         axes[ophys_experiment_id]['text'].axis('off')
@@ -444,10 +454,28 @@ def make_cell_matching_across_experiment_plot(cell_specimen_id, experiment_id_to
         if is_cell_in_experiment(cell_specimen_id, experiment):
             mask = experiments[ophys_experiment_id].cell_specimen_table.loc[cell_specimen_id]['roi_mask'].astype(float)
             mask[np.where(mask == 0)] = np.nan
-            axes[ophys_experiment_id]['zoomed_mask'].imshow(mask, cmap='Greens_r', alpha=0.75)
+            if experiment.cell_specimen_table.loc[cell_specimen_id]['valid_roi']:
+                cmap = 'Greens_r'
+            else:
+                cmap = 'Reds_r'
+            axes[ophys_experiment_id]['zoomed_mask'].imshow(mask, cmap=cmap, alpha=0.75)
 
-        
-    cell_session_plot.suptitle('cell_specimen_id = {}'.format(cell_specimen_id))
+    experiment_count = len(experiments)
+    # print('about to calculate found_count')
+    # print(len(experiments))
+    # print(cell_specimen_id)
+    # print([cell_specimen_id for experiment in experiments])
+    # print([experiment for experiment in experiments])
+    found_count = sum([is_cell_in_experiment(cell_specimen_id, experiments[oeid]) for oeid in ophys_experiment_ids])
+    valid_count = sum([experiments[oeid].cell_specimen_table.loc[cell_specimen_id]['valid_roi'] for oeid in ophys_experiment_ids])
+    cell_session_plot.suptitle('cre_line = {}\ncell_specimen_id = {}\nfound_count = {}/{}\nvalid_count = {}/{}'.format(
+        experiment.metadata['cre_line'],
+        cell_specimen_id,
+        found_count,
+        experiment_count,
+        valid_count,
+        found_count
+    ))
     cell_session_plot.tight_layout()
 
     return cell_session_plot
