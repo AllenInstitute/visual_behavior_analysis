@@ -384,6 +384,21 @@ def get_general_info_for_ophys_experiment_id(ophys_experiment_id):
     return general_info
 
 
+def get_genotype_from_ophys_experiment_id(ophys_experiment_id):
+    '''
+    gets genotype string for a given ophys_experiment_id
+    '''
+    qs = '''
+        select donors.full_genotype
+        from ophys_experiments as oe
+        JOIN ophys_sessions os on os.id = oe.ophys_session_id
+        JOIN specimens on specimens.id = os.specimen_id
+        JOIN donors on donors.id = specimens.donor_id
+        where oe.id = {}
+    '''
+    return db.lims_query(qs.format(ophys_experiment_id))
+
+
 # for ophys_session_id
 
 
