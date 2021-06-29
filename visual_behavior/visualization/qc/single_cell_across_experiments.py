@@ -1,5 +1,5 @@
 import mindscope_utilities
-import mindscope_utilities.ophys as ophys
+import mindscope_utilities.visual_behavior_ophys as ophys
 import visual_behavior_glm.GLM_analysis_tools as gat
 import visual_behavior_glm.GLM_visualization_tools as gvt
 import allensdk.brain_observatory.behavior.behavior_project_cache as bpc
@@ -380,6 +380,77 @@ def make_single_cell_across_experiment_plot(cell_specimen_id, glm_version, disab
     else:
         print('plot for csid {} already exists in {}'.format(cell_specimen_id, saveloc))
 
+
+def make_cell_matching_across_experiment_plot(cell_specimen_id, experiment_id_to_highlight=None, disable_progress_bar=False, saveloc='', return_fig=True):
+    '''
+    makes a set of plots showing only the fields of view, highlighting the cell ROI when found
+    '''
+    print('making plot for cell_specimen_id = {}'.format(cell_specimen_id))
+    cell_specimen_id = int(cell_specimen_id)
+    ophys_experiment_ids = get_all_experiments_ids_for_cell(cell_specimen_id)
+    experiments = get_experiments(ophys_experiment_ids, disable_progress_bar=disable_progress_bar)
+
+    row_buffer = 0.025
+
+    ophys_experiment_ids = list(experiments.keys())
+
+    n_rows = len(ophys_experiment_ids)
+
+    cell_session_plot = plt.figure(figsize=(5, 4 * len(ophys_experiment_ids)))
+    axes = {}
+    for row, ophys_experiment_id in tqdm(enumerate(ophys_experiment_ids), total=len(ophys_experiment_ids), desc='populating plot axes for each experiment', disable=disable_progress_bar):
+
+        experiment = experiments[ophys_experiment_id]
+
+        row_start = row / n_rows
+        row_end = (row + 1) / n_rows
+
+        axes[ophys_experiment_id] = {
+            'text': vbp.placeAxesOnGrid(cell_session_plot, xspan=[0, 1], yspan=[row_start, row_start + row_buffer]),
+            'mask': vbp.placeAxesOnGrid(cell_session_plot, xspan=[0, 0.45], yspan=[row_start + row_buffer, row_end]),
+            'zoomed_mask': vbp.placeAxesOnGrid(cell_session_plot, xspan=[0.55, 1], yspan=[row_start + row_buffer, row_end]),
+        }
+
+        text = 'experiment_id = {}, cell in experiment? {}'.format(
+            ophys_experiment_id, 
+            is_cell_in_experiment(cell_specimen_id, experiment)
+        )
+        axes[ophys_experiment_id]['text'].text(0, 0, text, ha='left', va='bottom')
+        axes[ophys_experiment_id]['text'].axis('off')
+
+        axes[ophys_experiment_id]['mask'].imshow(experiment.max_projection, cmap='gray')
+        axes[ophys_experiment_id]['mask'].set_xticks([])
+        axes[ophys_experiment_id]['mask'].set_yticks([])
+        axes[ophys_experiment_id]['mask'].set_title('full max proj.', fontsize=8)
+
+        left, top, width, height = get_bounding_box(cell_specimen_id)
+        add_bounding_box(left, top, width, height, axes[ophys_experiment_id]['mask'])
+
+        axes[ophys_experiment_id]['zoomed_mask'].imshow(experiment.max_projection, cmap='gray')
+        axes[ophys_experiment_id]['zoomed_mask'].set_xticks([])
+        axes[ophys_experiment_id]['zoomed_mask'].set_yticks([])
+        axes[ophys_experiment_id]['zoomed_mask'].set_title('zoomed max proj.', fontsize=8)
+        add_bounding_box(left, top, width, height, axes[ophys_experiment_id]['zoomed_mask'])
+
+        axes[ophys_experiment_id]['zoomed_mask'].set_xlim(left - 10, left + width + 10)
+        axes[ophys_experiment_id]['zoomed_mask'].set_ylim(top + height + 10, top - 10, )
+
+        if ophys_experiment_id == experiment_id_to_highlight:
+            for ax_label in ['mask','zoomed_mask']:
+                for spine in axes[ophys_experiment_id][ax_label].spines.values():
+                    spine.set_edgecolor('green')
+                    spine.set_linewidth(5)
+
+        if is_cell_in_experiment(cell_specimen_id, experiment):
+            mask = experiments[ophys_experiment_id].cell_specimen_table.loc[cell_specimen_id]['roi_mask'].astype(float)
+            mask[np.where(mask == 0)] = np.nan
+            axes[ophys_experiment_id]['zoomed_mask'].imshow(mask, cmap='Greens_r', alpha=0.75)
+
+        
+    cell_session_plot.suptitle('cell_specimen_id = {}'.format(cell_specimen_id))
+    cell_session_plot.tight_layout()
+
+    return cell_session_plot
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='make a single cell plot')
