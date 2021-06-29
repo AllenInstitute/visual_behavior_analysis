@@ -20,11 +20,10 @@ job_settings = {'queue': 'braintv',
                 }
 
 
-container_ids = data_loading.get_ophys_container_ids(release_data_only=True)
+# container_ids = data_loading.get_ophys_container_ids(release_data_only=False)
 
-import pandas as pd
-df = pd.read_csv(r"/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/experiments_to_consider.csv")
-container_ids = df.ophys_container_id.unique()
+experiments = loading.get_second_release_candidates()
+container_ids = np.sort(experiments.ophys_container_id.unique())
 
 if __name__ == "__main__":
     args = parser.parse_args()
