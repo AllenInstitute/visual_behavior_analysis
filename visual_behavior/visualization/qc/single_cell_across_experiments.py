@@ -390,11 +390,18 @@ def make_single_cell_across_experiment_plot(cell_specimen_id, glm_version, disab
         print('plot for csid {} already exists in {}'.format(cell_specimen_id, saveloc))
 
 
+def is_valid(cell_specimen_id, experiment):
+    if is_cell_in_experiment(cell_specimen_id, experiment):
+        return experiment.cell_specimen_table.loc[cell_specimen_id]['valid_roi']
+    else:
+        return False
+
+
 def make_cell_matching_across_experiment_plot(cell_specimen_id, experiment_id_to_highlight=None, disable_progress_bar=False, saveloc='', return_fig=True):
     '''
     makes a set of plots showing only the fields of view, highlighting the cell ROI when found
     '''
-    print('making plot for cell_specimen_id = {}'.format(cell_specimen_id))
+    print('making plot for cell_specimen_id = {}, experiment_id = {}'.format(cell_specimen_id, experiment_id_to_highlight))
     cell_specimen_id = int(cell_specimen_id)
     ophys_experiment_ids = get_all_experiments_ids_for_cell(cell_specimen_id)
     experiments = get_experiments(ophys_experiment_ids, disable_progress_bar=disable_progress_bar)
@@ -420,10 +427,11 @@ def make_cell_matching_across_experiment_plot(cell_specimen_id, experiment_id_to
             'zoomed_mask': vbp.placeAxesOnGrid(cell_session_plot, xspan=[0.55, 1], yspan=[row_start + row_buffer, row_end]),
         }
 
+        in_exp = is_cell_in_experiment(cell_specimen_id, experiment)
         text = 'experiment_id = {}, cell in experiment? {}, valid = {}'.format(
             ophys_experiment_id,
-            is_cell_in_experiment(cell_specimen_id, experiment),
-            experiment.cell_specimen_table.loc[cell_specimen_id]['valid_roi']
+            in_exp,
+            is_valid(cell_specimen_id, experiment)
         )
         axes[ophys_experiment_id]['text'].text(0, 0, text, ha='left', va='bottom')
         axes[ophys_experiment_id]['text'].axis('off')
@@ -467,7 +475,7 @@ def make_cell_matching_across_experiment_plot(cell_specimen_id, experiment_id_to
     # print([cell_specimen_id for experiment in experiments])
     # print([experiment for experiment in experiments])
     found_count = sum([is_cell_in_experiment(cell_specimen_id, experiments[oeid]) for oeid in ophys_experiment_ids])
-    valid_count = sum([experiments[oeid].cell_specimen_table.loc[cell_specimen_id]['valid_roi'] for oeid in ophys_experiment_ids])
+    valid_count = sum([is_valid(cell_specimen_id, experiments[oeid]) for oeid in ophys_experiment_ids])
     cell_session_plot.suptitle('cre_line = {}\ncell_specimen_id = {}\nfound_count = {}/{}\nvalid_count = {}/{}'.format(
         experiment.metadata['cre_line'],
         cell_specimen_id,
