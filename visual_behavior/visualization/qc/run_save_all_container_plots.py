@@ -22,15 +22,8 @@ job_settings = {'queue': 'braintv',
                 }
 
 
-# container_ids = data_loading.get_ophys_container_ids(release_data_only=False)
+container_ids = data_loading.get_ophys_container_ids(release_data_only=False)
 
-experiments = loading.get_second_release_candidates()
-container_ids = np.sort(experiments.ophys_container_id.unique())
-container_ids = [1064844054, 1074913336, 1074913347, 1074913351, 1074913333,
-       1074913344, 1079028120, 1079028126, 1079028123, 1079028129,
-       1099411364, 1107904102, 1107904122, 1107904108, 1107904115,
-       1103781342, 1103781358, 1099410644, 1037672801, 1037672792,
-       1103538561, 1086191447, 1086191451, 1086191457]
 
 if __name__ == "__main__":
     args = parser.parse_args()
