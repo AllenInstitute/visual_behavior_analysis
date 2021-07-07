@@ -77,7 +77,8 @@ os.mkdir(stdout_location) if not os.path.exists(stdout_location) else None
 conda_environment = 'visbeh'
 
 jobname0 = 'SVM'
-jobname = f'{jobname0}:{session_id}'
+jobname = f'{jobname0}'
+# jobname = f'{jobname0}:{session_id}'
 
 
 python_file = r"/home/farzaneh.najafi/analysis_codes/visual_behavior_analysis/visual_behavior/decoding_population/svm_images_main_pre_pbs.py" #r"/home/farzaneh.najafi/analysis_codes/multiscope_fn/svm_main_pbs.py"
@@ -101,7 +102,7 @@ python_path = os.path.join(
 
 # instantiate a Slurm object    
 slurm = Slurm(
-    array = list_all_sessions_valid
+    array = range(len(list_all_sessions_valid)),
     cpus_per_task=4,
     job_name=jobname,
     output=f'{stdout_location}/{Slurm.JOB_ARRAY_MASTER_ID}_{Slurm.JOB_ARRAY_ID}.out',
