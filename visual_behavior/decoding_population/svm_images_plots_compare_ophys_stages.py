@@ -14,7 +14,13 @@ Created on Tue Apr 27 12:09:05 2021
 if trial_type =='hits_vs_misses':
     whichStages = [1,3,4,6]
 else:    
-    whichStages = [1,2,3,4,5,6] #[1,3,4,6] #[1,2,3] #[1,2] #[3,4] #stages to plot on top of each other to compare
+    if summary_which_comparison == 'novelty': 
+        whichStages = [1,3,4,6] #[1,2,3,4,5,6] #[1,2] #[3,4] #stages to plot on top of each other to compare
+    elif summary_which_comparison == 'engagement':
+        whichStages = [1,2,3] #
+    elif summary_which_comparison == 'all':
+        whichStages = [1,2,3,4,5,6]
+        
 
 ttest_actShfl_stages = 1 # 0: plot ttet comparison of actual and shuffled (it will be the default when len(whichStages)=1)); 1: plot ttest comparison between ophys stages, as long as len(whichStages)=2
 show_depth_stats = 1 # if 1, plot the bars that show anova/tukey comparison across depths

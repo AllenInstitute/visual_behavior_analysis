@@ -1,16 +1,14 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-This code is adapted from svm_main_pbs.py to decode images (multi-class classification). [svm_main_pbs.py was to decode the state at each time point from the spontaneous activity; used for finding flash and omission signal.]
-
-Run svm_init_images_pbs.py to set vars needed here.
+Run svm_init.py to set vars needed here.
 
 Performs SVM analysis on a particular experiment of a session.
 Saves the results in: dir_svm = '/allen/programs/braintv/workgroups/nc-ophys/Farzaneh'
-    if using same_num_neuron_all_planes, results will be saved in: dir_svm/ 'same_n_neurons_all_planes'
+    if using same_num_neuron_all_planes, results will be saved in: dir_svm/ 'same_num_neurons_all_planes'
 
 
-Created on Wed Oct  7 16:01:17 2020
+Created on Fri Aug  2 15:24:17 2019
 @author: farzaneh
 """
 
@@ -25,12 +23,12 @@ from svm_funs import *
 
 
 #%%
-def svm_main_images_pbs(data_list, experiment_ids_valid, df_data, session_trials, trial_type, dir_svm, kfold, frames_svm, numSamples, saveResults, cols_basic, cols_svm, project_codes, to_decode='current', svm_blocks=-100, engagement_pupil_running = np.nan, use_events=False, same_num_neuron_all_planes=0, use_balanced_trials=0):
+def svm_main_images_pbs(data_list, experiment_ids_valid, df_data, session_trials, trial_type, dir_svm, kfold, frames_svm, numSamples, saveResults, cols_basic, cols_svm, project_codes, to_decode='current', svm_blocks=-100, engagement_pupil_running = np.nan, use_events=False, same_num_neuron_all_planes=0, use_balanced_trials=0, use_spont_omitFrMinus1=1):
     
     def svm_run_save(traces_fut_now, image_labels_now, iblock_trials_blocks, svm_blocks, now, engagement_pupil_running, pupil_running_values, use_balanced_trials, project_codes): #, same_num_neuron_all_planes, norm_to_max_svm, svm_total_frs, n_neurons, numSamples, num_classes, samps_bef, regType, kfold, cre, saveResults):
         '''
-        #traces_fut_now = traces_fut_0
-        #image_labels_now = image_labels_0
+        traces_fut_now = traces_fut_0
+        image_labels_now = image_labels_0
         iblock_trials_blocks = [np.nan, []]
         iblock_trials_blocks = [iblock, trials_blocks]
         '''
@@ -142,18 +140,38 @@ def svm_main_images_pbs(data_list, experiment_ids_valid, df_data, session_trials
             else:
                 print(f'\n===== BLOCK {iblock} : running SVM on frame {nAftOmit} relative to trial onset =====\n')
 
-            # x
-            m = traces_fut_now[samps_bef + nAftOmit,:,:] # units x trials ; neural activity on the frame of omission
+                
+            if trial_type == 'omissions_baseline': # decode activity at each frame vs. baseline
+                # x
+                if use_spont_omitFrMinus1==0: # if 0, classify omissions against spontanoues frames (the initial gray screen); if 1, classify omissions against the frame right before the omission
+                    rand_spont_frs_num_omit = rnd.permutation(spont_frames.shape[1])[:num_omissions] # pick num_omissions random spontanous frames
+                    g = spont_frames[:,rand_spont_frs_num_omit] # units x trials
+                elif use_spont_omitFrMinus1==1:
+                    g = traces_fut_now[samps_bef - 1,:,:] # units x trials ; neural activity in the frame before the omission (gray screen)
+                    rand_spont_frs_num_omit = np.nan
 
+                m = traces_fut_now[samps_bef + nAftOmit,:,:] # units x trials ; neural activity on the frame of omission
+
+                # now set the x matrix for svm
+                X_svm = np.concatenate((g, m), axis=1) # units x (gray + omission)
+                
+            
+            else:
+
+                # x
+                m = traces_fut_now[samps_bef + nAftOmit,:,:] # units x trials ; neural activity on the frame of omission
+
+                # now set the x matrix for svm
+                X_svm = m # units x trials
+
+            
             # y
-            m_y = image_labels_now
-
-            # now set the x matrix for svm
-            X_svm = m # units x trials
-            Y_svm = m_y # trials
+            Y_svm = image_labels_now # trials
 
             print(X_svm.shape, Y_svm.shape)
 
+            
+            
 
             #%% Z score (make each neuron have mean 0 and std 1 across all trials)
 
@@ -393,9 +411,15 @@ def svm_main_images_pbs(data_list, experiment_ids_valid, df_data, session_trials
         svmn = f'{e}svm_decode_changes_from_nochanges'
     elif trial_type=='hits_vs_misses':
         svmn = f'{e}svm_decode_hits_from_misses'        
+    elif trial_type == 'omissions_baseline':
+        svmn = 'svm_gray_omit'
+        if use_spont_omitFrMinus1==0:
+            svmn = svmn + '_spontFrs'
     else:
         svmn = f'{e}svm_decode_{to_decode}_image_from_{trial_type}' # 'svm_gray_omit'
+#     print(svmn)
         
+    
 #     kfold = 5 #2 #10 # KFold divides all the samples in  groups of samples, called folds (if , this is equivalent to the Leave One Out strategy), of equal sizes (if possible). The prediction function is learned using  folds, and the fold left out is used for test.
     regType = 'l2'
     
@@ -499,7 +523,7 @@ def svm_main_images_pbs(data_list, experiment_ids_valid, df_data, session_trials
             image_indices_previous_flash = all_stim_indices_previous_flash
             image_indices_next_flash = all_stim_indices_next_flash
 
-        elif trial_type=='omissions': # omissions:
+        elif trial_type=='omissions' or trial_type=='omissions_baseline': # omissions:
             image_data = df_data[df_data['image_name']=='omitted']
             image_indices_previous_flash = all_stim_indices_previous_flash[all_stim_indices==8]
             image_indices_next_flash = all_stim_indices_next_flash[all_stim_indices==8]
@@ -554,11 +578,11 @@ def svm_main_images_pbs(data_list, experiment_ids_valid, df_data, session_trials
 
 
         #%% Set the vector of image labels which will be used for decoding
-        if trial_type=='changes_vs_nochanges': # change, then no-change will be concatenated
+        if trial_type=='changes_vs_nochanges' or trial_type == 'omissions_baseline': # change, then no-change will be concatenated
             a = np.full((len(image_indices)), 0)
             b = np.full((len(image_indices)), 1)
             image_labels = np.concatenate((a,b))
-
+                    
         else:
 
             if to_decode == 'current':
@@ -789,8 +813,10 @@ def svm_main_images_pbs(data_list, experiment_ids_valid, df_data, session_trials
                 traces_fut = traces_fut[:,:,masknan]
             else:
                 image_labels = copy.deepcopy(image_labels0)
-        
+
+
             num_classes = len(np.unique(image_labels)) # number of classes to be classified by the svm
+
             print(f'Number of classes in SVM: {num_classes}')
 
             
@@ -837,7 +863,7 @@ def svm_main_images_pbs(data_list, experiment_ids_valid, df_data, session_trials
 
             ######################################################
             # reset n_trials
-            n_trials = traces_fut.shape[2] 
+            n_trials = len(image_labels) #traces_fut.shape[2] # note: when trial_type='omissions_baseline', traces_fut includes half the trials at this point; so we go with image_labels to get the number of trials.
                 
             # double check reshape above worked fine.
             '''
@@ -1027,13 +1053,11 @@ plt.plot(x, a_chance, color='b', marker='.', label='chance')
 
 plt.legend(loc='center left', bbox_to_anchor=(1, .7))                
 plt.ylabel('% Classification accuracy')
-plt.xlabel('Frame after trial onset');
+plt.xlabel('Time after trial onset (sec)');
 plt.vlines(0, np.min(a_chance), np.max(a_train))
 
 
 """
-
-
 
 
 
@@ -1062,7 +1086,8 @@ to_decode = str(sys.argv[3])
 trial_type = str(sys.argv[4])
 svm_blocks = int(sys.argv[5]) 
 engagement_pupil_running = int(sys.argv[6]) 
-use_balanced_trials = int(sys.argv[7]) 
+use_spont_omitFrMinus1 = int(sys.argv[7]) 
+use_balanced_trials = int(sys.argv[8]) 
 
 # trial_type = 'images' # 'omissions', 'images', 'changes' # what trials to use for SVM analysis # the population activity of these trials at time time_win will be used to decode the image identity of flashes that occurred at their time 0 (if to_decode='current') or 750ms before (if to_decode='previous').
 # to_decode = 'previous' # 'current' (default): decode current image.    'previous': decode previous image.    'next': decode next image. # remember for omissions, you cant do "current", bc there is no current image, it has to be previous or next!
@@ -1079,7 +1104,7 @@ print('\n\n======== Analyzing session index %d ========\n' %(isess))
 # project_codes = ['VisualBehaviorMultiscope'] # session_numbers = [4]
 project_codes = ['VisualBehavior']
 
-time_win = [-.5, .75] # [-.3, 0] # timewindow (relative to trial onset) to run svm; this will be used to set frames_svm # analyze image-evoked responses
+time_win = [-.5, 1.5] #[-.5, .75] # [-.3, 0] # timewindow (relative to trial onset) to run svm; this will be used to set frames_svm # analyze image-evoked responses
 # time_trace goes from -.5 to .65sec in the image-aligned traces.
 
 kfold = 5 #2 #10 # KFold divides all the samples in  groups of samples, called folds (if , this is equivalent to the Leave One Out strategy), of equal sizes (if possible). The prediction function is learned using  folds, and the fold left out is used for test.
@@ -1092,16 +1117,18 @@ saveResults = 1 # 0 #
 
 print(f'Analyzing {project_codes} data')
 if trial_type=='changes_vs_nochanges':
-    print(f'Decoding changs from no-changes, activity at {time_win} ms!')
+    print(f'Decoding changs from no-changes, activity at {time_win} ms.')
 elif trial_type=='hits_vs_misses':
-    print(f'Decoding hits from misses, activity at {time_win} ms!')    
+    print(f'Decoding hits from misses, activity at {time_win} ms.')    
+elif trial_type=='omissions_baseline':
+    print(f'Decoding activity at *each time point* from *baseline* activity at {time_win} ms.')
 else:    
-    print(f'Decoding *{to_decode}* image from *{trial_type}* activity at {time_win} ms!')
+    print(f'Decoding *{to_decode}* image from *{trial_type}* activity at {time_win} s.')
 print(f'kfold = {kfold}')    
 if use_events:
-    print(f'Using events')
+    print(f'Using events.')
 else:
-    print(f'Using DF/F')
+    print(f'Using DF/F.')
 if svm_blocks==-100:
     print(f'Running SVM on the whole session.')
 elif svm_blocks==-1:
@@ -1575,11 +1602,16 @@ else:
 print('\n\n======================== Analyzing session %d, %d/%d ========================\n' %(session_id, isess, len(list_all_sessions_valid)))
 
 # Use below if you set session_data and session_trials above: for VIP and SST
-svm_main_images_pbs(data_list, experiment_ids_valid, df_data, session_trials, trial_type, dir_svm, kfold, frames_svm, numSamples, saveResults, cols_basic, cols_svm, project_codes, to_decode, svm_blocks, engagement_pupil_running, use_events, same_num_neuron_all_planes, use_balanced_trials)
+svm_main_pbs(data_list, experiment_ids_valid, df_data, session_trials, trial_type, dir_svm, kfold, frames_svm, numSamples, saveResults, cols_basic, cols_svm, project_codes, to_decode, svm_blocks, engagement_pupil_running, use_events, same_num_neuron_all_planes, use_balanced_trials, use_spont_omitFrMinus1)
 
 # svm_main_images_pbs(data_list, df_data, session_trials, trial_type, dir_svm, kfold, frames_svm, numSamples, saveResults, cols_basic, cols_svm, to_decode, svm_blocks, use_events, same_num_neuron_all_planes)
 
 # Use below if you set stimulus_response_df_allexp above: for Slc (can be also used for other cell types too; but we need it for Slc, as the concatenated dfs could not be set for it)
 # svm_main_images_pbs(data_list, stimulus_response_df_allexp, dir_svm, frames_svm, numSamples, saveResults, cols_basic, cols_svm, same_num_neuron_all_planes=0)
+
+
+
+
+
 
 

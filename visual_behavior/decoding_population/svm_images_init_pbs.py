@@ -16,15 +16,17 @@ import os
 
 #%% Define vars for svm_images analysis
 
-to_decode = 'next' # 'current' (default): decode current image.    'previous': decode previous image.    'next': decode next image.     # remember for omissions, you cant do "current", bc there is no current image, it has to be previous or next!
-trial_type = 'omissions' #'hits_vs_misses' #'changes_vs_nochanges' # 'images_omissions', 'images', 'changes', 'omissions', 'changes_vs_nochanges', 'hits_vs_misses' # what trials to use for SVM analysis # the population activity of these trials at time time_win will be used to decode the image identity of flashes that occurred at their time 0 (if to_decode='current') or 750ms before (if to_decode='previous').   # if 'changes_vs_nochanges', we will decode image changes from no changes; in this case set to_decode to 'current', but it doesnt really matter.
+to_decode = 'current' # 'current' (default): decode current image.    'previous': decode previous image.    'next': decode next image.     # remember for omissions, you cant do "current", bc there is no current image, it has to be previous or next!
+trial_type = 'omissions_baseline' #'omissions' #'omissions_baseline' #'hits_vs_misses' #'changes_vs_nochanges' # 'images_omissions', 'images', 'changes', 'omissions', 'changes_vs_nochanges', 'hits_vs_misses' # what trials to use for SVM analysis # the population activity of these trials at time time_win will be used to decode the image identity of flashes that occurred at their time 0 (if to_decode='current') or 750ms before (if to_decode='previous').   # if 'changes_vs_nochanges', we will decode image changes from no changes; in this case set to_decode to 'current', but it doesnt really matter. # 'omissions_baseline' # decode activity at each frame vs. baseline (ie the frame before omission unless use_spont_omitFrMinus1 = 1 (see below))
 #### NOTE: svm codes will result in decoding 9 classes (8 images + omissions) when to_decode='previous' and trial_type='images'. (it wont happen when to_decode='current' because above we only include images for trial_type='images'; it also wont happen when trial_type='omissions' or 'changes', because changes and omissions are not preceded by omissions (although rarely we do see double omissions))
 # if you want to also decode omissions (in addition to the 8 images) when to_decode='current', you should set trial_type='images_omissions'; HOWEVER, I dont think it's a good idea to mix image and omission aligned traces because omission aligned traces may have prediction/error signal, so it wont be easy to interpret the results bc we wont know if the decoding reflects image-evoked or image-prediciton/error related signals.
 
 use_events = 1 #0 #1 # whether to run the analysis on detected events (inferred spikes) or dff traces.
 svm_blocks = -100 #-1 #-100 # 2 # -101: run the analysis only on engaged trials # -1: divide trials based on engagement # 2 # number of trial blocks to divide the session to, and run svm on. # set to -100 to run svm analysis on the whole session
-use_balanced_trials = 0 #1 #only effective when num_classes=2 #if 1, use same number of trials for each class; only applicable when we have 2 classes (binary classification).
+use_balanced_trials = 1 #1 #only effective when num_classes=2 #if 1, use same number of trials for each class; only applicable when we have 2 classes (binary classification).
+
 engagement_pupil_running = 1 # np.nan or 0,1,2 for engagement, pupil, running: which metric to use to define engagement? only effective if svm_blocks=-1
+use_spont_omitFrMinus1 = 1 # applicable when trial_type='omissions_baseline' # if 0, classify omissions against randomly picked spontanoues frames (the initial gray screen); if 1, classify omissions against the frame right before the omission 
 
 
 # cre2ana = 'slc' # slc, sst, vip # will be used if session_numbers[0]<0 (we will use dataset and responseAnalysis (instead of the concatenated dfs) to set stim_response_df)
@@ -203,9 +205,10 @@ for isess in range(len(list_all_sessions_valid)): # [0,1]: # isess = -35 # sessi
     python_arg4 = '%s ' %trial_type
     python_arg5 = '%s ' %svm_blocks    
     python_arg6 = '%s ' %engagement_pupil_running
-    python_arg7 = '%s' %use_balanced_trials
+    python_arg7 = '%s ' %use_spont_omitFrMinus1
+    python_arg8 = '%s' %use_balanced_trials
     
-    print(python_arg1 + python_arg2 + python_arg3 + python_arg4 + python_arg5 + python_arg6 + python_arg7)
+    print(python_arg1 + python_arg2 + python_arg3 + python_arg4 + python_arg5 + python_arg6 + python_arg7 + python_arg8)
     
     
     #%%    
@@ -216,7 +219,7 @@ for isess in range(len(list_all_sessions_valid)): # [0,1]: # isess = -35 # sessi
     PythonJob(
         python_file,
         python_executable = '/home/farzaneh.najafi/anaconda3/envs/visbeh/bin/python',
-        python_args = python_arg1 + python_arg2 + python_arg3 + python_arg4 + python_arg5 + python_arg6 + python_arg7,
+        python_args = python_arg1 + python_arg2 + python_arg3 + python_arg4 + python_arg5 + python_arg6 + python_arg7 + python_arg8,
 #         python_args = str(session_data) + str(session_trials), # session_id experiment_ids validity_log_all dir_svm frames_svm numSamples saveResults use_ct_traces same_num_neuron_all_planes',
 #         python_args = isess, # session_id experiment_ids validity_log_all dir_svm frames_svm numSamples saveResults use_ct_traces same_num_neuron_all_planes',
         conda_env = None,

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-UUSE this code for the correlation analysis.
+USE this code for the correlation analysis.
 USE omissions_traces_peaks_init.py for the population-average analysis.
 
 

@@ -5,7 +5,7 @@ Vars are set in "omissions_traces_peaks_plots_setVars_corr.py"
 
 Here we set vars to make summary plots for mice in each cre line (for individual mouse, also summary across mice)
 
-This function calls  "omissions_traces_peaks_plots_setVars_corr_sumMice.py" to make summary plots for mice.
+This script calls  "omissions_traces_peaks_plots_setVars_corr_sumMice.py" to make summary plots for mice.
 It may also run omissions_traces_peaks_plots_setVars_corr_eachMouse.py to make plots for each mouse, if do_single_mouse_plots=1 (set in omissions_traces_peaks_plots_setVars_corr.py)
 
 Note that the plotting functions are defined in "omissions_traces_peaks_plots_setVars_corr.py"

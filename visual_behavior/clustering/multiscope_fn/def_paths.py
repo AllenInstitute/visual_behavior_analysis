@@ -1,3 +1,10 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+dirAna: directory containing analysis files
+dir0: directory for saving figures
+"""
+
 import socket
 import os
 

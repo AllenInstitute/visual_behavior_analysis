@@ -16,7 +16,7 @@ def set_mousetrainhist_allsess2an_whatsess(all_sess, dir_server_me, all_mice_id,
     analysis_name2 = 'mouse_trainHist_all2'
     name = 'all_sess_%s_.' %(analysis_name2) 
     allSessName2, h5_files = all_sess_set_h5_fileName(analysis_name2, dir_server_me)
-    # print(allSessName2)
+    print(allSessName2)
 
     # load mouse_trainHist_all2
     mouse_trainHist_all2 = pd.read_hdf(allSessName2) #, key='all_sess') #'svm_vars')        ## Load all_sess dataframe

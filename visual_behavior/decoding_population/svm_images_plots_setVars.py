@@ -90,15 +90,26 @@ dir_server_me = '/allen/programs/braintv/workgroups/nc-ophys/Farzaneh'
 dir0 = '/home/farzaneh/OneDrive/Analysis'
 
 
-#%%
-project_codes = ['VisualBehaviorMultiscope'] #['VisualBehavior'], ['VisualBehaviorMultiscope'] # ['VisualBehaviorMultiscope'] # ['VisualBehaviorMultiscope', 'VisualBehaviorTask1B', 'VisualBehavior', 'VisualBehaviorMultiscope4areasx2d']
+
+#%% Set the following vars
+
+project_codes = ['VisualBehavior'], ['VisualBehaviorMultiscope'] # ['VisualBehaviorMultiscope'] # both projects: #['VisualBehaviorMultiscope'] # ['VisualBehaviorMultiscope', 'VisualBehaviorTask1B', 'VisualBehavior', 'VisualBehaviorMultiscope4areasx2d']
+
+to_decode = 'current' # 'current': decode current image. # 'previous': decode previous image. # 'next': decode next image.
+trial_type = 'changes_vs_nochanges' # 'omissions' # 'changes' # 'hits_vs_misses' # 'changes_vs_nochanges' # 'images'# what trials to use for SVM analysis # the population activity of these trials at time time_win will be used to decode the image identity of flashes that occurred at their time 0 (if to_decode='current') or 750ms before (if to_decode='previous'). # eg 'omissions' means to use omission-aligned traces 
+# Note: when trial_type is 'hits_vs_misses' or 'changes_vs_nochanges', to_decode will be 'current' and wont really make sense.
+# in all other cases, we decode "to_decode" image from "trial_type", e.g. we decode 'current' image from 'changes' (ie change-aligned traces)
 
 svm_blocks = np.nan #-101 #-1: divide trials based on engagement # -101: use only engaged epochs for svm analysis # number of trial blocks to divide the session to, and run svm on. # set to np.nan to run svm analysis on the whole session
-use_events = True # False #whether to run the analysis on detected events (inferred spikes) or dff traces.
+use_events = True # True # False #whether to run the analysis on detected events (inferred spikes) or dff traces.
 
-to_decode = 'current' # 'current' : decode current image.    'previous': decode previous image.    'next': decode next image.
-trial_type = 'changes' #'hits_vs_misses' #'changes_vs_nochanges' # 'omissions', 'images', 'changes', 'changes_vs_nochanges' # what trials to use for SVM analysis # the population activity of these trials at time time_win will be used to decode the image identity of flashes that occurred at their time 0 (if to_decode='current') or 750ms before (if to_decode='previous').
-use_balanced_trials = 0 #1 # if 1, use same number of trials for each class; only applicable when we have 2 classes (binary classification).
+dosavefig = 1 # 0
+
+summary_which_comparison = 'novelty' # 'novelty' # 'engagement' # 'all' # determins sessions to use for plotting summary of ophys stages in svm_images_plots_compare_ophys_stages.py # 'novelty' will use [1,3,4,6] # 'engagement' will use [1,2,3] # 'all' will use [1,2,3,4,5,6]
+
+
+
+#%% The following vars we usually don't change, but you can if you want to.
 
 baseline_subtract = 1 # subtract the baseline (CA average during baseline, ie before time 0) from the evoked CA (classification accuracy)
 
@@ -109,10 +120,15 @@ superimpose_all_cre = False # plot all cre lines on the same figure
 plot_testing_shufl = 0 # if 0 correlate testing data with strategy dropout index; if 1, correlated shuffled data with strategy dropout index
 
 
-dosavefig = 1 # 0
 plot_single_mouse = 0 # if 1, make plots for each mouse
 fmt = '.pdf' # '.png' # '.svg'
 
+if trial_type == 'hits_vs_misses' or trial_type == 'changes_vs_nochanges':
+    use_balanced_trials = 1 #1 # if 1, use same number of trials for each class; only applicable when we have 2 classes (binary classification; eg decoding changes from no changes, or hits from misses; but when decoding images, it should be set to 0, because we are doing multi-class classification.).
+elif trial_type == 'changes' or trial_type == 'omissions' or trial_type == 'images':
+    use_balanced_trials = 0
+    
+    
 if use_events:
     time_win = [0, .4]
 else:
