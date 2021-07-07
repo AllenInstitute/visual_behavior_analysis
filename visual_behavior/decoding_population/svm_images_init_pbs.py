@@ -58,116 +58,56 @@ list_all_sessions_valid = sessions_ctDone
 print(f'{len(list_all_sessions_valid)}: Number of de-crosstalked sessions for analysis')
 
 
-#%% Get the list of all 8 experiments for each session, regardless of being valid
-
-experiments_table = loading.get_filtered_ophys_experiment_table(include_failed_data=True)
-experiments_table = experiments_table.reset_index('ophys_experiment_id')
-
-metadata_all = experiments_table[experiments_table['ophys_session_id'].isin(list_all_sessions_valid)==True] # metadata_all = experiments_table[np.in1d(experiments_table['ophys_session_id'].values, list_all_sessions_valid)]
-metadata_all.shape
-metadata_all.shape[0]/8
-
-
-# set the list of experiments for each session in list_all_sessions_valid
-if project_codes == ['VisualBehavior']:
-    list_all_experiments = metadata_all['ophys_experiment_id'].values
-                                  
-else:
-    try:
-        list_all_experiments = np.reshape(metadata_all['ophys_experiment_id'].values, (8, len(list_all_sessions_valid)), order='F').T    
-
-    except Exception as E:
-        print(E)
-
-        list_all_experiments = []
-        for sess in list_all_sessions_valid: # sess = list_all_sessions_valid[0]
-            es = metadata_all[metadata_all['ophys_session_id']==sess]['ophys_experiment_id'].values
-            list_all_experiments.append(es)
-        list_all_experiments = np.array(list_all_experiments)
-
-        list_all_experiments.shape
-
-        b = np.array([len(list_all_experiments[i]) for i in range(len(list_all_experiments))])
-        no8 = list_all_sessions_valid[b!=8]
-        if len(no8)>0:
-            print(f'The following sessions dont have all the 8 experiments, excluding them! {no8}')    
-            list_all_sessions_valid = list_all_sessions_valid[b==8]
-            list_all_experiments = list_all_experiments[b==8]
-
-            print(list_all_sessions_valid.shape, list_all_experiments.shape)
-
-        list_all_experiments = np.vstack(list_all_experiments)
-
-    list_all_experiments = np.sort(list_all_experiments) # sorts across axis 1, ie experiments within each session (does not change the order of sessions!)
-    
-print(list_all_experiments.shape)
-
-
-
-
-#%%
-'''
-# below is not needed anymore; just set session_numbers to a negative value so we load stim response df for cre lines (not the concat version that does not exist for all mice)
-session_numbers = [-10] #[4] # for slc, set to a value <0 (because for slc the concatenated stim response dfs could not be saved, so we have to load a different metadata file below)
-
-
-#%% Load the pickle file which includes session and metadata information.
-
-dir_server_me = '/allen/programs/braintv/workgroups/nc-ophys/Farzaneh'
-dir_svm = os.path.join(dir_server_me, 'SVM')
-a = '_'.join(project_codes)
-if session_numbers[0]<0:
-    b = cre2ana
-else:
-    b = '_'.join([str(session_numbers[i]) for i in range(len(session_numbers))])
-filen = os.path.join(dir_svm, f'metadata_basic_{a}_{b}')
-print(filen)
-
-
-### load the pickle file
-if session_numbers[0]>0:
-    pkl = open(filen, 'rb')
-    dict_se = pickle.load(pkl)
-    # metadata_basic = pickle.load(pkl)
-
-    list_all_sessions_valid = dict_se['list_all_sessions_valid']
-else:
-    pkl = open(filen, 'rb')
-    metadata_basic = pickle.load(pkl)
-    list_all_sessions_valid = metadata_basic[metadata_basic['valid']]['session_id'].unique()
-'''
-
-
 
     
-#%% Set vars for the cluster
+    
+    
+#%% Define slurm vars   
 
-import sys
-from pbstools import PythonJob # flake8: noqa: E999
-#sys.path.append('/allen/programs/braintv/workgroups/nc-ophys/nick.ponvert/src/pbstools')
-#import platform
-#if platform.system() == 'Linux':
-#    sys.path.append('/allen/programs/braintv/workgroups/nc-ophys/Doug/pbstools')
+from simple_slurm import Slurm
+
+# define the job record output folder
+stdout_location = '/allen/programs/braintv/workgroups/nc-ophys/Farzaneh/ClusterJobs/SVMJobs' #os.path.join(os.path.expanduser("~"), 'job_records')
+
+# make the job record location if it doesn't already exist
+os.mkdir(stdout_location) if not os.path.exists(stdout_location) else None
+
+    
+# define the conda environment
+conda_environment = 'visbeh'
+
+jobname0 = 'SVM'
+jobname = f'{jobname0}:{session_id}'
 
 
-python_file = r"/home/farzaneh.najafi/analysis_codes/visual_behavior_analysis/visual_behavior/decoding_population/svm_images_main_pbs.py" #r"/home/farzaneh.najafi/analysis_codes/multiscope_fn/svm_main_pbs.py"
+python_file = r"/home/farzaneh.najafi/analysis_codes/visual_behavior_analysis/visual_behavior/decoding_population/svm_images_main_pre_pbs.py" #r"/home/farzaneh.najafi/analysis_codes/multiscope_fn/svm_main_pbs.py"
 
 
-#%%
 
-jobdir = '/allen/programs/braintv/workgroups/nc-ophys/Farzaneh/ClusterJobs/SVMJobs'
-job_settings = {'queue': 'braintv',
-                'mem': '24g', #24g
-                'walltime': '120:00:00', # 48
-                'ppn': 4} #,
-#                'jobdir': jobdir,
-#                }
-job_settings.update({
-                'outfile':os.path.join(jobdir, '$PBS_JOBID.out'),
-                'errfile':os.path.join(jobdir, '$PBS_JOBID.err'),
-                'email': 'farzaneh.najafi@alleninstitute.org',
-                'email_options': 'a'
-                })
+
+# build the python path
+# this assumes that the environments are saved in the user's home directory in a folder called 'anaconda3'
+# this will be user setup dependent.
+python_path = os.path.join(
+    os.path.expanduser("~"), 
+    'anaconda3', 
+    'envs', 
+    conda_environment,
+    'bin',
+    'python'
+)    
+    
+    
+
+# instantiate a Slurm object    
+slurm = Slurm(
+    array = list_all_sessions_valid
+    cpus_per_task=4,
+    job_name=jobname,
+    output=f'{stdout_location}/{Slurm.JOB_ARRAY_MASTER_ID}_{Slurm.JOB_ARRAY_ID}.out',
+)
+
+
 
 
 
@@ -176,7 +116,7 @@ job_settings.update({
 
 # example active session: isess = -2; session_id = 914639324; isess = -30; session_id = 981845703
 cnt_sess = -1     
-for isess in range(len(list_all_sessions_valid)): # [0,1]: # isess = -35 # session_id = list_all_sessions_valid[0] #[num_valid_exps_each_sess == 8][0]
+for isess in range(len(list_all_sessions_valid[:2])): # [0,1]: # isess = -35 # session_id = list_all_sessions_valid[0] #[num_valid_exps_each_sess == 8][0]
     
     session_id = int(list_all_sessions_valid[isess])
 
@@ -186,47 +126,14 @@ for isess in range(len(list_all_sessions_valid)): # [0,1]: # isess = -35 # sessi
           (session_id, cnt_sess, len(list_all_sessions_valid)))    
 
     
-    '''
-    #%% Get session imaging data and session trial data
-    # get cell response data for this session
-    session_data = stimulus_response_data[stimulus_response_data['ophys_session_id']==session_id].copy()
+    
+    
+    
+    ##### call the `sbatch` command to run the jobs
+    slurm.sbatch(f'{python_path} {python_file} --isess {isess} --use_events {use_events} --to_decode {to_decode} --trial_type {trial_type}, --svm_blocks {svm_blocks}, --engagement_pupil_running {engagement_pupil_running}, --use_spont_omitFrMinus1 {use_spont_omitFrMinus1}, --use_balanced_trials {use_balanced_trials}' + Slurm.SLURM_ARRAY_TASK_ID)
 
-    # get stimulus presentations data for this session
-    session_trials = stim_presentations[stim_presentations['ophys_session_id']==session_id].copy()
-    # these two dataframes are linked by stimulus_presentations_id and ophys_session_id
-            
-    python_arg1 = '%s ' %session_data
-    python_arg2 = '%s' %session_trials
-    '''
-
-    python_arg1 = '%s ' %isess
-    python_arg2 = '%s ' %use_events # cast it as boolean!!!
-    python_arg3 = '%s ' %to_decode
-    python_arg4 = '%s ' %trial_type
-    python_arg5 = '%s ' %svm_blocks    
-    python_arg6 = '%s ' %engagement_pupil_running
-    python_arg7 = '%s ' %use_spont_omitFrMinus1
-    python_arg8 = '%s' %use_balanced_trials
-    
-    print(python_arg1 + python_arg2 + python_arg3 + python_arg4 + python_arg5 + python_arg6 + python_arg7 + python_arg8)
     
     
-    #%%    
-    jobname = 'SVM'
-    job_settings['jobname'] = '%s:%s' %(jobname, session_id)
-    
-    
-    PythonJob(
-        python_file,
-        python_executable = '/home/farzaneh.najafi/anaconda3/envs/visbeh/bin/python',
-        python_args = python_arg1 + python_arg2 + python_arg3 + python_arg4 + python_arg5 + python_arg6 + python_arg7 + python_arg8,
-#         python_args = str(session_data) + str(session_trials), # session_id experiment_ids validity_log_all dir_svm frames_svm numSamples saveResults use_ct_traces same_num_neuron_all_planes',
-#         python_args = isess, # session_id experiment_ids validity_log_all dir_svm frames_svm numSamples saveResults use_ct_traces same_num_neuron_all_planes',
-        conda_env = None,
-#        jobname = 'process_{}'.format(session_id),
-        **job_settings
-    ).run(dryrun=False)
-   
     
     
 
