@@ -57,7 +57,6 @@ sessions_ctDone = metadata_valid['ophys_session_id'].unique()
 list_all_sessions_valid = sessions_ctDone
 print(f'{len(list_all_sessions_valid)}: Number of de-crosstalked sessions for analysis')
 
-list_all_sessions_valid = list_all_sessions_valid[:2]
 
     
     
@@ -105,11 +104,11 @@ print(python_path)
 # instantiate a Slurm object    
 slurm = Slurm(
 #     array = range(len(list_all_sessions_valid)),
-    cpus_per_task = 1, #4
+    cpus_per_task = 4, #4
     job_name = jobname,
     output = f'{stdout_location}/{Slurm.JOB_ARRAY_MASTER_ID}_{Slurm.JOB_ARRAY_ID}.out',
     partition = 'braintv',
-    mem = '1g', #'24g'
+    mem = '24g', #'24g'
     time = '120:00:00'
     )
 # c = 1
