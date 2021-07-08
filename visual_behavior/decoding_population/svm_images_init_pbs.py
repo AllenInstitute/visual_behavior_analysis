@@ -102,11 +102,19 @@ python_path = os.path.join(
 
 # instantiate a Slurm object    
 slurm = Slurm(
-    array = range(len(list_all_sessions_valid)),
+#     array = range(len(list_all_sessions_valid)),
     cpus_per_task=4,
     job_name=jobname,
     output=f'{stdout_location}/{Slurm.JOB_ARRAY_MASTER_ID}_{Slurm.JOB_ARRAY_ID}.out',
-)
+    partition = 'braintv',
+    mem = '24g',
+    time = '120:00:00'
+    )
+# c = 1
+
+
+# call the `sbatch` command to run the jobs
+slurm.sbatch('python ../demo_python_scripts/simple_demo.py ' + Slurm.SLURM_ARRAY_TASK_ID)
 
 
 
@@ -117,7 +125,7 @@ slurm = Slurm(
 
 # example active session: isess = -2; session_id = 914639324; isess = -30; session_id = 981845703
 cnt_sess = -1     
-for isess in range(len(list_all_sessions_valid[:2])): # [0,1]: # isess = -35 # session_id = list_all_sessions_valid[0] #[num_valid_exps_each_sess == 8][0]
+for isess in range(len(list_all_sessions_valid)): # [0,1]: # isess = -35 # session_id = list_all_sessions_valid[0] #[num_valid_exps_each_sess == 8][0]
     
     session_id = int(list_all_sessions_valid[isess])
 
@@ -131,7 +139,7 @@ for isess in range(len(list_all_sessions_valid[:2])): # [0,1]: # isess = -35 # s
     
     
     ##### call the `sbatch` command to run the jobs
-    slurm.sbatch(f'{python_path} {python_file} --isess {isess} --use_events {use_events} --to_decode {to_decode} --trial_type {trial_type}, --svm_blocks {svm_blocks}, --engagement_pupil_running {engagement_pupil_running}, --use_spont_omitFrMinus1 {use_spont_omitFrMinus1}, --use_balanced_trials {use_balanced_trials}' + Slurm.SLURM_ARRAY_TASK_ID)
+    slurm.sbatch(f'{python_path} {python_file} --isess {isess} --use_events {use_events} --to_decode {to_decode} --trial_type {trial_type}, --svm_blocks {svm_blocks}, --engagement_pupil_running {engagement_pupil_running}, --use_spont_omitFrMinus1 {use_spont_omitFrMinus1}, --use_balanced_trials {use_balanced_trials}') #  + Slurm.SLURM_ARRAY_TASK_ID
 
     
     

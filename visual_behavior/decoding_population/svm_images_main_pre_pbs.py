@@ -58,7 +58,7 @@ def svm_images_main_pre_pbs(isess, use_events, to_decode, trial_type, svm_blocks
     # time_trace goes from -.5 to .65sec in the image-aligned traces.
 
     kfold = 5 #2 #10 # KFold divides all the samples in  groups of samples, called folds (if , this is equivalent to the Leave One Out strategy), of equal sizes (if possible). The prediction function is learned using  folds, and the fold left out is used for test.
-    numSamples = 2 #50 # numSamples = 2
+    numSamples = 50 # numSamples = 2
     same_num_neuron_all_planes = 0 # if 1, use the same number of neurons for all planes to train svm
     saveResults = 1 # 0 #
 
