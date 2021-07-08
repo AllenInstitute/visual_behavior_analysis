@@ -139,10 +139,15 @@ for isess in range(len(list_all_sessions_valid)): # [0,1]: # isess = -35 # sessi
     
     
     ##### call the `sbatch` command to run the jobs
-    slurm.sbatch(f'{python_path} {python_file} --isess {isess} --use_events {use_events} --to_decode {to_decode} --trial_type {trial_type}, --svm_blocks {svm_blocks}, --engagement_pupil_running {engagement_pupil_running}, --use_spont_omitFrMinus1 {use_spont_omitFrMinus1}, --use_balanced_trials {use_balanced_trials}') #  + Slurm.SLURM_ARRAY_TASK_ID
+    slurm.sbatch(f'{python_path} {python_file} --isess {isess} --use_events {use_events} --to_decode {to_decode} --trial_type {trial_type} --svm_blocks {svm_blocks} --engagement_pupil_running {engagement_pupil_running} --use_spont_omitFrMinus1 {use_spont_omitFrMinus1} --use_balanced_trials {use_balanced_trials}') #  + Slurm.SLURM_ARRAY_TASK_ID
 
-    
-    
+#     slurm.sbatch('{python_path} {python_file} --isess {isess} --use_events {use_events} --to_decode {to_decode} --trial_type {trial_type}, --svm_blocks {svm_blocks}, --engagement_pupil_running {engagement_pupil_running}, --use_spont_omitFrMinus1 {use_spont_omitFrMinus1}, --use_balanced_trials {use_balanced_trials}')
+
+#     slurm.sbatch('{} ../demo_python_scripts/plotting_demo.py --frequency {} --save-loc {}'.format(
+#             python_path,
+#             frequency,
+#             plot_save_location,
+#         )    
     
     
 
