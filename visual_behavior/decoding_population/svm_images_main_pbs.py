@@ -13,6 +13,7 @@ Created on Fri Aug  2 15:24:17 2019
 """
 
 #%%
+import os
 import datetime
 import re
 import pandas as pd
@@ -30,6 +31,7 @@ def svm_images_main_pbs(session_id, data_list, experiment_ids_valid, df_data, se
         traces_fut_now = traces_fut_0
         image_labels_now = image_labels_0
         iblock_trials_blocks = [np.nan, []]
+        
         iblock_trials_blocks = [iblock, trials_blocks]
         '''
         
@@ -108,9 +110,11 @@ def svm_images_main_pbs(session_id, data_list, experiment_ids_valid, df_data, se
             cbest_allFrs = np.full(svm_total_frs, np.nan)
 
 
+        if trial_type == 'omissions_baseline': # decode activity at each frame vs. baseline
+            numTrials = 2*traces_fut_now.shape[2]
+        else:
+            numTrials = traces_fut_now.shape[2]  # numDataPoints = X_svm.shape[1] # trials             
 
-        numTrials = traces_fut_now.shape[2]  # numDataPoints = X_svm.shape[1] # trials             
-        
         if num_classes==2 and use_balanced_trials==1:
             numO = sum(image_labels_now==0) 
             len_test = 2*len(np.arange(int((kfold-1.)/kfold*numO), numO))
