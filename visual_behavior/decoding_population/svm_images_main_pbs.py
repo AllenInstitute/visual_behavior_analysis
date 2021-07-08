@@ -23,7 +23,7 @@ from svm_funs import *
 
 
 #%%
-def svm_images_main_pbs(data_list, experiment_ids_valid, df_data, session_trials, trial_type, dir_svm, kfold, frames_svm, numSamples, saveResults, cols_basic, cols_svm, project_codes, to_decode='current', svm_blocks=-100, engagement_pupil_running = np.nan, use_events=False, same_num_neuron_all_planes=0, use_balanced_trials=0, use_spont_omitFrMinus1=1):
+def svm_images_main_pbs(session_id, data_list, experiment_ids_valid, df_data, session_trials, trial_type, dir_svm, kfold, frames_svm, numSamples, saveResults, cols_basic, cols_svm, project_codes, to_decode='current', svm_blocks=-100, engagement_pupil_running = np.nan, use_events=False, same_num_neuron_all_planes=0, use_balanced_trials=0, use_spont_omitFrMinus1=1):
     
     def svm_run_save(traces_fut_now, image_labels_now, iblock_trials_blocks, svm_blocks, now, engagement_pupil_running, pupil_running_values, use_balanced_trials, project_codes): #, same_num_neuron_all_planes, norm_to_max_svm, svm_total_frs, n_neurons, numSamples, num_classes, samps_bef, regType, kfold, cre, saveResults):
         '''

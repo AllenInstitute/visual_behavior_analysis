@@ -549,7 +549,7 @@ def svm_images_main_pre_pbs(isess, project_codes, use_events, to_decode, trial_t
     print('\n\n======================== Analyzing session %d, %d/%d ========================\n' %(session_id, isess, len(list_all_sessions_valid)))
 
     # Use below if you set session_data and session_trials above: for VIP and SST
-    svm_images_main_pbs(data_list, experiment_ids_valid, df_data, session_trials, trial_type, dir_svm, kfold, frames_svm, numSamples, saveResults, cols_basic, cols_svm, project_codes, to_decode, svm_blocks, engagement_pupil_running, use_events, same_num_neuron_all_planes, use_balanced_trials, use_spont_omitFrMinus1)
+    svm_images_main_pbs(session_id, data_list, experiment_ids_valid, df_data, session_trials, trial_type, dir_svm, kfold, frames_svm, numSamples, saveResults, cols_basic, cols_svm, project_codes, to_decode, svm_blocks, engagement_pupil_running, use_events, same_num_neuron_all_planes, use_balanced_trials, use_spont_omitFrMinus1)
 
     # svm_main_images_pbs(data_list, df_data, session_trials, trial_type, dir_svm, kfold, frames_svm, numSamples, saveResults, cols_basic, cols_svm, to_decode, svm_blocks, use_events, same_num_neuron_all_planes)
 
