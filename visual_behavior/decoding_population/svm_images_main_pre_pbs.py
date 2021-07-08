@@ -15,7 +15,7 @@ Created on Wed Jul  7 14:24:17 2021
 #%% To run on the cluster
 ################################################################################################################################################################################################################################################
 
-def svm_images_main_pre_pbs(isess, use_events, to_decode, trial_type, svm_blocks, engagement_pupil_running, use_spont_omitFrMinus1, use_balanced_trials):
+def svm_images_main_pre_pbs(isess, project_codes, use_events, to_decode, trial_type, svm_blocks, engagement_pupil_running, use_spont_omitFrMinus1, use_balanced_trials):
 
     # if socket.gethostname() != 'ibs-farzaneh-ux2': # it's not known what node on the cluster will run your code, so all i can do is to say if it is not your pc .. but obviously this will be come problematic if running the code on a computer other than your pc or the cluster
 
@@ -52,7 +52,7 @@ def svm_images_main_pre_pbs(isess, use_events, to_decode, trial_type, svm_blocks
     #%% Set SVM vars # NOTE: Pay special attention to the following vars before running the SVM:
 
     # project_codes = ['VisualBehaviorMultiscope'] # session_numbers = [4]
-    project_codes = ['VisualBehavior']
+#     project_codes = ['VisualBehavior']
 
     time_win = [-.5, 1.5] #[-.5, .75] # [-.3, 0] # timewindow (relative to trial onset) to run svm; this will be used to set frames_svm # analyze image-evoked responses
     # time_trace goes from -.5 to .65sec in the image-aligned traces.
@@ -563,5 +563,41 @@ def svm_images_main_pre_pbs(isess, use_events, to_decode, trial_type, svm_blocks
 
 
 
+######################################################
+######################################################
+#%% For SLURM
+######################################################
+######################################################
+
+if __name__ == "__main__":
+    # define args
+    parser = argparse.ArgumentParser()
+    
+    parser.add_argument('--isess', type=int)
+    parser.add_argument('--project_codes', type=list)    
+    parser.add_argument('--use_events', type=int)    
+    parser.add_argument('--to_decode', type=str)
+    parser.add_argument('--trial_type', type=str)
+    parser.add_argument('--svm_blocks', type=int)
+    parser.add_argument('--engagement_pupil_running', type=int) 
+    parser.add_argument('--use_spont_omitFrMinus1', type=int) 
+    parser.add_argument('--use_balanced_trials', type=int) 
+    
+    args = parser.parse_args()
+
+
+    
+    
+    # call the function
+    svm_images_main_pre_pbs(
+        args.isess, 
+        args.project_codes, 
+        args.use_events, 
+        args.to_decode, 
+        args.trial_type, 
+        args.svm_blocks, 
+        args.engagement_pupil_running, 
+        args.use_spont_omitFrMinus1, 
+        args.use_balanced_trials)
 
 
