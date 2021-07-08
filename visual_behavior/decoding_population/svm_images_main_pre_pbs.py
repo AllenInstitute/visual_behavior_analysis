@@ -577,7 +577,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     
     parser.add_argument('--isess', type=int)
-    parser.add_argument('--project_codes', type=tuple)    
+    parser.add_argument('--project_codes', type=str)    
     parser.add_argument('--use_events', type=int)    
     parser.add_argument('--to_decode', type=str)
     parser.add_argument('--trial_type', type=str)
