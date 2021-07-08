@@ -572,11 +572,12 @@ def svm_images_main_pre_pbs(isess, project_codes, use_events, to_decode, trial_t
 import argparse
 
 if __name__ == "__main__":
+    
     # define args
     parser = argparse.ArgumentParser()
     
     parser.add_argument('--isess', type=int)
-    parser.add_argument('--project_codes', type=list)    
+    parser.add_argument('--project_codes', type=tuple)    
     parser.add_argument('--use_events', type=int)    
     parser.add_argument('--to_decode', type=str)
     parser.add_argument('--trial_type', type=str)
