@@ -31,7 +31,7 @@ use_spont_omitFrMinus1 = 1 # applicable when trial_type='omissions_baseline' # i
 
 # cre2ana = 'slc' # slc, sst, vip # will be used if session_numbers[0]<0 (we will use dataset and responseAnalysis (instead of the concatenated dfs) to set stim_response_df)
 # project_codes = ['VisualBehaviorMultiscope'] # ['VisualBehaviorMultiscope', 'VisualBehaviorTask1B', 'VisualBehavior', 'VisualBehaviorMultiscope4areasx2d']
-project_codes = ['VisualBehavior']
+project_codes = 'VisualBehavior',
 # project_codes = ['VisualBehaviorMultiscope' , 'VisualBehavior']
 
 
