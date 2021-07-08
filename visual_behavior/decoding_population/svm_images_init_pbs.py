@@ -44,7 +44,7 @@ experiments_table = experiments_table.reset_index('ophys_experiment_id')
 # metadata_valid = experiments_table[experiments_table['project_code']=='VisualBehaviorMultiscope'] # multiscope sessions
 
 # get those rows of experiments_table that are for a specific project code
-metadata_valid = experiments_table[experiments_table['project_code'].isin(project_codes)]
+metadata_valid = experiments_table[experiments_table['project_code'].isin(list(project_codes))]
 
 
 # Use the new list of sessions that are de-crosstalked and will be released in March 2021
