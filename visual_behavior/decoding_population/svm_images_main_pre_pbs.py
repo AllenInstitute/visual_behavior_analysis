@@ -10,23 +10,19 @@ Created on Wed Jul  7 14:24:17 2021
 @author: farzaneh
 """
 
+import os
+import numpy as np
+import pandas as pd
+import pickle
+import sys
+import visual_behavior.data_access.loading as loading
+from svm_images_main_pbs import *
 
-################################################################################################################################################################################################################################################
-#%% To run on the cluster
-################################################################################################################################################################################################################################################
 
 def svm_images_main_pre_pbs(isess, project_codes, use_events, to_decode, trial_type, svm_blocks, engagement_pupil_running, use_spont_omitFrMinus1, use_balanced_trials):
 
-    # if socket.gethostname() != 'ibs-farzaneh-ux2': # it's not known what node on the cluster will run your code, so all i can do is to say if it is not your pc .. but obviously this will be come problematic if running the code on a computer other than your pc or the cluster
-
-    import os
-    import numpy as np
-    import pandas as pd
-    import pickle
-    import sys
-    import visual_behavior.data_access.loading as loading
-
-    print(project_codes)
+    # if socket.gethostname() != 'ibs-farzaneh-ux2': # it's not known what node on the cluster will run your code, so all i can do is to say if it is not your pc .. but obviously this will be come problematic if running the code on a computer other than your pc or the cluster    
+#     print(project_codes)
 
     #%% Get the input arguments passed here from pbstools (in svm_init_images script)
 
