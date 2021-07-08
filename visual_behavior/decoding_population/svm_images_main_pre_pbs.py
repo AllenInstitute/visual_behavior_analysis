@@ -569,6 +569,8 @@ def svm_images_main_pre_pbs(isess, project_codes, use_events, to_decode, trial_t
 ######################################################
 ######################################################
 
+import argparse
+
 if __name__ == "__main__":
     # define args
     parser = argparse.ArgumentParser()
