@@ -148,6 +148,28 @@ for i in allSessName:
     de = os.path.join(d, ii)
     os.rename(i, de)
 '''
+'''
+import re
+a,allSessName = all_sess_set_h5_fileName('(.*)events_svm_gray', '/allen/programs/braintv/workgroups/nc-ophys/Farzaneh/SVM', all_files=0)
+
+for i in allSessName: # i = allSessName[0]
+    d,p = os.path.split(i)
+    ii = os.path.basename(i)
+    
+    nn = ii.find('events_svm_gray_omit')
+    nn2 = nn+len('events_svm_gray_omit')
+    
+    ii = ii[:nn]+'events_svm_decode_baseline_from_nobaseline'+ii[nn2:]
+    de = os.path.join(d, ii)
+    
+    i = os.path.join('/allen/programs/braintv/workgroups/nc-ophys/Farzaneh/SVM', i)
+    de = os.path.join('/allen/programs/braintv/workgroups/nc-ophys/Farzaneh/SVM', de)
+    
+    print(i)
+    print(de)
+    
+    os.rename(i, de)
+'''
 
 
 
@@ -985,7 +1007,7 @@ def all_sess_set_h5_fileName(name, dir_now, all_files=0):
         if len(h5_files)==0:
             print('h5 file does not exist! (run svm_init to call svm_plots_init and save all_sess)')
         elif len(h5_files)>1:
-            print('More than 1 h5 file exists! Loading the latest file')
+            print('More than 1 h5 file exists! Using the latest file')
             allSessName = os.path.join(dir_now, h5_files[-1])            
         else:
             allSessName = os.path.join(dir_now, h5_files[0])            

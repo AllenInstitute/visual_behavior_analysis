@@ -110,7 +110,7 @@ def svm_images_main_pbs(session_id, data_list, experiment_ids_valid, df_data, se
             cbest_allFrs = np.full(svm_total_frs, np.nan)
 
 
-        if trial_type == 'omissions_baseline': # decode activity at each frame vs. baseline
+        if trial_type == 'baseline_vs_nobaseline': # decode activity at each frame vs. baseline
             numTrials = 2*traces_fut_now.shape[2]
         else:
             numTrials = traces_fut_now.shape[2]  # numDataPoints = X_svm.shape[1] # trials             
@@ -145,7 +145,7 @@ def svm_images_main_pbs(session_id, data_list, experiment_ids_valid, df_data, se
                 print(f'\n===== BLOCK {iblock} : running SVM on frame {nAftOmit} relative to trial onset =====\n')
 
                 
-            if trial_type == 'omissions_baseline': # decode activity at each frame vs. baseline
+            if trial_type == 'baseline_vs_nobaseline': # decode activity at each frame vs. baseline
                 # x
                 if use_spont_omitFrMinus1==0: # if 0, classify omissions against spontanoues frames (the initial gray screen); if 1, classify omissions against the frame right before the omission
                     rand_spont_frs_num_omit = rnd.permutation(spont_frames.shape[1])[:num_omissions] # pick num_omissions random spontanous frames
@@ -415,8 +415,8 @@ def svm_images_main_pbs(session_id, data_list, experiment_ids_valid, df_data, se
         svmn = f'{e}svm_decode_changes_from_nochanges'
     elif trial_type=='hits_vs_misses':
         svmn = f'{e}svm_decode_hits_from_misses'        
-    elif trial_type == 'omissions_baseline':
-        svmn = 'svm_gray_omit'
+    elif trial_type == 'baseline_vs_nobaseline':
+        svmn = f'{e}svm_decode_baseline_from_nobaseline' #f'{e}svm_gray_omit' #svm_decode_baseline_from_nobaseline
         if use_spont_omitFrMinus1==0:
             svmn = svmn + '_spontFrs'
     else:
@@ -527,7 +527,7 @@ def svm_images_main_pbs(session_id, data_list, experiment_ids_valid, df_data, se
             image_indices_previous_flash = all_stim_indices_previous_flash
             image_indices_next_flash = all_stim_indices_next_flash
 
-        elif trial_type=='omissions' or trial_type=='omissions_baseline': # omissions:
+        elif trial_type=='omissions' or trial_type=='baseline_vs_nobaseline': # omissions:
             image_data = df_data[df_data['image_name']=='omitted']
             image_indices_previous_flash = all_stim_indices_previous_flash[all_stim_indices==8]
             image_indices_next_flash = all_stim_indices_next_flash[all_stim_indices==8]
@@ -582,7 +582,7 @@ def svm_images_main_pbs(session_id, data_list, experiment_ids_valid, df_data, se
 
 
         #%% Set the vector of image labels which will be used for decoding
-        if trial_type=='changes_vs_nochanges' or trial_type == 'omissions_baseline': # change, then no-change will be concatenated
+        if trial_type=='changes_vs_nochanges' or trial_type == 'baseline_vs_nobaseline': # change, then no-change will be concatenated
             a = np.full((len(image_indices)), 0)
             b = np.full((len(image_indices)), 1)
             image_labels = np.concatenate((a,b))
@@ -867,7 +867,7 @@ def svm_images_main_pbs(session_id, data_list, experiment_ids_valid, df_data, se
 
             ######################################################
             # reset n_trials
-            n_trials = len(image_labels) #traces_fut.shape[2] # note: when trial_type='omissions_baseline', traces_fut includes half the trials at this point; so we go with image_labels to get the number of trials.
+            n_trials = len(image_labels) #traces_fut.shape[2] # note: when trial_type='baseline_vs_nobaseline', traces_fut includes half the trials at this point; so we go with image_labels to get the number of trials.
                 
             # double check reshape above worked fine.
             '''
