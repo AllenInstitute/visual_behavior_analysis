@@ -373,8 +373,8 @@ def svm_images_main_pbs(data_list, experiment_ids_valid, df_data, session_trials
             
         name = f'{cre_now}_m-{mouse}_s-{session_id}_e-{lims_id}_{svmn}_frames{frames_svm[0]}to{frames_svm[-1]}_{ending}'
 
-        if project_codes == ['VisualBehavior']:
-            name = f'{name}{project_codes[0]}_'
+        if project_codes == 'VisualBehavior':
+            name = f'{name}{project_codes}_'
         
         name = f'{name}{now}'
         

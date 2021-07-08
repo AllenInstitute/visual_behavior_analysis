@@ -199,7 +199,8 @@ def svm_images_main_pre_pbs(isess, project_codes, use_events, to_decode, trial_t
     experiments_table = experiments_table.reset_index('ophys_experiment_id')
 
     # get those rows of experiments_table that are for a specific project code
-    metadata_valid = experiments_table[experiments_table['project_code']==project_codes[0]] #'VisualBehaviorMultiscope'] # multiscope sessions
+    metadata_valid = experiments_table[experiments_table['project_code']==project_codes]
+#     metadata_valid = experiments_table[experiments_table['project_code']==project_codes[0]] #'VisualBehaviorMultiscope'] # multiscope sessions
 
 
     # Use the new list of sessions that are de-crosstalked and will be released in March 2021
@@ -222,7 +223,7 @@ def svm_images_main_pre_pbs(isess, project_codes, use_events, to_decode, trial_t
 
 
     # set the list of experiments for each session in list_all_sessions_valid
-    if project_codes == ['VisualBehavior']:
+    if project_codes == 'VisualBehavior':
         list_all_experiments = metadata_all['ophys_experiment_id'].values
 
     else:
@@ -329,7 +330,7 @@ def svm_images_main_pre_pbs(isess, project_codes, use_events, to_decode, trial_t
     # sort by area and depth
     data_list = data_list.sort_values(by=['targeted_structure', 'imaging_depth'])
 
-    if project_codes == ['VisualBehavior']:
+    if project_codes == 'VisualBehavior':
         experiment_ids_this_session = [experiment_ids]
     else:
         experiment_ids_this_session = experiment_ids
@@ -577,7 +578,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     
     parser.add_argument('--isess', type=int)
-    parser.add_argument('--project_codes', type=tuple)    
+    parser.add_argument('--project_codes', type=str)    
     parser.add_argument('--use_events', type=int)    
     parser.add_argument('--to_decode', type=str)
     parser.add_argument('--trial_type', type=str)
