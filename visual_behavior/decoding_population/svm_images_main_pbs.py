@@ -30,6 +30,7 @@ def svm_images_main_pbs(session_id, data_list, experiment_ids_valid, df_data, se
         '''
         traces_fut_now = traces_fut_0
         image_labels_now = image_labels_0
+        
         iblock_trials_blocks = [np.nan, []]
         
         iblock_trials_blocks = [iblock, trials_blocks]
@@ -110,6 +111,8 @@ def svm_images_main_pbs(session_id, data_list, experiment_ids_valid, df_data, se
             cbest_allFrs = np.full(svm_total_frs, np.nan)
 
 
+        
+        ##########################
         if trial_type == 'baseline_vs_nobaseline': # decode activity at each frame vs. baseline
             numTrials = 2*traces_fut_now.shape[2]
         else:
@@ -401,6 +404,10 @@ def svm_images_main_pbs(session_id, data_list, experiment_ids_valid, df_data, se
     ####################################################################################################
     ####################################################################################################
     #%% Set SVM vars
+    ####################################################################################################
+    ####################################################################################################    
+    ####################################################################################################
+    ####################################################################################################
     
     svm_min_neurs = 3 # min population size for training svm
 
@@ -421,7 +428,7 @@ def svm_images_main_pbs(session_id, data_list, experiment_ids_valid, df_data, se
             svmn = svmn + '_spontFrs'
     else:
         svmn = f'{e}svm_decode_{to_decode}_image_from_{trial_type}' # 'svm_gray_omit'
-#     print(svmn)
+    print(svmn)
         
     
 #     kfold = 5 #2 #10 # KFold divides all the samples in  groups of samples, called folds (if , this is equivalent to the Leave One Out strategy), of equal sizes (if possible). The prediction function is learned using  folds, and the fold left out is used for test.
@@ -982,7 +989,7 @@ def svm_images_main_pbs(session_id, data_list, experiment_ids_valid, df_data, se
                         
             
                     ### set trial_blocks: block0 is engaged0, block1 is engaged1
-                    blocks_int = np.unique(engaged[~np.isnan(engaged)]).astype(int)
+                    blocks_int = np.unique(engaged[~np.isnan(engaged.astype(float))]).astype(int)
                     trials_blocks = []
                     for iblock in blocks_int: 
                         trials_blocks.append(np.argwhere(engaged==iblock).flatten())
