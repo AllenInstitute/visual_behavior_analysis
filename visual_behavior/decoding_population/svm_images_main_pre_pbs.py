@@ -67,7 +67,7 @@ def svm_images_main_pre_pbs(isess, project_codes, use_events, to_decode, trial_t
     elif trial_type=='hits_vs_misses':
         print(f'Decoding hits from misses, activity at {time_win} ms.')    
     elif trial_type=='baseline_vs_nobaseline':
-        print(f'Decoding activity at *each time point* from *baseline* activity at {time_win} ms.')
+        print(f'Decoding *baseline* activity from activity at *each time point* at {time_win} ms.')
     else:    
         print(f'Decoding *{to_decode}* image from *{trial_type}* activity at {time_win} s.')
     print(f'kfold = {kfold}')    
