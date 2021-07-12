@@ -1,75 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-NOTE: This code is the new version that replaced "svm_images_plots_setVars.py". It works for both when the svm was run on the whole session or when it was run on multiple blocks during the session.
-It will create plots for each stage (ophy1, 2, etc). If you want average plots across stages, you need to modify line 60 of code "svm_images_plots_setVars_sumMice_blocks.py" so we dont get only a given stage out of svm_this_plane_allsess0
-
-
-The 1st script to run to make plots. Before this script, "svm_images_init" must be run to save all_sess dataframe.
-
-This script loads all_sess that is set by function svm_main_post (called in svm_images_init).
-It sets all_sess_2an, which is a subset of all_sess that only includes desired sessions for analysis (A, or B, etc).
-
-Its output is a pandas table "svm_this_plane_allsess" which includes svm variables for each mouse, (for each plane, for each area, and for each depth) and will be used for plotting.
-
-This script will call the following 2 scripts to make all the plots related to svm analysis:
-"svm_images_plots_eachMouse" to make plots for each mouse.
-"svm_images_plots_setVars_sumMice.py" and "svm_images_plots_sumMice.py" which set vars and make average plots across mice (for each cre line).
-
-
-Note, this script is similar to part of omissions_traces_peaks_plots_setVars_ave.py.
-    The variable svm_this_plane_allsess here is basically a combination of the following 2 vars in omissions_traces_peaks_plots_setVars_ave.py:
-        trace_peak_allMice   :   includes traces and peak measures for all planes of all sessions, for each mouse.
-        pooled_trace_peak_allMice   : includes layer- and area-pooled vars, for each mouse.
-
-This script also sets some of the session-averaged vars per mouse (in var "svm_this_plane_allsess") , which will be used in eachMouse plots; 
-    # note: those vars are also set in svm_plots_setVars_sumMice.py (in var "svm_this_plane_allsess_sessAvSd". I didn't take them out of here, bc below will be used for making eachMouse plots. Codes in svm_plots_setVars_sumMice.py are compatible with omissions code, and will be used for making sumMice plots.
-
+Gets called in svm_images_plots_setVars.py (Read the comments in that script for more info.)
+Set svm_this_plane_allsess.
 
 Created on Tue Oct  20 13:56:00 2020
 @author: farzaneh
 """
 
-'''
-Relevant parts of different scripts, for quantifying response amplitudes:
-
-# average across cv samples # size perClassErrorTrain_data_allFrs: nSamples x nFrames
-av_train_data = 100-np.nanmean(perClassErrorTrain_data_allFrs, axis=0) # numFrames
-
-
-# concatenate CA traces for training, testing, shfl, and chance data, each a column in the matrix below; to compute their peaks all at once.
-CA_traces = np.vstack((av_train_data, av_test_data, av_test_shfl, av_test_chance)).T # times x 4
-#             print(CA_traces.shape)
-
-peak_amp_trainTestShflChance = np.nanmean(CA_traces[time_win_frames], axis=0)
-
-
-# peak_amp_trainTestShflChance
-y = all_sess_2an[all_sess_2an['mouse_id']==mouse_id]['peak_amp_trainTestShflChance'] # 8 * number_of_session_for_the_mouse
-peak_amp_trTsShCh_this_plane_allsess_allp = set_y_this_plane_allsess(y, num_sessions) # size: (8 x num_sessions x 4) # 4 for train, Test, Shfl, and Chance        
-
-
-aa = svm_this_plane_allsess['peak_amp_trTsShCh_this_plane_allsess_allp'].values # num_all_mice; # size of each element : 8 x num_sessions x 4
-aar = np.array([np.reshape(aa[ic], (aa[ic].shape[0] * aa[ic].shape[1] , aa[ic].shape[2]), order='F') for ic in range(len(aa))]) # aar.shape # num_all_mice; # size of each element : (8 x num_sessions) x 4
-a0 = np.concatenate((aar)) # (8*sum(num_sess_per_mouse)) x 4 # 8 planes of 1 session, then 8 planes of next session, and so on 
-pa_all = np.reshape(a0, (num_planes, int(a0.shape[0]/num_planes), a0.shape[-1]), order='F') # 8 x sum(num_sess_per_mouse) x 4 # each row is one plane, all sessions        
-
-
-pa_all = svm_allMice_sessPooled['peak_amp_allPlanes'].values[0]  # 8 x pooledSessNum x 4 (trTsShCh)
-
-top = np.nanmean(pa_all[:, cre_all[0,:]==cre], axis=1)
-top_sd = np.nanstd(pa_all[:, cre_all[0,:]==cre], axis=1) / np.sqrt(sum(cre_all[0,:]==cre))        
-
-
-# testing data
-ax1.errorbar(x, top[inds_v1, 1], yerr=top_sd[inds_v1, 1], fmt=fmt_now, markersize=3, capsize=3, label=lab1, color=cols_area_now[1])
-ax1.errorbar(x + xgap_areas, top[inds_lm, 1], yerr=top_sd[inds_lm, 1], fmt=fmt_now, markersize=3, capsize=3, label=lab2, color=cols_area_now[0])
-
-# shuffled data
-ax1.errorbar(x, top[inds_v1, 2], yerr=top_sd[inds_v1, 2], fmt=fmt_now, markersize=3, capsize=3, color='gainsboro') # label='V1',  # gray
-ax1.errorbar(x + xgap_areas, top[inds_lm, 2], yerr=top_sd[inds_lm, 2], fmt=fmt_now, markersize=3, capsize=3, color='gainsboro') # label='LM', # skyblue
-
-'''
 
 svm_this_plane_allsess = pd.DataFrame([], columns=columns)
 cntall = 0

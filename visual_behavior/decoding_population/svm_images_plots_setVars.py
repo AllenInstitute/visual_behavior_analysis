@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-NOTE: This code is the new version that replaced "svm_images_plots_setVars.py". It works for both when the svm was run on the whole session or when it was run on multiple blocks during the session.
+NOTE: This code is the new version that replaced the old "svm_images_plots_setVars.py". It works for both when the svm was run on the whole session or when it was run on multiple blocks during the session.
 It will create plots for each stage (ophy1, 2, etc). If you want average plots across stages, you need to modify line 60 of code "svm_images_plots_setVars_sumMice_blocks.py" so we dont get only a given stage out of svm_this_plane_allsess0
 
 
-The 1st script to run to make plots. Before this script, "svm_images_init" must be run to save all_sess dataframe.
+The 1st script to run to make plots. Before this script, "svm_images_plots_init" must be run to save all_sess dataframe.
 
 This script loads all_sess that is set by function svm_main_post (called in svm_images_init).
 It sets all_sess_2an, which is a subset of all_sess that only includes desired sessions for analysis (A, or B, etc).
@@ -93,25 +93,29 @@ dir0 = '/home/farzaneh/OneDrive/Analysis'
 
 #%% Set the following vars
 
-project_codes = ['VisualBehavior'], ['VisualBehaviorMultiscope'] # ['VisualBehaviorMultiscope'] # both projects: #['VisualBehaviorMultiscope'] # ['VisualBehaviorMultiscope', 'VisualBehaviorTask1B', 'VisualBehavior', 'VisualBehaviorMultiscope4areasx2d']
+project_codes = ['VisualBehaviorMultiscope'] #['VisualBehavior'], ['VisualBehaviorMultiscope'] # ['VisualBehaviorMultiscope'] # both projects: #['VisualBehaviorMultiscope'] # ['VisualBehaviorMultiscope', 'VisualBehaviorTask1B', 'VisualBehavior', 'VisualBehaviorMultiscope4areasx2d']
 
 to_decode = 'current' # 'current': decode current image. # 'previous': decode previous image. # 'next': decode next image.
-trial_type = 'changes_vs_nochanges' # 'omissions' # 'changes' # 'hits_vs_misses' # 'changes_vs_nochanges' # 'images'# what trials to use for SVM analysis # the population activity of these trials at time time_win will be used to decode the image identity of flashes that occurred at their time 0 (if to_decode='current') or 750ms before (if to_decode='previous'). # eg 'omissions' means to use omission-aligned traces 
+trial_type = 'baseline_vs_nobaseline' # 'omissions' # 'changes' # 'hits_vs_misses' # 'changes_vs_nochanges' # 'images'# what trials to use for SVM analysis # the population activity of these trials at time time_win will be used to decode the image identity of flashes that occurred at their time 0 (if to_decode='current') or 750ms before (if to_decode='previous'). # eg 'omissions' means to use omission-aligned traces # 'baseline_vs_nobaseline' # decode activity at each frame vs. baseline (ie the frame before omission unless use_spont_omitFrMinus1 = 1 (see below))
 # Note: when trial_type is 'hits_vs_misses' or 'changes_vs_nochanges', to_decode will be 'current' and wont really make sense.
 # in all other cases, we decode "to_decode" image from "trial_type", e.g. we decode 'current' image from 'changes' (ie change-aligned traces)
 
-svm_blocks = np.nan #-101 #-1: divide trials based on engagement # -101: use only engaged epochs for svm analysis # number of trial blocks to divide the session to, and run svm on. # set to np.nan to run svm analysis on the whole session
 use_events = True # True # False #whether to run the analysis on detected events (inferred spikes) or dff traces.
+svm_blocks = np.nan #-101 #-1: divide trials based on engagement # -101: use only engaged epochs for svm analysis # number of trial blocks to divide the session to, and run svm on. # set to np.nan to run svm analysis on the whole session
+# use_spont_omitFrMinus1 = 1 # applicable when trial_type='baseline_vs_nobaseline' # if 0, classify omissions against randomly picked spontanoues frames (the initial gray screen); if 1, classify omissions against the frame right before the omission 
+
+summary_which_comparison = 'all' # 'novelty' # 'engagement' # 'all' # determins sessions to use for plotting summary of ophys stages in svm_images_plots_compare_ophys_stages.py # 'novelty' will use [1,3,4,6] # 'engagement' will use [1,2,3] # 'all' will use [1,2,3,4,5,6]
+
+baseline_subtract = 0 #1 # subtract the baseline (CA average during baseline, ie before time 0) from the evoked CA (classification accuracy)
 
 dosavefig = 1 # 0
-
-summary_which_comparison = 'novelty' # 'novelty' # 'engagement' # 'all' # determins sessions to use for plotting summary of ophys stages in svm_images_plots_compare_ophys_stages.py # 'novelty' will use [1,3,4,6] # 'engagement' will use [1,2,3] # 'all' will use [1,2,3,4,5,6]
+fmt = '.pdf' # '.png' # '.svg'
 
 
 
 #%% The following vars we usually don't change, but you can if you want to.
 
-baseline_subtract = 1 # subtract the baseline (CA average during baseline, ie before time 0) from the evoked CA (classification accuracy)
+plot_single_mouse = 0 # if 1, make plots for each mouse
 
 # the following 3 vars will be used for plots to correlate classification accuracy with behavioral strategy, and only if trial_type =='changes_vs_nochanges' or trial_type =='hits_vs_misses'
 pool_all_stages = True #True
@@ -120,15 +124,14 @@ superimpose_all_cre = False # plot all cre lines on the same figure
 plot_testing_shufl = 0 # if 0 correlate testing data with strategy dropout index; if 1, correlated shuffled data with strategy dropout index
 
 
-plot_single_mouse = 0 # if 1, make plots for each mouse
-fmt = '.pdf' # '.png' # '.svg'
-
 if trial_type == 'hits_vs_misses' or trial_type == 'changes_vs_nochanges':
     use_balanced_trials = 1 #1 # if 1, use same number of trials for each class; only applicable when we have 2 classes (binary classification; eg decoding changes from no changes, or hits from misses; but when decoding images, it should be set to 0, because we are doing multi-class classification.).
 elif trial_type == 'changes' or trial_type == 'omissions' or trial_type == 'images':
     use_balanced_trials = 0
     
-    
+
+if trial_type == 'baseline_vs_nobaseline':
+    time_win = [0, .75] # we use the entire time after omission because the omission responses slowly go up
 if use_events:
     time_win = [0, .4]
 else:
@@ -137,18 +140,24 @@ else:
 
 same_num_neuron_all_planes = 0 #1 # if 1, use the same number of neurons for all planes to train svm
 
-    
-cre2ana_all = 'slc', 'sst', 'vip'
+# cre2ana_all = 'slc', 'sst', 'vip'
 use_same_experiments_dff_events = False #True # use the same set of experiments for both events and dff analysis (Note: for this to work you need to get both ea_evs and ev_dff; for this run the code until line ~300 twice once setting use_events to True and once to False.)
+
+
 
 
 #%% Initialize variables
 
-e = 'events_' if use_events else ''
+e = 'events_' if use_events else ''  
+
 if trial_type=='changes_vs_nochanges': # change, then no-change will be concatenated
-    svmn = f'{e}svm_decode_changes_from_nochanges' # 'svm_gray_omit'
+    svmn = f'{e}svm_decode_changes_from_nochanges'
 elif trial_type=='hits_vs_misses':
-    svmn = f'{e}svm_decode_hits_from_misses'    
+    svmn = f'{e}svm_decode_hits_from_misses'        
+elif trial_type == 'baseline_vs_nobaseline':
+    svmn = f'{e}svm_decode_baseline_from_nobaseline' #f'{e}svm_gray_omit' #svm_decode_baseline_from_nobaseline
+    if use_spont_omitFrMinus1==0:
+        svmn = svmn + '_spontFrs'
 else:
     svmn = f'{e}svm_decode_{to_decode}_image_from_{trial_type}' # 'svm_gray_omit'
 
@@ -158,6 +167,9 @@ if svm_blocks==-101: # run svm analysis only on engaged trials; redifine df_data
 if use_balanced_trials:
     svmn = f'{svmn}_equalTrs'
 
+print(svmn)
+
+    
 dir_now = svmn #'omit_across_sess'
 if use_events:
     dir_now = 'svm_' + svmn[len('events_svm_'):] + '_events' # so all the folders start with svm
@@ -168,11 +180,8 @@ elif svm_blocks==-101:
     dir_now = os.path.join(dir_now, f'only_engaged')
 elif ~np.isnan(svm_blocks):
     dir_now = os.path.join(dir_now, f'trial_blocks')
-    
-    
-# fmt = '.pdf' # '.png' # '.svg'
+        
 dd = os.path.join(dir0, 'svm', dir_now)
-
 if not os.path.exists(dd):
     os.makedirs(dd)
 
@@ -222,7 +231,7 @@ elif ~np.isnan(svm_blocks):
     br = range(svmb)    
 else:
     br = [np.nan]
-
+print(br)
 
 project_codes_all = copy.deepcopy(project_codes)
 
@@ -428,7 +437,7 @@ if len(project_codes_all)==1:
 #####################################################################################
 
 
-else: # pooling data from multiple project codes    
+else: # pooling data across multiple project codes    
     
     svm_allMice_sessPooled_allprojects = []
     svm_allMice_sessAvSd_allprojects = []

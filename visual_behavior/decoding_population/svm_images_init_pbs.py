@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Run svm_init_images_pre.py to save the pickle file which includes session and metadata information. This pickle file will be loaded here.
+Run on the cluster (Slurm) for the SVM analysis. It calls svm_images_main_pre_pbs.py which sets vars for the svm analysis, and subsequently calls svm_images_main_pbs.py to run the SVM analysis.
+
+Once the analysis is done and svm results are saved, run svm_images_plots_init.py to set vars for making plots.
+
 
 Created on Thu Oct 9 12:29:43 2020
 @author: farzaneh
@@ -16,6 +19,8 @@ import os
 
 #%% Define vars for svm_images analysis
 
+project_codes = 'VisualBehavior' #'VisualBehavior' # has to only include 1 project # project_codes : ['VisualBehaviorMultiscope', 'VisualBehaviorTask1B', 'VisualBehavior', 'VisualBehaviorMultiscope4areasx2d']
+
 # Note: the variable names 'to_decode' and 'trial_type' are confusing. The names really only make sense when we are decoding images (ie when trial_type is images/changes/omissions), in which case they mean we are decoding to_decode image (eg current image) from trial_type (eg images); otherwise, to_decode is useless (we just default it to 'current') and trial_type indicates what was decoded from what (eg hits_vs_misses)
 to_decode = 'current' # 'current' (default): decode current image.    'previous': decode previous image.    'next': decode next image.     # remember for omissions, you cant do "current", bc there is no current image, it has to be previous or next!
 trial_type = 'baseline_vs_nobaseline' #'omissions' #'baseline_vs_nobaseline' #'hits_vs_misses' #'changes_vs_nochanges' # 'images_omissions', 'images', 'changes', 'omissions' # what trials to use for SVM analysis # the population activity of these trials at time time_win will be used to decode the image identity of flashes that occurred at their time 0 (if to_decode='current') or 750ms before (if to_decode='previous').   # if 'changes_vs_nochanges', we will decode image changes from no changes; in this case set to_decode to 'current', but it doesnt really matter. # 'baseline_vs_nobaseline' # decode activity at each frame vs. baseline (ie the frame before omission unless use_spont_omitFrMinus1 = 1 (see below))
@@ -28,9 +33,6 @@ svm_blocks = -1 #-1 #-100 # 2 # -101: run the analysis only on engaged trials # 
 engagement_pupil_running = 0 # applicable when svm_blocks=-1 # np.nan or 0,1,2 for engagement, pupil, running: which metric to use to define engagement? 
 
 use_spont_omitFrMinus1 = 1 # applicable when trial_type='baseline_vs_nobaseline' # if 0, classify omissions against randomly picked spontanoues frames (the initial gray screen); if 1, classify omissions against the frame right before the omission 
-
-project_codes = 'VisualBehavior' #'VisualBehavior' # has to only include 1 project
-# project_codes : ['VisualBehaviorMultiscope', 'VisualBehaviorTask1B', 'VisualBehavior', 'VisualBehaviorMultiscope4areasx2d']
 
 
 # Note: in the cases below, we are decoding baseline from no-baseline , hits from misses, and changes from no-changes, respectively. 

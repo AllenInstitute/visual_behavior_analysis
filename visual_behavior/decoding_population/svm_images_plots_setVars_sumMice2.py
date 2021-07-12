@@ -1,6 +1,14 @@
 """
-Vars needed here are set in "svm_images_plots_setVars_sumMice_blocks.py"
+Gets called in svm_images_plots_setVars.py
+Set vars and plot traces and quantifications for each ophys stage
+
 Make summary plots across mice (each cre line) for the svm analysis.
+
+Vars needed here are set in "svm_images_plots_setVars_sumMice.py"
+
+
+Set vars to make mouse-averaged plots
+
 
 Created on Wed Oct 21 15:22:05 2020
 @author: farzaneh

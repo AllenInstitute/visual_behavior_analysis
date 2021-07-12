@@ -1,4 +1,6 @@
 """
+Set svm_allMice_sessPooled and svm_allMice_sessAvSd.
+
 Run "svm_images_plots_setVars.py" to set vars needed here, mainly svm_this_plane_allsess.
 
 This script sets vars that will be used for making summary plots across mice.

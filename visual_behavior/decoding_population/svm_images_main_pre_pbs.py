@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Run svm_init.py to set vars needed here.
+This function is called in svm_images_init_pbs.py. We run svm_images_init_pbs.py in command line (cluster: slurm), so at the end of the function below we argeparse the inputs to this function.
 
-Set vars and runs svm_main_images_pbs.py
+This function sets svm vars and calls svm_images_main_pbs.py
 
 
 Created on Wed Jul  7 14:24:17 2021

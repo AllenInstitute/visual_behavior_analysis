@@ -1,5 +1,7 @@
 """
-Vars needed here are set in "svm_images_plots_setVars_sumMice_blocks.py"
+Gets called in svm_images_plots_setVars.py.
+
+Vars needed here are set in "svm_images_plots_setVars_sumMice.py"
 Make summary plots across mice (each cre line) for the svm analysis.
 
 Created on Wed Oct 21 15:22:05 2020

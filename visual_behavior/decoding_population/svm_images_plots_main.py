@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-This function is called in svm_init_images.
+This function is called in svm_images_plots_init.
 
 It loads the svm file that was saved for each experiment, and returns a pandas dataframe (this_sess), which includes a number of columns, including average and st error of class accuracies across CV samples; also quantification of the image signal.
 svm_init combines this_sess for all sessions into a single pandas table (all_sess), and saves it at /allen/programs/braintv/workgroups/nc-ophys/Farzaneh/SVM/same_num_neurons_all_planes/all_sess_svm_images*
@@ -23,22 +23,28 @@ from general_funs import *
 np.warnings.filterwarnings('ignore', category=np.VisibleDeprecationWarning)
 
 
-def svm_images_main_post(session_id, data_list, svm_blocks, iblock, dir_svm, frames_svm, time_win, trial_type, to_decode, same_num_neuron_all_planes, cols, analysis_dates, project_codes, use_events=False, doPlots=0):
+def svm_images_plots_main(session_id, data_list, svm_blocks, iblock, dir_svm, frames_svm, time_win, trial_type, to_decode, same_num_neuron_all_planes, cols, analysis_dates, project_codes, use_spont_omitFrMinus1, use_events=False, doPlots=0):
     
     bl_percentile = 10 #20  # for peak measurements, we subtract pre-omit baseline from the peak. bl_percentile determines what pre-omit values will be used.      
     
     num_classes = 8 # decoding 8 images
     num_planes = 8
     
-    e = 'events_' if use_events else ''
+    e = 'events_' if use_events else ''  
     
     if trial_type=='changes_vs_nochanges': # change, then no-change will be concatenated
-        svmn = f'{e}svm_decode_changes_from_nochanges' # 'svm_gray_omit'
-    elif trial_type=='hits_vs_misses': # 
-        svmn = f'{e}svm_decode_hits_from_misses'                
+        svmn = f'{e}svm_decode_changes_from_nochanges'
+    elif trial_type=='hits_vs_misses':
+        svmn = f'{e}svm_decode_hits_from_misses'        
+    elif trial_type == 'baseline_vs_nobaseline':
+        svmn = f'{e}svm_decode_baseline_from_nobaseline' #f'{e}svm_gray_omit' #svm_decode_baseline_from_nobaseline
+        if use_spont_omitFrMinus1==0:
+            svmn = svmn + '_spontFrs'
     else:
         svmn = f'{e}svm_decode_{to_decode}_image_from_{trial_type}' # 'svm_gray_omit'
-        
+    print(svmn)
+
+    
     if svm_blocks==-101: # run svm analysis only on engaged trials; redifine df_data only including the engaged rows
         svmn = f'{svmn}_only_engaged'
          

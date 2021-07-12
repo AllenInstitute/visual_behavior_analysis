@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Run svm_init.py to set vars needed here.
+Gets called in svm_images_main_pre_pbs.py
 
-Performs SVM analysis on a particular experiment of a session.
-Saves the results in: dir_svm = '/allen/programs/braintv/workgroups/nc-ophys/Farzaneh'
-    if using same_num_neuron_all_planes, results will be saved in: dir_svm/ 'same_num_neurons_all_planes'
+Performs SVM analysis and saves the results in: dir_svm = '/allen/programs/braintv/workgroups/nc-ophys/Farzaneh'.
+If using same_num_neuron_all_planes, results will be saved in: dir_svm/ 'same_num_neurons_all_planes'
+
+Once the analysis is done and svm results are saved, run svm_images_plots_init.py to set vars for making plots.
 
 
 Created on Fri Aug  2 15:24:17 2019
@@ -722,19 +723,18 @@ def svm_images_main_pbs(session_id, data_list, experiment_ids_valid, df_data, se
     
     for index, lims_id in enumerate(exp_ids):  
 
-        print(f'\n\n=========== Analyzing {cre[:3]}, experiment_id: {lims_id} ===========\n\n')
-
-        '''
-        for il in [2]: #range(num_planes):
-            index = il
-            lims_id = exp_ids[il]
-        '''            
         '''
         ll = list(enumerate(exp_ids))
         l = ll[0]; # first plane
         index = l[0]; # plane index
         lims_id = l[1] # experiment id 
         '''
+        '''
+        for il in [2]: #range(num_planes):
+            index = il
+            lims_id = exp_ids[il]
+        '''            
+        print(f'\n\n=========== Analyzing {cre[:3]}, experiment_id: {lims_id} ===========\n\n')
         
         area = data_list.iloc[index]['targeted_structure'] #area
         depth = int(data_list.iloc[index]['imaging_depth']) #depth

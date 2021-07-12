@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Run this script to create all_sess, a dataframe in which the svm results of all sessions are concatenated. We need this to make plots for the svm (images) analysis.
-This script calls the function: svm_main_images_post
+After SVM analysis is already done and the results are already saved (by running the svm_image_main_pbs code), 
+run this script to create all_sess, a dataframe in which the svm results of all sessions are concatenated. We need this to make plots for the svm (images) analysis.
 
-SVM files are already saved (by running the svm_image_main_pbs code).
+This script calls the function: svm_images_plots_main
 
-Follow this script by svm_images_plots_setVars_blocks.py to make plots.
-If making plots for the block-block analysis, follow it by svm_images_plots_setVars_blocks.py to make plots.
+Follow this script by svm_images_plots_setVars.py to make plots.
 
 
 Created on Tue Oct 13 20:48:43 2020
@@ -23,23 +22,28 @@ import matplotlib.pyplot as plt
 import datetime
 
 import visual_behavior.data_access.loading as loading
-from svm_images_main_post import *
+from svm_images_plots_main import *
 
 # import warnings
 # warnings.simplefilter(action='ignore', category=pd.errors.PerformanceWarning) # ignore some warnings!
 
 
-    
 #%% Get SVM output for each cell type, and each frames_svm.
 
-project_codes = ['VisualBehavior'] # ['VisualBehaviorMultiscope'] # ['VisualBehaviorMultiscope', 'VisualBehaviorTask1B', 'VisualBehavior', 'VisualBehaviorMultiscope4areasx2d']
 
-svm_blocks = np.nan #-101 #np.nan # -1: divide trials based on engagement #2 # number of trial blocks to divide the session to, and run svm on. # set to np.nan to run svm analysis on the whole session
+#%% Set vars
+
+project_codes = ['VisualBehaviorMultiscope'] # ['VisualBehaviorMultiscope'] # ['VisualBehaviorMultiscope', 'VisualBehaviorTask1B', 'VisualBehavior', 'VisualBehaviorMultiscope4areasx2d']
+
+to_decode = 'current' #'next' # 'current' (default): decode current image.    'previous': decode previous image.    'next': decode next image.
+trial_type = 'baseline_vs_nobaseline' #'changes' #'hits_vs_misses' #'changes_vs_nochanges' #'omissions' # 'omissions', 'images', 'changes' # what trials to use for SVM analysis # the population activity of these trials at time time_win will be used to decode the image identity of flashes that occurred at their time 0 (if to_decode='current') or 750ms before (if to_decode='previous'). # 'baseline_vs_nobaseline' # decode activity at each frame vs. baseline (ie the frame before omission unless use_spont_omitFrMinus1 = 1 (see below))
+
 use_events = True #False # whether to run the analysis on detected events (inferred spikes) or dff traces.
 
-to_decode = 'next' #'next' # 'current' (default): decode current image.    'previous': decode previous image.    'next': decode next image.
-trial_type = 'omissions' #'changes' #'hits_vs_misses' #'changes_vs_nochanges' #'omissions' # 'omissions', 'images', 'changes' # what trials to use for SVM analysis # the population activity of these trials at time time_win will be used to decode the image identity of flashes that occurred at their time 0 (if to_decode='current') or 750ms before (if to_decode='previous').
-use_balanced_trials = 0 #1 # if 1, use same number of trials for each class; only applicable when we have 2 classes (binary classification).
+svm_blocks = np.nan #-101 #np.nan # -1: divide trials based on engagement #2 # number of trial blocks to divide the session to, and run svm on. # set to np.nan to run svm analysis on the whole session
+
+# engagement_pupil_running = 0 # applicable when svm_blocks=-1 # np.nan or 0,1,2 for engagement, pupil, running: which metric to use to define engagement? 
+use_spont_omitFrMinus1 = 1 # applicable when trial_type='baseline_vs_nobaseline' # if 0, classify omissions against randomly picked spontanoues frames (the initial gray screen); if 1, classify omissions against the frame right before the omission 
 
 
 # set window for quantifying the responses
@@ -47,6 +51,23 @@ if use_events:
     time_win = [0, .4]
 else:
     time_win = [0, .55] # 'frames_svm' # set time_win to a string (any string) to use frames_svm as the window of quantification. # time window relative to trial onset to quantify image signal. Over this window class accuracy traces will be averaged.
+
+
+same_num_neuron_all_planes = 0
+saveResults = 1
+
+
+
+#%%    
+    
+# Note: in the cases below, we are decoding baseline from no-baseline , hits from misses, and changes from no-changes, respectively. 
+# since we are not decoding images, to_decode really doesnt mean anything (when decoding images, to_decode means current/next/previous image) and we just set it to 'current' so it takes some value.
+if trial_type == 'baseline_vs_nobaseline' or trial_type == 'hits_vs_misses' or trial_type == 'changes_vs_nochanges':
+    to_decode = 'current'
+    use_balanced_trials = 1 #only effective when num_classes=2 #if 1, use same number of trials for each class; only applicable when we have 2 classes (binary classification).
+else: # decoding images
+    use_balanced_trials = 0 #1 #only effective when num_classes=2 #if 1, use same number of trials for each class; only applicable when we have 2 classes (binary classification).
+    
 
     
 # Note: trials df has a much longer time_trace (goes up to 4.97) compared to stimulus df (goes up to .71), so frames_svm ends up being 1 element longer for trials df (ie when decoding hits from misses) compared to stimulus df (ie when decoding the images)    
@@ -59,15 +80,10 @@ if trial_type=='hits_vs_misses':
 #     frames_svm_all[0][-1] = frames_svm_all[0][-1] + 1
     frames_svm_all[0] = np.concatenate((frames_svm_all[0], [frames_svm_all[0][-1] + 1]))
 
+frames_svm = frames_svm_all[0] #[-3,-2,-1] # [0,1,2,3,4,5] #  which svm files to load (this will be used to set svm file name) # (frames_svm also gets saved in svm_vars if svm could be run successfully on a session)
+# print(f'Analyzing: {cre2ana}, {frames_svm}')
     
-same_num_neuron_all_planes = 0
 
-saveResults = 1
-cre2ana_all = 'slc', 'sst', 'vip'
-# session_numbers = [6] # ophys session stage corresponding to project_codes that we will load.
-
-
-#%%
 num_planes = 8
 analysis_dates = [''] # ['2020507'] #set to [''] if you want to load the latest file. # the date on which the svm files were saved.
 
@@ -87,9 +103,6 @@ else:
 # samps_bef = 5 #np.argwhere(trace_time==0)[0][0] # 
 # samps_aft = 8 #len(trace_time)-samps_bef #
 
-
-frames_svm = frames_svm_all[0] #[-3,-2,-1] # [0,1,2,3,4,5] #  which svm files to load (this will be used to set svm file name) # (frames_svm also gets saved in svm_vars if svm could be run successfully on a session)
-#     print(f'Analyzing: {cre2ana}, {frames_svm}')
 
 
 
@@ -161,6 +174,7 @@ elif ~np.isnan(svm_blocks):
     br = range(svmb)    
 else:
     br = [np.nan]
+print(br)    
 
     
 for iblock in br: # iblock=0; iblock=np.nan
@@ -219,7 +233,7 @@ for iblock in br: # iblock=0; iblock=np.nan
 
         #%% Run the main function
         
-        this_sess = svm_images_main_post(session_id, data_list, svm_blocks, iblock, dir_svm, frames_svm, time_win, trial_type, to_decode, same_num_neuron_all_planes, cols, analysis_dates, project_codes, use_events, doPlots=0)
+        this_sess = svm_images_plots_main(session_id, data_list, svm_blocks, iblock, dir_svm, frames_svm, time_win, trial_type, to_decode, same_num_neuron_all_planes, cols, analysis_dates, project_codes, use_spont_omitFrMinus1, use_events, doPlots=0)
 
         
         all_sess = all_sess.append(this_sess) 
@@ -244,20 +258,28 @@ for iblock in br: # iblock=0; iblock=np.nan
 
 
     # Set the name of the h5 file for saving all_sess
-    e = 'events_' if use_events else ''
+    e = 'events_' if use_events else ''      
     if trial_type=='changes_vs_nochanges': # change, then no-change will be concatenated
-        svmn = f'{e}svm_decode_changes_from_nochanges' # 'svm_gray_omit'
-    elif trial_type=='hits_vs_misses': # 
-        svmn = f'{e}svm_decode_hits_from_misses'                
+        svmn = f'{e}svm_decode_changes_from_nochanges'
+    elif trial_type=='hits_vs_misses':
+        svmn = f'{e}svm_decode_hits_from_misses'        
+    elif trial_type == 'baseline_vs_nobaseline':
+        svmn = f'{e}svm_decode_baseline_from_nobaseline' #f'{e}svm_gray_omit' #svm_decode_baseline_from_nobaseline
+        if use_spont_omitFrMinus1==0:
+            svmn = svmn + '_spontFrs'
     else:
         svmn = f'{e}svm_decode_{to_decode}_image_from_{trial_type}' # 'svm_gray_omit'
 
+        
     if svm_blocks==-101: # run svm analysis only on engaged trials; redifine df_data only including the engaged rows
         svmn = f'{svmn}_only_engaged'
         
     if use_balanced_trials:
         svmn = f'{svmn}_equalTrs'
         
+    print(svmn)
+
+    
     now = (datetime.datetime.now()).strftime("%Y%m%d_%H%M%S")
 
     if same_num_neuron_all_planes:
@@ -278,7 +300,7 @@ for iblock in br: # iblock=0; iblock=np.nan
         a = f'{a}_{word}{iblock}'
 
     name = f'{name}_{a}_{b}_{now}'
-#     print(name)
+    print(name)
 
 
     if saveResults:

@@ -256,8 +256,9 @@ if np.isnan(svm_blocks) or svm_blocks==-101:
         gs1.update(bottom=.15, top=0.8, left=0.05, right=0.95, wspace=.55, hspace=.5)
 
         ax1 = plt.subplot(gs1[0])
-        ax2 = plt.subplot(gs1[1])
-        ax3 = plt.subplot(gs1[2])
+        if ~np.isnan(inds_lm).squeeze():
+            ax2 = plt.subplot(gs1[1])
+            ax3 = plt.subplot(gs1[2])
 
         xgap = 0
         top_allstage = []
@@ -316,7 +317,9 @@ if np.isnan(svm_blocks) or svm_blocks==-101:
             xnowall.append(xnow)
     #         print(x+xgap)
 
-    
+            #######################################
+            ############# plot errorbars #############        
+            #######################################
             # test
             ax1.errorbar(xnow, top[inds_v1, 1], yerr=top_sd[inds_v1, 1], fmt=fmt_now, markersize=5, capsize=0, label=f'{ophys_stage_labels[stagenow-1]}', color=colors[stagenow-1]) #cols_stages[stcn]
             if ~np.isnan(inds_lm[0]):
@@ -334,7 +337,10 @@ if np.isnan(svm_blocks) or svm_blocks==-101:
                 ax3.errorbar(xnow, top_pooled[:, 2], yerr=top_sd_pooled[:, 2], fmt=fmt_now, markersize=3, capsize=0, color='gray')
 
                 
+                
+            ##############################################################################
             ####### do anova and tukey hsd for pairwise comparison of depths per area
+            ##############################################################################
             ylims = []
             if project_codes_all == ['VisualBehaviorMultiscope'] and show_depth_stats:
                 tukey_all = anova_tukey.do_anova_tukey(summary_vars_all, crenow, stagenow, inds_v1, inds_lm, inds_pooled)
@@ -349,16 +355,21 @@ if np.isnan(svm_blocks) or svm_blocks==-101:
 
             else:
                 ylims.append(ax1.get_ylim())
-                ylims.append(ax2.get_ylim())
-                ylims.append(ax3.get_ylim())
+                if ~np.isnan(inds_lm).squeeze():
+                    ylims.append(ax2.get_ylim())
+                    ylims.append(ax3.get_ylim())
                 
                 
+                
+            ##############################################################################    
             ####### compare actual and shuffled for each ophys stage
+            ##############################################################################
             if ttest_actShfl_stages == 0: 
                 ax1.plot(xnow, p_act_shfl_sigval[icre, stagenow-1, inds_v1]*mn_mx_allcre[icre][1]-np.diff(mn_mx_allcre[icre])*.03, color=colors[stagenow-1], marker='*', linestyle='') # cols_stages[stcn]
                 ax2.plot(xnow, p_act_shfl_sigval[icre, stagenow-1, inds_lm]*mn_mx_allcre[icre][1]-np.diff(mn_mx_allcre[icre])*.03, color=colors[stagenow-1], marker='*', linestyle='')
                 ax3.plot(xnow, p_act_shfl_sigval_pooled[icre, stagenow-1, :]*mn_mx_allcre[icre][1]-np.diff(mn_mx_allcre[icre])*.03, color=colors[stagenow-1], marker='*', linestyle='')                
 
+                
 
         top_allstage = np.array(top_allstage)
         mn_mx_allstage = np.array(mn_mx_allstage)
@@ -425,6 +436,11 @@ if np.isnan(svm_blocks) or svm_blocks==-101:
             fgn = '' #f'{whatSess}'
             if same_num_neuron_all_planes:
                 fgn = fgn + '_sameNumNeursAllPlanes'
+            
+            if baseline_subtract==1:
+                bln = f'timewin{time_win}_blSubtracted'
+            else:
+                bln = f'timewin{time_win}_blNotSubtracted'                
 
             if svm_blocks==-1:
                 word = 'engaged_disengaged_blocks_'
@@ -440,6 +456,7 @@ if np.isnan(svm_blocks) or svm_blocks==-101:
             
             if show_depth_stats:
                 word = word + '_anova'
+
                 
             fgn = f'{fgn}_{word}'
             if len(project_codes_all)==1:
@@ -458,10 +475,11 @@ if np.isnan(svm_blocks) or svm_blocks==-101:
             
             fgn = f'{fgn}_{pcn}'            
                 
-            nam = f'{crenow[:3]}{whatSess}_aveMice_aveSessPooled{fgn}_{now}'
+            nam = f'{crenow[:3]}{whatSess}_{bln}_aveMice_aveSessPooled{fgn}_{now}'
             
             fign = os.path.join(dir0, 'svm', dir_now, nam+fmt)
             print(fign)
+            
             
             plt.savefig(fign, bbox_inches='tight') # , bbox_extra_artists=(lgd,)    
 
