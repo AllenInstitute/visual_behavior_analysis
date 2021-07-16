@@ -1015,11 +1015,11 @@ def cache_behavior_stats(behavior_session_id, engaged_only=True, cache_dir='/all
     '''
     behavior_stats_df = pd.DataFrame(
         get_behavior_stats(behavior_session_id, engaged_only),
-        index = [0]
+        index=[0]
     )
 
     filename = 'behavior_summary_behavior_session_id={}.h5'.format(behavior_session_id)
     behavior_stats_df.to_hdf(
         os.path.join(cache_dir, filename),
-        key = 'data'
+        key='data'
     )
