@@ -22,7 +22,9 @@ job_settings = {'queue': 'braintv',
                 }
 
 
-container_ids = data_loading.get_ophys_container_ids(release_data_only=False)
+
+container_ids = data_loading.get_ophys_container_ids(include_failed_data=False, release_data_only=False,
+                                                     exclude_ai94=False, from_cache=False)
 
 
 if __name__ == "__main__":
