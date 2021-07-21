@@ -199,7 +199,7 @@ def get_filtered_ophys_experiment_table(include_failed_data=False, release_data_
         pass
     else:
         experiments = filtering.limit_to_passed_experiments(experiments)
-        experiments = filtering.remove_failed_containers(experiments) # container_workflow_state can be anything other than 'failed'
+        experiments = filtering.remove_failed_containers(experiments)  # container_workflow_state can be anything other than 'failed'
         # limit to sessions that start with OPHYS
         experiments = filtering.limit_to_valid_ophys_session_types(experiments)
     if release_data_only:
@@ -2449,7 +2449,7 @@ def get_file_name_for_multi_session_df(df_name, project_code, session_type, cond
 
 
 def get_multi_session_df(cache_dir, df_name, conditions, experiments_table, remove_outliers=True, use_session_type=True,
-                         use_events=False):
+                          use_events=False):
     """
     Loops through all experiments in the provided experiments_table, creates a response dataframe indicated by df_name,
     creates a mean response dataframe for a given set of conditions, and concatenates across all experiments to create
