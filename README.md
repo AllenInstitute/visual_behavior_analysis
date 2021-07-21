@@ -19,8 +19,8 @@ Then activate the environment:
 
 and install with pip (Allen Institute internal users only):
 
-    pip install git+http://stash.corp.alleninstitute.org/scm/vb/visual_behavior_analysis.git
-
+    pip install git+https://github.com/AllenInstitute/visual_behavior_analysis.git
+    
 ## Installation
 
 This package is designed to be installed using standard Python packaging tools. For example,
@@ -33,13 +33,9 @@ If you are using pip to manage packages and versions (recommended), you can also
 
 If you are plan to contribute to the development of the package, I recommend installing in "editable" mode:
 
-   pip install -e ./
+    pip install -e ./
 
 This ensures that Python uses the current, active files in the folder (even while switching between branches).
-
-To install from with in the AIBS local network from a whl using pip:
-   
-   pip install -i http://aibs-artifactory/artifactory/api/pypi/pypi-local/simple --trusted-host aibs-artifactory --extra-index-url https://pypi.org/simple visual_behavior==0.5.0.dev5
 
 
 ## To ensure that the newly created environment is visible in Jupyter:
