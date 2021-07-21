@@ -1250,7 +1250,6 @@ def get_multi_session_df(experiments, df_name, conditions, use_events=False, fil
     :return:
     """
     import visual_behavior.ophys.response_analysis.utilities as ut
-    import visual_behavior.ophys.response_analysis.response_processing as rp
     from visual_behavior.ophys.response_analysis.response_analysis import ResponseAnalysis
 
     if 'stimulus' in df_name:
@@ -1277,7 +1276,7 @@ def get_multi_session_df(experiments, df_name, conditions, use_events=False, fil
         print('processing experiment', i, 'out of', str(len(experiments.index)))
         try:
             print(experiment_id)
-            dataset = loading.get_ophys_dataset(experiment_id)
+            dataset = data_loading.get_ophys_dataset(experiment_id)
             analysis = ResponseAnalysis(dataset, use_events=use_events, filter_events=filter_events,
                                         use_extended_stimulus_presentations=use_extended_stimulus_presentations)
             df = analysis.get_response_df(df_name)

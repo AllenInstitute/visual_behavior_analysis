@@ -1,11 +1,10 @@
 import os
 import sys
 import argparse
-import numpy as np
 from visual_behavior.data_access import loading as loading
 
 sys.path.append('/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/src/')
-from pbstools import pbstools # NOQA E402
+from pbstools import pbstools  # NOQA E402
 
 
 parser = argparse.ArgumentParser(description='run container qc plot generation functions on the cluster')
@@ -22,9 +21,8 @@ job_settings = {'queue': 'braintv',
                 }
 
 
-
-container_ids = data_loading.get_ophys_container_ids(include_failed_data=False, release_data_only=False,
-                                                     exclude_ai94=False, from_cache=False)
+container_ids = loading.get_ophys_container_ids(include_failed_data=False, release_data_only=False,
+                                                exclude_ai94=False, from_cache=False)
 
 
 if __name__ == "__main__":
