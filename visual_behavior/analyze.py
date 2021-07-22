@@ -1,5 +1,5 @@
 import numpy as np
-from scipy.signal import medfilt
+from scipy.ndimage import median_filter as medfilt
 
 
 def calc_deriv(x, time):
@@ -49,7 +49,7 @@ def compute_running_speed(dx_raw, time, v_sig, v_in, smooth=False):
     numpy.ndarray
         Running speed (cm/s)
     """
-    dx = medfilt(dx_raw, kernel_size=5)  # remove big, single frame spikes in encoder values
+    dx = medfilt(dx_raw, size=5)  # remove big, single frame spikes in encoder values
     dx = np.cumsum(dx)  # wheel rotations
     speed = calc_deriv(dx, time)  # speed in degrees/s
     speed = deg_to_dist(speed)

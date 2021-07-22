@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 from .extended_trials import get_first_lick_relative_to_scheduled_change
 from visual_behavior.change_detection.running.metrics import count_wraps
-from scipy.signal import medfilt
+from scipy.ndimage import median_filter as medfilt
 
 
 def parse_log(log_record):
@@ -138,7 +138,7 @@ def validate_encoder_voltage(core_data, range_threshold=3, wrap_threshold=2):
     running = core_data['running']
 
     # filter out voltage artifacts
-    filtered_vsig = medfilt(running['v_sig'], kernel_size=5)
+    filtered_vsig = medfilt(running['v_sig'], size=5)
 
     v_sig_range = filtered_vsig.max() - filtered_vsig.min()
 

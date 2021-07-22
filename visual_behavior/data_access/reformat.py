@@ -16,7 +16,9 @@ import visual_behavior.ophys.dataset.extended_stimulus_processing as esp
 
 def add_mouse_seeks_fail_tags_to_experiments_table(experiments):
     mouse_seeks_report_file_base = r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots'
-    report_file = 'ophys_session_log_011221.xlsx'
+    # report_file = 'ophys_session_log_011221.xlsx'
+    # report_file = 'ophys_session_log_210629.xlsx'
+    report_file = 'ophys_session_log_072221.xlsx'
     vb_report_path = os.path.join(mouse_seeks_report_file_base, report_file)
     vb_report_df = pd.read_excel(vb_report_path)
 
@@ -26,8 +28,10 @@ def add_mouse_seeks_fail_tags_to_experiments_table(experiments):
     vb_report_df.columns = clean_columns(vb_report_df.columns)
     vb_report_df = vb_report_df.rename(columns={'session_id': 'ophys_session_id'})
     # merge fail tags into all_experiments manifest
+    experiments = experiments.reset_index()
     experiments = experiments.merge(vb_report_df[['ophys_session_id', 'session_tags', 'failure_tags']],
                                     right_on='ophys_session_id', left_on='ophys_session_id')
+    experiments = experiments.set_index('ophys_experiment_id')
     return experiments
 
 
@@ -44,7 +48,7 @@ def get_exposure_number_for_group(group):
 
 
 def add_session_type_exposure_number_to_experiments_table(experiments):
-    experiments = experiments.groupby(['super_container_id', 'container_id', 'session_type']).apply(
+    experiments = experiments.groupby(['mouse_id', 'ophys_container_id', 'session_type']).apply(
         get_exposure_number_for_group)
     return experiments
 
@@ -61,11 +65,7 @@ def add_engagement_state_to_trials_table(trials, extended_stimulus_presentations
     for idx, trial in trials.iterrows():
         start_time = trial['start_time']
         query_string = 'start_time > @start_time - 1 and start_time < @start_time + 1'
-        first_stim_presentation_index = np.argmin(
-            np.abs(
-                start_time - extended_stimulus_presentations.query(query_string)['start_time']
-            )
-        )
+        first_stim_presentation_index = (np.abs(start_time - extended_stimulus_presentations.query(query_string)['start_time'])).idxmin()
         trials.at[idx, 'first_stim_presentation_index'] = first_stim_presentation_index
 
     # define the columns from extended_stimulus_presentations that we want to merge into trials
@@ -75,7 +75,7 @@ def add_engagement_state_to_trials_table(trials, extended_stimulus_presentations
     ]
 
     # merge the desired columns into trials on the stimulus_presentations_id indices
-    trials = trials = trials.merge(
+    trials = trials.merge(
         extended_stimulus_presentations[cols_to_merge].reset_index(),
         left_on='first_stim_presentation_index',
         right_on='stimulus_presentations_id',
@@ -173,23 +173,22 @@ def add_model_outputs_availability_to_table(table):
     return table
 
 
-def reformat_experiments_table(experiments, behavior_session_table):
+def reformat_experiments_table(experiments):
+    """
+    adds extra columns to experiments table
+    :param experiments:
+    :return:
+    """
     experiments = experiments.reset_index()
-    experiments['super_container_id'] = experiments['specimen_id'].values
     # clean up cre_line naming
-    # experiments['cre_line'] = [driver_line[1] if driver_line[0] == 'Camk2a-tTA' else driver_line[0] for driver_line in
-    #                            experiments.driver_line.values]
     experiments['cre_line'] = [
         full_genotype.split('/')[0] if 'Ai94' not in full_genotype else full_genotype.split('/')[0] + ';Ai94' for
         full_genotype in
         experiments.full_genotype.values]
-    experiments = experiments[experiments.cre_line != 'Cux2-CreERT2']  # why is this here?
+    experiments = experiments[experiments.cre_line != 'Cux2-CreERT2']  # why is this in the VB dataset?
     # replace session types that are NaN with string None
     experiments.at[experiments[experiments.session_type.isnull()].index.values, 'session_type'] = 'None'
     experiments = add_mouse_seeks_fail_tags_to_experiments_table(experiments)
-    experiments = add_session_type_exposure_number_to_experiments_table(experiments)
-    experiments = add_image_set_exposure_number_to_experiments_table(experiments, behavior_session_table)
-    experiments = add_omission_exposure_number_to_experiments_table(experiments, behavior_session_table)
     experiments = add_model_outputs_availability_to_table(experiments)
     if 'level_0' in experiments.columns:
         experiments = experiments.drop(columns='level_0')
@@ -233,7 +232,7 @@ def add_container_workflow_state_to_ophys_session_table(session_table, experimen
         """
     session_table = session_table.reset_index()
     session_table = session_table[session_table.ophys_session_id.isin(experiment_table.ophys_session_id.unique())]
-    experiments = experiment_table[['ophys_session_id', 'container_id', 'container_workflow_state']].drop_duplicates(
+    experiments = experiment_table[['ophys_session_id', 'ophys_container_id', 'container_workflow_state']].drop_duplicates(
         ['ophys_session_id'])
     session_table = session_table.merge(experiments, left_on='ophys_session_id', right_on='ophys_session_id')
     session_table = session_table.set_index(keys='ophys_session_id')

@@ -204,6 +204,20 @@ def get_stats_for_cell_summary_areas(cell_summary_df, metric):
     return stats_df
 
 
+def get_stats_for_cell_summary_session_numbers(cell_summary_df, metric):
+    df = cell_summary_df.copy()
+    df['cre line'] = [cre_line.split('-')[0] for cre_line in df.cre_line.values]
+
+    condition = 'cre line'
+    condition_values = np.sort(df[condition].unique())
+    hue = 'session_number'
+    hue_names = np.sort(df[hue].unique())
+    sample_type = 'cells'
+
+    stats_df = get_stats_for_conditions(df, metric, sample_type, condition, condition_values, hue, hue_names)
+    return stats_df
+
+
 ## behavior - figure 1
 
 
@@ -1115,6 +1129,8 @@ def plot_cdf_for_condition(df, metric, condition='image_set', condition_values=[
             stats_df = get_stats_for_cell_summary_image_sets(df, metric)
         elif condition == 'area':
             stats_df = get_stats_for_cell_summary_areas(df, metric)
+        elif condition == 'session_number':
+            stats_df = get_stats_for_cell_summary_session_numbers(df, metric)
         stats = stats_df[(stats_df.group == cre_line.split('-')[0])]
         xlim = ax.get_xlim()
         ylim = ax.get_ylim()
@@ -1152,26 +1168,33 @@ def plot_cdf_for_condition(df, metric, condition='image_set', condition_values=[
 
 def plot_cdf_for_image_sets(df, metric, cdf_ranges=[(0, 1), (0, 1)], xlabel=None, ylabel='fraction of cells',
                             show_legend=True, show_stats=True, save_figures=False, save_dir=None, folder=None):
-    condition = 'image_set'
-    condition_values = ut.get_image_sets(df)
-    colors = ut.get_colors_for_image_sets()
-    cre_lines = ut.get_cre_lines(df)
+    if 'image_set' in df.keys():
+        condition = 'image_set'
+        condition_values = ut.get_image_sets(df)
+        colors = ut.get_colors_for_image_sets()
+    else:
+        condition = 'session_number'
+        condition_values = np.sort(df[condition].unique())
+        import visual_behavior.visualization.utils as utils
+        colors = utils.get_colors_for_session_numbers()
 
-    figsize = (8, 3.5)
-    fig, ax = plt.subplots(1, 2, figsize=figsize, sharex=False, sharey=True)
+    cre_lines = np.sort(df.cre_line.unique())
+    figsize = (len(cre_lines)*4, 3.5)
+    fig, ax = plt.subplots(1, len(cre_lines), figsize=figsize, sharex=False, sharey=True)
     for i, cre_line in enumerate(cre_lines):
         tmp = df[df.cre_line == cre_line].copy()
         ax[i] = plot_cdf_for_condition(tmp, metric, condition, condition_values, colors=colors, cre_line=cre_line,
                                        show_stats=show_stats, ylabel=ylabel,
                                        cdf_range=cdf_ranges[i], ax=ax[i], save_figures=False, save_dir=save_dir,
                                        folder=folder)
+        ax[i].get_legend().remove()
 
         if xlabel is None:
             ax[i].set_xlabel(metric)
         else:
             ax[i].set_xlabel(xlabel)
     ax[1].set_ylabel('')
-    l = ax[i].legend(title=condition, fontsize='x-small')
+    l = ax[i].legend(title=condition, fontsize='x-small', bbox_to_anchor=(1.1,1))
     plt.setp(l.get_title(), fontsize='x-small')
     if (show_legend == False) or (show_stats == True):
         ax[i].legend_.remove()
@@ -1650,10 +1673,13 @@ def generate_figures_for_session_metric_areas(session_summary_df, metric, range=
 
 ### heatmaps
 
-def plot_tuning_curve_heatmap(df, vmax=0.3, title=None, ax=None, save_dir=None, folder=None, use_events=False,
+def plot_tuning_curve_heatmap(df, cre_line, image_set=None, vmax=0.3, title=None, ax=None, save_dir=None, folder=None, use_events=False,
                               colorbar=True, horizontal_legend=False, include_omitted=False):
-    image_set = df.image_set.unique()[0]
-    cre_line = df.cre_line.unique()[0]
+    if 'image_set' is None:
+        if 'image_set' in df.keys():
+            image_set = df.image_set.unique()[0]
+        else:
+            image_set = df.session_number.unique()[0]
     if 'image_name' in df.keys():
         image_name = 'image_name'
         suffix = '_flashes'
