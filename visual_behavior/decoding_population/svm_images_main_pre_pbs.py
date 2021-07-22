@@ -197,7 +197,8 @@ def svm_images_main_pre_pbs(isess, project_codes, use_events, to_decode, trial_t
     # get those rows of experiments_table that are for a specific project code
     metadata_valid = experiments_table[experiments_table['project_code']==project_codes]
 #     metadata_valid = experiments_table[experiments_table['project_code']==project_codes[0]] #'VisualBehaviorMultiscope'] # multiscope sessions
-
+    metadata_valid = metadata_valid.sort_values('ophys_session_id')
+    
 
     # Use the new list of sessions that are de-crosstalked and will be released in March 2021
     # metadata_meso_dir = '/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/meso_decrosstalk/meso_experiments_in_release.csv'
@@ -213,6 +214,7 @@ def svm_images_main_pre_pbs(isess, project_codes, use_events, to_decode, trial_t
     experiments_table = experiments_table.reset_index('ophys_experiment_id')
 
     metadata_all = experiments_table[experiments_table['ophys_session_id'].isin(list_all_sessions_valid)==True] # metadata_all = experiments_table[np.in1d(experiments_table['ophys_session_id'].values, list_all_sessions_valid)]
+    metadata_all = metadata_all.sort_values('ophys_session_id')
     metadata_all.shape
     metadata_all.shape[0]/8
 

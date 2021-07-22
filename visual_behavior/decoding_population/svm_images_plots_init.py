@@ -35,8 +35,8 @@ from svm_images_plots_main import *
 
 project_codes = ['VisualBehavior'] # ['VisualBehaviorMultiscope'] # ['VisualBehaviorMultiscope', 'VisualBehaviorTask1B', 'VisualBehavior', 'VisualBehaviorMultiscope4areasx2d']
 
-to_decode = 'current' #'next' # 'current' (default): decode current image.    'previous': decode previous image.    'next': decode next image.
-trial_type = 'baseline_vs_nobaseline' #'changes' #'baseline_vs_nobaseline' #'hits_vs_misses' #'changes_vs_nochanges' #'omissions' # 'omissions', 'images', 'changes' # what trials to use for SVM analysis # the population activity of these trials at time time_win will be used to decode the image identity of flashes that occurred at their time 0 (if to_decode='current') or 750ms before (if to_decode='previous'). # 'baseline_vs_nobaseline' # decode activity at each frame vs. baseline (ie the frame before omission unless use_spont_omitFrMinus1 = 1 (see below))
+to_decode = 'next' #'next' # 'current' (default): decode current image.    'previous': decode previous image.    'next': decode next image.
+trial_type = 'omissions' #'changes' #'baseline_vs_nobaseline' #'hits_vs_misses' #'changes_vs_nochanges' #'omissions' # 'omissions', 'images', 'changes' # what trials to use for SVM analysis # the population activity of these trials at time time_win will be used to decode the image identity of flashes that occurred at their time 0 (if to_decode='current') or 750ms before (if to_decode='previous'). # 'baseline_vs_nobaseline' # decode activity at each frame vs. baseline (ie the frame before omission unless use_spont_omitFrMinus1 = 1 (see below))
 
 use_events = True #False # whether to run the analysis on detected events (inferred spikes) or dff traces.
 
@@ -135,6 +135,7 @@ if ~np.isnan(svm_blocks):
 experiments_table = loading.get_filtered_ophys_experiment_table(release_data_only=True)
 experiments_table = experiments_table.reset_index('ophys_experiment_id')
 metadata_valid = experiments_table[experiments_table['project_code']==project_codes[0]] # multiscope sessions
+metadata_valid = metadata_valid.sort_values('ophys_session_id')
 
 list_all_sessions_valid = metadata_valid['ophys_session_id'].unique()
 print(f'{len(list_all_sessions_valid)}: Number of de-crosstalked sessions for analysis')
@@ -145,6 +146,7 @@ experiments_table = loading.get_filtered_ophys_experiment_table(include_failed_d
 experiments_table = experiments_table.reset_index('ophys_experiment_id')
 
 metadata_all = experiments_table[experiments_table['ophys_session_id'].isin(list_all_sessions_valid)==True] # metadata_all = experiments_table[np.in1d(experiments_table['ophys_session_id'].values, list_all_sessions_valid)]
+metadata_all = metadata_all.sort_values('ophys_session_id')
 metadata_all.shape
 metadata_all.shape[0]/8
 
@@ -238,6 +240,8 @@ for iblock in br: # iblock=0; iblock=np.nan
         session_id = int(list_all_sessions_valid[isess])
 #         data_list = metadata_basic[metadata_basic['session_id'].values==session_id]
 
+        print('\n\n======================== Analyzing session %d, %d/%d ========================\n' %(session_id, isess, len(list_all_sessions_valid)))
+
         experiment_ids = list_all_experiments[isess] # we want to have the list of all experiments for each session regardless of whethere they were valid or not... this way we can find the same plane across all sessions.
 
         # Note: we cant use metadata from allensdk because it doesnt include all experiments of a session, it only includes the valid experiments, so it wont allow us to set the metadata for all experiments.
@@ -245,9 +249,8 @@ for iblock in br: # iblock=0; iblock=np.nan
         metadata_now = metadata_valid[metadata_valid['ophys_session_id']==session_id]
         experiment_ids_valid = metadata_now['ophys_experiment_id'].values # the problem is that this wont give us the list of all experiments for a session ... it only includes the valid experiments.
         experiment_ids_valid = np.sort(experiment_ids_valid)
-        print(f'\n{sum(np.in1d(experiment_ids, experiment_ids_valid)==False)} of the experiments are invalid!\n')
 
-        print('\n\n======================== Analyzing session %d, %d/%d ========================\n' %(session_id, isess, len(list_all_sessions_valid)))
+        print(f'\n{sum(np.in1d(experiment_ids, experiment_ids_valid)==False)} of the experiments are invalid!\n')
 
 
 
