@@ -124,12 +124,23 @@ def get_manifest_path():
     return manifest_path
 
 
-def get_visual_behavior_cache(manifest_path=None):
-    """Get cache using manifest path"""
-    # i think this manifest caching is now disabled, so providing the path to the manifest does nothing in this case ###
-    if manifest_path is None:
-        manifest_path = get_manifest_path()
-    cache = bpc.from_lims(manifest=get_manifest_path())
+def get_visual_behavior_cache(from_s3=True, release_data_only=True, cache_dir=None):
+    """
+    Gets the visual behavior dataset cache object from s3 or lims
+    :param from_s3: If True, loads manifest from s3 and saves to provided cache_dir (or default cache_dir if None provided)
+    :param release_data_only: limits to data released on March 25th when loading from lims
+    :param cache_dir: directory where to save manifest & data files if using s3
+    :return: SDK cache object
+    """
+    if from_s3:
+        if cache_dir is None:
+            cache_dir = get_cache_dir()
+        cache = bpc.from_s3_cache(cache_dir=cache_dir)
+    else:
+        if release_data_only:
+            cache = bpc.from_lims(data_release_date='2021-03-25')
+        else:
+            cache = bpc.from_lims()
     return cache
 
 
