@@ -170,7 +170,7 @@ def crossValidateModel(X, Y, modelFn, **options):
         Ys_now = Ys[Ys==0]
         Xs_now = Xs[Ys==0]
         numO = len(Ys_now) 
-    #     print(Ys_now.shape, Xs_now.shape)
+#         print(Ys_now.shape, Xs_now.shape)
         YTrain_0 = Ys_now[np.arange(0, int((kfold-1.) / kfold * numO))] # Take the first 90% of trials as training set       
         YTest_0 = Ys_now[np.arange(int((kfold-1.)/kfold*numO), numO)] # Take the last 10% of trials as testing set
         XTrain_0 = Xs_now[np.arange(0, int((kfold-1.) / kfold * numO))] # Take the first 90% of trials as training set       
@@ -179,7 +179,7 @@ def crossValidateModel(X, Y, modelFn, **options):
         Ys_now = Ys[Ys==1]
         Xs_now = Xs[Ys==1]
         numO = len(Ys_now) 
-    #     print(Ys_now.shape, Xs_now.shape)
+#         print(Ys_now.shape, Xs_now.shape)
         YTrain_1 = Ys_now[np.arange(0, int((kfold-1.) / kfold * numO))] # Take the first 90% of trials as training set       
         YTest_1 = Ys_now[np.arange(int((kfold-1.)/kfold*numO), numO)] # Take the last 10% of trials as testing set
         XTrain_1 = Xs_now[np.arange(0, int((kfold-1.) / kfold * numO))] # Take the first 90% of trials as training set       

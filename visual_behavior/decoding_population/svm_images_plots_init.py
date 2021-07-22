@@ -33,17 +33,17 @@ from svm_images_plots_main import *
 
 #%% Set vars
 
-project_codes = ['VisualBehaviorMultiscope'] # ['VisualBehaviorMultiscope'] # ['VisualBehaviorMultiscope', 'VisualBehaviorTask1B', 'VisualBehavior', 'VisualBehaviorMultiscope4areasx2d']
+project_codes = ['VisualBehavior'] # ['VisualBehaviorMultiscope'] # ['VisualBehaviorMultiscope', 'VisualBehaviorTask1B', 'VisualBehavior', 'VisualBehaviorMultiscope4areasx2d']
 
 to_decode = 'current' #'next' # 'current' (default): decode current image.    'previous': decode previous image.    'next': decode next image.
-trial_type = 'baseline_vs_nobaseline' #'changes' #'hits_vs_misses' #'changes_vs_nochanges' #'omissions' # 'omissions', 'images', 'changes' # what trials to use for SVM analysis # the population activity of these trials at time time_win will be used to decode the image identity of flashes that occurred at their time 0 (if to_decode='current') or 750ms before (if to_decode='previous'). # 'baseline_vs_nobaseline' # decode activity at each frame vs. baseline (ie the frame before omission unless use_spont_omitFrMinus1 = 1 (see below))
+trial_type = 'baseline_vs_nobaseline' #'changes' #'baseline_vs_nobaseline' #'hits_vs_misses' #'changes_vs_nochanges' #'omissions' # 'omissions', 'images', 'changes' # what trials to use for SVM analysis # the population activity of these trials at time time_win will be used to decode the image identity of flashes that occurred at their time 0 (if to_decode='current') or 750ms before (if to_decode='previous'). # 'baseline_vs_nobaseline' # decode activity at each frame vs. baseline (ie the frame before omission unless use_spont_omitFrMinus1 = 1 (see below))
 
 use_events = True #False # whether to run the analysis on detected events (inferred spikes) or dff traces.
 
-svm_blocks = np.nan #-101 #np.nan # -1: divide trials based on engagement #2 # number of trial blocks to divide the session to, and run svm on. # set to np.nan to run svm analysis on the whole session
-
+svm_blocks = -1 #-101 #np.nan # -1: divide trials based on engagement #2 # number of trial blocks to divide the session to, and run svm on. # set to np.nan to run svm analysis on the whole session
 # engagement_pupil_running = 0 # applicable when svm_blocks=-1 # np.nan or 0,1,2 for engagement, pupil, running: which metric to use to define engagement? 
-use_spont_omitFrMinus1 = 1 # applicable when trial_type='baseline_vs_nobaseline' # if 0, classify omissions against randomly picked spontanoues frames (the initial gray screen); if 1, classify omissions against the frame right before the omission 
+
+analysis_dates = [''] #['20210708'] # ['2020507'] #set to [''] if you want to load the latest file. # the date on which the svm files were saved.
 
 
 # set window for quantifying the responses
@@ -51,6 +51,8 @@ if use_events:
     time_win = [0, .4]
 else:
     time_win = [0, .55] # 'frames_svm' # set time_win to a string (any string) to use frames_svm as the window of quantification. # time window relative to trial onset to quantify image signal. Over this window class accuracy traces will be averaged.
+# if trial_type == 'baseline_vs_nobaseline':
+#     time_win = [0, .75] # we use the entire time after omission because the omission responses slowly go up
 
 
 same_num_neuron_all_planes = 0
@@ -59,6 +61,8 @@ saveResults = 1
 
 
 #%%    
+    
+use_spont_omitFrMinus1 = 1 # applicable when trial_type='baseline_vs_nobaseline' # if 0, classify omissions against randomly picked spontanoues frames (the initial gray screen); if 1, classify omissions against the frame right before the omission 
     
 # Note: in the cases below, we are decoding baseline from no-baseline , hits from misses, and changes from no-changes, respectively. 
 # since we are not decoding images, to_decode really doesnt mean anything (when decoding images, to_decode means current/next/previous image) and we just set it to 'current' so it takes some value.
@@ -85,7 +89,6 @@ frames_svm = frames_svm_all[0] #[-3,-2,-1] # [0,1,2,3,4,5] #  which svm files to
     
 
 num_planes = 8
-analysis_dates = [''] # ['2020507'] #set to [''] if you want to load the latest file. # the date on which the svm files were saved.
 
 if project_codes == ['VisualBehavior']:
     frame_dur = np.array([.032])
@@ -150,8 +153,34 @@ if project_codes == ['VisualBehavior']:
     list_all_experiments = metadata_all['ophys_experiment_id'].values
                                   
 else:
-    list_all_experiments = np.reshape(metadata_all['ophys_experiment_id'].values, (8, len(list_all_sessions_valid)), order='F').T    
-# list_all_experiments.shape
+    try:
+        list_all_experiments = np.reshape(metadata_all['ophys_experiment_id'].values, (8, len(list_all_sessions_valid)), order='F').T    
+
+    except Exception as E:
+        print(E)
+
+        list_all_experiments = []
+        for sess in list_all_sessions_valid: # sess = list_all_sessions_valid[0]
+            es = metadata_all[metadata_all['ophys_session_id']==sess]['ophys_experiment_id'].values
+            list_all_experiments.append(es)
+        list_all_experiments = np.array(list_all_experiments)
+
+        list_all_experiments.shape
+
+        b = np.array([len(list_all_experiments[i]) for i in range(len(list_all_experiments))])
+        no8 = list_all_sessions_valid[b!=8]
+        if len(no8)>0:
+            print(f'The following sessions dont have all the 8 experiments, excluding them! {no8}')    
+            list_all_sessions_valid = list_all_sessions_valid[b==8]
+            list_all_experiments = list_all_experiments[b==8]
+
+            print(list_all_sessions_valid.shape, list_all_experiments.shape)
+
+        list_all_experiments = np.vstack(list_all_experiments)
+
+    list_all_experiments = np.sort(list_all_experiments) # sorts across axis 1, ie experiments within each session (does not change the order of sessions!)
+
+print(list_all_experiments.shape)
 
 
 

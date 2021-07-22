@@ -181,12 +181,17 @@ for istage in np.unique(stages_all): # istage=1
                cre_all_eachDepth, depth_all_eachDepth, ts_all_eachDepth, sh_all_eachDepth, pao_all_eachDepth
 
         else:
-            
-            svm_allMice_sessPooled.at[cntall, indexes] = cre_all, mouse_id_all, session_ids_all, area_all, depth_all, block_all, session_labs_all, \
-               ts_all, sh_all, pa_all
+
+            arrvars = cre_all, mouse_id_all, session_ids_all, area_all, depth_all, block_all, session_labs_all, ts_all, sh_all, pa_all
+            for iar in range(len(indexes)):
+                svm_allMice_sessPooled.at[cntall, indexes[iar]] = arrvars[iar]
+                
+            # not sure why but below fails...
+#             svm_allMice_sessPooled.at[cntall, indexes] = cre_all, mouse_id_all, session_ids_all, \
+#                 area_all, depth_all, block_all, session_labs_all, ts_all, sh_all, pa_all
             
 
-        print(svm_allMice_sessPooled.shape)        
+        print(svm_allMice_sessPooled.shape)
 #         print(svm_allMice_sessPooled)
 
 

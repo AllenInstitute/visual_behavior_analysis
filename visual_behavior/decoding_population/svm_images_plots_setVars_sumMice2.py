@@ -72,7 +72,7 @@ for istage in np.unique(stages_all): # istage=1
             svm_this_plane_allsess = svm_this_plane_allsess0[stages_all==istage]
 '''
 
-if ~np.isnan(svm_blocks) and svm_blocks!=-101:
+if ~np.isnan(svm_blocks) and svm_blocks!=-101: # svm was run on blocks 
 
     for istage in np.unique(stages_all): # istage=1
         a = svm_allMice_sessPooled0[stages_allp==istage]
@@ -202,102 +202,108 @@ for istage in np.unique(stages_all): # istage=1
                 
 
             ###############################
-            cre_all = svm_allMice_sessPooled['cre_allPlanes'].values[0]
-            cre_lines = np.unique(cre_all)
-            mouse_id_all = svm_allMice_sessPooled['mouse_id_allPlanes'].values[0]
-
-#             cre = 'Sst' #cre_lines[icre]    
-            thisCre_pooledSessNum = sum(cre_all[0,:]==cre) # number of pooled sessions for this cre line
-            thisCre_mice = mouse_id_all[0, cre_all[0,:]==cre]
-            thisCre_mice_num = len(np.unique(thisCre_mice))
-
-    
-            if svm_blocks==-1:
-                lab_b = f'e{iblock}' # engagement
-            else:
-                lab_b = f'b{iblock}' # block
-
-                    
-            if thisCre_pooledSessNum < 1:
-                print(f'There are no sessions for stage {istage}, mouse {cre}, block {iblock}')
+            if len(svm_allMice_sessPooled)==0: # eg when dividing blocks by engagement metric (svm_blocks=-1), we wont have data for passive sessions.
+                thisCre_pooledSessNum = 0
+                print(f'\nThere is no data for {cre}, stage {istage} block {iblock}!\n')
                 
-            else:
-                ###############################
-                #%% Set vars
-                a_all = svm_allMice_sessPooled['area_allPlanes'].values[0]  # 8 x pooledSessNum 
-                d_all = svm_allMice_sessPooled['depth_allPlanes'].values[0]  # 8 x pooledSessNum 
-                session_labs_all = svm_allMice_sessPooled['session_labs'].values[0]    
+            else: # there is data
 
-                ts_all = svm_allMice_sessPooled['av_test_data_allPlanes'].values[0]  # 8 x pooledSessNum x 80
-                sh_all = svm_allMice_sessPooled['av_test_shfl_allPlanes'].values[0]  # 8 x pooledSessNum x 80
+                cre_all = svm_allMice_sessPooled['cre_allPlanes'].values[0]
+                cre_lines = np.unique(cre_all)
+                mouse_id_all = svm_allMice_sessPooled['mouse_id_allPlanes'].values[0]
 
-                pa_all = svm_allMice_sessPooled['peak_amp_allPlanes'].values[0]  # 8 x pooledSessNum x 4 (trTsShCh)
+    #             cre = 'Sst' #cre_lines[icre]    
+                thisCre_pooledSessNum = sum(cre_all[0,:]==cre) # number of pooled sessions for this cre line
+                thisCre_mice = mouse_id_all[0, cre_all[0,:]==cre]
+                thisCre_mice_num = len(np.unique(thisCre_mice))
 
-                
-                if project_codes == ['VisualBehaviorMultiscope']:
-                    cre_eachArea = svm_allMice_sessPooled['cre_eachArea'].values[0] # 2 x (4*sum(num_sess_per_mouse))
-                    ts_eachArea = svm_allMice_sessPooled['av_test_data_eachArea'].values[0] # 2 x (4*sum(num_sess_per_mouse)) x 80
-                    sh_eachArea = svm_allMice_sessPooled['av_test_shfl_eachArea'].values[0] # 2 x (4*sum(num_sess_per_mouse)) x 80    
-                    pa_eachArea = svm_allMice_sessPooled['peak_amp_eachArea'].values[0] # 2 x (4*sum(num_sess_per_mouse)) x 4 (trTsShCh)
 
-                    cre_eachDepth = svm_allMice_sessPooled['cre_eachDepth'].values[0] # 4 x (2*sum(num_sess_per_mouse))
-                    depth_eachDepth = svm_allMice_sessPooled['depth_eachDepth'].values[0] # 4 x (2*sum(num_sess_per_mouse))
-                    ts_eachDepth = svm_allMice_sessPooled['av_test_data_eachDepth'].values[0] # 4 x (2*sum(num_sess_per_mouse)) x 80
-                    sh_eachDepth = svm_allMice_sessPooled['av_test_shfl_eachDepth'].values[0] # 4 x (2*sum(num_sess_per_mouse)) x 80    
-
-                    depth_ave = np.mean(depth_eachDepth[:, cre_eachDepth[0,:]==cre], axis=1).astype(float) # 4 # average across areas and sessions
-                
+                if svm_blocks==-1:
+                    lab_b = f'e{iblock}' # engagement
                 else:
-                    depth_ave = np.mean(d_all[:,cre_all[0,:]==cre], axis=1).astype(float) # 4 # average across areas and sessions
-                    
-
-                #################################
-                #%% Keep summary vars for all ophys stages
-
-                cntn = cntn+1
-#                 depth_ave = np.mean(depth_eachDepth[:, cre_eachDepth[0,:]==cre], axis=1).astype(float) # 4 # average across areas and sessions
-                pallnow = pa_all[:, cre_all[0,:]==cre]
-                
-                summary_vars_all.at[cntn, cols_sum] = istage, cre, iblock, depth_ave, pallnow
-                
-                
-
-                ####################################################################################
-                ####################################################################################                
-                #%% Plot session-averaged traces for each plane; 2 subplots: 1 per area
-                ####################################################################################
-                ####################################################################################
-
-                #%%
-                # Average across all pooled sessions for each plane # remember some experiments might be nan (because they were not valid, we keep all 8 experiments to make indexing easy)
-                a = ts_all[:, cre_all[0,:]==cre]  # 8 x thisCre_pooledSessNum x 80
-                av_ts_eachPlane = np.nanmean(a, axis=1) # 8 x 80
-                sd_ts_eachPlane = np.nanstd(a, axis=1) / np.sqrt(a.shape[1]) # 8 x 80
-
-                a = sh_all[:, cre_all[0,:]==cre]  # 8 x thisCre_pooledSessNum x 80
-                av_sh_eachPlane = np.nanmean(a, axis=1) # 8 x 80
-                sd_sh_eachPlane = np.nanstd(a, axis=1) / np.sqrt(a.shape[1]) # 8 x 80
-
-                areas = a_all[:, cre_all[0,:]==cre]  # 8 x thisCre_pooledSessNum
-                depths = d_all[:, cre_all[0,:]==cre]  # 8 x thisCre_pooledSessNum
-
-                lims = np.array([np.nanmin(av_sh_eachPlane - sd_sh_eachPlane), np.nanmax(av_ts_eachPlane + sd_ts_eachPlane)])
-                lims[0] = lims[0] - np.diff(lims) / 20.
-                lims[1] = lims[1] + np.diff(lims) / 20.
-
-                lims_v1lm.append(lims)
+                    lab_b = f'b{iblock}' # block
 
 
-                
-                ################################################################
-                ################################################################
-                ################################################################
-                
-                plots_make_finalize = [1,0]
-                
-                if len(project_codes_all)==1:
-                    exec(open('svm_images_plots_sumMice.py').read())
-                
+                if thisCre_pooledSessNum < 1:
+                    print(f'There are no sessions for stage {istage}, mouse {cre}, block {iblock}')
+
+                else:
+                    ###############################
+                    #%% Set vars
+                    a_all = svm_allMice_sessPooled['area_allPlanes'].values[0]  # 8 x pooledSessNum 
+                    d_all = svm_allMice_sessPooled['depth_allPlanes'].values[0]  # 8 x pooledSessNum 
+                    session_labs_all = svm_allMice_sessPooled['session_labs'].values[0]    
+
+                    ts_all = svm_allMice_sessPooled['av_test_data_allPlanes'].values[0]  # 8 x pooledSessNum x 80
+                    sh_all = svm_allMice_sessPooled['av_test_shfl_allPlanes'].values[0]  # 8 x pooledSessNum x 80
+
+                    pa_all = svm_allMice_sessPooled['peak_amp_allPlanes'].values[0]  # 8 x pooledSessNum x 4 (trTsShCh)
+
+
+                    if project_codes == ['VisualBehaviorMultiscope']:
+                        cre_eachArea = svm_allMice_sessPooled['cre_eachArea'].values[0] # 2 x (4*sum(num_sess_per_mouse))
+                        ts_eachArea = svm_allMice_sessPooled['av_test_data_eachArea'].values[0] # 2 x (4*sum(num_sess_per_mouse)) x 80
+                        sh_eachArea = svm_allMice_sessPooled['av_test_shfl_eachArea'].values[0] # 2 x (4*sum(num_sess_per_mouse)) x 80    
+                        pa_eachArea = svm_allMice_sessPooled['peak_amp_eachArea'].values[0] # 2 x (4*sum(num_sess_per_mouse)) x 4 (trTsShCh)
+
+                        cre_eachDepth = svm_allMice_sessPooled['cre_eachDepth'].values[0] # 4 x (2*sum(num_sess_per_mouse))
+                        depth_eachDepth = svm_allMice_sessPooled['depth_eachDepth'].values[0] # 4 x (2*sum(num_sess_per_mouse))
+                        ts_eachDepth = svm_allMice_sessPooled['av_test_data_eachDepth'].values[0] # 4 x (2*sum(num_sess_per_mouse)) x 80
+                        sh_eachDepth = svm_allMice_sessPooled['av_test_shfl_eachDepth'].values[0] # 4 x (2*sum(num_sess_per_mouse)) x 80    
+
+                        depth_ave = np.mean(depth_eachDepth[:, cre_eachDepth[0,:]==cre], axis=1).astype(float) # 4 # average across areas and sessions
+
+                    else:
+                        depth_ave = np.mean(d_all[:,cre_all[0,:]==cre], axis=1).astype(float) # 4 # average across areas and sessions
+
+
+                    #################################
+                    #%% Keep summary vars for all ophys stages
+
+                    cntn = cntn+1
+    #                 depth_ave = np.mean(depth_eachDepth[:, cre_eachDepth[0,:]==cre], axis=1).astype(float) # 4 # average across areas and sessions
+                    pallnow = pa_all[:, cre_all[0,:]==cre]
+
+                    summary_vars_all.at[cntn, cols_sum] = istage, cre, iblock, depth_ave, pallnow
+
+
+
+                    ####################################################################################
+                    ####################################################################################                
+                    #%% Plot session-averaged traces for each plane; 2 subplots: 1 per area
+                    ####################################################################################
+                    ####################################################################################
+
+                    #%%
+                    # Average across all pooled sessions for each plane # remember some experiments might be nan (because they were not valid, we keep all 8 experiments to make indexing easy)
+                    a = ts_all[:, cre_all[0,:]==cre]  # 8 x thisCre_pooledSessNum x 80
+                    av_ts_eachPlane = np.nanmean(a, axis=1) # 8 x 80
+                    sd_ts_eachPlane = np.nanstd(a, axis=1) / np.sqrt(a.shape[1]) # 8 x 80
+
+                    a = sh_all[:, cre_all[0,:]==cre]  # 8 x thisCre_pooledSessNum x 80
+                    av_sh_eachPlane = np.nanmean(a, axis=1) # 8 x 80
+                    sd_sh_eachPlane = np.nanstd(a, axis=1) / np.sqrt(a.shape[1]) # 8 x 80
+
+                    areas = a_all[:, cre_all[0,:]==cre]  # 8 x thisCre_pooledSessNum
+                    depths = d_all[:, cre_all[0,:]==cre]  # 8 x thisCre_pooledSessNum
+
+                    lims = np.array([np.nanmin(av_sh_eachPlane - sd_sh_eachPlane), np.nanmax(av_ts_eachPlane + sd_ts_eachPlane)])
+                    lims[0] = lims[0] - np.diff(lims) / 20.
+                    lims[1] = lims[1] + np.diff(lims) / 20.
+
+                    lims_v1lm.append(lims)
+
+
+
+                    ################################################################
+                    ################################################################
+                    ################################################################
+
+                    plots_make_finalize = [1,0]
+
+                    if len(project_codes_all)==1:
+                        exec(open('svm_images_plots_sumMice.py').read())
+
 
 
         ################################################################

@@ -73,12 +73,15 @@ for iblock in br: # iblock=0 ; iblock=np.nan
         print(f'Loading: {allSessName[ia]}')
         all_sess_now = pd.read_hdf(allSessName[ia], key='all_sess') #'svm_vars')
         all_sess = pd.concat([all_sess, all_sess_now])
-
+    
     all_sess0 = copy.deepcopy(all_sess)
 
     session_ids = all_sess0['session_id'].unique()
     print(f'\n {session_ids.shape[0]} sessions found!')
 
+    input_vars = pd.read_hdf(allSessName[ia], key='input_vars')
+    time_win = input_vars.iloc[0]['time_win']
+    print(f'\n{time_win}: time window that was used for response quantification.\n')
 
 
     #%% Fix nan values of mouse_ids/date/stage/cre (some invalid experiments of a session have nan for mouse_id; this will cause problem later; here we replace them by the mouse_id of a valid experiment of that same session)
@@ -277,7 +280,7 @@ for iblock in br: # iblock=0 ; iblock=np.nan
     
     #%% correlate classification accuracy with behavioral strategy
     
-    if trial_type =='changes_vs_nochanges' or trial_type =='hits_vs_misses':
+    if trial_type =='changes_vs_nochanges' or trial_type =='hits_vs_misses' or trial_type == 'baseline_vs_nobaseline':
         
         exec(open('svm_images_plots_corr_beh_strategy.py').read()) 
     

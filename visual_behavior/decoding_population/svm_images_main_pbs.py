@@ -949,7 +949,9 @@ def svm_images_main_pbs(session_id, data_list, experiment_ids_valid, df_data, se
 #                     engaged[engaged=='engaged'] = 1
 #                     engaged[engaged=='disengaged'] = 0
                     
-                
+    
+                ###############################################################################
+                ###############################################################################
                 #### divide trials based on the engagement state
                 elif svm_blocks == -1:
                     
@@ -993,20 +995,29 @@ def svm_images_main_pbs(session_id, data_list, experiment_ids_valid, df_data, se
                     trials_blocks = []
                     for iblock in blocks_int: 
                         trials_blocks.append(np.argwhere(engaged==iblock).flatten())
-#                     print(trials_blocks)    
+#                     print(trials_blocks); print(len(trials_blocks[0]), len(trials_blocks[1]))        
                     
-                    ############## Loop through each trial block to run the SVM analysis ##############
-                    
+    
+                    ############## Loop through each trial block to run the SVM analysis ##############                    
                     for iblock in blocks_int: # iblock=0
                             
                         traces_fut_now = traces_fut_0[:,:,trials_blocks[iblock]]
                         image_labels_now = image_labels_0[trials_blocks[iblock]]
+                        
+                        if trial_type == 'baseline_vs_nobaseline': # decode activity at each frame vs. baseline
+                            a = np.full((len(image_labels_now)), 0)
+                            b = np.full((len(image_labels_now)), 1)
+                            image_labels_now = np.concatenate((a,b))
+
                         print(traces_fut_now.shape , image_labels_now.shape)
                         
                         svmName = svm_run_save(traces_fut_now, image_labels_now, [iblock, trials_blocks], svm_blocks, now, engagement_pupil_running, pupil_running_values, use_balanced_trials, project_codes) #, same_num_neuron_all_planes, norm_to_max_svm, svm_total_frs, n_neurons, numSamples, num_classes, samps_bef, regType, kfold, cre, saveResults)
                         
         
         
+        
+                ########################################################################
+                ########################################################################
                 #### do the block-by-block analysis: train SVM on blocks of trials; block 0: 1st half of the session; block 1: 2nd half of the session.
                 else:
                     # divide the trials into a given number of blocks and take care of the last trial in the last block
