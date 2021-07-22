@@ -274,7 +274,7 @@ def get_filtered_ophys_session_table(release_data_only=True, include_failed_data
         from_pre_saved_file = True
     else:
         from_pre_saved_file = False
-    experiment_table = get_filtered_ophys_experiment_table(release_data_only=released_data_only,
+    experiment_table = get_filtered_ophys_experiment_table(release_data_only=release_data_only,
                                                            include_failed_data=include_failed_data,
                                                            from_pre_saved_file=from_pre_saved_file)
     sessions = filtering.limit_to_production_project_codes(sessions)
