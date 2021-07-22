@@ -21,10 +21,12 @@ stdout_location = r'/allen/programs/braintv/workgroups/nc-ophys/Marina/ClusterJo
 
 # instantiate a Slurm object
 slurm = Slurm(
-    # mem=100,
-    cpus_per_task=10,
-    job_name='multi_session_df',
-    output=f'{stdout_location}/{Slurm.JOB_ARRAY_MASTER_ID}_{Slurm.JOB_ARRAY_ID}.out',
+    mem = '20g', #'24g'
+    cpus_per_task=5,
+    time = '100:00:00'
+    partition = 'braintv',
+    job_name= 'multi_session_df',
+    output = f'{stdout_location}/{Slurm.JOB_ARRAY_MASTER_ID}_{Slurm.JOB_ARRAY_ID}.out',
 )
 
 # get experiments to iterate over
