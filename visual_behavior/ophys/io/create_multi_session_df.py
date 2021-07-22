@@ -28,7 +28,7 @@ def get_multi_session_df(project_code, session_number, df_name, conditions, use_
 
     experiments_table = loading.get_filtered_ophys_experiment_table(release_data_only=True)
     experiments = experiments_table[(experiments_table.project_code == project_code) &
-                                    (experiments_table.session_number == session_number)].copy()
+                                    (experiments_table.session_number == int(session_number))].copy()
     print('session_types:', experiments.session_type.unique(), ' - there should only be one!')
     session_type = experiments.session_type.unique()[0]
 

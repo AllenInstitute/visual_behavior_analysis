@@ -17,7 +17,7 @@ if __name__ == '__main__':
     # define args
     parser = argparse.ArgumentParser()
     parser.add_argument('--project_code', type=str)
-    parser.add_argument('--session_number', type=int)
+    parser.add_argument('--session_number', type=str)
     args = parser.parse_args()
     project_code = args.project_code
     session_number = args.session_number
