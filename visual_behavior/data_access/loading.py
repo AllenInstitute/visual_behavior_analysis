@@ -92,6 +92,8 @@ def get_single_cell_plots_dir():
 def get_analysis_cache_dir():
     return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/visual_behavior_production_analysis'
 
+def get_platform_analysis_cache_dir():
+    return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/platform_paper_cache'
 
 def get_events_dir():
     return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/event_detection'
