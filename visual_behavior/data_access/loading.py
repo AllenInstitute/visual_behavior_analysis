@@ -218,6 +218,8 @@ def get_filtered_ophys_experiment_table(include_failed_data=False, release_data_
             experiments = filtering.limit_to_production_project_codes(experiments)
             # create cre_line column, set NaN session_types to None, add model output availability and location columns
             experiments = reformat.reformat_experiments_table(experiments)
+            # experiments = experiments.reset_index()
+            # experiments = experiments.drop(columns='index', errors='ignore')
         if include_failed_data:
             print('including failed data')
             # experiment_workflow_state must be 'failed' or 'passed', NOT 'qc'
@@ -230,6 +232,8 @@ def get_filtered_ophys_experiment_table(include_failed_data=False, release_data_
             # limit to sessions that start with OPHYS
             print('limiting to sessions that start with OPHYS')
             experiments = filtering.limit_to_valid_ophys_session_types(experiments)
+            # experiments = experiments.drop_duplicates(subset='ophys_experiment_id')
+            # experiments = experiments.set_index('ophys_experiment_id')
     if exclude_ai94:
         print('excluding Ai94 data')
         experiments = experiments[experiments.full_genotype != 'Slc17a7-IRES2-Cre/wt;Camk2a-tTA/wt;Ai94(TITL-GCaMP6s)/wt']
@@ -238,7 +242,7 @@ def get_filtered_ophys_experiment_table(include_failed_data=False, release_data_
     # add session number for convenience
     experiments['session_number'] = [int(session_type[6]) if 'OPHYS' in session_type else None for session_type in
                                      experiments.session_type.values]
-    # filter one more time to make sure we restrict to Visual Behavior project experiments
+    # filter one more time on load to restrict to Visual Behavior project experiments ###
     experiments = filtering.limit_to_production_project_codes(experiments)
     if overwrite_pre_saved_file == True:
         print('overwriting pre-saved experiments table file')
