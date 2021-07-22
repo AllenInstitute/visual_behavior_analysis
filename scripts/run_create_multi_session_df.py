@@ -16,6 +16,18 @@ python_file = r"/home/marinag/visual_behavior_analysis/scripts/create_multi_sess
 # conda environment to use
 conda_environment = 'visual_behavior_sdk'
 
+# build the python path
+# this assumes that the environments are saved in the user's home directory in a folder called 'anaconda3'
+# this will be user setup dependent.
+python_path = os.path.join(
+    os.path.expanduser("~"),
+    'anaconda2',
+    'envs',
+    conda_environment,
+    'bin',
+    'python'
+)
+
 # define the job record output folder
 stdout_location = r'/allen/programs/braintv/workgroups/nc-ophys/Marina/ClusterJobs/JobRecords'
 
@@ -35,12 +47,14 @@ experiments_table = loading.get_filtered_ophys_experiment_table(release_data_onl
 # call the `sbatch` command to run the jobs.
 for project_code in experiments_table.project_code.unique()[:1]:
     for session_number in experiments_table.session_number.unique()[:1]:
-        slurm.sbatch('{} --project_code {} --session_number {}'.format(
+        slurm.sbatch('{} {} --project_code {} --session_number {}'.format(
+                python_path,
                 python_file,
                 project_code,
                 session_number,
             )
         )
+
 
 
 #
