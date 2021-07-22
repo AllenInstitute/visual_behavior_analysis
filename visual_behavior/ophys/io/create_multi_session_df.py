@@ -72,7 +72,9 @@ def get_multi_session_df(project_code, session_number, df_name, conditions, use_
         mega_mdf = mega_mdf.drop(columns='index')
 
     filename = loading.get_file_name_for_multi_session_df(df_name, project_code, session_type, conditions, use_events)
-    mega_mdf_write_dir = os.path.join(loading.get_analysis_cache_dir(), 'multi_session_summary_dfs')
+    save_dir = loading.get_platform_analysis_cache_dir()
+    save_dir = r'/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/visual_behavior_production_analysis/multi_session_summary_dfs/platform_paper_dfs'
+    mega_mdf_write_dir = os.path.join(save_dir, 'multi_session_summary_dfs')
     print('saving multi session mean df to ', filename)
     mega_mdf.to_hdf(os.path.join(mega_mdf_write_dir, filename), key='df')
     print('saved')

@@ -17,7 +17,7 @@ python_file = r"/home/marinag/visual_behavior_analysis/scripts/create_multi_sess
 conda_environment = 'visual_behavior_sdk'
 
 # define the job record output folder
-stdout_location = '/allen/programs/braintv/workgroups/nc-ophys/Marina/ClusterJobs/JobRecords'
+stdout_location = r'/allen/programs/braintv/workgroups/nc-ophys/Marina/ClusterJobs/JobRecords'
 
 # instantiate a Slurm object
 slurm = Slurm(
