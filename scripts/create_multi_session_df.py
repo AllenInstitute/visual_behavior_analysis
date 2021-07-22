@@ -23,8 +23,8 @@ if __name__ == '__main__':
     session_number = args.session_number
     print(project_code, session_number)
 
-    # df_name = 'trials_response_df'
-    # conditions = ['cell_specimen_id', 'engagement_state', 'is_change']
+    df_name = 'trials_response_df'
+    conditions = ['cell_specimen_id', 'engagement_state', 'is_change']
 
     df_name = 'omission_response_df'
     conditions = ['cell_specimen_id', 'engagement_state']
@@ -32,7 +32,7 @@ if __name__ == '__main__':
     # df_name = 'trials_pupil_area_df'
     # conditions = ['ophys_experiment_id', 'go']
 
-    df = io.get_multi_session_df(project_code, session_number, df_name, conditions, use_filtered_events=True, use_extended_stimulus_presentations=True)
+    df = io.get_multi_session_df(project_code, session_number, df_name, conditions, use_events=True, use_extended_stimulus_presentations=True)
     print('done')
 
     # df_name = 'omission_response_df'
