@@ -30,7 +30,7 @@ if __name__ == "__main__":
         cpus_per_task=5,
         time='10:00:00',
         partition='braintv',
-        job_name='save_container_plots',
+        job_name='container_plots',
         output=f'{stdout_location}/{Slurm.JOB_ARRAY_MASTER_ID}_{Slurm.JOB_ARRAY_ID}.out',
     )
 
