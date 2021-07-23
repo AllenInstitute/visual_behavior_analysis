@@ -19,6 +19,7 @@ import datetime
 import re
 import pandas as pd
 import copy
+import sys
 import numpy.random as rnd
 from svm_funs import *
 # get_ipython().magic(u'matplotlib inline') # %matplotlib inline
@@ -218,7 +219,8 @@ def svm_images_main_pbs(session_id, data_list, experiment_ids_valid, df_data, se
 
 
             ########## Set the SVM output at best C (for all samples) and keep SVM vars for all frames
-
+#             print(np.shape(wAllC))
+#             print(np.shape(w_data_allFrs))
             if same_num_neuron_all_planes:
                 for i_pop_size in range(len(population_sizes_to_try)):
 
@@ -539,18 +541,33 @@ def svm_images_main_pbs(session_id, data_list, experiment_ids_valid, df_data, se
             image_data = df_data[df_data['image_name']=='omitted']
             image_indices_previous_flash = all_stim_indices_previous_flash[all_stim_indices==8]
             image_indices_next_flash = all_stim_indices_next_flash[all_stim_indices==8]
-            
+
+            # list each omission with its previous and next image labels
+#             a = np.argwhere(all_stim_indices==8).flatten()
+            # b and c are the same
+#             b = [[all_stim_indices[a[i]-1], all_stim_indices[a[i]], all_stim_indices[a[i]+1]] for i in range(len(a))]
+#             b
+#             c = [[image_indices_previous_flash[i], all_stim_indices[a[i]], image_indices_next_flash[i]] for i in range(len(a))]
+#             c
+        
             if all_stim_indices[0]==8:
                 image_indices_next_flash[0] = np.nan # so it wont be analyzed bc image_labels[0] will now be nan.
                 
             do = sum(image_indices_previous_flash==8)
             if do>0:
                 print(f'Number of double omissions: {do}')
+                print(f'\nRemoving {do*2} double-omission trials from analysis!\n')
+                aa = np.argwhere(image_indices_next_flash==8).flatten()
+                bb = np.argwhere(image_indices_previous_flash==8).flatten()
+                image_indices_next_flash[aa] = np.nan
+                image_indices_next_flash[bb] = np.nan
+#                 c = [[image_indices_previous_flash[i], all_stim_indices[a[i]], image_indices_next_flash[i]] for i in range(len(a))]
+#                 c                
                 
             a = image_indices_previous_flash - image_indices_next_flash
             a = a[~np.isnan(a)]
             if a.any():
-                print(f'UNEXPECTED: the images before and after the omission are different!!')
+                print(f'UNCANNY: in {sum(a!=0)} cases, the images before and after the omission are different!!')
 
         elif trial_type=='images': # all images excluding omissions:
             image_data = df_data[df_data['image_name']!='omitted']
@@ -605,7 +622,7 @@ def svm_images_main_pbs(session_id, data_list, experiment_ids_valid, df_data, se
                 image_labels = image_indices_next_flash 
 
 
-                
+    image_trials0 = copy.deepcopy(image_trials)            
     image_labels0 = copy.deepcopy(image_labels)
     #len(image_labels0)
     print(f'Unique image labels: {np.unique(image_labels0)}')
@@ -734,6 +751,7 @@ def svm_images_main_pbs(session_id, data_list, experiment_ids_valid, df_data, se
             index = il
             lims_id = exp_ids[il]
         '''            
+        
         print(f'\n\n=========== Analyzing {cre[:3]}, experiment_id: {lims_id} ===========\n\n')
         
         area = data_list.iloc[index]['targeted_structure'] #area
@@ -822,6 +840,7 @@ def svm_images_main_pbs(session_id, data_list, experiment_ids_valid, df_data, se
                 # remove the nan from labels and traces
                 image_labels = image_labels0[masknan]
                 traces_fut = traces_fut[:,:,masknan]
+                image_trials = image_trials0[masknan]
             else:
                 image_labels = copy.deepcopy(image_labels0)
 
@@ -875,7 +894,8 @@ def svm_images_main_pbs(session_id, data_list, experiment_ids_valid, df_data, se
             ######################################################
             # reset n_trials
             n_trials = len(image_labels) #traces_fut.shape[2] # note: when trial_type='baseline_vs_nobaseline', traces_fut includes half the trials at this point; so we go with image_labels to get the number of trials.
-                
+            print(n_trials)
+            
             # double check reshape above worked fine.
             '''
             c_all = []
@@ -1010,6 +1030,8 @@ def svm_images_main_pbs(session_id, data_list, experiment_ids_valid, df_data, se
                             image_labels_now = np.concatenate((a,b))
 
                         print(traces_fut_now.shape , image_labels_now.shape)
+                        print(np.unique(image_labels_now))
+                        num_classes = len(np.unique(image_labels_now))
                         
                         svmName = svm_run_save(traces_fut_now, image_labels_now, [iblock, trials_blocks], svm_blocks, now, engagement_pupil_running, pupil_running_values, use_balanced_trials, project_codes) #, same_num_neuron_all_planes, norm_to_max_svm, svm_total_frs, n_neurons, numSamples, num_classes, samps_bef, regType, kfold, cre, saveResults)
                         

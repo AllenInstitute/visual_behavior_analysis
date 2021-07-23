@@ -147,8 +147,9 @@ def crossValidateModel(X, Y, modelFn, **options):
     
     
     ## %%%%%
-
-    num_classes = len(np.unique(Y)) # 2
+    
+    classes = np.unique(Y).astype(int)
+    num_classes = len(classes) # 2
         
     if num_classes==2 and use_balanced_trials==1:
 
@@ -190,8 +191,8 @@ def crossValidateModel(X, Y, modelFn, **options):
         XTrain = np.concatenate((XTrain_0, XTrain_1), axis=0)
         XTest = np.concatenate((XTest_0, XTest_1), axis=0)
 
-        print(f'YTrain: n_trials of each class: {[sum(YTrain==irng) for irng in range(num_classes)]}')
-        print(f'YTest: n_trials of each class: {[sum(YTest==irng) for irng in range(num_classes)]}')
+        print(f'YTrain: n_trials of each class: {[sum(YTrain==irng) for irng in classes]}')
+        print(f'YTest: n_trials of each class: {[sum(YTest==irng) for irng in classes]}')
 
         # Fit the classifier
         results = modelFn(XTrain, YTrain, XTest, YTest, **options)
@@ -232,8 +233,8 @@ def crossValidateModel(X, Y, modelFn, **options):
             XTrain = Xs[np.arange(0, int((kfold-1.)/kfold*numObservations)), :]
             XTest = Xs[np.arange(int((kfold-1.)/kfold*numObservations), numObservations), :]
 
-            print(f'YTrain: n_trials of each class: {[sum(YTrain==irng) for irng in range(num_classes)]}')
-            print(f'YTest: n_trials of each class: {[sum(YTest==irng) for irng in range(num_classes)]}')
+            print(f'YTrain: n_trials of each class: {[sum(YTrain==irng) for irng in classes]}')
+            print(f'YTest: n_trials of each class: {[sum(YTest==irng) for irng in classes]}')
 
 
             # Fit the classifier
@@ -343,7 +344,8 @@ def set_best_c(X,Y,regType,kfold,numDataPoints,numSamples,doPlots,useEqualTrNums
     
     
     #%%    
-    num_classes = len(np.unique(Y))
+    classes = np.unique(Y).astype(int)
+    num_classes = len(classes)
     
     numTrials = X.shape[1]
     print('FINAL: %d trials; %d neurons' %(numTrials, X.shape[0]))
@@ -360,7 +362,7 @@ def set_best_c(X,Y,regType,kfold,numDataPoints,numSamples,doPlots,useEqualTrNums
     X0 = X + 0 # units x trials
     Y0 = Y + 0
     
-    print(f'Y: n_trials of each class: {[sum(Y0==irng) for irng in range(num_classes)]}')
+    print(f'Y: n_trials of each class: {[sum(Y0==irng) for irng in np.unique(Y0)]}')
 
     
     #%% Initiate vars   
@@ -447,15 +449,22 @@ def set_best_c(X,Y,regType,kfold,numDataPoints,numSamples,doPlots,useEqualTrNums
         
         a = np.arange(0, len_test, np.round(len_test/float(num_classes)).astype(int))
         
+#         all_classes_in_ychance = 1
         if len(a)-1 == num_classes:
             divis = a
             divis[-1] = len_test
         elif len(a) == num_classes:
             divis = np.concatenate((a, [len_test]))
         else:
-            a = np.arange(0, len_test, np.floor(len_test/float(num_classes)).astype(int))
+            if len_test > num_classes:
+                a = np.arange(0, len_test, np.floor(len_test/float(num_classes)).astype(int))
+            else: # we have very few test trials; fewer than the number of classes
+                a = np.arange(0, len_test)
+#                 all_classes_in_ychance = 0
+                
             divis = a[:num_classes+1]
-            divis[-1] = len_test            
+            divis[-1] = len_test
+                
 
 #         if len(divis)!=num_classes+1:
 #             print(divis)
@@ -463,7 +472,7 @@ def set_best_c(X,Y,regType,kfold,numDataPoints,numSamples,doPlots,useEqualTrNums
     
         ########
         Y_chance = np.zeros(len_test)
-        for irng in range(num_classes):
+        for irng in range(len(divis)-1):
             Y_chance[divis[irng]: divis[irng+1]] = irng
         
         # shuffle it
@@ -471,7 +480,7 @@ def set_best_c(X,Y,regType,kfold,numDataPoints,numSamples,doPlots,useEqualTrNums
 #         Y_chance.shape, Y_chance
         
         if s==0: # sanity check
-            print(f'Y_chance: n_trials of each class: {[sum(Y_chance==irng) for irng in range(num_classes)]}')
+            print(f'Y_chance: n_trials of each class: {[sum(Y_chance==irng) for irng in classes]}')
         
     
         ## old code: setting Y_chance; only works if there are 2 classes.

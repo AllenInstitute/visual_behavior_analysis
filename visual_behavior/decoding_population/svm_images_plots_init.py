@@ -270,7 +270,7 @@ for iblock in br: # iblock=0; iblock=np.nan
         
         all_sess = all_sess.append(this_sess) 
 
-    print(len(all_sess))    
+    print(f'\n\nFinal: length of all_sess: {len(all_sess)}\n\n')
     all_sess
 
 
