@@ -29,8 +29,8 @@ stdout_location = r'/allen/programs/braintv/workgroups/nc-ophys/Marina/ClusterJo
 experiments_table = loading.get_filtered_ophys_experiment_table(release_data_only=True)
 
 # call the `sbatch` command to run the jobs.
-for project_code in experiments_table.project_code.unique()[:1]:
-    for session_number in experiments_table.session_number.unique()[-1:]:
+for project_code in experiments_table.project_code.unique():
+    for session_number in experiments_table.session_number.unique():
 
         # instantiate a Slurm object
         slurm = Slurm(
