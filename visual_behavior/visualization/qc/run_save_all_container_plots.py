@@ -12,7 +12,7 @@ parser.add_argument("--plots", type=str, default=None, metavar='plot name to gen
 
 
 container_ids = loading.get_ophys_container_ids(include_failed_data=False, release_data_only=False,
-                                                exclude_ai94=False, from_cache=False)
+                                                exclude_ai94=False, from_cached_file=True)
 
 
 if __name__ == "__main__":
@@ -28,7 +28,7 @@ if __name__ == "__main__":
     slurm = Slurm(
         mem='20g',  # '24g'
         cpus_per_task=5,
-        time='100:00:00',
+        time='10:00:00',
         partition='braintv',
         job_name='save_container_plots',
         output=f'{stdout_location}/{Slurm.JOB_ARRAY_MASTER_ID}_{Slurm.JOB_ARRAY_ID}.out',

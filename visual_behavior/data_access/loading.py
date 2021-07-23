@@ -715,10 +715,11 @@ def get_behavior_dataset(behavior_session_id, from_lims=False, from_nwb=False):
     return dataset
 
 
-def get_ophys_container_ids(include_failed_data=False, release_data_only=False, exclude_ai94=True, from_cache=True, save_to_cache=False):
+def get_ophys_container_ids(include_failed_data=False, release_data_only=False, exclude_ai94=True, from_cached_file=True, overwrite_cached_file=False):
     """Get container_ids that meet the criteria indicated by flags, which are identical to those in get_filtered_ophys_experiment_table() """
     experiments = get_filtered_ophys_experiment_table(include_failed_data=include_failed_data, release_data_only=release_data_only,
-                                                      exclude_ai94=exclude_ai94, from_cache=from_cache, save_to_cache=save_to_cache)
+                                                      exclude_ai94=exclude_ai94, from_cached_file=from_cached_file,
+                                                      overwrite_cached_file=overwrite_cached_file)
     container_ids = np.sort(experiments.ophys_container_id.unique())
     return container_ids
 
