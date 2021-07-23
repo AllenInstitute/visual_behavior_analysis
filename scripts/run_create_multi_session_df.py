@@ -30,12 +30,12 @@ experiments_table = loading.get_filtered_ophys_experiment_table(release_data_onl
 
 # call the `sbatch` command to run the jobs.
 for project_code in experiments_table.project_code.unique()[:1]:
-    for session_number in experiments_table.session_number.unique()[:3]:
+    for session_number in experiments_table.session_number.unique()[-1]:
 
         # instantiate a Slurm object
         slurm = Slurm(
-            mem='100g',  # '24g'
-            cpus_per_task=20,
+            mem='120g',  # '24g'
+            cpus_per_task=1,
             time='60:00:00',
             partition='braintv',
             job_name='multi_session_df_'+project_code+'_'+str(session_number),
