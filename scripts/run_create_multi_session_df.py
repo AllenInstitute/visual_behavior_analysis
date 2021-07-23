@@ -30,7 +30,7 @@ experiments_table = loading.get_filtered_ophys_experiment_table(release_data_onl
 
 # call the `sbatch` command to run the jobs.
 for project_code in experiments_table.project_code.unique()[:1]:
-    for session_number in experiments_table.session_number.unique()[-1]:
+    for session_number in experiments_table.session_number.unique()[-1:]:
 
         # instantiate a Slurm object
         slurm = Slurm(
