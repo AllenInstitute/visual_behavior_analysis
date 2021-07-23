@@ -26,8 +26,8 @@ if __name__ == "__main__":
 
     # instantiate a Slurm object
     slurm = Slurm(
-        mem='20g',  # '24g'
-        cpus_per_task=5,
+        mem='60g',  # '24g'
+        cpus_per_task=10,
         time='10:00:00',
         partition='braintv',
         job_name='container_plots',

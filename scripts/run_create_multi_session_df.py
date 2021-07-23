@@ -23,28 +23,25 @@ python_path = os.path.join(
 # define the job record output folder
 stdout_location = r'/allen/programs/braintv/workgroups/nc-ophys/Marina/ClusterJobs/JobRecords'
 
-# instantiate a Slurm object
-slurm = Slurm(
-    mem = '60g', #'24g'
-    cpus_per_task=10,
-    time = '60:00:00',
-    partition = 'braintv',
-    job_name= 'multi_session_df',
-    output = f'{stdout_location}/{Slurm.JOB_ARRAY_MASTER_ID}_{Slurm.JOB_ARRAY_ID}.out',
-)
+
 
 # get experiments to iterate over
 experiments_table = loading.get_filtered_ophys_experiment_table(release_data_only=True)
 
 # call the `sbatch` command to run the jobs.
-for project_code in experiments_table.project_code.unique():
-    for session_number in experiments_table.session_number.unique():
-        # slurm.sbatch('{} {} --project_code {} --session_number {}'.format(
-        #         python_path,
-        #         python_file,
-        #         project_code,
-        #         session_number,
-        #     )
+for project_code in experiments_table.project_code.unique()[:1]:
+    for session_number in experiments_table.session_number.unique()[:3]:
+
+        # instantiate a Slurm object
+        slurm = Slurm(
+            mem='60g',  # '24g'
+            cpus_per_task=10,
+            time='60:00:00',
+            partition='braintv',
+            job_name='multi_session_df_'+project_code+'_'+str(session_number),
+            output=f'{stdout_location}/{Slurm.JOB_ARRAY_MASTER_ID}_{Slurm.JOB_ARRAY_ID}.out',
+        )
+
         slurm.sbatch(python_path+' '+python_file+' --project_code '+str(project_code)+' --session_number'+' '+str(session_number))
 
 
