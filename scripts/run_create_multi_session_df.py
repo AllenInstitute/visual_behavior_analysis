@@ -33,9 +33,9 @@ stdout_location = r'/allen/programs/braintv/workgroups/nc-ophys/Marina/ClusterJo
 
 # instantiate a Slurm object
 slurm = Slurm(
-    mem = '20g', #'24g'
+    mem = '10g', #'24g'
     cpus_per_task=5,
-    time = '100:00:00',
+    time = '50:00:00',
     partition = 'braintv',
     job_name= 'multi_session_df',
     output = f'{stdout_location}/{Slurm.JOB_ARRAY_MASTER_ID}_{Slurm.JOB_ARRAY_ID}.out',
@@ -54,7 +54,7 @@ for project_code in experiments_table.project_code.unique()[:1]:
         #         session_number,
         #     )
         slurm.sbatch(python_path+' '+python_file+' --project_code '+str(project_code)+' --session_number'+' '+str(session_number))
-        
+
 
 
 
