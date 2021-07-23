@@ -54,7 +54,7 @@ for project_code in experiments_table.project_code.unique()[:1]:
         #         session_number,
         #     )
         slurm.sbatch(python_path+' '+python_file+' --project_code '+str(project_code)+' --session_number'+' '+str(session_number))
-        )
+        
 
 
 
