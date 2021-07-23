@@ -34,8 +34,8 @@ for project_code in experiments_table.project_code.unique()[:1]:
 
         # instantiate a Slurm object
         slurm = Slurm(
-            mem='60g',  # '24g'
-            cpus_per_task=10,
+            mem='100g',  # '24g'
+            cpus_per_task=20,
             time='60:00:00',
             partition='braintv',
             job_name='multi_session_df_'+project_code+'_'+str(session_number),

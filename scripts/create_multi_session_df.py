@@ -26,21 +26,14 @@ if __name__ == '__main__':
     df_name = 'trials_response_df'
     conditions = ['cell_specimen_id', 'engagement_state', 'is_change']
 
+    print('creating multi_session_df for', df_name, ', ', project_code, ', session number', session_number)
+    df = io.get_multi_session_df(project_code, session_number, df_name, conditions, use_events=True, filter_events=True,
+                                 use_extended_stimulus_presentations=True)
+
     df_name = 'omission_response_df'
     conditions = ['cell_specimen_id', 'engagement_state']
 
-    # df_name = 'trials_pupil_area_df'
-    # conditions = ['ophys_experiment_id', 'go']
-
-    df = io.get_multi_session_df(project_code, session_number, df_name, conditions, use_events=True, use_extended_stimulus_presentations=True)
+    print('creating multi_session_df for', df_name, ', ', project_code, ', session number', session_number)
+    df = io.get_multi_session_df(project_code, session_number, df_name, conditions, use_events=True, filter_events=True,
+                                 use_extended_stimulus_presentations=True)
     print('done')
-
-    # df_name = 'omission_response_df'
-    # conditions = ['cell_specimen_id']
-
-    # df_name = 'omission_pupil_area_df'
-    # conditions = ['ophys_experiment_id']
-    #
-    # df = io.get_multi_session_df(project_code, session_number, df_name, conditions, use_events=False,
-    #                              use_extended_stimulus_presentations=False)
-    # print('done')
