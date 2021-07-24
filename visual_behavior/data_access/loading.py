@@ -92,8 +92,6 @@ def get_single_cell_plots_dir():
 def get_analysis_cache_dir():
     return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/visual_behavior_production_analysis'
 
-def get_platform_analysis_cache_dir():
-    return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/platform_paper_cache'
 
 def get_events_dir():
     return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/event_detection'
@@ -715,11 +713,10 @@ def get_behavior_dataset(behavior_session_id, from_lims=False, from_nwb=False):
     return dataset
 
 
-def get_ophys_container_ids(include_failed_data=False, release_data_only=False, exclude_ai94=True, from_cached_file=True, overwrite_cached_file=False):
+def get_ophys_container_ids(include_failed_data=False, release_data_only=False, exclude_ai94=True, from_cache=True, save_to_cache=False):
     """Get container_ids that meet the criteria indicated by flags, which are identical to those in get_filtered_ophys_experiment_table() """
     experiments = get_filtered_ophys_experiment_table(include_failed_data=include_failed_data, release_data_only=release_data_only,
-                                                      exclude_ai94=exclude_ai94, from_cached_file=from_cached_file,
-                                                      overwrite_cached_file=overwrite_cached_file)
+                                                      exclude_ai94=exclude_ai94, from_cache=from_cache, save_to_cache=save_to_cache)
     container_ids = np.sort(experiments.ophys_container_id.unique())
     return container_ids
 
@@ -2447,12 +2444,9 @@ def add_superficial_deep_to_experiments_table(experiments_table):
     return experiments_table
 
 
-def get_file_name_for_multi_session_df_no_session_type(df_name, project_code, conditions, use_events, filter_events):
+def get_file_name_for_multi_session_df_no_session_type(df_name, project_code, conditions, use_events):
     if use_events:
-        if filter_events:
-            suffix = '_filtered_events'
-        else:
-            suffix = '_events'
+        suffix = '_events'
     else:
         suffix = ''
 
@@ -2473,12 +2467,9 @@ def get_file_name_for_multi_session_df_no_session_type(df_name, project_code, co
     return filename
 
 
-def get_file_name_for_multi_session_df(df_name, project_code, session_type, conditions, use_events, filter_events):
+def get_file_name_for_multi_session_df(df_name, project_code, session_type, conditions, use_events):
     if use_events:
-        if filter_events:
-            suffix = '_filtered_events'
-        else:
-            suffix = '_events'
+        suffix = '_events'
     else:
         suffix = ''
     if len(conditions) == 6:
@@ -2498,8 +2489,7 @@ def get_file_name_for_multi_session_df(df_name, project_code, session_type, cond
     return filename
 
 
-def get_multi_session_df(cache_dir, df_name, conditions, experiments_table, remove_outliers=True, use_session_type=True,
-                         use_events=False, filter_events=True):
+def get_multi_session_df(cache_dir, df_name, conditions, experiments_table, remove_outliers=True, use_session_type=True, use_events=False):
     """
     Loops through all experiments in the provided experiments_table, creates a response dataframe indicated by df_name,
     creates a mean response dataframe for a given set of conditions, and concatenates across all experiments to create
@@ -2530,9 +2520,8 @@ def get_multi_session_df(cache_dir, df_name, conditions, experiments_table, remo
             for session_type in np.sort(experiments.session_type.unique()):
                 try:
                     filename = get_file_name_for_multi_session_df(df_name, project_code, session_type, conditions,
-                                                                  use_events, filter_events)
-                    filepath = os.path.join(get_platform_analysis_cache_dir(), 'multi_session_summary_dfs', filename)
-                    # print('reading file at', filepath)
+                                                                  use_events)
+                    filepath = os.path.join(cache_dir, 'multi_session_summary_dfs', filename)
                     df = pd.read_hdf(filepath, key='df')
                     df = df.merge(expts, on='ophys_experiment_id')
                     if remove_outliers:
@@ -2542,7 +2531,7 @@ def get_multi_session_df(cache_dir, df_name, conditions, experiments_table, remo
                 except BaseException:
                     print('no multi_session_df for', session_type)
         else:
-            filename = get_file_name_for_multi_session_df_no_session_type(df_name, project_code, conditions, use_events, filter_events)
+            filename = get_file_name_for_multi_session_df_no_session_type(df_name, project_code, conditions, use_events)
             filepath = os.path.join(cache_dir, 'multi_session_summary_dfs', filename)
             df = pd.read_hdf(filepath, key='df')
             df = df.merge(expts[['ophys_experiment_id', 'cre_line', 'location', 'location_layer',
