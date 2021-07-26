@@ -124,12 +124,23 @@ def get_manifest_path():
     return manifest_path
 
 
-def get_visual_behavior_cache(manifest_path=None):
-    """Get cache using manifest path"""
-    # i think this manifest caching is now disabled, so providing the path to the manifest does nothing in this case ###
-    if manifest_path is None:
-        manifest_path = get_manifest_path()
-    cache = bpc.from_lims(manifest=get_manifest_path())
+def get_visual_behavior_cache(from_s3=True, release_data_only=True, cache_dir=None):
+    """
+    Gets the visual behavior dataset cache object from s3 or lims
+    :param from_s3: If True, loads manifest from s3 and saves to provided cache_dir (or default cache_dir if None provided)
+    :param release_data_only: limits to data released on March 25th when loading from lims
+    :param cache_dir: directory where to save manifest & data files if using s3
+    :return: SDK cache object
+    """
+    if from_s3:
+        if cache_dir is None:
+            cache_dir = get_cache_dir()
+        cache = bpc.from_s3_cache(cache_dir=cache_dir)
+    else:
+        if release_data_only:
+            cache = bpc.from_lims(data_release_date='2021-03-25')
+        else:
+            cache = bpc.from_lims()
     return cache
 
 
@@ -143,9 +154,10 @@ def get_released_ophys_experiment_table(exclude_ai94=True):
     Returns:
         experiment_table -- returns a dataframe with ophys_experiment_id as the index and metadata as columns.
     '''
-    data_storage_directory = '//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/production_cache'
+    # data_storage_directory = '//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/production_cache'
+    # cache = bpc.from_s3_cache(cache_dir=data_storage_directory)
 
-    cache = bpc.from_s3_cache(cache_dir=data_storage_directory)
+    cache = bpc.from_lims(data_release_date='2021-03-25')
 
     experiment_table = cache.get_ophys_experiment_table()
 
@@ -155,7 +167,8 @@ def get_released_ophys_experiment_table(exclude_ai94=True):
     return experiment_table
 
 
-def get_filtered_ophys_experiment_table(include_failed_data=False, release_data_only=False, exclude_ai94=True):
+def get_filtered_ophys_experiment_table(include_failed_data=False, release_data_only=False, exclude_ai94=True,
+                                        from_cached_file=True, overwrite_cached_file=False):
     """
     Loads a list of available ophys experiments and adds additional useful columns to the table. By default, loads from a saved cached file.
     If cached file does not exist, loads list of available experiments directly from lims using SDK BehaviorProjectCache, and saves the reformatted table to the default Visual Behavior data cache location.
@@ -164,50 +177,81 @@ def get_filtered_ophys_experiment_table(include_failed_data=False, release_data_
 
         include_failed_data {bool} -- If True, return all experiments including those from failed containers and receptive field mapping experiments.
                                       If False, returns only experiments that have passed experiment level QC.
-
-        release_data_only {bool} -- If True, return only experiments that have been reprocessed, passed experiment and container level QC, and are slated for release in March.
+        release_data_only {bool} -- If True, return only experiments that were released on March 25th, 2021.
+                                    Fail tags and other extra columns will not be added if this is set to True.
                                     Release data includes project_codes = ['VisualBehavior', 'VisualBehaviorTask1B', 'VisualBehaviorMultiscope'].
                                     If False, return all Visual Behavior ophys experiments that have been collected, including data from project_code = 'VisualBehaviorMultiscope4areasx2d'. There is no guarantee on data quality or reprocessing for these experiments.
-
+                                    Additional columns will be added, including fail tags, model availability and location string
         exclude_ai94 {bool} -- If True, exclude data from mice with Ai94(GCaMP6s) as the reporter line. (default: {True})
+        from_cached_file {bool} -- If True, loads experiments table from saved file in default cache location
+        overwrite_cached_file {bool} -- If True, saves experiment_table to default cache folder, overwrites existing file
 
     Returns:
         experiment_table -- returns a dataframe with ophys_experiment_id as the index and metadata as columns.
     """
-    if 'filtered_ophys_experiment_table.csv' in os.listdir(get_cache_dir()):
-        experiments = pd.read_csv(os.path.join(get_cache_dir(), 'filtered_ophys_experiment_table.csv'))
-    else:
-        print('generating filtered_ophys_experiment_table')
-        cache = get_visual_behavior_cache()
-        experiments = cache.get_ophys_experiment_table()
-        behavior_session_table = cache.get_behavior_session_table()
-        experiments = reformat.reformat_experiments_table(experiments, behavior_session_table)
-        experiments = filtering.limit_to_production_project_codes(experiments)
-        experiments = experiments.set_index('ophys_experiment_id')
-        experiments.to_csv(os.path.join(get_cache_dir(), 'filtered_ophys_experiment_table.csv'))
-        experiments = experiments.reset_index()
-        experiments = experiments.drop(columns='index', errors='ignore')
-    if include_failed_data:
-        experiments = filtering.limit_to_experiments_with_final_qc_state(experiments)
-    else:
-        experiments = filtering.limit_to_passed_experiments(experiments)
-        experiments = filtering.limit_to_valid_ophys_session_types(experiments)
-        experiments = filtering.remove_failed_containers(experiments)
     if release_data_only:
-        experiments = get_released_ophys_experiment_table(exclude_ai94=exclude_ai94).reset_index()
+        # get cache from lims for data released on March 25th
+        print('getting experiment table for March 25th release from lims')
+        cache = bpc.from_lims(data_release_date='2021-03-25')
+        # cache = get_visual_behavior_cache(from_s3=False, release_data_only=True)
+        experiments = cache.get_ophys_experiment_table()
+    if not release_data_only:
+        if from_cached_file == True:
+            if 'filtered_ophys_experiment_table.csv' in os.listdir(get_cache_dir()):
+                filepath = os.path.join(get_cache_dir(), 'filtered_ophys_experiment_table.csv')
+                print('loading cached experiment_table')
+                print('last updated on:')
+                import time
+                print(time.ctime(os.path.getctime(filepath)))
+                # load the cached file
+                experiments = pd.read_csv(filepath)
+            else:
+                print('there is no filtered_ophys_experiment_table.csv', get_cache_dir())
+        else:
+            print('getting up-to-date experiment_table from lims and adding extra columns')
+            print('NOTE: this is slow. set from_pre_saved_file to True to load cached version of experiments_table at:')
+            print(get_cache_dir())
+            # get everything in lims
+            cache = bpc.from_lims()
+            experiments = cache.get_ophys_experiment_table()
+            # limit to the 4 VisualBehavior project codes
+            experiments = filtering.limit_to_production_project_codes(experiments)
+            # create cre_line column, set NaN session_types to None, add model output availability and location columns
+            experiments = reformat.reformat_experiments_table(experiments)
+            # experiments = experiments.reset_index()
+            # experiments = experiments.drop(columns='index', errors='ignore')
+        if include_failed_data:
+            print('including failed data')
+            # experiment_workflow_state must be 'failed' or 'passed', NOT 'qc'
+            # experiments = filtering.limit_to_experiments_with_final_qc_state(experiments)
+            pass
+        else:
+            print('limiting to passed experiments')
+            experiments = filtering.limit_to_passed_experiments(experiments)
+            experiments = filtering.remove_failed_containers(experiments)  # container_workflow_state can be anything other than 'failed'
+            # limit to sessions that start with OPHYS
+            print('limiting to sessions that start with OPHYS')
+            experiments = filtering.limit_to_valid_ophys_session_types(experiments)
+    if experiments.index.name != 'ophys_experiment_id':
+        experiments = experiments.drop_duplicates(subset='ophys_experiment_id')
+        experiments = experiments.set_index('ophys_experiment_id')
     if exclude_ai94:
+        print('excluding Ai94 data')
         experiments = experiments[experiments.full_genotype != 'Slc17a7-IRES2-Cre/wt;Camk2a-tTA/wt;Ai94(TITL-GCaMP6s)/wt']
+    if 'cre_line' not in experiments.keys():
+        experiments['cre_line'] = [full_genotype.split('/')[0] for full_genotype in experiments.full_genotype.values]
+    # add session number for convenience
     experiments['session_number'] = [int(session_type[6]) if 'OPHYS' in session_type else None for session_type in
                                      experiments.session_type.values]
-    experiments['cre_line'] = [full_genotype.split('/')[0] for full_genotype in experiments.full_genotype.values]
-    experiments = experiments.drop_duplicates(subset='ophys_experiment_id')
-    experiments = experiments.set_index('ophys_experiment_id')
-    # filter one more time on load to restrict to data release experiments ###
+    # filter one more time on load to restrict to Visual Behavior project experiments ###
     experiments = filtering.limit_to_production_project_codes(experiments)
+    if overwrite_cached_file == True:
+        print('overwriting pre-saved experiments table file')
+        experiments.to_csv(os.path.join(get_cache_dir(), 'filtered_ophys_experiment_table.csv'))
     return experiments
 
 
-def get_filtered_ophys_session_table():
+def get_filtered_ophys_session_table(release_data_only=True, include_failed_data=False):
     """Get ophys sessions table from SDK, and add container_id and container_workflow_state to table,
         add session_workflow_state to table (defined as >1 experiment within session passing),
         and return only sessions where container and session workflow states are 'passed'.
@@ -240,9 +284,15 @@ def get_filtered_ophys_session_table():
                         "container_id":
                         "container_workflow_state":
     """
-    cache = get_visual_behavior_cache()
+    cache = bpc.from_lims()
     sessions = cache.get_ophys_session_table()
-    experiment_table = get_filtered_ophys_experiment_table(include_failed_data=True)
+    if release_data_only == False:
+        from_pre_saved_file = True
+    else:
+        from_pre_saved_file = False
+    experiment_table = get_filtered_ophys_experiment_table(release_data_only=release_data_only,
+                                                           include_failed_data=include_failed_data,
+                                                           from_pre_saved_file=from_pre_saved_file)
     sessions = filtering.limit_to_production_project_codes(sessions)
     sessions = reformat.add_all_qc_states_to_ophys_session_table(sessions, experiment_table)
     sessions = filtering.limit_to_valid_ophys_session_types(sessions)
@@ -285,6 +335,31 @@ def get_filtered_behavior_session_table(release_data_only=True):
     behavior_sessions = behavior_sessions.drop_duplicates(subset=['behavior_session_id'])
     behavior_sessions = behavior_sessions.set_index('behavior_session_id')
     return behavior_sessions
+
+
+def get_second_release_candidates():
+    """
+    Preliminary function to get candidates for August release. Will be revised.
+    :return:
+    """
+    full_cache = bpc.from_lims()
+    full_experiment_table = full_cache.get_ophys_experiment_table()
+
+    unreleased_complete_multiscope = full_experiment_table[
+        full_experiment_table.project_code.isin(['VisualBehaviorMultiscope']) &
+        (full_experiment_table.container_workflow_state.isin(['completed', 'container_qc'])) &
+        (full_experiment_table.experiment_workflow_state == 'passed')]
+    print(len(unreleased_complete_multiscope), 'un-released VisualBehaviorMultiscope where container_workflow_state == completed')
+
+    unreleased_not_failed_4x2 = full_experiment_table[(full_experiment_table.project_code.isin(['VisualBehaviorMultiscope4areasx2d']) &
+                                                       (full_experiment_table.container_workflow_state != 'failed') &
+                                                       (full_experiment_table.experiment_workflow_state == 'passed'))]
+    print(len(unreleased_not_failed_4x2), 'un-released VisualBehaviorMultiscope4areasx2d where container_workflow_state != failed')
+
+    release_candidates = pd.concat([unreleased_complete_multiscope, unreleased_not_failed_4x2])
+    print(len(release_candidates), 'release candidates')
+
+    return release_candidates
 
 
 # LOAD OPHYS DATA FROM SDK AND EDIT OR ADD METHODS/ATTRIBUTES WITH BUGS OR INCOMPLETE FEATURES #
@@ -384,6 +459,7 @@ class BehaviorOphysDataset(BehaviorOphysExperiment):
                                                                           'phase', 'spatial_frequency'])
         stimulus_presentations = reformat.add_change_each_flash(stimulus_presentations)
         stimulus_presentations['pre_change'] = stimulus_presentations['change'].shift(-1)
+        stimulus_presentations['pre_omitted'] = stimulus_presentations['omitted'].shift(-1)
         stimulus_presentations = reformat.add_epoch_times(stimulus_presentations)
         stimulus_presentations = reformat.add_mean_running_speed(stimulus_presentations, self.running_speed)
         try:  # if eye tracking data is not present or cant be loaded
@@ -559,6 +635,7 @@ class BehaviorDataset(BehaviorSession):
         stimulus_presentations = self.stimulus_presentations.copy()
         stimulus_presentations = reformat.add_change_each_flash(stimulus_presentations)
         stimulus_presentations['pre_change'] = stimulus_presentations['change'].shift(-1)
+        stimulus_presentations['pre_omitted'] = stimulus_presentations['omitted'].shift(-1)
         stimulus_presentations = reformat.add_epoch_times(stimulus_presentations)
         stimulus_presentations = reformat.add_mean_running_speed(stimulus_presentations, self.running_speed)
         stimulus_presentations = reformat.add_licks_each_flash(stimulus_presentations, self.licks)
@@ -636,9 +713,10 @@ def get_behavior_dataset(behavior_session_id, from_lims=False, from_nwb=False):
     return dataset
 
 
-def get_ophys_container_ids(release_data_only=False):
-    """Get container_ids that meet the criteria in get_filtered_ophys_experiment_table(). """
-    experiments = get_filtered_ophys_experiment_table(release_data_only=release_data_only)
+def get_ophys_container_ids(include_failed_data=False, release_data_only=False, exclude_ai94=True, from_cache=True, save_to_cache=False):
+    """Get container_ids that meet the criteria indicated by flags, which are identical to those in get_filtered_ophys_experiment_table() """
+    experiments = get_filtered_ophys_experiment_table(include_failed_data=include_failed_data, release_data_only=release_data_only,
+                                                      exclude_ai94=exclude_ai94, from_cache=from_cache, save_to_cache=save_to_cache)
     container_ids = np.sort(experiments.ophys_container_id.unique())
     return container_ids
 
@@ -2411,8 +2489,7 @@ def get_file_name_for_multi_session_df(df_name, project_code, session_type, cond
     return filename
 
 
-def get_multi_session_df(cache_dir, df_name, conditions, experiments_table, remove_outliers=True, use_session_type=True,
-                         use_events=False):
+def get_multi_session_df(cache_dir, df_name, conditions, experiments_table, remove_outliers=True, use_session_type=True, use_events=False):
     """
     Loops through all experiments in the provided experiments_table, creates a response dataframe indicated by df_name,
     creates a mean response dataframe for a given set of conditions, and concatenates across all experiments to create
@@ -2430,15 +2507,15 @@ def get_multi_session_df(cache_dir, df_name, conditions, experiments_table, remo
     :param use_events: Boolean, whether to use events instead of dF/F when creating response dataframes
     :return: multi_session_df for conditions specified above
     """
-    experiments_table = get_annotated_experiments_table()
+    experiments_table = get_filtered_ophys_experiment_table()
     project_codes = experiments_table.project_code.unique()
     multi_session_df = pd.DataFrame()
     for project_code in project_codes:
         experiments = experiments_table[(experiments_table.project_code == project_code)]
         if project_code == 'VisualBehaviorMultiscope':
             experiments = experiments[experiments.session_type != 'OPHYS_2_images_B_passive']
-        # expts = experiments_table.reset_index()
-        expts = experiments_table.copy()
+        expts = experiments_table.reset_index()
+        # expts = experiments_table.copy()
         if use_session_type:
             for session_type in np.sort(experiments.session_type.unique()):
                 try:
