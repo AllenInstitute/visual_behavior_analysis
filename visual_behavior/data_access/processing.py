@@ -1232,3 +1232,84 @@ def add_bouts_to_licks(licks):
     indices = licks[licks.inter_flash_lick_diff < median_inter_lick_interval * 3].index
     licks.at[indices, 'lick_in_bout'] = True
     return licks
+
+
+def get_multi_session_df(experiments, df_name, conditions, use_events=False, filter_events=False,
+                         use_extended_stimulus_presentations=False):
+    """
+    Code to generate a concatenated multi session dataframe with cell responses averaged over a set of conditions.
+    This functionality also exists in scripts for the cluster where it will create the dataframes for all cre lines and session types automatically.
+    This is a standalone version that runs only on the set of experiments provided (ex: just on one cre line)
+    :param experiments: experiments_table filtered to include only experiments you want to include in the concatenated df
+    :param df_name: which ResponseAnalysis dataframe to use; 'trials_response_df', 'omission_response_df', or 'stimulus_response_df'
+    :param conditions: conditions over which to group by and average for each cell, must be a column in the response dataframe;
+                        ex: ['cell_specimen_id', 'image_name'] or ['cell_specimen_id', 'engagement_state', 'hit']
+    :param use_events: Boolean; whether or not to use detected events
+    :param filter_events: Boolean; whether or not to use filtered events
+    :param use_extended_stimulus_presentations: Boolean; whether or not to merge response df with extended_stimulus_presentations or the default SDK version of stimulus_presentations
+    :return:
+    """
+    import visual_behavior.ophys.response_analysis.utilities as ut
+    from visual_behavior.ophys.response_analysis.response_analysis import ResponseAnalysis
+
+    if 'stimulus' in df_name:
+        flashes = True
+        omitted = False
+        get_pref_stim = True
+    elif 'omission' in df_name:
+        flashes = False
+        omitted = True
+        get_pref_stim = False
+    elif 'trials' in df_name:
+        flashes = False
+        omitted = False
+        get_pref_stim = True
+    else:
+        print('unable to set params for', df_name)
+    if ('run_speed' in df_name) or ('pupil_area' in df_name):
+        get_pref_stim = False
+    if ('engaged' in conditions) or ('engagement_state' in conditions):
+        use_extended_stimulus_presentations = True
+
+    mega_mdf = pd.DataFrame()
+    for i, experiment_id in enumerate(experiments.index):
+        print('processing experiment', i, 'out of', str(len(experiments.index)))
+        try:
+            print(experiment_id)
+            dataset = data_loading.get_ophys_dataset(experiment_id)
+            analysis = ResponseAnalysis(dataset, use_events=use_events, filter_events=filter_events,
+                                        use_extended_stimulus_presentations=use_extended_stimulus_presentations)
+            df = analysis.get_response_df(df_name)
+            df['ophys_experiment_id'] = experiment_id
+            if 'passive' in dataset.metadata['session_type']:
+                df['lick_on_next_flash'] = False
+                df['engaged'] = False
+                df['engagement_state'] = 'disengaged'
+            if 'running' in conditions:
+                df['running'] = [True if mean_running_speed > 2 else False for mean_running_speed in df.mean_running_speed.values]
+            if 'large_pupil' in conditions:
+                if 'mean_pupil_area' in df.keys():
+                    df = df[df.mean_pupil_area.isnull() == False]
+                    if len(df) > 100:
+                        median_pupil_area = df.mean_pupil_area.median()
+                        df['large_pupil'] = [True if mean_pupil_area > median_pupil_area else False for mean_pupil_area in
+                                             df.mean_pupil_area.values]
+            mdf = ut.get_mean_df(df, analysis, conditions=conditions, get_pref_stim=get_pref_stim,
+                                 flashes=flashes, omitted=omitted, get_reliability=True,
+                                 exclude_omitted_from_pref_stim=True)
+            if 'correlation_values' in mdf.keys():
+                mdf = mdf.drop(columns=['correlation_values'])
+            mdf['ophys_experiment_id'] = experiment_id
+            print('mean df created for', experiment_id)
+            mega_mdf = pd.concat([mega_mdf, mdf])
+        except Exception as e:  # flake8: noqa: E722
+            print(e)
+            print('problem for', experiment_id)
+
+    if 'level_0' in mega_mdf.keys():
+        mega_mdf = mega_mdf.drop(columns='level_0')
+    if 'index' in mega_mdf.keys():
+        mega_mdf = mega_mdf.drop(columns='index')
+
+    print('finished creating multi_session_df')
+    return mega_mdf

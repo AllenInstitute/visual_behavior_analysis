@@ -39,8 +39,8 @@ def placeAxesOnGrid(fig, dim=[1, 1], xspan=[0, 1], yspan=[0, 1], wspace=None, hs
     outer_grid = gridspec.GridSpec(100, 100)
     inner_grid = gridspec.GridSpecFromSubplotSpec(dim[0], dim[1],
                                                   subplot_spec=outer_grid[int(100 * yspan[0]):int(100 * yspan[1]),
-                                                               # flake8: noqa: E999
-                                                               int(100 * xspan[0]):int(100 * xspan[1])], wspace=wspace,
+                                                                          # flake8: noqa: E999
+                                                                          int(100 * xspan[0]):int(100 * xspan[1])], wspace=wspace,
                                                   hspace=hspace)  # flake8: noqa: E999
 
     # NOTE: A cleaner way to do this is with list comprehension:
@@ -597,7 +597,7 @@ def plot_experiment_summary_figure(analysis, save_dir=None):
         ax = plot_mean_trace_heatmap(mdf, condition='behavioral_response_type',
                                      condition_values=['HIT', 'MISS', 'CR', 'FA'], ax=ax, save_dir=None,
                                      use_events=use_events, window=analysis.trial_window)
-    except:
+    except BaseException:
         pass
 
     ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.78, 0.97), yspan=(.3, .8))
