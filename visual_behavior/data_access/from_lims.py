@@ -37,6 +37,48 @@ except Exception as e:
     warnings.warn(warn_string)
 
 
+### CONSTANTS ###      # noqa: E266
+wellKnownFilesDict = {
+    "BehaviorOphysNwb":              {"id" : 857644235,  "attachable_id_type" : "ophys_experiment_id"}, 
+    "DemixedTracesFile":             {"id" : 820011707,  "attachable_id_type" : "ophys_experiment_id"},
+    "EyeDlcOutputFile":              {"id" : 990460508,  "attachable_id_type" : "ophys_session_id"},
+    "EyeDlcScreenMapping":           {"id" : 916857994,  "attachable_id_type" : "ophys_session_id"},
+    "EyeTrackingEllipses":           {"id" : 914623492,  "attachable_id_type" : "ophys_session_id"},
+    "MotionCorrectedImageStack":     {"id" : 886523092,  "attachable_id_type" : "ophys_experiment_id"},
+    "NeuropilCorrection":            {"id" : 514173083,  "attachable_id_type" : "ophys_experiment_id"},
+    "OphysDffTraceFile":             {"id" : 514173073,  "attachable_id_type" : "ophys_experiment_id"},
+    "OphysEventTraceFile":           {"id" : 1074961818, "attachable_id_type" : "ophys_experiment_id"},
+    "OphysMaxIntImage":              {"id" : 819891467,  "attachable_id_type" : "OphysCellSegmentationRun"},
+    "OphysMotionPreview":            {"id" : 1078829422, "attachable_id_type" : "ophys_experiment_id"},
+    "OphysMotionXyOffsetData":       {"id" : 514167000 , "attachable_id_type" : "ophys_experiment_id"},
+    "OphysNeuropilTraces":           {"id" : 514173078,  "attachable_id_type" : "ophys_experiment_id"},
+    "OphysPlatformJson":             {"id" : 746251277,  "attachable_id_type" : "ophys_session_id"},
+    "StimulusPickle":                {"id" : 610487715,  "attachable_id_type" : "ophys_session_id"},
+    "OphysRigSync":                  {"id" : 610487713,  "attachable_id_type" : "ophys_session_id"},
+    "OphysRoiTraces":                {"id" : 514173076,  "attachable_id_type" : "ophys_experiment_id"},
+    "OphysSegmentationMaskData":     {"id" : 514167002,  "attachable_id_type" : "OphysCellSegmentationRun"},
+    "OphysSegmentationMaskImage":    {"id" : 514166991,  "attachable_id_type" : "OphysCellSegmentationRun"},
+    "OphysSegmentationObjects":      {"id" : 514167005,  "attachable_id_type" : "OphysCellSegmentationRun"},
+    "OphysTimeSynchronization":      {"id" : 518070518,  "attachable_id_type" : "ophys_experiment_id"},
+    "RawBehaviorTrackingVideo":      {"id" : 695808672,  "attachable_id_type" : "ophys_session_id"},
+    "RawEyeTrackingVideo":           {"id" : 695808172,  "attachable_id_type" : "ophys_session_id"},
+    "OphysRegistrationSummaryImage": {"id" : 1078813087, "attachable_id_type" : "ophys_experiment_id"},
+    "OphysLoSegmentationMaskData":   {"id" : 569491905,  "attachable_id_type" : "OphysCellSegmentationRun"},
+    "OphysxtractedTracesInputJson":  {"id" : 820015097,  "attachable_id_type" : "ophys_experiment_id"},
+    "OphysAverageIntensityProjectionImage": {"id" :  514166989, "attachable_id_type" : ["ophys_experiment_id", "OphysCellSegmentationRun"]}}
+
+
+idTypesDict = {
+    "ophys_experiment_id" : {"lims_table" : "ophys_experiments",  "id_column": "id"},
+    "ophys_session_id"    : {"lims_table" : "ophys_sessions",     "id_column": "id"},
+    "behavior_session_id" : {"lims_table" : "behavior_sessions",  "id_column": "id"}, 
+    "foraging_id"         : {"lims_table" : "behavior_sessions",  "id_column": "foraging_id" },
+    "donor_id"            : {"lims_table" : "behavior_sessions",  "id_column": "donor_id"},
+    "cell_roi_id"         : {"lims_table" : "cell_rois" ,         "id_column": "id" },
+    "cell_specimen_id"    : {"lims_table" : "cell_rois",          "id_column": "cell_specimen_id"},
+    "ophys_container_id"  : {"lims_table" : "visual_behavior_experiment_containers",  "id_column": "id"},
+    "super_container_id"  : {"lims_table" : "visual_behavior_supercontainers",        "id_column": "id" }}
+
 ### QUERIES USED FOR MULTIPLE FUNCTIONS ###      # noqa: E266
 def general_info_for_id_query():
     """the base query used for all the 'get_general_info_for...
@@ -159,7 +201,6 @@ def all_ids_for_id_query():
 
 # mouse related IDS
 
-
 def get_donor_id_for_specimen_id(specimen_id):
     specimen_id = int(specimen_id)
     query = '''
@@ -190,6 +231,29 @@ def get_specimen_id_for_donor_id(donor_id):
     '''.format(donor_id)
     specimen_ids = mixin.select(query)
     return specimen_ids
+
+# Cell / ROI related IDS
+def get_ophys_experiment_id_for_cell_roi_id(cell_roi_id):
+    '''
+    returns the ophys experiment ID from which a given cell_roi_id was recorded
+    Parameters:
+    -----------
+    cell_roi_id: int
+        cell_roi_id of interest
+
+    Returns:
+    --------
+    int
+        ophys_experiment_id
+    '''
+    cell_roi_id = int(cell_roi_id)
+    query_string = '''
+    select ophys_experiment_id
+    from cell_rois
+    where id = {}
+    '''
+
+    return db.lims_query(query_string.format(cell_roi_id))
 
 
 # for ophys_experimnt_id
@@ -1155,24 +1219,22 @@ def get_cell_exclusion_labels(ophys_experiment_id):
 
 
 ### FILEPATHS FOR WELL KNOWN FILES###      # noqa: E266
-
-## for ophys_experiment_id ##              # noqa: E266
-
-def get_BehaviorOphysNWB_filepath(ophys_experiment_id):
+def get_well_known_file_path(wellKnownFileName, attachable_id):
     """[summary]
 
     Parameters
     ----------
-    ophys_experiment_id : [type]
-        [description]
+    wellKnownFileName : string
+        well known file name, e.g. "BehaviorOphysNwb",'DemixedTracesFile' etc.
+    attachable_id : int
+        the id that the well known file can be identified by
 
     Returns
     -------
-    [type]
-        [description]
+    filepath string
+        the filepath for the well known file
     """
-    ophys_experiment_id = int(ophys_experiment_id)
-
+    
     query = '''
     SELECT
     wkf.storage_directory || wkf.filename
@@ -1185,12 +1247,86 @@ def get_BehaviorOphysNWB_filepath(ophys_experiment_id):
     ON wkft.id = wkf.well_known_file_type_id
 
     WHERE
-    wkft.name = 'BehaviorOphysNwb'
+    wkft.name = {}
     AND wkf.attachable_id = {}
-    '''.format(ophys_experiment_id)
+    '''.format(wellKnownFileName, attachable_id)
+    
     RealDict_object = mixin.select(query)
     filepath = lims_utils.get_filepath_from_realdict_object(RealDict_object)
     return filepath
+
+
+def get_BehaviorOphys_NWB_filepath(ophys_experiment_id):
+    filepath = get_well_known_file_path("BehaviorOphysNwb", ophys_experiment_id)
+    return filepath
+
+
+
+
+
+# def get_BehaviorOphysNWB_filepath(ophys_experiment_id):
+#     """[summary]
+
+#     Parameters
+#     ----------
+#     ophys_experiment_id : [type]
+#         [description]
+
+#     Returns
+#     -------
+#     [type]
+#         [description]
+#     """
+#     ophys_experiment_id = int(ophys_experiment_id)
+
+#     query = '''
+#     SELECT
+#     wkf.storage_directory || wkf.filename
+#     AS filepath
+
+#     FROM
+#     well_known_files wkf
+
+#     JOIN well_known_file_types wkft
+#     ON wkft.id = wkf.well_known_file_type_id
+
+#     WHERE
+#     wkft.name = 'BehaviorOphysNwb'
+#     AND wkf.attachable_id = {}
+#     '''.format(ophys_experiment_id)
+#     RealDict_object = mixin.select(query)
+#     filepath = lims_utils.get_filepath_from_realdict_object(RealDict_object)
+#     return filepath
+    
+
+
+
+# def get_well_known_file_path(id, attachable_type, asset_name):
+#     '''
+#     returns the filepath for a given well known file asset
+#     Parameters:
+#     -----------
+#     id: int
+#         the id of the attachable_type
+#     attachable_type: str
+#         attachable type (e.g. 'OphysExperiment', 'OphysSession', 'BehaviorSession')
+#     asset_name: str
+#         the name of the desired asset (e.g. 'OphysRoiTraces'). Must exist for the given attachable type
+
+#     Returns:
+#     --------
+#     str
+#         filepath to asset
+#     '''
+#     wkf = db.get_well_known_files(id, attachable_id_type=attachable_type)
+
+#     assert asset_name in wkf.index.to_list(), 'only assets {} are available for {}'.format(wkf.index.to_list(), attachable_type)
+
+#     return '/' + ''.join([wkf.loc[asset_name]['storage_directory'], wkf.loc[asset_name]['filename']])
+
+## for ophys_experiment_id ##              # noqa: E266
+
+
 
 
 def get_demixed_traces_filepath(ophys_experiment_id):
@@ -2253,27 +2389,7 @@ def get_well_known_file_path(id, attachable_type, asset_name):
     return '/' + ''.join([wkf.loc[asset_name]['storage_directory'], wkf.loc[asset_name]['filename']])
 
 
-def get_ophys_experiment_id_for_cell_roi_id(cell_roi_id):
-    '''
-    returns the ophys experiment ID from which a given cell_roi_id was recorded
-    Parameters:
-    -----------
-    cell_roi_id: int
-        cell_roi_id of interest
 
-    Returns:
-    --------
-    int
-        ophys_experiment_id
-    '''
-    cell_roi_id = int(cell_roi_id)
-    query_string = '''
-    select ophys_experiment_id
-    from cell_rois
-    where id = {}
-    '''
-
-    return db.lims_query(query_string.format(cell_roi_id))
 
 
 def get_id_type(input_id):
