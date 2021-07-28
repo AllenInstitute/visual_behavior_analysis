@@ -38,41 +38,16 @@ except Exception as e:
 
 
 ### CONSTANTS ###      # noqa: E266
-wellKnownFilesDict = {
-    "BehaviorOphysNwb":              {"id" : 857644235,  "attachable_id_type" : "ophys_experiment_id"}, 
-    "DemixedTracesFile":             {"id" : 820011707,  "attachable_id_type" : "ophys_experiment_id"},
-    "EyeDlcOutputFile":              {"id" : 990460508,  "attachable_id_type" : "ophys_session_id"},
-    "EyeDlcScreenMapping":           {"id" : 916857994,  "attachable_id_type" : "ophys_session_id"},
-    "EyeTrackingEllipses":           {"id" : 914623492,  "attachable_id_type" : "ophys_session_id"},
-    "MotionCorrectedImageStack":     {"id" : 886523092,  "attachable_id_type" : "ophys_experiment_id"},
-    "NeuropilCorrection":            {"id" : 514173083,  "attachable_id_type" : "ophys_experiment_id"},
-    "OphysDffTraceFile":             {"id" : 514173073,  "attachable_id_type" : "ophys_experiment_id"},
-    "OphysEventTraceFile":           {"id" : 1074961818, "attachable_id_type" : "ophys_experiment_id"},
-    "OphysMaxIntImage":              {"id" : 819891467,  "attachable_id_type" : "OphysCellSegmentationRun"},
-    "OphysMotionPreview":            {"id" : 1078829422, "attachable_id_type" : "ophys_experiment_id"},
-    "OphysMotionXyOffsetData":       {"id" : 514167000 , "attachable_id_type" : "ophys_experiment_id"},
-    "OphysNeuropilTraces":           {"id" : 514173078,  "attachable_id_type" : "ophys_experiment_id"},
-    "OphysPlatformJson":             {"id" : 746251277,  "attachable_id_type" : "ophys_session_id"},
-    "StimulusPickle":                {"id" : 610487715,  "attachable_id_type" : "ophys_session_id"},
-    "OphysRigSync":                  {"id" : 610487713,  "attachable_id_type" : "ophys_session_id"},
-    "OphysRoiTraces":                {"id" : 514173076,  "attachable_id_type" : "ophys_experiment_id"},
-    "OphysSegmentationMaskData":     {"id" : 514167002,  "attachable_id_type" : "OphysCellSegmentationRun"},
-    "OphysSegmentationMaskImage":    {"id" : 514166991,  "attachable_id_type" : "OphysCellSegmentationRun"},
-    "OphysSegmentationObjects":      {"id" : 514167005,  "attachable_id_type" : "OphysCellSegmentationRun"},
-    "OphysTimeSynchronization":      {"id" : 518070518,  "attachable_id_type" : "ophys_experiment_id"},
-    "RawBehaviorTrackingVideo":      {"id" : 695808672,  "attachable_id_type" : "ophys_session_id"},
-    "RawEyeTrackingVideo":           {"id" : 695808172,  "attachable_id_type" : "ophys_session_id"},
-    "OphysRegistrationSummaryImage": {"id" : 1078813087, "attachable_id_type" : "ophys_experiment_id"},
-    "OphysLoSegmentationMaskData":   {"id" : 569491905,  "attachable_id_type" : "OphysCellSegmentationRun"},
-    "OphysxtractedTracesInputJson":  {"id" : 820015097,  "attachable_id_type" : "ophys_experiment_id"},
-    "OphysAverageIntensityProjectionImage": {"id" :  514166989, "attachable_id_type" : ["ophys_experiment_id", "OphysCellSegmentationRun"]}}
+
+
+
 
 
 idTypesDict = {
     "ophys_experiment_id" : {"lims_table" : "ophys_experiments",  "id_column": "id"},
     "ophys_session_id"    : {"lims_table" : "ophys_sessions",     "id_column": "id"},
     "behavior_session_id" : {"lims_table" : "behavior_sessions",  "id_column": "id"}, 
-    "foraging_id"         : {"lims_table" : "behavior_sessions",  "id_column": "foraging_id" },
+    "specimen_id"         : {"lims_table" : "behavior_sessions",  "id_column": "specimen_id"}, 
     "donor_id"            : {"lims_table" : "behavior_sessions",  "id_column": "donor_id"},
     "cell_roi_id"         : {"lims_table" : "cell_rois" ,         "id_column": "id" },
     "cell_specimen_id"    : {"lims_table" : "cell_rois",          "id_column": "cell_specimen_id"},
@@ -1219,22 +1194,61 @@ def get_cell_exclusion_labels(ophys_experiment_id):
 
 
 ### FILEPATHS FOR WELL KNOWN FILES###      # noqa: E266
+
+wellKnownFilesDict = {
+    "BehaviorOphysNwb":              {"wellKnownFile_id": 857644235,  "attachable_id_type": "ophys_experiment_id"},        # noqa: E241
+    "DemixedTracesFile":             {"wellKnownFile_id": 820011707,  "attachable_id_type": "ophys_experiment_id"},        # noqa: E241
+    "EyeDlcOutputFile":              {"wellKnownFile_id": 990460508,  "attachable_id_type": "ophys_session_id"},           # noqa: E241
+    "EyeDlcScreenMapping":           {"wellKnownFile_id": 916857994,  "attachable_id_type": "ophys_session_id"},           # noqa: E241
+    "EyeTrackingEllipses":           {"wellKnownFile_id": 914623492,  "attachable_id_type": "ophys_session_id"},           # noqa: E241
+    "MotionCorrectedImageStack":     {"wellKnownFile_id": 886523092,  "attachable_id_type": "ophys_experiment_id"},        # noqa: E241
+    "NeuropilCorrection":            {"wellKnownFile_id": 514173083,  "attachable_id_type": "ophys_experiment_id"},        # noqa: E241
+    "OphysDffTraceFile":             {"wellKnownFile_id": 514173073,  "attachable_id_type": "ophys_experiment_id"},        # noqa: E241
+    "OphysEventTraceFile":           {"wellKnownFile_id": 1074961818, "attachable_id_type": "ophys_experiment_id"},        # noqa: E241
+    "OphysMaxIntImage":              {"wellKnownFile_id": 819891467,  "attachable_id_type": "OphysCellSegmentationRun"},   # noqa: E241
+    "OphysMotionPreview":            {"wellKnownFile_id": 1078829422, "attachable_id_type": "ophys_experiment_id"},        # noqa: E241
+    "OphysMotionXyOffsetData":       {"wellKnownFile_id": 514167000,  "attachable_id_type": "ophys_experiment_id"},        # noqa: E241
+    "OphysNeuropilTraces":           {"wellKnownFile_id": 514173078,  "attachable_id_type": "ophys_experiment_id"},        # noqa: E241
+    "OphysPlatformJson":             {"wellKnownFile_id": 746251277,  "attachable_id_type": "ophys_session_id"},           # noqa: E241
+    "StimulusPickle":                {"wellKnownFile_id": 610487715,  "attachable_id_type": "ophys_session_id"},           # noqa: E241
+    "OphysRigSync":                  {"wellKnownFile_id": 610487713,  "attachable_id_type": "ophys_session_id"},           # noqa: E241
+    "OphysRoiTraces":                {"wellKnownFile_id": 514173076,  "attachable_id_type": "ophys_experiment_id"},        # noqa: E241
+    "OphysSegmentationMaskData":     {"wellKnownFile_id": 514167002,  "attachable_id_type": "OphysCellSegmentationRun"},   # noqa: E241
+    "OphysSegmentationMaskImage":    {"wellKnownFile_id": 514166991,  "attachable_id_type": "OphysCellSegmentationRun"},   # noqa: E241
+    "OphysSegmentationObjects":      {"wellKnownFile_id": 514167005,  "attachable_id_type": "OphysCellSegmentationRun"},   # noqa: E241
+    "OphysTimeSynchronization":      {"wellKnownFile_id": 518070518,  "attachable_id_type": "ophys_experiment_id"},        # noqa: E241
+    "RawBehaviorTrackingVideo":      {"wellKnownFile_id": 695808672,  "attachable_id_type": "ophys_session_id"},           # noqa: E241
+    "RawEyeTrackingVideo":           {"wellKnownFile_id": 695808172,  "attachable_id_type": "ophys_session_id"},           # noqa: E241
+    "OphysRegistrationSummaryImage": {"wellKnownFile_id": 1078813087, "attachable_id_type": "ophys_experiment_id"},        # noqa: E241
+    "OphysLoSegmentationMaskData":   {"wellKnownFile_id": 569491905,  "attachable_id_type": "OphysCellSegmentationRun"},   # noqa: E241
+    "OphysxtractedTracesInputJson":  {"wellKnownFile_id": 820015097,  "attachable_id_type": "ophys_experiment_id"},        # noqa: E241
+    "OphysAverageIntensityProjectionImage": {"wellKnownFile_id":  514166989, "attachable_id_type": ["ophys_experiment_id", "OphysCellSegmentationRun"]}}  # noqa: E241
+
+
 def get_well_known_file_path(wellKnownFileName, attachable_id):
-    """[summary]
+    """a generalized function to get the filepath for well known files when
+       given the wellKnownFile name and the correct attchable_id
 
     Parameters
     ----------
     wellKnownFileName : string
         well known file name, e.g. "BehaviorOphysNwb",'DemixedTracesFile' etc.
     attachable_id : int
-        the id that the well known file can be identified by
+        the id that the well known file can be identified by. Potential attachable_id
+        types include:
+            ophys_experiment_id
+            ophys_session_id
+            OphysCellSegmentationRun etc.
+
+        refer to the wellKnownFilesDict and see "attachable_id_type" key to get the attachable
+        id type for each wellKnownFile.
 
     Returns
     -------
     filepath string
         the filepath for the well known file
     """
-    
+
     query = '''
     SELECT
     wkf.storage_directory || wkf.filename
@@ -1250,7 +1264,7 @@ def get_well_known_file_path(wellKnownFileName, attachable_id):
     wkft.name = {}
     AND wkf.attachable_id = {}
     '''.format(wellKnownFileName, attachable_id)
-    
+
     RealDict_object = mixin.select(query)
     filepath = lims_utils.get_filepath_from_realdict_object(RealDict_object)
     return filepath
@@ -1325,8 +1339,6 @@ def get_BehaviorOphys_NWB_filepath(ophys_experiment_id):
 #     return '/' + ''.join([wkf.loc[asset_name]['storage_directory'], wkf.loc[asset_name]['filename']])
 
 ## for ophys_experiment_id ##              # noqa: E266
-
-
 
 
 def get_demixed_traces_filepath(ophys_experiment_id):
