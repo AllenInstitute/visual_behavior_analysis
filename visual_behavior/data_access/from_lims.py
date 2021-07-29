@@ -37,24 +37,54 @@ except Exception as e:
     warnings.warn(warn_string)
 
 
-### CONSTANTS ###      # noqa: E266
+### ID TYPES ###      # noqa: E266
+
+ID_TYPES_DICT = {
+    "ophys_experiment_id": {"lims_table": "ophys_experiments",  "id_column": "id"},                       # noqa: E241
+    "ophys_session_id":    {"lims_table": "ophys_sessions",     "id_column": "id"},                       # noqa: E241
+    "behavior_session_id": {"lims_table": "behavior_sessions",  "id_column": "id"},                       # noqa: E241
+    "specimen_id":         {"lims_table": "behavior_sessions",  "id_column": "specimen_id"},              # noqa: E241
+    "donor_id":            {"lims_table": "behavior_sessions",  "id_column": "donor_id"},                 # noqa: E241
+    "cell_roi_id":         {"lims_table": "cell_rois",          "id_column": "id" },                      # noqa: E241
+    "cell_specimen_id":    {"lims_table": "cell_rois",          "id_column": "cell_specimen_id"},         # noqa: E241
+    "ophys_container_id":  {"lims_table": "visual_behavior_experiment_containers",  "id_column": "id"},   # noqa: E241
+    "super_container_id":  {"lims_table": "visual_behavior_supercontainers",        "id_column": "id" }}  # noqa: E241
 
 
+def general_id_type_query(input_id, id_type):
+    query = '''
+    SELECT *
+    FROM {}
+    WHERE {} = {} limit 1
+    '''.format(ID_TYPES_DICT[id_type]["lims_table"],
+               ID_TYPES_DICT[id_type]["id_column"],
+               input_id)
+
+    table_row = mixin.select(query)
+    return table_row
 
 
+def get_id_type(input_id):
+    found_id_types = []
+    for id_type_key in ID_TYPES_DICT:
+        if len(general_id_type_query(input_id, id_type_key)) > 0:
+            found_id_types.append(id_type_key)
 
-idTypesDict = {
-    "ophys_experiment_id" : {"lims_table" : "ophys_experiments",  "id_column": "id"},
-    "ophys_session_id"    : {"lims_table" : "ophys_sessions",     "id_column": "id"},
-    "behavior_session_id" : {"lims_table" : "behavior_sessions",  "id_column": "id"}, 
-    "specimen_id"         : {"lims_table" : "behavior_sessions",  "id_column": "specimen_id"}, 
-    "donor_id"            : {"lims_table" : "behavior_sessions",  "id_column": "donor_id"},
-    "cell_roi_id"         : {"lims_table" : "cell_rois" ,         "id_column": "id" },
-    "cell_specimen_id"    : {"lims_table" : "cell_rois",          "id_column": "cell_specimen_id"},
-    "ophys_container_id"  : {"lims_table" : "visual_behavior_experiment_containers",  "id_column": "id"},
-    "super_container_id"  : {"lims_table" : "visual_behavior_supercontainers",        "id_column": "id" }}
+    # assert that no more than one ID type was found (they should be unique)
+    assert len(found_id_types) <= 1, 'multiple id types found: {}'.format(found_id_types)
+
+    if len(found_id_types) == 1:
+        # if only one id type was found, return it
+        id_type = found_id_types[0]
+    else:
+        # return 'unknown_id' if id was not found
+        id_type = "unknown_id"
+
+    return id_type
+
 
 ### QUERIES USED FOR MULTIPLE FUNCTIONS ###      # noqa: E266
+
 def general_info_for_id_query():
     """the base query used for all the 'get_general_info_for...
     id type' functions. can be used with the following ID types:
@@ -172,9 +202,8 @@ def all_ids_for_id_query():
     '''
     return all_ids_query_string
 
-### ID TYPES ###      # noqa: E266
 
-# mouse related IDS
+### ID TYPES ###      # noqa: E266
 
 def get_donor_id_for_specimen_id(specimen_id):
     specimen_id = int(specimen_id)
@@ -206,6 +235,7 @@ def get_specimen_id_for_donor_id(donor_id):
     '''.format(donor_id)
     specimen_ids = mixin.select(query)
     return specimen_ids
+
 
 # Cell / ROI related IDS
 def get_ophys_experiment_id_for_cell_roi_id(cell_roi_id):
@@ -439,8 +469,6 @@ def get_genotype_from_ophys_experiment_id(ophys_experiment_id):
 
 
 # for ophys_session_id
-
-
 def get_ophys_experiment_ids_for_ophys_session_id(ophys_session_id):
     """uses an sqlite to query lims2 database. Gets the ophys_experiment_id
        for a given ophys_session_id from the ophys_experiments table in lims.
@@ -571,8 +599,6 @@ def get_general_info_for_ophys_session_id(ophys_session_id):
 
 
 # for behavior_session_id
-
-
 def get_ophys_experiment_ids_for_behavior_session_id(behavior_session_id):
     behavior_session_id = int(behavior_session_id)
     query = '''
@@ -1195,34 +1221,36 @@ def get_cell_exclusion_labels(ophys_experiment_id):
 
 ### FILEPATHS FOR WELL KNOWN FILES###      # noqa: E266
 
-wellKnownFilesDict = {
-    "BehaviorOphysNwb":              {"wellKnownFile_id": 857644235,  "attachable_id_type": "ophys_experiment_id"},        # noqa: E241
-    "DemixedTracesFile":             {"wellKnownFile_id": 820011707,  "attachable_id_type": "ophys_experiment_id"},        # noqa: E241
-    "EyeDlcOutputFile":              {"wellKnownFile_id": 990460508,  "attachable_id_type": "ophys_session_id"},           # noqa: E241
-    "EyeDlcScreenMapping":           {"wellKnownFile_id": 916857994,  "attachable_id_type": "ophys_session_id"},           # noqa: E241
-    "EyeTrackingEllipses":           {"wellKnownFile_id": 914623492,  "attachable_id_type": "ophys_session_id"},           # noqa: E241
-    "MotionCorrectedImageStack":     {"wellKnownFile_id": 886523092,  "attachable_id_type": "ophys_experiment_id"},        # noqa: E241
-    "NeuropilCorrection":            {"wellKnownFile_id": 514173083,  "attachable_id_type": "ophys_experiment_id"},        # noqa: E241
-    "OphysDffTraceFile":             {"wellKnownFile_id": 514173073,  "attachable_id_type": "ophys_experiment_id"},        # noqa: E241
-    "OphysEventTraceFile":           {"wellKnownFile_id": 1074961818, "attachable_id_type": "ophys_experiment_id"},        # noqa: E241
-    "OphysMaxIntImage":              {"wellKnownFile_id": 819891467,  "attachable_id_type": "OphysCellSegmentationRun"},   # noqa: E241
-    "OphysMotionPreview":            {"wellKnownFile_id": 1078829422, "attachable_id_type": "ophys_experiment_id"},        # noqa: E241
-    "OphysMotionXyOffsetData":       {"wellKnownFile_id": 514167000,  "attachable_id_type": "ophys_experiment_id"},        # noqa: E241
-    "OphysNeuropilTraces":           {"wellKnownFile_id": 514173078,  "attachable_id_type": "ophys_experiment_id"},        # noqa: E241
-    "OphysPlatformJson":             {"wellKnownFile_id": 746251277,  "attachable_id_type": "ophys_session_id"},           # noqa: E241
-    "StimulusPickle":                {"wellKnownFile_id": 610487715,  "attachable_id_type": "ophys_session_id"},           # noqa: E241
-    "OphysRigSync":                  {"wellKnownFile_id": 610487713,  "attachable_id_type": "ophys_session_id"},           # noqa: E241
-    "OphysRoiTraces":                {"wellKnownFile_id": 514173076,  "attachable_id_type": "ophys_experiment_id"},        # noqa: E241
-    "OphysSegmentationMaskData":     {"wellKnownFile_id": 514167002,  "attachable_id_type": "OphysCellSegmentationRun"},   # noqa: E241
-    "OphysSegmentationMaskImage":    {"wellKnownFile_id": 514166991,  "attachable_id_type": "OphysCellSegmentationRun"},   # noqa: E241
-    "OphysSegmentationObjects":      {"wellKnownFile_id": 514167005,  "attachable_id_type": "OphysCellSegmentationRun"},   # noqa: E241
-    "OphysTimeSynchronization":      {"wellKnownFile_id": 518070518,  "attachable_id_type": "ophys_experiment_id"},        # noqa: E241
-    "RawBehaviorTrackingVideo":      {"wellKnownFile_id": 695808672,  "attachable_id_type": "ophys_session_id"},           # noqa: E241
-    "RawEyeTrackingVideo":           {"wellKnownFile_id": 695808172,  "attachable_id_type": "ophys_session_id"},           # noqa: E241
-    "OphysRegistrationSummaryImage": {"wellKnownFile_id": 1078813087, "attachable_id_type": "ophys_experiment_id"},        # noqa: E241
-    "OphysLoSegmentationMaskData":   {"wellKnownFile_id": 569491905,  "attachable_id_type": "OphysCellSegmentationRun"},   # noqa: E241
-    "OphysxtractedTracesInputJson":  {"wellKnownFile_id": 820015097,  "attachable_id_type": "ophys_experiment_id"},        # noqa: E241
-    "OphysAverageIntensityProjectionImage": {"wellKnownFile_id":  514166989, "attachable_id_type": ["ophys_experiment_id", "OphysCellSegmentationRun"]}}  # noqa: E241
+def generate_wellKnownFilesDict():
+    wellKnownFilesDict = {
+        "BehaviorOphysNwb":              {"wellKnownFile_id": 857644235,  "attachable_id_type": "ophys_experiment_id"},        # noqa: E241
+        "DemixedTracesFile":             {"wellKnownFile_id": 820011707,  "attachable_id_type": "ophys_experiment_id"},        # noqa: E241
+        "EyeDlcOutputFile":              {"wellKnownFile_id": 990460508,  "attachable_id_type": "ophys_session_id"},           # noqa: E241
+        "EyeDlcScreenMapping":           {"wellKnownFile_id": 916857994,  "attachable_id_type": "ophys_session_id"},           # noqa: E241
+        "EyeTrackingEllipses":           {"wellKnownFile_id": 914623492,  "attachable_id_type": "ophys_session_id"},           # noqa: E241
+        "MotionCorrectedImageStack":     {"wellKnownFile_id": 886523092,  "attachable_id_type": "ophys_experiment_id"},        # noqa: E241
+        "NeuropilCorrection":            {"wellKnownFile_id": 514173083,  "attachable_id_type": "ophys_experiment_id"},        # noqa: E241
+        "OphysDffTraceFile":             {"wellKnownFile_id": 514173073,  "attachable_id_type": "ophys_experiment_id"},        # noqa: E241
+        "OphysEventTraceFile":           {"wellKnownFile_id": 1074961818, "attachable_id_type": "ophys_experiment_id"},        # noqa: E241
+        "OphysMaxIntImage":              {"wellKnownFile_id": 819891467,  "attachable_id_type": "OphysCellSegmentationRun"},   # noqa: E241
+        "OphysMotionPreview":            {"wellKnownFile_id": 1078829422, "attachable_id_type": "ophys_experiment_id"},        # noqa: E241
+        "OphysMotionXyOffsetData":       {"wellKnownFile_id": 514167000,  "attachable_id_type": "ophys_experiment_id"},        # noqa: E241
+        "OphysNeuropilTraces":           {"wellKnownFile_id": 514173078,  "attachable_id_type": "ophys_experiment_id"},        # noqa: E241
+        "OphysPlatformJson":             {"wellKnownFile_id": 746251277,  "attachable_id_type": "ophys_session_id"},           # noqa: E241
+        "StimulusPickle":                {"wellKnownFile_id": 610487715,  "attachable_id_type": "ophys_session_id"},           # noqa: E241
+        "OphysRigSync":                  {"wellKnownFile_id": 610487713,  "attachable_id_type": "ophys_session_id"},           # noqa: E241
+        "OphysRoiTraces":                {"wellKnownFile_id": 514173076,  "attachable_id_type": "ophys_experiment_id"},        # noqa: E241
+        "OphysSegmentationMaskData":     {"wellKnownFile_id": 514167002,  "attachable_id_type": "OphysCellSegmentationRun"},   # noqa: E241
+        "OphysSegmentationMaskImage":    {"wellKnownFile_id": 514166991,  "attachable_id_type": "OphysCellSegmentationRun"},   # noqa: E241
+        "OphysSegmentationObjects":      {"wellKnownFile_id": 514167005,  "attachable_id_type": "OphysCellSegmentationRun"},   # noqa: E241
+        "OphysTimeSynchronization":      {"wellKnownFile_id": 518070518,  "attachable_id_type": "ophys_experiment_id"},        # noqa: E241
+        "RawBehaviorTrackingVideo":      {"wellKnownFile_id": 695808672,  "attachable_id_type": "ophys_session_id"},           # noqa: E241
+        "RawEyeTrackingVideo":           {"wellKnownFile_id": 695808172,  "attachable_id_type": "ophys_session_id"},           # noqa: E241
+        "OphysRegistrationSummaryImage": {"wellKnownFile_id": 1078813087, "attachable_id_type": "ophys_experiment_id"},        # noqa: E241
+        "OphysLoSegmentationMaskData":   {"wellKnownFile_id": 569491905,  "attachable_id_type": "OphysCellSegmentationRun"},   # noqa: E241
+        "OphysxtractedTracesInputJson":  {"wellKnownFile_id": 820015097,  "attachable_id_type": "ophys_experiment_id"},        # noqa: E241
+        "OphysAverageIntensityProjectionImage": {"wellKnownFile_id":  514166989, "attachable_id_type": ["ophys_experiment_id", "OphysCellSegmentationRun"]}}  # noqa: E241
+    return wellKnownFilesDict
 
 
 def get_well_known_file_path(wellKnownFileName, attachable_id):
