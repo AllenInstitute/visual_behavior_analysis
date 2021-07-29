@@ -1,3 +1,11 @@
+### PRECONDITIONS AND POSTCONDITIONS ### 
+
+# A precondition is something that must be true at the start of a function in order
+# for it to work correctly. 
+
+# A postcondition is something that the function guarantees is true when it finishes
+
+## IMPORTS ## 
 from visual_behavior.data_access import from_lims
 
 
@@ -36,6 +44,6 @@ def validate_below_threshold(input_value, threshold_value, variable_name):
 
 
 def validate_below_or_equal_threshold(input_value, threshold_value, variable_name):
-     assert input_value <= threshold_value, "Error: {} must be less than or equal to {}.".format(variable_name, 
+     assert input_value <= threshold_value, "Error: {} must be less than or equal to {}.".format(variable_name,
                                                                                                  threshold_value)
 
