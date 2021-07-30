@@ -1275,11 +1275,9 @@ def get_well_known_file_path(wellKnownFileName, attachable_id):
     filepath string
         the filepath for the well known file
     """
-    # ensure well known file name is infact a well known file
     conditions.validate_value_in_dict_keys(wellKnownFileName,
                                            WELL_KNOWN_FILES_DICT,
                                            "WELL_KNOWN_FILES_DICT")
-    # build query
     query = '''
     SELECT
     wkf.storage_directory || wkf.filename
