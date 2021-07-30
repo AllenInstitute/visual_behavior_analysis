@@ -11,6 +11,7 @@ import os
 import h5py
 import cv2
 import warnings
+from tqdm import tqdm
 
 from . import database as db
 
@@ -932,7 +933,119 @@ def annotate_licks(dataset, inplace=False, lick_bout_ili=0.7):
         return licks_df
 
 
-def get_behavior_stats(behavior_session_id, engaged_only=True):
+def annotate_stimuli(dataset, inplace=False):
+    '''
+    adds the following columns to the stimulus_presentations table, facilitating calculation
+    of behavior performance based entirely on the stimulus_presentations table:
+
+    'trials_id': the corresponding ID of the stimulus in the trials table
+    'previous_image_name': the name of the stimulus on the last flash
+    'next_start_time': The time of the next stimulus start
+    'auto_rewarded': True for trials where rewards were delivered regardless of animal response
+    'trial_stimulus_index': index of the given stimulus on the current trial
+    'response_lick': Boolean, True if a lick followed the stimulus
+    'response_lick_times': list of all lick times following this stimulus
+    'response_lick_latency': time difference between first lick and stimulus
+    'previous_response_on_trial': Boolean, True if there has been a lick to a previous stimulus on this trial
+    'could_change': Boolean, True if the stimulus met the conditions that would have allowed
+                    to be chosen as the change stimulus by camstim:
+                        * at least the fourth stimulus flash in the trial
+                        * not preceded by any licks on that trial
+
+    Parameters:
+    -----------
+    dataset : BehaviorSession or BehaviorOphysSession object
+        an SDK session object
+    inplace : Boolean
+        If True, operates on the dataset.stimulus_presentations object directly and returns None
+        If False (default), operates on a copy and returns the copy
+
+    Returns:
+    --------
+    Pandas.DataFrame (if inplace == False)
+    None (if inplace == True)
+    '''
+
+    if inplace:
+        stimulus_presentations = dataset.stimulus_presentations
+    else:
+        stimulus_presentations = dataset.stimulus_presentations.copy()
+
+    # add previous_image_name
+    stimulus_presentations['previous_image_name'] = stimulus_presentations['image_name'].shift()
+
+    # add next_start_time
+    stimulus_presentations['next_start_time'] = stimulus_presentations['start_time'].shift(-1)
+
+    # add trials_id and trial_stimulus_index
+    stimulus_presentations['trials_id'] = None
+    stimulus_presentations['trial_stimulus_index'] = None
+    last_trial_id = -1
+    trial_stimulus_index = 0
+
+    # add response_lick, response_lick_times, response_lick_latency
+    stimulus_presentations['response_lick'] = False
+    stimulus_presentations['response_lick_times'] = None
+    stimulus_presentations['response_lick_latency'] = None
+
+    # make a copy of trials with 'start_time' as index to speed lookup
+    trials = dataset.trials.copy().reset_index().set_index('start_time')
+
+    # make a copy of licks with 'timestamps' as index to speed lookup
+    licks = dataset.licks.copy().reset_index().set_index('timestamps')
+
+    # iterate over every stimulus
+    for idx, row in stimulus_presentations.iterrows():
+        # trials_id is last trials_id with start_time <= stimulus_time
+        trials_id = trials.loc[:row['start_time']].iloc[-1]['trials_id']
+        stimulus_presentations.at[idx, 'trials_id'] = trials_id
+
+        if trials_id == last_trial_id:
+            trial_stimulus_index += 1
+        else:
+            trial_stimulus_index = 0
+            last_trial_id = trials_id
+        stimulus_presentations.at[idx, 'trial_stimulus_index'] = trial_stimulus_index
+
+        stim_licks = licks.loc[row['start_time']:row['next_start_time'] - 1e-9].index.to_list()  # note the `- 1e-9` acts as a <, as opposed to a <=
+
+        stimulus_presentations.at[idx, 'response_lick_times'] = stim_licks
+        if len(stim_licks) > 0:
+            stimulus_presentations.at[idx, 'response_lick'] = True
+            stimulus_presentations.at[idx, 'response_lick_latency'] = stim_licks[0] - row['start_time']
+
+    # merge in auto_rewarded column from trials table
+    stimulus_presentations = stimulus_presentations.reset_index().merge(
+        dataset.trials[['auto_rewarded']],
+        on='trials_id',
+        how='left',
+    ).set_index('stimulus_presentations_id')
+
+    # add previous_response_on_trial
+    stimulus_presentations['previous_response_on_trial'] = False
+    # set 'stimulus_presentations_id' and 'trials_id' as indices to speed lookup
+    stimulus_presentations = stimulus_presentations.reset_index().set_index(['stimulus_presentations_id', 'trials_id'])
+    for idx, row in stimulus_presentations.iterrows():
+        stim_id, trials_id = idx
+        # get all stimuli before the current on the current trial
+        mask = (stimulus_presentations.index.get_level_values(0) < stim_id) & (stimulus_presentations.index.get_level_values(1) == trials_id) 
+        # check to see if any previous stimuli have a response lick
+        stimulus_presentations.at[idx, 'previous_response_on_trial'] = stimulus_presentations[mask]['response_lick'].any()
+    # set the index back to being just 'stimulus_presentations_id'
+    stimulus_presentations = stimulus_presentations.reset_index().set_index('stimulus_presentations_id')
+
+    # add could_change
+    stimulus_presentations['could_change'] = False
+    for idx, row in stimulus_presentations.iterrows():
+        # check if we meet conditions where a change could occur on this stimulus (at least 4th flash of trial, no previous change on trial)
+        if row['trial_stimulus_index'] >= 4 and row['previous_response_on_trial'] == False:
+            stimulus_presentations.at[idx, 'could_change'] = True
+
+    if inplace == False:
+        return stimulus_presentations
+
+
+def get_behavior_stats(behavior_session_id, engaged_only=True, method='stimulus_based'):
     '''
     gets behavior stats for a given behavior session
     relies on the existence of a behavioral model for a given session
@@ -943,6 +1056,14 @@ def get_behavior_stats(behavior_session_id, engaged_only=True):
         behavior session ID of interest
     engaged_only : boolean
         If True (default), calculates behavior stats only on engaged trials
+    method : str
+        if 'trial_based', calculates hit and false alarm rates based on the trial definitions
+            used by the stimulus control program (camstim) in realtime. Thus, only the
+            single stimulus on catch trials that is deemed as the 'catch' stimulus is used to
+            calculate the false alarm rate
+        if 'stimulus_based' (default), calculates hit and false alarm rates using every stimulus on which
+            a change could have occurred. This dramatically increases the number of stimuli used when
+            calculating the false alarm rate, reducing the noise on the false alarm estimate.
 
     Returns:
     --------
@@ -963,36 +1084,73 @@ def get_behavior_stats(behavior_session_id, engaged_only=True):
             error - the error string associated with the failure
 
     '''
+    output_dict = {'behavior_session_id': behavior_session_id}
     try:
         session = loading.get_behavior_dataset(behavior_session_id)
-        trials = session.extended_trials
+        if method == 'trial_based':
+            
+            trials = session.extended_trials
 
-        output_dict = {'behavior_session_id': behavior_session_id}
-        output_dict.update({'response_latency_{}'.format(key): value for key, value in trials.query('hit and engaged')['response_latency'].describe().to_dict().items()})
+            output_dict.update({'response_latency_{}'.format(key): value for key, value in trials.query('hit and engaged')['response_latency'].describe().to_dict().items()})
 
-        output_dict['hit_rate'] = trials.query('go and engaged')['hit'].mean()
-        output_dict['fa_rate'] = trials.query('catch and engaged')['false_alarm'].mean()
-        output_dict['number_of_engaged_go_trials'] = len(trials.query('go and engaged'))
-        output_dict['number_of_engaged_hits'] = trials.query('go and engaged')['hit'].sum()
-        output_dict['number_of_engaged_catch_trials'] = len(trials.query('catch and engaged'))
-        output_dict['number_of_engaged_false_alarms'] = trials.query('catch and engaged')['false_alarm'].sum()
-        output_dict['fraction_engaged'] = trials.query('go or catch')['engaged'].mean()
-        output_dict['dprime_trial_corrected'] = dprime(
-            go_trials=trials.query('go and engaged')['hit'],
-            catch_trials=trials.query('catch and engaged')['false_alarm'],
-            limits=True
-        )
-        output_dict['dprime_non_trial_corrected'] = dprime(
-            go_trials=trials.query('go and engaged')['hit'],
-            catch_trials=trials.query('catch and engaged')['false_alarm'],
-            limits=False
-        )
+            output_dict['hit_rate'] = trials.query('go and engaged')['hit'].mean()
+            output_dict['fa_rate'] = trials.query('catch and engaged')['false_alarm'].mean()
+            output_dict['number_of_engaged_go_trials'] = len(trials.query('go and engaged'))
+            output_dict['number_of_engaged_hits'] = trials.query('go and engaged')['hit'].sum()
+            output_dict['number_of_engaged_catch_trials'] = len(trials.query('catch and engaged'))
+            output_dict['number_of_engaged_false_alarms'] = trials.query('catch and engaged')['false_alarm'].sum()
+            output_dict['fraction_engaged'] = trials.query('go or catch')['engaged'].mean()
+            output_dict['dprime_trial_corrected'] = dprime(
+                go_trials=trials.query('go and engaged')['hit'],
+                catch_trials=trials.query('catch and engaged')['false_alarm'],
+                limits=True
+            )
+            output_dict['dprime_non_trial_corrected'] = dprime(
+                go_trials=trials.query('go and engaged')['hit'],
+                catch_trials=trials.query('catch and engaged')['false_alarm'],
+                limits=False
+            )
+
+        elif method == 'stimulus_based':
+            session.stimulus_presentations = loading.add_model_outputs_to_stimulus_presentations(
+                session.stimulus_presentations,
+                behavior_session_id
+            )
+
+            stimulus_presentations = annotate_stimuli(session, inplace = False)
+
+            go_trials = stimulus_presentations.query('auto_rewarded == False and could_change == True and is_change == True and engagement_state == "engaged"')
+            catch_trials = stimulus_presentations.query('auto_rewarded == False and could_change == True and is_change == False and engagement_state == "engaged"')
+
+            output_dict.update({'response_latency_{}'.format(key): value for key, value in go_trials.query('response_lick')['response_lick_latency'].astype(float).describe().to_dict().items()})
+
+            output_dict['hit_rate'] = go_trials['response_lick'].mean()
+            output_dict['fa_rate'] = catch_trials['response_lick'].mean()
+            output_dict['number_of_engaged_go_trials'] = len(go_trials)
+            output_dict['number_of_engaged_hits'] = go_trials['response_lick'].sum()
+            output_dict['number_of_engaged_catch_trials'] = len(catch_trials)
+            output_dict['number_of_engaged_false_alarms'] = catch_trials['response_lick'].sum()
+            output_dict['fraction_engaged'] = (stimulus_presentations.query('auto_rewarded == False and could_change == True')['engagement_state'] == 'engaged').mean()
+            output_dict['dprime_trial_corrected'] = dprime(
+                go_trials=go_trials['response_lick'],
+                catch_trials=catch_trials['response_lick'],
+                limits=True
+            )
+            output_dict['dprime_non_trial_corrected'] = dprime(
+                go_trials=go_trials['response_lick'],
+                catch_trials=catch_trials['response_lick'],
+                limits=False
+            )
+
         return output_dict
+
     except Exception as e:
+        print('Failed!')
+        print(e)
         return {'behavior_session_id': behavior_session_id, 'error': e}
 
 
-def cache_behavior_stats(behavior_session_id, engaged_only=True, cache_dir='/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/behavior_perfomance_summary'):
+def cache_behavior_stats(behavior_session_id, engaged_only=True, method='stimulus_based'):
     '''
     calculates behavior stats for a given session, saves to file
     file format is behavior_summary_behavior_session_id={behavior_session_id}.h5 with key = 'data'
@@ -1013,6 +1171,12 @@ def cache_behavior_stats(behavior_session_id, engaged_only=True, cache_dir='/all
     --------
     None
     '''
+
+    if method == 'trial_based':
+        cache_dir='/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/behavior_perfomance_summary_trial_based'
+    elif method == 'stimulus_based':
+        cache_dir='/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/behavior_perfomance_summary_stimulus_based'
+
     behavior_stats_df = pd.DataFrame(
         get_behavior_stats(behavior_session_id, engaged_only),
         index=[0]
@@ -1023,3 +1187,13 @@ def cache_behavior_stats(behavior_session_id, engaged_only=True, cache_dir='/all
         os.path.join(cache_dir, filename),
         key='data'
     )
+
+def get_cached_behavior_stats(behavior_session_id, engaged_only=True, method='stimulus_based'):
+    if method == 'trial_based':
+        cache_dir='/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/behavior_perfomance_summary_trial_based'
+    elif method == 'stimulus_based':
+        cache_dir='/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/behavior_perfomance_summary_stimulus_based'
+
+    fn = os.path.join(cache_dir, 'behavior_summary_behavior_session_id={}.h5'.format(behavior_session_id))
+    
+    return pd.read_hdf(fn, key='data')

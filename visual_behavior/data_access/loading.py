@@ -880,7 +880,11 @@ def load_behavior_model_outputs(behavior_session_id):
             'reward_rate',
             'is_change'
         ]
-        model_outputs.drop(columns=cols_to_drop, inplace=True)
+        for col in cols_to_drop:
+            try:
+                model_outputs.drop(columns=[col], inplace=True)
+            except KeyError:
+                pass
 
     else:
         warnings.warn('no model outputs saved for behavior_session_id: {}'.format(behavior_session_id))
