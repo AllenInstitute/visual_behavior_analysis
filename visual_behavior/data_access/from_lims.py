@@ -8,6 +8,7 @@ import pandas as pd
 from allensdk.internal.api import PostgresQueryMixin
 from visual_behavior.data_access import utilities as utils
 from visual_behavior.data_access import from_lims_utilities as lims_utils
+from visual_behavior.data_access import pre_post_conditions as conditions
 import visual_behavior.database as db
 
 
@@ -48,10 +49,11 @@ ID_TYPES_DICT = {
     "cell_roi_id":         {"lims_table": "cell_rois",          "id_column": "id" },                      # noqa: E241
     "cell_specimen_id":    {"lims_table": "cell_rois",          "id_column": "cell_specimen_id"},         # noqa: E241
     "ophys_container_id":  {"lims_table": "visual_behavior_experiment_containers",  "id_column": "id"},   # noqa: E241
-    "super_container_id":  {"lims_table": "visual_behavior_supercontainers",        "id_column": "id" }}  # noqa: E241
+    "supercontainer_id":   {"lims_table": "visual_behavior_supercontainers",        "id_column": "id" }}  # noqa: E241
 
 
 def general_id_type_query(input_id, id_type):
+    conditions.validate_value_in_dict_keys(id_type, ID_TYPES_DICT, "ID_TYPES_DICT")
     query = '''
     SELECT *
     FROM {}
@@ -1220,37 +1222,35 @@ def get_cell_exclusion_labels(ophys_experiment_id):
 
 
 ### FILEPATHS FOR WELL KNOWN FILES###      # noqa: E266
+WELL_KNOWN_FILES_DICT = {
+    "BehaviorOphysNwb":              {"wellKnownFile_id": 857644235,  "attachable_id_type": "ophys_experiment_id"},        # noqa: E241
+    "DemixedTracesFile":             {"wellKnownFile_id": 820011707,  "attachable_id_type": "ophys_experiment_id"},        # noqa: E241
+    "EyeDlcOutputFile":              {"wellKnownFile_id": 990460508,  "attachable_id_type": "ophys_session_id"},           # noqa: E241
+    "EyeDlcScreenMapping":           {"wellKnownFile_id": 916857994,  "attachable_id_type": "ophys_session_id"},           # noqa: E241
+    "EyeTrackingEllipses":           {"wellKnownFile_id": 914623492,  "attachable_id_type": "ophys_session_id"},           # noqa: E241
+    "MotionCorrectedImageStack":     {"wellKnownFile_id": 886523092,  "attachable_id_type": "ophys_experiment_id"},        # noqa: E241
+    "NeuropilCorrection":            {"wellKnownFile_id": 514173083,  "attachable_id_type": "ophys_experiment_id"},        # noqa: E241
+    "OphysDffTraceFile":             {"wellKnownFile_id": 514173073,  "attachable_id_type": "ophys_experiment_id"},        # noqa: E241
+    "OphysEventTraceFile":           {"wellKnownFile_id": 1074961818, "attachable_id_type": "ophys_experiment_id"},        # noqa: E241
+    "OphysMaxIntImage":              {"wellKnownFile_id": 819891467,  "attachable_id_type": "OphysCellSegmentationRun"},   # noqa: E241
+    "OphysMotionPreview":            {"wellKnownFile_id": 1078829422, "attachable_id_type": "ophys_experiment_id"},        # noqa: E241
+    "OphysMotionXyOffsetData":       {"wellKnownFile_id": 514167000,  "attachable_id_type": "ophys_experiment_id"},        # noqa: E241
+    "OphysNeuropilTraces":           {"wellKnownFile_id": 514173078,  "attachable_id_type": "ophys_experiment_id"},        # noqa: E241
+    "OphysPlatformJson":             {"wellKnownFile_id": 746251277,  "attachable_id_type": "ophys_session_id"},           # noqa: E241
+    "StimulusPickle":                {"wellKnownFile_id": 610487715,  "attachable_id_type": "ophys_session_id"},           # noqa: E241
+    "OphysRigSync":                  {"wellKnownFile_id": 610487713,  "attachable_id_type": "ophys_session_id"},           # noqa: E241
+    "OphysRoiTraces":                {"wellKnownFile_id": 514173076,  "attachable_id_type": "ophys_experiment_id"},        # noqa: E241
+    "OphysSegmentationMaskData":     {"wellKnownFile_id": 514167002,  "attachable_id_type": "OphysCellSegmentationRun"},   # noqa: E241
+    "OphysSegmentationMaskImage":    {"wellKnownFile_id": 514166991,  "attachable_id_type": "OphysCellSegmentationRun"},   # noqa: E241
+    "OphysSegmentationObjects":      {"wellKnownFile_id": 514167005,  "attachable_id_type": "OphysCellSegmentationRun"},   # noqa: E241
+    "OphysTimeSynchronization":      {"wellKnownFile_id": 518070518,  "attachable_id_type": "ophys_experiment_id"},        # noqa: E241
+    "RawBehaviorTrackingVideo":      {"wellKnownFile_id": 695808672,  "attachable_id_type": "ophys_session_id"},           # noqa: E241
+    "RawEyeTrackingVideo":           {"wellKnownFile_id": 695808172,  "attachable_id_type": "ophys_session_id"},           # noqa: E241
+    "OphysRegistrationSummaryImage": {"wellKnownFile_id": 1078813087, "attachable_id_type": "ophys_experiment_id"},        # noqa: E241
+    "OphysLoSegmentationMaskData":   {"wellKnownFile_id": 569491905,  "attachable_id_type": "OphysCellSegmentationRun"},   # noqa: E241
+    "OphysxtractedTracesInputJson":  {"wellKnownFile_id": 820015097,  "attachable_id_type": "ophys_experiment_id"},        # noqa: E241
+    "OphysAverageIntensityProjectionImage": {"wellKnownFile_id":  514166989, "attachable_id_type": ["ophys_experiment_id", "OphysCellSegmentationRun"]}}  # noqa: E241
 
-def generate_wellKnownFilesDict():
-    wellKnownFilesDict = {
-        "BehaviorOphysNwb":              {"wellKnownFile_id": 857644235,  "attachable_id_type": "ophys_experiment_id"},        # noqa: E241
-        "DemixedTracesFile":             {"wellKnownFile_id": 820011707,  "attachable_id_type": "ophys_experiment_id"},        # noqa: E241
-        "EyeDlcOutputFile":              {"wellKnownFile_id": 990460508,  "attachable_id_type": "ophys_session_id"},           # noqa: E241
-        "EyeDlcScreenMapping":           {"wellKnownFile_id": 916857994,  "attachable_id_type": "ophys_session_id"},           # noqa: E241
-        "EyeTrackingEllipses":           {"wellKnownFile_id": 914623492,  "attachable_id_type": "ophys_session_id"},           # noqa: E241
-        "MotionCorrectedImageStack":     {"wellKnownFile_id": 886523092,  "attachable_id_type": "ophys_experiment_id"},        # noqa: E241
-        "NeuropilCorrection":            {"wellKnownFile_id": 514173083,  "attachable_id_type": "ophys_experiment_id"},        # noqa: E241
-        "OphysDffTraceFile":             {"wellKnownFile_id": 514173073,  "attachable_id_type": "ophys_experiment_id"},        # noqa: E241
-        "OphysEventTraceFile":           {"wellKnownFile_id": 1074961818, "attachable_id_type": "ophys_experiment_id"},        # noqa: E241
-        "OphysMaxIntImage":              {"wellKnownFile_id": 819891467,  "attachable_id_type": "OphysCellSegmentationRun"},   # noqa: E241
-        "OphysMotionPreview":            {"wellKnownFile_id": 1078829422, "attachable_id_type": "ophys_experiment_id"},        # noqa: E241
-        "OphysMotionXyOffsetData":       {"wellKnownFile_id": 514167000,  "attachable_id_type": "ophys_experiment_id"},        # noqa: E241
-        "OphysNeuropilTraces":           {"wellKnownFile_id": 514173078,  "attachable_id_type": "ophys_experiment_id"},        # noqa: E241
-        "OphysPlatformJson":             {"wellKnownFile_id": 746251277,  "attachable_id_type": "ophys_session_id"},           # noqa: E241
-        "StimulusPickle":                {"wellKnownFile_id": 610487715,  "attachable_id_type": "ophys_session_id"},           # noqa: E241
-        "OphysRigSync":                  {"wellKnownFile_id": 610487713,  "attachable_id_type": "ophys_session_id"},           # noqa: E241
-        "OphysRoiTraces":                {"wellKnownFile_id": 514173076,  "attachable_id_type": "ophys_experiment_id"},        # noqa: E241
-        "OphysSegmentationMaskData":     {"wellKnownFile_id": 514167002,  "attachable_id_type": "OphysCellSegmentationRun"},   # noqa: E241
-        "OphysSegmentationMaskImage":    {"wellKnownFile_id": 514166991,  "attachable_id_type": "OphysCellSegmentationRun"},   # noqa: E241
-        "OphysSegmentationObjects":      {"wellKnownFile_id": 514167005,  "attachable_id_type": "OphysCellSegmentationRun"},   # noqa: E241
-        "OphysTimeSynchronization":      {"wellKnownFile_id": 518070518,  "attachable_id_type": "ophys_experiment_id"},        # noqa: E241
-        "RawBehaviorTrackingVideo":      {"wellKnownFile_id": 695808672,  "attachable_id_type": "ophys_session_id"},           # noqa: E241
-        "RawEyeTrackingVideo":           {"wellKnownFile_id": 695808172,  "attachable_id_type": "ophys_session_id"},           # noqa: E241
-        "OphysRegistrationSummaryImage": {"wellKnownFile_id": 1078813087, "attachable_id_type": "ophys_experiment_id"},        # noqa: E241
-        "OphysLoSegmentationMaskData":   {"wellKnownFile_id": 569491905,  "attachable_id_type": "OphysCellSegmentationRun"},   # noqa: E241
-        "OphysxtractedTracesInputJson":  {"wellKnownFile_id": 820015097,  "attachable_id_type": "ophys_experiment_id"},        # noqa: E241
-        "OphysAverageIntensityProjectionImage": {"wellKnownFile_id":  514166989, "attachable_id_type": ["ophys_experiment_id", "OphysCellSegmentationRun"]}}  # noqa: E241
-    return wellKnownFilesDict
 
 
 def get_well_known_file_path(wellKnownFileName, attachable_id):
@@ -1276,7 +1276,11 @@ def get_well_known_file_path(wellKnownFileName, attachable_id):
     filepath string
         the filepath for the well known file
     """
-
+    # ensure well known file name is infact a well known file
+    conditions.validate_value_in_dict_keys(wellKnownFileName,
+                                           WELL_KNOWN_FILES_DICT,
+                                           "WELL_KNOWN_FILES_DICT")
+    # build query
     query = '''
     SELECT
     wkf.storage_directory || wkf.filename
@@ -1292,115 +1296,22 @@ def get_well_known_file_path(wellKnownFileName, attachable_id):
     wkft.name = {}
     AND wkf.attachable_id = {}
     '''.format(wellKnownFileName, attachable_id)
-
     RealDict_object = mixin.select(query)
+
+    #filepath works for all operating systems
     filepath = lims_utils.get_filepath_from_realdict_object(RealDict_object)
     return filepath
 
 
 def get_BehaviorOphys_NWB_filepath(ophys_experiment_id):
+    conditions.validate_id_type(ophys_experiment_id, "ophys_experiment_id")
     filepath = get_well_known_file_path("BehaviorOphysNwb", ophys_experiment_id)
     return filepath
 
 
-
-
-
-# def get_BehaviorOphysNWB_filepath(ophys_experiment_id):
-#     """[summary]
-
-#     Parameters
-#     ----------
-#     ophys_experiment_id : [type]
-#         [description]
-
-#     Returns
-#     -------
-#     [type]
-#         [description]
-#     """
-#     ophys_experiment_id = int(ophys_experiment_id)
-
-#     query = '''
-#     SELECT
-#     wkf.storage_directory || wkf.filename
-#     AS filepath
-
-#     FROM
-#     well_known_files wkf
-
-#     JOIN well_known_file_types wkft
-#     ON wkft.id = wkf.well_known_file_type_id
-
-#     WHERE
-#     wkft.name = 'BehaviorOphysNwb'
-#     AND wkf.attachable_id = {}
-#     '''.format(ophys_experiment_id)
-#     RealDict_object = mixin.select(query)
-#     filepath = lims_utils.get_filepath_from_realdict_object(RealDict_object)
-#     return filepath
-    
-
-
-
-# def get_well_known_file_path(id, attachable_type, asset_name):
-#     '''
-#     returns the filepath for a given well known file asset
-#     Parameters:
-#     -----------
-#     id: int
-#         the id of the attachable_type
-#     attachable_type: str
-#         attachable type (e.g. 'OphysExperiment', 'OphysSession', 'BehaviorSession')
-#     asset_name: str
-#         the name of the desired asset (e.g. 'OphysRoiTraces'). Must exist for the given attachable type
-
-#     Returns:
-#     --------
-#     str
-#         filepath to asset
-#     '''
-#     wkf = db.get_well_known_files(id, attachable_id_type=attachable_type)
-
-#     assert asset_name in wkf.index.to_list(), 'only assets {} are available for {}'.format(wkf.index.to_list(), attachable_type)
-
-#     return '/' + ''.join([wkf.loc[asset_name]['storage_directory'], wkf.loc[asset_name]['filename']])
-
-## for ophys_experiment_id ##              # noqa: E266
-
-
 def get_demixed_traces_filepath(ophys_experiment_id):
-    """[summary]
-
-    Parameters
-    ----------
-    ophys_experiment_id : [type]
-        [description]
-
-    Returns
-    -------
-    [type]
-        [description]
-    """
-    ophys_experiment_id = int(ophys_experiment_id)
-
-    query = '''
-    SELECT
-    wkf.storage_directory || wkf.filename
-    AS filepath
-
-    FROM
-    well_known_files wkf
-
-    JOIN well_known_file_types wkft
-    ON wkft.id = wkf.well_known_file_type_id
-
-    WHERE
-    wkft.name = 'DemixedTracesFile'
-    AND wkf.attachable_id = {}
-    '''.format(ophys_experiment_id)
-    RealDict_object = mixin.select(query)
-    filepath = lims_utils.get_filepath_from_realdict_object(RealDict_object)
+    conditions.validate_id_type(ophys_experiment_id, "ophys_experiment_id")
+    filepath = get_well_known_file_path("DemixedTracesFile", ophys_experiment_id)
     return filepath
 
 
