@@ -6,9 +6,9 @@ import pandas as pd
 
 
 from allensdk.internal.api import PostgresQueryMixin
-from visual_behavior.data_access import utilities as utils
-from visual_behavior.data_access import from_lims_utilities as lims_utils
-from visual_behavior.data_access import pre_post_conditions as conditions
+import visual_behavior.data_access.utilities as utils
+import visual_behavior.data_access.from_lims_utilities as lims_utils
+import visual_behavior.data_access.pre_post_conditions as conditions
 import visual_behavior.database as db
 
 
@@ -1252,7 +1252,6 @@ WELL_KNOWN_FILES_DICT = {
     "OphysAverageIntensityProjectionImage": {"wellKnownFile_id":  514166989, "attachable_id_type": ["ophys_experiment_id", "OphysCellSegmentationRun"]}}  # noqa: E241
 
 
-
 def get_well_known_file_path(wellKnownFileName, attachable_id):
     """a generalized function to get the filepath for well known files when
        given the wellKnownFile name and the correct attchable_id
@@ -1298,7 +1297,7 @@ def get_well_known_file_path(wellKnownFileName, attachable_id):
     '''.format(wellKnownFileName, attachable_id)
     RealDict_object = mixin.select(query)
 
-    #filepath works for all operating systems
+    # filepath works for all operating systems
     filepath = lims_utils.get_filepath_from_realdict_object(RealDict_object)
     return filepath
 
