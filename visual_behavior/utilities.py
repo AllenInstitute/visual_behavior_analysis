@@ -11,7 +11,6 @@ import os
 import h5py
 import cv2
 import warnings
-from tqdm import tqdm
 
 from . import database as db
 
@@ -1028,7 +1027,7 @@ def annotate_stimuli(dataset, inplace=False):
     for idx, row in stimulus_presentations.iterrows():
         stim_id, trials_id = idx
         # get all stimuli before the current on the current trial
-        mask = (stimulus_presentations.index.get_level_values(0) < stim_id) & (stimulus_presentations.index.get_level_values(1) == trials_id) 
+        mask = (stimulus_presentations.index.get_level_values(0) < stim_id) & (stimulus_presentations.index.get_level_values(1) == trials_id)
         # check to see if any previous stimuli have a response lick
         stimulus_presentations.at[idx, 'previous_response_on_trial'] = stimulus_presentations[mask]['response_lick'].any()
     # set the index back to being just 'stimulus_presentations_id'
@@ -1088,7 +1087,7 @@ def get_behavior_stats(behavior_session_id, engaged_only=True, method='stimulus_
     try:
         session = loading.get_behavior_dataset(behavior_session_id)
         if method == 'trial_based':
-            
+
             trials = session.extended_trials
 
             output_dict.update({'response_latency_{}'.format(key): value for key, value in trials.query('hit and engaged')['response_latency'].describe().to_dict().items()})
@@ -1117,7 +1116,7 @@ def get_behavior_stats(behavior_session_id, engaged_only=True, method='stimulus_
                 behavior_session_id
             )
 
-            stimulus_presentations = annotate_stimuli(session, inplace = False)
+            stimulus_presentations = annotate_stimuli(session, inplace=False)
 
             go_trials = stimulus_presentations.query('auto_rewarded == False and could_change == True and is_change == True and engagement_state == "engaged"')
             catch_trials = stimulus_presentations.query('auto_rewarded == False and could_change == True and is_change == False and engagement_state == "engaged"')
@@ -1173,9 +1172,9 @@ def cache_behavior_stats(behavior_session_id, engaged_only=True, method='stimulu
     '''
 
     if method == 'trial_based':
-        cache_dir='/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/behavior_perfomance_summary_trial_based'
+        cache_dir = '/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/behavior_perfomance_summary_trial_based'
     elif method == 'stimulus_based':
-        cache_dir='/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/behavior_perfomance_summary_stimulus_based'
+        cache_dir = '/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/behavior_perfomance_summary_stimulus_based'
 
     behavior_stats_df = pd.DataFrame(
         get_behavior_stats(behavior_session_id, engaged_only),
@@ -1188,12 +1187,13 @@ def cache_behavior_stats(behavior_session_id, engaged_only=True, method='stimulu
         key='data'
     )
 
+
 def get_cached_behavior_stats(behavior_session_id, engaged_only=True, method='stimulus_based'):
     if method == 'trial_based':
-        cache_dir='/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/behavior_perfomance_summary_trial_based'
+        cache_dir = '/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/behavior_perfomance_summary_trial_based'
     elif method == 'stimulus_based':
-        cache_dir='/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/behavior_perfomance_summary_stimulus_based'
+        cache_dir = '/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/behavior_perfomance_summary_stimulus_based'
 
     fn = os.path.join(cache_dir, 'behavior_summary_behavior_session_id={}.h5'.format(behavior_session_id))
-    
+
     return pd.read_hdf(fn, key='data')
