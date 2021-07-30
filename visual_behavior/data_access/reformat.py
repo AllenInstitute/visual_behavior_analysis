@@ -18,7 +18,7 @@ def add_mouse_seeks_fail_tags_to_experiments_table(experiments):
     mouse_seeks_report_file_base = r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots'
     # report_file = 'ophys_session_log_011221.xlsx'
     # report_file = 'ophys_session_log_210629.xlsx'
-    report_file = 'ophys_session_log_072221.xlsx'
+    report_file = 'ophys_session_log_072921.xlsx'
     vb_report_path = os.path.join(mouse_seeks_report_file_base, report_file)
     vb_report_df = pd.read_excel(vb_report_path)
 
