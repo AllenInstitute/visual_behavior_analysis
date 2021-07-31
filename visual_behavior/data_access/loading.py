@@ -216,7 +216,7 @@ def get_filtered_ophys_experiment_table(include_failed_data=False, release_data_
             cache = bpc.from_lims()
             experiments = cache.get_ophys_experiment_table()
             # limit to the 4 VisualBehavior project codes
-            experiments = filtering.limit_to_production_project_codes(experiments)
+            # experiments = filtering.limit_to_production_project_codes(experiments)
             if add_extra_columns:
                 print('adding extra columns')
                 print('NOTE: this is slow. set from_pre_saved_file to True to load cached version of experiments_table at:')
