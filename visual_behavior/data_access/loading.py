@@ -170,8 +170,8 @@ def get_released_ophys_experiment_table(exclude_ai94=True):
     return experiment_table
 
 
-def get_filtered_ophys_experiment_table(include_failed_data=False, release_data_only=False, exclude_ai94=True,
-                                        add_extra_columns=True, from_cached_file=True, overwrite_cached_file=False):
+def get_filtered_ophys_experiment_table(include_failed_data=False, release_data_only=False, exclude_ai94=False,
+                                        add_extra_columns=False, from_cached_file=False, overwrite_cached_file=False):
     """
     Loads a list of available ophys experiments and adds additional useful columns to the table. By default, loads from a saved cached file.
     If cached file does not exist, loads list of available experiments directly from lims using SDK BehaviorProjectCache, and saves the reformatted table to the default Visual Behavior data cache location.
