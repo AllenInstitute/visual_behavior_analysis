@@ -2537,7 +2537,7 @@ def get_multi_session_df(cache_dir, df_name, conditions, experiments_table, remo
                     filepath = os.path.join(get_platform_analysis_cache_dir(), 'multi_session_summary_dfs', filename)
                     # print('reading file at', filepath)
                     df = pd.read_hdf(filepath, key='df')
-                    df = df.merge(expts, on='ophys_experiment_id')
+                    # df = df.merge(expts, on='ophys_experiment_id')
                     if remove_outliers:
                         outlier_cells = df[df.mean_response > 5].cell_specimen_id.unique()
                         df = df[df.cell_specimen_id.isin(outlier_cells) == False]
@@ -2548,9 +2548,9 @@ def get_multi_session_df(cache_dir, df_name, conditions, experiments_table, remo
             filename = get_file_name_for_multi_session_df_no_session_type(df_name, project_code, conditions, use_events, filter_events)
             filepath = os.path.join(cache_dir, 'multi_session_summary_dfs', filename)
             df = pd.read_hdf(filepath, key='df')
-            df = df.merge(expts[['ophys_experiment_id', 'cre_line', 'location', 'location_layer',
-                                 'layer', 'ophys_session_id', 'project_code', 'session_type',
-                                 'specimen_id', 'depth', 'exposure_number', 'ophys_container_id']], on='ophys_experiment_id')
+            # df = df.merge(expts[['ophys_experiment_id', 'cre_line', 'location', 'location_layer',
+            #                      'layer', 'ophys_session_id', 'project_code', 'session_type',
+            #                      'specimen_id', 'depth', 'exposure_number', 'ophys_container_id']], on='ophys_experiment_id')
             if remove_outliers:
                 outlier_cells = df[df.mean_response > 5].cell_specimen_id.unique()
             df = df[df.cell_specimen_id.isin(outlier_cells) == False]
