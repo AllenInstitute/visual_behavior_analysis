@@ -74,7 +74,8 @@ def get_super_container_plots_dir():
 
 
 def get_container_plots_dir():
-    return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/container_plots'
+    # return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/container_plots'
+    return r'//allen/programs/braintv/workgroups/nc-ophys/MultiscopeSignalNoise/QC/container_plots'
 
 
 def get_session_plots_dir():
