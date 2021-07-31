@@ -170,7 +170,7 @@ def get_released_ophys_experiment_table(exclude_ai94=True):
 
 
 def get_filtered_ophys_experiment_table(include_failed_data=False, release_data_only=False, exclude_ai94=True,
-                                        from_cached_file=True, overwrite_cached_file=False):
+                                        add_extra_columns=True, from_cached_file=True, overwrite_cached_file=False):
     """
     Loads a list of available ophys experiments and adds additional useful columns to the table. By default, loads from a saved cached file.
     If cached file does not exist, loads list of available experiments directly from lims using SDK BehaviorProjectCache, and saves the reformatted table to the default Visual Behavior data cache location.
@@ -210,18 +210,20 @@ def get_filtered_ophys_experiment_table(include_failed_data=False, release_data_
             else:
                 print('there is no filtered_ophys_experiment_table.csv', get_cache_dir())
         else:
-            print('getting up-to-date experiment_table from lims and adding extra columns')
-            print('NOTE: this is slow. set from_pre_saved_file to True to load cached version of experiments_table at:')
-            print(get_cache_dir())
+            print('getting up-to-date experiment_table from lims')
             # get everything in lims
             cache = bpc.from_lims()
             experiments = cache.get_ophys_experiment_table()
             # limit to the 4 VisualBehavior project codes
             experiments = filtering.limit_to_production_project_codes(experiments)
-            # create cre_line column, set NaN session_types to None, add model output availability and location columns
-            experiments = reformat.reformat_experiments_table(experiments)
-            # experiments = experiments.reset_index()
-            # experiments = experiments.drop(columns='index', errors='ignore')
+            if add_extra_columns:
+                print('adding extra columns')
+                print('NOTE: this is slow. set from_pre_saved_file to True to load cached version of experiments_table at:')
+                print(get_cache_dir())
+                # create cre_line column, set NaN session_types to None, add model output availability and location columns
+                experiments = reformat.reformat_experiments_table(experiments)
+                # experiments = experiments.reset_index()
+                # experiments = experiments.drop(columns='index', errors='ignore')
         if include_failed_data:
             print('including failed data')
             # experiment_workflow_state must be 'failed' or 'passed', NOT 'qc'
@@ -715,11 +717,12 @@ def get_behavior_dataset(behavior_session_id, from_lims=False, from_nwb=False):
     return dataset
 
 
-def get_ophys_container_ids(include_failed_data=False, release_data_only=False, exclude_ai94=True, from_cached_file=True, overwrite_cached_file=False):
+def get_ophys_container_ids(include_failed_data=False, release_data_only=False, exclude_ai94=True, add_extra_columns=False,
+                            from_cached_file=True, overwrite_cached_file=False):
     """Get container_ids that meet the criteria indicated by flags, which are identical to those in get_filtered_ophys_experiment_table() """
     experiments = get_filtered_ophys_experiment_table(include_failed_data=include_failed_data, release_data_only=release_data_only,
-                                                      exclude_ai94=exclude_ai94, from_cached_file=from_cached_file,
-                                                      overwrite_cached_file=overwrite_cached_file)
+                                                      exclude_ai94=exclude_ai94, add_extra_columns=add_extra_columns,
+                                                      from_cached_file=from_cached_file, overwrite_cached_file=overwrite_cached_file)
     container_ids = np.sort(experiments.ophys_container_id.unique())
     return container_ids
 
