@@ -11,9 +11,14 @@ parser.add_argument('--scriptname', type=str, default='save_all_container_plots.
 parser.add_argument("--plots", type=str, default=None, metavar='plot name to generate')
 
 
-container_ids = loading.get_ophys_container_ids(include_failed_data=False, release_data_only=False,
-                                                exclude_ai94=False, from_cached_file=True)
+# container_ids = loading.get_ophys_container_ids(include_failed_data=False, release_data_only=False, add_extra_columns=False,
+#                                                 exclude_ai94=False, from_cached_file=False)
 
+# second release candidates
+save_dir = r'/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/august_release'
+save_path = os.path.join(save_dir, 'second_release_candidates_073021.csv')
+release_candidates = pd.read_csv(save_path)
+container_ids = release_candidates.ophys_container_id.unique()
 
 if __name__ == "__main__":
     args = parser.parse_args()
