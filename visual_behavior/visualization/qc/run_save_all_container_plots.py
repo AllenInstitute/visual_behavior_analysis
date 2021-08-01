@@ -14,14 +14,14 @@ parser.add_argument("--plots", type=str, default=None, metavar='plot name to gen
 # container_ids = loading.get_ophys_container_ids(include_failed_data=False, release_data_only=False, add_extra_columns=False,
 #                                                 exclude_ai94=False, from_cached_file=False)
 
-# # second release candidates
-# save_dir = r'/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/august_release'
-# save_path = os.path.join(save_dir, 'second_release_candidates_073021.csv')
-# import pandas as pd
-# release_candidates = pd.read_csv(save_path)
-# container_ids = release_candidates.ophys_container_id.unique()
+# second release candidates
+save_dir = r'/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/august_release'
+save_path = os.path.join(save_dir, 'second_release_candidates_073021.csv')
+import pandas as pd
+release_candidates = pd.read_csv(save_path)
+container_ids = release_candidates.ophys_container_id.unique()
 
-
+#
 # try for MultiscopeSignalNoise project
 from allensdk.brain_observatory.behavior.behavior_project_cache import VisualBehaviorOphysProjectCache as bpc
 cache = bpc.from_lims()

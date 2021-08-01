@@ -169,7 +169,7 @@ def get_released_ophys_experiment_table(exclude_ai94=True):
 
     return experiment_table
 
-#
+# #
 # def get_filtered_ophys_experiment_table(include_failed_data=False, release_data_only=False, exclude_ai94=True,
 #                                         add_extra_columns=True, from_cached_file=True, overwrite_cached_file=False):
 #     """
@@ -216,10 +216,10 @@ def get_released_ophys_experiment_table(exclude_ai94=True):
 #             cache = bpc.from_lims()
 #             experiments = cache.get_ophys_experiment_table()
 #             # limit to the 4 VisualBehavior project codes
-#             # experiments = filtering.limit_to_production_project_codes(experiments)
+#             experiments = filtering.limit_to_production_project_codes(experiments)
 #             if add_extra_columns:
 #                 print('adding extra columns')
-#                 print('NOTE: this is slow. set from_pre_saved_file to True to load cached version of experiments_table at:')
+#                 print('NOTE: this is slow. set from_cached_file to True to load cached version of experiments_table at:')
 #                 print(get_cache_dir())
 #                 # create cre_line column, set NaN session_types to None, add model output availability and location columns
 #                 experiments = reformat.reformat_experiments_table(experiments)
@@ -258,18 +258,17 @@ def get_released_ophys_experiment_table(exclude_ai94=True):
 
 ###### TEMP FOR MULTISCOPE SIGNAL NOISE ######
 
-
+#
 
 def get_filtered_ophys_experiment_table():
 
-    print('getting up-to-date experiment_table from lims')
+    print('getting up-to-date experiment_table from lims for SNR data')
     # get everything in lims
     cache = bpc.from_lims()
     experiments = cache.get_ophys_experiment_table()
+    experiments = experiments[experiments.project_code=='MultiscopeSignalNoise']
+    experiments = experiments[(experiments.experiment_workflow_state=='passed')&(experiments.container_workflow_state=='completed')]
 
-    print('limiting to passed experiments')
-    experiments = filtering.limit_to_passed_experiments(experiments)
-    experiments = filtering.remove_failed_containers(experiments)  # container_workflow_state can be anything other than 'failed'
     return experiments
 
 
@@ -309,12 +308,12 @@ def get_filtered_ophys_session_table(release_data_only=True, include_failed_data
     cache = bpc.from_lims()
     sessions = cache.get_ophys_session_table()
     if release_data_only == False:
-        from_pre_saved_file = True
+        from_cached_file = True
     else:
-        from_pre_saved_file = False
+        from_cached_file = False
     experiment_table = get_filtered_ophys_experiment_table(release_data_only=release_data_only,
                                                            include_failed_data=include_failed_data,
-                                                           from_pre_saved_file=from_pre_saved_file)
+                                                           from_cached_file=from_cached_file)
     sessions = filtering.limit_to_production_project_codes(sessions)
     sessions = reformat.add_all_qc_states_to_ophys_session_table(sessions, experiment_table)
     sessions = filtering.limit_to_valid_ophys_session_types(sessions)
