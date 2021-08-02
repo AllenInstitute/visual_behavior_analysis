@@ -32,7 +32,7 @@ if __name__ == "__main__":
     )
 
     for ii, ophys_experiment_id in enumerate(ophys_experiment_ids):
-        args_to_pass = '--container-id {}'.format(ophys_experiment_id)
+        args_to_pass = '--ophys_experiment_id {}'.format(ophys_experiment_id)
         print('experiment ID = {}, number {} of {}'.format(ophys_experiment_id, ii + 1, len(ophys_experiment_ids)))
         job_title = 'experiment_{}'.format(ophys_experiment_id)
 

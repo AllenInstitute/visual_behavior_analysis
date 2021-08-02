@@ -13,7 +13,7 @@ from visual_behavior.ophys.response_analysis import cell_metrics
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("--ophys_experiment-id", type=int,
+    parser.add_argument("--ophys_experiment_id", type=int,
                         help="Experiment ID to process")
     args = parser.parse_args()
 
