@@ -996,7 +996,10 @@ def annotate_stimuli(dataset, inplace=False):
     # iterate over every stimulus
     for idx, row in stimulus_presentations.iterrows():
         # trials_id is last trials_id with start_time <= stimulus_time
-        trials_id = trials.loc[:row['start_time']].iloc[-1]['trials_id']
+        try:
+            trials_id = trials.loc[:row['start_time']].iloc[-1]['trials_id']
+        except IndexError:
+            trials_id = -1
         stimulus_presentations.at[idx, 'trials_id'] = trials_id
 
         if trials_id == last_trial_id:
@@ -1037,7 +1040,7 @@ def annotate_stimuli(dataset, inplace=False):
     stimulus_presentations['could_change'] = False
     for idx, row in stimulus_presentations.iterrows():
         # check if we meet conditions where a change could occur on this stimulus (at least 4th flash of trial, no previous change on trial)
-        if row['trial_stimulus_index'] >= 4 and row['previous_response_on_trial'] == False:
+        if row['trial_stimulus_index'] >= 4 and row['previous_response_on_trial'] == False and row['image_name'] != 'omitted' and row['previous_image_name'] != 'omitted':
             stimulus_presentations.at[idx, 'could_change'] = True
 
     if inplace == False:
