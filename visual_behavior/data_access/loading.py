@@ -250,6 +250,14 @@ def get_filtered_ophys_experiment_table(include_failed_data=False, release_data_
                                      experiments.session_type.values]
     # filter one more time on load to restrict to Visual Behavior project experiments ###
     experiments = filtering.limit_to_production_project_codes(experiments)
+
+
+    ### add new columns for conditions to analyze for platform paper ###
+    experiments = utilities.add_cell_type(experiments)
+    experiments = utilities.add_session_number_to_experiment_table(experiments)
+    experiments = utilities.add_experience_level_to_experiment_table(experiments)
+    experiments = utilities.add_passive_flag_to_ophys_experiment_table(experiments)
+
     if overwrite_cached_file == True:
         print('overwriting pre-saved experiments table file')
         experiments.to_csv(os.path.join(get_cache_dir(), 'filtered_ophys_experiment_table.csv'))
