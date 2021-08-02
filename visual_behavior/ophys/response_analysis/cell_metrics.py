@@ -361,12 +361,15 @@ def get_trace_metrics(traces):
     return trace_metrics
 
 
-def get_trace_metrics_table(ophys_experiment_id, ophys_experiment_table, use_events=False):
+def get_trace_metrics_table(ophys_experiment_id, ophys_experiment_table, use_events=False, filter_events=False):
     ophys_session_id = ophys_experiment_table.loc[ophys_experiment_id].ophys_session_id
     dataset = loading.get_ophys_dataset(ophys_experiment_id, from_lims=False, from_nwb=False)
 
     if use_events:
-        traces = dataset.events.copy()
+        if filter_events:
+            traces = dataset.filtered_events.copy()
+        else:
+            traces = dataset.events.copy()
     else:
         traces = dataset.dff_traces.copy()
     trace_metrics = get_trace_metrics(traces)
@@ -389,13 +392,13 @@ def get_trace_metrics_table(ophys_experiment_id, ophys_experiment_table, use_eve
     return trace_metrics
 
 
-def generate_metrics_table(ophys_experiment_id, ophys_experiment_table, use_events=False,
+def generate_metrics_table(ophys_experiment_id, ophys_experiment_table, use_events=False, filter_events=False,
                            condition='changes', session_subset='full_session', stimuli='pref_image'):
 
     ophys_session_id = ophys_experiment_table.loc[int(ophys_experiment_id)].ophys_session_id
     dataset = loading.get_ophys_dataset(ophys_experiment_id, from_lims=False, from_nwb=False)
 
-    analysis = ResponseAnalysis(dataset, use_extended_stimulus_presentations=True, use_events=use_events)
+    analysis = ResponseAnalysis(dataset, use_extended_stimulus_presentations=True, use_events=use_events, filter_events=filter_events)
     sdf = analysis.get_response_df(df_name='stimulus_response_df')
 
     if condition == 'changes':
@@ -474,34 +477,37 @@ def generate_metrics_table(ophys_experiment_id, ophys_experiment_table, use_even
     return metrics_table
 
 
-def get_metrics_df_filename(ophys_experiment_id, condition, stimuli, session_subset, use_events):
+def get_metrics_df_filename(ophys_experiment_id, condition, stimuli, session_subset, use_events, filter_events):
     if use_events:
-        trace_type = 'events'
+        if filter_events:
+            trace_type = 'filtered_events'
+        else:
+            trace_type = 'events'
     else:
         trace_type = 'dFF'
     filename = 'experiment_id_' + str(ophys_experiment_id) + '_' + condition + '_' + stimuli + '_' + session_subset + '_' + trace_type
     return filename
 
 
-def get_metrics_df_filepath(ophys_experiment_id, condition, stimuli, session_subset, use_events):
+def get_metrics_df_filepath(ophys_experiment_id, condition, stimuli, session_subset, use_events, filter_events):
     import platform
     if platform.system() == 'Linux':
         save_dir = r'/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/single_cell_metrics'
     else:
         save_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\single_cell_metrics'
-    filename = get_metrics_df_filename(ophys_experiment_id, condition, stimuli, session_subset, use_events)
+    filename = get_metrics_df_filename(ophys_experiment_id, condition, stimuli, session_subset, use_events, filter_events)
     filepath = os.path.join(save_dir, 'cell_metrics', filename + '.h5')
     return filepath
 
 
-def get_cell_metrics_table_for_experiment(ophys_experiment_id, condition, stimulus, session_subset, use_events):
+def get_cell_metrics_table_for_experiment(ophys_experiment_id, condition, stimulus, session_subset, use_events, filter_events):
     filepath = get_metrics_df_filepath(ophys_experiment_id, condition, stimulus,
-                                       session_subset, use_events)
+                                       session_subset, use_events, filter_events)
     metrics_table = pd.read_hdf(filepath, key='df')
     return metrics_table
 
 
-def load_cell_metrics_table_for_experiments(ophys_experiment_ids, condition, stimulus, session_subset, use_events):
+def load_cell_metrics_table_for_experiments(ophys_experiment_ids, condition, stimulus, session_subset, use_events, filter_events):
     import visual_behavior.data_access.loading as loading
     ophys_experiment_table = loading.get_filtered_ophys_experiment_table(release_data_only=True)
     ophys_experiment_table = loading.add_superficial_deep_to_experiments_table(ophys_experiment_table)
@@ -511,7 +517,7 @@ def load_cell_metrics_table_for_experiments(ophys_experiment_ids, condition, sti
     if ophys_experiment_ids == 'all_experiments':
         try:
             metrics_table = get_cell_metrics_table_for_experiment(ophys_experiment_ids, condition, stimulus, session_subset,
-                                                                  use_events)
+                                                                  use_events, filter_events)
         except BaseException:
             print('problem for all experiments metrics table generation')
     else:
@@ -519,7 +525,7 @@ def load_cell_metrics_table_for_experiments(ophys_experiment_ids, condition, sti
             print(np.where(ophys_experiment_ids == ophys_experiment_id)[0][0], 'out of', len(ophys_experiment_ids))
             try:
                 tmp = get_cell_metrics_table_for_experiment(ophys_experiment_id, condition, stimulus, session_subset,
-                                                            use_events)
+                                                            use_events, filter_events)
             except BaseException:
                 print('problem for experiment', ophys_experiment_id)
                 problem_expts.append(ophys_experiment_id)
