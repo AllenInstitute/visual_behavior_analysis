@@ -363,7 +363,7 @@ def get_trace_metrics(traces):
 
 def get_trace_metrics_table(ophys_experiment_id, ophys_experiment_table, use_events=False, filter_events=False):
     ophys_session_id = ophys_experiment_table.loc[ophys_experiment_id].ophys_session_id
-    dataset = loading.get_ophys_dataset(ophys_experiment_id, from_lims=False, from_nwb=False)
+    dataset = loading.get_ophys_dataset(ophys_experiment_id)
 
     if use_events:
         if filter_events:
@@ -396,7 +396,7 @@ def generate_metrics_table(ophys_experiment_id, ophys_experiment_table, use_even
                            condition='changes', session_subset='full_session', stimuli='pref_image'):
 
     ophys_session_id = ophys_experiment_table.loc[int(ophys_experiment_id)].ophys_session_id
-    dataset = loading.get_ophys_dataset(ophys_experiment_id, from_lims=False, from_nwb=False)
+    dataset = loading.get_ophys_dataset(ophys_experiment_id)
 
     analysis = ResponseAnalysis(dataset, use_extended_stimulus_presentations=True, use_events=use_events, filter_events=filter_events)
     sdf = analysis.get_response_df(df_name='stimulus_response_df')
@@ -542,7 +542,7 @@ if __name__ == '__main__':
 
     ophys_experiment_id = ophys_experiment_table.index[50]
     ophys_session_id = ophys_experiment_table.loc[ophys_experiment_id].ophys_session_id
-    dataset = loading.get_ophys_dataset(ophys_experiment_id, from_lims=False, from_nwb=False)
+    dataset = loading.get_ophys_dataset(ophys_experiment_id)
 
     analysis = ResponseAnalysis(dataset, use_extended_stimulus_presentations=True)
 
