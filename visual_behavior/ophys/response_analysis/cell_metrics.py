@@ -366,10 +366,7 @@ def get_trace_metrics_table(ophys_experiment_id, ophys_experiment_table, use_eve
     dataset = loading.get_ophys_dataset(ophys_experiment_id)
 
     if use_events:
-        if filter_events:
-            traces = dataset.filtered_events.copy()
-        else:
-            traces = dataset.events.copy()
+        traces = dataset.events.copy()
     else:
         traces = dataset.dff_traces.copy()
     trace_metrics = get_trace_metrics(traces)
