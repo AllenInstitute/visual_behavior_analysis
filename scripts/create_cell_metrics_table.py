@@ -16,6 +16,7 @@ if __name__ == '__main__':
     parser.add_argument("--ophys_experiment_id", type=int,
                         help="Experiment ID to process")
     args = parser.parse_args()
+    ophys_experiment_id = args.ophys_experiment_id
 
     ophys_experiment_table = loading.get_filtered_ophys_experiment_table(release_data_only=True)
 
