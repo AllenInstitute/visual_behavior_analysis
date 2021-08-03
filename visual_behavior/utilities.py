@@ -15,6 +15,7 @@ import warnings
 from . import database as db
 
 from visual_behavior.ophys.sync.sync_dataset import Dataset
+from visual_behavior.data_access import loading
 
 
 def flatten_list(in_list):
@@ -929,3 +930,96 @@ def annotate_licks(dataset, inplace=False, lick_bout_ili=0.7):
 
     if inplace == False:
         return licks_df
+
+
+def get_behavior_stats(behavior_session_id, engaged_only=True):
+    '''
+    gets behavior stats for a given behavior session
+    relies on the existence of a behavioral model for a given session
+
+    Parameters:
+    -----------
+    behavior_session_id : int
+        behavior session ID of interest
+    engaged_only : boolean
+        If True (default), calculates behavior stats only on engaged trials
+
+    Returns:
+    --------
+    dictionary with keys:
+        if successful:
+            behavior_session_id
+            hit_rate
+            fa_rate
+            number_of_engaged_go_trials
+            number_of_engaged_hits
+            number_of_engaged_catch_trials
+            number_of_engaged_false_alarms
+            fraction_engaged
+            dprime_trial_corrected
+            dprime_non_trial_corrected
+        if unsuccessful:
+            behavior_session_id
+            error - the error string associated with the failure
+
+    '''
+    try:
+        session = loading.get_behavior_dataset(behavior_session_id)
+        trials = session.extended_trials
+
+        output_dict = {'behavior_session_id': behavior_session_id}
+        output_dict.update({'response_latency_{}'.format(key): value for key, value in trials.query('hit and engaged')['response_latency'].describe().to_dict().items()})
+
+        output_dict['hit_rate'] = trials.query('go and engaged')['hit'].mean()
+        output_dict['fa_rate'] = trials.query('catch and engaged')['false_alarm'].mean()
+        output_dict['number_of_engaged_go_trials'] = len(trials.query('go and engaged'))
+        output_dict['number_of_engaged_hits'] = trials.query('go and engaged')['hit'].sum()
+        output_dict['number_of_engaged_catch_trials'] = len(trials.query('catch and engaged'))
+        output_dict['number_of_engaged_false_alarms'] = trials.query('catch and engaged')['false_alarm'].sum()
+        output_dict['fraction_engaged'] = trials.query('go or catch')['engaged'].mean()
+        output_dict['dprime_trial_corrected'] = dprime(
+            go_trials=trials.query('go and engaged')['hit'],
+            catch_trials=trials.query('catch and engaged')['false_alarm'],
+            limits=True
+        )
+        output_dict['dprime_non_trial_corrected'] = dprime(
+            go_trials=trials.query('go and engaged')['hit'],
+            catch_trials=trials.query('catch and engaged')['false_alarm'],
+            limits=False
+        )
+        return output_dict
+    except Exception as e:
+        return {'behavior_session_id': behavior_session_id, 'error': e}
+
+
+def cache_behavior_stats(behavior_session_id, engaged_only=True, cache_dir='/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/behavior_perfomance_summary'):
+    '''
+    calculates behavior stats for a given session, saves to file
+    file format is behavior_summary_behavior_session_id={behavior_session_id}.h5 with key = 'data'
+    file can be opened with df = pd.read_hdf(filename, key='data')
+
+    See docstring for `get_behavior_stats` for details on what will be saved
+
+    Parameters:
+    -----------
+    behavior_session_id : int
+        behavior session ID of interest
+    engaged_only : boolean
+        If True (default), calculates behavior stats only on engaged trials
+    cache_dir : string
+        directory in which to save h5 file
+
+    Returns:
+    --------
+    None
+    '''
+    behavior_stats_df = pd.DataFrame(
+        get_behavior_stats(behavior_session_id, engaged_only),
+        index=[0]
+    )
+
+    filename = 'behavior_summary_behavior_session_id={}.h5'.format(behavior_session_id)
+    behavior_stats_df.to_hdf(
+        os.path.join(cache_dir, filename),
+        key='data'
+    )

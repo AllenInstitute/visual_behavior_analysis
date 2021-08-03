@@ -383,7 +383,7 @@ def plot_behavior_timeseries_for_experiment(ophys_experiment_id, xlim_seconds=No
     if xlim_seconds is None:
         xlim_seconds = [dataset.stimulus_timestamps[0], dataset.stimulus_timestamps[-1]]
 
-    lick_timestamps = dataset.licks["time"].values
+    lick_timestamps = dataset.licks["timestamps"].values
     licks = np.ones(len(lick_timestamps))
 
     reward_timestamps = dataset.rewards.index.values  # the index is "timestamps"
@@ -393,7 +393,7 @@ def plot_behavior_timeseries_for_experiment(ophys_experiment_id, xlim_seconds=No
     running_timestamps = dataset.running_speed["timestamps"].values
 
     pupil_area = dataset.eye_tracking["pupil_area"].values
-    pupil_timestamps = dataset.eye_tracking["time"].values
+    pupil_timestamps = dataset.eye_tracking["timestamps"].values
 
     if ax is None:
         if plot_face_motion_energy:
@@ -590,7 +590,7 @@ def plot_dff_trace_and_behavior_for_experiment(ophys_experiment_id, save_figure=
     """
     dataset = loading.get_ophys_dataset(ophys_experiment_id)
 
-    for cell_specimen_id in dataset.cell_specimen_ids:
+    for cell_specimen_id in dataset.dff_traces.index.values:
         scp.plot_single_cell_activity_and_behavior(dataset, cell_specimen_id, save_figure=save_figure)
 
 
