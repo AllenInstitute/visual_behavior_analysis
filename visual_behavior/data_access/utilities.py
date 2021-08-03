@@ -1295,7 +1295,6 @@ def correct_dataframe_filepath(dataframe, column_string):
     return dataframe
 
 
-
 # functions to annotate experiments table with conditions to use for platform paper analysis ######
 
 def add_session_number_to_experiment_table(experiments):

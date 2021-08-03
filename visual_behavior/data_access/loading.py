@@ -246,7 +246,7 @@ def get_filtered_ophys_experiment_table(include_failed_data=False, release_data_
     # filter one more time on load to restrict to Visual Behavior project experiments ###
     experiments = filtering.limit_to_production_project_codes(experiments)
 
-    ### add new columns for conditions to analyze for platform paper ###
+    # add new columns for conditions to analyze for platform paper ###
     experiments = utilities.add_cell_type(experiments)
     experiments = utilities.add_session_number_to_experiment_table(experiments)
     experiments = utilities.add_experience_level_to_experiment_table(experiments)
