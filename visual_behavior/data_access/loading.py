@@ -264,7 +264,7 @@ def get_filtered_ophys_experiment_table(include_failed_data=False, release_data_
     return experiments
 
 
-###### TEMP FOR MULTISCOPE SIGNAL NOISE ######
+# TEMP FOR MULTISCOPE SIGNAL NOISE ######
 
 #
 # def get_filtered_ophys_experiment_table():
