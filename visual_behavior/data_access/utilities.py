@@ -1293,3 +1293,109 @@ def correct_dataframe_filepath(dataframe, column_string):
     """
     dataframe[column_string] = dataframe[column_string].apply(lambda x: correct_filepath(x))
     return dataframe
+
+
+# functions to annotate experiments table with conditions to use for platform paper analysis ######
+
+def add_session_number_to_experiment_table(experiments):
+    # add session number column, extracted frrom session_type
+    experiments['session_number'] = [int(session_type[6]) if 'OPHYS' in session_type else None for session_type in
+                                     experiments.session_type.values]
+    return experiments
+
+
+def add_experience_level_to_experiment_table(experiments):
+    """
+    adds a column to ophys_experiment_table that contains a string indicating whether a session had
+    exposure level of Familiar, Novel 1, or Novel >1, based on session number and prior_exposure_to_image_set
+    """
+    # add experience_level column with strings indicating relevant conditions
+    experiments['experience_level'] = 'None'
+
+    familiar_indices = experiments[experiments.session_number.isin([1, 2, 3])].index.values
+    experiments.at[familiar_indices, 'experience_level'] = 'Familiar'
+
+    novel_indices = experiments[(experiments.session_number == 4) &
+                                (experiments.prior_exposures_to_image_set == 0)].index.values
+    experiments.at[novel_indices, 'experience_level'] = 'Novel 1'
+
+    novel_greater_than_1_indices = experiments[(experiments.session_number.isin([4, 5, 6])) &
+                                               (experiments.prior_exposures_to_image_set != 0)].index.values
+    experiments.at[novel_greater_than_1_indices, 'experience_level'] = 'Novel >1'
+
+    return experiments
+
+
+def get_experience_level_colors():
+    """
+    get color map corresponding to Familiar, Novel 1 and Novel >1
+    Familiar = red
+    Novel 1 = blue
+    Novel >1 = lighter blue
+    """
+    import visual_behavior.visualization.utils as utils
+    original_colors = utils.get_colors_for_session_numbers()
+
+    colors = [original_colors[0], original_colors[3], original_colors[4]]
+
+    return colors
+
+
+def add_passive_flag_to_ophys_experiment_table(experiments):
+    """
+    adds a column to ophys_experiment_table that contains a Boolean indicating whether a session was
+    passive or not based on session number
+    """
+    experiments['passive'] = 'None'
+
+    passive_indices = experiments[experiments.session_number.isin([2, 5])].index.values
+    experiments.at[passive_indices, 'passive'] = True
+
+    active_indices = experiments[experiments.session_number.isin([2, 5]) == False].index.values
+    experiments.at[active_indices, 'passive'] = False
+
+    return experiments
+
+
+def add_passive_to_engagement_state(df):
+    """
+    adds a column to any df that contains a string indicating whether
+    the row values correspond to engaged, disengaged, or passive conditions.
+    input dataframe must contain already a column called 'engagement_state',
+    this function just makes sure that any passive sessions are labeled 'passive' rather than 'disengaged'
+    """
+
+    passive_indices = df[df.session_number.isin([2, 5])].index.values
+    df.at[passive_indices, 'engagement_state'] = 'passive'
+
+    return df
+
+
+def get_engagement_state_order(df):
+    """
+    returns preferred order of engagement_state column
+    must pass df containing a column 'engagement_state' in order to determine what values are present
+    """
+    if 'engagement_state' not in df.keys():
+        print('there is no engagement_state in this df, must provide a df with engagement_state column to evaluate')
+    elif 'passive' in df.engagement_state.unique():
+        order = ['engaged', 'disengaged', 'passive']
+    else:
+        order = ['engaged', 'disengaged']
+    return order
+
+
+def add_cell_type(df):
+    """
+    adds a column with abbreviated version of cre_line, i.e. Vip, Sst, Exc
+    """
+    cre_indices = df[df.cre_line == 'Vip-IRES-Cre'].index.values
+    df.at[cre_indices, 'cell_type'] = 'Vip Inhibitory'
+
+    cre_indices = df[df.cre_line == 'Sst-IRES-Cre'].index.values
+    df.at[cre_indices, 'cell_type'] = 'Sst Inhibitory'
+
+    cre_indices = df[df.cre_line == 'Slc17a7-IRES2-Cre'].index.values
+    df.at[cre_indices, 'cell_type'] = 'Excitatory'
+
+    return df
