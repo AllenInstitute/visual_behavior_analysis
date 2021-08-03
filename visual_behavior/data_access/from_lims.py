@@ -44,8 +44,8 @@ ID_TYPES_DICT = {
     "ophys_experiment_id": {"lims_table": "ophys_experiments",  "id_column": "id"},                       # noqa: E241
     "ophys_session_id":    {"lims_table": "ophys_sessions",     "id_column": "id"},                       # noqa: E241
     "behavior_session_id": {"lims_table": "behavior_sessions",  "id_column": "id"},                       # noqa: E241
-    "specimen_id":         {"lims_table": "behavior_sessions",  "id_column": "specimen_id"},              # noqa: E241
-    "donor_id":            {"lims_table": "behavior_sessions",  "id_column": "donor_id"},                 # noqa: E241
+    "specimen_id":         {"lims_table": "specimens",          "id_column": "id"},              # noqa: E241
+    "donor_id":            {"lims_table": "specimens",          "id_column": "donor_id"},                 # noqa: E241
     "cell_roi_id":         {"lims_table": "cell_rois",          "id_column": "id" },                      # noqa: E241
     "cell_specimen_id":    {"lims_table": "cell_rois",          "id_column": "cell_specimen_id"},         # noqa: E241
     "ophys_container_id":  {"lims_table": "visual_behavior_experiment_containers",  "id_column": "id"},   # noqa: E241
@@ -1313,234 +1313,50 @@ def get_demixed_traces_filepath(ophys_experiment_id):
 
 
 def get_motion_corrected_movie_filepath(ophys_experiment_id):
-    ophys_experiment_id = int(ophys_experiment_id)
-
-    query = '''
-    SELECT
-    wkf.storage_directory || wkf.filename
-    AS filepath
-
-    FROM
-    well_known_files wkf
-
-    JOIN well_known_file_types wkft
-    ON wkft.id = wkf.well_known_file_type_id
-
-    WHERE
-    wkft.name = 'MotionCorrectedImageStack'
-    AND wkf.attachable_id = {}
-    '''.format(ophys_experiment_id)
-    RealDict_object = mixin.select(query)
-    filepath = lims_utils.get_filepath_from_realdict_object(RealDict_object)
+    conditions.validate_id_type(ophys_experiment_id, "ophys_experiment_id")
+    filepath = get_well_known_file_path("'MotionCorrectedImageStack'", ophys_experiment_id)
     return filepath
 
 
 def get_neuropil_correction_filepath(ophys_experiment_id):
-    ophys_experiment_id = int(ophys_experiment_id)
-
-    query = '''
-    SELECT
-    wkf.storage_directory || wkf.filename
-    AS filepath
-
-    FROM
-    well_known_files wkf
-
-    JOIN well_known_file_types wkft
-    ON wkft.id = wkf.well_known_file_type_id
-
-    WHERE
-    wkft.name = 'NeuropilCorrection'
-    AND wkf.attachable_id = {}
-    '''.format(ophys_experiment_id)
-    RealDict_object = mixin.select(query)
-    filepath = lims_utils.get_filepath_from_realdict_object(RealDict_object)
+    conditions.validate_id_type(ophys_experiment_id, "ophys_experiment_id")
+    filepath = get_well_known_file_path("'NeuropilCorrection'", ophys_experiment_id)
     return filepath
 
 
 def get_average_intensity_projection_filepath(ophys_experiment_id):
-    """[summary]
-
-    Parameters
-    ----------
-    ophys_experiment_id : [type]
-        [description]
-
-    Returns
-    -------
-    [type]
-        [description]
-    """
-    ophys_experiment_id = int(ophys_experiment_id)
-
-    query = '''
-    SELECT
-    wkf.storage_directory || wkf.filename
-    AS filepath
-
-    FROM
-    well_known_files wkf
-
-    JOIN well_known_file_types wkft
-    ON wkft.id = wkf.well_known_file_type_id
-
-    WHERE
-    wkft.name = 'OphysAverageIntensityProjectionImage'
-    AND wkf.attachable_id = {}
-    '''.format(ophys_experiment_id)
-    RealDict_object = mixin.select(query)
-    filepath = lims_utils.get_filepath_from_realdict_object(RealDict_object)
+    conditions.validate_id_type(ophys_experiment_id, "ophys_experiment_id")
+    filepath = get_well_known_file_path("OphysAverageIntensityProjectionImage'", ophys_experiment_id)
     return filepath
 
 
 def get_dff_traces_filepath(ophys_experiment_id):
-    """[summary]
-
-    Parameters
-    ----------
-    ophys_experiment_id : [type]
-        [description]
-
-    Returns
-    -------
-    [type]
-        [description]
-    """
-    ophys_experiment_id = int(ophys_experiment_id)
-
-    query = '''
-    SELECT
-    wkf.storage_directory || wkf.filename
-    AS filepath
-
-    FROM
-    well_known_files wkf
-
-    JOIN well_known_file_types wkft
-    ON wkft.id = wkf.well_known_file_type_id
-
-    WHERE
-    wkft.name = 'OphysDffTraceFile'
-    AND wkf.attachable_id = {}
-    '''.format(ophys_experiment_id)
-    RealDict_object = mixin.select(query)
-    filepath = lims_utils.get_filepath_from_realdict_object(RealDict_object)
+    conditions.validate_id_type(ophys_experiment_id, "ophys_experiment_id")
+    filepath = get_well_known_file_path("'OphysDffTraceFile'", ophys_experiment_id)
     return filepath
 
 
 def get_event_trace_filepath(ophys_experiment_id):
-    """[summary]
-
-    Parameters
-    ----------
-    ophys_experiment_id : [type]
-        [description]
-
-    Returns
-    -------
-    [type]
-        [description]
-    """
-    ophys_experiment_id = int(ophys_experiment_id)
-
-    query = '''
-    SELECT
-    wkf.storage_directory || wkf.filename
-    AS filepath
-
-    FROM
-    well_known_files wkf
-
-    JOIN well_known_file_types wkft
-    ON wkft.id = wkf.well_known_file_type_id
-
-    WHERE
-    wkft.name = 'OphysEventTraceFile'
-    AND wkf.attachable_id = {}
-    '''.format(ophys_experiment_id)
-    RealDict_object = mixin.select(query)
-    filepath = lims_utils.get_filepath_from_realdict_object(RealDict_object)
+    conditions.validate_id_type(ophys_experiment_id, "ophys_experiment_id")
+    filepath = get_well_known_file_path("'OphysEventTraceFile'", ophys_experiment_id)
     return filepath
 
 
 def get_extracted_traces_input_filepath(ophys_experiment_id):
-    """[summary]
-
-    Parameters
-    ----------
-    ophys_experiment_id : int
-        unique identifier for an ophys experiment
-
-    Returns
-    -------
-    string for filepath
-        [description]
-    """
-    ophys_experiment_id = int(ophys_experiment_id)
-
-    query = '''
-    SELECT
-    wkf.storage_directory || wkf.filename
-    AS filepath
-
-    FROM
-    well_known_files wkf
-
-    JOIN well_known_file_types wkft
-    ON wkft.id = wkf.well_known_file_type_id
-
-    WHERE
-    wkft.name = 'OphysExtractedTracesInputJson'
-    AND wkf.attachable_id = {}
-    '''.format(ophys_experiment_id)
-    RealDict_object = mixin.select(query)
-    filepath = lims_utils.get_filepath_from_realdict_object(RealDict_object)
+    conditions.validate_id_type(ophys_experiment_id, "ophys_experiment_id")
+    filepath = get_well_known_file_path("'OphysExtractedTracesInputJson'", ophys_experiment_id)
     return filepath
 
 
 def get_motion_preview_filepath(ophys_experiment_id):
-    ophys_experiment_id = int(ophys_experiment_id)
-
-    query = '''
-    SELECT
-    wkf.storage_directory || wkf.filename
-    AS filepath
-
-    FROM
-    well_known_files wkf
-
-    JOIN well_known_file_types wkft
-    ON wkft.id = wkf.well_known_file_type_id
-
-    WHERE
-    wkft.name = 'OphysMotionPreview'
-    AND wkf.attachable_id = {}
-    '''.format(ophys_experiment_id)
-    RealDict_object = mixin.select(query)
-    filepath = lims_utils.get_filepath_from_realdict_object(RealDict_object)
+    conditions.validate_id_type(ophys_experiment_id, "ophys_experiment_id")
+    filepath = get_well_known_file_path("'OphysMotionPreview'", ophys_experiment_id)
     return filepath
 
 
 def get_motion_xy_offset_filepath(ophys_experiment_id):
-    ophys_experiment_id = int(ophys_experiment_id)
-
-    query = '''
-    SELECT
-    wkf.storage_directory || wkf.filename
-    AS filepath
-
-    FROM
-    well_known_files wkf
-
-    JOIN well_known_file_types wkft
-    ON wkft.id = wkf.well_known_file_type_id
-
-    WHERE
-    wkft.name = 'OphysMotionXyOffsetData'
-    AND wkf.attachable_id = {}
-    '''.format(ophys_experiment_id)
-    RealDict_object = mixin.select(query)
-    filepath = lims_utils.get_filepath_from_realdict_object(RealDict_object)
+    conditions.validate_id_type(ophys_experiment_id, "ophys_experiment_id")
+    filepath = get_well_known_file_path("'OphysMotionXyOffsetData'", ophys_experiment_id)
     return filepath
 
 
@@ -1559,48 +1375,14 @@ def get_neuropil_traces_filepath(ophys_experiment_id):
         AI network filepath string for neuropil_traces.h5 for a
         given ophys experiment.
     """
-    ophys_experiment_id = int(ophys_experiment_id)
-
-    query = '''
-    SELECT
-    wkf.storage_directory || wkf.filename
-    AS filepath
-
-    FROM
-    well_known_files wkf
-
-    JOIN well_known_file_types wkft
-    ON wkft.id = wkf.well_known_file_type_id
-
-    WHERE
-    wkft.name = 'OphysNeuropilTraces'
-    AND wkf.attachable_id = {}
-    '''.format(ophys_experiment_id)
-    RealDict_object = mixin.select(query)
-    filepath = lims_utils.get_filepath_from_realdict_object(RealDict_object)
+    conditions.validate_id_type(ophys_experiment_id, "ophys_experiment_id")
+    filepath = get_well_known_file_path("'OphysNeuropilTraces'", ophys_experiment_id)
     return filepath
 
 
 def get_ophys_registration_summary_image_filepath(ophys_experiment_id):
-    ophys_experiment_id = int(ophys_experiment_id)
-
-    query = '''
-    SELECT
-    wkf.storage_directory || wkf.filename
-    AS filepath
-
-    FROM
-    well_known_files wkf
-
-    JOIN well_known_file_types wkft
-    ON wkft.id = wkf.well_known_file_type_id
-
-    WHERE
-    wkft.name = 'OphysRegistrationSummaryImage'
-    AND wkf.attachable_id = {}
-    '''.format(ophys_experiment_id)
-    RealDict_object = mixin.select(query)
-    filepath = lims_utils.get_filepath_from_realdict_object(RealDict_object)
+    conditions.validate_id_type(ophys_experiment_id, "ophys_experiment_id")
+    filepath = get_well_known_file_path("'OphysRegistrationSummaryImage'", ophys_experiment_id)
     return filepath
 
 
@@ -1618,30 +1400,13 @@ def get_roi_traces_filepath(ophys_experiment_id):
     filepath
         filepath to the roi_traces.h5 for an ophys experiment
     """
-    ophys_experiment_id = int(ophys_experiment_id)
-
-    query = '''
-    SELECT
-    wkf.storage_directory || wkf.filename
-    AS filepath
-
-    FROM
-    well_known_files wkf
-
-    JOIN well_known_file_types wkft
-    ON wkft.id = wkf.well_known_file_type_id
-
-    WHERE
-    wkft.name = 'OphysRoiTraces'
-    AND wkf.attachable_id = {}
-    '''.format(ophys_experiment_id)
-    RealDict_object = mixin.select(query)
-    filepath = lims_utils.get_filepath_from_realdict_object(RealDict_object)
+    conditions.validate_id_type(ophys_experiment_id, "ophys_experiment_id")
+    filepath = get_well_known_file_path("'OphysRoiTraces'", ophys_experiment_id)
     return filepath
 
 
 def get_time_syncronization_filepath(ophys_experiment_id):
-    """for scientifica experiments only
+    """for scientifica experiments only (CAM2P.3, CAM2P.4, CAM2P.5)
 
     Parameters
     ----------
@@ -1653,25 +1418,8 @@ def get_time_syncronization_filepath(ophys_experiment_id):
     [type]
         [description]
     """
-    ophys_experiment_id = int(ophys_experiment_id)
-
-    query = '''
-    SELECT
-    wkf.storage_directory || wkf.filename
-    AS filepath
-
-    FROM
-    well_known_files wkf
-
-    JOIN well_known_file_types wkft
-    ON wkft.id = wkf.well_known_file_type_id
-
-    WHERE
-    wkft.name = 'OphysTimeSynchronization'
-    AND wkf.attachable_id = {}
-    '''.format(ophys_experiment_id)
-    RealDict_object = mixin.select(query)
-    filepath = lims_utils.get_filepath_from_realdict_object(RealDict_object)
+    conditions.validate_id_type(ophys_experiment_id, "ophys_experiment_id")
+    filepath = get_well_known_file_path("'OphysTimeSynchronization'", ophys_experiment_id)
     return filepath
 
 
@@ -1688,136 +1436,45 @@ def get_segmentation_objects_filepath(ophys_experiment_id):
     Returns:
         list -- list with storage directory and filename
     """
+    conditions.validate_id_type(ophys_experiment_id, "ophys_experiment_id")
     current_seg_id = int(get_current_segmentation_run_id_for_ophys_experiment_id(ophys_experiment_id))
-    query = '''
-    SELECT
-    wkf.storage_directory || wkf.filename
-    AS filepath
-
-    FROM
-    well_known_files wkf
-
-    JOIN well_known_file_types wkft
-    ON wkft.id = wkf.well_known_file_type_id
-
-    WHERE
-    wkft.name = 'OphysSegmentationObjects'
-    AND wkf.attachable_id = {}
-    '''.format(current_seg_id)
-    RealDict_object = mixin.select(query)
-    filepath = lims_utils.get_filepath_from_realdict_object(RealDict_object)
+    filepath = get_well_known_file_path("'OphysSegmentationObjects'", current_seg_id)
     return filepath
 
 
 def get_lo_segmentation_mask_filepath(ophys_experiment_id):
+    conditions.validate_id_type(ophys_experiment_id, "ophys_experiment_id")
     current_seg_id = int(get_current_segmentation_run_id_for_ophys_experiment_id(ophys_experiment_id))
-    query = '''
-    SELECT
-    wkf.storage_directory || wkf.filename
-    AS filepath
-
-    FROM
-    well_known_files wkf
-
-    JOIN well_known_file_types wkft
-    ON wkft.id = wkf.well_known_file_type_id
-
-    WHERE
-    wkft.name = 'OphysLoSegmentationMaskData'
-    AND wkf.attachable_id = {}
-    '''.format(current_seg_id)
-    RealDict_object = mixin.select(query)
-    filepath = lims_utils.get_filepath_from_realdict_object(RealDict_object)
+    filepath = get_well_known_file_path("'OphysLoSegmentationMaskData'", current_seg_id)
     return filepath
 
 
 def get_segmentation_mask_filepath(ophys_experiment_id):
+    conditions.validate_id_type(ophys_experiment_id, "ophys_experiment_id")
     current_seg_id = int(get_current_segmentation_run_id_for_ophys_experiment_id(ophys_experiment_id))
-    query = '''
-    SELECT
-    wkf.storage_directory || wkf.filename
-    AS filepath
-
-    FROM
-    well_known_files wkf
-
-    JOIN well_known_file_types wkft
-    ON wkft.id = wkf.well_known_file_type_id
-
-    WHERE
-    wkft.name = 'OphysSegmentationMaskData'
-    AND wkf.attachable_id = {}
-    '''.format(current_seg_id)
-    RealDict_object = mixin.select(query)
-    filepath = lims_utils.get_filepath_from_realdict_object(RealDict_object)
+    filepath = get_well_known_file_path("'OphysSegmentationMaskData'", current_seg_id)
     return filepath
 
 
 def get_segmentation_mask_image_filepath(ophys_experiment_id):
+    conditions.validate_id_type(ophys_experiment_id, "ophys_experiment_id")
     current_seg_id = int(get_current_segmentation_run_id_for_ophys_experiment_id(ophys_experiment_id))
-    query = '''
-    SELECT
-    wkf.storage_directory || wkf.filename
-    AS filepath
-
-    FROM
-    well_known_files wkf
-
-    JOIN well_known_file_types wkft
-    ON wkft.id = wkf.well_known_file_type_id
-
-    WHERE
-    wkft.name = 'OphysSegmentationMaskImage'
-    AND wkf.attachable_id = {}
-    '''.format(current_seg_id)
-    RealDict_object = mixin.select(query)
-    filepath = lims_utils.get_filepath_from_realdict_object(RealDict_object)
+    filepath = get_well_known_file_path("'OphysSegmentationMaskImage'", current_seg_id)
     return filepath
 
 
 def get_ave_intensity_projection_filepath(ophys_experiment_id):
+    conditions.validate_id_type(ophys_experiment_id, "ophys_experiment_id")
     current_seg_id = int(get_current_segmentation_run_id_for_ophys_experiment_id(ophys_experiment_id))
-    query = '''
-    SELECT
-    wkf.storage_directory || wkf.filename
-    AS filepath
-
-    FROM
-    well_known_files wkf
-
-    JOIN well_known_file_types wkft
-    ON wkft.id = wkf.well_known_file_type_id
-
-    WHERE
-    wkft.name = 'OphysAverageIntensityProjectionImage'
-    AND wkf.attachable_id = {}
-    '''.format(current_seg_id)
-    RealDict_object = mixin.select(query)
-    filepath = lims_utils.get_filepath_from_realdict_object(RealDict_object)
+    filepath = get_well_known_file_path("'OphysAverageIntensityProjectionImage'", current_seg_id)
     return filepath
 
 
 def get_max_intensity_projection_filepath(ophys_experiment_id):
+    conditions.validate_id_type(ophys_experiment_id, "ophys_experiment_id")
     current_seg_id = int(get_current_segmentation_run_id_for_ophys_experiment_id(ophys_experiment_id))
-    query = '''
-    SELECT
-    wkf.storage_directory || wkf.filename
-    AS filepath
-
-    FROM
-    well_known_files wkf
-
-    JOIN well_known_file_types wkft
-    ON wkft.id = wkf.well_known_file_type_id
-
-    WHERE
-    wkft.name = 'OphysMaxIntImage'
-    AND wkf.attachable_id = {}
-    '''.format(current_seg_id)
-    RealDict_object = mixin.select(query)
-    filepath = lims_utils.get_filepath_from_realdict_object(RealDict_object)
+    filepath = get_well_known_file_path("'OphysMaxIntImage'", current_seg_id)
     return filepath
-
 
 ## for ophys_session_id ##              # noqa: E266
 
@@ -1825,7 +1482,7 @@ def get_max_intensity_projection_filepath(ophys_experiment_id):
 def get_timeseries_ini_filepath(ophys_session_id):
     """use SQL and the LIMS well known file system to get the
        timeseries_XYT.ini file for a given ophys session.
-       Notes: only Scientifca microscopes prodice timeseries.ini files
+       Notes: only Scientifca microscopes produce timeseries.ini files
 
     Arguments:
         ophys_session_id {int} -- 9 digit ophys session id
@@ -1833,31 +1490,34 @@ def get_timeseries_ini_filepath(ophys_session_id):
     Returns:
 
     """
-    ophys_session_id = int(ophys_session_id)
-    query = '''
-    SELECT
-    wkf.storage_directory || wkf.filename
-    AS filepath
+    conditions.validate_id_type(ophys_session_id, "ophys_session_id")
+    filepath = get_well_known_file_path("'SciVivoMetadata'", ophys_session_id)
+    return filepath
+    # ophys_session_id = int(ophys_session_id)
+    # query = '''
+    # SELECT
+    # wkf.storage_directory || wkf.filename
+    # AS filepath
 
-    FROM
-    well_known_files wkf
+    # FROM
+    # well_known_files wkf
 
-    JOIN well_known_file_types wkft ON wkft.id=wkf.well_known_file_type_id
-    JOIN specimens sp ON sp.id=wkf.attachable_id
-    JOIN ophys_sessions os ON os.specimen_id=sp.id
+    # JOIN well_known_file_types wkft ON wkft.id=wkf.well_known_file_type_id
+    # JOIN specimens sp ON sp.id=wkf.attachable_id
+    # JOIN ophys_sessions os ON os.specimen_id=sp.id
 
-    WHERE
-    wkft.name = 'SciVivoMetadata'
-    AND wkf.storage_directory LIKE '%ophys_session_{0}%'
-    AND os.id = {0}
-    '''.format(ophys_session_id)
+    # WHERE
+    # wkft.name = 'SciVivoMetadata'
+    # AND wkf.storage_directory LIKE '%ophys_session_{0}%'
+    # AND os.id = {0}
+    # '''.format(ophys_session_id)
 
     try:
         RealDict_object = mixin.select(query)
         filepath = lims_utils.get_filepath_from_realdict_object(RealDict_object)
         return filepath
     except KeyError:
-        print("Error: Must be collected on a scientifica microscope to have timeseries ini. \n Check that equipment_name = CAM2P.2, CAM2P.3, CAM2P.4, CAM2P.5 or CAM2P.6")
+        print("Error: Must be collected on a scientifica microscope to have timeseries ini. \n Check that equipment_name = CAM2P.3, CAM2P.4, CAM2P.5 or CAM2P.6")
 
 
 def get_stimulus_pkl_filepath(ophys_session_id):
@@ -1871,50 +1531,14 @@ def get_stimulus_pkl_filepath(ophys_session_id):
     Returns:
         [type] -- [description]
     """
-    QUERY = '''
-    SELECT
-    storage_directory || filename
-    AS filepath
-
-    FROM
-    well_known_files
-
-    WHERE
-    well_known_file_type_id = 610487715
-    AND attachable_id = {0}
-    '''.format(ophys_session_id)
-    RealDict_object = mixin.select(QUERY)
-    filepath = lims_utils.get_filepath_from_realdict_object(RealDict_object)
+    conditions.validate_id_type(ophys_session_id, "ophys_session_id")
+    filepath = get_well_known_file_path("'StimulusPickle'", ophys_session_id)
     return filepath
 
 
 def get_session_h5_filepath(ophys_session_id):
-    """[summary]
-
-    Parameters
-    ----------
-    ophys_session_id : [type]
-        [description]
-
-    Returns
-    -------
-    [type]
-        [description]
-    """
-    QUERY = '''
-    SELECT
-    storage_directory || filename
-    AS filepath
-
-    FROM
-    well_known_files
-
-    WHERE
-    well_known_file_type_id = 610487713
-    AND attachable_id = {0}
-    '''.format(ophys_session_id)
-    RealDict_object = mixin.select(QUERY)
-    filepath = lims_utils.get_filepath_from_realdict_object(RealDict_object)
+    conditions.validate_id_type(ophys_session_id, "ophys_session_id")
+    filepath = get_well_known_file_path("'OphysRigSync'", ophys_session_id)
     return filepath
 
 
@@ -1932,21 +1556,10 @@ def get_behavior_avi_filepath(ophys_session_id):
     string
         network filepath as a string
     """
-    QUERY = '''
-    SELECT
-    storage_directory || filename
-    AS filepath
-
-    FROM
-    well_known_files
-
-    WHERE
-    well_known_file_type_id = 695808672
-    AND attachable_id = {0}
-    '''.format(ophys_session_id)
-    RealDict_object = mixin.select(QUERY)
-    filepath = lims_utils.get_filepath_from_realdict_object(RealDict_object)
+    conditions.validate_id_type(ophys_session_id, "ophys_session_id")
+    filepath = get_well_known_file_path("'RawBehaviorTrackingVideo'", ophys_session_id)
     return filepath
+
 
 
 def get_behavior_h5_filepath(ophys_session_id):
@@ -2313,93 +1926,93 @@ def load_objectlist(ophys_experiment_id):
     return objectlist_dataframe
 
 
-def get_well_known_file_path(id, attachable_type, asset_name):
-    '''
-    returns the filepath for a given well known file asset
-    Parameters:
-    -----------
-    id: int
-        the id of the attachable_type
-    attachable_type: str
-        attachable type (e.g. 'OphysExperiment', 'OphysSession', 'BehaviorSession')
-    asset_name: str
-        the name of the desired asset (e.g. 'OphysRoiTraces'). Must exist for the given attachable type
+# def get_well_known_file_path(id, attachable_type, asset_name):
+#     '''
+#     returns the filepath for a given well known file asset
+#     Parameters:
+#     -----------
+#     id: int
+#         the id of the attachable_type
+#     attachable_type: str
+#         attachable type (e.g. 'OphysExperiment', 'OphysSession', 'BehaviorSession')
+#     asset_name: str
+#         the name of the desired asset (e.g. 'OphysRoiTraces'). Must exist for the given attachable type
 
-    Returns:
-    --------
-    str
-        filepath to asset
-    '''
-    wkf = db.get_well_known_files(id, attachable_id_type=attachable_type)
+#     Returns:
+#     --------
+#     str
+#         filepath to asset
+#     '''
+#     wkf = db.get_well_known_files(id, attachable_id_type=attachable_type)
 
-    assert asset_name in wkf.index.to_list(), 'only assets {} are available for {}'.format(wkf.index.to_list(), attachable_type)
+#     assert asset_name in wkf.index.to_list(), 'only assets {} are available for {}'.format(wkf.index.to_list(), attachable_type)
 
-    return '/' + ''.join([wkf.loc[asset_name]['storage_directory'], wkf.loc[asset_name]['filename']])
-
-
+#     return '/' + ''.join([wkf.loc[asset_name]['storage_directory'], wkf.loc[asset_name]['filename']])
 
 
 
-def get_id_type(input_id):
-    '''
-    a function to get the id type for a given input ID
 
-    Examples:
 
-    >> get_id_type(914580664)
-    'ophys_experiment_id'
+# def get_id_type(input_id):
+#     '''
+#     a function to get the id type for a given input ID
 
-    >> get_id_type(914211263)
-    'behavior_session_id'
+#     Examples:
 
-    >> get_id_type(1086515263)
-    'cell_specimen_id'
+#     >> get_id_type(914580664)
+#     'ophys_experiment_id'
 
-    >> get_id_type(914161594)
-    'ophys_session_id'
+#     >> get_id_type(914211263)
+#     'behavior_session_id'
 
-    >> get_id_type(1080784881)
-    'cell_roi_id'
+#     >> get_id_type(1086515263)
+#     'cell_specimen_id'
 
-    >> get_id_type(1234)
-    'unknown_id'
+#     >> get_id_type(914161594)
+#     'ophys_session_id'
 
-    Parameters:
-    -----------
-    input_id : int
-        id to search
+#     >> get_id_type(1080784881)
+#     'cell_roi_id'
 
-    Returns:
-    --------
-    string
-        The ID type, or 'unknown_id' if the ID type cannot be determined
-    '''
+#     >> get_id_type(1234)
+#     'unknown_id'
 
-    found_id_types = []
+#     Parameters:
+#     -----------
+#     input_id : int
+#         id to search
 
-    # set up a general query string
-    query = 'select * from {} where id = {} limit 1'
+#     Returns:
+#     --------
+#     string
+#         The ID type, or 'unknown_id' if the ID type cannot be determined
+#     '''
 
-    # iterate over tables
-    for table in ['ophys_experiments', 'ophys_sessions', 'behavior_sessions', 'cell_rois']:
+#     found_id_types = []
 
-        # check to see if the id is an index in the table
-        if len(db.lims_query(query.format(table, input_id))) > 0:
-            # add to list of found IDs
-            found_id_types.append(table[:-1] + '_id')
+#     # set up a general query string
+#     query = 'select * from {} where id = {} limit 1'
 
-    # a special case for cell_specimen_id given that there is no cell_specimens table
-    cell_specimen_id_query = 'select * from cell_rois where cell_specimen_id = {} limit 1'
-    if len(db.lims_query(cell_specimen_id_query.format(input_id))) > 0:
-        # return if id is cell_specimen_id
-        found_id_types.append('cell_specimen_id')
+#     # iterate over tables
+#     for table in ['ophys_experiments', 'ophys_sessions', 'behavior_sessions', 'cell_rois']:
 
-    # assert that no more than one ID type was found (they should be unique)
-    assert len(found_id_types) <= 1, 'found ID in multiple tables: {}'.format(found_id_types)
+#         # check to see if the id is an index in the table
+#         if len(db.lims_query(query.format(table, input_id))) > 0:
+#             # add to list of found IDs
+#             found_id_types.append(table[:-1] + '_id')
 
-    if len(found_id_types) == 1:
-        # if only one id type was found, return it
-        return found_id_types[0]
-    else:
-        # return 'unknown_id' if id was not found
-        return 'unknown_id'
+#     # a special case for cell_specimen_id given that there is no cell_specimens table
+#     cell_specimen_id_query = 'select * from cell_rois where cell_specimen_id = {} limit 1'
+#     if len(db.lims_query(cell_specimen_id_query.format(input_id))) > 0:
+#         # return if id is cell_specimen_id
+#         found_id_types.append('cell_specimen_id')
+
+#     # assert that no more than one ID type was found (they should be unique)
+#     assert len(found_id_types) <= 1, 'found ID in multiple tables: {}'.format(found_id_types)
+
+#     if len(found_id_types) == 1:
+#         # if only one id type was found, return it
+#         return found_id_types[0]
+#     else:
+#         # return 'unknown_id' if id was not found
+#         return 'unknown_id'
