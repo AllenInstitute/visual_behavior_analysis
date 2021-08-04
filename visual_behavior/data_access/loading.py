@@ -346,25 +346,52 @@ def get_filtered_behavior_session_table(release_data_only=True):
 
 def get_second_release_candidates():
     """
-    Preliminary function to get candidates for August release. Will be revised.
+    Criteria for release candidates:
+        - must be a VB project code
+        - experiment_workflow_state must be passed
+        - container_workflow_state must be 'completed' or 'container_qc'
+        - must not be part of March release
     :return:
     """
-    full_cache = bpc.from_lims()
-    full_experiment_table = full_cache.get_ophys_experiment_table()
+    cache = bpc.from_lims()
+    # full_experiment_table = full_cache.get_ophys_experiment_table()
 
-    unreleased_complete_multiscope = full_experiment_table[
-        full_experiment_table.project_code.isin(['VisualBehaviorMultiscope']) &
-        (full_experiment_table.container_workflow_state.isin(['completed', 'container_qc'])) &
-        (full_experiment_table.experiment_workflow_state == 'passed')]
-    print(len(unreleased_complete_multiscope), 'un-released VisualBehaviorMultiscope where container_workflow_state == completed')
+    # this limits one experiment id to one container id, giving an inaccurate view of what is in lims
+    # experiments = cache.get_ophys_experiment_table()
+    # use this version to prevent limiting ophys experiment IDs to a single container
+    experiments = cache.fetch_api.get_ophys_experiment_table()
+    print(len(experiments))
+    # need to merge in behavior table to get mouse_id
+    behavior_sessions_table = cache.get_behavior_session_table(suppress=None, as_df=True, include_ophys_data=False)
+    experiments = behavior_sessions_table.merge(experiments, left_index=True, right_on='behavior_session_id',
+                                                suffixes=('_behavior', '_ophys'))
+    # limit to VB experiments
+    experiments = experiments[experiments.project_code.isin(['VisualBehavior', 'VisualBehaviorTask1B',
+                                                             'VisualBehaviorMultiscope',
+                                                             'VisualBehaviorMultiscope4areasx2d'])]
+    # random mouse we dont want
+    experiments = experiments[experiments.cre_line != 'Cux2-CreERT2']
 
-    unreleased_not_failed_4x2 = full_experiment_table[(full_experiment_table.project_code.isin(['VisualBehaviorMultiscope4areasx2d']) &
-                                                       (full_experiment_table.container_workflow_state != 'failed') &
-                                                       (full_experiment_table.experiment_workflow_state == 'passed'))]
-    print(len(unreleased_not_failed_4x2), 'un-released VisualBehaviorMultiscope4areasx2d where container_workflow_state != failed')
+    passing_experiments = experiments[(experiments.experiment_workflow_state == 'passed') &
+                                      (experiments.container_workflow_state.isin(['completed', 'container_qc']))]
 
-    release_candidates = pd.concat([unreleased_complete_multiscope, unreleased_not_failed_4x2])
-    print(len(release_candidates), 'release candidates')
+    # make sure nothing from March release is included in release candidates
+    cache = bpc.from_lims(data_release_date='03-25-2021')
+    released_experiments = cache.get_ophys_experiment_table()
+    released_sessions = released_experiments.ophys_session_id.unique()
+    released_containers = released_experiments.ophys_container_id.unique()
+
+    release_candidates = passing_experiments[(passing_experiments.ophys_session_id.isin(released_sessions) == False) &
+                                             (passing_experiments.ophys_container_id.isin(released_containers) == False)]
+
+    # print stats
+    print(len(release_candidates.index.unique()), 'experiments')
+    print(len(release_candidates.ophys_session_id.unique()), 'sessions')
+    print(len(release_candidates.ophys_container_id.unique()), 'containers')
+    print(release_candidates.project_code.unique())
+    print(release_candidates.full_genotype.unique())
+    print(release_candidates.experiment_workflow_state.unique())
+    print(release_candidates.container_workflow_state.unique())
 
     return release_candidates
 
