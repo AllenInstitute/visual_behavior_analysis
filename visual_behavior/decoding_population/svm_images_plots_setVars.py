@@ -92,20 +92,20 @@ dir0 = '/home/farzaneh/OneDrive/Analysis'
 
 #%% Set the following vars
 
-project_codes = ['VisualBehaviorMultiscope'] #['VisualBehavior'], ['VisualBehaviorMultiscope'] # ['VisualBehaviorMultiscope'] # both projects: #['VisualBehaviorMultiscope'] # ['VisualBehaviorMultiscope', 'VisualBehaviorTask1B', 'VisualBehavior', 'VisualBehaviorMultiscope4areasx2d']
+project_codes = ['VisualBehaviorMultiscope'] #['VisualBehavior'], ['VisualBehaviorMultiscope'] # pooled: ['VisualBehavior'], ['VisualBehaviorMultiscope'] # ['VisualBehaviorMultiscope'] # both projects: #['VisualBehaviorMultiscope'] # ['VisualBehaviorMultiscope', 'VisualBehaviorTask1B', 'VisualBehavior', 'VisualBehaviorMultiscope4areasx2d']
 
 to_decode = 'current' # 'current': decode current image. # 'previous': decode previous image. # 'next': decode next image.
-trial_type = 'changes' # 'omissions' # 'changes' # 'hits_vs_misses' # 'changes_vs_nochanges' # 'images'# what trials to use for SVM analysis # the population activity of these trials at time time_win will be used to decode the image identity of flashes that occurred at their time 0 (if to_decode='current') or 750ms before (if to_decode='previous'). # eg 'omissions' means to use omission-aligned traces # 'baseline_vs_nobaseline' # decode activity at each frame vs. baseline (ie the frame before omission unless use_spont_omitFrMinus1 = 1 (see below))
+trial_type = 'baseline_vs_nobaseline' # 'baseline_vs_nobaseline' # 'omissions' # 'changes' # 'hits_vs_misses' # 'changes_vs_nochanges' # 'images'# what trials to use for SVM analysis # the population activity of these trials at time time_win will be used to decode the image identity of flashes that occurred at their time 0 (if to_decode='current') or 750ms before (if to_decode='previous'). # eg 'omissions' means to use omission-aligned traces # 'baseline_vs_nobaseline' # decode activity at each frame vs. baseline (ie the frame before omission unless use_spont_omitFrMinus1 = 1 (see below))
 # Note: when trial_type is 'hits_vs_misses' or 'changes_vs_nochanges', to_decode will be 'current' and wont really make sense.
 # in all other cases, we decode "to_decode" image from "trial_type", e.g. we decode 'current' image from 'changes' (ie change-aligned traces)
 
 use_events = True # True # False #whether to run the analysis on detected events (inferred spikes) or dff traces.
-svm_blocks = -1 #-101 #-1: divide trials based on engagement # -101: use only engaged epochs for svm analysis # number of trial blocks to divide the session to, and run svm on. # set to np.nan to run svm analysis on the whole session
+svm_blocks = np.nan #-101 #-1: divide trials based on engagement # -101: use only engaged epochs for svm analysis # number of trial blocks to divide the session to, and run svm on. # set to np.nan to run svm analysis on the whole session
+
 engagement_pupil_running = 0 # applicable when svm_blocks=-1 # np.nan or 0,1,2 for engagement, pupil, running: which metric to use to define engagement? 
 baseline_subtract = 0 #1 # subtract the baseline (CA average during baseline, ie before time 0) from the evoked CA (classification accuracy)
 
-summary_which_comparison = 'all' # 'novelty' # 'engagement' # 'all' # determins sessions to use for plotting summary of ophys stages in svm_images_plots_compare_ophys_stages.py # 'novelty' will use [1,3,4,6] # 'engagement' will use [1,2,3] # 'all' will use [1,2,3,4,5,6]
-
+summary_which_comparison = [3, 4, 6] #'all' # an array of session numbers: [3, 4, 6] or the following strings: # 'novelty' # 'engagement' # 'all' # determins sessions to use for plotting summary of ophys stages in svm_images_plots_compare_ophys_stages.py # 'novelty' will use [1,3,4,6] # 'engagement' will use [1,2,3] # 'all' will use [1,2,3,4,5,6]
 dosavefig = 1 # 0
 fmt = '.pdf' # '.png' # '.svg'
 
@@ -139,8 +139,8 @@ if use_events:
     time_win = [0, .4]
 else:
     time_win = [0, .55] # 'frames_svm' # set time_win to a string (any string) to use frames_svm as the window of quantification. # time window relative to trial onset to quantify image signal. Over this window class accuracy traces will be averaged.
-# if trial_type == 'baseline_vs_nobaseline':
-#     time_win = [0, .75] # we use the entire time after omission because the omission responses slowly go up
+if trial_type == 'baseline_vs_nobaseline':
+    time_win = [0, .75] # we use the entire time after omission because the omission responses slowly go up
 '''
 
 same_num_neuron_all_planes = 0 #1 # if 1, use the same number of neurons for all planes to train svm

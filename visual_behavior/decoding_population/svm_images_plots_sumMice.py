@@ -411,8 +411,8 @@ if plots_make_finalize[1] == 1:
 
         fgn = f'{fgn}_{word}_frames{frames_svm[0]}to{frames_svm[-1]}'                        
         fgn = fgn + '_ClassAccur'
-        if project_codes == ['VisualBehavior']:
-            fgn = f'{fgn}_{project_codes[0]}'
+#         if project_codes == ['VisualBehavior']:
+        fgn = f'{fgn}_{project_codes[0]}'
 
         nam = f'{cre[:3]}_aveMice_aveSessPooled{fgn}_{now}'
         fign = os.path.join(dir0, 'svm', dir_now, nam+fmt)

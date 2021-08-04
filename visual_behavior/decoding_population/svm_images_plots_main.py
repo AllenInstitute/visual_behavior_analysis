@@ -115,8 +115,8 @@ def svm_images_plots_main(session_id, data_list, svm_blocks, iblock, dir_svm, fr
 
             name = f'(.*)_s-{session_id}_e-{lims_id}_{svmn}_frames{frames_svm[0]}to{frames_svm[-1]}_{ending}'
 
-            if project_codes == ['VisualBehavior']:
-                name = f'{name}{project_codes[0]}_'
+#             if project_codes == ['VisualBehavior']:
+            name = f'{name}{project_codes[0]}_'
 
             name = f'{name}{nown}'
             

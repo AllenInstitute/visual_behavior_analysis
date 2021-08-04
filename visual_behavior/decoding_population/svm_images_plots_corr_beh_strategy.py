@@ -198,7 +198,10 @@ for stage_2_analyze in stagesall: # stage_2_analyze = stagesall[0]
             fgn = fgn + '_sameNumNeursAllPlanes'
 
         if svm_blocks==-1:
-            word = 'engaged_disengaged_blocks_'
+            if iblock==0:
+                word = 'disengaged_'
+            elif iblock==1:
+                word = 'engaged_'
         elif svm_blocks==-101:
             word = 'only_engaged_'
         elif ~np.isnan(svm_blocks):
