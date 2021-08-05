@@ -373,7 +373,7 @@ def get_second_release_candidates():
     experiments = experiments[experiments.cre_line != 'Cux2-CreERT2']
 
     passing_experiments = experiments[(experiments.experiment_workflow_state == 'passed') &
-                                      (experiments.container_workflow_state.isin(['completed', 'container_qc']))]
+                                      (experiments.container_workflow_state == 'postprocessing')]
 
     # make sure nothing from March release is included in release candidates
     cache = bpc.from_lims(data_release_date='03-25-2021')
