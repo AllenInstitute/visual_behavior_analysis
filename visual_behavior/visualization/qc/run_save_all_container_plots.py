@@ -16,7 +16,7 @@ parser.add_argument("--plots", type=str, default=None, metavar='plot name to gen
 
 # second release candidates
 save_dir = r'/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/august_release'
-save_path = os.path.join(save_dir, 'second_release_candidates_080321.csv')
+save_path = os.path.join(save_dir, 'second_release_candidates_080421.csv')
 import pandas as pd
 release_candidates = pd.read_csv(save_path)
 container_ids = release_candidates.ophys_container_id.unique()
