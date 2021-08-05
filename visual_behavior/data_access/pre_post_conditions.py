@@ -7,15 +7,7 @@
 
 ## IMPORTS ##                                                             # noqa: E266
 
-from visual_behavior.data_access import from_lims
-
-
-def validate_id_type(input_id, correct_id_type):
-    validate_value_in_dict_keys(correct_id_type, from_lims.ID_TYPES_DICT, "ID_TYPES_DICT")
-    input_id_type = from_lims.get_id_type(input_id)
-    assert input_id_type == correct_id_type, "Incorrect id type. Entered Id type is {},\
-                                              correct id type is {}".format(input_id_type,
-                                                                            correct_id_type)
+from visual_behavior.data_access import from_lims, from_lims_utilities
 
 
 def validate_value_in_dict_keys(input_value, dictionary, dict_name):
@@ -55,6 +47,34 @@ def validate_below_or_equal_threshold(input_value, threshold_value, variable_nam
 def validate_equals_threshold(input_value, threshold_value, variable_name):
     assert input_value == threshold_value, "Error: {} must equal {}.".format(variable_name,
                                                                              threshold_value)
+
+
+### TYPES ###                                                             # noqa: E266
+def validate_microscope_type(ophys_session_id, correct_microscope_type):
+    session_microscope_type = from_lims_utilities.get_microscope_type(ophys_session_id)
+    assert session_microscope_type == correct_microscope_type, "Error: incorrect microscope type.\
+                                                               {} provided but {} necessary.".format(session_microscope_type,
+                                                                                                     correct_microscope_type)
+
+
+def validate_id_type(input_id, correct_id_type):
+    """takes an input id, looks up what type of id it is and then validates
+       whether it is the same as the desired/correct id type
+
+    Parameters
+    ----------
+    input_id : int
+         the numeric any of the common types of ids associated or used with an optical physiology.
+         Examples: ophys_experiment_id, ophys_session_id, cell_roi_id etc. See ID_TYPES_DICT in
+         from_lims module for complete list of acceptable id types 
+    correct_id_type : string
+        [description]
+    """
+    validate_value_in_dict_keys(correct_id_type, from_lims.ID_TYPES_DICT, "ID_TYPES_DICT")
+    input_id_type = from_lims.get_id_type(input_id)
+    assert input_id_type == correct_id_type, "Incorrect id type. Entered Id type is {},\
+                                              correct id type is {}".format(input_id_type,
+                                                                            correct_id_type)
 
 
 ### DATAFRAMES ###                                                        # noqa: E266
