@@ -2895,9 +2895,9 @@ def get_cell_table(ophys_experiment_ids=None, columns_to_return='*'):
         data_storage_directory = get_cache_dir()
         cache = bpc.from_s3_cache(cache_dir=data_storage_directory)
 
-        experiment_table = cache.get_ophys_experiment_table().reset_index()
+        experiment_table = cache.get_ophys_experiment_table()
 
-        ophys_session_ids = experiment_table['ophys_experiment_id'].unique()
+        ophys_experiment_ids = experiment_table.index.unique()
 
     if columns_to_return != '*':
         columns_to_return = ', '.join(columns_to_return).replace('cell_roi_id', 'id')
