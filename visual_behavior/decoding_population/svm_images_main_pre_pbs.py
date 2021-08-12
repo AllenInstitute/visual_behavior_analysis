@@ -701,6 +701,7 @@ if __name__ == "__main__":
         args.svm_blocks, 
         args.engagement_pupil_running, 
         args.use_spont_omitFrMinus1, 
-        args.use_balanced_trials)
+        args.use_balanced_trials,
+        args.use_matched_cells)
 
 
