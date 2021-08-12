@@ -19,7 +19,7 @@ import visual_behavior.data_access.loading as loading
 from svm_images_main_pbs import *
 
 
-def svm_images_main_pre_pbs(isess, project_codes, use_events, to_decode, trial_type, svm_blocks, engagement_pupil_running, use_spont_omitFrMinus1, use_balanced_trials):
+def svm_images_main_pre_pbs(isess, project_codes, use_events, to_decode, trial_type, svm_blocks, engagement_pupil_running, use_spont_omitFrMinus1, use_balanced_trials, use_matched_cells):
 
     # if socket.gethostname() != 'ibs-farzaneh-ux2': # it's not known what node on the cluster will run your code, so all i can do is to say if it is not your pc .. but obviously this will be come problematic if running the code on a computer other than your pc or the cluster    
 #     print(project_codes)
@@ -192,8 +192,82 @@ def svm_images_main_pre_pbs(isess, project_codes, use_events, to_decode, trial_t
     # data release sessions
     # experiments_table = loading.get_filtered_ophys_experiment_table()
     experiments_table = loading.get_filtered_ophys_experiment_table(release_data_only=True)
-    experiments_table = experiments_table.reset_index('ophys_experiment_id')
 
+    
+    
+    
+    
+    ################################################################################################
+    ################################################################################################
+    ###### codes below are adapted from marina's notebook: https://gist.github.com/matchings/880aee8adf9c1c6c56e994df511c4c3d ######
+    ################################################################################################
+    ################################################################################################
+    if use_matched_cells!=0: 
+
+        #%% get matched cells
+        cell_table = loading.get_cell_table(ophys_session_ids=experiments_table.index.unique())
+
+        # merge in metadata to get experience level
+        cell_table = cell_table.merge(experiments_table, on='ophys_experiment_id')    
+
+        if use_matched_cells==123:
+            experience_levels = ['Familiar', 'Novel 1', 'Novel >1']
+        else:
+            if use_matched_cells==12: # limit to cells in Familiar or Novel 1
+                experience_levels = ['Familiar', 'Novel 1']
+            elif use_matched_cells==23: 
+                experience_levels = ['Novel 1', 'Novel >1']
+            elif use_matched_cells==13: 
+                experience_levels = ['Familiar', 'Novel >1']
+
+            cell_table = cell_table[cell_table.experience_level.isin(experience_levels)]
+        
+        n_sessions_matched = len(experience_levels)
+        
+        # group by cell and experience level to figure out how many sessions each cell has for each experience level
+        exp_matched = cell_table.groupby(['cell_specimen_id', 'experience_level', 'ophys_experiment_id']).count()    
+
+
+        ### NOTE: we do the following for now until Marina averages the multiple values for an experience level
+
+        # drop rows where a single cell_specimen_id has more than one session for each experience level¶
+        exp_matched = exp_matched.reset_index().drop_duplicates(subset=['cell_specimen_id', 'experience_level'])    
+
+        # count how many remaining sessions there are per cell and experience level
+        n_matched = exp_matched.groupby(['cell_specimen_id']).count()[['experience_level']].rename(columns={'experience_level':'n_sessions_matched'})    
+
+        # only keep cells that have 3 sessions - one per experience level, i.e. cells that are matched in all 3 types
+        matched_cell_ids = n_matched[n_matched['n_sessions_matched']==n_sessions_matched].index.unique()
+
+        print(len(matched_cell_ids), len(cell_table.cell_specimen_id.unique()))
+        print(np.round(len(matched_cell_ids)/len(cell_table['cell_specimen_id'].unique()),3)*100, 'percent of cells are matched in all 3 experience levels')
+
+
+        # get list of matched cells with other metadata including experiment and session ID
+        tmp = exp_matched[['cell_specimen_id', 'ophys_experiment_id']].merge(experiments_table, on='ophys_experiment_id')
+
+        matched_cells = tmp[tmp.cell_specimen_id.isin(matched_cell_ids)]
+#         print(len(matched_cells.cell_specimen_id.unique()))
+#         matched_cells
+
+
+        # This list only includes cells that are matched across sessions for Familiar, Novel 1, Novel >1¶
+        # There is only one session of each type per cell
+
+        # Save it
+        # save_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\platform_paper_cache\matched_cell_lists'
+        # matched_cells.to_csv(os.path.join(save_dir, 'cells_matched_across_experience_levels.csv'))    
+
+    ################################################################################################
+    ################################################################################################
+    ################################################################################################
+    ################################################################################################    
+    
+    
+    
+   
+    experiments_table = experiments_table.reset_index('ophys_experiment_id')
+    
     # get those rows of experiments_table that are for a specific project code
     metadata_valid = experiments_table[experiments_table['project_code']==project_codes]
 #     metadata_valid = experiments_table[experiments_table['project_code']==project_codes[0]] #'VisualBehaviorMultiscope'] # multiscope sessions
@@ -457,7 +531,33 @@ def svm_images_main_pre_pbs(isess, project_codes, use_events, to_decode, trial_t
     df_data = stimulus_response_df_allexp
     session_trials = np.nan # we need it as an input to the function
 
+    df_data0 = copy.deepcopy(df_data)
 
+    
+    ################################################################################
+    #%% redefine df_data, only keeping matched cells!
+    ################################################################################
+    
+    if use_matched_cells!=0:
+        
+        cells_to_keep = matched_cells[matched_cells['ophys_session_id']==session_id]['cell_specimen_id'].unique()
+
+        if len(cells_to_keep)==0:
+            sys.exit(f'Exiting analysis! No matched cells across 3 experience levels for session {session_id}!')
+        
+        a = df_data0['cell_specimen_id'].unique().shape[0]
+        b = cells_to_keep.shape[0]
+        print(f'{b} matched cells out of {a}')
+        print(f'\n{b/a} of cells are matched in all 3 experience levels\n')
+
+        df_data = df_data0[df_data0['cell_specimen_id'].isin(cells_to_keep)]
+#         df_data0.shape, df_data.shape
+
+
+
+    
+    
+    
     ### some tests related to images changes in stim df vs. trials df  
     # trials_response_df[~np.in1d(range(len(trials_response_df)), stimdf_ind_in_trdf)]['trial_type'].unique()
     # trials_response_df[~np.in1d(range(len(trials_response_df)), stimdf_ind_in_trdf)]['catch'].unique()
@@ -551,7 +651,7 @@ def svm_images_main_pre_pbs(isess, project_codes, use_events, to_decode, trial_t
     print('\n\n======================== Analyzing session %d, %d/%d ========================\n' %(session_id, isess, len(list_all_sessions_valid)))
 
     # Use below if you set session_data and session_trials above: for VIP and SST
-    svm_images_main_pbs(session_id, data_list, experiment_ids_valid, df_data, session_trials, trial_type, dir_svm, kfold, frames_svm, numSamples, saveResults, cols_basic, cols_svm, project_codes, to_decode, svm_blocks, engagement_pupil_running, use_events, same_num_neuron_all_planes, use_balanced_trials, use_spont_omitFrMinus1)
+    svm_images_main_pbs(session_id, data_list, experiment_ids_valid, df_data, session_trials, trial_type, dir_svm, kfold, frames_svm, numSamples, saveResults, cols_basic, cols_svm, project_codes, to_decode, svm_blocks, engagement_pupil_running, use_events, same_num_neuron_all_planes, use_balanced_trials, use_spont_omitFrMinus1, use_matched_cells)
 
     # svm_main_images_pbs(data_list, df_data, session_trials, trial_type, dir_svm, kfold, frames_svm, numSamples, saveResults, cols_basic, cols_svm, to_decode, svm_blocks, use_events, same_num_neuron_all_planes)
 
@@ -583,7 +683,8 @@ if __name__ == "__main__":
     parser.add_argument('--svm_blocks', type=int)
     parser.add_argument('--engagement_pupil_running', type=int) 
     parser.add_argument('--use_spont_omitFrMinus1', type=int) 
-    parser.add_argument('--use_balanced_trials', type=int) 
+    parser.add_argument('--use_balanced_trials', type=int)
+    parser.add_argument('--use_matched_cells', type=int)
     
     args = parser.parse_args()
 
