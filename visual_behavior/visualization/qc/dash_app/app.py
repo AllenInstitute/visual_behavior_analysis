@@ -55,7 +55,7 @@ app.layout = html.Div(
     [
         html.H3('Visual Behavior Data QC Viewer'),
         # checklist for components to show
-        html.Div([components.show_overview_checklist], style= {'display': 'none'}),
+        html.Div([components.show_overview_checklist], style={'display': 'none'}),
         components.plot_inventory_graph_div,
         # container level dropdown
         components.container_overview_dropdown,
@@ -105,22 +105,22 @@ app.layout = html.Div(
                 html.H4(''),
                 dcc.Link(id='link_9', children='', href='', style={'display': True}, target="_blank"),
             ],
-            id = 'motion_correction_links',
+            id='motion_correction_links',
             style={'display': True}
         ),
         html.Div(
             [
                 html.H4(id='session_header', children='Associated Experiment IDs'),
-                html.P(id = 'exp_link_0', children = ''),
-                html.P(id = 'exp_link_1', children = ''),
-                html.P(id = 'exp_link_2', children = ''),
-                html.P(id = 'exp_link_3', children = ''),
-                html.P(id = 'exp_link_4', children = ''),
-                html.P(id = 'exp_link_5', children = ''),
-                html.P(id = 'exp_link_6', children = ''),
-                html.P(id = 'exp_link_7', children = ''),
+                html.P(id='exp_link_0', children=''),
+                html.P(id='exp_link_1', children=''),
+                html.P(id='exp_link_2', children=''),
+                html.P(id='exp_link_3', children=''),
+                html.P(id='exp_link_4', children=''),
+                html.P(id='exp_link_5', children=''),
+                html.P(id='exp_link_6', children=''),
+                html.P(id='exp_link_7', children=''),
             ],
-            id = 'experiment_links',
+            id='experiment_links',
             style={'display': 'none'}
         ),
         components.feedback_button,
@@ -178,6 +178,8 @@ app.layout = html.Div(
 )
 
 # update data table
+
+
 @app.callback(Output('data_table', 'data'),
               [
                   Input('display_level_selection', 'value'),
@@ -203,9 +205,11 @@ def update_data(data_display_level, selected_rows, n_clicks, stored_feedback, up
     return data
 
 # update data table columns
+
+
 @app.callback(Output('data_table', 'columns'),
-              [Input('display_level_selection', 'value'),]
-)
+              [Input('display_level_selection', 'value'), ]
+              )
 def update_data_columns(data_display_level):
     if data_display_level == 'container':
         columns = [{"name": i.replace('_', ' '), "id": i} for i in container_table.columns]
@@ -216,9 +220,11 @@ def update_data_columns(data_display_level):
     return columns
 
 # toggle motion correction link visibility
+
+
 @app.callback(Output('motion_correction_links', 'style'),
-              [Input('display_level_selection', 'value'),]
-)
+              [Input('display_level_selection', 'value'), ]
+              )
 def display_motion_correction_links(data_display_level):
     if data_display_level == 'container':
         return {'display': True}
@@ -226,9 +232,11 @@ def display_motion_correction_links(data_display_level):
         return {'display': 'none'}
 
 # toggle experiment ID link visibility
+
+
 @app.callback(Output('experiment_links', 'style'),
-              [Input('display_level_selection', 'value'),]
-)
+              [Input('display_level_selection', 'value'), ]
+              )
 def display_experiment_id_links(data_display_level):
     if data_display_level == 'container':
         return {'display': 'none'}
@@ -335,7 +343,7 @@ def log_feedback(n1, timestamp, username, _id, experiment_ids, qc_attribute, mot
         '{}_id'.format(display_level): _id,
         'experiment_id': experiment_ids,
         'qc_attribute': qc_attribute,
-        'motion_present': motion_present, 
+        'motion_present': motion_present,
         'qc_labels': qc_labels,
         'input_text': input_text,
     }
@@ -380,6 +388,8 @@ def fill_container_id(selected_rows, display_level):
         return session_table.iloc[idx]['ophys_session_id']
 
 # populate qc attributes in popup when selecting new display level
+
+
 @app.callback(
     Output('feedback_popup_qc_dropdown', 'options'),
     [
@@ -395,6 +405,8 @@ def update_qc_attributes(display_level):
     return qc_options
 
 # label radio buttons in popup with currently selected experiment_ids
+
+
 @app.callback(
     Output('feedback_popup_experiments', 'options'),
     [
@@ -411,10 +423,12 @@ def experiment_id_checklist(row_index, display_level):
         experiments = list(np.array(session_table.iloc[row_index[0]]['ophys_experiment_ids, paired']).flatten())
         options = [{'label': oeid, 'value': oeid} for oeid in experiments]
     else:
-        options = [{'label':'NONE', 'value':None}]
+        options = [{'label': 'NONE', 'value': None}]
     return options
 
 # select all experiments
+
+
 @app.callback(
     Output('feedback_popup_experiments', 'value'),
     [
@@ -440,6 +454,8 @@ def select_all_experiments(select_all_timestamp, unselect_all_timestamp, open_fe
 # populate feedback popup qc options
 
 # only enable OK button when all fields are populated
+
+
 @app.callback(
     Output('feedback_popup_ok', 'disabled'),
     [
@@ -458,10 +474,10 @@ def enable_popup_ok(username, selected_experiments, qc_attribute, qc_label, moti
         binary_choice_selected = True
 
     anything_missing = (
-        username == '' 
-        or username is None 
-        or selected_experiments is None 
-        or qc_attribute == '' 
+        username == ''
+        or username is None
+        or selected_experiments is None
+        or qc_attribute == ''
         or qc_attribute is None
         or qc_label is None
         or binary_choice_selected == False
@@ -472,7 +488,7 @@ def enable_popup_ok(username, selected_experiments, qc_attribute, qc_label, moti
     else:
         # else return disabled = False
         return False
-    
+
 
 @app.callback(
     Output('feedback_popup_qc_labels', 'options'),
@@ -517,7 +533,6 @@ def clear_popup_text(n1, is_open):
 #     return None
 
 
-
 # clear motion selection
 @app.callback(
     Output("feedback_popup_motion_present", "value"),
@@ -530,6 +545,8 @@ def clear_motion_label(n1, is_open):
     return None
 
 # clear qc label selections
+
+
 @app.callback(
     Output("feedback_popup_qc_labels", "value"),
     [
@@ -578,7 +595,7 @@ def update_container_overview_options(checkbox_values):
 
 # update container plot options when container checklist state is changed
 @app.callback(
-    Output('plot_selection_dropdown', 'options'), 
+    Output('plot_selection_dropdown', 'options'),
     [
         Input('container_checklist', 'value'),
         Input('display_level_selection', 'value')
@@ -620,7 +637,7 @@ def regenerate_plot_inventory(checkbox_values):
 
 # show/hide plot inventory frame based on 'container_checklist'
 @app.callback(Output('plot_inventory_container', 'style'), [Input('container_checklist', 'value')])
-def show_plot_inventory(checkbox_values):
+def show_plot_inventory_checklist(checkbox_values):
     if 'show_plot_inventory' in checkbox_values:
         # retun hidden = False
         print('making plot visible!!')
@@ -632,7 +649,7 @@ def show_plot_inventory(checkbox_values):
 
 # show/hide motion label based on attribute being qc'd
 @app.callback(Output('feedback_popup_motion_present', 'style'), [Input('feedback_popup_qc_dropdown', 'value')])
-def show_plot_inventory(attribute_to_qc):
+def show_plot_inventory_attribute(attribute_to_qc):
     if attribute_to_qc == "Motion Correction":
         return {'display': True}
     else:
@@ -640,6 +657,8 @@ def show_plot_inventory(attribute_to_qc):
         return {'display': 'none'}
 
 # show/hide motion label based on attribute being qc'd
+
+
 @app.callback(Output('feedback_popup_motion_present_label', 'style'), [Input('feedback_popup_qc_dropdown', 'value')])
 def show_plot_inventory(attribute_to_qc):
     if attribute_to_qc == "Motion Correction":
@@ -685,6 +704,8 @@ def highlight_row(row_index, page_current, derived_viewport_indices):
 # set plot titles
 # this is just text above the actual plot frame
 # Use this loop to determine the correct title to update
+
+
 def update_plot_title(plot_types, display_level, input_id):
     '''a function to update plot titles'''
     idx = int(input_id.split('plot_title_')[1])
@@ -692,11 +713,13 @@ def update_plot_title(plot_types, display_level, input_id):
         return plot_types[idx]
     except IndexError:
         return ''
+
+
 for i in range(10):
     app.callback(
         Output(f"plot_title_{i}", "children"),
         [
-            Input(f"plot_selection_dropdown", "value"), 
+            Input("plot_selection_dropdown", "value"),
             Input('display_level_selection', 'value'),
             Input(f"plot_title_{i}", "id")
         ]  # noqa: F541
@@ -704,6 +727,8 @@ for i in range(10):
 
 # image frames callbacks
 # generated in a loop
+
+
 def update_frame_N(row_index, plot_types, display_level, input_id):
     '''
     a function to fill the image frames
@@ -720,6 +745,8 @@ def update_frame_N(row_index, plot_types, display_level, input_id):
         return 'data:image/png;base64,{}'.format(encoded_image.decode())
     except IndexError:
         return None
+
+
 for i in range(10):
     app.callback(
         Output(f"image_frame_{i}", "src"),
@@ -732,22 +759,26 @@ for i in range(10):
     )(update_frame_N)
 
 # update_links
+
+
 def update_link_text_N(row_index, path_style, input_id):
     '''a function to update plot titles'''
     idx = int(input_id.split('link_')[1])
     ophys_container_id = container_table.iloc[row_index[0]]['ophys_container_id']
     link_list = functions.get_motion_corrected_movie_paths(ophys_container_id)
     if path_style == 'windows':
-        link_list = [v.replace('/','\\') for v in link_list]
+        link_list = [v.replace('/', '\\') for v in link_list]
     try:
         return link_list[idx]
     except IndexError:
         return 'INVALID LINK'
+
+
 for i in range(10):
     app.callback(
         Output(f"link_{i}", "children"),
         [
-            Input('data_table', 'selected_rows'), 
+            Input('data_table', 'selected_rows'),
             Input('path_style', 'value'),
             Input(f"link_{i}", "id")
         ]
@@ -763,6 +794,8 @@ def update_link_destination_N(row_index, input_id):
         return 'file:{}'.format(link_list[idx])
     except IndexError:
         return 'https://www.google.com/'
+
+
 for i in range(10):
     app.callback(
         Output(f"link_{i}", "href"),
@@ -773,15 +806,15 @@ for i in range(10):
 def update_link_visibility_N(row_index, input_id):
     '''a function to update plot titles'''
     idx = int(input_id.split('link_')[1])
-    ophys_container_id = container_table.iloc[row_index[0]]['ophys_container_id']
-    link_list = functions.get_motion_corrected_movie_paths(ophys_container_id)
+
     try:
-        link_text = link_list[idx]
         print("Returning True, idx = {}".format(idx))
         return {'display': True}
     except IndexError:
         print("Returning None, idx = {}".format(idx))
         return {'display': 'none'}
+
+
 for i in range(10):
     app.callback(
         Output(f"link_{i}", "style"),
@@ -789,6 +822,8 @@ for i in range(10):
     )(update_link_visibility_N)
 
 # update session header
+
+
 @app.callback(
     Output('session_header', 'children'),
     [
@@ -817,12 +852,13 @@ def update_exp_link_text_N(row_index, display_level_selection, path_style, input
     else:
         return "NOT APPLICABLE"
 
+
 for i in range(8):
     app.callback(
         Output(f"exp_link_{i}", "children"),
         [
-            Input('data_table', 'selected_rows'), 
-            Input('display_level_selection', 'value'), 
+            Input('data_table', 'selected_rows'),
+            Input('display_level_selection', 'value'),
             Input('path_style', 'value'),
             Input(f"exp_link_{i}", "id")
         ]
