@@ -2316,15 +2316,15 @@ def build_container_df(experiment_table):
     '''
     table = experiment_table.copy()
     # table = get_filtered_ophys_experiment_table().sort_values(by='date_of_acquisition', ascending=False).reset_index()
-    container_ids = table['ophys_container_id'].unique()
+    ophys_container_ids = table['ophys_container_id'].unique()
     list_of_dicts = []
-    for container_id in container_ids:
-        subset = table.query('container_id == @container_id').sort_values(
+    for ophys_container_id in ophys_container_ids:
+        subset = table.query('ophys_container_id == @ophys_container_id').sort_values(
             by='date_of_acquisition',
             ascending=True
         ).drop_duplicates('ophys_session_id').reset_index()
         temp_dict = {
-            'ophys_container_id': container_id,
+            'ophys_container_id': ophys_container_id,
             # 'container_workflow_state': table.query('ophys_container_id == @ophys_container_id')['container_workflow_state'].unique()[0],
             'project_code': subset['project_code'].unique()[0],
             'mouse_id': subset['mouse_id'].unique()[0],
