@@ -806,7 +806,6 @@ for i in range(10):
 def update_link_visibility_N(row_index, input_id):
     '''a function to update plot titles'''
     idx = int(input_id.split('link_')[1])
-
     try:
         print("Returning True, idx = {}".format(idx))
         return {'display': True}
@@ -865,6 +864,17 @@ for i in range(8):
     )(update_exp_link_text_N)
 
 
+@app.callback(Output('link_0', 'children'),
+              [Input('data_table', 'selected_rows'),
+               Input('plot_selection_dropdown', 'value'),
+               ])
+def print_movie_paths(row_index, plot_types):
+    ophys_container_id = container_table.iloc[row_index[0]]['ophys_container_id']
+    output_text = functions.print_motion_corrected_movie_paths(ophys_container_id)
+    print(output_text)
+    return output_text
+
+
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='Run dash visualization app for VB production data')
@@ -883,14 +893,3 @@ if __name__ == '__main__':
     print("PORT = {}".format(args.port))
     print("DEBUG MODE = {}".format(args.debug))
     app.run_server(debug=args.debug, port=args.port, host='0.0.0.0')
-
-
-@app.callback(Output('link_0', 'children'),
-              [Input('data_table', 'selected_rows'),
-               Input('plot_selection_dropdown', 'value'),
-               ])
-def print_movie_paths(row_index, plot_types):
-    ophys_container_id = container_table.iloc[row_index[0]]['ophys_container_id']
-    output_text = functions.print_motion_corrected_movie_paths(ophys_container_id)
-    print(output_text)
-    return output_text
