@@ -70,16 +70,12 @@ def limit_to_Multiscope_data(table):
 
 
 def limit_to_valid_ophys_session_types(table):
-    table = table[table.session_type.isin(['OPHYS_1_images_A', 'OPHYS_3_images_A', 'OPHYS_4_images_B',
-                                           'OPHYS_5_images_B_passive', 'OPHYS_6_images_B',
-                                           'OPHYS_2_images_A_passive', 'OPHYS_1_images_B',
-                                           'OPHYS_2_images_B_passive', 'OPHYS_3_images_B',
-                                           'OPHYS_4_images_A',
-                                           'OPHYS_5_images_A_passive', 'OPHYS_6_images_A',
-                                           'OPHYS_1_images_G', 'OPHYS_3_images_G',
-                                           'OPHYS_2_images_G_passive',
-                                           'OPHYS_4_images_H', 'OPHYS_5_images_H_passive',
-                                           'OPHYS_6_images_H'])]
+    table = table[table.session_type.isin(['OPHYS_1_images_A', 'OPHYS_2_images_A_passive', 'OPHYS_3_images_A',
+                                           'OPHYS_4_images_B', 'OPHYS_5_images_B_passive', 'OPHYS_6_images_B',
+                                           'OPHYS_1_images_B', 'OPHYS_2_images_B_passive', 'OPHYS_3_images_B',
+                                           'OPHYS_4_images_A', 'OPHYS_5_images_A_passive', 'OPHYS_6_images_A',
+                                           'OPHYS_1_images_G', 'OPHYS_2_images_G_passive', 'OPHYS_3_images_G',
+                                           'OPHYS_4_images_H', 'OPHYS_5_images_H_passive', 'OPHYS_6_images_H'])]
     return table
 
 
