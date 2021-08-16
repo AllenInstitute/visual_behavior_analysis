@@ -36,8 +36,7 @@ def load_session_data():
     except Exception as e:
         print("ERROR LOADING SESSION DATA TABLE")
         print(e)
-        return pd.DataFrame({'error':[e]})
-
+        return pd.DataFrame({'error': [e]})
 
 
 def load_yaml(yaml_path):
@@ -116,10 +115,9 @@ def get_plot(_id, plot_type, display_level):
     return encoded_image
 
 
-
 def generate_plot_inventory():
     global CONTAINER_TABLE
-    
+
     CONTAINER_TABLE = load_container_data().sort_values('first_acquistion_date')
     container_table = CONTAINER_TABLE
     plots = load_container_plot_options()
@@ -170,6 +168,7 @@ def make_plot_inventory_heatmap(plot_inventory):
 
     return fig
 
+
 def get_motion_corrected_movie_path(oeid):
     query = '''
     SELECT wkft.name, wkf.storage_directory || wkf.filename as path
@@ -183,12 +182,13 @@ def get_motion_corrected_movie_path(oeid):
     except Exception as e:
         return e
 
+
 def get_motion_corrected_movie_paths(ophys_container_id):
     et = loading.get_filtered_ophys_experiment_table().reset_index()
     paths = []
     for oeid in et.query('ophys_container_id == @ophys_container_id').sort_values(by='ophys_experiment_id')['ophys_experiment_id']:
         paths.append(
-            '/'+get_motion_corrected_movie_path(oeid)
+            '/' + get_motion_corrected_movie_path(oeid)
         )
     return paths
 
@@ -231,23 +231,23 @@ def log_feedback(feedback, display_level):
         to_mongo(feedback, display_level)
 
 
-def get_roi_overlap_plots_links(session_id, plots_dir = '/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/single_cell_plots/mesoscope_decrosstalk'):
-    """
-    function to build links ot the roi-level plots given session_id
-    session_id : int, session ID form lims
-    plots_dir: str, path to outer directory 
-    returns dict, where {'pair_0_overlaps' : "path_to_roi_level_dir"}
-    """
-    session_path = os.path.join(plots_dir, f"session_{session_id}")
-    roi_links = {}
-    pairs = get_paired_planes(session_id)
-    for i, pair in enumerate(pairs):
-        pair_dir_path = os.path.join(session_path, f"pair_{i}_overlaps")
-        if os.path.isdir(pair_dir_path):
-            roi_links[f'pair_{i}'] = pair_dir_path
-        else:
-            roi_links[f'pair_{i}']  = "roi level plots don't exist"        
-    return roi_links
+# def get_roi_overlap_plots_links(session_id, plots_dir='/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/single_cell_plots/mesoscope_decrosstalk'):
+#     """
+#     function to build links ot the roi-level plots given session_id
+#     session_id : int, session ID form lims
+#     plots_dir: str, path to outer directory
+#     returns dict, where {'pair_0_overlaps' : "path_to_roi_level_dir"}
+#     """
+#     session_path = os.path.join(plots_dir, f"session_{session_id}")
+#     roi_links = {}
+#     pairs = get_paired_planes(session_id)
+#     for i, pair in enumerate(pairs):
+#         pair_dir_path = os.path.join(session_path, f"pair_{i}_overlaps")
+#         if os.path.isdir(pair_dir_path):
+#             roi_links[f'pair_{i}'] = pair_dir_path
+#         else:
+#             roi_links[f'pair_{i}'] = "roi level plots don't exist"
+#     return roi_links
 
 
 def get_experiment_ids_for_session_id(ophys_session_id):

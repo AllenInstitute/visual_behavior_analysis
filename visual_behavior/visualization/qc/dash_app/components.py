@@ -5,7 +5,7 @@ import dash_html_components as html
 import dash_table
 import dash_bootstrap_components as dbc
 
-from functions import generate_plot_inventory, make_plot_inventory_heatmap, load_container_qc_definitions
+from functions import generate_plot_inventory, make_plot_inventory_heatmap
 
 
 # dropdown for selecting plots to display
@@ -34,7 +34,7 @@ path_style = dcc.RadioItems(
     ],
     value='unix',
     inputStyle={"margin-left": "20px"},
-) 
+)
 
 display_level_selection = dcc.RadioItems(
     id='display_level_selection',
@@ -44,7 +44,7 @@ display_level_selection = dcc.RadioItems(
     ],
     value='container',
     inputStyle={"margin-left": "20px"},
-)  
+)
 
 # dropdown to select which overview plot to show in iframe
 container_overview_dropdown = dcc.Dropdown(
@@ -145,10 +145,10 @@ feedback_button = html.Div(
                         dbc.Input(id="feedback_popup_id", type="text", disabled=True),
                         dbc.Label("Experiment ID:"),
                         html.H4(''),
-                        html.Button('Select All Experiments', id='feedback_popup_select_all_experiments', style = dict(display='none')),
-                        html.Button('Unselect All Experiments', id='feedback_popup_unselect_all_experiments', style = dict(display='none')),
+                        html.Button('Select All Experiments', id='feedback_popup_select_all_experiments', style=dict(display='none')),
+                        html.Button('Unselect All Experiments', id='feedback_popup_unselect_all_experiments', style=dict(display='none')),
                         dbc.RadioItems(
-                            options=[{"label": "exp0 ", "value": 1},],
+                            options=[{"label": "exp0 ", "value": 1}, ],
                             value=None,
                             id="feedback_popup_experiments",
                         ),
@@ -156,17 +156,17 @@ feedback_button = html.Div(
                         dcc.Dropdown(
                             id='feedback_popup_qc_dropdown',
                             # options=QC_OPTIONS,
-                            options = [{"label": "exp0 ", "value": 1},],
+                            options=[{"label": "exp0 ", "value": 1}, ],
                             value=''
                         ),
                         html.Label(children="Is residual motion present in the video:", id='feedback_popup_motion_present_label'),
                         dbc.RadioItems(
                             options=[
-                                {'label':'yes', 'value':"yes_motion"}, 
-                                {'label':'no', 'value':"no_motion"},
-                                {'label':'movie_too_dim_to_tell', 'value':'movie_too_dim_to_tell'},
-                                {'label':"movie_too_noisy_to_tell", 'value':"movie_too_noisy_to_tell"},
-                                {'label':"missing_movie", 'value':"missing_movie"},
+                                {'label': 'yes', 'value': "yes_motion"},
+                                {'label': 'no', 'value': "no_motion"},
+                                {'label': 'movie_too_dim_to_tell', 'value': 'movie_too_dim_to_tell'},
+                                {'label': "movie_too_noisy_to_tell", 'value': "movie_too_noisy_to_tell"},
+                                {'label': "missing_movie", 'value': "missing_movie"},
                             ],
                             value='yes',
                             id="feedback_popup_motion_present",
