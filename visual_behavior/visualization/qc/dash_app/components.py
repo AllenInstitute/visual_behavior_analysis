@@ -10,9 +10,9 @@ from functions import generate_plot_inventory, make_plot_inventory_heatmap
 
 # dropdown for selecting plots to display
 plot_selection_dropdown = dcc.Dropdown(
-    id='container_plot_dropdown',
+    id='plot_selection_dropdown',
     options=None,
-    value=['ophys_session_sequence'],
+    value=[],
     multi=True
 )
 
@@ -26,10 +26,30 @@ show_overview_checklist = dcc.Checklist(
     value=[]
 )
 
+path_style = dcc.RadioItems(
+    id='path_style',
+    options=[
+        {'label': 'Unix  ', 'value': 'unix'},
+        {'label': 'Windows  ', 'value': 'windows'},
+    ],
+    value='unix',
+    inputStyle={"margin-left": "20px"},
+)
+
+display_level_selection = dcc.RadioItems(
+    id='display_level_selection',
+    options=[
+        {'label': 'Container Level  ', 'value': 'container'},
+        {'label': 'Session Level  ', 'value': 'session'},
+    ],
+    value='container',
+    inputStyle={"margin-left": "20px"},
+)
+
 # dropdown to select which overview plot to show in iframe
 container_overview_dropdown = dcc.Dropdown(
     id='container_overview_dropdown',
-    style={'display': 'none'},
+    # style={'display': 'none'},
     options=None,
     value='VisualBehavior_containers_chronological.png'
 )
@@ -57,7 +77,16 @@ table_row_selection = dcc.Input(
     value=5,
 )
 
-container_data_table = dash_table.DataTable(
+# next/previous buttons
+next_button = html.Button('Next', id='next_button')
+previous_button = html.Button('Previous', id='previous_button')
+
+# next/previous buttons
+reload_data_button = html.Button('Reload Data', id='reload_data_button')
+update_data_button = html.Button('Update Data', id='update_data_button')
+
+# data table
+data_table = dash_table.DataTable(
     id='data_table',
     columns=None,
     data=None,
@@ -100,54 +129,66 @@ plot_inventory_graph_div = html.Div(
     ]
 )
 
-feeback_button = html.Div(
+feedback_button = html.Div(
     [
-        dbc.Button("Provide Feedback", id="open"),
+        dbc.Button("Provide Feedback", id="open_feedback_popup"),
         dbc.Modal(
             [
                 dbc.ModalHeader("Plot Feedback"),
-                dbc.ModalBody("This is a prototype popup for plot QC"),
+                dbc.ModalBody(
+                    [
+                        dbc.Label("Timestamp:"),
+                        dbc.Input(id="feedback_popup_datetime", type="text", disabled=True),
+                        dbc.Label("Username:"),
+                        dbc.Input(id="feedback_popup_username", type="text", debounce=True),
+                        dbc.Label("Container/Session ID:"),
+                        dbc.Input(id="feedback_popup_id", type="text", disabled=True),
+                        dbc.Label("Experiment ID:"),
+                        html.H4(''),
+                        html.Button('Select All Experiments', id='feedback_popup_select_all_experiments', style=dict(display='none')),
+                        html.Button('Unselect All Experiments', id='feedback_popup_unselect_all_experiments', style=dict(display='none')),
+                        dbc.RadioItems(
+                            options=[{"label": "exp0 ", "value": 1}, ],
+                            value=None,
+                            id="feedback_popup_experiments",
+                        ),
+                        dbc.Label("Attribute being QC'd:"),
+                        dcc.Dropdown(
+                            id='feedback_popup_qc_dropdown',
+                            # options=QC_OPTIONS,
+                            options=[{"label": "exp0 ", "value": 1}, ],
+                            value=''
+                        ),
+                        html.Label(children="Is residual motion present in the video:", id='feedback_popup_motion_present_label'),
+                        dbc.RadioItems(
+                            options=[
+                                {'label': 'yes', 'value': "yes_motion"},
+                                {'label': 'no', 'value': "no_motion"},
+                                {'label': 'movie_too_dim_to_tell', 'value': 'movie_too_dim_to_tell'},
+                                {'label': "movie_too_noisy_to_tell", 'value': "movie_too_noisy_to_tell"},
+                                {'label': "missing_movie", 'value': "missing_movie"},
+                            ],
+                            value='yes',
+                            id="feedback_popup_motion_present",
+                        ),
+                        dbc.Label("QC Label:"),
+                        dbc.RadioItems(
+                            options=[],
+                            value=None,
+                            id="feedback_popup_qc_labels",
+                        ),
+                        dbc.Label("Notes/observations:"),
+                        dbc.Input(id="feedback_popup_text", type="text", debounce=True),
+                    ]
+                ),
                 dbc.ModalFooter(
-                    dbc.Button("Close", id="close", className="ml-auto")
+                    [
+                        dbc.Button("OK", color="primary", id="feedback_popup_ok", disabled=True),
+                        dbc.Button("Cancel", id="feedback_popup_cancel"),
+                    ]
                 ),
             ],
             id="plot_qc_popup",
         ),
     ]
 )
-
-
-class FeebackButton(object):
-    def __init__(self, plot_number, plot_name, body_text=None):
-        self.plot_number = plot_number
-        self.plot_name = plot_name
-        if body_text is not None:
-            self.body_text = body_text
-        else:
-            self.body_text = 'this is the popup body'
-
-        self.popup = self.make_popup()
-
-    def make_popup(self):
-        feedback_button = html.Div(
-            [
-                dbc.Button(
-                    "{} - Provide Feedback".format(self.plot_name),
-                    id="open_feedback_{}".format(self.plot_number)
-                ),
-                dbc.Modal(
-                    [
-                        dbc.ModalHeader("Provide feedback for {}".format(self.plot_name)),
-                        dbc.ModalBody(self.body_text),
-                        dbc.ModalFooter(
-                            dbc.Button("Close", id="close", className="ml-auto")
-                        ),
-                    ],
-                    id="plot_qc_popup_{}".format(self.plot_number),
-                ),
-            ]
-        )
-        return feedback_button
-
-    def update_info(self, plot_number, plot_name):
-        self.popup
