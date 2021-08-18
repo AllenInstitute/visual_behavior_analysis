@@ -9,10 +9,10 @@ jobs:
             flake8 visual_behavior
           name: lint it up
 
-  test-37-pinned-allensdk: &linux-template
+  test-36-pinned-allensdk: &linux-template
     parameters:
       pyversion:
-        default: "3.7.7"
+        default: "3.6.12"
         type: string
     executor: python/default
     steps:
@@ -40,11 +40,18 @@ jobs:
             python -m pytest -m "not onprem"
           name: run tests
 
-  test-36-pinned-allensdk:
+  test-37-pinned-allensdk:
     <<: *linux-template
     parameters:
       pyversion:
-        default: "3.6.12"
+        default: "3.7.7"
+        type: string
+  
+  test-38-pinned-allensdk:
+    <<: *linux-template
+    parameters:
+      pyversion:
+        default: "3.8.10"
         type: string
 
 orbs:
@@ -56,3 +63,4 @@ workflows:
       - lint
       - test-36-pinned-allensdk
       - test-37-pinned-allensdk
+      - test-38-pinned-allensdk
