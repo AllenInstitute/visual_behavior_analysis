@@ -2327,9 +2327,10 @@ def build_container_df(experiment_table):
     ophys_container_ids = table['ophys_container_id'].unique()
     list_of_dicts = []
     for ophys_container_id in ophys_container_ids:
-        subset = table.query('ophys_container_id == @ophys_container_id').sort_values(by='date_of_acquisition',
-                                                                                      ascending=True).drop_duplicates(
-            'ophys_session_id').reset_index()
+        subset = table.query('ophys_container_id == @ophys_container_id').sort_values(
+            by='date_of_acquisition',
+            ascending=True
+        ).drop_duplicates('ophys_session_id').reset_index()
         temp_dict = {
             'ophys_container_id': ophys_container_id,
             # 'container_workflow_state': table.query('ophys_container_id == @ophys_container_id')['container_workflow_state'].unique()[0],
@@ -2837,14 +2838,14 @@ def get_remaining_crosstalk_amount_dict(experiment_id):
     return remaining_crosstalk_dict
 
 
-def get_cell_table(ophys_session_ids=None, columns_to_return='*'):
+def get_cell_table(ophys_experiment_ids=None, columns_to_return='*'):
     '''
     retrieves the full cell_specimen table from LIMS for the specified ophys_experiment_ids
     if no ophys_experiment_ids are passed, all experiments from the `VisualBehaviorOphysProjectCache` will be retrieved
 
     Parameters
     ----------
-    ophys_session_ids : list
+    ophys_experiment_ids : list
         A list of ophys_experiment_ids for which to retrieve the associated cells.
         If None, all experiments from the `VisualBehaviorOphysProjectCache` will be retrieved.
         Default = None
@@ -2898,14 +2899,14 @@ def get_cell_table(ophys_session_ids=None, columns_to_return='*'):
 
 
     '''
-    # get ophys_session_ids from S3 if they were not passed
-    if ophys_session_ids is None:
-        data_storage_directory = '/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/production_cache'
+    # get ophys_experiment_ids from S3 if they were not passed
+    if ophys_experiment_ids is None:
+        data_storage_directory = get_cache_dir()
         cache = bpc.from_s3_cache(cache_dir=data_storage_directory)
 
-        experiment_table = cache.get_ophys_experiment_table().reset_index()
+        experiment_table = cache.get_ophys_experiment_table()
 
-        ophys_session_ids = experiment_table['ophys_experiment_id'].unique()
+        ophys_experiment_ids = experiment_table.index.unique()
 
     if columns_to_return != '*':
         columns_to_return = ', '.join(columns_to_return).replace('cell_roi_id', 'id')
@@ -2918,7 +2919,7 @@ def get_cell_table(ophys_session_ids=None, columns_to_return='*'):
 
     # Since we are querying from the 'cell_rois' table, the 'id' column is actually 'cell_roi_id'. Rename.
     lims_rois = db.lims_query(
-        query.format(columns_to_return, tuple(ophys_session_ids))
+        query.format(columns_to_return, tuple(ophys_experiment_ids))
     ).rename(columns={'id': 'cell_roi_id'})
 
     return lims_rois
