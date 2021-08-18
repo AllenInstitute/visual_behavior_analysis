@@ -1,3 +1,6 @@
+import numpy as np  # noqa E902
+import pandas as pd
+import visual_behavior.utilities as vbu
 
 
 def calculate_response_matrix(stimuli, aggfunc=np.mean, sort_by_column=True, engaged_only=True):
@@ -32,7 +35,6 @@ def calculate_response_matrix(stimuli, aggfunc=np.mean, sort_by_column=True, eng
     if engaged_only:
         stimuli_to_analyze = stimuli_to_analyze.query('engagement_state == "engaged"')
 
-
     response_matrix = pd.pivot_table(
         stimuli_to_analyze,
         values='response_lick',
@@ -40,17 +42,17 @@ def calculate_response_matrix(stimuli, aggfunc=np.mean, sort_by_column=True, eng
         columns=['image_name'],
         aggfunc=aggfunc
     ).astype(float)
-    
+
     if sort_by_column:
         sort_by = response_matrix.mean(axis=0).sort_values().index
         response_matrix = response_matrix.loc[sort_by][sort_by]
-        
+
     response_matrix.index.name = 'previous_image_name'
-    
+
     return response_matrix
 
 
-def calculate_d_prime_matrix(stimuli, sort_by_column=True, engaged_only=True)):
+def calculate_d_prime_matrix(stimuli, sort_by_column=True, engaged_only=True):
     '''
     calculates the d' matrix for each individual image pair in the `stimulus` dataframe
 
@@ -60,9 +62,6 @@ def calculate_d_prime_matrix(stimuli, sort_by_column=True, engaged_only=True)):
         From experiment.stimulus_presentations, after adding engagement state and annotating as follows:
             experiment.stimulus_presentations = loading.add_model_outputs_to_stimulus_presentations(experiment.stimulus_presentations, behavior_session_id')
             stimulus_presentations = vbu.annotate_stimuli(experiment, inplace = False)
-    aggfunc: function
-        function to apply to calculation. Default = np.mean
-        other options include np.size (to get counts) or np.median
     sort_by_column: Boolean
         if True (default), sorts outputs by column means
     engaged_only: Boolean
@@ -77,8 +76,8 @@ def calculate_d_prime_matrix(stimuli, sort_by_column=True, engaged_only=True)):
         catch trials are on diagonal
 
     '''
-    response_matrix = make_response_matrix(stimuli, aggfunc=np.mean, sort_by_column=sort_by_column, engaged_only=engaged_only)
-    
+    response_matrix = calculate_response_matrix(stimuli, aggfunc=np.mean, sort_by_column=sort_by_column, engaged_only=engaged_only)
+
     d_prime_matrix = response_matrix.copy()
     for row in response_matrix.columns:
         for col in response_matrix.columns:
@@ -89,5 +88,5 @@ def calculate_d_prime_matrix(stimuli, sort_by_column=True, engaged_only=True)):
             )
             if row == col:
                 d_prime_matrix.loc[row][col] = np.nan
-                
+
     return d_prime_matrix
