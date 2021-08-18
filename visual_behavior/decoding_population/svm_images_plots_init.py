@@ -4,9 +4,9 @@
 After SVM analysis is already done and the results are already saved (by running the svm_image_main_pbs code), 
 run this script to create all_sess, a dataframe in which the svm results of all sessions are concatenated. We need this to make plots for the svm (images) analysis.
 
-This script calls the function: svm_images_plots_main
+This script calls the function: svm_images_plots_main.py
 
-Follow this script by svm_images_plots_setVars.py to make plots.
+After this script, run svm_images_plots_setVars.py to make plots.
 
 
 Created on Tue Oct 13 20:48:43 2020
@@ -39,10 +39,12 @@ to_decode = 'current' #'next' # 'current' (default): decode current image.    'p
 trial_type = 'changes' #'changes' #'baseline_vs_nobaseline' #'hits_vs_misses' #'changes_vs_nochanges' #'omissions' # 'omissions', 'images', 'changes' # what trials to use for SVM analysis # the population activity of these trials at time time_win will be used to decode the image identity of flashes that occurred at their time 0 (if to_decode='current') or 750ms before (if to_decode='previous'). # 'baseline_vs_nobaseline' # decode activity at each frame vs. baseline (ie the frame before omission unless use_spont_omitFrMinus1 = 1 (see below))
 
 use_events = True #False # whether to run the analysis on detected events (inferred spikes) or dff traces.
-svm_blocks = -1 #-101 #np.nan # -1: divide trials based on engagement #2 # number of trial blocks to divide the session to, and run svm on. # set to np.nan to run svm analysis on the whole session
+svm_blocks = np.nan #-101 #np.nan # -1: divide trials based on engagement #2 # number of trial blocks to divide the session to, and run svm on. # set to np.nan to run svm analysis on the whole session
 
-# use ['20210722'] for vb-ms, 'current', 'changes', events, svm_blocks=-1
-analysis_dates = ['20210722'] #['20210708'] # ['2020507'] #set to [''] if you want to load the latest file. # the date on which the svm files were saved.
+use_matched_cells = 123 # 0: analyze all cells of an experiment. 123: analyze cells matched in all experience levels (familiar, novel 1 , novel >1); 12: cells matched in familiar and novel 1.  23: cells matched in novel 1 and novel >1.  13: cells matched in familiar and novel >1
+
+# use ['20210722'] for vb-ms, 'current', 'changes', events, svm_blocks=-1, no matched cells
+analysis_dates = [''] #['20210722'] #['20210708'] # ['2020507'] #set to [''] if you want to load the latest file. # the date on which the svm files were saved.
 
 
 # set window for quantifying the responses
@@ -189,7 +191,7 @@ print(list_all_experiments.shape)
 
 #%% Set the columns in dataframe all_sess
 
-cols0 = np.array(['session_id', 'experiment_id', 'mouse_id', 'date', 'cre', 'stage', 'area', 'depth', 'n_trials', 'n_neurons', 'cell_specimen_id', 'frame_dur', 'meanX_allFrs', 'stdX_allFrs', 'av_train_data', 'av_test_data', 'av_test_shfl', 'av_test_chance', 'sd_train_data', 'sd_test_data', 'sd_test_shfl', 'sd_test_chance', 'peak_amp_trainTestShflChance', 'bl_pre0'])
+cols0 = np.array(['session_id', 'experiment_id', 'mouse_id', 'date', 'cre', 'stage', 'experience_level', 'area', 'depth', 'n_trials', 'n_neurons', 'cell_specimen_id', 'frame_dur', 'meanX_allFrs', 'stdX_allFrs', 'av_train_data', 'av_test_data', 'av_test_shfl', 'av_test_chance', 'sd_train_data', 'sd_test_data', 'sd_test_shfl', 'sd_test_chance', 'peak_amp_trainTestShflChance', 'bl_pre0'])
 if same_num_neuron_all_planes:
     cols = np.concatenate((cols0, ['population_sizes_to_try'])) 
 else:
@@ -207,7 +209,9 @@ else:
     br = [np.nan]
 print(br)    
 
-    
+
+doPlots = 0
+
 for iblock in br: # iblock=0; iblock=np.nan
 #     for icre in np.arange(0, len(cre2ana_all)): # icre=0
 
@@ -235,7 +239,7 @@ for iblock in br: # iblock=0; iblock=np.nan
 
     all_sess = pd.DataFrame([], columns=cols)
 
-    for isess in np.arange(0, len(list_all_sessions_valid)):  # isess=0
+    for isess in np.arange(0, len(list_all_sessions_valid)):  # isess=0 # isess=38
 
         session_id = int(list_all_sessions_valid[isess])
 #         data_list = metadata_basic[metadata_basic['session_id'].values==session_id]
@@ -265,7 +269,7 @@ for iblock in br: # iblock=0; iblock=np.nan
 
         #%% Run the main function
         
-        this_sess = svm_images_plots_main(session_id, data_list, svm_blocks, iblock, dir_svm, frames_svm, time_win, trial_type, to_decode, same_num_neuron_all_planes, cols, analysis_dates, project_codes, use_spont_omitFrMinus1, use_events, doPlots=0)
+        this_sess = svm_images_plots_main(session_id, data_list, svm_blocks, iblock, dir_svm, frames_svm, time_win, trial_type, to_decode, same_num_neuron_all_planes, cols, analysis_dates, project_codes, use_spont_omitFrMinus1, use_events, doPlots, use_matched_cells)
 
         
         all_sess = all_sess.append(this_sess) 
@@ -301,6 +305,16 @@ for iblock in br: # iblock=0; iblock=np.nan
             svmn = svmn + '_spontFrs'
     else:
         svmn = f'{e}svm_decode_{to_decode}_image_from_{trial_type}' # 'svm_gray_omit'
+        
+
+    if use_matched_cells==123:
+        svmn = svmn + '_matched_cells_FN1Nn' #Familiar, N1, N+1
+    elif use_matched_cells==12:
+        svmn = svmn + '_matched_cells_FN1'
+    elif use_matched_cells==23:
+        svmn = svmn + '_matched_cells_N1Nn'
+    elif use_matched_cells==13:
+        svmn = svmn + '_matched_cells_FNn'        
 
         
     if svm_blocks==-101: # run svm analysis only on engaged trials; redifine df_data only including the engaged rows

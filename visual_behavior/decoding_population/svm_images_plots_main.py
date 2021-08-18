@@ -23,7 +23,7 @@ from general_funs import *
 np.warnings.filterwarnings('ignore', category=np.VisibleDeprecationWarning)
 
 
-def svm_images_plots_main(session_id, data_list, svm_blocks, iblock, dir_svm, frames_svm, time_win, trial_type, to_decode, same_num_neuron_all_planes, cols, analysis_dates, project_codes, use_spont_omitFrMinus1, use_events=False, doPlots=0):
+def svm_images_plots_main(session_id, data_list, svm_blocks, iblock, dir_svm, frames_svm, time_win, trial_type, to_decode, same_num_neuron_all_planes, cols, analysis_dates, project_codes, use_spont_omitFrMinus1, use_events=False, doPlots=0, use_matched_cells=0):
     
     bl_percentile = 10 #20  # for peak measurements, we subtract pre-omit baseline from the peak. bl_percentile determines what pre-omit values will be used.      
     
@@ -42,13 +42,22 @@ def svm_images_plots_main(session_id, data_list, svm_blocks, iblock, dir_svm, fr
             svmn = svmn + '_spontFrs'
     else:
         svmn = f'{e}svm_decode_{to_decode}_image_from_{trial_type}' # 'svm_gray_omit'
-    print(svmn)
 
-    
+    if use_matched_cells==123:
+        svmn = svmn + '_matched_cells_FN1Nn' #Familiar, N1, N+1
+    elif use_matched_cells==12:
+        svmn = svmn + '_matched_cells_FN1'
+    elif use_matched_cells==23:
+        svmn = svmn + '_matched_cells_N1Nn'
+    elif use_matched_cells==13:
+        svmn = svmn + '_matched_cells_FNn'        
+        
     if svm_blocks==-101: # run svm analysis only on engaged trials; redifine df_data only including the engaged rows
         svmn = f'{svmn}_only_engaged'
          
-            
+    print(svmn)
+    
+    
     exp_ids = data_list['ophys_experiment_id'].values
 #     frame_dur = np.array([0.093]) # sec (~10.7 Hz; each pair of planes that are recorded simultaneously have time resolution frame_dur)    
     
@@ -158,10 +167,21 @@ def svm_images_plots_main(session_id, data_list, svm_blocks, iblock, dir_svm, fr
             date = svm_vars.iloc[0]['date']
             mouse = svm_vars.iloc[0]['mouse_id']
             stage = svm_vars.iloc[0]['stage']
+                        
+            try:
+                experience_level = svm_vars.iloc[0]['experience_level']
+            except Exception as e: 
+#                 print(e)
+                # get experience level from experiments table
+                import visual_behavior.data_access.loading as loading
+                experiments_table = loading.get_filtered_ophys_experiment_table(release_data_only=True)
+                experiments_table = experiments_table.reset_index('ophys_experiment_id')
 
-            this_sess.at[index, ['mouse_id', 'date', 'cre', 'stage']] = mouse, date, cre, stage
-            
-
+                experience_level = experiments_table[experiments_table['ophys_experiment_id']==lims_id].iloc[0]['experience_level']    
+    
+            this_sess.at[index, ['mouse_id', 'date', 'cre', 'stage', 'experience_level']] = mouse, date, cre, stage, experience_level
+        
+        
             n_trials = svm_vars.iloc[0]['n_trials']
             n_neurons = svm_vars.iloc[0]['n_neurons']
             print(f'{n_trials} trials; {n_neurons} neurons')

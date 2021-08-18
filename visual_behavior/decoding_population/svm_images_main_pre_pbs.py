@@ -497,16 +497,19 @@ def svm_images_main_pre_pbs(isess, project_codes, use_events, to_decode, trial_t
             ############################################    
 
             stim_response_df0 = stim_response_df # stim_response_df.keys()       
-            # only get certain columns of stim_response_df
+            
+            # only get certain columns of stim_response_df defined by c
             stim_response_df = stim_response_df0.loc[:,c]
 
-        else:
-
+        else: # invalid experiment
             valid = False
             stim_response_df = pd.DataFrame([np.full((len(c)), np.nan)], columns=c) 
 
+            
         stim_response_df['ophys_session_id'] = session_id #data_list[data_list['experiment_id']==ophys_experiment_id].iloc[0]['session_id']
         stim_response_df['ophys_experiment_id'] = ophys_experiment_id # data_list[data_list['experiment_id']==ophys_experiment_id].iloc[0]['experiment_id']
+
+        stim_response_df['experience_level'] = metadata_all[metadata_all['ophys_experiment_id']==ophys_experiment_id].iloc[0]['experience_level']        
         stim_response_df['area'] = metadata_all[metadata_all['ophys_experiment_id']==ophys_experiment_id].iloc[0]['targeted_structure']
         stim_response_df['depth'] = metadata_all[metadata_all['ophys_experiment_id']==ophys_experiment_id].iloc[0]['imaging_depth']
         stim_response_df['valid'] = valid 
@@ -630,7 +633,7 @@ def svm_images_main_pre_pbs(isess, project_codes, use_events, to_decode, trial_t
 
 
     #%%
-    cols_basic = np.array(['session_id', 'experiment_id', 'mouse_id', 'date', 'cre', 'stage', 'area', 'depth', 'n_trials', 'n_neurons', 'cell_specimen_id', 'frame_dur', 'samps_bef', 'samps_aft']) #, 'flash_omit_dur_all', 'flash_omit_dur_fr_all'])
+    cols_basic = np.array(['session_id', 'experiment_id', 'mouse_id', 'date', 'cre', 'stage', 'experience_level', 'area', 'depth', 'n_trials', 'n_neurons', 'cell_specimen_id', 'frame_dur', 'samps_bef', 'samps_aft']) #, 'flash_omit_dur_all', 'flash_omit_dur_fr_all'])
     cols_svm_0 = ['frames_svm', 'to_decode', 'use_balanced_trials', 'thAct', 'numSamples', 'softNorm', 'kfold', 'regType', 'cvect', 'meanX_allFrs', 'stdX_allFrs', 
            'image_labels', 'image_indices', 'image_indices_previous_flash', 'image_indices_next_flash',
            'num_classes', 'iblock', 'trials_blocks', 'engagement_pupil_running', 'pupil_running_values' , 

@@ -691,6 +691,7 @@ def svm_images_main_pbs(session_id, data_list, experiment_ids_valid, df_data, se
     date = image_data.iloc[0]['date_of_acquisition'][:10]
     cre = image_data.iloc[0]['cre_line']    
     stage = image_data.iloc[0]['session_type']
+    experience_level = image_data.iloc[0]['experience_level']
     
     # set mouse_id ('external_donor_name')
     session_name = str(image_data.iloc[0]['session_name'])
@@ -768,7 +769,7 @@ def svm_images_main_pbs(session_id, data_list, experiment_ids_valid, df_data, se
         depth = int(data_list.iloc[index]['imaging_depth']) #depth
         valid = sum(np.in1d(experiment_ids_valid, int(lims_id)))>0 #data_list.iloc[index]['valid']
 
-        this_sess.at[index, cols[range(8)]] = session_id, lims_id, mouse, date, cre, stage, area, depth #, valid
+        this_sess.at[index, cols[range(9)]] = session_id, lims_id, mouse, date, cre, stage, experience_level, area, depth #, valid
         
         if valid==False:
             print(f'Experiment {index} is not valid; skipping analysis...')
@@ -966,9 +967,12 @@ def svm_images_main_pbs(session_id, data_list, experiment_ids_valid, df_data, se
                 print(traces_fut_0.shape , image_labels_0.shape)
                 
                 pupil_running_values = np.nan
-                
+
+                ###############################################################################
+                ###############################################################################                
                 #### run svm analysis on the whole session
                 if svm_blocks == -100 or svm_blocks == -101:
+                    
                     svmName = svm_run_save(traces_fut_0, image_labels_0, [np.nan, []], svm_blocks, now, engagement_pupil_running, pupil_running_values, use_balanced_trials, project_codes) #, same_num_neuron_all_planes, norm_to_max_svm, svm_total_frs, n_neurons, numShufflesN, numSamples, num_classes, samps_bef, regType, kfold, cre, saveResults)
                     
 
