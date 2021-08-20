@@ -937,8 +937,8 @@ def annotate_stimuli(dataset, inplace=False):
     adds the following columns to the stimulus_presentations table, facilitating calculation
     of behavior performance based entirely on the stimulus_presentations table:
 
-    'trials_id': the corresponding ID of the stimulus in the trials table
-    'previous_image_name': the name of the stimulus on the last flash
+    'trials_id': the corresponding ID of the trial in the trials table in which the stimulus occurred
+    'previous_image_name': the name of the stimulus on the last flash (will list 'omitted' if last trial is omitted)
     'next_start_time': The time of the next stimulus start
     'auto_rewarded': True for trials where rewards were delivered regardless of animal response
     'trial_stimulus_index': index of the given stimulus on the current trial
