@@ -2834,7 +2834,8 @@ def get_remaining_crosstalk_amount_dict(experiment_id):
     return remaining_crosstalk_dict
 
 
-def get_cell_table(ophys_experiment_ids=None, columns_to_return='*'):
+def get_cell_table(ophys_experiment_ids=None, columns_to_return='*', valid_rois_only=False):
+
     '''
     retrieves the full cell_specimen table from LIMS for the specified ophys_experiment_ids
     if no ophys_experiment_ids are passed, all experiments from the `VisualBehaviorOphysProjectCache` will be retrieved
@@ -2866,6 +2867,9 @@ def get_cell_table(ophys_experiment_ids=None, columns_to_return='*'):
             mask_image_plane
             ophys_cell_segmentation_run_id
         default = '*'
+    valid_rois_only: bool
+        If False (default), all ROIs will be returned
+        If True, only valid ROIs will be returned
 
     Returns
     -------
@@ -2907,11 +2911,18 @@ def get_cell_table(ophys_experiment_ids=None, columns_to_return='*'):
     if columns_to_return != '*':
         columns_to_return = ', '.join(columns_to_return).replace('cell_roi_id', 'id')
 
-    query = '''
-        select {}
-        from cell_rois
-        where ophys_experiment_id in {} and cell_specimen_id is not null and valid_roi = True
-    '''
+    if valid_rois_only:
+        query = '''
+            select {}
+            from cell_rois
+            where ophys_experiment_id in {} and cell_specimen_id is not null and valid_roi = True
+        '''
+    else:
+        query = '''
+            select {}
+            from cell_rois
+            where ophys_experiment_id in {} and cell_specimen_id is not null
+        '''
 
     # Since we are querying from the 'cell_rois' table, the 'id' column is actually 'cell_roi_id'. Rename.
     lims_rois = db.lims_query(
