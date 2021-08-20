@@ -346,7 +346,7 @@ def is_csid_in_folder(csid, folder):
     checks to see if cell_specimen_id exists in specified folder
     '''
     csids = []
-    for fn in glob.glob(os.path.join(folder,'csid*.png')):
+    for fn in glob.glob(os.path.join(folder, 'csid*.png')):
         csids.append(int(fn.split('csid=')[1].split('_')[0]))
     return csid in csids
 
@@ -454,7 +454,7 @@ def make_cell_matching_across_experiment_plot(cell_specimen_id, experiment_id_to
         axes[ophys_experiment_id]['zoomed_mask'].set_ylim(top + height + 10, top - 10, )
 
         if ophys_experiment_id == experiment_id_to_highlight:
-            for ax_label in ['mask','zoomed_mask']:
+            for ax_label in ['mask', 'zoomed_mask']:
                 for spine in axes[ophys_experiment_id][ax_label].spines.values():
                     spine.set_edgecolor('green')
                     spine.set_linewidth(5)
@@ -487,6 +487,7 @@ def make_cell_matching_across_experiment_plot(cell_specimen_id, experiment_id_to
     cell_session_plot.tight_layout()
 
     return cell_session_plot
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='make a single cell plot')
