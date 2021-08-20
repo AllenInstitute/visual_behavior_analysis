@@ -2830,7 +2830,7 @@ def get_remaining_crosstalk_amount_dict(experiment_id):
     return remaining_crosstalk_dict
 
 
-def get_cell_table(ophys_session_ids=None, columns_to_return='*', valid_rois_only=False):
+def get_cell_table(ophys_experiment_ids=None, columns_to_return='*', valid_rois_only=False):
 
     '''
     retrieves the full cell_specimen table from LIMS for the specified ophys_experiment_ids
