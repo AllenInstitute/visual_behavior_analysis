@@ -455,7 +455,7 @@ def get_general_info_for_ophys_experiment_id(ophys_experiment_id):
     return general_info
 
 
-def get_genotype_from_ophys_experiment_id(ophys_experiment_id):
+def get_genotype_for_ophys_experiment_id(ophys_experiment_id):
     '''
     gets genotype string for a given ophys_experiment_id
     '''

@@ -1,0 +1,31 @@
+{
+  "manifest": [
+    {
+      "type": "manifest_version",
+      "value": "0.0.1-alpha.3"
+    },
+    {
+      "key": "BASEDIR",
+      "type": "dir",
+      "spec": "."
+    },
+    {
+      "key": "ophys_sessions",
+      "type": "file",
+      "spec": "ophys_sessions.csv",
+      "parent_key": "BASEDIR"
+    },
+    {
+      "key": "behavior_sessions",
+      "type": "file",
+      "spec": "behavior_sessions.csv",
+      "parent_key": "BASEDIR"
+    },
+    {
+      "key": "ophys_experiments",
+      "type": "file",
+      "spec": "ophys_experiments.csv",
+      "parent_key": "BASEDIR"
+    }
+  ]
+}
