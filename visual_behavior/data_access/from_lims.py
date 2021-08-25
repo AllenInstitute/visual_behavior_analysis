@@ -9,7 +9,6 @@ from allensdk.internal.api import PostgresQueryMixin
 import visual_behavior.data_access.utilities as utils
 import visual_behavior.data_access.from_lims_utilities as lims_utils
 import visual_behavior.data_access.pre_post_conditions as conditions
-import visual_behavior.database as db
 
 
 # Accessing Lims Database
@@ -41,15 +40,17 @@ except Exception as e:
 ### ID TYPES ###      # noqa: E266
 
 ID_TYPES_DICT = {
+    "donor_id":            {"lims_table": "specimens",          "id_column": "donor_id"},                 # noqa: E241
+    "cell_roi_id":         {"lims_table": "cell_rois",          "id_column": "id" },                      # noqa: E241
+    "specimen_id":         {"lims_table": "specimens",          "id_column": "id"},                       # noqa: E241
+    "cell_specimen_id":    {"lims_table": "cell_rois",          "id_column": "cell_specimen_id"},         # noqa: E241
     "ophys_experiment_id": {"lims_table": "ophys_experiments",  "id_column": "id"},                       # noqa: E241
     "ophys_session_id":    {"lims_table": "ophys_sessions",     "id_column": "id"},                       # noqa: E241
     "behavior_session_id": {"lims_table": "behavior_sessions",  "id_column": "id"},                       # noqa: E241
-    "specimen_id":         {"lims_table": "specimens",          "id_column": "id"},              # noqa: E241
-    "donor_id":            {"lims_table": "specimens",          "id_column": "donor_id"},                 # noqa: E241
-    "cell_roi_id":         {"lims_table": "cell_rois",          "id_column": "id" },                      # noqa: E241
-    "cell_specimen_id":    {"lims_table": "cell_rois",          "id_column": "cell_specimen_id"},         # noqa: E241
     "ophys_container_id":  {"lims_table": "visual_behavior_experiment_containers",  "id_column": "id"},   # noqa: E241
-    "supercontainer_id":   {"lims_table": "visual_behavior_supercontainers",        "id_column": "id" }}  # noqa: E241
+    "supercontainer_id":   {"lims_table": "visual_behavior_supercontainers",        "id_column": "id"},   # noqa: E241
+    "isi_experiment_id":   {"lims_table": "isi_experiments",                        "id_column": "id"},   # noqa: E241
+    "extracellular_ephys_session_id": {"lims_table": "ecephys_sessions",            "id_column": "id"}}   # noqa: E241
 
 
 def general_id_type_query(input_id, id_type):
@@ -86,6 +87,7 @@ def get_id_type(input_id):
 
 
 ### QUERIES USED FOR MULTIPLE FUNCTIONS ###      # noqa: E266
+
 
 def general_info_for_id_query():
     """the base query used for all the 'get_general_info_for...
@@ -208,6 +210,7 @@ def all_ids_for_id_query():
 ### ID TYPES ###      # noqa: E266
 
 def get_donor_id_for_specimen_id(specimen_id):
+    conditions.validate_id_type(specimen_id, "specimen_id")
     specimen_id = int(specimen_id)
     query = '''
     SELECT
@@ -224,6 +227,7 @@ def get_donor_id_for_specimen_id(specimen_id):
 
 
 def get_specimen_id_for_donor_id(donor_id):
+    conditions.validate_id_type(donor_id, "donor_id")
     donor_id = int(donor_id)
     query = '''
     SELECT
@@ -253,14 +257,14 @@ def get_ophys_experiment_id_for_cell_roi_id(cell_roi_id):
     int
         ophys_experiment_id
     '''
-    cell_roi_id = int(cell_roi_id)
-    query_string = '''
-    select ophys_experiment_id
-    from cell_rois
-    where id = {}
-    '''
-
-    return db.lims_query(query_string.format(cell_roi_id))
+    conditions.validate_id_type(cell_roi_id, "cell_roi_id")
+    query = '''
+    SELECT ophys_experiment_id
+    FROM cell_rois
+    WHERE id = {}
+    '''.format(cell_roi_id)
+    ophys_experiment_id = mixin.select(query)
+    return ophys_experiment_id
 
 
 # for ophys_experimnt_id
@@ -278,7 +282,7 @@ def get_current_segmentation_run_id_for_ophys_experiment_id(ophys_experiment_id)
     int
         current cell segmentation run id
     """
-    ophys_experiment_id = int(ophys_experiment_id)
+    conditions.validate_id_type(ophys_experiment_id, "ophys_experiment_id")
     query = '''
     SELECT
     id
@@ -300,7 +304,7 @@ def get_ophys_session_id_for_ophys_experiment_id(ophys_experiment_id):
        for a given ophys_experiment_id from the ophys_experiments table
        in lims.
     """
-    ophys_experiment_id = int(ophys_experiment_id)
+    conditions.validate_id_type(ophys_experiment_id, "ophys_experiment_id")
     query = '''
     SELECT
     ophys_session_id
@@ -317,7 +321,7 @@ def get_ophys_session_id_for_ophys_experiment_id(ophys_experiment_id):
 
 
 def get_behavior_session_id_for_ophys_experiment_id(ophys_experiment_id):
-    ophys_experiment_id = int(ophys_experiment_id)
+    conditions.validate_id_type(ophys_experiment_id, "ophys_experiment_id")
     query = '''
     SELECT
     behavior.id as behavior_session_id
@@ -337,7 +341,7 @@ def get_behavior_session_id_for_ophys_experiment_id(ophys_experiment_id):
 
 
 def get_ophys_container_id_for_ophys_experiment_id(ophys_experiment_id):
-    ophys_experiment_id = int(ophys_experiment_id)
+    conditions.validate_id_type(ophys_experiment_id, "ophys_experiment_id")
     query = '''
     SELECT
     visual_behavior_experiment_container_id as ophys_container_id
@@ -354,7 +358,9 @@ def get_ophys_container_id_for_ophys_experiment_id(ophys_experiment_id):
 
 
 def get_supercontainer_id_for_ophys_experiment_id(ophys_experiment_id):
-    ophys_experiment_id = int(ophys_experiment_id)
+    conditions.validate_id_type(ophys_experiment_id, "ophys_experiment_id")
+    ophys_session_id = get_ophys_session_id_for_ophys_experiment_id(ophys_experiment_id)
+    conditions.validate_microscope_type(ophys_session_id, "Mesoscope")
     query = '''
     SELECT
     sessions.visual_behavior_supercontainer_id as supercontainer_id
@@ -394,13 +400,11 @@ def get_all_ids_for_ophys_experiment_id(ophys_experiment_id):
             supercontainer_id
 
     """
-    ophys_experiment_id = int(ophys_experiment_id)
-
+    conditions.validate_id_type(ophys_experiment_id, "ophys_experiment_id")
     all_ids_query = all_ids_for_id_query()
     query_selection = '''
     WHERE oe.id = {} '''.format(ophys_experiment_id)
     query = all_ids_query + query_selection
-
     all_ids = mixin.select(query)
     return all_ids
 
@@ -456,18 +460,19 @@ def get_general_info_for_ophys_experiment_id(ophys_experiment_id):
 
 
 def get_genotype_for_ophys_experiment_id(ophys_experiment_id):
-    '''
-    gets genotype string for a given ophys_experiment_id
-    '''
-    qs = '''
-        select donors.full_genotype
-        from ophys_experiments as oe
-        JOIN ophys_sessions os on os.id = oe.ophys_session_id
-        JOIN specimens on specimens.id = os.specimen_id
-        JOIN donors on donors.id = specimens.donor_id
-        where oe.id = {}
-    '''
-    return db.lims_query(qs.format(ophys_experiment_id))
+    conditions.validate_id_type(ophys_experiment_id, "ophys_experiment_id")
+    query = '''
+    SELECT donors.full_genotype
+    FROM ophys_experiments as OE
+
+    JOIN ophys_sessions os ON  os.id = oe.ophys_session_id
+    JOIN specimens ON specimens.id = os.specimen_id
+    JOIN donors ON donors.id = specimens.donor_id
+
+    WHERE oe.id = {}
+    '''.format(ophys_experiment_id)
+    genotype = mixin.select(query)
+    return genotype
 
 
 # for ophys_session_id
@@ -478,7 +483,7 @@ def get_ophys_experiment_ids_for_ophys_session_id(ophys_session_id):
        note: number of experiments per session will vary depending on the
        rig it was collected on and the project it was collected for.
     """
-    ophys_session_id = int(ophys_session_id)
+    conditions.validate_id_type(ophys_session_id, 'ophys_session_id')
     query = '''
     SELECT
     id
@@ -494,7 +499,7 @@ def get_ophys_experiment_ids_for_ophys_session_id(ophys_session_id):
 
 
 def get_behavior_session_id_for_ophys_session_id(ophys_session_id):
-    ophys_session_id = int(ophys_session_id)
+    conditions.validate_id_type(ophys_session_id, 'ophys_session_id')
     query = '''
     SELECT
     id AS behavior_session_id
@@ -510,7 +515,7 @@ def get_behavior_session_id_for_ophys_session_id(ophys_session_id):
 
 
 def get_ophys_container_ids_for_ophys_session_id(ophys_session_id):
-    ophys_session_id = int(ophys_session_id)
+    conditions.validate_id_type(ophys_session_id, 'ophys_session_id')
     query = '''
     SELECT
     container.visual_behavior_experiment_container_id
@@ -527,7 +532,8 @@ def get_ophys_container_ids_for_ophys_session_id(ophys_session_id):
 
 
 def get_supercontainer_id_for_ophys_session_id(ophys_session_id):
-    ophys_session_id = int(ophys_session_id)
+    conditions.validate_id_type(ophys_session_id, 'ophys_session_id')
+    conditions.validate_microscope_type(ophys_session_id, "Mesoscope")
     query = '''
     SELECT
     visual_behavior_supercontainer_id
@@ -561,8 +567,7 @@ def get_all_ids_for_ophys_session_id(ophys_session_id):
             ophys_container_id,
             supercontainer_id
     """
-    ophys_session_id = int(ophys_session_id)
-
+    conditions.validate_id_type(ophys_session_id, 'ophys_session_id')
     all_ids_query = all_ids_for_id_query()
     query_selection = '''
     WHERE oe.ophys_session_id ={} '''.format(ophys_session_id)
@@ -585,8 +590,7 @@ def get_general_info_for_ophys_session_id(ophys_session_id):
     [type]
         [description]
     """
-    ophys_session_id = int(ophys_session_id)
-
+    conditions.validate_id_type(ophys_session_id, 'ophys_session_id')
     general_info_query = general_info_for_id_query()
     query_selection = '''
     WHERE os.id ={} '''.format(ophys_session_id)
@@ -629,7 +633,8 @@ def get_ophys_session_id_for_behavior_session_id(behavior_session_id):
        behavior_sessions where ophys imaging took place will have
        ophys_session_id's
     """
-    behavior_session_id = int(behavior_session_id)
+    conditions.validate_id_type(behavior_session_id, "behavior_session_id")
+
     query = '''
     SELECT
     ophys_session_id
@@ -637,13 +642,15 @@ def get_ophys_session_id_for_behavior_session_id(behavior_session_id):
     FROM behavior_sessions
 
     WHERE id = {}'''.format(behavior_session_id)
+
     ophys_session_id = mixin.select(query)
     ophys_session_id = ophys_session_id["ophys_session_id"][0]
     return ophys_session_id
 
 
 def get_ophys_container_ids_for_behavior_session_id(behavior_session_id):
-    behavior_session_id = int(behavior_session_id)
+    conditions.validate_id_type(behavior_session_id, "behavior_session_id")
+
     query = '''
     SELECT
     container.visual_behavior_experiment_container_id
@@ -663,12 +670,16 @@ def get_ophys_container_ids_for_behavior_session_id(behavior_session_id):
     WHERE
     behavior.id = {}
     '''.format(behavior_session_id)
+
     container_id = mixin.select(query)
     return container_id
 
 
 def get_supercontainer_id_for_behavior_session_id(behavior_session_id):
-    behavior_session_id = int(behavior_session_id)
+    conditions.validate_id_type(behavior_session_id, "behavior_session_id")
+    ophys_session_id = get_ophys_session_id_for_behavior_session_id(behavior_session_id)
+    conditions.validate_microscope_type(ophys_session_id, "Mesoscope")
+
     query = '''
     SELECT
     sessions.visual_behavior_supercontainer_id AS supercontainer_id
@@ -687,6 +698,7 @@ def get_supercontainer_id_for_behavior_session_id(behavior_session_id):
     WHERE
     behavior.id = {}
     '''.format(behavior_session_id)
+
     supercontainer_id = mixin.select(query)
     supercontainer_id = supercontainer_id["supercontainer_id"][0]
     return supercontainer_id
@@ -810,6 +822,7 @@ def get_ophys_session_ids_for_ophys_container_id(ophys_container_id):
 
 def get_behavior_session_ids_for_ophys_container_id(ophys_container_id):
     ophys_container_id = int(ophys_container_id)
+
     query = '''
     SELECT
     bs.id
@@ -830,11 +843,14 @@ def get_behavior_session_ids_for_ophys_container_id(ophys_container_id):
     WHERE
     oevbec.visual_behavior_experiment_container_id = {}
     '''.format(ophys_container_id)
+
     behavior_session_id = mixin.select(query)
     return behavior_session_id
 
 
 def get_supercontainer_id_for_ophys_container_id(ophys_container_id):
+    ophys_session_id = get_ophys_session_ids_for_ophys_container_id(ophys_container_id)[0]
+    conditions.validate_microscope_type(ophys_session_id, "Mesoscope")
     ophys_container_id = int(ophys_container_id)
     query = '''
     SELECT
@@ -1252,7 +1268,7 @@ WELL_KNOWN_FILES_DICT = {
     "'OphysAverageIntensityProjectionImage'": {"wellKnownFile_id":  514166989, "attachable_id_type": ["ophys_experiment_id", "OphysCellSegmentationRun"]}}  # noqa: E241
 
 
-def get_well_known_file_path(wellKnownFileName, attachable_id):
+def get_well_known_file_realdict(wellKnownFileName, attachable_id):
     """a generalized function to get the filepath for well known files when
        given the wellKnownFile name and the correct attchable_id
 
@@ -1295,6 +1311,11 @@ def get_well_known_file_path(wellKnownFileName, attachable_id):
     '''.format(wellKnownFileName, attachable_id)
     RealDict_object = mixin.select(query)
 
+    return RealDict_object
+
+
+def get_well_known_file_path(wellKnownFileName, attachable_id):
+    RealDict_object = get_well_known_file_realdict(wellKnownFileName, attachable_id)
     # filepath works for all operating systems
     filepath = lims_utils.get_filepath_from_realdict_object(RealDict_object)
     return filepath
@@ -1476,6 +1497,7 @@ def get_max_intensity_projection_filepath(ophys_experiment_id):
     filepath = get_well_known_file_path("'OphysMaxIntImage'", current_seg_id)
     return filepath
 
+
 ## for ophys_session_id ##              # noqa: E266
 
 
@@ -1491,33 +1513,9 @@ def get_timeseries_ini_filepath(ophys_session_id):
 
     """
     conditions.validate_id_type(ophys_session_id, "ophys_session_id")
+    conditions.validate_microscope_type(ophys_session_id, "Scientifica")
     filepath = get_well_known_file_path("'SciVivoMetadata'", ophys_session_id)
     return filepath
-    # ophys_session_id = int(ophys_session_id)
-    # query = '''
-    # SELECT
-    # wkf.storage_directory || wkf.filename
-    # AS filepath
-
-    # FROM
-    # well_known_files wkf
-
-    # JOIN well_known_file_types wkft ON wkft.id=wkf.well_known_file_type_id
-    # JOIN specimens sp ON sp.id=wkf.attachable_id
-    # JOIN ophys_sessions os ON os.specimen_id=sp.id
-
-    # WHERE
-    # wkft.name = 'SciVivoMetadata'
-    # AND wkf.storage_directory LIKE '%ophys_session_{0}%'
-    # AND os.id = {0}
-    # '''.format(ophys_session_id)
-
-    try:
-        RealDict_object = mixin.select(query)
-        filepath = lims_utils.get_filepath_from_realdict_object(RealDict_object)
-        return filepath
-    except KeyError:
-        print("Error: Must be collected on a scientifica microscope to have timeseries ini. \n Check that equipment_name = CAM2P.3, CAM2P.4, CAM2P.5 or CAM2P.6")
 
 
 def get_stimulus_pkl_filepath(ophys_session_id):
@@ -1561,220 +1559,51 @@ def get_behavior_avi_filepath(ophys_session_id):
     return filepath
 
 
-
 def get_behavior_h5_filepath(ophys_session_id):
-    """[summary]
-
-    Parameters
-    ----------
-    ophys_session_id : [type]
-        [description]
-
-    Returns
-    -------
-    [type]
-        [description]
-    """
-    QUERY = '''
-    SELECT
-    storage_directory || filename
-    AS filepath
-
-    FROM
-    well_known_files
-
-    WHERE
-    well_known_file_type_id = 695808672
-    AND attachable_id = {0}
-    '''.format(ophys_session_id)
-    RealDict_object = mixin.select(QUERY)
-
+    conditions.validate_id_type(ophys_session_id, "ophys_session_id")
+    RealDict_object = get_well_known_file_realdict("'RawBehaviorTrackingVideo'", ophys_session_id)
     filepath = RealDict_object['filepath'][0]
     filepath = filepath.replace('avi', 'h5')
     filepath = utils.correct_filepath(filepath)
-
     return filepath
 
 
 def get_eye_tracking_avi_filepath(ophys_session_id):
-    """[summary]
-
-    Parameters
-    ----------
-    ophys_session_id : [type]
-        [description]
-
-    Returns
-    -------
-    [type]
-        [description]
-    """
-
-    QUERY = '''
-    SELECT
-    storage_directory || filename
-    AS filepath
-
-    FROM
-    well_known_files
-
-    WHERE
-    well_known_file_type_id = 695808172
-    AND attachable_id = {0}
-    '''.format(ophys_session_id)
-    RealDict_object = mixin.select(QUERY)
-    filepath = lims_utils.get_filepath_from_realdict_object(RealDict_object)
+    conditions.validate_id_type(ophys_session_id, "ophys_session_id")
+    filepath = get_well_known_file_path("'RawEyeTrackingVideo'", ophys_session_id)
     return filepath
 
 
 def get_eye_tracking_h5_filepath(ophys_session_id):
-    """[summary]
-
-    Parameters
-    ----------
-    ophys_session_id : [type]
-        [description]
-
-    Returns
-    -------
-    [type]
-        [description]
-    """
-
-    QUERY = '''
-    SELECT
-    storage_directory || filename
-    AS filepath
-
-    FROM
-    well_known_files
-
-    WHERE
-    well_known_file_type_id = 695808172
-    AND attachable_id = {0}
-    '''.format(ophys_session_id)
-    RealDict_object = mixin.select(QUERY)
-
+    conditions.validate_id_type(ophys_session_id, "ophys_session_id")
+    RealDict_object = get_well_known_file_realdict("'RawEyeTrackingVideo'", ophys_session_id)
     filepath = RealDict_object['filepath'][0]
     filepath = filepath.replace('avi', 'h5')
     filepath = utils.correct_filepath(filepath)
-
     return filepath
 
 
 def get_ellipse_filepath(ophys_session_id):
-    """[summary]
-
-    Parameters
-    ----------
-    ophys_session_id : [type]
-        [description]
-
-    Returns
-    -------
-    [type]
-        [description]
-    """
-    QUERY = '''
-    SELECT
-    storage_directory || filename
-    AS filepath
-
-    FROM well_known_files
-
-    WHERE
-    well_known_file_type_id = 914623492
-    AND attachable_id = {0}
-    '''.format(ophys_session_id)
-    RealDict_object = mixin.select(QUERY)
-    filepath = lims_utils.get_filepath_from_realdict_object(RealDict_object)
+    conditions.validate_id_type(ophys_session_id, "ophys_session_id")
+    filepath = get_well_known_file_path("'EyeTrackingEllipses'", ophys_session_id)
     return filepath
 
 
 def get_platform_json_filepath(ophys_session_id):
-    """[summary]
-
-    Parameters
-    ----------
-    ophys_session_id : [type]
-        [description]
-
-    Returns
-    -------
-    [type]
-        [description]
-    """
-    QUERY = '''
-    SELECT
-    storage_directory || filename
-    AS filepath
-
-    FROM well_known_files
-
-    WHERE
-    well_known_file_type_id = 746251277
-    AND attachable_id = {0}
-    '''.format(ophys_session_id)
-    RealDict_object = mixin.select(QUERY)
-    filepath = lims_utils.get_filepath_from_realdict_object(RealDict_object)
+    conditions.validate_id_type(ophys_session_id, "ophys_session_id")
+    filepath = get_well_known_file_path("'OphysPlatformJson'", ophys_session_id)
     return filepath
 
 
 def get_screen_mapping_h5_filepath(ophys_session_id):
-    """[summary]
-
-    Parameters
-    ----------
-    ophys_session_id : [type]
-        [description]
-
-    Returns
-    -------
-    [type]
-        [description]
-    """
-
-    QUERY = '''
-    SELECT
-    storage_directory || filename
-    AS filepath
-
-    FROM well_known_files
-
-    WHERE
-    well_known_file_type_id = 916857994
-    AND attachable_id = {0}
-    '''.format(ophys_session_id)
-    RealDict_object = mixin.select(QUERY)
-    filepath = lims_utils.get_filepath_from_realdict_object(RealDict_object)
+    conditions.validate_id_type(ophys_session_id, "ophys_session_id")
+    filepath = get_well_known_file_path("'EyeDlcScreenMapping'", ophys_session_id)
     return filepath
 
 
 def get_deepcut_h5_filepath(ophys_session_id):
-    """use SQL and the LIMS well known file system to get the
-        screen mapping .h5 file information for a given
-        ophys_session_id
-
-    Arguments:
-        ophys_session_id {int} -- 9 digit ophys session ID
-
-    Returns:
-        [type] -- [description]
-    """
-    QUERY = '''
-    SELECT
-    storage_directory || filename
-    AS filepath
-
-    FROM
-    well_known_files
-
-    WHERE
-    well_known_file_type_id = 990460508
-    AND attachable_id = {0}
-    '''.format(ophys_session_id)
-    RealDict_object = mixin.select(QUERY)
-    filepath = lims_utils.get_filepath_from_realdict_object(RealDict_object)
+    conditions.validate_id_type(ophys_session_id, "ophys_session_id")
+    filepath = get_well_known_file_path("'EyeDlcOutputFile'", ophys_session_id)
     return filepath
 
 
@@ -1924,95 +1753,3 @@ def load_objectlist(ophys_experiment_id):
     objectlist_dataframe = pd.read_csv(filepath)
     objectlist_dataframe = lims_utils.update_objectlist_column_labels(objectlist_dataframe)
     return objectlist_dataframe
-
-
-# def get_well_known_file_path(id, attachable_type, asset_name):
-#     '''
-#     returns the filepath for a given well known file asset
-#     Parameters:
-#     -----------
-#     id: int
-#         the id of the attachable_type
-#     attachable_type: str
-#         attachable type (e.g. 'OphysExperiment', 'OphysSession', 'BehaviorSession')
-#     asset_name: str
-#         the name of the desired asset (e.g. 'OphysRoiTraces'). Must exist for the given attachable type
-
-#     Returns:
-#     --------
-#     str
-#         filepath to asset
-#     '''
-#     wkf = db.get_well_known_files(id, attachable_id_type=attachable_type)
-
-#     assert asset_name in wkf.index.to_list(), 'only assets {} are available for {}'.format(wkf.index.to_list(), attachable_type)
-
-#     return '/' + ''.join([wkf.loc[asset_name]['storage_directory'], wkf.loc[asset_name]['filename']])
-
-
-
-
-
-# def get_id_type(input_id):
-#     '''
-#     a function to get the id type for a given input ID
-
-#     Examples:
-
-#     >> get_id_type(914580664)
-#     'ophys_experiment_id'
-
-#     >> get_id_type(914211263)
-#     'behavior_session_id'
-
-#     >> get_id_type(1086515263)
-#     'cell_specimen_id'
-
-#     >> get_id_type(914161594)
-#     'ophys_session_id'
-
-#     >> get_id_type(1080784881)
-#     'cell_roi_id'
-
-#     >> get_id_type(1234)
-#     'unknown_id'
-
-#     Parameters:
-#     -----------
-#     input_id : int
-#         id to search
-
-#     Returns:
-#     --------
-#     string
-#         The ID type, or 'unknown_id' if the ID type cannot be determined
-#     '''
-
-#     found_id_types = []
-
-#     # set up a general query string
-#     query = 'select * from {} where id = {} limit 1'
-
-#     # iterate over tables
-#     for table in ['ophys_experiments', 'ophys_sessions', 'behavior_sessions', 'cell_rois']:
-
-#         # check to see if the id is an index in the table
-#         if len(db.lims_query(query.format(table, input_id))) > 0:
-#             # add to list of found IDs
-#             found_id_types.append(table[:-1] + '_id')
-
-#     # a special case for cell_specimen_id given that there is no cell_specimens table
-#     cell_specimen_id_query = 'select * from cell_rois where cell_specimen_id = {} limit 1'
-#     if len(db.lims_query(cell_specimen_id_query.format(input_id))) > 0:
-#         # return if id is cell_specimen_id
-#         found_id_types.append('cell_specimen_id')
-
-#     # assert that no more than one ID type was found (they should be unique)
-#     assert len(found_id_types) <= 1, 'found ID in multiple tables: {}'.format(found_id_types)
-
-#     if len(found_id_types) == 1:
-#         # if only one id type was found, return it
-#         return found_id_types[0]
-#     else:
-#         # return 'unknown_id' if id was not found
-#         return 'unknown_id'
