@@ -849,7 +849,8 @@ def get_behavior_session_ids_for_ophys_container_id(ophys_container_id):
 
 
 def get_supercontainer_id_for_ophys_container_id(ophys_container_id):
-    ophys_session_id = get_ophys_session_ids_for_ophys_container_id(ophys_container_id)[0]
+    conditions.validate_id_type(ophys_container_id, "ophys_container_id")
+    ophys_session_id = get_ophys_session_ids_for_ophys_container_id(ophys_container_id)["ophys_session_id"][0]
     conditions.validate_microscope_type(ophys_session_id, "Mesoscope")
     ophys_container_id = int(ophys_container_id)
     query = '''
@@ -1089,8 +1090,7 @@ def get_cell_segmentation_runs_table(ophys_experiment_id):
     """
     ophys_experiment_id = int(ophys_experiment_id)
     query = '''
-    select
-    *
+    SELECT *
 
     FROM
     ophys_cell_segmentation_runs
@@ -1101,8 +1101,29 @@ def get_cell_segmentation_runs_table(ophys_experiment_id):
     return mixin.select(query)
 
 
+def get_cell_rois_table(ophys_experiment_id):
+    conditions.validate_id_type(ophys_experiment_id, "ophys_experiment_id")
+    current_segmentation_run_id = get_current_segmentation_run_id_for_ophys_experiment_id(ophys_experiment_id)
+
+    query = '''
+    SELECT *
+
+    FROM
+    cell_rois
+
+    WHERE
+    cell_rois.ophys_cell_segmentation_run_id = {}
+    '''.format(current_segmentation_run_id)
+
+    cell_rois_table = mixin.select(query)
+    cell_rois_table.rename(columns={"id": "cell_roi_id"})
+
+    return cell_rois_table
+
+
 def get_ophys_experiments_table(ophys_experiment_id):
-    ophys_experiment_id = int(ophys_experiment_id)
+    conditions.validate_id_type(ophys_experiment_id, "ophys_expeirment_id")
+
     query = '''
     SELECT
     oe.id AS ophys_experiment_id,
@@ -1136,7 +1157,8 @@ def get_ophys_experiments_table(ophys_experiment_id):
 
 
 def get_ophys_sessions_table(ophys_session_id):
-    ophys_session_id = int(ophys_session_id)
+    conditions.validate_id_type(ophys_session_id, "ophys_session_id")
+
     query = '''
     SELECT
     os.id AS ophys_session_id,
@@ -1164,11 +1186,13 @@ def get_ophys_sessions_table(ophys_session_id):
     os.id = {}
     '''.format(ophys_session_id)
     ophys_sessions_table = mixin.select(query)
+
     return ophys_sessions_table
 
 
 def get_behavior_sessions_table(behavior_session_id):
-    behavior_session_id = int(behavior_session_id)
+    conditions.validate_id_type(behavior_session_id, "behavior_session_id")
+
     query = '''
     SELECT
     bs.id as behavior_session_id,
@@ -1192,7 +1216,8 @@ def get_behavior_sessions_table(behavior_session_id):
 
 
 def get_visual_behavior_experiment_containers_table(ophys_container_id):
-    ophys_container_id = int(ophys_container_id)
+    conditions.validate_id_type(ophys_container_id, "ophys_container_id")
+
     query = '''
     SELECT
     vbec.id AS container_id,
@@ -1207,6 +1232,7 @@ def get_visual_behavior_experiment_containers_table(ophys_container_id):
     WHERE
     vbec.id = {}
     '''.format(ophys_container_id)
+
     visual_behavior_experiment_containers_table = mixin.select(query)
     return visual_behavior_experiment_containers_table
 
@@ -1215,6 +1241,8 @@ def get_visual_behavior_experiment_containers_table(ophys_container_id):
 
 
 def get_cell_exclusion_labels(ophys_experiment_id):
+    conditions.validate_id_type(ophys_experiment_id, "ophys_experiment_id")
+
     query = '''
     SELECT
     oe.id AS ophys_experiment_id,
@@ -1234,6 +1262,7 @@ def get_cell_exclusion_labels(ophys_experiment_id):
     WHERE
     oe.id = {}
     '''.format(ophys_experiment_id)
+
     return mixin.select(query)
 
 
@@ -1243,7 +1272,7 @@ WELL_KNOWN_FILES_DICT = {
     "'DemixedTracesFile'":             {"wellKnownFile_id": 820011707,  "attachable_id_type": "ophys_experiment_id"},        # noqa: E241
     "'EyeDlcOutputFile'":              {"wellKnownFile_id": 990460508,  "attachable_id_type": "ophys_session_id"},           # noqa: E241
     "'EyeDlcScreenMapping'":           {"wellKnownFile_id": 916857994,  "attachable_id_type": "ophys_session_id"},           # noqa: E241
-    "'EyeTrackingEllipses'":           {"wellKnownFile_id": 914623492,  "attachable_id_type": "ophys_session_id"},           # noqa: E241
+    "'EyeTracking Ellipses'":           {"wellKnownFile_id": 914623492,  "attachable_id_type": "ophys_session_id"},           # noqa: E241
     "'MotionCorrectedImageStack'":     {"wellKnownFile_id": 886523092,  "attachable_id_type": "ophys_experiment_id"},        # noqa: E241
     "'NeuropilCorrection'":            {"wellKnownFile_id": 514173083,  "attachable_id_type": "ophys_experiment_id"},        # noqa: E241
     "'OphysDffTraceFile'":             {"wellKnownFile_id": 514173073,  "attachable_id_type": "ophys_experiment_id"},        # noqa: E241
@@ -1264,7 +1293,7 @@ WELL_KNOWN_FILES_DICT = {
     "'RawEyeTrackingVideo'":           {"wellKnownFile_id": 695808172,  "attachable_id_type": "ophys_session_id"},           # noqa: E241
     "'OphysRegistrationSummaryImage'": {"wellKnownFile_id": 1078813087, "attachable_id_type": "ophys_experiment_id"},        # noqa: E241
     "'OphysLoSegmentationMaskData'":   {"wellKnownFile_id": 569491905,  "attachable_id_type": "OphysCellSegmentationRun"},   # noqa: E241
-    "'OphysxtractedTracesInputJson'":  {"wellKnownFile_id": 820015097,  "attachable_id_type": "ophys_experiment_id"},        # noqa: E241
+    "'OphysExtractedTracesInputJson'": {"wellKnownFile_id": 820015097,  "attachable_id_type": "ophys_experiment_id"},        # noqa: E241
     "'OphysAverageIntensityProjectionImage'": {"wellKnownFile_id":  514166989, "attachable_id_type": ["ophys_experiment_id", "OphysCellSegmentationRun"]}}  # noqa: E241
 
 
@@ -1294,6 +1323,7 @@ def get_well_known_file_realdict(wellKnownFileName, attachable_id):
     conditions.validate_value_in_dict_keys(wellKnownFileName,
                                            WELL_KNOWN_FILES_DICT,
                                            "WELL_KNOWN_FILES_DICT")
+
     query = '''
     SELECT
     wkf.storage_directory || wkf.filename
@@ -1309,8 +1339,8 @@ def get_well_known_file_realdict(wellKnownFileName, attachable_id):
     wkft.name = {}
     AND wkf.attachable_id = {}
     '''.format(wellKnownFileName, attachable_id)
-    RealDict_object = mixin.select(query)
 
+    RealDict_object = mixin.select(query)
     return RealDict_object
 
 
@@ -1347,7 +1377,7 @@ def get_neuropil_correction_filepath(ophys_experiment_id):
 
 def get_average_intensity_projection_filepath(ophys_experiment_id):
     conditions.validate_id_type(ophys_experiment_id, "ophys_experiment_id")
-    filepath = get_well_known_file_path("OphysAverageIntensityProjectionImage'", ophys_experiment_id)
+    filepath = get_well_known_file_path("'OphysAverageIntensityProjectionImage'", ophys_experiment_id)
     return filepath
 
 
@@ -1440,6 +1470,8 @@ def get_time_syncronization_filepath(ophys_experiment_id):
         [description]
     """
     conditions.validate_id_type(ophys_experiment_id, "ophys_experiment_id")
+    ophys_session_id = get_ophys_session_id_for_ophys_experiment_id(ophys_experiment_id)
+    conditions.validate_microscope_type(ophys_session_id, "Scientifica")
     filepath = get_well_known_file_path("'OphysTimeSynchronization'", ophys_experiment_id)
     return filepath
 
@@ -1585,7 +1617,7 @@ def get_eye_tracking_h5_filepath(ophys_session_id):
 
 def get_ellipse_filepath(ophys_session_id):
     conditions.validate_id_type(ophys_session_id, "ophys_session_id")
-    filepath = get_well_known_file_path("'EyeTrackingEllipses'", ophys_session_id)
+    filepath = get_well_known_file_path("'EyeTracking Ellipses'", ophys_session_id)
     return filepath
 
 
