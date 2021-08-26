@@ -20,7 +20,7 @@ def validate_not_none(input, input_name):
 
 def validate_string_not_empty(input_string, string_name):
     assert bool(input_string) and bool(input_string.strip()), "Error: \
-                                                               {} is empty".format(string_name)
+        {} is empty".format(string_name)
 
 
 ### NUMERIC THRESHOLDS ###                                                # noqa: E266
@@ -35,14 +35,12 @@ def validate_greater_than_zero(input_value, variable_name):
 
 def validate_above_threshold(input_value, threshold_value, variable_name):
     assert input_value > threshold_value, "Error: {} must \
-                                          be greater than {}.".format(variable_name,
-                                                                      threshold_value)
+        be greater than {}.".format(variable_name, threshold_value)
 
 
 def validate_greater_or_equal_threshold(input_value, threshold_value, variable_name):
     assert input_value >= threshold_value, "Error: {} must \
-                                            be greater or equal to {}.".format(variable_name,
-                                                                               threshold_value)
+        be greater or equal to {}.".format(variable_name, threshold_value)
 
 
 def validate_below_threshold(input_value, threshold_value, variable_name):
@@ -52,8 +50,7 @@ def validate_below_threshold(input_value, threshold_value, variable_name):
 
 def validate_below_or_equal_threshold(input_value, threshold_value, variable_name):
     assert input_value <= threshold_value, "Error: {} must \
-                                            be less than or equal to {}.".format(variable_name,
-                                                                                 threshold_value)
+        be less than or equal to {}.".format(variable_name, threshold_value)
 
 
 def validate_equals_threshold(input_value, threshold_value, variable_name):
@@ -65,8 +62,7 @@ def validate_equals_threshold(input_value, threshold_value, variable_name):
 def validate_microscope_type(ophys_session_id, correct_microscope_type):
     session_microscope_type = from_lims_utilities.get_microscope_type(ophys_session_id)
     assert session_microscope_type == correct_microscope_type, "Error: incorrect microscope type.\
-                                                               {} provided but {} necessary.".format(session_microscope_type,
-                                                                                                     correct_microscope_type)
+        {} provided but {} necessary.".format(session_microscope_type, correct_microscope_type)
 
 
 def validate_id_type(input_id, correct_id_type):
@@ -85,16 +81,14 @@ def validate_id_type(input_id, correct_id_type):
     validate_value_in_dict_keys(correct_id_type, from_lims.ID_TYPES_DICT, "ID_TYPES_DICT")
     input_id_type = from_lims.get_id_type(input_id)
     assert input_id_type == correct_id_type, "Incorrect id type. Entered Id type is {},\
-                                              correct id type is {}".format(input_id_type,
-                                                                            correct_id_type)
+        correct id type is {}".format(input_id_type, correct_id_type)
 
 
 def validate_ophys_associated_with_behavior(behavior_session_id):
     validate_id_type(behavior_session_id, "behavior_session_id")
     ophys_session_id = from_lims.get_ophys_session_id_for_behavior_session_id(behavior_session_id)
     assert ophys_session_id is not None, "There is no ophys_session_id \
-                                          associated with this \
-                                          behavior_session_id: {}".format(behavior_session_id)
+        associated with this behavior_session_id: {}".format(behavior_session_id)
 
 
 # def validate_qc_state()
