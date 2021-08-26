@@ -444,7 +444,7 @@ def get_general_info_for_ophys_experiment_id(ophys_experiment_id):
             session_storage_directory
 
     """
-    ophys_experiment_id = int(ophys_experiment_id)
+    conditions.validate_id_type(ophys_experiment_id, "ophys_experiment_id")
 
     general_info_query = general_info_for_id_query()
     query_selection = '''
@@ -723,7 +723,7 @@ def get_all_ids_for_behavior_session_id(behavior_session_id):
             ophys_container_id,
             supercontainer_id
     """
-    behavior_session_id = int(behavior_session_id)
+    conditions.validate_id_type(behavior_session_id, "behavior_session_id")
 
     all_ids_query = all_ids_for_id_query()
     query_selection = '''
@@ -767,7 +767,7 @@ def get_general_info_for_behavior_session_id(behavior_session_id):
             experiment_storage_directory
             session_storage_directory
     """
-    behavior_session_id = int(behavior_session_id)
+    conditions.validate_id_type(behavior_session_id, "behavior_session_id")
 
     general_info_query = general_info_for_id_query()
     query_selection = '''
@@ -786,7 +786,8 @@ def get_general_info_for_behavior_session_id(behavior_session_id):
 
 
 def get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id):
-    ophys_container_id = int(ophys_container_id)
+    conditions.validate_id_type(ophys_container_id, "ophys_container_id")
+
     query = '''
     SELECT
     ophys_experiment_id
@@ -802,7 +803,7 @@ def get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id):
 
 
 def get_ophys_session_ids_for_ophys_container_id(ophys_container_id):
-    ophys_container_id = int(ophys_container_id)
+    conditions.validate_id_type(ophys_container_id, "ophys_container_id")
     query = '''
     SELECT
     oe.ophys_session_id
@@ -821,7 +822,7 @@ def get_ophys_session_ids_for_ophys_container_id(ophys_container_id):
 
 
 def get_behavior_session_ids_for_ophys_container_id(ophys_container_id):
-    ophys_container_id = int(ophys_container_id)
+    conditions.validate_id_type(ophys_container_id, "ophys_container_id")
 
     query = '''
     SELECT
@@ -877,7 +878,7 @@ def get_supercontainer_id_for_ophys_container_id(ophys_container_id):
 
 
 def get_all_ids_for_ophys_container_id(ophys_container_id):
-    ophys_container_id = int(ophys_container_id)
+    conditions.validate_id_type(ophys_container_id, "ophys_container_id")
 
     all_ids_query = all_ids_for_id_query()
     query_selection = '''
@@ -891,7 +892,7 @@ def get_all_ids_for_ophys_container_id(ophys_container_id):
 
 
 def get_general_info_for_ophys_container_id(ophys_container_id):
-    ophys_container_id = int(ophys_container_id)
+    conditions.validate_id_type(ophys_container_id, "ophys_container_id")
 
     general_info_query = general_info_for_id_query()
     query_selection = '''
@@ -909,7 +910,8 @@ def get_general_info_for_ophys_container_id(ophys_container_id):
 
 
 def get_ophys_experiment_ids_for_supercontainer_id(supercontainer_id):
-    supercontainer_id = int(supercontainer_id)
+    conditions.validate_id_type(supercontainer_id, "supercontainer_id")
+
     query = '''
     SELECT
     oe.id AS ophys_experiment_id
@@ -923,12 +925,14 @@ def get_ophys_experiment_ids_for_supercontainer_id(supercontainer_id):
     WHERE
     os.visual_behavior_supercontainer_id = {}
     '''.format(supercontainer_id)
+
     ophys_experiment_ids = mixin.select(query)
     return ophys_experiment_ids
 
 
 def get_ophys_session_ids_for_supercontainer_id(supercontainer_id):
-    supercontainer_id = int(supercontainer_id)
+    conditions.validate_id_type(supercontainer_id, "supercontainer_id")
+
     query = '''
     SELECT
     id AS ophys_session_id
@@ -939,12 +943,14 @@ def get_ophys_session_ids_for_supercontainer_id(supercontainer_id):
     WHERE
     visual_behavior_supercontainer_id = {}
     '''.format(supercontainer_id)
+
     ophys_session_ids = mixin.select(query)
     return ophys_session_ids
 
 
 def get_behavior_session_id_for_supercontainer_id(supercontainer_id):
-    supercontainer_id = int(supercontainer_id)
+    conditions.validate_id_type(supercontainer_id, "supercontainer_id")
+
     query = '''
     SELECT
     bs.id AS behavior_session_id
@@ -963,7 +969,8 @@ def get_behavior_session_id_for_supercontainer_id(supercontainer_id):
 
 
 def get_ophys_container_ids_for_supercontainer_id(supercontainer_id):
-    supercontainer_id = int(supercontainer_id)
+    conditions.validate_id_type(supercontainer_id, "supercontainer_id")
+
     query = '''
     SELECT
     oevbec.visual_behavior_experiment_container_id
@@ -1004,7 +1011,7 @@ def get_all_ids_for_supercontainer_id(supercontainer_id):
             ophys_container_id,
             supercontainer_id
     """
-    supercontainer_id = int(supercontainer_id)
+    conditions.validate_id_type(supercontainer_id, "supercontainer_id")
 
     all_ids_query = all_ids_for_id_query()
     query_selection = '''
@@ -1050,7 +1057,7 @@ def get_general_info_for_supercontainer_id(supercontainer_id):
             experiment_storage_directory
             session_storage_directory
     """
-    supercontainer_id = int(supercontainer_id)
+    conditions.validate_id_type(supercontainer_id, "supercontainer_id")
 
     general_info_query = general_info_for_id_query()
     query_selection = '''
@@ -1088,7 +1095,8 @@ def get_cell_segmentation_runs_table(ophys_experiment_id):
                         created_at{timestamp}:
                         updated_at{timestamp}:
     """
-    ophys_experiment_id = int(ophys_experiment_id)
+    conditions.validate_id_type(ophys_experiment_id, "ophys_experiment_id")
+
     query = '''
     SELECT *
 
