@@ -2,6 +2,7 @@ import os
 from simple_slurm import Slurm
 
 import visual_behavior.data_access.loading as loading
+from allensdk.brain_observatory.behavior.behavior_project_cache import VisualBehaviorOphysProjectCache as bpc
 
 # python file to execute on cluster
 python_file = r"/home/marinag/visual_behavior_analysis/scripts/create_multi_session_df.py"
@@ -23,10 +24,12 @@ python_path = os.path.join(
 # define the job record output folder
 stdout_location = r'/allen/programs/braintv/workgroups/nc-ophys/Marina/ClusterJobs/JobRecords'
 
+# # get experiments to iterate over
+# experiments_table = loading.get_filtered_ophys_experiment_table(release_data_only=True)
 
-
-# get experiments to iterate over
-experiments_table = loading.get_filtered_ophys_experiment_table(release_data_only=True)
+# use full release dataset
+cache = bpc.from_lims(data_release_date=['2021-03-25', '2021-08-12'])
+experiments_table = cache.get_ophys_experiment_table()
 
 # call the `sbatch` command to run the jobs.
 for project_code in experiments_table.project_code.unique():
