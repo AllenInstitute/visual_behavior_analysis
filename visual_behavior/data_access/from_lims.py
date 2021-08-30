@@ -1386,6 +1386,23 @@ def get_well_known_file_path(wellKnownFileName, attachable_id):
 
 
 # FOR ISI EXPERIMENT ID
+def get_isi_experiment_filepath(isi_experiment_id):
+    conditions.validate_id_type(isi_experiment_id, "isi_experiment_id")
+    filepath = get_well_known_file_path("'IsiExperiment'", isi_experiment_id)
+    return filepath
+
+
+def get_processed_isi_experiment(isi_experiment_id):
+    conditions.validate_id_type(isi_experiment_id, "isi_experiment_id")
+    filepath = get_well_known_file_path("'IsiProcessed'", isi_experiment_id)
+    return filepath
+
+
+def get_isi_NWB(isi_experiment_id):
+    conditions.validate_id_type(isi_experiment_id, "isi_experiment_id")
+    filepath = get_well_known_file_path("'NWBISI'", isi_experiment_id)
+    return filepath
+
 
 # FOR OPHYS EXPERIMENT ID
 def get_BehaviorOphys_NWB_filepath(ophys_experiment_id):
