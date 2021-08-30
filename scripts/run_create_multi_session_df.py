@@ -25,11 +25,11 @@ python_path = os.path.join(
 stdout_location = r'/allen/programs/braintv/workgroups/nc-ophys/Marina/ClusterJobs/JobRecords'
 
 # # get experiments to iterate over
-# experiments_table = loading.get_filtered_ophys_experiment_table(release_data_only=True)
+experiments_table = loading.get_released_ophys_experiment_table()
 
-# use full release dataset
-cache = bpc.from_lims(data_release_date=['2021-03-25', '2021-08-12'])
-experiments_table = cache.get_ophys_experiment_table()
+# # use full release dataset
+# cache = bpc.from_lims(data_release_date=['2021-03-25', '2021-08-12'])
+# experiments_table = cache.get_ophys_experiment_table()
 
 # call the `sbatch` command to run the jobs.
 for project_code in experiments_table.project_code.unique():

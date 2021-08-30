@@ -160,7 +160,7 @@ def get_released_ophys_experiment_table(exclude_ai94=True):
     # data_storage_directory = '//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/production_cache'
     # cache = bpc.from_s3_cache(cache_dir=data_storage_directory)
 
-    cache = bpc.from_lims(data_release_date='2021-03-25')
+    cache = bpc.from_lims(data_release_date=['2021-03-25', '2021-08-12'])
 
     experiment_table = cache.get_ophys_experiment_table()
 
