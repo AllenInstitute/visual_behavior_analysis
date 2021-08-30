@@ -25,7 +25,8 @@ python_path = os.path.join(
 stdout_location = r'/allen/programs/braintv/workgroups/nc-ophys/Marina/ClusterJobs/JobRecords'
 
 # # get experiments to iterate over
-experiments_table = loading.get_released_ophys_experiment_table()
+experiments_table = loading.get_filtered_ophys_experiment_table()
+experiments_table = experiments_table[experiments_table.container_workflow_state=='published']
 
 # # use full release dataset
 # cache = bpc.from_lims(data_release_date=['2021-03-25', '2021-08-12'])

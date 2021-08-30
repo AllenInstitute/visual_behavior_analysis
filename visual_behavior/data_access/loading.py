@@ -196,6 +196,7 @@ def get_filtered_ophys_experiment_table(include_failed_data=False, release_data_
         # get cache from lims for data released on March 25th
         print('getting experiment table for March 25th release from lims')
         cache = bpc.from_lims(data_release_date='2021-03-25')
+        print('use get_released_ophys_experiment_table to get August release data in addition to March release')
         # cache = get_visual_behavior_cache(from_s3=False, release_data_only=True)
         experiments = cache.get_ophys_experiment_table()
     if not release_data_only:
@@ -246,17 +247,16 @@ def get_filtered_ophys_experiment_table(include_failed_data=False, release_data_
     if 'cre_line' not in experiments.keys():
         experiments['cre_line'] = [full_genotype.split('/')[0] for full_genotype in experiments.full_genotype.values]
     # add session number for convenience
-    experiments['session_number'] = [int(session_type[6]) if 'OPHYS' in session_type else None for session_type in
-                                     experiments.session_type.values]
+    # experiments['session_number'] = [int(session_type[6]) if 'OPHYS' in session_type else None for session_type in
+    #                                  experiments.session_type.values]
     # filter one more time on load to restrict to Visual Behavior project experiments ###
     experiments = filtering.limit_to_production_project_codes(experiments)
 
-
     ### add new columns for conditions to analyze for platform paper ###
     experiments = utilities.add_cell_type(experiments)
-    experiments = utilities.add_session_number_to_experiment_table(experiments)
-    experiments = utilities.add_experience_level_to_experiment_table(experiments)
-    experiments = utilities.add_passive_flag_to_ophys_experiment_table(experiments)
+    # experiments = utilities.add_session_number_to_experiment_table(experiments)
+    # experiments = utilities.add_experience_level_to_experiment_table(experiments)
+    # experiments = utilities.add_passive_flag_to_ophys_experiment_table(experiments)
 
     if overwrite_cached_file == True:
         print('overwriting pre-saved experiments table file')
