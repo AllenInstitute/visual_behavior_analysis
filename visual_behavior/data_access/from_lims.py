@@ -267,7 +267,7 @@ def get_ophys_experiment_id_for_cell_roi_id(cell_roi_id):
     return ophys_experiment_id
 
 
-# for ophys_experimnt_id
+# for ophys_experiment_id
 def get_current_segmentation_run_id_for_ophys_experiment_id(ophys_experiment_id):
     """gets the id for the current cell segmentation run for a given experiment.
         Queries LIMS via AllenSDK PostgresQuery function.
@@ -847,6 +847,24 @@ def get_behavior_session_ids_for_ophys_container_id(ophys_container_id):
 
     behavior_session_id = mixin.select(query)
     return behavior_session_id
+
+
+def get_current_container_run_id_for_ophys_container_id(ophys_container_id):
+    conditions.validate_id_type(ophys_container_id, "ophys_container_id")
+
+    query = '''
+    SELECT
+    vbcr.id AS container_run_id
+
+    FROM
+    visual_behavior_container_runs as vbcr
+
+    WHERE
+    vbcr.current = true
+    AND vbcr.visual_behavior_experiment_container_id = {}
+    '''.format(ophys_container_id)
+    current_container_run_id = mixin.select(query)
+    return current_container_run_id
 
 
 def get_supercontainer_id_for_ophys_container_id(ophys_container_id):
@@ -1781,13 +1799,15 @@ def get_stimulus_pkl_filepath_for_behavior_session(behavior_session_id):
 
 def get_nway_cell_matching_output_filepath(ophys_container_id):
     conditions.validate_id_type(ophys_container_id, "ophys_container_id")
-    filepath = get_well_known_file_path("'OphysNwayCellMatchingOutput'", ophys_container_id)
+    current_container_run_id = get_current_container_run_id_for_ophys_container_id(ophys_container_id)
+    filepath = get_well_known_file_path("'OphysNwayCellMatchingOutput'", current_container_run_id)
     return filepath
 
 
 def get_cell_matching_output_filepath(ophys_container_id):
     conditions.validate_id_type(ophys_container_id, "ophys_container_id")
-    filepath = get_well_known_file_path("'OphysCellMatchingOutput'", ophys_container_id)
+    current_container_run_id = get_current_container_run_id_for_ophys_container_id(ophys_container_id)
+    filepath = get_well_known_file_path("'OphysCellMatchingOutput'", current_container_run_id)
     return filepath
 
 
