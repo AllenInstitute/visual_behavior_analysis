@@ -86,6 +86,22 @@ def get_id_type(input_id):
     return id_type
 
 
+MICROSCOPE_TYPE_EQUIPMENT_NAMES_DICT = {
+    "Nikon":       ["CAM2P.1", "CAM2P.2"],                     # noqa: E241
+    "Scientifica": ["CAM2P.3, CAM2P.4, CAM2P.5, CAM2P.6"],
+    "Mesoscope":   ["MESO.1", "MESO.2"]}                       # noqa: E241
+
+
+def get_microscope_type(ophys_session_id):
+    conditions.validate_id_type(ophys_session_id, "ophys_session_id")
+    equipment_name = get_general_info_for_ophys_session_id(ophys_session_id)["equipment_name"][0]
+
+    for key, value in MICROSCOPE_TYPE_EQUIPMENT_NAMES_DICT.items():
+        if equipment_name in value:
+            return key
+    return "Cannot find microscope type for {}".format(equipment_name)
+
+
 ### QUERIES USED FOR MULTIPLE FUNCTIONS ###      # noqa: E266
 
 

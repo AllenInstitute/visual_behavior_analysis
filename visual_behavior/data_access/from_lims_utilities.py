@@ -1,6 +1,4 @@
-from visual_behavior.data_access import from_lims
 from visual_behavior.data_access import utilities as utils
-import visual_behavior.data_access.pre_post_conditions as conditions
 
 
 def correct_general_info_filepaths(general_info_df):
@@ -75,24 +73,3 @@ def update_objectlist_column_labels(objectlist_df):
                                                   ' corcoef0':      'soma_obj0_overlap_trace_corr',        # noqa: E241
                                                   ' corcoef1':      'soma_obj1_overlap_trace_corr'})       # noqa: E241
     return objectlist_df
-
-
-MICROSCOPE_TYPE_EQUIPMENT_NAMES_DICT = {
-    "Nikon":       ["CAM2P.1", "CAM2P.2"],                     # noqa: E241
-    "Scientifica": ["CAM2P.3, CAM2P.4, CAM2P.5, CAM2P.6"],
-    "Mesoscope":   ["MESO.1", "MESO.2"]}                       # noqa: E241
-
-
-def get_microscope_equipment_name(ophys_session_id):
-    conditions.validate_id_type(ophys_session_id, "ophys_session_id")
-    equipment_name = from_lims.get_general_info_for_ophys_session_id(ophys_session_id)["equipment_name"][0]
-    return equipment_name
-
-
-def get_microscope_type(ophys_session_id):
-    equipment_name = get_microscope_equipment_name(ophys_session_id)
-
-    for key, value in MICROSCOPE_TYPE_EQUIPMENT_NAMES_DICT.items():
-        if equipment_name in value:
-            return key
-    return "Cannot find microscope type for {}".format(equipment_name)
