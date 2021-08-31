@@ -1644,7 +1644,7 @@ def get_timeseries_ini_filepath(ophys_session_id):
     return filepath
 
 
-def get_stimulus_pkl_filepath(ophys_session_id):
+def get_stimulus_pkl_filepath_for_ophys_session(ophys_session_id):
     """use SQL and the LIMS well known file system to get the
         session pkl file information for a given
         ophys_session_id
@@ -1709,6 +1709,24 @@ def get_eye_tracking_h5_filepath(ophys_session_id):
     return filepath
 
 
+def get_eye_screen_mapping_filepath(ophys_session_id):
+    conditions.validate_id_type(ophys_session_id, "ophys_session_id")
+    filepath = get_well_known_file_path("'EyeScreenMapping'", ophys_session_id)
+    return filepath
+
+
+def get_eyetracking_corneal_reflection(ophys_session_id):
+    conditions.validate_id_type(ophys_session_id, "ophys_session_id")
+    filepath = get_well_known_file_path("'EyeTracking Corneal Reflection'", ophys_session_id)
+    return filepath
+
+
+def get_eyetracking_pupil_filepath(ophys_session_id):
+    conditions.validate_id_type(ophys_session_id, "ophys_session_id")
+    filepath = get_well_known_file_path("'EyeTracking Pupil'", ophys_session_id)
+    return filepath
+
+
 def get_ellipse_filepath(ophys_session_id):
     conditions.validate_id_type(ophys_session_id, "ophys_session_id")
     filepath = get_well_known_file_path("'EyeTracking Ellipses'", ophys_session_id)
@@ -1730,6 +1748,46 @@ def get_screen_mapping_h5_filepath(ophys_session_id):
 def get_deepcut_h5_filepath(ophys_session_id):
     conditions.validate_id_type(ophys_session_id, "ophys_session_id")
     filepath = get_well_known_file_path("'EyeDlcOutputFile'", ophys_session_id)
+    return filepath
+
+
+## for behavior_session_id ##              # noqa: E266
+
+
+def get_behavior_NWB_filepath(behavior_session_id):
+    conditions.validate_id_type(behavior_session_id, "behavior_session_id")
+    filepath = get_well_known_file_path("'BehaviorNwb'", behavior_session_id)
+    return filepath
+
+
+def get_stimulus_pkl_filepath_for_behavior_session(behavior_session_id):
+    """use SQL and the LIMS well known file system to get the
+        session pkl file information for a given
+        behavior_session_id
+
+    Arguments:
+        ophys_session_id {int} -- 9 digit ophys session ID
+
+    Returns:
+        [type] -- [description]
+    """
+    conditions.validate_id_type(behavior_session_id, "behavior_session_id")
+    filepath = get_well_known_file_path("'StimulusPickle'", behavior_session_id)
+    return filepath
+
+
+## for ophys_container_id ##              # noqa: E266
+
+
+def get_nway_cell_matching_output_filepath(ophys_container_id):
+    conditions.validate_id_type(ophys_container_id, "ophys_container_id")
+    filepath = get_well_known_file_path("'OphysNwayCellMatchingOutput'", ophys_container_id)
+    return filepath
+
+
+def get_cell_matching_output_filepath(ophys_container_id):
+    conditions.validate_id_type(ophys_container_id, "ophys_container_id")
+    filepath = get_well_known_file_path("'OphysCellMatchingOutput'", ophys_container_id)
     return filepath
 
 
