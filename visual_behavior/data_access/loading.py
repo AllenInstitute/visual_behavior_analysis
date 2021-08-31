@@ -964,7 +964,7 @@ def get_sdk_max_projection(ophys_experiment_id):
 
     Returns:
         image -- can be visualized via plt.imshow(max_projection)
-    """ 
+    """
     session = get_ophys_dataset(ophys_experiment_id)
     max_projection = session.max_projection
     return max_projection
