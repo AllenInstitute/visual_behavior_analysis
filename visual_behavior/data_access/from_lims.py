@@ -1392,19 +1392,33 @@ def get_isi_experiment_filepath(isi_experiment_id):
     return filepath
 
 
-def get_processed_isi_experiment(isi_experiment_id):
+def get_processed_isi_experiment_filepath(isi_experiment_id):
     conditions.validate_id_type(isi_experiment_id, "isi_experiment_id")
     filepath = get_well_known_file_path("'IsiProcessed'", isi_experiment_id)
     return filepath
 
 
-def get_isi_NWB(isi_experiment_id):
+def get_isi_NWB_filepath(isi_experiment_id):
     conditions.validate_id_type(isi_experiment_id, "isi_experiment_id")
     filepath = get_well_known_file_path("'NWBISI'", isi_experiment_id)
     return filepath
 
 
 # FOR OPHYS EXPERIMENT ID
+
+
+def get_ophys_NWB_filepath(ophys_experiment_id):
+    conditions.validate_id_type(ophys_experiment_id)
+    filepath = get_well_known_file_path("'NWBOphys'", ophys_experiment_id)
+    return filepath
+
+
+def get_ophys_extracted_traces_filepath(ophys_experiment_id):
+    conditions.validate_id_type(ophys_experiment_id)
+    filepath = get_well_known_file_path("'NWBOphys'", ophys_experiment_id)
+    return filepath
+
+
 def get_BehaviorOphys_NWB_filepath(ophys_experiment_id):
     conditions.validate_id_type(ophys_experiment_id, "ophys_experiment_id")
     filepath = get_well_known_file_path("'BehaviorOphysNwb'", ophys_experiment_id)
@@ -1450,6 +1464,12 @@ def get_event_trace_filepath(ophys_experiment_id):
 def get_extracted_traces_input_filepath(ophys_experiment_id):
     conditions.validate_id_type(ophys_experiment_id, "ophys_experiment_id")
     filepath = get_well_known_file_path("'OphysExtractedTracesInputJson'", ophys_experiment_id)
+    return filepath
+
+
+def get_extracted_traces_filepath(ophys_experiment_id):
+    conditions.validate_id_type(ophys_experiment_id, "ophys_experiment_id")
+    filepath = get_well_known_file_path("'OphysExtractedTraces'", ophys_experiment_id)
     return filepath
 
 
@@ -1510,6 +1530,12 @@ def get_roi_traces_filepath(ophys_experiment_id):
     return filepath
 
 
+def get_cell_roi_metrics_file_filepath(ophys_experiment_id):
+    conditions.validate_id_type(ophys_experiment_id, "ophys_experiment_id")
+    filepath = get_well_known_file_path("'OphysExperimentCellRoiMetricsFile'", ophys_experiment_id)
+    return filepath
+
+
 def get_time_syncronization_filepath(ophys_experiment_id):
     """for scientifica experiments only (CAM2P.3, CAM2P.4, CAM2P.5)
 
@@ -1530,7 +1556,21 @@ def get_time_syncronization_filepath(ophys_experiment_id):
     return filepath
 
 
-## for segmentation_id via ophys_experiment_id ##              # noqa: E266
+def get_observatory_events_filepath(ophys_experiment_id):
+    conditions.validate_id_type(ophys_experiment_id, "ophys_experiment_id")
+    filepath = get_well_known_file_path("'ObservatoryEventsFile'", ophys_experiment_id)
+    return filepath
+
+
+## FOR ophys_cell_segmentation_run_id via ophys_experiment_id             # noqa: E266
+
+
+def get_ophys_suite2p_rois_filepath(ophys_experiment_id):
+    conditions.validate_id_type(ophys_experiment_id, "ophys_experiment_id")
+    current_seg_id = int(get_current_segmentation_run_id_for_ophys_experiment_id(ophys_experiment_id))
+    filepath = get_well_known_file_path("'OphysSuite2pRois'", current_seg_id)
+    return filepath
+
 
 def get_segmentation_objects_filepath(ophys_experiment_id):
     """use SQL and the LIMS well known file system to get the
