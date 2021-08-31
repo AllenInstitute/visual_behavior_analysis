@@ -1143,7 +1143,7 @@ def get_stim_metrics_summary(behavior_session_id, load_location='from_file'):
 
 # FROM LIMS DATABASE
 # this portion is depreciated, please use functions in from_lims.py instead
-gen_depr_str = 'this function is deprecated and will be removed in a future version, ' \
+gen_depr_str = 'this function is deprecated and will be removed on October 29th 2021, ' \
                + 'please use {}.{} instead'
 
 # EXPERIMENT LEVEL
@@ -1419,7 +1419,7 @@ def gen_roi_exclusion_labels_lists(experiment_id):
 
 
 def clean_roi_locations_column_labels(roi_locations_dataframe):
-    """takes some column labels from the roi_locations dataframe and  renames them to be more explicit and descriptive, and to match the column labels
+    """takes some column labels from the roi_locations dataframe and renames them to be more explicit and descriptive, and to match the column labels
         from the objectlist dataframe.
 
     Arguments:
@@ -1428,6 +1428,9 @@ def clean_roi_locations_column_labels(roi_locations_dataframe):
     Returns:
         dataframe -- [description]
     """
+    warn_str = gen_depr_str.format('from_lims',
+                                   'get_cell_rois_table')
+    warnings.warn(warn_str)
     roi_locations_dataframe = roi_locations_dataframe.rename(columns={"id": "cell_roi_id",
                                                                       "mask_matrix": "roi_mask",
                                                                       "x": "bbox_min_x",
