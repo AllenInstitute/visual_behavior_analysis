@@ -93,8 +93,10 @@ def get_single_cell_plots_dir():
 def get_analysis_cache_dir():
     return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/visual_behavior_production_analysis'
 
+
 def get_platform_analysis_cache_dir():
     return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/platform_paper_cache'
+
 
 def get_events_dir():
     return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/event_detection'
@@ -2545,6 +2547,7 @@ def get_multi_session_df(cache_dir, df_name, conditions, experiments_table, remo
     :return: multi_session_df for conditions specified above
     """
     experiments_table = get_filtered_ophys_experiment_table()
+    # experiments_table = loading.get_released_ophys_experiment_table(exclude_ai94=True)
     project_codes = experiments_table.project_code.unique()
     multi_session_df = pd.DataFrame()
     for project_code in project_codes:

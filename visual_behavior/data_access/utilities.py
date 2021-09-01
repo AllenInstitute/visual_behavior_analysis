@@ -1398,3 +1398,30 @@ def add_cell_type(df):
     df.at[cre_indices, 'cell_type'] = 'Excitatory'
 
     return df
+
+
+def get_matched_cells_for_set_of_conditions(ophys_experiment_table, ophys_cells_table, column_name, column_values):
+    """
+    column_name: name of column in ophys_experiment_table describing the conditions
+                over which you want to identify matched cells (ex: 'experience_level' or 'session_type')
+    column_values: values of the column that you want to check for matches between (ex: ['Familiar', 'Novel 1'] or
+                    ['OPHYS_1_images_A', 'OPHYS_3_images_A'])
+    """
+    # get experiments and cells tables and merge
+    # experiments_table = cache.get_ophys_experiment_table()
+    # experiments_table = experiments_table[experiments_table.container_workflow_state=='published']
+    # cell_table = cache.get_ophys_cells_table()
+    ophys_cells_table = ophys_cells_table.merge(ophys_experiment_table, on='ophys_experiment_id')
+    # limit cells table to the column values to match over
+    cells = ophys_cells_table[ophys_cells_table[column_name].isin(column_values)]
+    # group by cell and column_name to figure out how many sessions each cell has for each column_value
+    exp_matched = ophys_cells_table.groupby(['cell_specimen_id', column_name, 'ophys_experiment_id']).count()
+    # drop rows where a single cell_specimen_id has more than one session for each column_value
+    exp_matched = exp_matched.reset_index().drop_duplicates(subset=['cell_specimen_id', column_name])
+    # count how many remaining sessions there are per cell and column_name
+    n_matched = exp_matched.groupby(['cell_specimen_id']).count()[[column_name]].rename(columns={column_name:'n_sessions_matched'})
+    # only keep cells that have 3 sessions - one per experience level, i.e. cells that are matched in all 3 types
+    matched_cell_ids = n_matched[n_matched.n_sessions_matched==len(column_values)].index.unique()
+    # print info
+    print(np.round(len(matched_cell_ids)/len(ophys_cells_table.cell_specimen_id.unique()),3)*100, 'percent of cells are matched across', column_values)
+    return matched_cell_ids

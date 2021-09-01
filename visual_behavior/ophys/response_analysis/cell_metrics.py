@@ -506,7 +506,7 @@ def get_cell_metrics_table_for_experiment(ophys_experiment_id, condition, stimul
 
 def load_cell_metrics_table_for_experiments(ophys_experiment_ids, condition, stimulus, session_subset, use_events, filter_events):
     import visual_behavior.data_access.loading as loading
-    ophys_experiment_table = loading.get_filtered_ophys_experiment_table(release_data_only=True)
+    ophys_experiment_table = loading.get_released_ophys_experiment_table()
     ophys_experiment_table = loading.add_superficial_deep_to_experiments_table(ophys_experiment_table)
 
     problem_expts = []
