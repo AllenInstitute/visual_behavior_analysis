@@ -1326,6 +1326,30 @@ def add_experience_level_to_experiment_table(experiments):
     return experiments
 
 
+def add_experience_and_exposure_to_experiment_table(experiments_table):
+    """
+    adds a column to ophys_experiment_table that contains a string indicating the experience level and
+    image set exposure number for Novel sessions, and experience level and prior omissions exposure for familiar sessions
+    """
+    experience_exposure_list = []
+    for experiment_id in experiments_table.index.values:
+        expt = experiments_table.loc[experiment_id]
+        if 'Familiar' in expt.experience_level:
+            if expt.prior_exposures_to_omissions <=3:
+                exp = 'Familiar '+str(int(expt.prior_exposures_to_omissions))
+            else:
+                exp = 'Familiar > 3'
+            experience_exposure_list.append(exp)
+        elif 'Novel' in expt.experience_level:
+            if expt.prior_exposures_to_image_set <=3:
+                exp = 'Novel '+str(int(expt.prior_exposures_to_image_set))
+            else:
+                exp = 'Novel > 3'
+            experience_exposure_list.append(exp)
+    experiments_table['experience_exposure'] = experience_exposure_list
+    return experiments_table
+
+
 def get_experience_level_colors():
     """
     get color map corresponding to Familiar, Novel 1 and Novel >1
