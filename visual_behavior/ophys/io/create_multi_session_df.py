@@ -1,6 +1,7 @@
 import os
 import pandas as pd
 
+from allensdk.brain_observatory.behavior.behavior_project_cache import VisualBehaviorOphysProjectCache as bpc
 from visual_behavior.ophys.response_analysis.response_analysis import ResponseAnalysis
 import visual_behavior.ophys.response_analysis.utilities as ut
 from visual_behavior.data_access import loading
@@ -27,9 +28,14 @@ def get_multi_session_df(project_code, session_number, df_name, conditions, use_
     if ('engaged' in conditions) or ('engagement_state' in conditions):
         use_extended_stimulus_presentations = True
 
-    experiments_table = loading.get_filtered_ophys_experiment_table(release_data_only=True)
+    # experiments_table = loading.get_filtered_ophys_experiment_table(release_data_only=True)
+
+    cache_dir = r'/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/platform_paper_cache'
+    cache = bpc.from_s3_cache(cache_dir=cache_dir)
+    experiments_table = cache.get_ophys_experiment_table()
+
     experiments = experiments_table[(experiments_table.project_code == project_code) &
-                                    (experiments_table.session_number == int(session_number))].copy()
+                                    (experiments_table.session_number == session_number)].copy()
     print('session_types:', experiments.session_type.unique(), ' - there should only be one!')
     session_type = experiments.session_type.unique()[0]
 
