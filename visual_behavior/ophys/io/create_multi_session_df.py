@@ -34,8 +34,9 @@ def get_multi_session_df(project_code, session_number, df_name, conditions, use_
     cache = bpc.from_s3_cache(cache_dir=cache_dir)
     experiments_table = cache.get_ophys_experiment_table()
 
+    session_number = float(session_number)
     experiments = experiments_table[(experiments_table.project_code == project_code) &
-                                    (experiments_table.session_number == session_number)].copy()
+                                    (experiments_table.session_number == session_number].copy()
     print('session_types:', experiments.session_type.unique(), ' - there should only be one!')
     session_type = experiments.session_type.unique()[0]
 
