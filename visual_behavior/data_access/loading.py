@@ -523,11 +523,11 @@ class BehaviorOphysDataset(BehaviorOphysExperiment):
         stimulus_presentations['lick_rate_next_flash'] = stimulus_presentations['lick_rate'].shift(-1)
         stimulus_presentations['lick_on_previous_flash'] = stimulus_presentations['licked'].shift(1)
         stimulus_presentations['lick_rate_previous_flash'] = stimulus_presentations['lick_rate'].shift(1)
-        if check_if_model_output_available(self.metadata['behavior_session_id']):
-            stimulus_presentations = add_model_outputs_to_stimulus_presentations(
-                stimulus_presentations, int(self.metadata['behavior_session_id']))
-        else:
-            print('model outputs not available')
+        # if check_if_model_output_available(self.metadata['behavior_session_id']):
+        #     stimulus_presentations = add_model_outputs_to_stimulus_presentations(
+        #         stimulus_presentations, int(self.metadata['behavior_session_id']))
+        # else:
+        #     print('model outputs not available')
         self._extended_stimulus_presentations = stimulus_presentations
         return self._extended_stimulus_presentations
 
