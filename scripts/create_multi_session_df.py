@@ -18,6 +18,15 @@ if __name__ == '__main__':
     session_number = float(args.session_number)
     print(project_code, session_number)
 
+
+    df_name = 'omission_response_df'
+    conditions = ['cell_specimen_id', 'epoch']
+
+    print('creating multi_session_df for', df_name, ', ', project_code, ', session number', session_number, conditions)
+    df = io.get_multi_session_df(project_code, session_number, df_name, conditions, use_events=True, filter_events=True,
+                                 use_extended_stimulus_presentations=True)
+
+
     df_name = 'trials_response_df'
     conditions = ['cell_specimen_id', 'stimulus_change', 'epoch']
 
@@ -26,16 +35,17 @@ if __name__ == '__main__':
                                  use_extended_stimulus_presentations=True)
 
 
-    df_name = 'omission_response_df'
-    conditions = ['cell_specimen_id', 'epoch']
+    df_name = 'trials_response_df'
+    conditions = ['cell_specimen_id', 'stimulus_change', 'change_image_name']
 
     print('creating multi_session_df for', df_name, ', ', project_code, ', session number', session_number, conditions)
     df = io.get_multi_session_df(project_code, session_number, df_name, conditions, use_events=True, filter_events=True,
-                                 use_extended_stimulus_presentations=True)
+                                 use_extended_stimulus_presentations=False)
+
     print('done')
 
 
-   # engagement
+    # engagement
    #
    #  df_name = 'trials_response_df'
    #  conditions = ['cell_specimen_id', 'engagement_state', 'stimulus_change']
