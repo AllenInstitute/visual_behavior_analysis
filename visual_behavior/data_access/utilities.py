@@ -1357,10 +1357,13 @@ def get_experience_level_colors():
     Novel 1 = blue
     Novel >1 = lighter blue
     """
-    import visual_behavior.visualization.utils as utils
-    original_colors = utils.get_colors_for_session_numbers()
+    import seaborn as sns
+    
+    reds = sns.color_palette('Reds_r', 6)[:5][::2]
+    blues = sns.color_palette('Blues_r', 6)[:5][::2]
+    purples = sns.color_palette('Purples_r', 6)[:5][::2]
 
-    colors = [original_colors[0], original_colors[3], original_colors[4]]
+    colors = [reds[0], blues[0], purples[0]]
 
     return colors
 
