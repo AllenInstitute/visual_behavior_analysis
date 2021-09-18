@@ -9,8 +9,14 @@ parser = argparse.ArgumentParser(description='run cell metrics generation functi
 parser.add_argument('--env', type=str, default='visual_behavior_sdk', metavar='name of conda environment to use')
 parser.add_argument('--scriptname', type=str, default='create_cell_metrics_table.py', metavar='name of script to run (must be in same folder)')
 
-experiments_table = loading.get_filtered_ophys_experiment_table(include_failed_data=False, release_data_only=True, exclude_ai94=True,
-                                        add_extra_columns=False, from_cached_file=False, overwrite_cached_file=False)
+# experiments_table = loading.get_filtered_ophys_experiment_table(include_failed_data=False, release_data_only=True, exclude_ai94=True,
+#                                         add_extra_columns=False, from_cached_file=False, overwrite_cached_file=False)
+# ophys_experiment_ids = experiments_table.index.values
+
+from allensdk.brain_observatory.behavior.behavior_project_cache import VisualBehaviorOphysProjectCache as bpc
+cache_dir = r'allen/programs/braintv/workgroups/nc-ophys/visual_behavior/platform_paper_cache'
+cache = bpc.from_s3_cache(cache_dir=cache_dir)
+experiments_table = cache.get_ophys_experiment_table()
 ophys_experiment_ids = experiments_table.index.values
 
 if __name__ == "__main__":
