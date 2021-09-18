@@ -1358,7 +1358,7 @@ def get_experience_level_colors():
     Novel >1 = lighter blue
     """
     import seaborn as sns
-    
+
     reds = sns.color_palette('Reds_r', 6)[:5][::2]
     blues = sns.color_palette('Blues_r', 6)[:5][::2]
     purples = sns.color_palette('Purples_r', 6)[:5][::2]
