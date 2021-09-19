@@ -506,7 +506,11 @@ def get_cell_metrics_table_for_experiment(ophys_experiment_id, condition, stimul
 
 def load_cell_metrics_table_for_experiments(ophys_experiment_ids, condition, stimulus, session_subset, use_events, filter_events):
     import visual_behavior.data_access.loading as loading
-    ophys_experiment_table = loading.get_released_ophys_experiment_table()
+    # ophys_experiment_table = loading.get_released_ophys_experiment_table()
+    from allensdk.brain_observatory.behavior.behavior_project_cache import VisualBehaviorOphysProjectCache
+    cache_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\platform_paper_cache'
+    cache = VisualBehaviorOphysProjectCache.from_s3_cache(cache_dir=cache_dir)
+    ophys_experiment_table = cache.get_ophys_experiment_table()
     ophys_experiment_table = loading.add_superficial_deep_to_experiments_table(ophys_experiment_table)
 
     problem_expts = []
@@ -528,7 +532,7 @@ def load_cell_metrics_table_for_experiments(ophys_experiment_ids, condition, sti
                 problem_expts.append(ophys_experiment_id)
             metrics_table = pd.concat([metrics_table, tmp])
 
-    metrics_table = metrics_table.merge(ophys_experiment_table, on=['ophys_experiment_id', 'ophys_session_id'])
+    # metrics_table = metrics_table.merge(ophys_experiment_table, on=['ophys_experiment_id', 'ophys_session_id'])
 
     return metrics_table
 
