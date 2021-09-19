@@ -25,9 +25,9 @@ if __name__ == '__main__':
 
     import platform
     if platform.system() == 'Linux':
-        save_dir = r'/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/single_cell_metrics'
+        save_dir = r'/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/platform_paper_cache/single_cell_metrics'
     else:
-        save_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\single_cell_metrics'
+        save_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\platform_paper_cache\single_cell_metrics'
 
     # use filtered events when use_events = True
     filter_events = True
