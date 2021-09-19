@@ -21,7 +21,7 @@ if __name__ == '__main__':
     from allensdk.brain_observatory.behavior.behavior_project_cache import VisualBehaviorOphysProjectCache as bpc
     cache_dir = r'/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/platform_paper_cache'
     cache = bpc.from_s3_cache(cache_dir=cache_dir)
-    ophys_experiments_table = cache.get_ophys_experiment_table()
+    ophys_experiment_table = cache.get_ophys_experiment_table()
 
     import platform
     if platform.system() == 'Linux':
