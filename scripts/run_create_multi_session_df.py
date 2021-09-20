@@ -29,8 +29,7 @@ cache = bpc.from_s3_cache(cache_dir=cache_dir)
 
 experiments_table = cache.get_ophys_experiment_table()
 
-# experiments_table = experiments_table[(experiments_table.project_code=='VisualBehaviorMultiscope')&
-#                                       (experiments_table.session_number==4)]
+experiments_table = experiments_table[(experiments_table.session_number==1)]
 
 # # get experiments to iterate over
 # experiments_table = loading.get_filtered_ophys_experiment_table()
