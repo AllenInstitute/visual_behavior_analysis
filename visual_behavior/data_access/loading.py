@@ -2575,7 +2575,7 @@ def get_multi_session_df(cache_dir, df_name, conditions, experiments_table, remo
                         df = df[df.cell_specimen_id.isin(outlier_cells) == False]
                     multi_session_df = pd.concat([multi_session_df, df])
                 except BaseException:
-                    print('no multi_session_df for', session_type)
+                    print('no multi_session_df for', project_code, session_type)
         else:
             filename = get_file_name_for_multi_session_df_no_session_type(df_name, project_code, conditions, use_events, filter_events)
             filepath = os.path.join(cache_dir, 'multi_session_summary_dfs', filename)
