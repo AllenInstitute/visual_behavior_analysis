@@ -87,7 +87,7 @@ def plot_hist_for_condition(df, metric, condition='image_set', condition_values=
     ax.set_xlabel(metric)
     ax.set_ylabel('fraction of cells')
     if title is None:
-        ax.set_title(cre_line)
+        ax.set_title('')
     else:
         ax.set_title(title)
     ax.set_xlim(range[0] - 0.1, range[1] + 0.1)
