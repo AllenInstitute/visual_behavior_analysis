@@ -181,7 +181,7 @@ def get_platform_paper_experiment_table():
 
     # remove 4x2 and Ai94 data
     experiment_table = experiment_table[(experiment_table.project_code != 'VisualBehaviorMultiscope4areasx2d') &
-                                          (experiment_table.reporter_line != 'Ai94(TITL-GCaMP6s)')]
+                                        (experiment_table.reporter_line != 'Ai94(TITL-GCaMP6s)')]
 
     # add cell type columm
     experiment_table = utilities.add_cell_type(experiment_table)
@@ -190,6 +190,8 @@ def get_platform_paper_experiment_table():
     return experiment_table
 
 #
+
+
 def get_filtered_ophys_experiment_table(include_failed_data=False, release_data_only=False, exclude_ai94=True,
                                         add_extra_columns=True, from_cached_file=True, overwrite_cached_file=False):
     """
@@ -434,6 +436,7 @@ def get_extened_stimulus_presentations(stimulus_presentations, licks, rewards, r
 
 # LOAD OPHYS DATA FROM SDK AND EDIT OR ADD METHODS/ATTRIBUTES WITH BUGS OR INCOMPLETE FEATURES #
 
+
 class BehaviorOphysDataset(BehaviorOphysExperiment):
     """
     Loads SDK ophys experiment object and 1) optionally filters out invalid ROIs, 2) adds extended_stimulus_presentations table, 3) adds extended_trials table, 4) adds behavior movie PCs and timestamps
@@ -524,7 +527,7 @@ class BehaviorOphysDataset(BehaviorOphysExperiment):
     @property
     def extended_stimulus_presentations(self):
         extended_stimulus_presentations = get_extened_stimulus_presentations(self.stimulus_presentations.copy(),
-                                                                self.licks, self.rewards, self.running_speed, self.eye_tracking)
+                                                                             self.licks, self.rewards, self.running_speed, self.eye_tracking)
         self._extended_stimulus_presentations = extended_stimulus_presentations
         return self._extended_stimulus_presentations
 
@@ -617,8 +620,8 @@ def get_ophys_dataset(ophys_experiment_id, include_invalid_rois=False, load_from
         dataset = cache.get_behavior_ophys_experiment(ophys_experiment_id)
         # add extended stimulus presentations
         dataset.extended_stimulus_presentations = get_extened_stimulus_presentations(dataset.stimulus_presentations.copy(),
-                                                                             dataset.licks, dataset.rewards,
-                                                                             dataset.running_speed, dataset.eye_tracking)
+                                                                                     dataset.licks, dataset.rewards,
+                                                                                     dataset.running_speed, dataset.eye_tracking)
         # add behavior movie timestamps
         lims_data = utilities.get_lims_data(ophys_experiment_id)
         timestamps = utilities.get_timestamps(lims_data)
@@ -750,6 +753,7 @@ def get_behavior_dataset(behavior_session_id, from_lims=False, from_nwb=False):
 #                                                       from_cached_file=from_cached_file, overwrite_cached_file=overwrite_cached_file)
 #     container_ids = np.sort(experiments.ophys_container_id.unique())
 #     return container_ids
+
 
 def get_ophys_container_ids(platform_paper_only=False):
     """
@@ -2887,7 +2891,6 @@ def get_remaining_crosstalk_amount_dict(experiment_id):
 
 
 def get_cell_table(ophys_experiment_ids=None, columns_to_return='*', valid_rois_only=False):
-
     '''
     retrieves the full cell_specimen table from LIMS for the specified ophys_experiment_ids
     if no ophys_experiment_ids are passed, all experiments from the `VisualBehaviorOphysProjectCache` will be retrieved
