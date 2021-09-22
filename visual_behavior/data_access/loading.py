@@ -266,7 +266,7 @@ def get_filtered_ophys_experiment_table(include_failed_data=False, release_data_
     # filter one more time on load to restrict to Visual Behavior project experiments ###
     experiments = filtering.limit_to_production_project_codes(experiments)
 
-    ### add new columns for conditions to analyze for platform paper ###
+    # add new columns for conditions to analyze for platform paper ###
     experiments = utilities.add_cell_type(experiments)
 
     if overwrite_cached_file == True:
@@ -2582,7 +2582,7 @@ def get_multi_session_df(cache_dir, df_name, conditions, experiments_table, remo
         experiments = experiments_table[(experiments_table.project_code == project_code)]
         if project_code == 'VisualBehaviorMultiscope':
             experiments = experiments[experiments.session_type != 'OPHYS_2_images_B_passive']
-        expts = experiments_table.reset_index()
+        # expts = experiments_table.reset_index()
         if use_session_type:
             for session_type in np.sort(experiments.session_type.unique()):
                 try:
