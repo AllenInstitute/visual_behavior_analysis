@@ -91,6 +91,10 @@ def get_analysis_cache_dir():
     return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/visual_behavior_production_analysis'
 
 
+def get_platform_analysis_cache_dir():
+    return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/platform_paper_cache'
+
+
 def get_events_dir():
     return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/event_detection'
 
@@ -112,7 +116,7 @@ def get_ophys_glm_dir():
 
 def get_cache_dir():
     """Get directory of data cache for analysis - this should be the standard cache location"""
-    cache_dir = r"//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/2020_cache/production_cache"
+    cache_dir = get_platform_analysis_cache_dir()
     return cache_dir
 
 
@@ -132,11 +136,11 @@ def get_visual_behavior_cache(from_s3=True, release_data_only=True, cache_dir=No
     """
     if from_s3:
         if cache_dir is None:
-            cache_dir = get_cache_dir()
+            cache_dir = get_platform_analysis_cache_dir()
         cache = bpc.from_s3_cache(cache_dir=cache_dir)
     else:
         if release_data_only:
-            cache = bpc.from_lims(data_release_date='2021-03-25')
+            cache = bpc.from_lims(data_release_date=['2021-03-25', '2021-08-12'])
         else:
             cache = bpc.from_lims()
     return cache
@@ -152,10 +156,9 @@ def get_released_ophys_experiment_table(exclude_ai94=True):
     Returns:
         experiment_table -- returns a dataframe with ophys_experiment_id as the index and metadata as columns.
     '''
-    # data_storage_directory = '//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/production_cache'
-    # cache = bpc.from_s3_cache(cache_dir=data_storage_directory)
+    print('getting experiment table from lims, NOT AWS')
 
-    cache = bpc.from_lims(data_release_date='2021-03-25')
+    cache = bpc.from_lims(data_release_date=['2021-03-25', '2021-08-12'])
 
     experiment_table = cache.get_ophys_experiment_table()
 
