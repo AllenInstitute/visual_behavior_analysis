@@ -573,7 +573,7 @@ def get_ophys_dataset(ophys_experiment_id, include_invalid_rois=False, load_from
         load_from_lims -- if True, loads dataset directly from BehaviorOphysSession.from_lims(). Invalid ROIs will be included.
         load_from_nwb -- if True, loads dataset directly from BehaviorOphysSession.from_nwb_path(). Invalid ROIs will not be included.
 
-        If both from_lims and from_nwb are set to False, an exception will be raised 
+        If both from_lims and from_nwb are set to False, an exception will be raised
 
     Returns:
         object -- BehaviorOphysSession or BehaviorOphysDataset instance, which inherits attributes & methods from SDK BehaviorOphysSession
@@ -695,7 +695,7 @@ def get_behavior_dataset(behavior_session_id, from_lims=False, from_nwb=False):
         from_lims -- if True, loads dataset directly from BehaviorSession.from_lims()
         from_nwb -- if True, loads dataset directly from BehaviorSession.from_nwb_path(), after converting behavior_session_id to nwb_path via lims query
 
-        If both from_lims and from_nwb are set to False, an exception will be raised 
+        If both from_lims and from_nwb are set to False, an exception will be raised
 
     Returns:
         object -- BehaviorSession or BehaviorDataset instance
