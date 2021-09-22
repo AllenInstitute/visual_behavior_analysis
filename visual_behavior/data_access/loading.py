@@ -168,8 +168,30 @@ def get_released_ophys_experiment_table(exclude_ai94=True):
     return experiment_table
 
 
+def get_platform_paper_experiment_table():
+    """
+    loads the experiment table that was downloaded from AWS and saved to the the platform paper cache dir.
+    Then filter out VisualBehaviorMultiscope4areasx2d and Ai94 data.
+    And add cell_type column (values = ['Excitatory', 'Sst Inhibitory', 'Vip Inhibitory']
+    :return:
+    """
+    cache_dir = get_platform_analysis_cache_dir()
+    cache = bpc.from_s3_cache(cache_dir=cache_dir)
+    experiment_table = cache.get_ophys_experiment_table()
+
+    # remove 4x2 and Ai94 data
+    experiment_table = experiment_table[(experiment_table.project_code != 'VisualBehaviorMultiscope4areasx2d') &
+                                          (experiment_table.reporter_line != 'Ai94(TITL-GCaMP6s)')]
+
+    # add cell type columm
+    experiment_table = utilities.add_cell_type(experiment_table)
+    experiment_table.cell_type.unique()
+
+    return experiment_table
+
+#
 def get_filtered_ophys_experiment_table(include_failed_data=False, release_data_only=False, exclude_ai94=True,
-                                        from_cached_file=True, overwrite_cached_file=False):
+                                        add_extra_columns=True, from_cached_file=True, overwrite_cached_file=False):
     """
     Loads a list of available ophys experiments and adds additional useful columns to the table. By default, loads from a saved cached file.
     If cached file does not exist, loads list of available experiments directly from lims using SDK BehaviorProjectCache, and saves the reformatted table to the default Visual Behavior data cache location.
