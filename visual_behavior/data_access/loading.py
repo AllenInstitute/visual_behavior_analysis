@@ -384,6 +384,54 @@ def get_second_release_candidates():
     return release_candidates
 
 
+def get_extened_stimulus_presentations(stimulus_presentations, licks, rewards, running_speed, eye_tracking):
+    """
+    Takes SDK stimulus presentations table and adds a bunch of useful columns by incorporating data from other tables
+    and reformatting existing column data
+    :param stimulus_presentations:
+    :return:
+    """
+    if 'orientation' in stimulus_presentations.columns:
+        stimulus_presentations = stimulus_presentations.drop(columns=['orientation', 'image_set', 'index',
+                                                                      'phase', 'spatial_frequency'])
+    stimulus_presentations = reformat.add_change_each_flash(stimulus_presentations)
+    stimulus_presentations['pre_change'] = stimulus_presentations['change'].shift(-1)
+    stimulus_presentations['pre_omitted'] = stimulus_presentations['omitted'].shift(-1)
+    stimulus_presentations = reformat.add_epoch_times(stimulus_presentations)
+    stimulus_presentations = reformat.add_mean_running_speed(stimulus_presentations, running_speed)
+    try:  # if eye tracking data is not present or cant be loaded
+        stimulus_presentations = reformat.add_mean_pupil_area(stimulus_presentations, eye_tracking)
+    except BaseException:  # set to NaN
+        stimulus_presentations['mean_pupil_area'] = np.nan
+    stimulus_presentations = reformat.add_licks_each_flash(stimulus_presentations, licks)
+    stimulus_presentations = reformat.add_response_latency(stimulus_presentations)
+    stimulus_presentations = reformat.add_rewards_each_flash(stimulus_presentations, rewards)
+    stimulus_presentations['licked'] = [True if len(licks) > 0 else False for licks in
+                                        stimulus_presentations.licks.values]
+    stimulus_presentations['lick_rate'] = stimulus_presentations['licked'].rolling(window=320, min_periods=1,
+                                                                                   win_type='triang').mean() / .75
+    stimulus_presentations['rewarded'] = [True if len(rewards) > 0 else False for rewards in
+                                          stimulus_presentations.rewards.values]
+    stimulus_presentations['reward_rate'] = stimulus_presentations['rewarded'].rolling(window=320, min_periods=1,
+                                                                                       win_type='triang').mean()
+    stimulus_presentations = reformat.add_response_latency(stimulus_presentations)
+    stimulus_presentations = reformat.add_image_contrast_to_stimulus_presentations(stimulus_presentations)
+    stimulus_presentations = reformat.add_time_from_last_lick(stimulus_presentations, licks)
+    stimulus_presentations = reformat.add_time_from_last_reward(stimulus_presentations, rewards)
+    stimulus_presentations = reformat.add_time_from_last_change(stimulus_presentations)
+    stimulus_presentations = reformat.add_time_from_last_omission(stimulus_presentations)
+    stimulus_presentations['flash_after_omitted'] = stimulus_presentations['omitted'].shift(1)
+    stimulus_presentations['flash_after_change'] = stimulus_presentations['change'].shift(1)
+    stimulus_presentations['image_name_next_flash'] = stimulus_presentations['image_name'].shift(-1)
+    stimulus_presentations['image_index_next_flash'] = stimulus_presentations['image_index'].shift(-1)
+    stimulus_presentations['image_name_previous_flash'] = stimulus_presentations['image_name'].shift(1)
+    stimulus_presentations['image_index_previous_flash'] = stimulus_presentations['image_index'].shift(1)
+    stimulus_presentations['lick_on_next_flash'] = stimulus_presentations['licked'].shift(-1)
+    stimulus_presentations['lick_rate_next_flash'] = stimulus_presentations['lick_rate'].shift(-1)
+    stimulus_presentations['lick_on_previous_flash'] = stimulus_presentations['licked'].shift(1)
+    stimulus_presentations['lick_rate_previous_flash'] = stimulus_presentations['lick_rate'].shift(1)
+    return stimulus_presentations
+
 # LOAD OPHYS DATA FROM SDK AND EDIT OR ADD METHODS/ATTRIBUTES WITH BUGS OR INCOMPLETE FEATURES #
 
 class BehaviorOphysDataset(BehaviorOphysExperiment):
@@ -475,52 +523,9 @@ class BehaviorOphysDataset(BehaviorOphysExperiment):
 
     @property
     def extended_stimulus_presentations(self):
-        stimulus_presentations = self.stimulus_presentations.copy()
-        if 'orientation' in stimulus_presentations.columns:
-            stimulus_presentations = stimulus_presentations.drop(columns=['orientation', 'image_set', 'index',
-                                                                          'phase', 'spatial_frequency'])
-        stimulus_presentations = reformat.add_change_each_flash(stimulus_presentations)
-        stimulus_presentations['pre_change'] = stimulus_presentations['change'].shift(-1)
-        stimulus_presentations['pre_omitted'] = stimulus_presentations['omitted'].shift(-1)
-        stimulus_presentations = reformat.add_epoch_times(stimulus_presentations)
-        stimulus_presentations = reformat.add_mean_running_speed(stimulus_presentations, self.running_speed)
-        try:  # if eye tracking data is not present or cant be loaded
-            stimulus_presentations = reformat.add_mean_pupil_area(stimulus_presentations, self.eye_tracking)
-        except BaseException:  # set to NaN
-            stimulus_presentations['mean_pupil_area'] = np.nan
-        stimulus_presentations = reformat.add_licks_each_flash(stimulus_presentations, self.licks)
-        stimulus_presentations = reformat.add_response_latency(stimulus_presentations)
-        stimulus_presentations = reformat.add_rewards_each_flash(stimulus_presentations, self.rewards)
-        stimulus_presentations['licked'] = [True if len(licks) > 0 else False for licks in
-                                            stimulus_presentations.licks.values]
-        stimulus_presentations['lick_rate'] = stimulus_presentations['licked'].rolling(window=320, min_periods=1,
-                                                                                       win_type='triang').mean() / .75
-        stimulus_presentations['rewarded'] = [True if len(rewards) > 0 else False for rewards in
-                                              stimulus_presentations.rewards.values]
-        stimulus_presentations['reward_rate'] = stimulus_presentations['rewarded'].rolling(window=320, min_periods=1,
-                                                                                           win_type='triang').mean()
-        stimulus_presentations = reformat.add_response_latency(stimulus_presentations)
-        stimulus_presentations = reformat.add_image_contrast_to_stimulus_presentations(stimulus_presentations)
-        stimulus_presentations = reformat.add_time_from_last_lick(stimulus_presentations, self.licks)
-        stimulus_presentations = reformat.add_time_from_last_reward(stimulus_presentations, self.rewards)
-        stimulus_presentations = reformat.add_time_from_last_change(stimulus_presentations)
-        stimulus_presentations = reformat.add_time_from_last_omission(stimulus_presentations)
-        stimulus_presentations['flash_after_omitted'] = stimulus_presentations['omitted'].shift(1)
-        stimulus_presentations['flash_after_change'] = stimulus_presentations['change'].shift(1)
-        stimulus_presentations['image_name_next_flash'] = stimulus_presentations['image_name'].shift(-1)
-        stimulus_presentations['image_index_next_flash'] = stimulus_presentations['image_index'].shift(-1)
-        stimulus_presentations['image_name_previous_flash'] = stimulus_presentations['image_name'].shift(1)
-        stimulus_presentations['image_index_previous_flash'] = stimulus_presentations['image_index'].shift(1)
-        stimulus_presentations['lick_on_next_flash'] = stimulus_presentations['licked'].shift(-1)
-        stimulus_presentations['lick_rate_next_flash'] = stimulus_presentations['lick_rate'].shift(-1)
-        stimulus_presentations['lick_on_previous_flash'] = stimulus_presentations['licked'].shift(1)
-        stimulus_presentations['lick_rate_previous_flash'] = stimulus_presentations['lick_rate'].shift(1)
-        if check_if_model_output_available(self.metadata['behavior_session_id']):
-            stimulus_presentations = add_model_outputs_to_stimulus_presentations(
-                stimulus_presentations, int(self.metadata['behavior_session_id']))
-        else:
-            print('model outputs not available')
-        self._extended_stimulus_presentations = stimulus_presentations
+        extended_stimulus_presentations = get_extened_stimulus_presentations(self.stimulus_presentations.copy(),
+                                                                self.licks, self.rewards, self.running_speed, self.eye_tracking)
+        self._extended_stimulus_presentations = extended_stimulus_presentations
         return self._extended_stimulus_presentations
 
     @property
@@ -578,7 +583,8 @@ class BehaviorOphysDataset(BehaviorOphysExperiment):
         return cell_specimen_id
 
 
-def get_ophys_dataset(ophys_experiment_id, include_invalid_rois=False, load_from_lims=False, load_from_nwb=False):
+def get_ophys_dataset(ophys_experiment_id, include_invalid_rois=False, load_from_lims=False, load_from_nwb=True,
+                      get_extended_stimulus_presentations=True):
     """
     Gets behavior + ophys data for one experiment (single imaging plane), either using the SDK LIMS API,
     SDK NWB API, or using BehaviorOphysDataset wrapper which inherits the LIMS API BehaviorOphysSession object,
@@ -589,6 +595,7 @@ def get_ophys_dataset(ophys_experiment_id, include_invalid_rois=False, load_from
         include_invalid_rois {Boolean} -- if True, return all ROIs including invalid. If False, filter out invalid ROIs
         load_from_lims -- if True, loads dataset directly from BehaviorOphysSession.from_lims(). Invalid ROIs will be included.
         load_from_nwb -- if True, loads dataset directly from BehaviorOphysSession.from_nwb_path(). Invalid ROIs will not be included.
+        get_extended_stimulus_presentations -- if True, adds an attribute "extended_stimulus_presentations" to the dataset object
 
         If both from_lims and from_nwb are set to False, an exception will be raised
 
