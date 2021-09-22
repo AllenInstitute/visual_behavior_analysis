@@ -2497,9 +2497,12 @@ def add_superficial_deep_to_experiments_table(experiments_table):
     return experiments_table
 
 
-def get_file_name_for_multi_session_df_no_session_type(df_name, project_code, conditions, use_events):
+def get_file_name_for_multi_session_df_no_session_type(df_name, project_code, conditions, use_events, filter_events):
     if use_events:
-        suffix = '_events'
+        if filter_events:
+            suffix = '_filtered_events'
+        else:
+            suffix = '_events'
     else:
         suffix = ''
 
@@ -2520,9 +2523,12 @@ def get_file_name_for_multi_session_df_no_session_type(df_name, project_code, co
     return filename
 
 
-def get_file_name_for_multi_session_df(df_name, project_code, session_type, conditions, use_events):
+def get_file_name_for_multi_session_df(df_name, project_code, session_type, conditions, use_events, filter_events):
     if use_events:
-        suffix = '_events'
+        if filter_events:
+            suffix = '_filtered_events'
+        else:
+            suffix = '_events'
     else:
         suffix = ''
     if len(conditions) == 6:
@@ -2542,7 +2548,8 @@ def get_file_name_for_multi_session_df(df_name, project_code, session_type, cond
     return filename
 
 
-def get_multi_session_df(cache_dir, df_name, conditions, experiments_table, remove_outliers=True, use_session_type=True, use_events=False):
+def get_multi_session_df(cache_dir, df_name, conditions, experiments_table, remove_outliers=False, use_session_type=True,
+                         use_events=False, filter_events=True):
     """
     Loops through all experiments in the provided experiments_table, creates a response dataframe indicated by df_name,
     creates a mean response dataframe for a given set of conditions, and concatenates across all experiments to create
@@ -2560,7 +2567,11 @@ def get_multi_session_df(cache_dir, df_name, conditions, experiments_table, remo
     :param use_events: Boolean, whether to use events instead of dF/F when creating response dataframes
     :return: multi_session_df for conditions specified above
     """
-    experiments_table = get_filtered_ophys_experiment_table()
+
+    cache_dir = get_platform_analysis_cache_dir()
+    cache = bpc.from_s3_cache(cache_dir=cache_dir)
+    experiments_table = cache.get_ophys_experiment_table()
+
     project_codes = experiments_table.project_code.unique()
     multi_session_df = pd.DataFrame()
     for project_code in project_codes:
@@ -2568,28 +2579,28 @@ def get_multi_session_df(cache_dir, df_name, conditions, experiments_table, remo
         if project_code == 'VisualBehaviorMultiscope':
             experiments = experiments[experiments.session_type != 'OPHYS_2_images_B_passive']
         expts = experiments_table.reset_index()
-        # expts = experiments_table.copy()
         if use_session_type:
             for session_type in np.sort(experiments.session_type.unique()):
                 try:
                     filename = get_file_name_for_multi_session_df(df_name, project_code, session_type, conditions,
-                                                                  use_events)
-                    filepath = os.path.join(cache_dir, 'multi_session_summary_dfs', filename)
+                                                                  use_events, filter_events)
+                    filepath = os.path.join(get_platform_analysis_cache_dir(), 'multi_session_summary_dfs', filename)
+                    # print('reading file at', filepath)
                     df = pd.read_hdf(filepath, key='df')
-                    df = df.merge(expts, on='ophys_experiment_id')
+                    # df = df.merge(expts, on='ophys_experiment_id')
                     if remove_outliers:
                         outlier_cells = df[df.mean_response > 5].cell_specimen_id.unique()
                         df = df[df.cell_specimen_id.isin(outlier_cells) == False]
                     multi_session_df = pd.concat([multi_session_df, df])
                 except BaseException:
-                    print('no multi_session_df for', session_type)
+                    print('no multi_session_df for', project_code, session_type)
         else:
-            filename = get_file_name_for_multi_session_df_no_session_type(df_name, project_code, conditions, use_events)
+            filename = get_file_name_for_multi_session_df_no_session_type(df_name, project_code, conditions, use_events, filter_events)
             filepath = os.path.join(cache_dir, 'multi_session_summary_dfs', filename)
             df = pd.read_hdf(filepath, key='df')
-            df = df.merge(expts[['ophys_experiment_id', 'cre_line', 'location', 'location_layer',
-                                 'layer', 'ophys_session_id', 'project_code', 'session_type',
-                                 'specimen_id', 'depth', 'exposure_number', 'ophys_container_id']], on='ophys_experiment_id')
+            # df = df.merge(expts[['ophys_experiment_id', 'cre_line', 'location', 'location_layer',
+            #                      'layer', 'ophys_session_id', 'project_code', 'session_type',
+            #                      'specimen_id', 'depth', 'exposure_number', 'ophys_container_id']], on='ophys_experiment_id')
             if remove_outliers:
                 outlier_cells = df[df.mean_response > 5].cell_specimen_id.unique()
             df = df[df.cell_specimen_id.isin(outlier_cells) == False]
