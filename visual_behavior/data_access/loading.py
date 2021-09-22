@@ -612,15 +612,17 @@ def get_ophys_dataset(ophys_experiment_id, include_invalid_rois=False, load_from
     if load_from_lims:
         dataset = BehaviorOphysExperiment.from_lims(int(ophys_experiment_id))
     elif load_from_nwb:
-        nwb_files = get_release_ophys_nwb_file_paths()
-        nwb_file = [file for file in nwb_files.nwb_file.values if str(ophys_experiment_id) in file]
-        if len(nwb_file) > 0:
-            nwb_path = nwb_file[0]
-            if 'win' in sys.platform:
-                nwb_path = '\\' + os.path.abspath(nwb_path)[2:]
-            dataset = BehaviorOphysExperiment.from_nwb_path(nwb_path)
-        else:
-            print('no NWB file path found for', ophys_experiment_id)
+        cache_dir = get_platform_analysis_cache_dir()
+        cache = bpc.from_s3_cache(cache_dir=cache_dir)
+        dataset = cache.get_behavior_ophys_experiment(ophys_experiment_id)
+        # add extended stimulus presentations
+        dataset.extended_stimulus_presentations = get_extened_stimulus_presentations(dataset.stimulus_presentations.copy(),
+                                                                             dataset.licks, dataset.rewards,
+                                                                             dataset.running_speed, dataset.eye_tracking)
+        # add behavior movie timestamps
+        lims_data = utilities.get_lims_data(ophys_experiment_id)
+        timestamps = utilities.get_timestamps(lims_data)
+        dataset.behavior_movie_timestamps = timestamps['behavior_monitoring']['timestamps'].copy()
     else:
         raise Exception('Set load_from_lims or load_from_nwb to True')
     return dataset
@@ -739,11 +741,27 @@ def get_behavior_dataset(behavior_session_id, from_lims=False, from_nwb=False):
         raise Exception('Set load_from_lims or load_from_nwb to True')
     return dataset
 
+#
+# def get_ophys_container_ids(include_failed_data=False, release_data_only=False, exclude_ai94=True, add_extra_columns=False,
+#                             from_cached_file=True, overwrite_cached_file=False):
+#     """Get container_ids that meet the criteria indicated by flags, which are identical to those in get_filtered_ophys_experiment_table() """
+#     experiments = get_filtered_ophys_experiment_table(include_failed_data=include_failed_data, release_data_only=release_data_only,
+#                                                       exclude_ai94=exclude_ai94, add_extra_columns=add_extra_columns,
+#                                                       from_cached_file=from_cached_file, overwrite_cached_file=overwrite_cached_file)
+#     container_ids = np.sort(experiments.ophys_container_id.unique())
+#     return container_ids
 
-def get_ophys_container_ids(include_failed_data=False, release_data_only=False, exclude_ai94=True, from_cache=True, save_to_cache=False):
-    """Get container_ids that meet the criteria indicated by flags, which are identical to those in get_filtered_ophys_experiment_table() """
-    experiments = get_filtered_ophys_experiment_table(include_failed_data=include_failed_data, release_data_only=release_data_only,
-                                                      exclude_ai94=exclude_ai94, from_cache=from_cache, save_to_cache=save_to_cache)
+def get_ophys_container_ids(platform_paper_only=False):
+    """
+    Gets ophys_container_ids for all published datasets by default, or limits to platform paper containers if platform_paper_only is True
+    :return:
+    """
+    if platform_paper_only:
+        experiments = get_platform_paper_experiment_table()
+    else:
+        cache_dir = get_platform_analysis_cache_dir
+        cache = bpc.from_s3_cache(cache_dir)
+        experiments = cache.get_ophys_experiment_table()
     container_ids = np.sort(experiments.ophys_container_id.unique())
     return container_ids
 
