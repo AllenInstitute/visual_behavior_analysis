@@ -26,6 +26,7 @@ stdout_location = r'/allen/programs/braintv/workgroups/nc-ophys/Marina/ClusterJo
 
 cache_dir = loading.get_platform_analysis_cache_dir()
 cache = bpc.from_s3_cache(cache_dir=cache_dir)
+print(cache_dir)
 
 experiments_table = cache.get_ophys_experiment_table()
 

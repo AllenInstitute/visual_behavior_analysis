@@ -92,9 +92,7 @@ def get_analysis_cache_dir():
 
 
 def get_platform_analysis_cache_dir():
-    cache_dir = r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/platform_paper_cache/2.12.4'
-    print('cache_dir: ', cache_dir)
-    return cache_dir
+    return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/platform_paper_cache'
 
 
 def get_events_dir():
@@ -139,6 +137,7 @@ def get_visual_behavior_cache(from_s3=True, release_data_only=True, cache_dir=No
     if from_s3:
         if cache_dir is None:
             cache_dir = get_platform_analysis_cache_dir()
+            print(cache_dir)
         cache = bpc.from_s3_cache(cache_dir=cache_dir)
     else:
         if release_data_only:
@@ -626,7 +625,8 @@ def get_ophys_dataset(ophys_experiment_id, include_invalid_rois=False, load_from
         # add extended stimulus presentations
         dataset.extended_stimulus_presentations = get_extened_stimulus_presentations(dataset.stimulus_presentations.copy(),
                                                                                      dataset.licks, dataset.rewards,
-    if get_behavior_movie_timestamps:                                                dataset.running_speed, dataset.eye_tracking)
+                                                                                     dataset.running_speed, dataset.eye_tracking)
+    if get_behavior_movie_timestamps:
         # add behavior movie timestamps
         lims_data = utilities.get_lims_data(ophys_experiment_id)
         timestamps = utilities.get_timestamps(lims_data)

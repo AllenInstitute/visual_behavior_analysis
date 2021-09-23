@@ -32,6 +32,7 @@ def get_multi_session_df(project_code, session_number, df_name, conditions, use_
 
     cache_dir = loading.get_platform_analysis_cache_dir()
     cache = bpc.from_s3_cache(cache_dir=cache_dir)
+    print(cache_dir)
     experiments_table = cache.get_ophys_experiment_table()
 
     session_number = float(session_number)
