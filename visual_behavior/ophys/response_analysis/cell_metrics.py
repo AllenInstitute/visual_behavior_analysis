@@ -213,7 +213,7 @@ def get_fano_factor(group):
     """
     mean_responses = group.mean_response.values
     sd = np.std(mean_responses)
-    mean_response = np.mean(mean_responses)
+    mean_response = np.nanmean(mean_responses)
     fano_factor = np.abs((sd * 2) / mean_response)
     return pd.Series({'fano_factor': fano_factor})
 
