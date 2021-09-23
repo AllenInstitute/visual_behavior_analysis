@@ -1,8 +1,6 @@
 import warnings
 from allensdk.internal.api import PostgresQueryMixin
-from allensdk.brain_observatory.behavior.session_apis.data_io import BehaviorLimsApi
 from allensdk.brain_observatory.behavior.behavior_session import BehaviorSession
-from allensdk.brain_observatory.behavior.session_apis.data_io import BehaviorOphysLimsApi
 from allensdk.brain_observatory.behavior.behavior_ophys_experiment import BehaviorOphysExperiment
 from allensdk.brain_observatory.behavior.behavior_project_cache import VisualBehaviorOphysProjectCache as bpc
 from visual_behavior.data_access import filtering
@@ -575,7 +573,7 @@ def get_ophys_dataset(ophys_experiment_id, include_invalid_rois=False, load_from
         load_from_lims -- if True, loads dataset directly from BehaviorOphysSession.from_lims(). Invalid ROIs will be included.
         load_from_nwb -- if True, loads dataset directly from BehaviorOphysSession.from_nwb_path(). Invalid ROIs will not be included.
 
-        If both from_lims and from_nwb are set to False, data will be loaded using the LIMS API then passed to the BehaviorOphysDataset class which allows invalid ROIs to be filtered out, and allows access to extended_stimulus_presentations, and face movie data.
+        If both from_lims and from_nwb are set to False, an exception will be raised
 
     Returns:
         object -- BehaviorOphysSession or BehaviorOphysDataset instance, which inherits attributes & methods from SDK BehaviorOphysSession
@@ -600,8 +598,7 @@ def get_ophys_dataset(ophys_experiment_id, include_invalid_rois=False, load_from
         else:
             print('no NWB file path found for', ophys_experiment_id)
     else:
-        api = BehaviorOphysLimsApi(int(ophys_experiment_id))
-        dataset = BehaviorOphysDataset(api, include_invalid_rois)
+        raise Exception('Set load_from_lims or load_from_nwb to True')
     return dataset
 
 
@@ -698,7 +695,7 @@ def get_behavior_dataset(behavior_session_id, from_lims=False, from_nwb=False):
         from_lims -- if True, loads dataset directly from BehaviorSession.from_lims()
         from_nwb -- if True, loads dataset directly from BehaviorSession.from_nwb_path(), after converting behavior_session_id to nwb_path via lims query
 
-        If both from_lims and from_nwb are set to False, data will be loaded using the LIMS API then passed to the BehaviorDataset class which allows access to extended_stimulus_presentations and trials.
+        If both from_lims and from_nwb are set to False, an exception will be raised
 
     Returns:
         object -- BehaviorSession or BehaviorDataset instance
@@ -715,8 +712,7 @@ def get_behavior_dataset(behavior_session_id, from_lims=False, from_nwb=False):
         else:
             print('no NWB file path found for', behavior_session_id)
     else:
-        api = BehaviorLimsApi(behavior_session_id)
-        dataset = BehaviorDataset(api)
+        raise Exception('Set load_from_lims or load_from_nwb to True')
     return dataset
 
 
@@ -895,7 +891,11 @@ def load_behavior_model_outputs(behavior_session_id):
             'reward_rate',
             'is_change'
         ]
-        model_outputs.drop(columns=cols_to_drop, inplace=True)
+        for col in cols_to_drop:
+            try:
+                model_outputs.drop(columns=[col], inplace=True)
+            except KeyError:
+                pass
 
     else:
         warnings.warn('no model outputs saved for behavior_session_id: {}'.format(behavior_session_id))
@@ -1147,7 +1147,7 @@ def get_stim_metrics_summary(behavior_session_id, load_location='from_file'):
 
 # FROM LIMS DATABASE
 # this portion is depreciated, please use functions in from_lims.py instead
-gen_depr_str = 'this function is deprecated and will be removed in a future version, ' \
+gen_depr_str = 'this function is deprecated and will be removed on October 29th 2021, ' \
                + 'please use {}.{} instead'
 
 # EXPERIMENT LEVEL
@@ -1423,7 +1423,7 @@ def gen_roi_exclusion_labels_lists(experiment_id):
 
 
 def clean_roi_locations_column_labels(roi_locations_dataframe):
-    """takes some column labels from the roi_locations dataframe and  renames them to be more explicit and descriptive, and to match the column labels
+    """takes some column labels from the roi_locations dataframe and renames them to be more explicit and descriptive, and to match the column labels
         from the objectlist dataframe.
 
     Arguments:
@@ -1432,6 +1432,9 @@ def clean_roi_locations_column_labels(roi_locations_dataframe):
     Returns:
         dataframe -- [description]
     """
+    warn_str = gen_depr_str.format('from_lims',
+                                   'get_cell_rois_table')
+    warnings.warn(warn_str)
     roi_locations_dataframe = roi_locations_dataframe.rename(columns={"id": "cell_roi_id",
                                                                       "mask_matrix": "roi_mask",
                                                                       "x": "bbox_min_x",
@@ -2838,7 +2841,8 @@ def get_remaining_crosstalk_amount_dict(experiment_id):
     return remaining_crosstalk_dict
 
 
-def get_cell_table(ophys_experiment_ids=None, columns_to_return='*'):
+def get_cell_table(ophys_experiment_ids=None, columns_to_return='*', valid_rois_only=False):
+
     '''
     retrieves the full cell_specimen table from LIMS for the specified ophys_experiment_ids
     if no ophys_experiment_ids are passed, all experiments from the `VisualBehaviorOphysProjectCache` will be retrieved
@@ -2870,6 +2874,9 @@ def get_cell_table(ophys_experiment_ids=None, columns_to_return='*'):
             mask_image_plane
             ophys_cell_segmentation_run_id
         default = '*'
+    valid_rois_only: bool
+        If False (default), all ROIs will be returned
+        If True, only valid ROIs will be returned
 
     Returns
     -------
@@ -2911,11 +2918,18 @@ def get_cell_table(ophys_experiment_ids=None, columns_to_return='*'):
     if columns_to_return != '*':
         columns_to_return = ', '.join(columns_to_return).replace('cell_roi_id', 'id')
 
-    query = '''
-        select {}
-        from cell_rois
-        where ophys_experiment_id in {} and cell_specimen_id is not null and valid_roi = True
-    '''
+    if valid_rois_only:
+        query = '''
+            select {}
+            from cell_rois
+            where ophys_experiment_id in {} and cell_specimen_id is not null and valid_roi = True
+        '''
+    else:
+        query = '''
+            select {}
+            from cell_rois
+            where ophys_experiment_id in {} and cell_specimen_id is not null
+        '''
 
     # Since we are querying from the 'cell_rois' table, the 'id' column is actually 'cell_roi_id'. Rename.
     lims_rois = db.lims_query(
