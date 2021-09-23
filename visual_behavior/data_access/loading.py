@@ -92,7 +92,7 @@ def get_analysis_cache_dir():
 
 
 def get_platform_analysis_cache_dir():
-    return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/platform_paper_cache'
+    return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/platform_paper_cache/2.12.4'
 
 
 def get_events_dir():
