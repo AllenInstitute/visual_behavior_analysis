@@ -1346,7 +1346,7 @@ def add_experience_and_exposure_to_experiment_table(experiments_table):
             else:
                 exp = 'Novel > 3'
             experience_exposure_list.append(exp)
-    experiments_table['experience_exposure'] = experience_exposure_list
+    experiments_table.loc[:, 'experience_exposure'] = experience_exposure_list
     return experiments_table
 
 
@@ -1418,13 +1418,13 @@ def add_cell_type(df):
     adds a column with abbreviated version of cre_line, i.e. Vip, Sst, Exc
     """
     cre_indices = df[df.cre_line == 'Vip-IRES-Cre'].index.values
-    df.at[cre_indices, 'cell_type'] = 'Vip Inhibitory'
+    df.loc[cre_indices, 'cell_type'] = 'Vip Inhibitory'
 
     cre_indices = df[df.cre_line == 'Sst-IRES-Cre'].index.values
-    df.at[cre_indices, 'cell_type'] = 'Sst Inhibitory'
+    df.loc[cre_indices, 'cell_type'] = 'Sst Inhibitory'
 
     cre_indices = df[df.cre_line == 'Slc17a7-IRES2-Cre'].index.values
-    df.at[cre_indices, 'cell_type'] = 'Excitatory'
+    df.loc[cre_indices, 'cell_type'] = 'Excitatory'
 
     return df
 
