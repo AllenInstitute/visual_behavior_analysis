@@ -206,6 +206,18 @@ def get_fraction_significant_p_value_gray_screen(group):
     return pd.Series({'fraction_significant_p_value_gray_screen': fraction_significant_p_value_gray_screen})
 
 
+def get_fano_factor(group):
+    """
+    takes stimulus_response_df grouped by cell_specimen_id (with desired filtering criteria previously applied)
+    and computes the fano_factor each cell_specimen_id
+    """
+    mean_responses = group.mean_response.values
+    sd = np.std(mean_responses)
+    mean_response = np.mean(mean_responses)
+    fano_factor = np.abs((sd * 2) / mean_response)
+    return pd.Series({'fano_factor': fano_factor})
+
+
 def compute_reliability_vectorized(traces):
     '''
     Compute average pearson correlation between pairs of rows of the input matrix.
@@ -223,7 +235,7 @@ def compute_reliability_vectorized(traces):
     lower_tri_inds = np.where(np.tril(np.ones([m, m]), k=-1))
     # Take the lower triangle values from the corrmat and averge them
     correlation_values = list(corrmat[lower_tri_inds[0], lower_tri_inds[1]])
-    reliability = np.mean(correlation_values)
+    reliability = np.nanmean(correlation_values)
     return reliability, correlation_values
 
 
@@ -438,6 +450,9 @@ def generate_metrics_table(ophys_experiment_id, ophys_experiment_table, use_even
     # get fraction responsive trials across all images
     fraction_responsive_trials = df.groupby(['cell_specimen_id']).apply(get_fraction_significant_p_value_gray_screen)
 
+    # get fano factor across trials
+    fano_factor = df.groupby(['cell_specimen_id']).apply(get_fano_factor)
+
     # get average trial to trial reliability across all images
     frame_rate = dataset.metadata['ophys_frame_rate']
     reliability = get_reliability_for_cell_specimen_ids(df, frame_rate)
@@ -455,6 +470,7 @@ def generate_metrics_table(ophys_experiment_id, ophys_experiment_table, use_even
     metrics_table = metrics_table.merge(image_selectivity_index, on='cell_specimen_id')
     metrics_table = metrics_table.merge(lifetime_sparseness, on='cell_specimen_id')
     metrics_table = metrics_table.merge(fraction_responsive_trials, on='cell_specimen_id')
+    metrics_table = metrics_table.merge(fano_factor, on='cell_specimen_id')
     metrics_table = metrics_table.merge(reliability, on='cell_specimen_id')
     metrics_table = metrics_table.merge(running_modulation_index, on='cell_specimen_id')
     if condition == 'changes':
