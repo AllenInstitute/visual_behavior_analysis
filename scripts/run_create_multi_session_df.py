@@ -24,7 +24,7 @@ python_path = os.path.join(
 # define the job record output folder
 stdout_location = r'/allen/programs/braintv/workgroups/nc-ophys/Marina/ClusterJobs/JobRecords'
 
-cache_dir = r'/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/platform_paper_cache'
+cache_dir = loading.get_platform_analysis_cache_dir()
 cache = bpc.from_s3_cache(cache_dir=cache_dir)
 
 experiments_table = cache.get_ophys_experiment_table()

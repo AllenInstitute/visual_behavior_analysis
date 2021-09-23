@@ -30,7 +30,7 @@ def get_multi_session_df(project_code, session_number, df_name, conditions, use_
 
     # experiments_table = loading.get_filtered_ophys_experiment_table(release_data_only=True)
 
-    cache_dir = r'/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/platform_paper_cache'
+    cache_dir = loading.get_platform_analysis_cache_dir()
     cache = bpc.from_s3_cache(cache_dir=cache_dir)
     experiments_table = cache.get_ophys_experiment_table()
 
@@ -81,7 +81,7 @@ def get_multi_session_df(project_code, session_number, df_name, conditions, use_
         mega_mdf = mega_mdf.drop(columns='index')
 
     filename = loading.get_file_name_for_multi_session_df(df_name, project_code, session_type, conditions, use_events, filter_events)
-    mega_mdf_write_dir = os.path.join(loading.get_analysis_cache_dir(), 'multi_session_summary_dfs')
+    mega_mdf_write_dir = os.path.join(loading.get_platform_analysis_cache_dir(), 'multi_session_summary_dfs')
     print('saving multi session mean df to ', filename)
     mega_mdf.to_hdf(os.path.join(mega_mdf_write_dir, filename), key='df')
     print('saved')
