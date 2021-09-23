@@ -393,6 +393,8 @@ def get_extened_stimulus_presentations(stimulus_presentations, licks, rewards, r
     :param stimulus_presentations:
     :return:
     """
+    if 'time' in licks.keys():
+        licks = licks.rename(columns={'time': 'timestamps'})
     if 'orientation' in stimulus_presentations.columns:
         stimulus_presentations = stimulus_presentations.drop(columns=['orientation', 'image_set', 'index',
                                                                       'phase', 'spatial_frequency'])
