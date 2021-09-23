@@ -1399,3 +1399,11 @@ def add_cell_type(df):
     df.at[cre_indices, 'cell_type'] = 'Excitatory'
 
     return df
+
+
+def add_image_set_to_experiment_table(experiment_table):
+    """
+    Adds a column 'image_set' to the experiment_table, determined based on the image set listed in the session_type column string
+    """
+    experiment_table['image_set'] = [session_type[15] for session_type in experiment_table.session_type.values]
+    return experiment_table

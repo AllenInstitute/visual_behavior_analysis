@@ -2,6 +2,7 @@ import os
 import allensdk.brain_observatory.behavior.behavior_project_cache as bpc
 from slurm_deploy import Slurm
 import pathlib
+import time
 
 
 def deploy_get_behavior_summary_for_all_sessions():
@@ -16,19 +17,24 @@ def deploy_get_behavior_summary_for_all_sessions():
         partition='braintv', 
         cpus_per_task=1, 
         memory='16gb', 
-        time='00:10:00',
+        time='00:3:00',
         username=None,
     )
 
     current_location = pathlib.Path(__file__).parent.resolve()
     python_script_to_run = os.path.join(current_location, 'cache_behavior_performance_for_one_session.py')
 
+    method = 'stimulus_based'
+
     for behavior_session_id, row in behavior_session_table.iterrows():
         print('deploying job for bsid {}'.format(behavior_session_id))
-        slurm.python_script = '{} --behavior-session-id {}'.format(python_script_to_run, behavior_session_id)
+        slurm.python_script = '{} --behavior-session-id {} --method {}'.format(python_script_to_run, behavior_session_id, method)
         slurm.job_name = 'bsid_{}'.format(behavior_session_id)
 
         slurm.deploy_job()
+
+        time.sleep(0.05)
+
 
 if __name__ == "__main__":
     deploy_get_behavior_summary_for_all_sessions()
