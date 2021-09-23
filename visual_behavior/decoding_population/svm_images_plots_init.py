@@ -33,7 +33,7 @@ from svm_images_plots_main import *
 
 #%% Set vars
 
-project_codes = ['VisualBehaviorMultiscope'] # ['VisualBehaviorMultiscope'] # ['VisualBehaviorMultiscope', 'VisualBehaviorTask1B', 'VisualBehavior', 'VisualBehaviorMultiscope4areasx2d']
+project_codes = ['VisualBehavior'] # ['VisualBehaviorMultiscope'] # ['VisualBehaviorMultiscope', 'VisualBehaviorTask1B', 'VisualBehavior', 'VisualBehaviorMultiscope4areasx2d']
 
 to_decode = 'current' #'next' # 'current' (default): decode current image.    'previous': decode previous image.    'next': decode next image.
 trial_type = 'changes' #'changes' #'baseline_vs_nobaseline' #'hits_vs_misses' #'changes_vs_nochanges' #'omissions' # 'omissions', 'images', 'changes' # what trials to use for SVM analysis # the population activity of these trials at time time_win will be used to decode the image identity of flashes that occurred at their time 0 (if to_decode='current') or 750ms before (if to_decode='previous'). # 'baseline_vs_nobaseline' # decode activity at each frame vs. baseline (ie the frame before omission unless use_spont_omitFrMinus1 = 1 (see below))
