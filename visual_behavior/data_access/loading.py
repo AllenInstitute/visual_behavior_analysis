@@ -246,13 +246,11 @@ def get_filtered_ophys_experiment_table(include_failed_data=False, release_data_
         experiments = experiments[experiments.full_genotype != 'Slc17a7-IRES2-Cre/wt;Camk2a-tTA/wt;Ai94(TITL-GCaMP6s)/wt']
     if 'cre_line' not in experiments.keys():
         experiments['cre_line'] = [full_genotype.split('/')[0] for full_genotype in experiments.full_genotype.values]
-    # add session number for convenience
-    # experiments['session_number'] = [int(session_type[6]) if 'OPHYS' in session_type else None for session_type in
-    #                                  experiments.session_type.values]
     # filter one more time on load to restrict to Visual Behavior project experiments ###
     experiments = filtering.limit_to_production_project_codes(experiments)
 
-    ### add new columns for conditions to analyze for platform paper ###
+    # add new columns for conditions to analyze for platform paper ###
+    experiments = utilities.add_cell_type(experiments)
 
     if overwrite_cached_file == True:
         print('overwriting pre-saved experiments table file')
@@ -2541,7 +2539,7 @@ def get_multi_session_df(cache_dir, df_name, conditions, experiments_table, remo
         experiments = experiments_table[(experiments_table.project_code == project_code)]
         if project_code == 'VisualBehaviorMultiscope':
             experiments = experiments[experiments.session_type != 'OPHYS_2_images_B_passive']
-        expts = experiments_table.reset_index()
+        # expts = experiments_table.reset_index()
         # expts = experiments_table.copy()
         if use_session_type:
             for session_type in np.sort(experiments.session_type.unique()):
