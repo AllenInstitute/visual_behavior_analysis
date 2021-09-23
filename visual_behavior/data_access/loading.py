@@ -73,7 +73,6 @@ def get_super_container_plots_dir():
 
 def get_container_plots_dir():
     return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/container_plots'
-    # return r'//allen/programs/braintv/workgroups/nc-ophys/MultiscopeSignalNoise/QC/container_plots'
 
 
 def get_session_plots_dir():
@@ -90,10 +89,6 @@ def get_single_cell_plots_dir():
 
 def get_analysis_cache_dir():
     return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/visual_behavior_production_analysis'
-
-  
-def get_platform_analysis_cache_dir():
-    return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/platform_paper_cache'
 
 
 def get_platform_analysis_cache_dir():
@@ -278,7 +273,6 @@ def get_filtered_ophys_experiment_table(include_failed_data=False, release_data_
         print('overwriting pre-saved experiments table file')
         experiments.to_csv(os.path.join(get_cache_dir(), 'filtered_ophys_experiment_table.csv'))
     return experiments
-
 
 
 def get_filtered_ophys_session_table(release_data_only=True, include_failed_data=False):
@@ -606,7 +600,7 @@ def get_ophys_dataset(ophys_experiment_id, include_invalid_rois=False, load_from
         load_from_nwb -- if True, loads dataset directly from BehaviorOphysSession.from_nwb_path(). Invalid ROIs will not be included.
         get_extended_stimulus_presentations -- if True, adds an attribute "extended_stimulus_presentations" to the dataset object
 
-        If both from_lims and from_nwb are set to False, an exception will be raised 
+        If both from_lims and from_nwb are set to False, an exception will be raised
 
     Returns:
         object -- BehaviorOphysSession or BehaviorOphysDataset instance, which inherits attributes & methods from SDK BehaviorOphysSession
@@ -730,7 +724,7 @@ def get_behavior_dataset(behavior_session_id, from_lims=False, from_nwb=False):
         from_lims -- if True, loads dataset directly from BehaviorSession.from_lims()
         from_nwb -- if True, loads dataset directly from BehaviorSession.from_nwb_path(), after converting behavior_session_id to nwb_path via lims query
 
-        If both from_lims and from_nwb are set to False, an exception will be raised 
+        If both from_lims and from_nwb are set to False, an exception will be raised
 
     Returns:
         object -- BehaviorSession or BehaviorDataset instance
