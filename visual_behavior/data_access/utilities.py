@@ -1335,14 +1335,14 @@ def add_experience_and_exposure_to_experiment_table(experiments_table):
     for experiment_id in experiments_table.index.values:
         expt = experiments_table.loc[experiment_id]
         if 'Familiar' in expt.experience_level:
-            if expt.prior_exposures_to_omissions <=3:
-                exp = 'Familiar '+str(int(expt.prior_exposures_to_omissions))
+            if expt.prior_exposures_to_omissions <= 3:
+                exp = 'Familiar ' + str(int(expt.prior_exposures_to_omissions))
             else:
                 exp = 'Familiar > 3'
             experience_exposure_list.append(exp)
         elif 'Novel' in expt.experience_level:
-            if expt.prior_exposures_to_image_set <=3:
-                exp = 'Novel '+str(int(expt.prior_exposures_to_image_set))
+            if expt.prior_exposures_to_image_set <= 3:
+                exp = 'Novel ' + str(int(expt.prior_exposures_to_image_set))
             else:
                 exp = 'Novel > 3'
             experience_exposure_list.append(exp)
@@ -1413,7 +1413,6 @@ def get_engagement_state_order(df):
     return order
 
 
-
 def add_cell_type(df):
     """
     adds a column with abbreviated version of cre_line, i.e. Vip, Sst, Exc
@@ -1437,21 +1436,18 @@ def get_matched_cells_for_set_of_conditions(ophys_experiment_table, ophys_cells_
     column_values: values of the column that you want to check for matches between (ex: ['Familiar', 'Novel 1'] or
                     ['OPHYS_1_images_A', 'OPHYS_3_images_A'])
     """
-    # get experiments and cells tables and merge
-    # experiments_table = cache.get_ophys_experiment_table()
-    # experiments_table = experiments_table[experiments_table.container_workflow_state=='published']
-    # cell_table = cache.get_ophys_cells_table()
+
     ophys_cells_table = ophys_cells_table.merge(ophys_experiment_table, on='ophys_experiment_id')
     # limit cells table to the column values to match over
-    cells = ophys_cells_table[ophys_cells_table[column_name].isin(column_values)]
+    ophys_cells_table = ophys_cells_table[ophys_cells_table[column_name].isin(column_values)]
     # group by cell and column_name to figure out how many sessions each cell has for each column_value
     exp_matched = ophys_cells_table.groupby(['cell_specimen_id', column_name, 'ophys_experiment_id']).count()
     # drop rows where a single cell_specimen_id has more than one session for each column_value
     exp_matched = exp_matched.reset_index().drop_duplicates(subset=['cell_specimen_id', column_name])
     # count how many remaining sessions there are per cell and column_name
-    n_matched = exp_matched.groupby(['cell_specimen_id']).count()[[column_name]].rename(columns={column_name:'n_sessions_matched'})
+    n_matched = exp_matched.groupby(['cell_specimen_id']).count()[[column_name]].rename(columns={column_name: 'n_sessions_matched'})
     # only keep cells that have 3 sessions - one per experience level, i.e. cells that are matched in all 3 types
-    matched_cell_ids = n_matched[n_matched.n_sessions_matched==len(column_values)].index.unique()
+    matched_cell_ids = n_matched[n_matched.n_sessions_matched == len(column_values)].index.unique()
     # print info
-    print(np.round(len(matched_cell_ids)/len(ophys_cells_table.cell_specimen_id.unique()),3)*100, 'percent of cells are matched across', column_values)
+    print(np.round(len(matched_cell_ids) / len(ophys_cells_table.cell_specimen_id.unique()), 3) * 100, 'percent of cells are matched across', column_values)
     return matched_cell_ids
