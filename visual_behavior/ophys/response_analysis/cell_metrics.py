@@ -212,7 +212,7 @@ def get_fano_factor(group):
     and computes the fano_factor each cell_specimen_id
     """
     mean_responses = group.mean_response.values
-    sd = np.std(mean_responses)
+    sd = np.nanstd(mean_responses)
     mean_response = np.nanmean(mean_responses)
     fano_factor = np.abs((sd * 2) / mean_response)
     return pd.Series({'fano_factor': fano_factor})
