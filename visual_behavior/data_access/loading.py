@@ -91,7 +91,7 @@ def get_single_cell_plots_dir():
 def get_analysis_cache_dir():
     return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/visual_behavior_production_analysis'
 
-
+  
 def get_platform_analysis_cache_dir():
     return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/platform_paper_cache'
 
@@ -253,30 +253,12 @@ def get_filtered_ophys_experiment_table(include_failed_data=False, release_data_
     experiments = filtering.limit_to_production_project_codes(experiments)
 
     ### add new columns for conditions to analyze for platform paper ###
-    experiments = utilities.add_cell_type(experiments)
-    # experiments = utilities.add_session_number_to_experiment_table(experiments)
-    # experiments = utilities.add_experience_level_to_experiment_table(experiments)
-    # experiments = utilities.add_passive_flag_to_ophys_experiment_table(experiments)
 
     if overwrite_cached_file == True:
         print('overwriting pre-saved experiments table file')
         experiments.to_csv(os.path.join(get_cache_dir(), 'filtered_ophys_experiment_table.csv'))
     return experiments
 
-
-# TEMP FOR MULTISCOPE SIGNAL NOISE ######
-
-#
-# def get_filtered_ophys_experiment_table():
-#
-#     print('getting up-to-date experiment_table from lims for SNR data')
-#     # get everything in lims
-#     cache = bpc.from_lims()
-#     experiments = cache.get_ophys_experiment_table()
-#     experiments = experiments[experiments.project_code=='MultiscopeSignalNoise']
-#     experiments = experiments[(experiments.experiment_workflow_state=='passed')&(experiments.container_workflow_state=='completed')]
-#
-#     return experiments
 
 
 def get_filtered_ophys_session_table(release_data_only=True, include_failed_data=False):
@@ -745,6 +727,7 @@ def get_ophys_container_ids(include_failed_data=False, release_data_only=False, 
     experiments = get_filtered_ophys_experiment_table(include_failed_data=include_failed_data, release_data_only=release_data_only,
                                                       exclude_ai94=exclude_ai94, add_extra_columns=add_extra_columns,
                                                       from_cached_file=from_cached_file, overwrite_cached_file=overwrite_cached_file)
+
     container_ids = np.sort(experiments.ophys_container_id.unique())
     return container_ids
 
@@ -908,7 +891,11 @@ def load_behavior_model_outputs(behavior_session_id):
             'reward_rate',
             'is_change'
         ]
-        model_outputs.drop(columns=cols_to_drop, inplace=True)
+        for col in cols_to_drop:
+            try:
+                model_outputs.drop(columns=[col], inplace=True)
+            except KeyError:
+                pass
 
     else:
         warnings.warn('no model outputs saved for behavior_session_id: {}'.format(behavior_session_id))
@@ -1160,7 +1147,7 @@ def get_stim_metrics_summary(behavior_session_id, load_location='from_file'):
 
 # FROM LIMS DATABASE
 # this portion is depreciated, please use functions in from_lims.py instead
-gen_depr_str = 'this function is deprecated and will be removed in a future version, ' \
+gen_depr_str = 'this function is deprecated and will be removed on October 29th 2021, ' \
                + 'please use {}.{} instead'
 
 # EXPERIMENT LEVEL
@@ -1436,7 +1423,7 @@ def gen_roi_exclusion_labels_lists(experiment_id):
 
 
 def clean_roi_locations_column_labels(roi_locations_dataframe):
-    """takes some column labels from the roi_locations dataframe and  renames them to be more explicit and descriptive, and to match the column labels
+    """takes some column labels from the roi_locations dataframe and renames them to be more explicit and descriptive, and to match the column labels
         from the objectlist dataframe.
 
     Arguments:
@@ -1445,6 +1432,9 @@ def clean_roi_locations_column_labels(roi_locations_dataframe):
     Returns:
         dataframe -- [description]
     """
+    warn_str = gen_depr_str.format('from_lims',
+                                   'get_cell_rois_table')
+    warnings.warn(warn_str)
     roi_locations_dataframe = roi_locations_dataframe.rename(columns={"id": "cell_roi_id",
                                                                       "mask_matrix": "roi_mask",
                                                                       "x": "bbox_min_x",
@@ -2340,9 +2330,10 @@ def build_container_df(experiment_table):
     ophys_container_ids = table['ophys_container_id'].unique()
     list_of_dicts = []
     for ophys_container_id in ophys_container_ids:
-        subset = table.query('ophys_container_id == @ophys_container_id').sort_values(by='date_of_acquisition',
-                                                                                      ascending=True).drop_duplicates(
-            'ophys_session_id').reset_index()
+        subset = table.query('ophys_container_id == @ophys_container_id').sort_values(
+            by='date_of_acquisition',
+            ascending=True
+        ).drop_duplicates('ophys_session_id').reset_index()
         temp_dict = {
             'ophys_container_id': ophys_container_id,
             # 'container_workflow_state': table.query('ophys_container_id == @ophys_container_id')['container_workflow_state'].unique()[0],
@@ -2472,12 +2463,9 @@ def add_superficial_deep_to_experiments_table(experiments_table):
     return experiments_table
 
 
-def get_file_name_for_multi_session_df_no_session_type(df_name, project_code, conditions, use_events, filter_events):
+def get_file_name_for_multi_session_df_no_session_type(df_name, project_code, conditions, use_events):
     if use_events:
-        if filter_events:
-            suffix = '_filtered_events'
-        else:
-            suffix = '_events'
+        suffix = '_events'
     else:
         suffix = ''
 
@@ -2498,12 +2486,9 @@ def get_file_name_for_multi_session_df_no_session_type(df_name, project_code, co
     return filename
 
 
-def get_file_name_for_multi_session_df(df_name, project_code, session_type, conditions, use_events, filter_events):
+def get_file_name_for_multi_session_df(df_name, project_code, session_type, conditions, use_events):
     if use_events:
-        if filter_events:
-            suffix = '_filtered_events'
-        else:
-            suffix = '_events'
+        suffix = '_events'
     else:
         suffix = ''
     if len(conditions) == 6:
@@ -2525,6 +2510,7 @@ def get_file_name_for_multi_session_df(df_name, project_code, session_type, cond
 
 def get_multi_session_df(cache_dir, df_name, conditions, experiments_table, remove_outliers=False, use_session_type=True,
                          use_events=False, filter_events=True):
+
     """
     Loops through all experiments in the provided experiments_table, creates a response dataframe indicated by df_name,
     creates a mean response dataframe for a given set of conditions, and concatenates across all experiments to create
@@ -2561,9 +2547,8 @@ def get_multi_session_df(cache_dir, df_name, conditions, experiments_table, remo
             for session_type in np.sort(experiments.session_type.unique()):
                 try:
                     filename = get_file_name_for_multi_session_df(df_name, project_code, session_type, conditions,
-                                                                  use_events, filter_events)
-                    filepath = os.path.join(get_platform_analysis_cache_dir(), 'multi_session_summary_dfs', filename)
-                    # print('reading file at', filepath)
+                                                                  use_events)
+                    filepath = os.path.join(cache_dir, 'multi_session_summary_dfs', filename)
                     df = pd.read_hdf(filepath, key='df')
                     # df = df.merge(expts, on='ophys_experiment_id')
                     if remove_outliers:
@@ -2573,7 +2558,7 @@ def get_multi_session_df(cache_dir, df_name, conditions, experiments_table, remo
                 except BaseException:
                     print('no multi_session_df for', project_code, session_type)
         else:
-            filename = get_file_name_for_multi_session_df_no_session_type(df_name, project_code, conditions, use_events, filter_events)
+            filename = get_file_name_for_multi_session_df_no_session_type(df_name, project_code, conditions, use_events)
             filepath = os.path.join(cache_dir, 'multi_session_summary_dfs', filename)
             df = pd.read_hdf(filepath, key='df')
             # df = df.merge(expts[['ophys_experiment_id', 'cre_line', 'location', 'location_layer',
@@ -2864,14 +2849,15 @@ def get_remaining_crosstalk_amount_dict(experiment_id):
     return remaining_crosstalk_dict
 
 
-def get_cell_table(ophys_session_ids=None, columns_to_return='*'):
+def get_cell_table(ophys_experiment_ids=None, columns_to_return='*', valid_rois_only=False):
+
     '''
     retrieves the full cell_specimen table from LIMS for the specified ophys_experiment_ids
     if no ophys_experiment_ids are passed, all experiments from the `VisualBehaviorOphysProjectCache` will be retrieved
 
     Parameters
     ----------
-    ophys_session_ids : list
+    ophys_experiment_ids : list
         A list of ophys_experiment_ids for which to retrieve the associated cells.
         If None, all experiments from the `VisualBehaviorOphysProjectCache` will be retrieved.
         Default = None
@@ -2896,6 +2882,9 @@ def get_cell_table(ophys_session_ids=None, columns_to_return='*'):
             mask_image_plane
             ophys_cell_segmentation_run_id
         default = '*'
+    valid_rois_only: bool
+        If False (default), all ROIs will be returned
+        If True, only valid ROIs will be returned
 
     Returns
     -------
@@ -2925,27 +2914,34 @@ def get_cell_table(ophys_session_ids=None, columns_to_return='*'):
 
 
     '''
-    # get ophys_session_ids from S3 if they were not passed
-    if ophys_session_ids is None:
-        data_storage_directory = '/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/production_cache'
+    # get ophys_experiment_ids from S3 if they were not passed
+    if ophys_experiment_ids is None:
+        data_storage_directory = get_cache_dir()
         cache = bpc.from_s3_cache(cache_dir=data_storage_directory)
 
-        experiment_table = cache.get_ophys_experiment_table().reset_index()
+        experiment_table = cache.get_ophys_experiment_table()
 
-        ophys_session_ids = experiment_table['ophys_experiment_id'].unique()
+        ophys_experiment_ids = experiment_table.index.unique()
 
     if columns_to_return != '*':
         columns_to_return = ', '.join(columns_to_return).replace('cell_roi_id', 'id')
 
-    query = '''
-        select {}
-        from cell_rois
-        where ophys_experiment_id in {} and cell_specimen_id is not null and valid_roi = True
-    '''
+    if valid_rois_only:
+        query = '''
+            select {}
+            from cell_rois
+            where ophys_experiment_id in {} and cell_specimen_id is not null and valid_roi = True
+        '''
+    else:
+        query = '''
+            select {}
+            from cell_rois
+            where ophys_experiment_id in {} and cell_specimen_id is not null
+        '''
 
     # Since we are querying from the 'cell_rois' table, the 'id' column is actually 'cell_roi_id'. Rename.
     lims_rois = db.lims_query(
-        query.format(columns_to_return, tuple(ophys_session_ids))
+        query.format(columns_to_return, tuple(ophys_experiment_ids))
     ).rename(columns={'id': 'cell_roi_id'})
 
     return lims_rois

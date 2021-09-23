@@ -1295,7 +1295,7 @@ def correct_dataframe_filepath(dataframe, column_string):
     return dataframe
 
 
-###### functions to annotate experiments table with conditions to use for platform paper analysis ######
+# functions to annotate experiments table with conditions to use for platform paper analysis ######
 
 def add_session_number_to_experiment_table(experiments):
     # add session number column, extracted frrom session_type
@@ -1409,6 +1409,9 @@ def get_engagement_state_order(df):
         order = ['engaged', 'disengaged', 'passive']
     else:
         order = ['engaged', 'disengaged']
+
+    return order
+
 
 
 def add_cell_type(df):

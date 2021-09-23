@@ -1,10 +1,15 @@
 import os
-from simple_slurm import Slurm
+import sys
+import platform
+if platform.system() == 'Linux':
+    # sys.path.append('/allen/programs/braintv/workgroups/nc-ophys/Doug/pbstools')
+    sys.path.append('/allen/programs/braintv/workgroups/nc-ophys/nick.ponvert/src/pbstools')
+from pbstools import PythonJob  # flake8: noqa: E999
+
 
 import visual_behavior.data_access.loading as loading
 from allensdk.brain_observatory.behavior.behavior_project_cache import VisualBehaviorOphysProjectCache as bpc
 
-# python file to execute on cluster
 python_file = r"/home/marinag/visual_behavior_analysis/scripts/create_multi_session_df.py"
 
 # conda environment to use
@@ -29,31 +34,15 @@ cache = bpc.from_s3_cache(cache_dir=cache_dir)
 
 experiments_table = cache.get_ophys_experiment_table()
 
-# experiments_table = experiments_table[(experiments_table.session_number==1)]
-
-# # get experiments to iterate over
-# experiments_table = loading.get_filtered_ophys_experiment_table()
-# experiments_table = experiments_table[experiments_table.container_workflow_state=='published']
-
-# # use full release dataset
-# cache = bpc.from_lims(data_release_date=['2021-03-25', '2021-08-12'])
-# experiments_table = cache.get_ophys_experiment_table()
-
-# call the `sbatch` command to run the jobs.
 for project_code in experiments_table.project_code.unique():
     print(project_code)
     for session_number in experiments_table.session_number.unique():
 
-        # instantiate a Slurm object
-        slurm = Slurm(
-            mem='120g',  # '24g'
-            cpus_per_task=1,
-            time='60:00:00',
-            partition='braintv',
-            job_name='multi_session_df_'+project_code+'_'+str(session_number),
-            output=f'{stdout_location}/{Slurm.JOB_ARRAY_MASTER_ID}_{Slurm.JOB_ARRAY_ID}.out',
-        )
-
-        slurm.sbatch(python_path+' '+python_file+' --project_code '+str(project_code)+' --session_number'+' '+str(session_number))
-
-
+        PythonJob(
+            python_file,
+            python_executable='/home/marinag/anaconda2/envs/visual_behavior_sdk/bin/python',
+            python_args=[project_code, session_number],
+            conda_env=None,
+            jobname='multi_session_df_' + project_code + '_' + str(session_number),
+            **job_settings
+        ).run(dryrun=False)

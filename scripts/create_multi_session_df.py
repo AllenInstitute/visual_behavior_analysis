@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
 import os
-import argparse
 import numpy as np
 import pandas as pd
 import visual_behavior.data_access.loading as loading
@@ -16,6 +15,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     project_code = args.project_code
     session_number = float(args.session_number)
+
     print(project_code, session_number)
 
     #
@@ -85,3 +85,4 @@ if __name__ == '__main__':
                                  use_extended_stimulus_presentations=True)
 
     print('done')
+
