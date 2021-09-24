@@ -205,7 +205,13 @@ def svm_images_main_pre_pbs(isess, project_codes, use_events, to_decode, trial_t
     if use_matched_cells!=0: 
 
         #%% get matched cells
-        cell_table = loading.get_cell_table(ophys_session_ids=experiments_table.index.unique())
+        
+        from allensdk.brain_observatory.behavior.behavior_project_cache import VisualBehaviorOphysProjectCache
+        
+        cache = VisualBehaviorOphysProjectCache.from_lims()
+        cell_table = cache.get_ophys_cells_table()
+
+#         cell_table = loading.get_cell_table(ophys_session_ids=experiments_table.index.unique())
 
         # merge in metadata to get experience level
         cell_table = cell_table.merge(experiments_table, on='ophys_experiment_id')    
@@ -219,26 +225,47 @@ def svm_images_main_pre_pbs(isess, project_codes, use_events, to_decode, trial_t
                 experience_levels = ['Novel 1', 'Novel >1']
             elif use_matched_cells==13: 
                 experience_levels = ['Familiar', 'Novel >1']
-
+            
+            # only get those rows of cell_table that belong to experience_levels
             cell_table = cell_table[cell_table.experience_level.isin(experience_levels)]
-        
+
+            
         n_sessions_matched = len(experience_levels)
         
+        
+        # get the number of unique experience levels per cell specimen id
+        n_unique_sessions_per_cell = cell_table.groupby(['cell_specimen_id'])['experience_level'].nunique().reset_index()
+        
+        # only keep those cells that have all the experience levels defined above
+        matched_cell_table = n_unique_sessions_per_cell[n_unique_sessions_per_cell['experience_level'] == n_sessions_matched]
+        matched_cell_ids = matched_cell_table['cell_specimen_id'].unique()
+        
+        
+        # also get the session ids that have all the experience levels... so you dont run the analysis on sessions that have only 2 of the experience levels.
+        
+        work here
+        
+        
+        
+        ####################### marina's method #######################
         # group by cell and experience level to figure out how many sessions each cell has for each experience level
         exp_matched = cell_table.groupby(['cell_specimen_id', 'experience_level', 'ophys_experiment_id']).count()    
-
+        exp_matched = exp_matched.reset_index()
 
         ### NOTE: we do the following for now until Marina averages the multiple values for an experience level
 
         # drop rows where a single cell_specimen_id has more than one session for each experience level¶
-        exp_matched = exp_matched.reset_index().drop_duplicates(subset=['cell_specimen_id', 'experience_level'])    
+        exp_matched = exp_matched.drop_duplicates(subset=['cell_specimen_id', 'experience_level'])    
 
+        
         # count how many remaining sessions there are per cell and experience level
         n_matched = exp_matched.groupby(['cell_specimen_id']).count()[['experience_level']].rename(columns={'experience_level':'n_sessions_matched'})    
 
         # only keep cells that have 3 sessions - one per experience level, i.e. cells that are matched in all 3 types
         matched_cell_ids = n_matched[n_matched['n_sessions_matched']==n_sessions_matched].index.unique()
-
+        ################################################################
+        
+        
         print(len(matched_cell_ids), len(cell_table.cell_specimen_id.unique()))
         print(np.round(len(matched_cell_ids)/len(cell_table['cell_specimen_id'].unique()),3)*100, 'percent of cells are matched in all 3 experience levels')
 
