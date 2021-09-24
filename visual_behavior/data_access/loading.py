@@ -185,7 +185,12 @@ def get_platform_paper_experiment_table():
 
     # add cell type columm
     experiment_table = utilities.add_cell_type(experiment_table)
-    experiment_table.cell_type.unique()
+    # add other useful columns
+    experiment_table = utilities.add_n_relative_to_novel_1(experiment_table)
+    experiment_table = utilities.add_last_familiar(experiment_table)
+    experiment_table = utilities.add_last_familiar_active(experiment_table)
+    experiment_table = utilities.add_first_novel(experiment_table)
+    experiment_table = utilities.add_first_novel_active(experiment_table)
 
     return experiment_table
 
