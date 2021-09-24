@@ -24,12 +24,14 @@ if __name__ == '__main__':
     cache = bpc.from_s3_cache(cache_dir=cache_dir)
     ophys_experiment_table = cache.get_ophys_experiment_table()
 
-    import platform
-    if platform.system() == 'Linux':
-        save_dir = r'/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/platform_paper_cache/single_cell_metrics'
-    else:
-        save_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\platform_paper_cache\single_cell_metrics'
+    # import platform
+    # if platform.system() == 'Linux':
+    #     save_dir = r'/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/platform_paper_cache/single_cell_metrics'
+    # else:
+    #     save_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\platform_paper_cache\single_cell_metrics'
 
+    save_dir = loading.get_platform_analysis_cache_dir()
+    
     # use filtered events when use_events = True
     filter_events = True
 
