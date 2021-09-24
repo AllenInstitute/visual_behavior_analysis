@@ -621,18 +621,21 @@ def get_ophys_dataset(ophys_experiment_id, include_invalid_rois=False, load_from
         cache_dir = get_platform_analysis_cache_dir()
         cache = bpc.from_s3_cache(cache_dir=cache_dir)
         dataset = cache.get_behavior_ophys_experiment(ophys_experiment_id)
+    else:
+        raise Exception('Set load_from_lims or load_from_nwb to True')
+
     if get_extended_stimulus_presentations:
         # add extended stimulus presentations
-        dataset.extended_stimulus_presentations = get_extened_stimulus_presentations(dataset.stimulus_presentations.copy(),
-                                                                                     dataset.licks, dataset.rewards,
-                                                                                     dataset.running_speed, dataset.eye_tracking)
+        dataset.extended_stimulus_presentations = get_extened_stimulus_presentations(
+            dataset.stimulus_presentations.copy(),
+            dataset.licks, dataset.rewards,
+            dataset.running_speed, dataset.eye_tracking)
     if get_behavior_movie_timestamps:
         # add behavior movie timestamps
         lims_data = utilities.get_lims_data(ophys_experiment_id)
         timestamps = utilities.get_timestamps(lims_data)
         dataset.behavior_movie_timestamps = timestamps['behavior_monitoring']['timestamps'].copy()
-    else:
-        raise Exception('Set load_from_lims or load_from_nwb to True')
+        
     return dataset
 
 
