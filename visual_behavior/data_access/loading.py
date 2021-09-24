@@ -130,7 +130,7 @@ def get_visual_behavior_cache(from_s3=True, release_data_only=True, cache_dir=No
     """
     Gets the visual behavior dataset cache object from s3 or lims
     :param from_s3: If True, loads manifest from s3 and saves to provided cache_dir (or default cache_dir if None provided)
-    :param release_data_only: limits to data released on March 25th when loading from lims
+    :param release_data_only: limits to data released on March 25th and August 12th when loading from lims
     :param cache_dir: directory where to save manifest & data files if using s3
     :return: SDK cache object
     """
@@ -216,9 +216,8 @@ def get_filtered_ophys_experiment_table(include_failed_data=False, release_data_
     """
     if release_data_only:
         # get cache from lims for data released on March 25th
-        print('getting experiment table for March 25th release from lims')
+        print('getting experiment table for March and August releases from lims')
         cache = bpc.from_lims(data_release_date=['2021-03-25', '2021-08-12'])
-        print('use get_released_ophys_experiment_table to get August release data in addition to March release')
         experiments = cache.get_ophys_experiment_table()
     if not release_data_only:
         if from_cached_file == True:
