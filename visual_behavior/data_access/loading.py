@@ -2895,7 +2895,7 @@ def get_remaining_crosstalk_amount_dict(experiment_id):
     return remaining_crosstalk_dict
 
 
-def get_cell_table(ophys_experiment_ids=None, columns_to_return='*', valid_rois_only=False):
+def get_cell_table(ophys_experiment_ids=None, columns_to_return='*', valid_rois_only=False, platform_paper_only=False):
     '''
     retrieves the full cell_specimen table from LIMS for the specified ophys_experiment_ids
     if no ophys_experiment_ids are passed, all experiments from the `VisualBehaviorOphysProjectCache` will be retrieved
@@ -2930,6 +2930,10 @@ def get_cell_table(ophys_experiment_ids=None, columns_to_return='*', valid_rois_
     valid_rois_only: bool
         If False (default), all ROIs will be returned
         If True, only valid ROIs will be returned
+    platform_paper_only: bool
+        Only has an effect is ophys_experiment_ids==None
+        If False (default), all ROIs will be returned
+        If True, ROIs from Multiscope 4areasx2depths and Ai94 data will be excluded
 
     Returns
     -------
@@ -2965,6 +2969,10 @@ def get_cell_table(ophys_experiment_ids=None, columns_to_return='*', valid_rois_
         cache = bpc.from_s3_cache(cache_dir=data_storage_directory)
 
         experiment_table = cache.get_ophys_experiment_table()
+
+        # Exclude 4x2 and GCaMP6s mice
+        if platform_paper_only:
+            experiment_table = experiment_table[(experiment_table.project_code != "VisualBehaviorMultiscope4areasx2d") & (experiment_table.reporter_line != "Ai94(TITL-GCaMP6s)")]
 
         ophys_experiment_ids = experiment_table.index.unique()
 
