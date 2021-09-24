@@ -1313,15 +1313,15 @@ def add_experience_level_to_experiment_table(experiments):
     experiments['experience_level'] = 'None'
 
     familiar_indices = experiments[experiments.session_number.isin([1, 2, 3])].index.values
-    experiments.at[familiar_indices, 'experience_level'] = 'Familiar'
+    experiments.loc[familiar_indices, 'experience_level'] = 'Familiar'
 
     novel_indices = experiments[(experiments.session_number == 4) &
                                 (experiments.prior_exposures_to_image_set == 0)].index.values
-    experiments.at[novel_indices, 'experience_level'] = 'Novel 1'
+    experiments.loc[novel_indices, 'experience_level'] = 'Novel 1'
 
     novel_greater_than_1_indices = experiments[(experiments.session_number.isin([4, 5, 6])) &
                                                (experiments.prior_exposures_to_image_set != 0)].index.values
-    experiments.at[novel_greater_than_1_indices, 'experience_level'] = 'Novel >1'
+    experiments.loc[novel_greater_than_1_indices, 'experience_level'] = 'Novel >1'
 
     return experiments
 
@@ -1349,10 +1349,10 @@ def add_passive_flag_to_ophys_experiment_table(experiments):
     experiments['passive'] = 'None'
 
     passive_indices = experiments[experiments.session_number.isin([2, 5])].index.values
-    experiments.at[passive_indices, 'passive'] = True
+    experiments.loc[passive_indices, 'passive'] = True
 
     active_indices = experiments[experiments.session_number.isin([2, 5]) == False].index.values
-    experiments.at[active_indices, 'passive'] = False
+    experiments.loc[active_indices, 'passive'] = False
 
     return experiments
 
@@ -1366,7 +1366,7 @@ def add_passive_to_engagement_state(df):
     """
 
     passive_indices = df[df.session_number.isin([2, 5])].index.values
-    df.at[passive_indices, 'engagement_state'] = 'passive'
+    df.loc[passive_indices, 'engagement_state'] = 'passive'
 
     return df
 
@@ -1390,13 +1390,13 @@ def add_cell_type(df):
     adds a column with abbreviated version of cre_line, i.e. Vip, Sst, Exc
     """
     cre_indices = df[df.cre_line == 'Vip-IRES-Cre'].index.values
-    df.at[cre_indices, 'cell_type'] = 'Vip Inhibitory'
+    df.loc[cre_indices, 'cell_type'] = 'Vip Inhibitory'
 
     cre_indices = df[df.cre_line == 'Sst-IRES-Cre'].index.values
-    df.at[cre_indices, 'cell_type'] = 'Sst Inhibitory'
+    df.loc[cre_indices, 'cell_type'] = 'Sst Inhibitory'
 
     cre_indices = df[df.cre_line == 'Slc17a7-IRES2-Cre'].index.values
-    df.at[cre_indices, 'cell_type'] = 'Excitatory'
+    df.loc[cre_indices, 'cell_type'] = 'Excitatory'
 
     return df
 
