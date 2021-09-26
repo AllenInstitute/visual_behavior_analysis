@@ -503,11 +503,12 @@ def get_metrics_df_filename(ophys_experiment_id, condition, stimuli, session_sub
 
 
 def get_metrics_df_filepath(ophys_experiment_id, condition, stimuli, session_subset, use_events, filter_events):
-    import platform
-    if platform.system() == 'Linux':
-        save_dir = r'/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/single_cell_metrics'
-    else:
-        save_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\single_cell_metrics'
+    # import platform
+    # if platform.system() == 'Linux':
+    #     save_dir = r'/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/single_cell_metrics'
+    # else:
+    #     save_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\single_cell_metrics'
+    save_dir = os.path.join(loading.get_platform_analysis_cache_dir(), 'single_cell_metrics)'
     filename = get_metrics_df_filename(ophys_experiment_id, condition, stimuli, session_subset, use_events, filter_events)
     filepath = os.path.join(save_dir, 'cell_metrics', filename + '.h5')
     return filepath
