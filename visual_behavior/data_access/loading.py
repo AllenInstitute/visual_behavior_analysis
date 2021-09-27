@@ -63,6 +63,21 @@ except Exception as e:
 
 #  RELEVANT DIRECTORIES
 
+
+def get_platform_analysis_cache_dir():
+    """
+    This is the cache directory to use for all platform paper analysis
+    This cache contains NWB files downloaded directly from AWS
+    """
+    return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/platform_paper_cache'
+
+
+def get_production_cache_dir():
+    """Get directory containing a manifest file that includes all VB production data, including failed experiments"""
+    cache_dir = r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/2020_cache/production_cache'
+    return cache_dir
+
+
 def get_qc_plots_dir():
     return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots'
 
@@ -91,10 +106,6 @@ def get_analysis_cache_dir():
     return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/visual_behavior_production_analysis'
 
 
-def get_platform_analysis_cache_dir():
-    return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/platform_paper_cache/2.12.4'
-
-
 def get_events_dir():
     return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/event_detection'
 
@@ -111,18 +122,9 @@ def get_ophys_glm_dir():
     return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/ophys_glm'
 
 
-# LOAD MANIFEST FILES (TABLES CONTAINING METADATA FOR BEHAVIOR & OPHYS DATASETS) FROM SDK CACHE (RECORD OF AVAILABLE DATASETS)
-
-
-def get_cache_dir():
-    """Get directory of data cache for analysis - this should be the standard cache location"""
-    cache_dir = get_platform_analysis_cache_dir()
-    return cache_dir
-
-
 def get_manifest_path():
     """Get path to default manifest file for analysis"""
-    manifest_path = os.path.join(get_cache_dir(), "manifest.json")
+    manifest_path = os.path.join(get_production_cache_dir(), "manifest.json")
     return manifest_path
 
 
@@ -130,7 +132,7 @@ def get_visual_behavior_cache(from_s3=True, release_data_only=True, cache_dir=No
     """
     Gets the visual behavior dataset cache object from s3 or lims
     :param from_s3: If True, loads manifest from s3 and saves to provided cache_dir (or default cache_dir if None provided)
-    :param release_data_only: limits to data released on March 25th when loading from lims
+    :param release_data_only: limits to data released on March 25th and August 12th when loading from lims
     :param cache_dir: directory where to save manifest & data files if using s3
     :return: SDK cache object
     """
@@ -182,34 +184,49 @@ def get_platform_paper_experiment_table():
 
     # remove 4x2 and Ai94 data
     experiment_table = experiment_table[(experiment_table.project_code != 'VisualBehaviorMultiscope4areasx2d') &
-                                        (experiment_table.reporter_line != 'Ai94(TITL-GCaMP6s)')]
+                                        (experiment_table.reporter_line != 'Ai94(TITL-GCaMP6s)')].copy()
 
-    # add cell type columm
-    experiment_table = utilities.add_cell_type(experiment_table)
-    experiment_table.cell_type.unique()
+    # add cell type and binned depth columms for plot labels
+    experiment_table = utilities.add_cell_type_column(experiment_table)
+    experiment_table = utilities.add_binned_depth_column(experiment_table)
+    # add other columns indicating whether a session was the last familiar before the first novel session,
+    # or the second passing novel session after the first truly novel one
+    experiment_table = utilities.add_first_novel_column(experiment_table)
+    experiment_table = utilities.add_n_relative_to_first_novel_column(experiment_table)
+    experiment_table = utilities.add_last_familiar_column(experiment_table)
+    experiment_table = utilities.add_last_familiar_active_column(experiment_table)
+    experiment_table = utilities.add_second_novel_column(experiment_table)
+    experiment_table = utilities.add_second_novel_active_column(experiment_table)
+    # add column that has a combination of experience level and exposure to omissions for familiar sessions,
+    # or exposure to image set for novel sessions
+    experiment_table = utilities.add_experience_exposure_column(experiment_table)
 
     return experiment_table
 
 #
 
 
-def get_filtered_ophys_experiment_table(include_failed_data=False, release_data_only=False, exclude_ai94=True,
-                                        add_extra_columns=True, from_cached_file=True, overwrite_cached_file=False):
+def get_filtered_ophys_experiment_table(include_failed_data=False, release_data_only=True, exclude_ai94=True,
+                                        add_extra_columns=True, from_cached_file=False, overwrite_cached_file=False):
     """
-    Loads a list of available ophys experiments and adds additional useful columns to the table. By default, loads from a saved cached file.
+    Loads a list of available ophys experiments FROM LIMS (not S3 cache) and adds additional useful columns to the table.
+    By default, loads from a saved cached file.
     If cached file does not exist, loads list of available experiments directly from lims using SDK BehaviorProjectCache, and saves the reformatted table to the default Visual Behavior data cache location.
 
     Keyword Arguments:
 
         include_failed_data {bool} -- If True, return all experiments including those from failed containers and receptive field mapping experiments.
                                       If False, returns only experiments that have passed experiment level QC.
-        release_data_only {bool} -- If True, return only experiments that were released on March 25th, 2021.
+                                      If "release_data_only" is True, failed experiments will not be retruned
+                                      There is no guarantee on data quality or reprocessing for these experiments.
+        release_data_only {bool} -- If True, return only experiments that were released on March 25th, 2021 and August 12, 2021.
                                     Fail tags and other extra columns will not be added if this is set to True.
                                     Release data includes project_codes = ['VisualBehavior', 'VisualBehaviorTask1B', 'VisualBehaviorMultiscope'].
-                                    If False, return all Visual Behavior ophys experiments that have been collected, including data from project_code = 'VisualBehaviorMultiscope4areasx2d'. There is no guarantee on data quality or reprocessing for these experiments.
-                                    Additional columns will be added, including fail tags, model availability and location string
+                                    If False, return all Visual Behavior ophys experiments that have been collected, including data from project_code = 'VisualBehaviorMultiscope4areasx2d'.
+                                    Note, if False, there is no guarantee on data quality or processing for these experiments.
+        add_extra_columns {bool} -- Additional columns will be added, including fail tags, model availability and location string
         exclude_ai94 {bool} -- If True, exclude data from mice with Ai94(GCaMP6s) as the reporter line. (default: {True})
-        from_cached_file {bool} -- If True, loads experiments table from saved file in default cache location
+        from_cached_file {bool} -- If True, loads experiments table from saved file in default cache location (returned by get_production_cache_dir())
         overwrite_cached_file {bool} -- If True, saves experiment_table to default cache folder, overwrites existing file
 
     Returns:
@@ -217,14 +234,13 @@ def get_filtered_ophys_experiment_table(include_failed_data=False, release_data_
     """
     if release_data_only:
         # get cache from lims for data released on March 25th
-        print('getting experiment table for March 25th release from lims')
+        print('getting experiment table for March and August releases from lims')
         cache = bpc.from_lims(data_release_date=['2021-03-25', '2021-08-12'])
-        print('use get_released_ophys_experiment_table to get August release data in addition to March release')
         experiments = cache.get_ophys_experiment_table()
     if not release_data_only:
         if from_cached_file == True:
-            if 'filtered_ophys_experiment_table.csv' in os.listdir(get_cache_dir()):
-                filepath = os.path.join(get_cache_dir(), 'filtered_ophys_experiment_table.csv')
+            if 'filtered_ophys_experiment_table.csv' in os.listdir(get_production_cache_dir()):
+                filepath = os.path.join(get_production_cache_dir(), 'filtered_ophys_experiment_table.csv')
                 print('loading cached experiment_table')
                 print('last updated on:')
                 import time
@@ -232,7 +248,7 @@ def get_filtered_ophys_experiment_table(include_failed_data=False, release_data_
                 # load the cached file
                 experiments = pd.read_csv(filepath)
             else:
-                print('there is no filtered_ophys_experiment_table.csv', get_cache_dir())
+                print('there is no filtered_ophys_experiment_table.csv', get_production_cache_dir())
         else:
             print('getting up-to-date experiment_table from lims')
             # get everything in lims
@@ -243,7 +259,7 @@ def get_filtered_ophys_experiment_table(include_failed_data=False, release_data_
             if add_extra_columns:
                 print('adding extra columns')
                 print('NOTE: this is slow. set from_cached_file to True to load cached version of experiments_table at:')
-                print(get_cache_dir())
+                print(get_production_cache_dir())
                 # create cre_line column, set NaN session_types to None, add model output availability and location columns
                 experiments = reformat.reformat_experiments_table(experiments)
         if include_failed_data:
@@ -268,11 +284,11 @@ def get_filtered_ophys_experiment_table(include_failed_data=False, release_data_
     experiments = filtering.limit_to_production_project_codes(experiments)
 
     # add new columns for conditions to analyze for platform paper ###
-    experiments = utilities.add_cell_type(experiments)
+    experiments = utilities.add_cell_type_column(experiments)
 
     if overwrite_cached_file == True:
         print('overwriting pre-saved experiments table file')
-        experiments.to_csv(os.path.join(get_cache_dir(), 'filtered_ophys_experiment_table.csv'))
+        experiments.to_csv(os.path.join(get_production_cache_dir(), 'filtered_ophys_experiment_table.csv'))
     return experiments
 
 
@@ -2449,34 +2465,34 @@ def get_annotated_experiments_table():
 
     experiments_table['layer'] = None
     indices = experiments_table[(experiments_table.imaging_depth < 100)].index.values
-    experiments_table.at[indices, 'layer'] = 'L1'
+    experiments_table.loc[indices, 'layer'] = 'L1'
     indices = experiments_table[(experiments_table.imaging_depth < 270) &
                                 (experiments_table.imaging_depth >= 100)].index.values
-    experiments_table.at[indices, 'layer'] = 'L2/3'
+    experiments_table.loc[indices, 'layer'] = 'L2/3'
 
     indices = experiments_table[
         (experiments_table.imaging_depth >= 270) & (experiments_table.imaging_depth < 350)].index.values
-    experiments_table.at[indices, 'layer'] = 'L4'
+    experiments_table.loc[indices, 'layer'] = 'L4'
     indices = experiments_table[
         (experiments_table.imaging_depth >= 350) & (experiments_table.imaging_depth < 550)].index.values
-    experiments_table.at[indices, 'layer'] = 'L5'
+    experiments_table.loc[indices, 'layer'] = 'L5'
 
     experiments_table['location_layer'] = [experiments_table.loc[expt].cre_line.split('-')[0] + '_' +
                                            experiments_table.loc[expt].targeted_structure + '_' +
                                            experiments_table.loc[expt].layer for expt in experiments_table.index]
 
     indices = experiments_table[experiments_table.location == 'Slc17a7_superficial'].index.values
-    experiments_table.at[indices, 'location'] = 'Excitatory superficial'
+    experiments_table.loc[indices, 'location'] = 'Excitatory superficial'
     indices = experiments_table[experiments_table.location == 'Slc17a7_deep'].index.values
-    experiments_table.at[indices, 'location'] = 'Excitatory deep'
+    experiments_table.loc[indices, 'location'] = 'Excitatory deep'
     indices = experiments_table[experiments_table.location == 'Vip_superficial'].index.values
-    experiments_table.at[indices, 'location'] = 'Vip'
+    experiments_table.loc[indices, 'location'] = 'Vip'
     indices = experiments_table[experiments_table.location == 'Sst_superficial'].index.values
-    experiments_table.at[indices, 'location'] = 'Sst'
+    experiments_table.loc[indices, 'location'] = 'Sst'
     indices = experiments_table[experiments_table.location == 'Vip_deep'].index.values
-    experiments_table.at[indices, 'location'] = 'Vip'
+    experiments_table.loc[indices, 'location'] = 'Vip'
     indices = experiments_table[experiments_table.location == 'Sst_deep'].index.values
-    experiments_table.at[indices, 'location'] = 'Sst'
+    experiments_table.loc[indices, 'location'] = 'Sst'
 
     experiments_table['session_number'] = [int(session_type[6]) for session_type in
                                            experiments_table.session_type.values]
@@ -2491,17 +2507,17 @@ def add_superficial_deep_to_experiments_table(experiments_table):
     experiments_table['location'] = [experiments_table.loc[expt].cre_line.split('-')[0] + '_' +
                                      experiments_table.loc[expt].depth for expt in experiments_table.index]
     indices = experiments_table[experiments_table.location == 'Slc17a7_superficial'].index.values
-    experiments_table.at[indices, 'location'] = 'Excitatory superficial'
+    experiments_table.loc[indices, 'location'] = 'Excitatory superficial'
     indices = experiments_table[experiments_table.location == 'Slc17a7_deep'].index.values
-    experiments_table.at[indices, 'location'] = 'Excitatory deep'
+    experiments_table.loc[indices, 'location'] = 'Excitatory deep'
     indices = experiments_table[experiments_table.location == 'Vip_superficial'].index.values
-    experiments_table.at[indices, 'location'] = 'Vip'
+    experiments_table.loc[indices, 'location'] = 'Vip'
     indices = experiments_table[experiments_table.location == 'Sst_superficial'].index.values
-    experiments_table.at[indices, 'location'] = 'Sst'
+    experiments_table.loc[indices, 'location'] = 'Sst'
     indices = experiments_table[experiments_table.location == 'Vip_deep'].index.values
-    experiments_table.at[indices, 'location'] = 'Vip'
+    experiments_table.loc[indices, 'location'] = 'Vip'
     indices = experiments_table[experiments_table.location == 'Sst_deep'].index.values
-    experiments_table.at[indices, 'location'] = 'Sst'
+    experiments_table.loc[indices, 'location'] = 'Sst'
 
     return experiments_table
 
@@ -2531,6 +2547,14 @@ def add_superficial_deep_to_experiments_table(experiments_table):
 #
 #     return filename
 
+def get_file_name_for_multi_session_df_no_session_type(df_name, project_code, conditions, use_events, filter_events):
+    if use_events:
+        if filter_events:
+            suffix = '_filtered_events'
+        else:
+            suffix = '_events'
+    else:
+        suffix = '_dff'
 
 def get_file_name_for_multi_session_df(df_name, project_code, session_type, conditions, use_events, filter_events):
     if use_events:
@@ -2895,7 +2919,7 @@ def get_remaining_crosstalk_amount_dict(experiment_id):
     return remaining_crosstalk_dict
 
 
-def get_cell_table(ophys_experiment_ids=None, columns_to_return='*', valid_rois_only=False, platform_paper_only=False):
+def get_cell_table_from_lims(ophys_experiment_ids=None, columns_to_return='*', valid_rois_only=False, platform_paper_only=False):
     '''
     retrieves the full cell_specimen table from LIMS for the specified ophys_experiment_ids
     if no ophys_experiment_ids are passed, all experiments from the `VisualBehaviorOphysProjectCache` will be retrieved
@@ -2963,15 +2987,15 @@ def get_cell_table(ophys_experiment_ids=None, columns_to_return='*', valid_rois_
 
 
     '''
-    # get ophys_experiment_ids from S3 if they were not passed
+    # get ophys_experiment_ids from lims if none were passed
+    # this includes failed experiments
     if ophys_experiment_ids is None:
-        data_storage_directory = get_cache_dir()
-        cache = bpc.from_s3_cache(cache_dir=data_storage_directory)
-
+        cache = bpc.from_lims()
         experiment_table = cache.get_ophys_experiment_table()
 
         # Exclude 4x2 and GCaMP6s mice
         if platform_paper_only:
+            cache = bpc.from_lims(data_release_date=['03-25-2021', '08-12-2021'])
             experiment_table = experiment_table[(experiment_table.project_code != "VisualBehaviorMultiscope4areasx2d") & (experiment_table.reporter_line != "Ai94(TITL-GCaMP6s)")]
 
         ophys_experiment_ids = experiment_table.index.unique()
@@ -3000,36 +3024,21 @@ def get_cell_table(ophys_experiment_ids=None, columns_to_return='*', valid_rois_
     return lims_rois
 
 
-def get_dff_traces_for_roi(cell_roi_id):
-    '''
-    gets dff trace for desired cell_roi_id
-    gets data directly from well_known_file h5 file, which is faster than opening the BehaviorOphysExperiment
-
-    Parameters:
-    -----------
-    cell_roi_id: int
-        desired cell_roi_id
-
-    Returns:
-    --------
-    array
-        1D array of dff values for the desired cell_roi_id
-    '''
-    # get associated experiment_id
-    ophys_experiment_id = from_lims.get_ophys_experiment_id_for_cell_roi_id(cell_roi_id)
-
-    # get roi_traces filepath
-    roi_traces_filename = from_lims.get_well_known_file_path(ophys_experiment_id, 'OphysExperiment', 'OphysDffTraceFile')
-
-    # open file for reading
-    with h5py.File(roi_traces_filename, "r") as f:
-
-        # get index for associated roi
-        roi_ids = [roi_name.decode("utf-8") for roi_name in f.get('roi_names')]
-        roi_index = roi_ids.index(str(cell_roi_id))
-
-        # get corresponding data
-        dff_data = f.get('data')
-        dff = dff_data[roi_index]
-
-    return dff
+def get_cell_table(platform_paper_only=False):
+    """
+    loads ophys_cells_table from the SDK using platform paper analysis cache and merges with experiment_table to get metadata
+    if 'platform_paper_only' is True, will filter out Ai94 and VisuaBehaviorMultiscope4areasx2d
+    :return:
+    """
+    cache_dir = get_platform_analysis_cache_dir()
+    cache = bpc.from_s3_cache(cache_dir=cache_dir)
+    # load cell table
+    cell_table = cache.get_ophys_cells_table()
+    # load experiments table and merge
+    experiment_table = get_platform_paper_experiment_table()
+    cell_table = cell_table.reset_index().merge(experiment_table, on='ophys_experiment_id')
+    cell_table = cell_table.set_index('cell_roi_id')
+    # optionally filter to limit to platform paper datasets
+    if platform_paper_only == True:
+        cell_table = cell_table[(cell_table.reporter_line != 'Ai94(TITL-GCaMP6s)') & (cell_table.project_code != 'VisualBehaviorMultiscope4areasx2d')]
+    return cell_table

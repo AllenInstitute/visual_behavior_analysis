@@ -40,17 +40,17 @@ except Exception as e:
 ### ID TYPES ###      # noqa: E266
 
 ID_TYPES_DICT = {
-    "donor_id":            {"lims_table": "specimens",          "id_column": "donor_id"},                 # noqa: E241
-    "cell_roi_id":         {"lims_table": "cell_rois",          "id_column": "id" },                      # noqa: E241
-    "specimen_id":         {"lims_table": "specimens",          "id_column": "id"},                       # noqa: E241
-    "cell_specimen_id":    {"lims_table": "cell_rois",          "id_column": "cell_specimen_id"},         # noqa: E241
-    "ophys_experiment_id": {"lims_table": "ophys_experiments",  "id_column": "id"},                       # noqa: E241
-    "ophys_session_id":    {"lims_table": "ophys_sessions",     "id_column": "id"},                       # noqa: E241
-    "behavior_session_id": {"lims_table": "behavior_sessions",  "id_column": "id"},                       # noqa: E241
-    "ophys_container_id":  {"lims_table": "visual_behavior_experiment_containers",  "id_column": "id"},   # noqa: E241
-    "supercontainer_id":   {"lims_table": "visual_behavior_supercontainers",        "id_column": "id"},   # noqa: E241
-    "isi_experiment_id":   {"lims_table": "isi_experiments",                        "id_column": "id"},   # noqa: E241
-    "extracellular_ephys_session_id": {"lims_table": "ecephys_sessions",            "id_column": "id"}}   # noqa: E241
+    "donor_id": {"lims_table": "specimens", "id_column": "donor_id"},                 # noqa: E241
+    "cell_roi_id": {"lims_table": "cell_rois", "id_column": "id" },                      # noqa: E241
+    "specimen_id": {"lims_table": "specimens", "id_column": "id"},                       # noqa: E241
+    "cell_specimen_id": {"lims_table": "cell_rois", "id_column": "cell_specimen_id"},         # noqa: E241
+    "ophys_experiment_id": {"lims_table": "ophys_experiments", "id_column": "id"},                       # noqa: E241
+    "ophys_session_id": {"lims_table": "ophys_sessions", "id_column": "id"},                       # noqa: E241
+    "behavior_session_id": {"lims_table": "behavior_sessions", "id_column": "id"},                       # noqa: E241
+    "ophys_container_id": {"lims_table": "visual_behavior_experiment_containers", "id_column": "id"},   # noqa: E241
+    "supercontainer_id": {"lims_table": "visual_behavior_supercontainers", "id_column": "id"},   # noqa: E241
+    "isi_experiment_id": {"lims_table": "isi_experiments", "id_column": "id"},   # noqa: E241
+    "extracellular_ephys_session_id": {"lims_table": "ecephys_sessions", "id_column": "id"}}   # noqa: E241
 
 
 def general_id_type_query(input_id, id_type):
@@ -87,9 +87,9 @@ def get_id_type(input_id):
 
 
 MICROSCOPE_TYPE_EQUIPMENT_NAMES_DICT = {
-    "Nikon":       ["CAM2P.1", "CAM2P.2"],                     # noqa: E241
+    "Nikon": ["CAM2P.1", "CAM2P.2"],                     # noqa: E241
     "Scientifica": ["CAM2P.3, CAM2P.4, CAM2P.5, CAM2P.6"],
-    "Mesoscope":   ["MESO.1", "MESO.2"]}                       # noqa: E241
+    "Mesoscope": ["MESO.1", "MESO.2"]}                       # noqa: E241
 
 
 def get_microscope_type(ophys_session_id):
@@ -1973,3 +1973,38 @@ def load_objectlist(ophys_experiment_id):
     objectlist_dataframe = pd.read_csv(filepath)
     objectlist_dataframe = lims_utils.update_objectlist_column_labels(objectlist_dataframe)
     return objectlist_dataframe
+
+
+def get_dff_traces_for_roi_from_lims(cell_roi_id):
+    '''
+    gets dff trace for desired cell_roi_id
+    gets data directly from well_known_file h5 file, which is faster than opening the BehaviorOphysExperiment
+
+    Parameters:
+    -----------
+    cell_roi_id: int
+        desired cell_roi_id
+
+    Returns:
+    --------
+    array
+        1D array of dff values for the desired cell_roi_id
+    '''
+    # get associated experiment_id
+    ophys_experiment_id = get_ophys_experiment_id_for_cell_roi_id(cell_roi_id)
+
+    # get roi_traces filepath
+    roi_traces_filename = get_well_known_file_path(ophys_experiment_id, 'OphysExperiment', 'OphysDffTraceFile')
+
+    # open file for reading
+    with h5py.File(roi_traces_filename, "r") as f:
+
+        # get index for associated roi
+        roi_ids = [roi_name.decode("utf-8") for roi_name in f.get('roi_names')]
+        roi_index = roi_ids.index(str(cell_roi_id))
+
+        # get corresponding data
+        dff_data = f.get('data')
+        dff = dff_data[roi_index]
+
+    return dff
