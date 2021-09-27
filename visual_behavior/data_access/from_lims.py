@@ -1991,10 +1991,10 @@ def get_dff_traces_for_roi_from_lims(cell_roi_id):
         1D array of dff values for the desired cell_roi_id
     '''
     # get associated experiment_id
-    ophys_experiment_id = from_lims.get_ophys_experiment_id_for_cell_roi_id(cell_roi_id)
+    ophys_experiment_id = get_ophys_experiment_id_for_cell_roi_id(cell_roi_id)
 
     # get roi_traces filepath
-    roi_traces_filename = from_lims.get_well_known_file_path(ophys_experiment_id, 'OphysExperiment', 'OphysDffTraceFile')
+    roi_traces_filename = get_well_known_file_path(ophys_experiment_id, 'OphysExperiment', 'OphysDffTraceFile')
 
     # open file for reading
     with h5py.File(roi_traces_filename, "r") as f:
