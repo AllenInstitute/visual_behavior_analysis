@@ -1592,6 +1592,24 @@ def add_second_novel_active_column(df):
     df.loc[df[df.second_novel_active == 1].index.values, 'second_novel_active'] = True
     return df
 
+
+def get_containers_with_all_experience_levels(experiments_table):
+    """
+    identifies containers with all 3 experience levels in ['Familiar', 'Novel 1', 'Novel >1']
+    """
+    experience_level_counts = experiments_table.groupby(['ophys_container_id', 'experience_level']).count().reset_index().groupby(['ophys_container_id']).count()[['experience_level']]
+    containers_with_all_experience_levels = experience_level_counts[experience_level_counts.experience_level == 3].index.unique()
+    return containers_with_all_experience_levels
+
+
+def limit_to_get_containers_with_all_experience_levels(experiments_table):
+    """
+    returns experiment_table limited to containers with all 3 experience levels in ['Familiar', 'Novel 1', 'Novel >1']
+    """
+    containers_with_all_experience_levels = get_containers_with_all_experience_levels(experiments_table)
+    experiments_table = experiments_table[experiments_table.ophys_container_id.isin(containers_with_all_experience_levels)]
+    return experiments_table
+
 #
 # def get_matched_cells_for_set_of_conditions(ophys_experiment_table, ophys_cells_table, column_name, column_values):
 #     """
