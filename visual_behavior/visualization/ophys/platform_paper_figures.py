@@ -19,7 +19,7 @@ sns.set_palette('deep')
 
 
 def plot_population_averages_for_conditions(multi_session_df, df_name, timestamps, axes_column, hue_column,
-                                            use_events=True, filter_events=True, palette=None,
+                                            use_events=True, filter_events=True, palette=None, data_type='events',
                                             horizontal=True, xlim_seconds=None, save_dir=None, folder=None):
     if palette is None:
         colors = sns.color_palette()
@@ -37,6 +37,8 @@ def plot_population_averages_for_conditions(multi_session_df, df_name, timestamp
         ylabel = 'population response'
     elif 'dFF' in data_type:
         ylabel = 'dF/F'
+    elif 'events' in data_type:
+        ylabel = 'response'
     elif 'pupil_area' in data_type:
         ylabel = 'pupil area (pix^2)'
     elif 'running' in data_type:
@@ -100,7 +102,7 @@ def plot_population_averages_for_conditions(multi_session_df, df_name, timestamp
     fig.tight_layout()
 
     if save_dir:
-        fig_title = cre_line+'_'+data_type+'_'+project_code[14:]+condition_name+'_by_session'
+        fig_title = cre_line+'_'+trace_type+'_'+project_code[14:]+condition_name+'_by_session'
         utils.save_figure(fig, figsize, save_dir, folder, fig_title)
 
 
@@ -231,7 +233,7 @@ def plot_response_heatmaps_for_conditions(multi_session_df, df_name, timestamps,
     fig.tight_layout()
 
     if save_dir:
-        fig_title = cre_line+'_'+data_type+'_'+project_code[14:]+condition_name+'_by_session'
+        fig_title = cre_line+'_'+trace_type+'_'+project_code[14:]+condition_name+'_by_session'
         utils.save_figure(fig, figsize, save_dir, folder, fig_title)
 
 
