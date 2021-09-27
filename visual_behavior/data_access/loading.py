@@ -183,7 +183,7 @@ def get_platform_paper_experiment_table():
 
     # remove 4x2 and Ai94 data
     experiment_table = experiment_table[(experiment_table.project_code != 'VisualBehaviorMultiscope4areasx2d') &
-                                        (experiment_table.reporter_line != 'Ai94(TITL-GCaMP6s)')]
+                                        (experiment_table.reporter_line != 'Ai94(TITL-GCaMP6s)')].copy()
 
     # add cell type and binned depth columms for plot labels
     experiment_table = utilities.add_cell_type_column(experiment_table)
@@ -2906,7 +2906,7 @@ def get_remaining_crosstalk_amount_dict(experiment_id):
     return remaining_crosstalk_dict
 
 
-def get_cell_table(ophys_experiment_ids=None, columns_to_return='*', valid_rois_only=False, platform_paper_only=False):
+def get_cell_table_from_lims(ophys_experiment_ids=None, columns_to_return='*', valid_rois_only=False, platform_paper_only=False):
     '''
     retrieves the full cell_specimen table from LIMS for the specified ophys_experiment_ids
     if no ophys_experiment_ids are passed, all experiments from the `VisualBehaviorOphysProjectCache` will be retrieved
@@ -2974,15 +2974,15 @@ def get_cell_table(ophys_experiment_ids=None, columns_to_return='*', valid_rois_
 
 
     '''
-    # get ophys_experiment_ids from S3 if they were not passed
+    # get ophys_experiment_ids from lims if none were passed
+    # this includes failed experiments
     if ophys_experiment_ids is None:
-        data_storage_directory = get_cache_dir()
-        cache = bpc.from_s3_cache(cache_dir=data_storage_directory)
-
+        cache = bpc.from_lims()
         experiment_table = cache.get_ophys_experiment_table()
 
         # Exclude 4x2 and GCaMP6s mice
         if platform_paper_only:
+            cache = bpc.from_lims(data_release_date=['03-25-2021', '08-12-2021'])
             experiment_table = experiment_table[(experiment_table.project_code != "VisualBehaviorMultiscope4areasx2d") & (experiment_table.reporter_line != "Ai94(TITL-GCaMP6s)")]
 
         ophys_experiment_ids = experiment_table.index.unique()
@@ -3011,20 +3011,23 @@ def get_cell_table(ophys_experiment_ids=None, columns_to_return='*', valid_rois_
     return lims_rois
 
 
-def get_cell_table():
+def get_cell_table(platform_paper_only=False):
     """
-    loads ophys_cells_table from the SDK using platform paper analysis cache
-    merges with experiments_table to add cell metadata
+    loads ophys_cells_table from the SDK using platform paper analysis cache and merges with experiment_table to get metadata
+    if 'platform_paper_only' is True, will filter out Ai94 and VisuaBehaviorMultiscope4areasx2d
     :return:
     """
     cache_dir = get_platform_analysis_cache_dir()
     cache = bpc.from_s3_cache(cache_dir=cache_dir)
     # load cell table
     cell_table = cache.get_ophys_cells_table()
-    # load experiment table & merge
-    experiments_table = cache.get_ophys_experiment_table()
-    cell_table = cell_table.merge(experiments_table, on='ophys_experiment_id')
-
+    # load experiments table and merge
+    experiment_table = get_platform_paper_experiment_table()
+    cell_table = cell_table.reset_index().merge(experiment_table, on='ophys_experiment_id')
+    cell_table = cell_table.set_index('cell_roi_id')
+    # optionally filter to limit to platform paper datasets
+    if platform_paper_only == True:
+        cell_table = cell_table[(cell_table.reporter_line!='Ai94(TITL-GCaMP6s)')&(cell_table.project_code!='VisualBehaviorMultiscope4areasx2d')]
     return cell_table
 
 

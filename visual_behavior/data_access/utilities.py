@@ -1450,6 +1450,7 @@ def add_binned_depth_column(df):
     :param df:
     :return:
     """
+    df = df.copy()
     df.loc[:, 'depth'] = None
 
     indices = df[(df.imaging_depth < 100)].index.values
