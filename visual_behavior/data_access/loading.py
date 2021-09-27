@@ -3027,9 +3027,5 @@ def get_cell_table(platform_paper_only=False):
     cell_table = cell_table.set_index('cell_roi_id')
     # optionally filter to limit to platform paper datasets
     if platform_paper_only == True:
-        cell_table = cell_table[(cell_table.reporter_line!='Ai94(TITL-GCaMP6s)')&(cell_table.project_code!='VisualBehaviorMultiscope4areasx2d')]
+        cell_table = cell_table[(cell_table.reporter_line != 'Ai94(TITL-GCaMP6s)') & (cell_table.project_code != 'VisualBehaviorMultiscope4areasx2d')]
     return cell_table
-
-
-
-
