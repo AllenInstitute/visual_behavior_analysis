@@ -287,7 +287,7 @@ def get_filtered_ophys_experiment_table(include_failed_data=False, release_data_
 
     if overwrite_cached_file == True:
         print('overwriting pre-saved experiments table file')
-        experiments.to_csv(os.path.join(get_cache_dir(), 'filtered_ophys_experiment_table.csv'))
+        experiments.to_csv(os.path.join(get_production_cache_dir(), 'filtered_ophys_experiment_table.csv'))
     return experiments
 
 
@@ -2550,7 +2550,7 @@ def get_file_name_for_multi_session_df(df_name, project_code, session_type, cond
         else:
             suffix = '_events'
     else:
-        suffix = ''
+        suffix = '_dff'
     if len(conditions) == 6:
         filename = 'mean_' + df_name + '_' + project_code + '_' + session_type + '_' + conditions[1] + '_' + conditions[2] + '_' + conditions[3] + '_' + conditions[4] + '_' + conditions[5] + suffix + '.h5'
     elif len(conditions) == 5:
