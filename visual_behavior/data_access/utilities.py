@@ -1326,7 +1326,7 @@ def add_experience_level_to_experiment_table(experiments):
     return experiments
 
 
-def add_experience_and_exposure_to_experiment_table(experiments_table):
+def add_experience_exposure_column(experiments_table):
     """
     adds a column to ophys_experiment_table that contains a string indicating the experience level and
     image set exposure number for Novel sessions, and experience level and prior omissions exposure for familiar sessions
@@ -1345,25 +1345,6 @@ def add_experience_and_exposure_to_experiment_table(experiments_table):
                 exp = 'Novel ' + str(int(expt.prior_exposures_to_image_set))
             else:
                 exp = 'Novel > 3'
-            experience_exposure_list.append(exp)
-    experiments_table.loc[:, 'experience_exposure'] = experience_exposure_list
-    return experiments_table
-
-
-def add_experience_exposure_column(experiments_table):
-    """
-    adds a column to ophys_experiment_table that contains a string indicating the experience level and
-    image set exposure number for Novel sessions, and experience level and prior omissions exposure for familiar sessions
-    experiments_table must contain columns 'prior_exposures_to_omissions' and 'prior_exposures_to_image_set'
-    """
-    experience_exposure_list = []
-    for experiment_id in experiments_table.index.values:
-        expt = experiments_table.loc[experiment_id]
-        if 'Familiar' in expt.experience_level:
-            exp = 'Familiar ' + str(int(expt.prior_exposures_to_omissions))
-            experience_exposure_list.append(exp)
-        elif 'Novel' in expt.experience_level:
-            exp = 'Novel ' + str(int(expt.prior_exposures_to_image_set))
             experience_exposure_list.append(exp)
     experiments_table.loc[:, 'experience_exposure'] = experience_exposure_list
     return experiments_table
