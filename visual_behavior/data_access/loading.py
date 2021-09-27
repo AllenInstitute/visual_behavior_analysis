@@ -63,6 +63,21 @@ except Exception as e:
 
 #  RELEVANT DIRECTORIES
 
+
+def get_platform_analysis_cache_dir():
+    """
+    This is the cache directory to use for all platform paper analysis
+    This cache contains NWB files downloaded directly from AWS
+    """
+    return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/platform_paper_cache'
+
+
+def get_production_cache_dir():
+    """Get directory containing a manifest file that includes all VB production data, including failed experiments"""
+    cache_dir = r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/2020_cache/production_cache'
+    return cache_dir
+
+
 def get_qc_plots_dir():
     return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots'
 
@@ -91,10 +106,6 @@ def get_analysis_cache_dir():
     return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/visual_behavior_production_analysis'
 
 
-def get_platform_analysis_cache_dir():
-    return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/platform_paper_cache'
-
-
 def get_events_dir():
     return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/event_detection'
 
@@ -111,18 +122,9 @@ def get_ophys_glm_dir():
     return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/ophys_glm'
 
 
-# LOAD MANIFEST FILES (TABLES CONTAINING METADATA FOR BEHAVIOR & OPHYS DATASETS) FROM SDK CACHE (RECORD OF AVAILABLE DATASETS)
-
-
-def get_cache_dir():
-    """Get directory of data cache for analysis - this should be the standard cache location"""
-    cache_dir = get_platform_analysis_cache_dir()
-    return cache_dir
-
-
 def get_manifest_path():
     """Get path to default manifest file for analysis"""
-    manifest_path = os.path.join(get_cache_dir(), "manifest.json")
+    manifest_path = os.path.join(get_production_cache_dir(), "manifest.json")
     return manifest_path
 
 
@@ -226,8 +228,8 @@ def get_filtered_ophys_experiment_table(include_failed_data=False, release_data_
         experiments = cache.get_ophys_experiment_table()
     if not release_data_only:
         if from_cached_file == True:
-            if 'filtered_ophys_experiment_table.csv' in os.listdir(get_cache_dir()):
-                filepath = os.path.join(get_cache_dir(), 'filtered_ophys_experiment_table.csv')
+            if 'filtered_ophys_experiment_table.csv' in os.listdir(get_production_cache_dir()):
+                filepath = os.path.join(get_production_cache_dir(), 'filtered_ophys_experiment_table.csv')
                 print('loading cached experiment_table')
                 print('last updated on:')
                 import time
@@ -235,7 +237,7 @@ def get_filtered_ophys_experiment_table(include_failed_data=False, release_data_
                 # load the cached file
                 experiments = pd.read_csv(filepath)
             else:
-                print('there is no filtered_ophys_experiment_table.csv', get_cache_dir())
+                print('there is no filtered_ophys_experiment_table.csv', get_production_cache_dir())
         else:
             print('getting up-to-date experiment_table from lims')
             # get everything in lims
@@ -246,7 +248,7 @@ def get_filtered_ophys_experiment_table(include_failed_data=False, release_data_
             if add_extra_columns:
                 print('adding extra columns')
                 print('NOTE: this is slow. set from_cached_file to True to load cached version of experiments_table at:')
-                print(get_cache_dir())
+                print(get_production_cache_dir())
                 # create cre_line column, set NaN session_types to None, add model output availability and location columns
                 experiments = reformat.reformat_experiments_table(experiments)
         if include_failed_data:
