@@ -2450,34 +2450,34 @@ def get_annotated_experiments_table():
 
     experiments_table['layer'] = None
     indices = experiments_table[(experiments_table.imaging_depth < 100)].index.values
-    experiments_table.at[indices, 'layer'] = 'L1'
+    experiments_table.loc[indices, 'layer'] = 'L1'
     indices = experiments_table[(experiments_table.imaging_depth < 270) &
                                 (experiments_table.imaging_depth >= 100)].index.values
-    experiments_table.at[indices, 'layer'] = 'L2/3'
+    experiments_table.loc[indices, 'layer'] = 'L2/3'
 
     indices = experiments_table[
         (experiments_table.imaging_depth >= 270) & (experiments_table.imaging_depth < 350)].index.values
-    experiments_table.at[indices, 'layer'] = 'L4'
+    experiments_table.loc[indices, 'layer'] = 'L4'
     indices = experiments_table[
         (experiments_table.imaging_depth >= 350) & (experiments_table.imaging_depth < 550)].index.values
-    experiments_table.at[indices, 'layer'] = 'L5'
+    experiments_table.loc[indices, 'layer'] = 'L5'
 
     experiments_table['location_layer'] = [experiments_table.loc[expt].cre_line.split('-')[0] + '_' +
                                            experiments_table.loc[expt].targeted_structure + '_' +
                                            experiments_table.loc[expt].layer for expt in experiments_table.index]
 
     indices = experiments_table[experiments_table.location == 'Slc17a7_superficial'].index.values
-    experiments_table.at[indices, 'location'] = 'Excitatory superficial'
+    experiments_table.loc[indices, 'location'] = 'Excitatory superficial'
     indices = experiments_table[experiments_table.location == 'Slc17a7_deep'].index.values
-    experiments_table.at[indices, 'location'] = 'Excitatory deep'
+    experiments_table.loc[indices, 'location'] = 'Excitatory deep'
     indices = experiments_table[experiments_table.location == 'Vip_superficial'].index.values
-    experiments_table.at[indices, 'location'] = 'Vip'
+    experiments_table.loc[indices, 'location'] = 'Vip'
     indices = experiments_table[experiments_table.location == 'Sst_superficial'].index.values
-    experiments_table.at[indices, 'location'] = 'Sst'
+    experiments_table.loc[indices, 'location'] = 'Sst'
     indices = experiments_table[experiments_table.location == 'Vip_deep'].index.values
-    experiments_table.at[indices, 'location'] = 'Vip'
+    experiments_table.loc[indices, 'location'] = 'Vip'
     indices = experiments_table[experiments_table.location == 'Sst_deep'].index.values
-    experiments_table.at[indices, 'location'] = 'Sst'
+    experiments_table.loc[indices, 'location'] = 'Sst'
 
     experiments_table['session_number'] = [int(session_type[6]) for session_type in
                                            experiments_table.session_type.values]
@@ -2492,45 +2492,45 @@ def add_superficial_deep_to_experiments_table(experiments_table):
     experiments_table['location'] = [experiments_table.loc[expt].cre_line.split('-')[0] + '_' +
                                      experiments_table.loc[expt].depth for expt in experiments_table.index]
     indices = experiments_table[experiments_table.location == 'Slc17a7_superficial'].index.values
-    experiments_table.at[indices, 'location'] = 'Excitatory superficial'
+    experiments_table.loc[indices, 'location'] = 'Excitatory superficial'
     indices = experiments_table[experiments_table.location == 'Slc17a7_deep'].index.values
-    experiments_table.at[indices, 'location'] = 'Excitatory deep'
+    experiments_table.loc[indices, 'location'] = 'Excitatory deep'
     indices = experiments_table[experiments_table.location == 'Vip_superficial'].index.values
-    experiments_table.at[indices, 'location'] = 'Vip'
+    experiments_table.loc[indices, 'location'] = 'Vip'
     indices = experiments_table[experiments_table.location == 'Sst_superficial'].index.values
-    experiments_table.at[indices, 'location'] = 'Sst'
+    experiments_table.loc[indices, 'location'] = 'Sst'
     indices = experiments_table[experiments_table.location == 'Vip_deep'].index.values
-    experiments_table.at[indices, 'location'] = 'Vip'
+    experiments_table.loc[indices, 'location'] = 'Vip'
     indices = experiments_table[experiments_table.location == 'Sst_deep'].index.values
-    experiments_table.at[indices, 'location'] = 'Sst'
+    experiments_table.loc[indices, 'location'] = 'Sst'
 
     return experiments_table
 
-
-def get_file_name_for_multi_session_df_no_session_type(df_name, project_code, conditions, use_events, filter_events):
-    if use_events:
-        if filter_events:
-            suffix = '_filtered_events'
-        else:
-            suffix = '_events'
-    else:
-        suffix = ''
-
-    if len(conditions) == 5:
-        filename = 'mean_' + df_name + '_' + project_code + '_' + conditions[1] + '_' + conditions[
-            2] + '_' + conditions[3] + '_' + conditions[4] + suffix + '.h5'
-    elif len(conditions) == 4:
-        filename = 'mean_' + df_name + '_' + project_code + '_' + conditions[1] + '_' + conditions[
-            2] + '_' + conditions[3] + suffix + '.h5'
-    elif len(conditions) == 3:
-        filename = 'mean_' + df_name + '_' + project_code + '_' + conditions[1] + '_' + conditions[
-            2] + suffix + '.h5'
-    elif len(conditions) == 2:
-        filename = 'mean_' + df_name + '_' + project_code + '_' + conditions[1] + suffix + '.h5'
-    elif len(conditions) == 1:
-        filename = 'mean_' + df_name + '_' + project_code + '_' + conditions[0] + suffix + '.h5'
-
-    return filename
+#
+# def get_file_name_for_multi_session_df_no_session_type(df_name, project_code, conditions, use_events, filter_events):
+#     if use_events:
+#         if filter_events:
+#             suffix = '_filtered_events'
+#         else:
+#             suffix = '_events'
+#     else:
+#         suffix = '_dff'
+#
+#     if len(conditions) == 5:
+#         filename = 'mean_' + df_name + '_' + project_code + '_' + conditions[1] + '_' + conditions[
+#             2] + '_' + conditions[3] + '_' + conditions[4] + suffix + '.h5'
+#     elif len(conditions) == 4:
+#         filename = 'mean_' + df_name + '_' + project_code + '_' + conditions[1] + '_' + conditions[
+#             2] + '_' + conditions[3] + suffix + '.h5'
+#     elif len(conditions) == 3:
+#         filename = 'mean_' + df_name + '_' + project_code + '_' + conditions[1] + '_' + conditions[
+#             2] + suffix + '.h5'
+#     elif len(conditions) == 2:
+#         filename = 'mean_' + df_name + '_' + project_code + '_' + conditions[1] + suffix + '.h5'
+#     elif len(conditions) == 1:
+#         filename = 'mean_' + df_name + '_' + project_code + '_' + conditions[0] + suffix + '.h5'
+#
+#     return filename
 
 
 def get_file_name_for_multi_session_df(df_name, project_code, session_type, conditions, use_events, filter_events):
@@ -3001,36 +3001,22 @@ def get_cell_table(ophys_experiment_ids=None, columns_to_return='*', valid_rois_
     return lims_rois
 
 
-def get_dff_traces_for_roi(cell_roi_id):
-    '''
-    gets dff trace for desired cell_roi_id
-    gets data directly from well_known_file h5 file, which is faster than opening the BehaviorOphysExperiment
+def get_cell_table():
+    """
+    loads ophys_cells_table from the SDK using platform paper analysis cache
+    merges with experiments_table to add cell metadata
+    :return:
+    """
+    cache_dir = get_platform_analysis_cache_dir()
+    cache = bpc.from_s3_cache(cache_dir=cache_dir)
+    # load cell table
+    cell_table = cache.get_ophys_cells_table()
+    # load experiment table & merge
+    experiments_table = cache.get_ophys_experiment_table()
+    cell_table = cell_table.merge(experiments_table, on='ophys_experiment_id')
 
-    Parameters:
-    -----------
-    cell_roi_id: int
-        desired cell_roi_id
+    return cell_table
 
-    Returns:
-    --------
-    array
-        1D array of dff values for the desired cell_roi_id
-    '''
-    # get associated experiment_id
-    ophys_experiment_id = from_lims.get_ophys_experiment_id_for_cell_roi_id(cell_roi_id)
 
-    # get roi_traces filepath
-    roi_traces_filename = from_lims.get_well_known_file_path(ophys_experiment_id, 'OphysExperiment', 'OphysDffTraceFile')
 
-    # open file for reading
-    with h5py.File(roi_traces_filename, "r") as f:
 
-        # get index for associated roi
-        roi_ids = [roi_name.decode("utf-8") for roi_name in f.get('roi_names')]
-        roi_index = roi_ids.index(str(cell_roi_id))
-
-        # get corresponding data
-        dff_data = f.get('data')
-        dff = dff_data[roi_index]
-
-    return dff
