@@ -205,23 +205,27 @@ def get_platform_paper_experiment_table():
 #
 
 
-def get_filtered_ophys_experiment_table(include_failed_data=False, release_data_only=False, exclude_ai94=True,
-                                        add_extra_columns=True, from_cached_file=True, overwrite_cached_file=False):
+def get_filtered_ophys_experiment_table(include_failed_data=False, release_data_only=True, exclude_ai94=True,
+                                        add_extra_columns=True, from_cached_file=False, overwrite_cached_file=False):
     """
-    Loads a list of available ophys experiments and adds additional useful columns to the table. By default, loads from a saved cached file.
+    Loads a list of available ophys experiments FROM LIMS (not S3 cache) and adds additional useful columns to the table.
+    By default, loads from a saved cached file.
     If cached file does not exist, loads list of available experiments directly from lims using SDK BehaviorProjectCache, and saves the reformatted table to the default Visual Behavior data cache location.
 
     Keyword Arguments:
 
         include_failed_data {bool} -- If True, return all experiments including those from failed containers and receptive field mapping experiments.
                                       If False, returns only experiments that have passed experiment level QC.
-        release_data_only {bool} -- If True, return only experiments that were released on March 25th, 2021.
+                                      If "release_data_only" is True, failed experiments will not be retruned
+                                      There is no guarantee on data quality or reprocessing for these experiments.
+        release_data_only {bool} -- If True, return only experiments that were released on March 25th, 2021 and August 12, 2021.
                                     Fail tags and other extra columns will not be added if this is set to True.
                                     Release data includes project_codes = ['VisualBehavior', 'VisualBehaviorTask1B', 'VisualBehaviorMultiscope'].
-                                    If False, return all Visual Behavior ophys experiments that have been collected, including data from project_code = 'VisualBehaviorMultiscope4areasx2d'. There is no guarantee on data quality or reprocessing for these experiments.
-                                    Additional columns will be added, including fail tags, model availability and location string
+                                    If False, return all Visual Behavior ophys experiments that have been collected, including data from project_code = 'VisualBehaviorMultiscope4areasx2d'.
+                                    Note, if False, there is no guarantee on data quality or processing for these experiments.
+        add_extra_columns {bool} -- Additional columns will be added, including fail tags, model availability and location string
         exclude_ai94 {bool} -- If True, exclude data from mice with Ai94(GCaMP6s) as the reporter line. (default: {True})
-        from_cached_file {bool} -- If True, loads experiments table from saved file in default cache location
+        from_cached_file {bool} -- If True, loads experiments table from saved file in default cache location (returned by get_production_cache_dir())
         overwrite_cached_file {bool} -- If True, saves experiment_table to default cache folder, overwrites existing file
 
     Returns:
