@@ -185,14 +185,20 @@ def get_platform_paper_experiment_table():
     experiment_table = experiment_table[(experiment_table.project_code != 'VisualBehaviorMultiscope4areasx2d') &
                                         (experiment_table.reporter_line != 'Ai94(TITL-GCaMP6s)')]
 
-    # add cell type columm
-    experiment_table = utilities.add_cell_type(experiment_table)
-    # add other useful columns
-    experiment_table = utilities.add_n_relative_to_novel_1(experiment_table)
-    experiment_table = utilities.add_last_familiar(experiment_table)
-    experiment_table = utilities.add_last_familiar_active(experiment_table)
-    experiment_table = utilities.add_first_novel(experiment_table)
-    experiment_table = utilities.add_first_novel_active(experiment_table)
+    # add cell type and binned depth columms for plot labels
+    experiment_table = utilities.add_cell_type_column(experiment_table)
+    experiment_table = utilities.add_binned_depth_column(experiment_table)
+    # add other columns indicating whether a session was the last familiar before the first novel session,
+    # or the second passing novel session after the first truly novel one
+    experiment_table = utilities.add_first_novel_column(experiment_table)
+    experiment_table = utilities.add_n_relative_to_first_novel_column(experiment_table)
+    experiment_table = utilities.add_last_familiar_column(experiment_table)
+    experiment_table = utilities.add_last_familiar_active_column(experiment_table)
+    experiment_table = utilities.add_second_novel_column(experiment_table)
+    experiment_table = utilities.add_second_novel_active_column(experiment_table)
+    # add column that has a combination of experience level and exposure to omissions for familiar sessions,
+    # or exposure to image set for novel sessions
+    experiment_table = utilities.add_experience_exposure_column(experiment_table)
 
     return experiment_table
 
@@ -273,7 +279,7 @@ def get_filtered_ophys_experiment_table(include_failed_data=False, release_data_
     experiments = filtering.limit_to_production_project_codes(experiments)
 
     # add new columns for conditions to analyze for platform paper ###
-    experiments = utilities.add_cell_type(experiments)
+    experiments = utilities.add_cell_type_column(experiments)
 
     if overwrite_cached_file == True:
         print('overwriting pre-saved experiments table file')
