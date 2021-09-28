@@ -2610,7 +2610,7 @@ def get_multi_session_df(cache_dir, df_name, conditions, experiments_table, remo
                 try:
                     filename = get_file_name_for_multi_session_df(df_name, project_code, session_type, conditions,
                                                                   use_events, filter_events)
-                    filepath = os.path.join(get_platform_analysis_cache_dir(), 'multi_session_summary_dfs', filename)
+                    filepath = os.path.join(get_platform_analysis_cache_dir(), 'multi_session_summary_dfs_250ms', filename)
                     # print('reading file at', filepath)
                     df = pd.read_hdf(filepath, key='df')
                     # df = df.merge(expts, on='ophys_experiment_id')
@@ -2622,7 +2622,7 @@ def get_multi_session_df(cache_dir, df_name, conditions, experiments_table, remo
                     print('no multi_session_df for', project_code, session_type)
         else:
             filename = get_file_name_for_multi_session_df_no_session_type(df_name, project_code, conditions, use_events, filter_events)
-            filepath = os.path.join(cache_dir, 'multi_session_summary_dfs', filename)
+            filepath = os.path.join(cache_dir, 'multi_session_summary_dfs_250ms', filename)
             df = pd.read_hdf(filepath, key='df')
             # df = df.merge(expts[['ophys_experiment_id', 'cre_line', 'location', 'location_layer',
             #                      'layer', 'ophys_session_id', 'project_code', 'session_type',

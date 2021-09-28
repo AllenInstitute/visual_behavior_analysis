@@ -82,7 +82,7 @@ def get_multi_session_df(project_code, session_number, df_name, conditions, use_
         mega_mdf = mega_mdf.drop(columns='index')
 
     filename = loading.get_file_name_for_multi_session_df(df_name, project_code, session_type, conditions, use_events, filter_events)
-    mega_mdf_write_dir = os.path.join(loading.get_platform_analysis_cache_dir(), 'multi_session_summary_dfs')
+    mega_mdf_write_dir = os.path.join(loading.get_platform_analysis_cache_dir(), 'multi_session_summary_dfs_250ms')
     print('saving multi session mean df as ', filename)
     mega_mdf.to_hdf(os.path.join(mega_mdf_write_dir, filename), key='df')
     print('saved to', mega_mdf_write_dir)
