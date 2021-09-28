@@ -52,7 +52,7 @@ def plot_population_averages_for_conditions(multi_session_df, df_name, timestamp
     if 'omission' in df_name:
         omitted = True
         change = False
-    elif 'change' in df_name:
+    elif 'trials' in df_name:
         omitted = False
         change = True
     else:
