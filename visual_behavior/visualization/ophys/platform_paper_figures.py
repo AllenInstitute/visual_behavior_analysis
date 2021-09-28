@@ -18,7 +18,7 @@ sns.set_palette('deep')
 
 
 
-def plot_population_averages_for_conditions(multi_session_df, df_name, timestamps, axes_column, hue_column,
+def plot_population_averages_for_conditions(multi_session_df, df_name, timestamps, axes_column, hue_column, project_code,
                                             use_events=True, filter_events=True, palette=None, data_type='events',
                                             horizontal=True, xlim_seconds=None, save_dir=None, folder=None):
     if palette is None:
@@ -43,12 +43,12 @@ def plot_population_averages_for_conditions(multi_session_df, df_name, timestamp
         ylabel = 'pupil area (pix^2)'
     elif 'running' in data_type:
         ylabel = 'running speed (cm/s)'
-    if len(project_codes) == 1:
-        project_code = project_codes[0]
-    elif len(project_codes) == 2:
-        project_code = 'Scientifica'
-    else:
-        project_code = 'all'
+    # if len(project_codes) == 1:
+    #     project_code = project_codes[0]
+    # elif len(project_codes) == 2:
+    #     project_code = 'Scientifica'
+    # else:
+    #     project_code = 'all'
     if 'omission' in df_name:
         omitted = True
         change = False
@@ -142,7 +142,7 @@ def plot_cell_response_heatmap(data, timestamps, xlabel='time after change (s)',
 
 
 def plot_response_heatmaps_for_conditions(multi_session_df, df_name, timestamps,
-                                          row_condition, col_condition, use_events, filter_events,
+                                          row_condition, col_condition, use_events, filter_events, project_code,
                                           microscope='Multiscope', vmax=0.05, xlim_seconds=None, match_cells=False,
                                           save_dir=None, folder=None):
     sdf = multi_session_df.copy()
@@ -152,17 +152,19 @@ def plot_response_heatmaps_for_conditions(multi_session_df, df_name, timestamps,
     if microscope == 'Multiscope':
         indices = [index for index in sdf.index if
                    len(sdf.iloc[index].mean_trace) == 64]  # expected multiscope trace length
-    else:
+    elif microscope == 'Scientifia':
         indices = [index for index in sdf.index if
                    len(sdf.iloc[index].mean_trace) == 186]  # expected scientifica trace length
+    else:
+        pass
     sdf = sdf.loc[indices]
 
-    if len(project_codes) == 1:
-        project_code = project_codes[0]
-    elif len(project_codes) == 2:
-        project_code = 'Scientifica'
-    else:
-        project_code = 'all'
+    # if len(project_codes) == 1:
+    #     project_code = project_codes[0]
+    # elif len(project_codes) == 2:
+    #     project_code = 'Scientifica'
+    # else:
+    #     project_code = 'all'
     if 'omission' in df_name:
         omitted = True
         change = False

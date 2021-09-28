@@ -2529,7 +2529,7 @@ def get_file_name_for_multi_session_df_no_session_type(df_name, project_code, co
         else:
             suffix = '_events'
     else:
-        suffix = '_dff'
+        suffix = ''
 
     if len(conditions) == 5:
         filename = 'mean_' + df_name + '_' + project_code + '_' + conditions[1] + '_' + conditions[
@@ -2555,7 +2555,8 @@ def get_file_name_for_multi_session_df(df_name, project_code, session_type, cond
         else:
             suffix = '_events'
     else:
-        suffix = '_dff'
+        suffix = ''
+
     if len(conditions) == 6:
         filename = 'mean_' + df_name + '_' + project_code + '_' + session_type + '_' + conditions[1] + '_' + conditions[2] + '_' + conditions[3] + '_' + conditions[4] + '_' + conditions[5] + suffix + '.h5'
     elif len(conditions) == 5:
