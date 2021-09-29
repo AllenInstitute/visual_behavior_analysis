@@ -3017,21 +3017,26 @@ def get_cell_table_from_lims(ophys_experiment_ids=None, columns_to_return='*', v
     return lims_rois
 
 
-def get_cell_table(platform_paper_only=False):
+def get_cell_table(platform_paper_only=True):
     """
     loads ophys_cells_table from the SDK using platform paper analysis cache and merges with experiment_table to get metadata
-    if 'platform_paper_only' is True, will filter out Ai94 and VisuaBehaviorMultiscope4areasx2d
+    if 'platform_paper_only' is True, will filter out Ai94 and VisuaBehaviorMultiscope4areasx2d and add extra columns
     :return:
     """
     cache_dir = get_platform_analysis_cache_dir()
     cache = bpc.from_s3_cache(cache_dir=cache_dir)
     # load cell table
     cell_table = cache.get_ophys_cells_table()
-    # load experiments table and merge
-    experiment_table = get_platform_paper_experiment_table()
-    cell_table = cell_table.reset_index().merge(experiment_table, on='ophys_experiment_id')
-    cell_table = cell_table.set_index('cell_roi_id')
     # optionally filter to limit to platform paper datasets
     if platform_paper_only == True:
+        # load experiments table and merge
+        experiment_table = get_platform_paper_experiment_table()
+        cell_table = cell_table.reset_index().merge(experiment_table, on='ophys_experiment_id')
         cell_table = cell_table[(cell_table.reporter_line != 'Ai94(TITL-GCaMP6s)') & (cell_table.project_code != 'VisualBehaviorMultiscope4areasx2d')]
+        cell_table = cell_table.set_index('cell_roi_id')
+    else:
+        # load platform experiments table and merge
+        experiment_table = cache.get_ophys_experiment_table()
+        cell_table = cell_table.reset_index().merge(experiment_table, on='ophys_experiment_id')
+        cell_table = cell_table.set_index('cell_roi_id')
     return cell_table
