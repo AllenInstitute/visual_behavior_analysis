@@ -9,6 +9,8 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import visual_behavior.visualization.utils as utils
 
+from visual_behavior.ophys.response_analysis.response_analysis import ResponseAnalysis
+
 # formatting
 sns.set_context('notebook', font_scale=1.5, rc={'lines.markeredgewidth': 2})
 sns.set_style('white', {'axes.spines.right': False, 'axes.spines.top': False, 'xtick.bottom': True, 'ytick.left': True, })
@@ -83,7 +85,7 @@ def plot_population_averages_for_conditions(multi_session_df, df_name, timestamp
                 ax[i].set_xlabel('time (s)')
     ax[0].set_ylabel(ylabel)
     # ax[i].legend(loc='upper right', fontsize='x-small')
-    ax[i].get_legend().remove()
+    # ax[i].get_legend().remove()
     if change:
         trace_type = 'change'
     elif omitted:
@@ -102,7 +104,6 @@ def get_timestamps_for_response_df_type(cache, experiment_id, df_name):
     """
     get timestamps from response_df
     """
-    from visual_behavior.ophys.response_analysis.response_analysis import ResponseAnalysis
 
     dataset = cache.get_behavior_ophys_experiment(experiment_id)
     analysis = ResponseAnalysis(dataset)
@@ -152,18 +153,12 @@ def plot_response_heatmaps_for_conditions(multi_session_df, df_name, timestamps,
     sdf = sdf.loc[indices]
 
     if 'omission' in df_name:
-        omitted = True
-        change = False
         xlabel = 'time after omission (s)'
         trace_type = 'omitted'
     elif 'change' in df_name:
-        omitted = False
-        change = True
         xlabel = 'time after change (s)',
         trace_type = 'change'
     else:
-        omitted = False
-        change = False
         xlabel = 'time (s)'
         trace_type = 'unknown'
 
@@ -229,9 +224,7 @@ def plot_response_heatmaps_for_conditions(multi_session_df, df_name, timestamps,
 if __name__ == '__main__':
 
     import visual_behavior.data_access.loading as loading
-    from visual_behavior.ophys.response_analysis.response_analysis import ResponseAnalysis
     from allensdk.brain_observatory.behavior.behavior_project_cache import VisualBehaviorOphysProjectCache
-
 
     # load cache
     cache_dir = loading.get_platform_analysis_cache_dir()
