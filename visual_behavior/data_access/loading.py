@@ -188,7 +188,9 @@ def get_platform_paper_experiment_table():
 
     # add cell type and binned depth columms for plot labels
     experiment_table = utilities.add_cell_type_column(experiment_table)
+    experiment_table = utilities.add_average_depth_across_container(experiment_table)
     experiment_table = utilities.add_binned_depth_column(experiment_table)
+    experiment_table = utilities.add_area_depth_column(experiment_table)
     # add other columns indicating whether a session was the last familiar before the first novel session,
     # or the second passing novel session after the first truly novel one
     experiment_table = utilities.add_first_novel_column(experiment_table)

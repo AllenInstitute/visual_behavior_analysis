@@ -1429,29 +1429,62 @@ def add_cell_type_column(df):
     return df
 
 
+def add_average_depth_across_container(experiments_table):
+    """
+    creates a column called 'depth' that contains the mean 'imaging_depth' across all experiments in each container
+    """
+    experiments_table['depth'] = None
+    for container_id in experiments_table.ophys_container_id.unique():
+        container_data = experiments_table[experiments_table.ophys_container_id==container_id]
+        indices = container_data.index.values
+        depth = container_data.imaging_depth.mean()
+        experiments_table.loc[indices, 'depth'] = int(depth)
+    return experiments_table
+
+
+def add_area_depth_column(experiments_table):
+    """
+    creates columns called 'area_depth' and 'area_binned_depth' that contains the conjunction of 'targeted_area' and 'depth' or 'binned_depth'
+    input df must have 'depth' and 'binned_depth' columns created using add_average_depth_across_container and add_binned_depth functions
+    """
+    experiments_table['area_depth'] = None
+    experiments_table['area_binned_depth'] = None
+    for container_id in experiments_table.ophys_container_id.unique():
+        container_data = experiments_table[experiments_table.ophys_container_id==container_id]
+        indices = container_data.index.values
+        depth = container_data.depth.mean()
+        binned_depth = container_data.binned_depth.mean()
+        area = container_data.targeted_structure.unique()[0]
+        if len(container_data.targeted_structure.unique())>1:
+            print('should not be more than one targeted_structure per container!!!!')
+        experiments_table.loc[indices, 'area_depth'] = area+'_'+str(int(depth))
+        experiments_table.loc[indices, 'area_binned_depth'] = area + '_' + str(int(binned_depth))
+    return experiments_table
+
+
 def add_binned_depth_column(df):
     """
-    for a dataframe with column 'imaging_depth', bin the depth values into 100um bins and assign the mean depth for each bin
+    for a dataframe with column 'depth', created by the function add_depth_per_container,
+    bin the depth values into 100um bins and assign the mean depth for each bin
     :param df:
     :return:
     """
-    df = df.copy()
-    df.loc[:, 'depth'] = None
+    df.loc[:, 'binned_depth'] = None
 
-    indices = df[(df.imaging_depth < 100)].index.values
-    df.loc[indices, 'depth'] = 75
+    indices = df[(df.depth < 100)].index.values
+    df.loc[indices, 'binned_depth'] = 75
 
-    indices = df[(df.imaging_depth < 200) &
-                 (df.imaging_depth >= 100)].index.values
-    df.loc[indices, 'depth'] = 150
-
-    indices = df[
-        (df.imaging_depth >= 200) & (df.imaging_depth < 300)].index.values
-    df.loc[indices, 'depth'] = 250
+    indices = df[(df.depth >= 100) &
+                 (df.depth < 200)].index.values
+    df.loc[indices, 'binned_depth'] = 175
 
     indices = df[
-        (df.imaging_depth >= 300) & (df.imaging_depth < 400)].index.values
-    df.loc[indices, 'depth'] = 350
+        (df.depth >= 200) & (df.depth < 300)].index.values
+    df.loc[indices, 'binned_depth'] = 275
+
+    indices = df[
+        (df.depth >= 300) & (df.depth < 500)].index.values
+    df.loc[indices, 'binned_depth'] = 375
 
     return df
 
