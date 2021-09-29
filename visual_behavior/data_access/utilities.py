@@ -1606,7 +1606,7 @@ def get_containers_with_all_experience_levels(experiments_table):
     return containers_with_all_experience_levels
 
 
-def limit_to_get_containers_with_all_experience_levels(experiments_table):
+def limit_to_containers_with_all_experience_levels(experiments_table):
     """
     returns experiment_table limited to containers with all 3 experience levels in ['Familiar', 'Novel 1', 'Novel >1']
     """
