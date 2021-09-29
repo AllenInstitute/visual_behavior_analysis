@@ -1435,7 +1435,7 @@ def add_average_depth_across_container(experiments_table):
     """
     experiments_table['depth'] = None
     for container_id in experiments_table.ophys_container_id.unique():
-        container_data = experiments_table[experiments_table.ophys_container_id==container_id]
+        container_data = experiments_table[experiments_table.ophys_container_id == container_id]
         indices = container_data.index.values
         depth = container_data.imaging_depth.mean()
         experiments_table.loc[indices, 'depth'] = int(depth)
@@ -1450,14 +1450,14 @@ def add_area_depth_column(experiments_table):
     experiments_table['area_depth'] = None
     experiments_table['area_binned_depth'] = None
     for container_id in experiments_table.ophys_container_id.unique():
-        container_data = experiments_table[experiments_table.ophys_container_id==container_id]
+        container_data = experiments_table[experiments_table.ophys_container_id == container_id]
         indices = container_data.index.values
         depth = container_data.depth.mean()
         binned_depth = container_data.binned_depth.mean()
         area = container_data.targeted_structure.unique()[0]
-        if len(container_data.targeted_structure.unique())>1:
+        if len(container_data.targeted_structure.unique()) > 1:
             print('should not be more than one targeted_structure per container!!!!')
-        experiments_table.loc[indices, 'area_depth'] = area+'_'+str(int(depth))
+        experiments_table.loc[indices, 'area_depth'] = area + '_' + str(int(depth))
         experiments_table.loc[indices, 'area_binned_depth'] = area + '_' + str(int(binned_depth))
     return experiments_table
 
@@ -1665,7 +1665,7 @@ def get_containers_with_all_experience_levels(experiments_table):
     identifies containers with all 3 experience levels in ['Familiar', 'Novel 1', 'Novel >1']
     """
     experience_level_counts = experiments_table.groupby(['ophys_container_id', 'experience_level']).count().reset_index().groupby(['ophys_container_id']).count()[['experience_level']]
-    containers_with_all_experience_levels = experience_level_counts[experience_level_counts.experience_level==3].index.unique()
+    containers_with_all_experience_levels = experience_level_counts[experience_level_counts.experience_level == 3].index.unique()
     return containers_with_all_experience_levels
 
 
@@ -1685,7 +1685,7 @@ def get_cell_specimen_ids_with_all_experience_levels(cells_table):
     input dataframe must have column 'cell_specimen_id', such as in ophys_cells_table
     """
     experience_level_counts = cells_table.groupby(['cell_specimen_id', 'experience_level']).count().reset_index().groupby(['cell_specimen_id']).count()[['experience_level']]
-    cell_specimen_ids_with_all_experience_levels = experience_level_counts[experience_level_counts.experience_level==3].index.unique()
+    cell_specimen_ids_with_all_experience_levels = experience_level_counts[experience_level_counts.experience_level == 3].index.unique()
     return cell_specimen_ids_with_all_experience_levels
 
 
@@ -1704,7 +1704,7 @@ def value_counts(df, conditions=['cell_type', 'experience_level', 'mouse_id']):
     group by the first conditions and count the last one
     """
     counts = df.groupby(conditions).count().reset_index().groupby(conditions[:-1]).count()
-    counts = counts[[conditions[-1]]].rename(columns={conditions[-1]:'n_'+conditions[-1]})
+    counts = counts[[conditions[-1]]].rename(columns={conditions[-1]: 'n_' + conditions[-1]})
     return counts
 
 
@@ -1719,7 +1719,6 @@ def count_mice_expts_containers_cells(df):
     cells = value_counts(df, conditions=['cell_type', 'experience_level', 'cell_specimen_id'])
 
     counts = mice.merge(experiments, on=['cell_type', 'experience_level'])
-    counts = counts.merge(containers,  on=['cell_type', 'experience_level'])
-    counts = counts.merge(cells,  on=['cell_type', 'experience_level'])
+    counts = counts.merge(containers, on=['cell_type', 'experience_level'])
+    counts = counts.merge(cells, on=['cell_type', 'experience_level'])
     return counts
-

@@ -16,8 +16,6 @@ sns.set_style('white', {'axes.spines.right': False, 'axes.spines.top': False, 'x
 sns.set_palette('deep')
 
 
-
-
 def plot_population_averages_for_conditions(multi_session_df, df_name, timestamps, axes_column, hue_column, project_code,
                                             use_events=True, filter_events=True, palette=None, data_type='events',
                                             horizontal=True, xlim_seconds=None, save_dir=None, folder=None):
@@ -73,8 +71,8 @@ def plot_population_averages_for_conditions(multi_session_df, df_name, timestamp
             traces = sdf[(sdf[axes_column] == axis) & (sdf[hue_column] == hue)].mean_trace.values
             #             traces = [trace for trace in traces if np.amax(trace) < 4]
             ax[i] = utils.plot_mean_trace(np.asarray(traces), timestamps, ylabel=ylabel,
-                                    legend_label=hue, color=palette[c], interval_sec=1,
-                                    xlim_seconds=xlim_seconds, ax=ax[i])
+                                          legend_label=hue, color=palette[c], interval_sec=1,
+                                          xlim_seconds=xlim_seconds, ax=ax[i])
             ax[i] = utils.plot_flashes_on_trace(ax[i], timestamps, change=change, omitted=omitted)
             ax[i].axvline(x=0, ymin=0, ymax=1, linestyle='--', color='gray')
             ax[i].set_title(axis)
@@ -102,7 +100,7 @@ def plot_population_averages_for_conditions(multi_session_df, df_name, timestamp
     fig.tight_layout()
 
     if save_dir:
-        fig_title = cre_line+'_'+trace_type+'_'+project_code[14:]+condition_name+'_by_session'
+        fig_title = cre_line + '_' + trace_type + '_' + project_code[14:] + condition_name + '_by_session'
         utils.save_figure(fig, figsize, save_dir, folder, fig_title)
 
 
@@ -235,9 +233,8 @@ def plot_response_heatmaps_for_conditions(multi_session_df, df_name, timestamps,
     fig.tight_layout()
 
     if save_dir:
-        fig_title = cre_line+'_'+trace_type+'_'+project_code[14:]+condition_name+'_by_session'
+        fig_title = cre_line + '_' + trace_type + '_' + project_code[14:] + condition_name + '_by_session'
         utils.save_figure(fig, figsize, save_dir, folder, fig_title)
-
 
 
 # examples
@@ -277,7 +274,7 @@ if __name__ == '__main__':
     palette = utils.get_experience_level_colors()
     xlim_seconds = [-1.8, 2.25]
 
-    df = multi_session_df[multi_session_df.project_code==project_code]
+    df = multi_session_df[multi_session_df.project_code == project_code]
     plot_population_averages_for_conditions(df, df_name, timestamps,
                                             axes_column, hue_column, palette,
                                             use_events=True, filter_events=True, xlim_seconds=xlim_seconds,

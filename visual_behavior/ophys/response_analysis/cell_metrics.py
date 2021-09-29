@@ -509,15 +509,15 @@ def get_metrics_df_filepath(ophys_experiment_id, condition, stimuli, session_sub
     # else:
     #     save_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\single_cell_metrics'
     save_dir = os.path.join(loading.get_platform_analysis_cache_dir(), 'single_cell_metrics)'
-    filename = get_metrics_df_filename(ophys_experiment_id, condition, stimuli, session_subset, use_events, filter_events)
-    filepath = os.path.join(save_dir, 'cell_metrics', filename + '.h5')
+    filename=get_metrics_df_filename(ophys_experiment_id, condition, stimuli, session_subset, use_events, filter_events)
+    filepath=os.path.join(save_dir, 'cell_metrics', filename + '.h5')
     return filepath
 
 
 def get_cell_metrics_table_for_experiment(ophys_experiment_id, condition, stimulus, session_subset, use_events, filter_events):
-    filepath = get_metrics_df_filepath(ophys_experiment_id, condition, stimulus,
+    filepath=get_metrics_df_filepath(ophys_experiment_id, condition, stimulus,
                                        session_subset, use_events, filter_events)
-    metrics_table = pd.read_hdf(filepath, key='df')
+    metrics_table=pd.read_hdf(filepath, key='df')
     return metrics_table
 
 
@@ -525,17 +525,17 @@ def load_cell_metrics_table_for_experiments(ophys_experiment_ids, condition, sti
     import visual_behavior.data_access.loading as loading
     # ophys_experiment_table = loading.get_released_ophys_experiment_table()
     from allensdk.brain_observatory.behavior.behavior_project_cache import VisualBehaviorOphysProjectCache
-    cache_dir = loading.get_platform_analysis_cache_dir()
+    cache_dir=loading.get_platform_analysis_cache_dir()
     print(cache_dir)
-    cache = VisualBehaviorOphysProjectCache.from_s3_cache(cache_dir=cache_dir)
-    ophys_experiment_table = cache.get_ophys_experiment_table()
-    ophys_experiment_table = loading.add_superficial_deep_to_experiments_table(ophys_experiment_table)
+    cache=VisualBehaviorOphysProjectCache.from_s3_cache(cache_dir=cache_dir)
+    ophys_experiment_table=cache.get_ophys_experiment_table()
+    ophys_experiment_table=loading.add_superficial_deep_to_experiments_table(ophys_experiment_table)
 
-    problem_expts = []
-    metrics_table = pd.DataFrame()
+    problem_expts=[]
+    metrics_table=pd.DataFrame()
     if ophys_experiment_ids == 'all_experiments':
         try:
-            metrics_table = get_cell_metrics_table_for_experiment(ophys_experiment_ids, condition, stimulus, session_subset,
+            metrics_table=get_cell_metrics_table_for_experiment(ophys_experiment_ids, condition, stimulus, session_subset,
                                                                   use_events, filter_events)
         except BaseException:
             print('problem for all experiments metrics table generation')
@@ -543,12 +543,12 @@ def load_cell_metrics_table_for_experiments(ophys_experiment_ids, condition, sti
         for ophys_experiment_id in ophys_experiment_ids:
             print(np.where(ophys_experiment_ids == ophys_experiment_id)[0][0], 'out of', len(ophys_experiment_ids))
             try:
-                tmp = get_cell_metrics_table_for_experiment(ophys_experiment_id, condition, stimulus, session_subset,
+                tmp=get_cell_metrics_table_for_experiment(ophys_experiment_id, condition, stimulus, session_subset,
                                                             use_events, filter_events)
             except BaseException:
                 print('problem for experiment', ophys_experiment_id)
                 problem_expts.append(ophys_experiment_id)
-            metrics_table = pd.concat([metrics_table, tmp])
+            metrics_table=pd.concat([metrics_table, tmp])
 
     # metrics_table = metrics_table.merge(ophys_experiment_table, on=['ophys_experiment_id', 'ophys_session_id'])
 
@@ -557,26 +557,26 @@ def load_cell_metrics_table_for_experiments(ophys_experiment_ids, condition, sti
 
 if __name__ == '__main__':
 
-    ophys_experiment_table = loading.get_filtered_ophys_experiment_table(release_data_only=True)
+    ophys_experiment_table=loading.get_filtered_ophys_experiment_table(release_data_only=True)
 
-    ophys_experiment_id = ophys_experiment_table.index[50]
-    ophys_session_id = ophys_experiment_table.loc[ophys_experiment_id].ophys_session_id
-    dataset = loading.get_ophys_dataset(ophys_experiment_id)
+    ophys_experiment_id=ophys_experiment_table.index[50]
+    ophys_session_id=ophys_experiment_table.loc[ophys_experiment_id].ophys_session_id
+    dataset=loading.get_ophys_dataset(ophys_experiment_id)
 
-    analysis = ResponseAnalysis(dataset, use_extended_stimulus_presentations=True)
+    analysis=ResponseAnalysis(dataset, use_extended_stimulus_presentations=True)
 
-    sdf = analysis.get_response_df(df_name='stimulus_response_df')
+    sdf=analysis.get_response_df(df_name='stimulus_response_df')
 
-    condition = 'changes'
-    session_subset = 'full_session'
-    stimuli = 'all_images'
+    condition='changes'
+    session_subset='full_session'
+    stimuli='all_images'
 
-    metrics_table = generate_metrics_table(ophys_experiment_id, ophys_experiment_table, use_events=True,
+    metrics_table=generate_metrics_table(ophys_experiment_id, ophys_experiment_table, use_events=True,
                                            condition=condition, session_subset=session_subset, stimuli=stimuli)
 
-    trace_metrics = get_trace_metrics_table(ophys_experiment_id, ophys_experiment_table, use_events=False)
+    trace_metrics=get_trace_metrics_table(ophys_experiment_id, ophys_experiment_table, use_events=False)
 
-    metrics_table = pd.concat([metrics_table, trace_metrics])
+    metrics_table=pd.concat([metrics_table, trace_metrics])
 
-    save_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\single_cell_metrics'
+    save_dir=r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\single_cell_metrics'
     # metrics_table.to_hdf(os.path.join(save_dir, 'cell_metrics', 'experiment_id' + str(ophys_experiment_id) + '.h5'), key='df')
