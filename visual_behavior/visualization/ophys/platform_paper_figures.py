@@ -3,7 +3,6 @@ Created on Thursday September 23 2021
 
 @author: marinag
 """
-import os
 import numpy as np
 import pandas as pd
 import seaborn as sns
@@ -20,7 +19,7 @@ def plot_population_averages_for_conditions(multi_session_df, df_name, timestamp
                                             use_events=True, filter_events=True, palette=None, data_type='events',
                                             horizontal=True, xlim_seconds=None, save_dir=None, folder=None):
     if palette is None:
-        colors = sns.color_palette()
+        palette = sns.color_palette()
 
     sdf = multi_session_df.copy()
 
@@ -41,12 +40,6 @@ def plot_population_averages_for_conditions(multi_session_df, df_name, timestamp
         ylabel = 'pupil area (pix^2)'
     elif 'running' in data_type:
         ylabel = 'running speed (cm/s)'
-    # if len(project_codes) == 1:
-    #     project_code = project_codes[0]
-    # elif len(project_codes) == 2:
-    #     project_code = 'Scientifica'
-    # else:
-    #     project_code = 'all'
     if 'omission' in df_name:
         omitted = True
         change = False
@@ -89,7 +82,8 @@ def plot_population_averages_for_conditions(multi_session_df, df_name, timestamp
             else:
                 ax[i].set_xlabel('time (s)')
     ax[0].set_ylabel(ylabel)
-    ax[i].legend(loc='upper right', fontsize='x-small')
+    # ax[i].legend(loc='upper right', fontsize='x-small')
+    ax[i].get_legend().remove()
     if change:
         trace_type = 'change'
     elif omitted:
@@ -100,7 +94,7 @@ def plot_population_averages_for_conditions(multi_session_df, df_name, timestamp
     fig.tight_layout()
 
     if save_dir:
-        fig_title = cre_line + '_' + trace_type + '_' + project_code[14:] + condition_name + '_by_session'
+        fig_title = trace_type + '_population_average_response_' + project_code[14:] + '_' + axes_column + '_' + hue_column
         utils.save_figure(fig, figsize, save_dir, folder, fig_title)
 
 
@@ -157,12 +151,6 @@ def plot_response_heatmaps_for_conditions(multi_session_df, df_name, timestamps,
         pass
     sdf = sdf.loc[indices]
 
-    # if len(project_codes) == 1:
-    #     project_code = project_codes[0]
-    # elif len(project_codes) == 2:
-    #     project_code = 'Scientifica'
-    # else:
-    #     project_code = 'all'
     if 'omission' in df_name:
         omitted = True
         change = False
@@ -233,17 +221,21 @@ def plot_response_heatmaps_for_conditions(multi_session_df, df_name, timestamps,
     fig.tight_layout()
 
     if save_dir:
-        fig_title = cre_line + '_' + trace_type + '_' + project_code[14:] + condition_name + '_by_session'
+        fig_title = trace_type + '_response_heatmap_' + project_code[14:] + '_' + col_condition + '_' + row_condition
         utils.save_figure(fig, figsize, save_dir, folder, fig_title)
 
 
 # examples
 if __name__ == '__main__':
 
+    import visual_behavior.data_access.loading as loading
     from visual_behavior.ophys.response_analysis.response_analysis import ResponseAnalysis
+    from allensdk.brain_observatory.behavior.behavior_project_cache import VisualBehaviorOphysProjectCache
+
 
     # load cache
     cache_dir = loading.get_platform_analysis_cache_dir()
+    cache = VisualBehaviorOphysProjectCache.from_s3_cache(cache_dir)
     experiments_table = loading.get_platform_paper_experiment_table()
 
     # load multi_session_df
@@ -266,7 +258,7 @@ if __name__ == '__main__':
 
     # get timestamps for population average
     experiment_id = experiments_table[experiments_table.project_code == project_code].index.values[9]
-    timestamps = ppf.get_timestamps_for_response_df_type(cache, experiment_id, df_name)
+    timestamps = get_timestamps_for_response_df_type(cache, experiment_id, df_name)
 
     # plot population average for experience_level
     axes_column = 'cell_type'
