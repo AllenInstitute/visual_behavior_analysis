@@ -175,12 +175,12 @@ def get_released_ophys_experiment_table(exclude_ai94=True):
     return experiment_table
 
 
-def get_platform_paper_experiment_table():
+def get_platform_paper_experiment_table(add_extra_columns=False):
     """
     loads the experiment table that was downloaded from AWS and saved to the the platform paper cache dir.
     Then filter out VisualBehaviorMultiscope4areasx2d and Ai94 data.
     And add cell_type column (values = ['Excitatory', 'Sst Inhibitory', 'Vip Inhibitory']
-    :return:
+    Set add_extra_columns to False if you dont need things like 'cell_type', 'binned_depth', or 'add_last_familiar'
     """
     cache_dir = get_platform_analysis_cache_dir()
     cache = bpc.from_s3_cache(cache_dir=cache_dir)
@@ -190,22 +190,23 @@ def get_platform_paper_experiment_table():
     experiment_table = experiment_table[(experiment_table.project_code != 'VisualBehaviorMultiscope4areasx2d') &
                                         (experiment_table.reporter_line != 'Ai94(TITL-GCaMP6s)')].copy()
 
-    # add cell type and binned depth columms for plot labels
-    experiment_table = utilities.add_cell_type_column(experiment_table)
-    experiment_table = utilities.add_average_depth_across_container(experiment_table)
-    experiment_table = utilities.add_binned_depth_column(experiment_table)
-    experiment_table = utilities.add_area_depth_column(experiment_table)
-    # add other columns indicating whether a session was the last familiar before the first novel session,
-    # or the second passing novel session after the first truly novel one
-    experiment_table = utilities.add_first_novel_column(experiment_table)
-    experiment_table = utilities.add_n_relative_to_first_novel_column(experiment_table)
-    experiment_table = utilities.add_last_familiar_column(experiment_table)
-    experiment_table = utilities.add_last_familiar_active_column(experiment_table)
-    experiment_table = utilities.add_second_novel_column(experiment_table)
-    experiment_table = utilities.add_second_novel_active_column(experiment_table)
-    # add column that has a combination of experience level and exposure to omissions for familiar sessions,
-    # or exposure to image set for novel sessions
-    experiment_table = utilities.add_experience_exposure_column(experiment_table)
+    if add_extra_columns == True:
+        # add cell type and binned depth columms for plot labels
+        experiment_table = utilities.add_cell_type_column(experiment_table)
+        experiment_table = utilities.add_average_depth_across_container(experiment_table)
+        experiment_table = utilities.add_binned_depth_column(experiment_table)
+        experiment_table = utilities.add_area_depth_column(experiment_table)
+        # add other columns indicating whether a session was the last familiar before the first novel session,
+        # or the second passing novel session after the first truly novel one
+        experiment_table = utilities.add_first_novel_column(experiment_table)
+        experiment_table = utilities.add_n_relative_to_first_novel_column(experiment_table)
+        experiment_table = utilities.add_last_familiar_column(experiment_table)
+        experiment_table = utilities.add_last_familiar_active_column(experiment_table)
+        experiment_table = utilities.add_second_novel_column(experiment_table)
+        experiment_table = utilities.add_second_novel_active_column(experiment_table)
+        # add column that has a combination of experience level and exposure to omissions for familiar sessions,
+        # or exposure to image set for novel sessions
+        experiment_table = utilities.add_experience_exposure_column(experiment_table)
 
     return experiment_table
 
