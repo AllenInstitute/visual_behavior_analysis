@@ -123,7 +123,11 @@ def get_ophys_glm_dir():
 
 
 def get_manifest_path():
-    """Get path to default manifest file for analysis"""
+    """
+    Get path to default manifest file for analysis
+    Default location of manifest is the production cache directory at /visual_behavior/2020_cache/production_cache'
+    This includes all VB production data and is not the same thing as the platform paper cache
+    """
     manifest_path = os.path.join(get_production_cache_dir(), "manifest.json")
     return manifest_path
 
@@ -409,8 +413,9 @@ def get_extened_stimulus_presentations(stimulus_presentations, licks, rewards, r
     """
     Takes SDK stimulus presentations table and adds a bunch of useful columns by incorporating data from other tables
     and reformatting existing column data
-    :param stimulus_presentations:
-    :return:
+    Additional columns include epoch #s for 10 minute bins in the session, whether a flash was a pre or post change or omission,
+    the mean running speed per flash, mean pupil area per flash, licks per flash, rewards per flash, lick rate, reward rate,
+    time since last change, time since last omission, time since last lick
     """
     if 'time' in licks.keys():
         licks = licks.rename(columns={'time': 'timestamps'})
