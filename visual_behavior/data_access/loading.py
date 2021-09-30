@@ -883,7 +883,7 @@ def get_pc_activations_for_session(ophys_session_id):
     return pc_activations
 
 
-def get_extended_stimulus_presentations(session):
+def get_extended_stimulus_presentations_for_session(session):
     '''
     Calculates additional information for each stimulus presentation
     '''
