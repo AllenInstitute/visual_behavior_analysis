@@ -123,7 +123,11 @@ def get_ophys_glm_dir():
 
 
 def get_manifest_path():
-    """Get path to default manifest file for analysis"""
+    """
+    Get path to default manifest file for analysis
+    Default location of manifest is the production cache directory at /visual_behavior/2020_cache/production_cache'
+    This includes all VB production data and is not the same thing as the platform paper cache
+    """
     manifest_path = os.path.join(get_production_cache_dir(), "manifest.json")
     return manifest_path
 
@@ -139,6 +143,7 @@ def get_visual_behavior_cache(from_s3=True, release_data_only=True, cache_dir=No
     if from_s3:
         if cache_dir is None:
             cache_dir = get_platform_analysis_cache_dir()
+            print(cache_dir)
         cache = bpc.from_s3_cache(cache_dir=cache_dir)
     else:
         if release_data_only:
@@ -170,12 +175,12 @@ def get_released_ophys_experiment_table(exclude_ai94=True):
     return experiment_table
 
 
-def get_platform_paper_experiment_table():
+def get_platform_paper_experiment_table(add_extra_columns=False):
     """
     loads the experiment table that was downloaded from AWS and saved to the the platform paper cache dir.
     Then filter out VisualBehaviorMultiscope4areasx2d and Ai94 data.
     And add cell_type column (values = ['Excitatory', 'Sst Inhibitory', 'Vip Inhibitory']
-    :return:
+    Set add_extra_columns to False if you dont need things like 'cell_type', 'binned_depth', or 'add_last_familiar'
     """
     cache_dir = get_platform_analysis_cache_dir()
     cache = bpc.from_s3_cache(cache_dir=cache_dir)
@@ -185,20 +190,23 @@ def get_platform_paper_experiment_table():
     experiment_table = experiment_table[(experiment_table.project_code != 'VisualBehaviorMultiscope4areasx2d') &
                                         (experiment_table.reporter_line != 'Ai94(TITL-GCaMP6s)')].copy()
 
-    # add cell type and binned depth columms for plot labels
-    experiment_table = utilities.add_cell_type_column(experiment_table)
-    experiment_table = utilities.add_binned_depth_column(experiment_table)
-    # add other columns indicating whether a session was the last familiar before the first novel session,
-    # or the second passing novel session after the first truly novel one
-    experiment_table = utilities.add_first_novel_column(experiment_table)
-    experiment_table = utilities.add_n_relative_to_first_novel_column(experiment_table)
-    experiment_table = utilities.add_last_familiar_column(experiment_table)
-    experiment_table = utilities.add_last_familiar_active_column(experiment_table)
-    experiment_table = utilities.add_second_novel_column(experiment_table)
-    experiment_table = utilities.add_second_novel_active_column(experiment_table)
-    # add column that has a combination of experience level and exposure to omissions for familiar sessions,
-    # or exposure to image set for novel sessions
-    experiment_table = utilities.add_experience_exposure_column(experiment_table)
+    if add_extra_columns == True:
+        # add cell type and binned depth columms for plot labels
+        experiment_table = utilities.add_cell_type_column(experiment_table)
+        experiment_table = utilities.add_average_depth_across_container(experiment_table)
+        experiment_table = utilities.add_binned_depth_column(experiment_table)
+        experiment_table = utilities.add_area_depth_column(experiment_table)
+        # add other columns indicating whether a session was the last familiar before the first novel session,
+        # or the second passing novel session after the first truly novel one
+        experiment_table = utilities.add_first_novel_column(experiment_table)
+        experiment_table = utilities.add_n_relative_to_first_novel_column(experiment_table)
+        experiment_table = utilities.add_last_familiar_column(experiment_table)
+        experiment_table = utilities.add_last_familiar_active_column(experiment_table)
+        experiment_table = utilities.add_second_novel_column(experiment_table)
+        experiment_table = utilities.add_second_novel_active_column(experiment_table)
+        # add column that has a combination of experience level and exposure to omissions for familiar sessions,
+        # or exposure to image set for novel sessions
+        experiment_table = utilities.add_experience_exposure_column(experiment_table)
 
     return experiment_table
 
@@ -406,9 +414,12 @@ def get_extened_stimulus_presentations(stimulus_presentations, licks, rewards, r
     """
     Takes SDK stimulus presentations table and adds a bunch of useful columns by incorporating data from other tables
     and reformatting existing column data
-    :param stimulus_presentations:
-    :return:
+    Additional columns include epoch #s for 10 minute bins in the session, whether a flash was a pre or post change or omission,
+    the mean running speed per flash, mean pupil area per flash, licks per flash, rewards per flash, lick rate, reward rate,
+    time since last change, time since last omission, time since last lick
     """
+    if 'time' in licks.keys():
+        licks = licks.rename(columns={'time': 'timestamps'})
     if 'orientation' in stimulus_presentations.columns:
         stimulus_presentations = stimulus_presentations.drop(columns=['orientation', 'image_set', 'index',
                                                                       'phase', 'spatial_frequency'])
@@ -603,7 +614,7 @@ class BehaviorOphysDataset(BehaviorOphysExperiment):
 
 
 def get_ophys_dataset(ophys_experiment_id, include_invalid_rois=False, load_from_lims=False, load_from_nwb=True,
-                      get_extended_stimulus_presentations=True):
+                      get_extended_stimulus_presentations=True, get_behavior_movie_timestamps=False):
     """
     Gets behavior + ophys data for one experiment (single imaging plane), either using the SDK LIMS API,
     SDK NWB API, or using BehaviorOphysDataset wrapper which inherits the LIMS API BehaviorOphysSession object,
@@ -634,16 +645,21 @@ def get_ophys_dataset(ophys_experiment_id, include_invalid_rois=False, load_from
         cache_dir = get_platform_analysis_cache_dir()
         cache = bpc.from_s3_cache(cache_dir=cache_dir)
         dataset = cache.get_behavior_ophys_experiment(ophys_experiment_id)
+    else:
+        raise Exception('Set load_from_lims or load_from_nwb to True')
+
+    if get_extended_stimulus_presentations:
         # add extended stimulus presentations
-        dataset.extended_stimulus_presentations = get_extened_stimulus_presentations(dataset.stimulus_presentations.copy(),
-                                                                                     dataset.licks, dataset.rewards,
-                                                                                     dataset.running_speed, dataset.eye_tracking)
+        dataset.extended_stimulus_presentations = get_extened_stimulus_presentations(
+            dataset.stimulus_presentations.copy(),
+            dataset.licks, dataset.rewards,
+            dataset.running_speed, dataset.eye_tracking)
+    if get_behavior_movie_timestamps:
         # add behavior movie timestamps
         lims_data = utilities.get_lims_data(ophys_experiment_id)
         timestamps = utilities.get_timestamps(lims_data)
         dataset.behavior_movie_timestamps = timestamps['behavior_monitoring']['timestamps'].copy()
-    else:
-        raise Exception('Set load_from_lims or load_from_nwb to True')
+
     return dataset
 
 
@@ -664,9 +680,6 @@ class BehaviorDataset(BehaviorSession):
     @property
     def metadata(self):
         metadata = super().metadata
-        # metadata['mouse_id'] = metadata['LabTracks_ID']
-        # metadata['equipment_name'] = metadata['rig_name']
-        # metadata['date_of_acquisition'] = metadata['experiment_datetime']
         self._metadata = metadata
         return self._metadata
 
@@ -871,7 +884,7 @@ def get_pc_activations_for_session(ophys_session_id):
     return pc_activations
 
 
-def get_extended_stimulus_presentations(session):
+def get_extended_stimulus_presentations_for_session(session):
     '''
     Calculates additional information for each stimulus presentation
     '''
@@ -2524,7 +2537,7 @@ def get_file_name_for_multi_session_df_no_session_type(df_name, project_code, co
         else:
             suffix = '_events'
     else:
-        suffix = '_dff'
+        suffix = ''
 
     if len(conditions) == 5:
         filename = 'mean_' + df_name + '_' + project_code + '_' + conditions[1] + '_' + conditions[
@@ -2550,7 +2563,8 @@ def get_file_name_for_multi_session_df(df_name, project_code, session_type, cond
         else:
             suffix = '_events'
     else:
-        suffix = '_dff'
+        suffix = ''
+
     if len(conditions) == 6:
         filename = 'mean_' + df_name + '_' + project_code + '_' + session_type + '_' + conditions[1] + '_' + conditions[2] + '_' + conditions[3] + '_' + conditions[4] + '_' + conditions[5] + suffix + '.h5'
     elif len(conditions) == 5:
@@ -3011,21 +3025,26 @@ def get_cell_table_from_lims(ophys_experiment_ids=None, columns_to_return='*', v
     return lims_rois
 
 
-def get_cell_table(platform_paper_only=False):
+def get_cell_table(platform_paper_only=True):
     """
     loads ophys_cells_table from the SDK using platform paper analysis cache and merges with experiment_table to get metadata
-    if 'platform_paper_only' is True, will filter out Ai94 and VisuaBehaviorMultiscope4areasx2d
+    if 'platform_paper_only' is True, will filter out Ai94 and VisuaBehaviorMultiscope4areasx2d and add extra columns
     :return:
     """
     cache_dir = get_platform_analysis_cache_dir()
     cache = bpc.from_s3_cache(cache_dir=cache_dir)
     # load cell table
     cell_table = cache.get_ophys_cells_table()
-    # load experiments table and merge
-    experiment_table = get_platform_paper_experiment_table()
-    cell_table = cell_table.reset_index().merge(experiment_table, on='ophys_experiment_id')
-    cell_table = cell_table.set_index('cell_roi_id')
     # optionally filter to limit to platform paper datasets
     if platform_paper_only == True:
+        # load experiments table and merge
+        experiment_table = get_platform_paper_experiment_table()
+        cell_table = cell_table.reset_index().merge(experiment_table, on='ophys_experiment_id')
         cell_table = cell_table[(cell_table.reporter_line != 'Ai94(TITL-GCaMP6s)') & (cell_table.project_code != 'VisualBehaviorMultiscope4areasx2d')]
+        cell_table = cell_table.set_index('cell_roi_id')
+    else:
+        # load platform experiments table and merge
+        experiment_table = cache.get_ophys_experiment_table()
+        cell_table = cell_table.reset_index().merge(experiment_table, on='ophys_experiment_id')
+        cell_table = cell_table.set_index('cell_roi_id')
     return cell_table

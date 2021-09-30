@@ -355,7 +355,7 @@ def compute_reliability_vectorized(traces):
     lower_tri_inds = np.where(np.tril(np.ones([m, m]), k=-1))
     # Take the lower triangle values from the corrmat and averge them
     correlation_values = list(corrmat[lower_tri_inds[0], lower_tri_inds[1]])
-    reliability = np.mean(correlation_values)
+    reliability = np.nanmean(correlation_values)
     return reliability, correlation_values
 
 
@@ -605,8 +605,8 @@ def annotate_mean_df_with_fano_factor(analysis, mean_df):
     ff_list = []
     for idx in mean_df.index:
         mean_responses = mean_df.iloc[idx].mean_responses
-        sd = np.std(mean_responses)
-        mean_response = np.mean(mean_responses)
+        sd = np.nanstd(mean_responses)
+        mean_response = np.nanmean(mean_responses)
         fano_factor = np.abs((sd * 2) / mean_response)  # take abs value to account for negative mean_response
         ff_list.append(fano_factor)
     mean_df['fano_factor'] = ff_list
