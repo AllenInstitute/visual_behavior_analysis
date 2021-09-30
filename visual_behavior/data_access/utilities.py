@@ -1313,17 +1313,41 @@ def add_experience_level_to_experiment_table(experiments):
     experiments['experience_level'] = 'None'
 
     familiar_indices = experiments[experiments.session_number.isin([1, 2, 3])].index.values
-    experiments.at[familiar_indices, 'experience_level'] = 'Familiar'
+    experiments.loc[familiar_indices, 'experience_level'] = 'Familiar'
 
     novel_indices = experiments[(experiments.session_number == 4) &
                                 (experiments.prior_exposures_to_image_set == 0)].index.values
-    experiments.at[novel_indices, 'experience_level'] = 'Novel 1'
+    experiments.loc[novel_indices, 'experience_level'] = 'Novel 1'
 
     novel_greater_than_1_indices = experiments[(experiments.session_number.isin([4, 5, 6])) &
                                                (experiments.prior_exposures_to_image_set != 0)].index.values
-    experiments.at[novel_greater_than_1_indices, 'experience_level'] = 'Novel >1'
+    experiments.loc[novel_greater_than_1_indices, 'experience_level'] = 'Novel >1'
 
     return experiments
+
+
+def add_experience_exposure_column(experiments_table):
+    """
+    adds a column to ophys_experiment_table that contains a string indicating the experience level and
+    image set exposure number for Novel sessions, and experience level and prior omissions exposure for familiar sessions
+    """
+    experience_exposure_list = []
+    for experiment_id in experiments_table.index.values:
+        expt = experiments_table.loc[experiment_id]
+        if 'Familiar' in expt.experience_level:
+            if expt.prior_exposures_to_omissions <= 3:
+                exp = 'Familiar ' + str(int(expt.prior_exposures_to_omissions))
+            else:
+                exp = 'Familiar > 3'
+            experience_exposure_list.append(exp)
+        elif 'Novel' in expt.experience_level:
+            if expt.prior_exposures_to_image_set <= 3:
+                exp = 'Novel ' + str(int(expt.prior_exposures_to_image_set))
+            else:
+                exp = 'Novel > 3'
+            experience_exposure_list.append(exp)
+    experiments_table.loc[:, 'experience_exposure'] = experience_exposure_list
+    return experiments_table
 
 
 def get_experience_level_colors():
@@ -1349,24 +1373,24 @@ def add_passive_flag_to_ophys_experiment_table(experiments):
     experiments['passive'] = 'None'
 
     passive_indices = experiments[experiments.session_number.isin([2, 5])].index.values
-    experiments.at[passive_indices, 'passive'] = True
+    experiments.loc[passive_indices, 'passive'] = True
 
     active_indices = experiments[experiments.session_number.isin([2, 5]) == False].index.values
-    experiments.at[active_indices, 'passive'] = False
+    experiments.loc[active_indices, 'passive'] = False
 
     return experiments
 
 
-def add_passive_to_engagement_state(df):
+def add_passive_to_engagement_state_column(df):
     """
     adds a column to any df that contains a string indicating whether
     the row values correspond to engaged, disengaged, or passive conditions.
-    input dataframe must contain already a column called 'engagement_state',
+    input dataframe must contain already a column called 'engagement_state', and column 'session_number'
     this function just makes sure that any passive sessions are labeled 'passive' rather than 'disengaged'
     """
 
     passive_indices = df[df.session_number.isin([2, 5])].index.values
-    df.at[passive_indices, 'engagement_state'] = 'passive'
+    df.loc[passive_indices, 'engagement_state'] = 'passive'
 
     return df
 
@@ -1385,25 +1409,211 @@ def get_engagement_state_order(df):
     return order
 
 
-def add_cell_type(df):
+def add_cell_type_column(df):
     """
     adds a column with abbreviated version of cre_line, i.e. Vip, Sst, Exc
     """
     cre_indices = df[df.cre_line == 'Vip-IRES-Cre'].index.values
-    df.at[cre_indices, 'cell_type'] = 'Vip Inhibitory'
+    df.loc[cre_indices, 'cell_type'] = 'Vip Inhibitory'
 
     cre_indices = df[df.cre_line == 'Sst-IRES-Cre'].index.values
-    df.at[cre_indices, 'cell_type'] = 'Sst Inhibitory'
+    df.loc[cre_indices, 'cell_type'] = 'Sst Inhibitory'
 
     cre_indices = df[df.cre_line == 'Slc17a7-IRES2-Cre'].index.values
-    df.at[cre_indices, 'cell_type'] = 'Excitatory'
+    df.loc[cre_indices, 'cell_type'] = 'Excitatory'
 
     return df
 
 
-def add_image_set_to_experiment_table(experiment_table):
+def add_binned_depth_column(df):
     """
-    Adds a column 'image_set' to the experiment_table, determined based on the image set listed in the session_type column string
+    for a dataframe with column 'imaging_depth', bin the depth values into 100um bins and assign the mean depth for each bin
+    :param df:
+    :return:
     """
-    experiment_table['image_set'] = [session_type[15] for session_type in experiment_table.session_type.values]
-    return experiment_table
+    df = df.copy()
+    df.loc[:, 'depth'] = None
+
+    indices = df[(df.imaging_depth < 100)].index.values
+    df.loc[indices, 'depth'] = 75
+
+    indices = df[(df.imaging_depth < 200) &
+                 (df.imaging_depth >= 100)].index.values
+    df.loc[indices, 'depth'] = 150
+
+    indices = df[
+        (df.imaging_depth >= 200) & (df.imaging_depth < 300)].index.values
+    df.loc[indices, 'depth'] = 250
+
+    indices = df[
+        (df.imaging_depth >= 300) & (df.imaging_depth < 400)].index.values
+    df.loc[indices, 'depth'] = 350
+
+    return df
+
+
+def add_first_novel_column(df):
+    """
+    Adds a column called 'first_novel' that indicates (with a Boolean) whether a session is the first true novel image session or not
+    Equivalent to experience_level == 'Novel 1'
+    """
+    df.loc[:, 'first_novel'] = False
+    indices = df[(df.session_number == 4) & (df.prior_exposures_to_image_set == 0)].index.values
+    df.loc[indices, 'first_novel'] = True
+    return df
+
+
+def get_n_relative_to_first_novel(group):
+    """
+    Function to apply to experiments_table data grouped on 'ophys_container_id'
+    For each container, determines the numeric order of sessions relative to the first novel image session
+    returns a pandas Series with column 'n_relative_to_first_novel' indicating this value for all session in the container
+    If the container does not have a truly novel session, all values are set to NaN
+    """
+    group = group.sort_values(by='date_of_acquisition')  # must sort for relative ordering to be accurate
+    if 'Novel 1' in group.experience_level.values:
+        novel_ind = np.where(group.experience_level == 'Novel 1')[0][0]
+        n_relative_to_first_novel = np.arange(-novel_ind, len(group) - novel_ind, 1)
+    else:
+        n_relative_to_first_novel = np.empty(len(group))
+        n_relative_to_first_novel[:] = np.nan
+    return pd.Series({'n_relative_to_first_novel': n_relative_to_first_novel})
+
+
+def add_n_relative_to_first_novel_column(df):
+    """
+    Add a column called 'n_relative_to_first_novel' that indicates the session number relative to the first novel session for each experiment in a container.
+    If a container does not have a first novel session, the value of n_relative_to_novel for all experiments in the container is NaN.
+    Input df must have column 'experience_level'
+    Input df is typically ophys_experiment_table
+    """
+    df = df.sort_values(by=['ophys_container_id', 'date_of_acquisition'])  # must sort for ordering to be accurate
+    numbers = df.groupby('ophys_container_id').apply(get_n_relative_to_first_novel)
+    df['n_relative_to_first_novel'] = np.nan
+    for container_id in df.ophys_container_id.unique():
+        indices = df[df.ophys_container_id == container_id].index.values
+        df.loc[indices, 'n_relative_to_first_novel'] = list(numbers.loc[container_id].n_relative_to_first_novel)
+    return df
+
+
+def add_last_familiar_column(df):
+    """
+    adds column to df called 'last_familiar' which indicates (with a Boolean) whether
+    a session is the last familiar image session prior to the first novel session for each container
+    If a container has no truly first novel session, all sessions are labeled as NaN
+    input df must have 'experience_level' and 'n_relative_to_first_novel'
+    """
+    df['last_familiar'] = False
+    indices = df[(df.n_relative_to_first_novel == -1) & (df.experience_level == 'Familiar')].index.values
+    df.loc[indices, 'last_familiar'] = True
+    return df
+
+
+def get_last_familiar_active(group):
+    """
+    Function to apply to experiments_table data grouped by 'ophys_container_id'
+    determines whether each session in the container was the last active familiar image session prior to the first novel session
+    input df must have column 'n_relative_to_first_novel'
+    """
+    group = group.sort_values(by='date_of_acquisition')
+    last_familiar_active = np.empty(len(group))
+    last_familiar_active[:] = False
+    indices = np.where((group.passive == False) & (group.n_relative_to_first_novel < 0))[0]
+    if len(indices) > 0:
+        index = indices[-1]  # use last (most recent) index
+        last_familiar_active[index] = True
+    return pd.Series({'last_familiar_active': last_familiar_active})
+
+
+def add_last_familiar_active_column(df):
+    """
+    Adds a column 'last_familiar_active' that indicates (with a Boolean) whether
+    a session is the last active familiar image session prior to the first novel session in each container
+    If a container has no truly first novel session, all sessions are labeled as NaN
+    input df must have 'experience_level' and 'n_relative_to_first_novel'
+    """
+    df = df.sort_values(by=['ophys_container_id', 'date_of_acquisition'])
+    values = df.groupby('ophys_container_id').apply(get_last_familiar_active)
+    df['last_familiar_active'] = False
+    for container_id in df.ophys_container_id.unique():
+        indices = df[df.ophys_container_id == container_id].index.values
+        df.loc[indices, 'last_familiar_active'] = list(values.loc[container_id].last_familiar_active)
+    # change to boolean
+    df.loc[df[df.last_familiar_active == 0].index.values, 'last_familiar_active'] = False
+    df.loc[df[df.last_familiar_active == 1].index.values, 'last_familiar_active'] = True
+    return df
+
+
+def add_second_novel_column(df):
+    """
+    Adds a column called 'second_novel' that indicates (with a Boolean) whether a session
+    was the second passing novel image session after the first truly novel session, including passive sessions.
+    If a container has no truly first novel session, all sessions are labeled as NaN
+    input df must have 'experience_level' and 'n_relative_to_first_novel'
+    """
+    df['second_novel'] = False
+    indices = df[(df.n_relative_to_first_novel == 1) & (df.experience_level == 'Novel >1')].index.values
+    df.loc[indices, 'second_novel'] = True
+    return df
+
+
+def get_second_novel_active(group):
+    """
+    Function to apply to experiments_table data grouped by 'ophys_container_id'
+    determines whether each session in the container was the second passing novel image session
+    after the first novel session, and was an active behavior session
+    input df must have column 'n_relative_to_first_novel'
+    """
+    group = group.sort_values(by='date_of_acquisition')
+    second_novel_active = np.empty(len(group))
+    second_novel_active[:] = False
+    indices = np.where((group.passive == False) & (group.n_relative_to_first_novel > 0))[0]
+    if len(indices) > 0:
+        index = indices[0]  # use first (most recent) index
+        second_novel_active[index] = True
+    return pd.Series({'second_novel_active': second_novel_active})
+
+
+def add_second_novel_active_column(df):
+    """
+    Adds a column called 'second_novel_active' that indicates (with a Boolean) whether a session
+    was the second passing novel image session after the first truly novel session, and was an active behavior session.
+    If a container has no truly first novel session, all sessions are labeled as NaN
+    input df must have 'experience_level' and 'n_relative_to_first_novel'
+    """
+    df = df.sort_values(by=['ophys_container_id', 'date_of_acquisition'])
+    values = df.groupby('ophys_container_id').apply(get_second_novel_active)
+    df['second_novel_active'] = False
+    for container_id in df.ophys_container_id.unique():
+        indices = df[df.ophys_container_id == container_id].index.values
+        df.loc[indices, 'second_novel_active'] = list(values.loc[container_id].second_novel_active)
+    # change to boolean
+    df.loc[df[df.second_novel_active == 0].index.values, 'second_novel_active'] = False
+    df.loc[df[df.second_novel_active == 1].index.values, 'second_novel_active'] = True
+    return df
+
+
+def get_containers_with_all_experience_levels(experiments_table):
+    """
+    identifies containers with all 3 experience levels in ['Familiar', 'Novel 1', 'Novel >1']
+    """
+    experience_level_counts = experiments_table.groupby(['ophys_container_id', 'experience_level']).count().reset_index().groupby(['ophys_container_id']).count()[['experience_level']]
+    containers_with_all_experience_levels = experience_level_counts[experience_level_counts.experience_level == 3].index.unique()
+    return containers_with_all_experience_levels
+
+
+def limit_to_get_containers_with_all_experience_levels(experiments_table):
+    """
+    returns experiment_table limited to containers with all 3 experience levels in ['Familiar', 'Novel 1', 'Novel >1']
+    """
+    containers_with_all_experience_levels = get_containers_with_all_experience_levels(experiments_table)
+    experiments_table = experiments_table[experiments_table.ophys_container_id.isin(containers_with_all_experience_levels)]
+    return experiments_table
+
+#
+# def get_matched_cells_for_set_of_conditions(ophys_experiment_table, ophys_cells_table, column_name, column_values):
+#     """
+#     Adds a column 'image_set' to the experiment_table, determined based on the image set listed in the session_type column string
+#     """
+#     experiment_table['image_set'] = [session_type[15] for session_type in experiment_table.session_type.values]
+#     return experiment_table
