@@ -53,7 +53,7 @@ def plot_population_averages_for_conditions(multi_session_df, df_name, timestamp
         change = False
 
     hue_conditions = np.sort(sdf[hue_column].unique())
-    axes_conditions = np.sort(sdf[axes_column].unique())
+    axes_conditions = np.sort(sdf[axes_column].unique())[::-1]
     if horizontal:
         figsize = (6 * len(axes_conditions), 4)
         fig, ax = plt.subplots(1, len(axes_conditions), figsize=figsize, sharey=False)
@@ -84,8 +84,7 @@ def plot_population_averages_for_conditions(multi_session_df, df_name, timestamp
             else:
                 ax[i].set_xlabel('time (s)')
     ax[0].set_ylabel(ylabel)
-    # ax[i].legend(loc='upper right', fontsize='x-small')
-    # ax[i].get_legend().remove()
+    ax[i].legend(loc='upper right', fontsize='x-small')
     if change:
         trace_type = 'change'
     elif omitted:
@@ -122,14 +121,14 @@ def plot_cell_response_heatmap(data, timestamps, xlabel='time after change (s)',
                      vmin=0, vmax=vmax, robust=True, cbar=True,
                      cbar_kws={"drawedges": False, "shrink": 1, "label": 'response'}, ax=ax)
     ax.vlines(x=32, ymin=0, ymax=len(data), color='w', linestyle='--')
-    if microscope == 'Multiscope':
-        ax.set_xticks([10, 21, 32, 43, 54])
-        ax.set_xticklabels([-2, -1, 0, 1, 2])
+    # if microscope == 'Multiscope':
+    #     ax.set_xticks([10, 21, 32, 43, 54])
+    #     ax.set_xticklabels([-2, -1, 0, 1, 2])
     ax.set_xlabel(xlabel)
     ax.set_ylabel('cells')
     ax.set_ylim(0, len(data))
-    ax.set_yticks(np.arange(0, len(data), 200))
-    ax.set_yticklabels(np.arange(0, len(data), 200))
+    ax.set_yticks(np.arange(0, len(data), 100))
+    ax.set_yticklabels(np.arange(0, len(data), 100))
 
     return ax
 
@@ -142,14 +141,7 @@ def plot_response_heatmaps_for_conditions(multi_session_df, df_name, timestamps,
 
     # remove traces with incorrect length - why does this happen?
     sdf = sdf.reset_index(drop=True)
-    if microscope == 'Multiscope':
-        indices = [index for index in sdf.index if
-                   len(sdf.iloc[index].mean_trace) == 64]  # expected multiscope trace length
-    elif microscope == 'Scientifia':
-        indices = [index for index in sdf.index if
-                   len(sdf.iloc[index].mean_trace) == 186]  # expected scientifica trace length
-    else:
-        pass
+    indices = [index for index in sdf.index if len(sdf.iloc[index].mean_trace) == len(sdf.mean_trace.values[0])]
     sdf = sdf.loc[indices]
 
     if 'omission' in df_name:
