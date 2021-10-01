@@ -63,6 +63,8 @@ def get_multi_session_df(project_code, session_number, df_name, conditions, use_
                         median_pupil_area = df.mean_pupil_area.median()
                         df['large_pupil'] = [True if mean_pupil_area > median_pupil_area else False for mean_pupil_area in
                                              df.mean_pupil_area.values]
+            if 'pre_change' in conditions:
+                df = df[df.pre_change.isnull()==False]
             mdf = ut.get_mean_df(df, analysis, conditions=conditions, get_pref_stim=get_pref_stim,
                                  flashes=flashes, omitted=omitted, get_reliability=True,
                                  exclude_omitted_from_pref_stim=True)

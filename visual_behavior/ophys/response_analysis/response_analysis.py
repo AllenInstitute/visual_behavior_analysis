@@ -212,11 +212,11 @@ class ResponseAnalysis(object):
             df = self.get_df_for_df_name(df_name, df_format if df_format is not None else self.dataframe_format)
 
         if 'trials' in df_name:
-            trials = self.dataset.trials
-            trials = trials.rename(
-                columns={'response': 'behavioral_response', 'response_type': 'behavioral_response_type',
-                         'response_time': 'behavioral_response_time',
-                         'response_latency': 'behavioral_response_latency'})
+            trials = self.dataset.trials.copy()
+            # trials = trials.rename(
+            #     columns={'response': 'behavioral_response', 'response_type': 'behavioral_response_type',
+            #              'response_time': 'behavioral_response_time',
+            #              'response_latency': 'behavioral_response_latency'})
             df = df.merge(trials, right_on='trials_id', left_on='trials_id')
             if self.use_extended_stimulus_presentations:
                 # merge in the extended stimulus presentations df on the change_time/start_time columns
@@ -231,6 +231,10 @@ class ResponseAnalysis(object):
                     # 'task0',
                     # 'timing1D',
                     # 'engagement_state',
+                    'pre_change',
+                    'pre_omitted',
+                    'flash_after_change',
+                    'flash_after_omitted',
                     'licked',
                     'lick_on_next_flash',
                     'lick_on_previous_flash',

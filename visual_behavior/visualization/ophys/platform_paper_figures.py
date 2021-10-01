@@ -45,12 +45,15 @@ def plot_population_averages_for_conditions(multi_session_df, df_name, timestamp
     if 'omission' in df_name:
         omitted = True
         change = False
+        xlabel = 'time after omission (s)'
     elif 'trials' in df_name:
         omitted = False
         change = True
+        xlabel = 'time after change (s)'
     else:
         omitted = False
         change = False
+        xlabel = 'time (s)'
 
     hue_conditions = np.sort(sdf[hue_column].unique())
     axes_conditions = np.sort(sdf[axes_column].unique())[::-1]
@@ -58,7 +61,7 @@ def plot_population_averages_for_conditions(multi_session_df, df_name, timestamp
         figsize = (6 * len(axes_conditions), 4)
         fig, ax = plt.subplots(1, len(axes_conditions), figsize=figsize, sharey=False)
     else:
-        figsize = (6, 3.5 * len(axes_conditions))
+        figsize = (5, 3.5 * len(axes_conditions))
         fig, ax = plt.subplots(len(axes_conditions), 1, figsize=figsize, sharey=False)
     ax = ax.ravel()
     for i, axis in enumerate(axes_conditions):
@@ -72,19 +75,17 @@ def plot_population_averages_for_conditions(multi_session_df, df_name, timestamp
             ax[i].axvline(x=0, ymin=0, ymax=1, linestyle='--', color='gray')
             ax[i].set_title(axis)
             ax[i].set_xlim(xlim_seconds)
+            ax[i].set_xlabel(xlabel)
             if horizontal:
                 ax[i].set_ylabel('')
             else:
                 ax[i].set_ylabel(ylabel)
                 ax[i].set_xlabel('')
-            if change:
-                ax[i].set_xlabel('time after change (s)')
-            elif omitted:
-                ax[i].set_xlabel('time after omission (s)')
-            else:
-                ax[i].set_xlabel('time (s)')
-    ax[0].set_ylabel(ylabel)
-    ax[i].legend(loc='upper right', fontsize='x-small')
+    if horizontal:
+        ax[0].set_ylabel(ylabel)
+    else:
+        ax[i].set_xlabel(xlabel)
+    ax[i].legend(loc='upper left', fontsize='x-small')
     if change:
         trace_type = 'change'
     elif omitted:
