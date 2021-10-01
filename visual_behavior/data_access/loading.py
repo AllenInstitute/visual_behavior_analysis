@@ -784,13 +784,13 @@ def get_behavior_dataset(behavior_session_id, from_lims=False, from_nwb=False):
 #     return container_ids
 
 
-def get_ophys_container_ids(platform_paper_only=False):
+def get_ophys_container_ids(platform_paper_only=False,add_extra_columns=True):
     """
     Gets ophys_container_ids for all published datasets by default, or limits to platform paper containers if platform_paper_only is True
     :return:
     """
     if platform_paper_only:
-        experiments = get_platform_paper_experiment_table()
+        experiments = get_platform_paper_experiment_table(add_extra_columns=add_extra_columns)
     else:
         cache_dir = get_platform_analysis_cache_dir
         cache = bpc.from_s3_cache(cache_dir)
@@ -3025,7 +3025,7 @@ def get_cell_table_from_lims(ophys_experiment_ids=None, columns_to_return='*', v
     return lims_rois
 
 
-def get_cell_table(platform_paper_only=True):
+def get_cell_table(platform_paper_only=True,add_extra_columns=True):
     """
     loads ophys_cells_table from the SDK using platform paper analysis cache and merges with experiment_table to get metadata
     if 'platform_paper_only' is True, will filter out Ai94 and VisuaBehaviorMultiscope4areasx2d and add extra columns
@@ -3038,7 +3038,7 @@ def get_cell_table(platform_paper_only=True):
     # optionally filter to limit to platform paper datasets
     if platform_paper_only == True:
         # load experiments table and merge
-        experiment_table = get_platform_paper_experiment_table()
+        experiment_table = get_platform_paper_experiment_table(add_extra_columns=add_extra_columns)
         cell_table = cell_table.reset_index().merge(experiment_table, on='ophys_experiment_id')
         cell_table = cell_table[(cell_table.reporter_line != 'Ai94(TITL-GCaMP6s)') & (cell_table.project_code != 'VisualBehaviorMultiscope4areasx2d')]
         cell_table = cell_table.set_index('cell_roi_id')
