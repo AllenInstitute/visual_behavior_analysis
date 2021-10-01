@@ -175,7 +175,7 @@ def get_released_ophys_experiment_table(exclude_ai94=True):
     return experiment_table
 
 
-def get_platform_paper_experiment_table(add_extra_columns=False):
+def get_platform_paper_experiment_table(add_extra_columns=True):
     """
     loads the experiment table that was downloaded from AWS and saved to the the platform paper cache dir.
     Then filter out VisualBehaviorMultiscope4areasx2d and Ai94 data.
