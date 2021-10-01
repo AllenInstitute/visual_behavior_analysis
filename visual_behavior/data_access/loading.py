@@ -784,7 +784,7 @@ def get_behavior_dataset(behavior_session_id, from_lims=False, from_nwb=False):
 #     return container_ids
 
 
-def get_ophys_container_ids(platform_paper_only=False,add_extra_columns=True):
+def get_ophys_container_ids(platform_paper_only=False, add_extra_columns=True):
     """
     Gets ophys_container_ids for all published datasets by default, or limits to platform paper containers if platform_paper_only is True
     :return:
@@ -3025,7 +3025,7 @@ def get_cell_table_from_lims(ophys_experiment_ids=None, columns_to_return='*', v
     return lims_rois
 
 
-def get_cell_table(platform_paper_only=True,add_extra_columns=True):
+def get_cell_table(platform_paper_only=True, add_extra_columns=True):
     """
     loads ophys_cells_table from the SDK using platform paper analysis cache and merges with experiment_table to get metadata
     if 'platform_paper_only' is True, will filter out Ai94 and VisuaBehaviorMultiscope4areasx2d and add extra columns
