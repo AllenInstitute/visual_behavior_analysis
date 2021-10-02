@@ -48,6 +48,16 @@ else: # decoding images
 
     
     
+#%%
+from allensdk.brain_observatory.behavior.behavior_project_cache import VisualBehaviorOphysProjectCache
+
+cache_dir = loading.get_platform_analysis_cache_dir()
+print(cache_dir)
+
+
+    
+    
+    
 #%% Use March 2021 data release sessions
 
 # experiments_table = loading.get_filtered_ophys_experiment_table()
