@@ -29,6 +29,7 @@ cache = bpc.from_s3_cache(cache_dir=cache_dir)
 print(cache_dir)
 
 experiments_table = cache.get_ophys_experiment_table()
+experiments_table = experiments_table[experiments_table.project_code=='VisualBehavior']
 
 
 # call the `sbatch` command to run the jobs.

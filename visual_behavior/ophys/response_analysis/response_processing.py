@@ -38,7 +38,7 @@ def get_default_stimulus_response_params():
             (dict) dict of response window params for computing stimulus_response_xr
         '''
     stimulus_response_params = {
-        "window_around_timepoint_seconds": [-1, 1.75],
+        "window_around_timepoint_seconds": [-0.5, 0.75],
         "response_window_duration_seconds": 0.25,
         "baseline_window_duration_seconds": 0.25
     }
