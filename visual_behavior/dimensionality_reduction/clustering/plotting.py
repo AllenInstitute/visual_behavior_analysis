@@ -62,7 +62,7 @@ def get_elbow_plots(X, K=range(2, 20), ax=None):
     plt.title('Elbow for KMeans clustering')
 
 
-def plot_silhouette_plot(X, model=KMeans, n_clusters=np.arange(2, 10), metric='euclidean', n_boots=20, ax=None,
+def plot_silhouette_scores(X, model=KMeans, n_clusters=np.arange(2, 10), metric='euclidean', n_boots=20, ax=None,
                          model_output_type=''):
     silhouette_scores = get_silhouette_scores(X=X, model=model, n_clusters=n_clusters, metric=metric, n_boots=n_boots)
 
