@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.cluster import KMeans
 from scipy.spatial.distance import cdist, pdist
-from visual_behavior.dimensionality_reduction import get_silhouette_scores
+from visual_behavior.dimensionality_reduction.clustering.processing import get_silhouette_scores
 
 
 def plot_clustered_dropout_scores(df, labels=None, cmap='RdBu_r', model_output_type='', ax=None,):
@@ -29,9 +29,16 @@ def plot_clustered_dropout_scores(df, labels=None, cmap='RdBu_r', model_output_t
     plt.tight_layout()
 
 
-def get_elbow_plots(X, K=range(2, 20), ax=None):
+def get_elbow_plots(X, n_clusters=range(2, 20), ax=None):
+    '''
+    Computes within cluster density and variance explained for Kmeans method.
+    :param X: data
+    :param n_clusters: default = range(2, 20)
+    :param ax: default=None
+    :return:
+    '''
 
-    km = [KMeans(n_clusters=k).fit(X) for k in K]  # get Kmeans for different Ks
+    km = [KMeans(n_clusters=k).fit(X) for k in n_clusters]  # get Kmeans for different Ks
     centroids = [k.cluster_centers_ for k in km]  # get centroids of clusters
 
     D_k = [cdist(X, cent, 'euclidean') for cent in centroids]  # compute distance of each datapoint
@@ -49,17 +56,17 @@ def get_elbow_plots(X, K=range(2, 20), ax=None):
 
     # elbow curve
 
-    ax[0].plot(K, avgWithinSS, 'k*-')
-    plt.grid(True)
-    plt.xlabel('Number of clusters')
-    plt.ylabel('Average within-cluster sum of squares')
-    plt.title('Elbow for KMeans clustering')
+    ax[0].plot(n_clusters, avgWithinSS, 'k*-')
+    ax[0].grid(True)
+    ax[0].set_xlabel('Number of clusters')
+    ax[0].set_ylabel('Average within-cluster sum of squares')
+    ax[0].set_title('Elbow for KMeans clustering')
 
-    ax[1].plot(K, bss / tss * 100, 'k*-')
-    plt.grid(True)
-    plt.xlabel('Number of clusters')
-    plt.ylabel('Percentage of variance explained')
-    plt.title('Elbow for KMeans clustering')
+    ax[1].plot(n_clusters, bss / tss * 100, 'k*-')
+    ax[1].grid(True)
+    ax[1].set_xlabel('Number of clusters')
+    ax[1].set_ylabel('Percentage of variance explained')
+    ax[1].set_title('Elbow for KMeans clustering')
 
 
 def plot_silhouette_scores(X, model=KMeans, n_clusters=np.arange(2, 10), metric='euclidean', n_boots=20, ax=None,
@@ -73,3 +80,5 @@ def plot_silhouette_scores(X, model=KMeans, n_clusters=np.arange(2, 10), metric=
     ax.set_xlabel('N Clusters')
     ax.set_ylabel('Silhouette score')
     plt.title(model_output_type)
+
+    return fig,ax,
