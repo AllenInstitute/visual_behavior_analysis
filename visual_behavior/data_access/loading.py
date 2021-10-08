@@ -190,6 +190,11 @@ def get_platform_paper_experiment_table(add_extra_columns=True):
     experiment_table = experiment_table[(experiment_table.project_code != 'VisualBehaviorMultiscope4areasx2d') &
                                         (experiment_table.reporter_line != 'Ai94(TITL-GCaMP6s)')].copy()
 
+    # overwrite session number and passive columns to patch for bug flagged in this SDK issue:
+    # https://github.com/AllenInstitute/AllenSDK/issues/2251
+    experiment_table = utilities.add_session_number_to_experiment_table(experiment_table)
+    experiment_table = utilities.add_passive_flag_to_ophys_experiment_table(experiment_table)
+
     if add_extra_columns == True:
         # add cell type and binned depth columms for plot labels
         experiment_table = utilities.add_cell_type_column(experiment_table)
