@@ -1498,6 +1498,15 @@ def dateformat(exp_date):
     return date
 
 
+def add_date_string(df):
+    """
+    Adds a new column called "date" that is a string version of the date_of_acquisition column,
+    with the format year-month-date, such as 20210921
+    """
+    df['date'] = df['date_of_acquisition'].apply(dateformat)
+    return df
+
+
 def add_first_novel_column(df):
     """
     Adds a column called 'first_novel' that indicates (with a Boolean) whether a session is the first true novel image session or not
@@ -1530,11 +1539,11 @@ def add_n_relative_to_first_novel_column(df):
     """
     Add a column called 'n_relative_to_first_novel' that indicates the session number relative to the first novel session for each experiment in a container.
     If a container does not have a first novel session, the value of n_relative_to_novel for all experiments in the container is NaN.
-    Input df must have column 'experience_level'
+    Input df must have column 'experience_level' and 'date'
     Input df is typically ophys_experiment_table
     """
     # add simplified string date column for accurate sorting
-    df['date'] = df['date_of_acquisition'].apply(dateformat)
+    df = add_date_string(df) # should already be in the table, but adding again here just in case
     df = df.sort_values(by=['ophys_container_id', 'date'])  # must sort for ordering to be accurate
     numbers = df.groupby('ophys_container_id').apply(get_n_relative_to_first_novel)
     df['n_relative_to_first_novel'] = np.nan
@@ -1561,9 +1570,9 @@ def get_last_familiar_active(group):
     """
     Function to apply to experiments_table data grouped by 'ophys_container_id'
     determines whether each session in the container was the last active familiar image session prior to the first novel session
-    input df must have column 'n_relative_to_first_novel'
+    input df must have column 'n_relative_to_first_novel' and 'date'
     """
-    group = group.sort_values(by='date_of_acquisition')
+    group = group.sort_values(by='date')
     last_familiar_active = np.empty(len(group))
     last_familiar_active[:] = False
     indices = np.where((group.passive == False) & (group.n_relative_to_first_novel < 0))[0]
@@ -1578,9 +1587,9 @@ def add_last_familiar_active_column(df):
     Adds a column 'last_familiar_active' that indicates (with a Boolean) whether
     a session is the last active familiar image session prior to the first novel session in each container
     If a container has no truly first novel session, all sessions are labeled as NaN
-    input df must have 'experience_level' and 'n_relative_to_first_novel'
+    input df must have 'experience_level' and 'n_relative_to_first_novel' and 'date'
     """
-    df = df.sort_values(by=['ophys_container_id', 'date_of_acquisition'])
+    df = df.sort_values(by=['ophys_container_id', 'date'])
     values = df.groupby('ophys_container_id').apply(get_last_familiar_active)
     df['last_familiar_active'] = False
     for container_id in df.ophys_container_id.unique():
@@ -1610,9 +1619,9 @@ def get_second_novel_active(group):
     Function to apply to experiments_table data grouped by 'ophys_container_id'
     determines whether each session in the container was the second passing novel image session
     after the first novel session, and was an active behavior session
-    input df must have column 'n_relative_to_first_novel'
+    input df must have column 'n_relative_to_first_novel' and 'date'
     """
-    group = group.sort_values(by='date_of_acquisition')
+    group = group.sort_values(by='date')
     second_novel_active = np.empty(len(group))
     second_novel_active[:] = False
     indices = np.where((group.passive == False) & (group.n_relative_to_first_novel > 0))[0]
@@ -1627,9 +1636,9 @@ def add_second_novel_active_column(df):
     Adds a column called 'second_novel_active' that indicates (with a Boolean) whether a session
     was the second passing novel image session after the first truly novel session, and was an active behavior session.
     If a container has no truly first novel session, all sessions are labeled as NaN
-    input df must have 'experience_level' and 'n_relative_to_first_novel'
+    input df must have 'experience_level' and 'n_relative_to_first_novel' and 'date'
     """
-    df = df.sort_values(by=['ophys_container_id', 'date_of_acquisition'])
+    df = df.sort_values(by=['ophys_container_id', 'date'])
     values = df.groupby('ophys_container_id').apply(get_second_novel_active)
     df['second_novel_active'] = False
     for container_id in df.ophys_container_id.unique():
