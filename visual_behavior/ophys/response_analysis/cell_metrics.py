@@ -541,7 +541,7 @@ def load_cell_metrics_table_for_experiments(ophys_experiment_ids, condition, sti
 
     problem_expts = []
     metrics_table = pd.DataFrame()
-    if ophys_experiment_ids == 'all_experiments':
+    if (type(ophys_experiment_ids) is str) and (ophys_experiment_ids == 'all_experiments'):
         try:
             metrics_table = get_cell_metrics_table_for_experiment(ophys_experiment_ids, condition, stimulus, session_subset,
                                                                   use_events, filter_events)
