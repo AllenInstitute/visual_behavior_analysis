@@ -189,9 +189,12 @@ def svm_images_main_pre_pbs(isess, project_codes, use_events, to_decode, trial_t
 
     # import visual_behavior.data_access.loading as loading
 
+    # use only those project codes that will be used for the paper
+    experiments_table = loading.get_platform_paper_experiment_table()
+    
     # data release sessions
     # experiments_table = loading.get_filtered_ophys_experiment_table()
-    experiments_table = loading.get_filtered_ophys_experiment_table(release_data_only=True)
+#     experiments_table = loading.get_filtered_ophys_experiment_table(release_data_only=True)
 
     
     

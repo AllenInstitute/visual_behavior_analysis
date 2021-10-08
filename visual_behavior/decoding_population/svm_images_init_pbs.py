@@ -46,22 +46,21 @@ else: # decoding images
     use_balanced_trials = 0 #1 #only effective when num_classes=2 #if 1, use same number of trials for each class; only applicable when we have 2 classes (binary classification).
     
 
-    
-    
-#%%
-from allensdk.brain_observatory.behavior.behavior_project_cache import VisualBehaviorOphysProjectCache
-
-cache_dir = loading.get_platform_analysis_cache_dir()
-print(cache_dir)
-
-
-    
-    
+        
     
 #%% Use March 2021 data release sessions
-
+'''
 # experiments_table = loading.get_filtered_ophys_experiment_table()
 experiments_table = loading.get_filtered_ophys_experiment_table(release_data_only=True)
+'''
+
+#%% Use only those project codes that will be used for the paper
+experiments_table = loading.get_platform_paper_experiment_table()
+# len(experiments_table)
+# experiments_table.keys()
+# experiments_table.project_code.unique()
+
+
 experiments_table = experiments_table.reset_index('ophys_experiment_id')
 # metadata_valid = experiments_table[experiments_table['project_code']=='VisualBehaviorMultiscope'] # multiscope sessions
 
