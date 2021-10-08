@@ -1680,9 +1680,21 @@ def limit_to_last_familiar_second_novel(df):
     return df
 
 
+def limit_to_second_novel_exposure(df):
+    """
+    Drops rows where Novel >1 sessions are not the second exposure to the novel image set
+    input df must have columns 'experience_level' and 'prior_exposures_to_image_set'
+    """
+    # drop novel >1 sessions that arent the second exposure (prior exposures = 1)
+    indices = df[(df.experience_level == 'Novel >1') & (df.prior_exposures_to_image_set != 1)].index.values
+    df = df.drop(labels=indices, axis=0)
+    return df
+
+
 def get_containers_with_all_experience_levels(experiments_table):
     """
     identifies containers with all 3 experience levels in ['Familiar', 'Novel 1', 'Novel >1']
+    returns a list of container_ids
     """
     experience_level_counts = experiments_table.groupby(['ophys_container_id', 'experience_level']).count().reset_index().groupby(['ophys_container_id']).count()[['experience_level']]
     containers_with_all_experience_levels = experience_level_counts[experience_level_counts.experience_level == 3].index.unique()
