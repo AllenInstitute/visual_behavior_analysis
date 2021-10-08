@@ -1489,6 +1489,15 @@ def add_binned_depth_column(df):
     return df
 
 
+def dateformat(exp_date):
+    """
+    reformat date of acquisition for accurate sorting by date
+    """
+    from datetime import datetime
+    date = int(datetime.strptime(exp_date, '%Y-%m-%d  %H:%M:%S.%f').strftime('%Y%m%d'))
+    return date
+
+
 def add_first_novel_column(df):
     """
     Adds a column called 'first_novel' that indicates (with a Boolean) whether a session is the first true novel image session or not
@@ -1507,7 +1516,7 @@ def get_n_relative_to_first_novel(group):
     returns a pandas Series with column 'n_relative_to_first_novel' indicating this value for all session in the container
     If the container does not have a truly novel session, all values are set to NaN
     """
-    group = group.sort_values(by='date_of_acquisition')  # must sort for relative ordering to be accurate
+    group = group.sort_values(by='date')  # must sort for relative ordering to be accurate
     if 'Novel 1' in group.experience_level.values:
         novel_ind = np.where(group.experience_level == 'Novel 1')[0][0]
         n_relative_to_first_novel = np.arange(-novel_ind, len(group) - novel_ind, 1)
@@ -1524,7 +1533,9 @@ def add_n_relative_to_first_novel_column(df):
     Input df must have column 'experience_level'
     Input df is typically ophys_experiment_table
     """
-    df = df.sort_values(by=['ophys_container_id', 'date_of_acquisition'])  # must sort for ordering to be accurate
+    # add simplified string date column for accurate sorting
+    df['date'] = df['date_of_acquisition'].apply(dateformat)
+    df = df.sort_values(by=['ophys_container_id', 'date'])  # must sort for ordering to be accurate
     numbers = df.groupby('ophys_container_id').apply(get_n_relative_to_first_novel)
     df['n_relative_to_first_novel'] = np.nan
     for container_id in df.ophys_container_id.unique():
