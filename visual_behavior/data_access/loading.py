@@ -203,7 +203,7 @@ def get_platform_paper_experiment_table(add_extra_columns=True):
         experiment_table = utilities.add_area_depth_column(experiment_table)
         # add other columns indicating whether a session was the last familiar before the first novel session,
         # or the second passing novel session after the first truly novel one
-        experiment_table = utilities.add_date_string(experiment_table) # add simplified date string for sorting
+        experiment_table = utilities.add_date_string(experiment_table)  # add simplified date string for sorting
         experiment_table = utilities.add_first_novel_column(experiment_table)
         experiment_table = utilities.add_n_relative_to_first_novel_column(experiment_table)
         experiment_table = utilities.add_last_familiar_column(experiment_table)

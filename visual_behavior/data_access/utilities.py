@@ -1543,7 +1543,7 @@ def add_n_relative_to_first_novel_column(df):
     Input df is typically ophys_experiment_table
     """
     # add simplified string date column for accurate sorting
-    df = add_date_string(df) # should already be in the table, but adding again here just in case
+    df = add_date_string(df)  # should already be in the table, but adding again here just in case
     df = df.sort_values(by=['ophys_container_id', 'date'])  # must sort for ordering to be accurate
     numbers = df.groupby('ophys_container_id').apply(get_n_relative_to_first_novel)
     df['n_relative_to_first_novel'] = np.nan
