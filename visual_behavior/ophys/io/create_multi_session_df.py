@@ -67,7 +67,7 @@ def get_multi_session_df(project_code, session_number, df_name, conditions, use_
                 df = df[df.pre_change.isnull()==False]
             mdf = ut.get_mean_df(df, analysis, conditions=conditions, get_pref_stim=get_pref_stim,
                                  flashes=flashes, omitted=omitted, get_reliability=True,
-                                 exclude_omitted_from_pref_stim=True)
+                                 exclude_omitted_from_pref_stim=False)
             if 'correlation_values' in mdf.keys():
                 mdf = mdf.drop(columns=['correlation_values'])
             mdf['ophys_experiment_id'] = experiment_id
