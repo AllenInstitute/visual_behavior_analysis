@@ -190,6 +190,11 @@ def get_platform_paper_experiment_table(add_extra_columns=True):
     experiment_table = experiment_table[(experiment_table.project_code != 'VisualBehaviorMultiscope4areasx2d') &
                                         (experiment_table.reporter_line != 'Ai94(TITL-GCaMP6s)')].copy()
 
+    # overwrite session number and passive columns to patch for bug flagged in this SDK issue:
+    # https://github.com/AllenInstitute/AllenSDK/issues/2251
+    experiment_table = utilities.add_session_number_to_experiment_table(experiment_table)
+    experiment_table = utilities.add_passive_flag_to_ophys_experiment_table(experiment_table)
+
     if add_extra_columns == True:
         # add cell type and binned depth columms for plot labels
         experiment_table = utilities.add_cell_type_column(experiment_table)
@@ -198,6 +203,7 @@ def get_platform_paper_experiment_table(add_extra_columns=True):
         experiment_table = utilities.add_area_depth_column(experiment_table)
         # add other columns indicating whether a session was the last familiar before the first novel session,
         # or the second passing novel session after the first truly novel one
+        experiment_table = utilities.add_date_string(experiment_table)  # add simplified date string for sorting
         experiment_table = utilities.add_first_novel_column(experiment_table)
         experiment_table = utilities.add_n_relative_to_first_novel_column(experiment_table)
         experiment_table = utilities.add_last_familiar_column(experiment_table)
