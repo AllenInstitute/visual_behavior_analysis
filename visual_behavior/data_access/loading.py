@@ -63,7 +63,7 @@ except Exception as e:
 def get_flagged_ophys_experiment_ids():
     '''
         The following ophys_experiment_ids are currently in the release dataset, but have been flagged for removal
-        
+
         Before adding an experiment, make an SDK github issue, and include the number here. So we can
         more easily track what things are being filtered out
     '''
@@ -185,13 +185,13 @@ def get_released_ophys_experiment_table(exclude_ai94=True):
     return experiment_table
 
 
-def get_platform_paper_experiment_table(add_extra_columns=True,remove_flagged=True):
+def get_platform_paper_experiment_table(add_extra_columns=True, remove_flagged=True):
     """
     loads the experiment table that was downloaded from AWS and saved to the the platform paper cache dir.
     Then filter out VisualBehaviorMultiscope4areasx2d and Ai94 data.
     And add cell_type column (values = ['Excitatory', 'Sst Inhibitory', 'Vip Inhibitory']
     Set add_extra_columns to False if you dont need things like 'cell_type', 'binned_depth', or 'add_last_familiar'
-    Set remove_flagged to False if you want to include experiments that are current in the release dataset, 
+    Set remove_flagged to False if you want to include experiments that are current in the release dataset,
         but have been flagged for removal
     """
     cache_dir = get_platform_analysis_cache_dir()
@@ -936,6 +936,7 @@ def get_model_output_file(behavior_session_id):
 def check_if_model_output_available(behavior_session_id):
     model_output_file = get_model_output_file(behavior_session_id)
     return len(model_output_file) > 0
+
 
 def load_behavior_model_outputs(behavior_session_id):
     '''
