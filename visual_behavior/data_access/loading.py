@@ -268,7 +268,7 @@ def get_filtered_ophys_experiment_table(include_failed_data=False, release_data_
         cache = bpc.from_lims(data_release_date=['2021-03-25', '2021-08-12'])
         experiments = cache.get_ophys_experiment_table()
     if not release_data_only:
-        if from_cached_file == True:
+        if from_cached_file:
             if 'filtered_ophys_experiment_table.csv' in os.listdir(get_production_cache_dir()):
                 filepath = os.path.join(get_production_cache_dir(), 'filtered_ophys_experiment_table.csv')
                 print('loading cached experiment_table')
@@ -357,7 +357,7 @@ def get_filtered_ophys_session_table(release_data_only=True, include_failed_data
     """
     cache = bpc.from_lims()
     sessions = cache.get_ophys_session_table()
-    if release_data_only == False:
+    if not release_data_only:
         from_cached_file = True
     else:
         from_cached_file = False
@@ -516,14 +516,14 @@ class BehaviorOphysDataset(BehaviorOphysExperiment):
     @property
     def cell_specimen_table(self):
         cell_specimen_table = super().cell_specimen_table.copy()
-        if self._include_invalid_rois == False:
+        if not self._include_invalid_rois:
             cell_specimen_table = cell_specimen_table[cell_specimen_table.valid_roi == True]
         self._cell_specimen_table = cell_specimen_table
         return self._cell_specimen_table
 
     @property
     def corrected_fluorescence_traces(self):
-        if self._include_invalid_rois == False:
+        if not self._include_invalid_rois:
             corrected_fluorescence_traces = super().corrected_fluorescence_traces
             cell_specimen_table = super().cell_specimen_table[super().cell_specimen_table.valid_roi == True]
             valid_cells = cell_specimen_table.cell_roi_id.values
@@ -535,7 +535,7 @@ class BehaviorOphysDataset(BehaviorOphysExperiment):
 
     @property
     def dff_traces(self):
-        if self._include_invalid_rois == False:
+        if not self._include_invalid_rois:
             dff_traces = super().dff_traces
             cell_specimen_table = super().cell_specimen_table[super().cell_specimen_table.valid_roi == True]
             valid_cells = cell_specimen_table.cell_roi_id.values
@@ -546,7 +546,7 @@ class BehaviorOphysDataset(BehaviorOphysExperiment):
 
     @property
     def events(self):
-        if self._include_invalid_rois == False:
+        if not self._include_invalid_rois:
             events = super().events
             cell_specimen_table = super().cell_specimen_table[super().cell_specimen_table.valid_roi == True]
             valid_cells = cell_specimen_table.cell_roi_id.values
@@ -935,11 +935,7 @@ def get_model_output_file(behavior_session_id):
 
 def check_if_model_output_available(behavior_session_id):
     model_output_file = get_model_output_file(behavior_session_id)
-    if len(model_output_file) > 0:
-        return True
-    else:
-        return False
-
+    return len(model_output_file) > 0
 
 def load_behavior_model_outputs(behavior_session_id):
     '''
@@ -1122,7 +1118,7 @@ def get_sdk_roi_masks(cell_specimen_table):
 def get_segmentation_mask(ophys_experiment_id, valid_only=True):
     dataset = get_ophys_dataset(ophys_experiment_id, include_invalid_rois=True)
     cell_specimen_table = dataset.cell_specimen_table.copy()
-    if valid_only == True:
+    if valid_only:
         roi_masks = get_sdk_roi_masks(cell_specimen_table[cell_specimen_table.valid_roi == True])
     else:
         roi_masks = get_sdk_roi_masks(cell_specimen_table)
@@ -3059,7 +3055,7 @@ def get_cell_table(platform_paper_only=True, add_extra_columns=True):
     # load cell table
     cell_table = cache.get_ophys_cells_table()
     # optionally filter to limit to platform paper datasets
-    if platform_paper_only == True:
+    if platform_paper_only:
         # load experiments table and merge
         experiment_table = get_platform_paper_experiment_table(add_extra_columns=add_extra_columns)
         cell_table = cell_table.reset_index().merge(experiment_table, on='ophys_experiment_id')
