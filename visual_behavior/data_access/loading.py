@@ -207,7 +207,7 @@ def get_platform_paper_experiment_table(add_extra_columns=True,remove_flagged=Tr
     experiment_table = utilities.add_session_number_to_experiment_table(experiment_table)
     experiment_table = utilities.add_passive_flag_to_ophys_experiment_table(experiment_table)
 
-    if add_extra_columns == True:
+    if add_extra_columns:
         # add cell type and binned depth columms for plot labels
         experiment_table = utilities.add_cell_type_column(experiment_table)
         experiment_table = utilities.add_average_depth_across_container(experiment_table)
