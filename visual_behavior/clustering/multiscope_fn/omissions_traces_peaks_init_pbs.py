@@ -17,8 +17,15 @@ import visual_behavior.data_access.loading as loading
 
 # data release sessions
 # experiments_table = loading.get_filtered_ophys_experiment_table()
+'''
 experiments_table = loading.get_filtered_ophys_experiment_table(release_data_only=True)
+'''
+experiments_table = loading.get_platform_paper_experiment_table()
+# experiments_table.shape
+# experiments_table['project_code'].unique()
+
 metadata_valid = experiments_table[experiments_table['project_code']=='VisualBehaviorMultiscope'] # multiscope sessions
+# metadata_valid.shape
 
 
 # Use the new list of sessions that are de-crosstalked and will be released in March 2021
@@ -95,6 +102,7 @@ print(f'{len(list_all_sessions_valid)}: Number of de-crosstalked sessions for an
 # get the list of 8 experiments for all sessions
 experiments_table = loading.get_filtered_ophys_experiment_table(include_failed_data=True)
 experiments_table = experiments_table.reset_index('ophys_experiment_id')
+experiments_table.shape
 
 metadata_all = experiments_table[experiments_table['ophys_session_id'].isin(list_all_sessions_valid)==True] # metadata_all = experiments_table[np.in1d(experiments_table['ophys_session_id'].values, list_all_sessions_valid)]
 metadata_all.shape

@@ -26,7 +26,7 @@ from omissions_traces_peaks_quantify import *
 from omissions_traces_peaks_quantify_flashAl import *
                 
 #%%
-def omissions_traces_peaks(metadata_all, session_id, experiment_ids, experiment_ids_valid, validity_log_all, norm_to_max, mean_notPeak, peak_win, flash_win, flash_win_timing, flash_win_vip, bl_percentile, num_shfl_corr, trace_median, doScale, doShift, doShift_again, bl_gray_screen, samps_bef, samps_aft, doCorrs, subtractSigCorrs, saveResults, cols, cols_basic, colsa, cols_this_sess_l, use_ct_traces=1, use_np_corr=1, use_common_vb_roi=1, controlSingleBeam_oddFrPlanes=[0], doPlots=0, doROC=0):    
+def omissions_traces_peaks(metadata_all, session_id, experiment_ids, experiment_ids_valid, validity_log_all, norm_to_max, mean_notPeak, peak_win, flash_win, flash_win_timing, flash_win_vip, bl_percentile, num_shfl_corr, trace_median, doScale, doShift, doShift_again, bl_gray_screen, samps_bef, samps_aft, doCorrs, subtractSigCorrs, saveResults, cols, cols_basic, colsa, cols_this_sess_l, use_ct_traces=1, use_np_corr=1, use_common_vb_roi=1, controlSingleBeam_oddFrPlanes=[0], doPlots=0, doROC=0, analyze_changes=False):    
     
     '''
     doCorrs = 1 # if 0, compute omit-aligned trace median, peaks, etc. If 1, compute corr coeff between neuron pairs in each layer of v1 and lm 
@@ -98,9 +98,60 @@ def omissions_traces_peaks(metadata_all, session_id, experiment_ids, experiment_
     ################################################################################
 
     # load the traces, behavioral and metadata for the session
-    [whole_data, data_list, table_stim, behav_data] = load_session_data_new(metadata_all, session_id, experiment_ids, use_ct_traces, use_np_corr, use_common_vb_roi)    
+    if analyze_changes == False:
+        [whole_data, data_list, table_stim, behav_data] = load_session_data_new(metadata_all, session_id, experiment_ids, use_ct_traces, use_np_corr, use_common_vb_roi)    
 
+    else: # analyzing image change traces
+        
+        ##################################
+        ##### Set a simplified version of whole_data
+        whole_data ={}
+        for indiv_id in experiment_ids: # indiv_id = list_mesoscope_exp[0] # indiv_id = experiment_ids[0]
+
+            indiv_data = {}
+            local_meta = metadata_all[metadata_all['ophys_experiment_id']==indiv_id]
+            
+            indiv_data['targeted_structure'] = local_meta['targeted_structure'].values[0]
+            indiv_data['mouse'] = local_meta['mouse_id'].values[0]      
+            indiv_data['stage'] = local_meta['session_type'].values[0]         
+            indiv_data['cre'] = local_meta['cre_line'].values[0]
+            indiv_data['imaging_depth'] = local_meta['imaging_depth'].values[0]
+            
+#             oldformat = local_meta['date_of_acquisition'].values[0]
+            oldformat = str(local_meta['date_of_acquisition'].iloc[0])
+            datetimeobject = datetime.strptime(oldformat,'%Y-%m-%d %H:%M:%S.%f')
+            indiv_data['experiment_date'] = datetimeobject.strftime('%Y-%m-%d')
+            
+            whole_data[str(indiv_id)] = indiv_data
+
+        ##################################    
+        ##### Set data_list : contains area and depth for each experiment, sorted by area and depth ####
+        data_list = pd.DataFrame([], columns=['lims_id', 'area', 'depth'])
+        session_exclude = 0 
+
+        for index,lims_ids in enumerate(whole_data.keys()):
+            try:
+                depth = whole_data[lims_ids]['imaging_depth']
+                area = whole_data[lims_ids]['targeted_structure']
+
+            except Exception as e:
+                depth = np.nan
+                area = np.nan
+                session_exclude = 1 # we sort by area and depth below, so we need to get these vars for all experiments, or we have to exclude the session!
+
+            local_exp = pd.DataFrame([[lims_ids, area, depth]], columns=['lims_id', 'area', 'depth'])
+            data_list = data_list.append(local_exp)  
+
+        ### Important: here we sort data_list by area and depth, so the order of experiment is different in data_list vs whole_data 
+        # data_list is similar to whole_data but sorted by area and depth        
+        if session_exclude == 0:
+            data_list = data_list.sort_values(by=['area', 'depth'])
+        else:
+            data_list.loc[:,'depth']=np.nan
+
+    
 #    [whole_data, data_list, table_stim] = load_session_data(session_id) # data_list is similar to whole_data but sorted by area and depth
+
 
 
 
@@ -124,10 +175,16 @@ def omissions_traces_peaks(metadata_all, session_id, experiment_ids, experiment_
     #     this_sess = mouse
     #     return this_sess
 
+    
+        #######################################################################################
         #%% Set flash_win: use a different window for computing flash responses if it is VIP, and B1 session (1st novel session)
 
-        session_novel = is_session_novel(dir_server_me, mouse, date) # first determine if the session is the 1st novel session or not
+        # new method using experience level : 'Familiar', 'Novel 1', 'Novel >1'
+        session_novel = metadata_all[metadata_all['ophys_session_id']==session_id]['experience_level'].iloc[0] == 'Novel 1'
 
+        # my old method
+#         session_novel = is_session_novel(dir_server_me, mouse, date) # first determine if the session is the 1st novel session or not
+        
         # vip, except for B1, needs a different timewindow for computing image-triggered average (because its response precedes the image).
         # sst, slc, and vip B1 sessions all need a timewindow that immediately follows the images.
         if np.logical_and(cre.find('Vip')==0 , session_novel) or cre.find('Vip')==-1: # VIP B1, SST, SLC: window after images (response follows the image)
@@ -136,84 +193,92 @@ def omissions_traces_peaks(metadata_all, session_id, experiment_ids, experiment_
         else: # VIP (non B1,familiar sessions): window precedes the image (pre-stimulus ramping activity)
             flash_win_final = flash_win_vip # [-.25, .5] 
         
+        
 
         #####################################################################################
         #%% Set stimulus and behavioral variables
         #####################################################################################
 
-        #%% Set omissions and flashes
-        list_omitted = table_stim[table_stim['omitted']==True]['start_time'] # start time of omissions (in sec)
-        list_omitted0 = list_omitted + 0
-
-        if len(list_omitted)==0:
-            print('session %d has no omissions!' %session_id)
-    ##        sys.exit('Exiting analysis as there are no omission trials in session %d!' %session_id)
-    ##            sess_no_omission.append(session_id)
-    #        
-    #    else:
-
-        #%%
-        # start time of all flashes (in sec)
-        list_flashesOmissions = table_stim['start_time'].values #[table_stim['omitted']==False]['start_time']
-        list_flashes = table_stim[table_stim['omitted']==False]['start_time']
-
-
-        # compute flash and gray durations from table_stim
-        '''
-        flashdurs = table_stim['end_time'].values - table_stim['start_time'].values
-        flash_dur_med = np.median(flashdurs)
-
-        # use both flash and omissions to set flashgraydurs
-        flashgraydurs, i = np.unique(np.diff(list_flashesOmissions), return_inverse=True)
-
-        # use only flashes to set flashgraydurs
-        flashgraydurs, i = np.unique(np.diff(list_flashes), return_inverse=True)
-
-        flashgray_dur_med = np.median(flashgraydurs)    
-        gray_dur_med = flashgray_dur_med - flash_dur_med
-
-        print(flash_dur_med, gray_dur_med, flashgray_dur_med)
-        '''
-
-        #%% Check for repeated omission entries (based on start times) or consecutive omissions
-        #s = np.sort(np.diff(list_omitted))
-        #si = np.argsort(np.diff(list_omitted))
-
-        d = np.diff(list_omitted0)
-        # If there are any repeated omissions, remove one of them.
-        rep_om = np.argwhere(d == 0).flatten()
-        list_omitted.iloc[rep_om] = np.nan
-
-        # consecutive omission: would be interesting to study them but for now remove them all.    
-        a = np.argwhere(np.logical_and(d>0 , d<.8)).flatten()
-        consec_om = np.sort(np.concatenate((a, a+1), axis=0)) # remove any flash that is preceded or followed by another omitted flash
-        list_omitted.iloc[consec_om] = np.nan
-        if len(consec_om)>0:
-            print(f'\nThere are {len(consec_om)} consecutive omissions in session {session_id}; removing them...')
-
-        # remove the values set to nan
-        #list_omitted.drop(list_omitted.index[consec_om, rep_om])
-        list_omitted = list_omitted[~np.isnan(list_omitted.values)]                
-        #        len(list_omitted0), len(list_omitted)
-        #        list_omitted0, ist_omitted
-
-
+        this_sess_l = pd.DataFrame([], columns = cols_this_sess_l) # colsa # index = range(num_planes),         
         
-        #%% Set dataframe this_sess_l        
-        
-        this_sess_l = pd.DataFrame([], columns = cols_this_sess_l) # colsa # index = range(num_planes), 
-#         this_sess_l = pd.DataFrame([], columns = ['valid', 'local_fluo_allOmitt', 'list_flashes', 'list_omitted', 'running_speed', 'licks', 'rewards'])
-#         this_sess_l = pd.DataFrame([], columns = ['valid', 'local_fluo_allOmitt', 'local_fluo_flashBefOmitt', 'local_fluo_traces', 'local_time_traces', 'list_flashes', 'list_omitted', 'running_speed', 'licks', 'rewards'])
+        if analyze_changes == False:
 
-        # the following are at the session level, even though we are saving them at the experiment level.
-        for ind in range(num_planes): # ind=0
-            this_sess_l.at[ind, 'list_flashes'] = [list_flashes] # flash onset
-            this_sess_l.at[ind, 'list_omitted'] = [list_omitted] # omission onset
-            this_sess_l.at[ind, 'running_speed'] = behav_data['running_speed']
-            this_sess_l.at[ind, 'licks'] = behav_data['licks'] 
-            this_sess_l.at[ind, 'rewards'] = behav_data['rewards']                        
-        #'running_speed', 'licks', 'rewards', 'd_prime', 'hit_rate', 'catch_rate'
+            #%% Set omissions and flashes
+            list_omitted = table_stim[table_stim['omitted']==True]['start_time'] # start time of omissions (in sec)
+            list_omitted0 = list_omitted + 0
 
+            if len(list_omitted)==0:
+                print('session %d has no omissions!' %session_id)
+        ##        sys.exit('Exiting analysis as there are no omission trials in session %d!' %session_id)
+        ##            sess_no_omission.append(session_id)
+        #        
+        #    else:
+
+            #%%
+            # start time of all flashes (in sec)
+            list_flashesOmissions = table_stim['start_time'].values #[table_stim['omitted']==False]['start_time']
+            list_flashes = table_stim[table_stim['omitted']==False]['start_time']
+
+
+            # compute flash and gray durations from table_stim
+            '''
+            flashdurs = table_stim['end_time'].values - table_stim['start_time'].values
+            flash_dur_med = np.median(flashdurs)
+
+            # use both flash and omissions to set flashgraydurs
+            flashgraydurs, i = np.unique(np.diff(list_flashesOmissions), return_inverse=True)
+
+            # use only flashes to set flashgraydurs
+            flashgraydurs, i = np.unique(np.diff(list_flashes), return_inverse=True)
+
+            flashgray_dur_med = np.median(flashgraydurs)    
+            gray_dur_med = flashgray_dur_med - flash_dur_med
+
+            print(flash_dur_med, gray_dur_med, flashgray_dur_med)
+            '''
+
+            #%% Check for repeated omission entries (based on start times) or consecutive omissions
+            #s = np.sort(np.diff(list_omitted))
+            #si = np.argsort(np.diff(list_omitted))
+
+            d = np.diff(list_omitted0)
+            # If there are any repeated omissions, remove one of them.
+            rep_om = np.argwhere(d == 0).flatten()
+            list_omitted.iloc[rep_om] = np.nan
+
+            # consecutive omission: would be interesting to study them but for now remove them all.    
+            a = np.argwhere(np.logical_and(d>0 , d<.8)).flatten()
+            consec_om = np.sort(np.concatenate((a, a+1), axis=0)) # remove any flash that is preceded or followed by another omitted flash
+            list_omitted.iloc[consec_om] = np.nan
+            if len(consec_om)>0:
+                print(f'\nThere are {len(consec_om)} consecutive omissions in session {session_id}; removing them...')
+
+            # remove the values set to nan
+            #list_omitted.drop(list_omitted.index[consec_om, rep_om])
+            list_omitted = list_omitted[~np.isnan(list_omitted.values)]                
+            #        len(list_omitted0), len(list_omitted)
+            #        list_omitted0, ist_omitted
+
+
+
+            ####################################################################################
+            #%% Set dataframe this_sess_l        
+            
+    #         this_sess_l = pd.DataFrame([], columns = ['valid', 'local_fluo_allOmitt', 'list_flashes', 'list_omitted', 'running_speed', 'licks', 'rewards'])
+    #         this_sess_l = pd.DataFrame([], columns = ['valid', 'local_fluo_allOmitt', 'local_fluo_flashBefOmitt', 'local_fluo_traces', 'local_time_traces', 'list_flashes', 'list_omitted', 'running_speed', 'licks', 'rewards'])
+
+            # the following are at the session level, even though we are saving them at the experiment level.
+            for ind in range(num_planes): # ind=0
+                this_sess_l.at[ind, 'list_flashes'] = [list_flashes] # flash onset
+                this_sess_l.at[ind, 'list_omitted'] = [list_omitted] # omission onset
+                this_sess_l.at[ind, 'running_speed'] = behav_data['running_speed']
+                this_sess_l.at[ind, 'licks'] = behav_data['licks'] 
+                this_sess_l.at[ind, 'rewards'] = behav_data['rewards']                        
+            #'running_speed', 'licks', 'rewards', 'd_prime', 'hit_rate', 'catch_rate'
+
+            
+            
+            
 
         #%% Set vars (time window and image names/indeces) for removing signal so correlations are not affected by signal, and instead reflect noise corrletions.
         # for each image type, we will compute average response across all trials of that image, and will subtract this average response from individual trials. This will be done for each neuron separately.
@@ -287,6 +352,7 @@ def omissions_traces_peaks(metadata_all, session_id, experiment_ids, experiment_
 
 #             return this_sess
 
+
             #%% Get traces of all neurons for the entire session
 
             # samps_bef (=40) frames before omission ; index: 0:39
@@ -297,7 +363,7 @@ def omissions_traces_peaks(metadata_all, session_id, experiment_ids, experiment_
             ### NOTE: commenting below and instead using the list of experiments in March 2021 data release to identify valid experiments
 #             if validity_log_all.iloc[validity_log_all.lims_id.values == int(lims_id)]['valid'].bool() == False:
                 
-            if sum(np.in1d(experiment_ids_valid, int(lims_id)))==0: # make sure lims_id is among the experiments in the data release
+            if sum(np.in1d(experiment_ids_valid, int(lims_id)))==0: # invalid experiment # make sure lims_id is among the experiments in the data release
                 
                 num_frs_control = samps_bef + samps_aft
                 if controlSingleBeam_oddFrPlanes[0]==1:
@@ -310,43 +376,100 @@ def omissions_traces_peaks(metadata_all, session_id, experiment_ids, experiment_
                 print('Skipping invalid experiment %d, index %d' %(int(lims_id), index))
         #                this_sess.at[index, :] = np.nan # check this works.
 
-            else:
+            else: # valid experiment
 
-                # Get traces of all neurons for the entire session
-                local_fluo_traces = whole_data[lims_id]['fluo_traces'] # neurons x frames
-                # added below after using data release sessions; the traces that we get from allensdk dataset object are 1 dimensional, so we make them 2 dim
-                if np.ndim(local_fluo_traces)==1 and local_fluo_traces.shape[0]>0:
-                    local_fluo_traces = np.vstack(whole_data[lims_id]['fluo_traces'])
+                if analyze_changes==True: # image changes analysis
                     
-                local_time_traces = whole_data[lims_id]['time_trace']  # frame times in sec. Volume rate is 10 Hz. Are these the time of frame onsets?? (I think yes... double checking with Jerome/ Marina.) # dataset.timestamps['ophys_frames'][0]             
-                roi_ids = whole_data[lims_id]['roi_ids']
-                
-                
-                this_sess_l.at[index, 'local_fluo_traces'] = local_fluo_traces
-                this_sess_l.at[index, 'local_time_traces'] = local_time_traces
-                this_sess_l.at[index, 'roi_ids'] = roi_ids
-                
-                
-                frame_dur = np.mean(np.diff(local_time_traces)) # difference in sec between frames
-                print(f'Frame duration {frame_dur:.3f} ms')
-                if np.logical_or(frame_dur < .09, frame_dur > .1):
-                    print(f'\n\nWARNING:Frame duration is unexpected!! {frame_dur}ms\n\n')
-        #                local_time_traces_all.append(local_time_traces)
-        #            depth_all.append(depth)
-        #            area_all.append(area)
+                    experiment_id = int(lims_id) #experiments_table.index[0]
 
-                num_neurons = local_fluo_traces.shape[0]
+                    dataset = loading.get_ophys_dataset(experiment_id, get_extended_stimulus_presentations=False)
 
-                if num_neurons==0: # some of the de-crosstalked planes don't have any neurons.
-                    this_sess_l.at[index, 'valid'] = 0
-                    print('0 neurons! skipping invalid experiment %d, index %d' %(int(lims_id), index))
+                    analysis = ResponseAnalysis(dataset)
+                    df = analysis.get_stimulus_response_df()
 
-                elif len(list_omitted)==0:
-                    num_omissions = 0
-                    this_sess.at[index, ['n_omissions', 'n_neurons', 'frame_dur']] = num_omissions, num_neurons, frame_dur
-                             
+                    changes = df[df.is_change==True]
+#                     omissions = df[df.omitted==True]
+
+                    # matrix of neurons x trials - doesnt have mean for each image subtracted though
+                    n_trials = len(changes.stimulus_presentations_id.unique())
+                    n_neurons = len(changes.cell_specimen_id.unique())
+                    n_frames = len(changes['trace_timestamps'].iloc[0])
+#                     print(n_neurons, n_trials, n_frames)
+
+                    matrix = np.empty((n_neurons, n_trials, n_frames))
+                    for i, cell_specimen_id in enumerate(changes.cell_specimen_id.unique()): 
+                        matrix[i] = np.vstack(changes[changes.cell_specimen_id==cell_specimen_id].trace.values) # n_trials x frames
+#                     matrix.shape # n_neurons x n_trials x n_frames   
                     
+                    local_fluo_allOmitt = np.transpose(matrix, [2,0,1]) # frames x units x trials
+                    local_time_allOmitt = np.vstack(changes[changes.cell_specimen_id==cell_specimen_id]['trace_timestamps'].values).T # frames x trials
+
+                    image_change_indices = changes[changes.cell_specimen_id==cell_specimen_id]['image_index'].values # n_trials # the image name (or image index) of the changed image            
+                    img_names = np.unique(image_change_indices)
+                        
+
+                    ###### subtract out average response to a given image from all trials of that image, on local_fluo_allOmitt
+                    # take all omit-aligned trials that have a particular image type; then take their average, and subtract the average from each individual trial (of that type)
+
+                    if np.logical_and(doCorrs==1, subtractSigCorrs==1):                    
+                        print(f'\nSubtracting out signal to compute noise correlations!\n')
+                        local_fluo_allOmitt_noSigSub = local_fluo_allOmitt + 0 # keep a copy
+
+                        for img_ind in range(len(img_names)): # img_ind = 0
+                            #### omission-aligned traces
+                            omit_al_this_image = local_fluo_allOmitt[:,:, image_change_indices==img_ind] # frames x units x trials_this_image
+                            omit_al_this_image_ave = np.nanmean(omit_al_this_image, axis=-1) # frames x units # average across all trials for a given image type
+                            omit_al_this_image_ave_subtracted = omit_al_this_image - omit_al_this_image_ave[:,:,np.newaxis] # frames x units x trials_this_image # for each neuron, subtract out signal (ie its average across trials with a give image), so when we compute correlations it will be noise correlations.
+
+                            # redefine local_fluo_allOmitt trials that have image type img_ind
+                            local_fluo_allOmitt[:,:, image_change_indices==img_ind] = omit_al_this_image_ave_subtracted 
+
+                        
+                    if doShift or doScale:
+                        sys.exit(f'You need to set baseline; you need local_fluo_traces if bl_gray_screen; check your omission codes')
+
+                        
+                        
+                        
+                #############################################    
+                else: # omissions analysis
                     
+                    # Get traces of all neurons for the entire session
+                    local_fluo_traces = whole_data[lims_id]['fluo_traces'] # neurons x frames
+                    # added below after using data release sessions; the traces that we get from allensdk dataset object are 1 dimensional, so we make them 2 dim
+                    if np.ndim(local_fluo_traces)==1 and local_fluo_traces.shape[0]>0:
+                        local_fluo_traces = np.vstack(whole_data[lims_id]['fluo_traces'])
+
+                    local_time_traces = whole_data[lims_id]['time_trace']  # frame times in sec. Volume rate is 10 Hz. Are these the time of frame onsets?? (I think yes... double checking with Jerome/ Marina.) # dataset.timestamps['ophys_frames'][0]             
+                    roi_ids = whole_data[lims_id]['roi_ids']
+
+
+                    this_sess_l.at[index, 'local_fluo_traces'] = local_fluo_traces
+                    this_sess_l.at[index, 'local_time_traces'] = local_time_traces
+                    this_sess_l.at[index, 'roi_ids'] = roi_ids
+
+
+                    ##################################
+                    frame_dur = np.mean(np.diff(local_time_traces)) # difference in sec between frames
+                    print(f'Frame duration {frame_dur:.3f} ms')
+                    if np.logical_or(frame_dur < .09, frame_dur > .1):
+                        print(f'\n\nWARNING:Frame duration is unexpected!! {frame_dur}ms\n\n')
+            #                local_time_traces_all.append(local_time_traces)
+            #            depth_all.append(depth)
+            #            area_all.append(area)
+
+                    num_neurons = local_fluo_traces.shape[0]
+
+                    if num_neurons==0: # some of the de-crosstalked planes don't have any neurons.
+                        this_sess_l.at[index, 'valid'] = 0
+                        print('0 neurons! skipping invalid experiment %d, index %d' %(int(lims_id), index))
+
+                    elif len(list_omitted)==0:
+                        num_omissions = 0
+                        this_sess.at[index, ['n_omissions', 'n_neurons', 'frame_dur']] = num_omissions, num_neurons, frame_dur
+
+
+
                     
             if doCorrs==-1: # in case an experiment is invalid or there are no omissions we make sure we set this_sess
                 this_sess = this_sess.iloc[:,range(len(cols_basic))].join(this_sess_l) # len(cols_basic) = 13
@@ -358,7 +481,7 @@ def omissions_traces_peaks(metadata_all, session_id, experiment_ids, experiment_
             ################################################################################
             ################################################################################
             
-            if this_sess_l.at[index, 'valid'] == 1 and len(list_omitted)>0:
+            if analyze_changes==False and this_sess_l.at[index, 'valid'] == 1 and len(list_omitted)>0:
 
                 #%% Plot the trace of all neurons (for the entire session) and mark the flash onsets
                 '''    
@@ -1810,6 +1933,7 @@ def omissions_traces_peaks(metadata_all, session_id, experiment_ids, experiment_
 ###########################################################################################
 
 #%%
+analyze_changes = True # False # whether correlations are computed on omission-aligned traces or image change-aligned traces
 controlSingleBeam_oddFrPlanes = [0, []] # [1, [0,2,5,7]] # if 1st element is 1, make control data to remove the simultaneous aspect of dual beam mesoscope (ie the coupled planes) to see if the correlation results require the high temporal resolution (11Hz) of dual beam vs. 5Hz of single beam mesoscope # 2nd element: odd_fr_planes = [0,2,5,7] # if the plane index is among these, we will take df/f from odd frame indices         
 
 saveResults = 1  # save the all_sess pandas at the end
@@ -1936,7 +2060,11 @@ import visual_behavior.data_access.loading as loading
 
 # metadata_meso_dir = '/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/meso_decrosstalk/meso_experiments_in_release.csv'
 # metadata_valid = pd.read_csv(metadata_meso_dir)
+'''
 experiments_table = loading.get_filtered_ophys_experiment_table(release_data_only=True)
+'''
+experiments_table = loading.get_platform_paper_experiment_table()
+
 experiments_table = experiments_table.reset_index('ophys_experiment_id')
 metadata_valid = experiments_table[experiments_table['project_code']=='VisualBehaviorMultiscope'] # multiscope sessions
 
@@ -2119,12 +2247,10 @@ print('\n\n======================== Analyzing session %d, %d/%d ================
 #%% Call the main function
 
 this_sess = omissions_traces_peaks(metadata_all, session_id, experiment_ids, experiment_ids_valid, validity_log_all, norm_to_max, mean_notPeak, peak_win, flash_win, flash_win_timing, flash_win_vip, bl_percentile, num_shfl_corr, trace_median,
-   doScale, doShift, doShift_again, bl_gray_screen, samps_bef, samps_aft, doCorrs, subtractSigCorrs, saveResults, cols, cols_basic, colsa, cols_this_sess_l, use_ct_traces, use_np_corr, use_common_vb_roi, controlSingleBeam_oddFrPlanes, doPlots, doROC)
+   doScale, doShift, doShift_again, bl_gray_screen, samps_bef, samps_aft, doCorrs, subtractSigCorrs, saveResults, cols, cols_basic, colsa, cols_this_sess_l, use_ct_traces, use_np_corr, use_common_vb_roi, controlSingleBeam_oddFrPlanes, doPlots, doROC, analyze_changes)
 
 # this_sess = omissions_traces_peaks_pbs(session_id, experiment_ids, validity_log_all, norm_to_max, mean_notPeak, peak_win, flash_win, flash_win_timing, flash_win_vip, bl_percentile, num_shfl_corr, trace_median,
 #        doScale, doShift, doShift_again, bl_gray_screen, samps_bef, samps_aft, doCorrs, subtractSigCorrs, saveResults, cols, use_ct_traces, doPlots, doROC)
     
-
-
 
 

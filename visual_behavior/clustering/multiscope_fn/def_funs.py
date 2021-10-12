@@ -1702,17 +1702,23 @@ def load_session_data_new(metadata_all, session_id, list_mesoscope_exp, use_ct_t
 #             dataset = VisualBehaviorOphysDataset(indiv_id, cache_dir=cache_dir) # vb            
 #             roi_ids_vb = dataset.cell_specimen_table['cell_roi_id'].values
 
-            dataset = loading.get_ophys_dataset(indiv_id, include_invalid_rois=False) # allen sdk
+#             dataset = loading.get_ophys_dataset(indiv_id, include_invalid_rois=False) # allen sdk
+            dataset = loading.get_ophys_dataset(indiv_id, include_invalid_rois=False, get_extended_stimulus_presentations=False) # allen sdk
     
             indiv_id_with_dataset = indiv_id
             
-            try:
+            
+            ###################################################
+            try: # this should be run only once, not for all experiments!
+                
                 table_stim = dataset.stimulus_presentations
             except Exception as e:
                 print(f'Cannot get dataset.stimulus_presentations; will try again on for a different experiment!')
                 print(e)
                 
-            ###
+                
+            ##################################################################
+            ##################################################################
             if 0: #use_ct_traces: # now (2/10/2021 decrosstalked traces are part of lims; so we get them from dataset object)
                 print('Using crosstalk-corrected dff traces.')
                 ######## read the crosstalk-corrected dff traces ########
@@ -1817,9 +1823,11 @@ def load_session_data_new(metadata_all, session_id, list_mesoscope_exp, use_ct_t
     #             plt.figure(figsize=(15,10)); plt.subplot(211); plt.plot(dff_traces.T); plt.subplot(212); plt.plot(dataset.dff_traces.T);
 
     
+            ##################################################################
             ###########################################################################
             ############### use dff traces in lims; get them from dataset object ###############
-            else:
+            else: # this is what gets run
+                
 #                 indiv_data['fluo_traces'] = dataset.dff_traces
                 indiv_data['fluo_traces'] = dataset.dff_traces['dff'].values
                 indiv_data['roi_ids'] = dataset.dff_traces['cell_roi_id'].values
@@ -1837,7 +1845,9 @@ def load_session_data_new(metadata_all, session_id, list_mesoscope_exp, use_ct_t
 #            else:
 #                raise(e)
 
-        
+
+
+        ##########################################################
         try:
             indiv_data['time_trace'] =  dataset.ophys_timestamps #dataset.timestamps['ophys_frames'][0]
         except Exception as e:
@@ -1845,7 +1855,8 @@ def load_session_data_new(metadata_all, session_id, list_mesoscope_exp, use_ct_t
             print('experiment: %d' %indiv_id)
             print('\t%s' %e)
 
-            
+        
+        ###########################################################
         try:
             # set metadata using allensdk
 #             experiment_table = loading.get_filtered_ophys_experiment_table(include_failed_data=True)
@@ -1855,9 +1866,12 @@ def load_session_data_new(metadata_all, session_id, list_mesoscope_exp, use_ct_t
             indiv_data['targeted_structure'] = local_meta['targeted_structure'].values[0]
             indiv_data['mouse'] = local_meta['mouse_id'].values[0]      
             indiv_data['stage'] = local_meta['session_type'].values[0]         
-            indiv_data['cre'] = local_meta['cre_line'].values[0]
+            indiv_data['cre'] = local_meta['cre_line'].values[0] 
+            # i think below should work just fine so we dont need to use mouse seeks to get imaging depth
+#             indiv_data['imaging_depth'] = local_meta['imaging_depth'].values[0]
             
-            oldformat = local_meta['date_of_acquisition'].values[0]
+#             oldformat = local_meta['date_of_acquisition'].values[0]
+            oldformat = str(local_meta['date_of_acquisition'].iloc[0])
             datetimeobject = datetime.strptime(oldformat,'%Y-%m-%d %H:%M:%S.%f')
             indiv_data['experiment_date'] = datetimeobject.strftime('%Y-%m-%d')
             
@@ -1979,6 +1993,8 @@ def load_session_data_new(metadata_all, session_id, list_mesoscope_exp, use_ct_t
     
     
     return [whole_data, data_list, table_stim, behav_data]
+
+
 
 
 
