@@ -60,6 +60,16 @@ except Exception as e:
 # behavior_session_id
 # ophys_container_id
 
+def get_flagged_ophys_experiment_ids():
+    '''
+        The following ophys_experiment_ids are currently in the release dataset, but have been flagged for removal
+        
+        Before adding an experiment, make an SDK github issue, and include the number here. So we can
+        more easily track what things are being filtered out
+    '''
+    # 856938751, SDK#794, extreme variability in image timing
+    oeids = [856938751]
+    return oeids
 
 #  RELEVANT DIRECTORIES
 
@@ -175,12 +185,14 @@ def get_released_ophys_experiment_table(exclude_ai94=True):
     return experiment_table
 
 
-def get_platform_paper_experiment_table(add_extra_columns=True):
+def get_platform_paper_experiment_table(add_extra_columns=True,remove_flagged=True):
     """
     loads the experiment table that was downloaded from AWS and saved to the the platform paper cache dir.
     Then filter out VisualBehaviorMultiscope4areasx2d and Ai94 data.
     And add cell_type column (values = ['Excitatory', 'Sst Inhibitory', 'Vip Inhibitory']
     Set add_extra_columns to False if you dont need things like 'cell_type', 'binned_depth', or 'add_last_familiar'
+    Set remove_flagged to False if you want to include experiments that are current in the release dataset, 
+        but have been flagged for removal
     """
     cache_dir = get_platform_analysis_cache_dir()
     cache = bpc.from_s3_cache(cache_dir=cache_dir)
@@ -213,6 +225,11 @@ def get_platform_paper_experiment_table(add_extra_columns=True):
         # add column that has a combination of experience level and exposure to omissions for familiar sessions,
         # or exposure to image set for novel sessions
         experiment_table = utilities.add_experience_exposure_column(experiment_table)
+
+    if remove_flagged:
+        # Remove flagged ophys experiment ids
+        flagged_oeids = get_flagged_ophys_experiment_ids()
+        experiment_table = experiment_table.drop(flagged_oeids, axis=0)
 
     return experiment_table
 
