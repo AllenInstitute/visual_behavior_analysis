@@ -1754,3 +1754,17 @@ def count_mice_expts_containers_cells(df):
     counts = counts.merge(containers, on=['cell_type', 'experience_level'])
     counts = counts.merge(cells, on=['cell_type', 'experience_level'])
     return counts
+
+
+def count_mice_expts_containers(df):
+    """
+    count the number of mice, experiments, containers in input dataframe
+    input dataframe is typically experiments_table
+    """
+    mice = value_counts(df, conditions=['cell_type', 'experience_level', 'mouse_id'])
+    experiments = value_counts(df, conditions=['cell_type', 'experience_level', 'ophys_experiment_id'])
+    containers = value_counts(df, conditions=['cell_type', 'experience_level', 'ophys_container_id'])
+
+    counts = mice.merge(experiments, on=['cell_type', 'experience_level'])
+    counts = counts.merge(containers, on=['cell_type', 'experience_level'])
+    return counts
