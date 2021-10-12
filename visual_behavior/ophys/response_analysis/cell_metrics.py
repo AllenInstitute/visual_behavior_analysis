@@ -1,10 +1,12 @@
 import os
 import numpy as np
 import pandas as pd
+from tqdm import tqdm
 
 import visual_behavior.data_access.loading as loading
 
 from visual_behavior.ophys.response_analysis.response_analysis import ResponseAnalysis
+from allensdk.brain_observatory.behavior.behavior_project_cache import VisualBehaviorOphysProjectCache
 
 
 def get_pref_image_for_group(group, image_column_name='image_name'):
@@ -522,9 +524,15 @@ def get_cell_metrics_table_for_experiment(ophys_experiment_id, condition, stimul
 
 
 def load_cell_metrics_table_for_experiments(ophys_experiment_ids, condition, stimulus, session_subset, use_events, filter_events):
-    import visual_behavior.data_access.loading as loading
-    # ophys_experiment_table = loading.get_released_ophys_experiment_table()
-    from allensdk.brain_observatory.behavior.behavior_project_cache import VisualBehaviorOphysProjectCache
+    '''
+        Loads a cell metric table for cells in the ophys_experiment_ids
+        condition (str): change, omissions, images, or traces
+        session_subset (str): 'full_session', 'engaged', 'disengaged'
+        stimulus (str): 'all_images', 'pref_image'
+        use_events (bool)
+        filter_events (bool)
+    '''
+
     cache_dir = loading.get_platform_analysis_cache_dir()
     print(cache_dir)
     cache = VisualBehaviorOphysProjectCache.from_s3_cache(cache_dir=cache_dir)
@@ -533,24 +541,21 @@ def load_cell_metrics_table_for_experiments(ophys_experiment_ids, condition, sti
 
     problem_expts = []
     metrics_table = pd.DataFrame()
-    if ophys_experiment_ids == 'all_experiments':
+    if (type(ophys_experiment_ids) is str) and (ophys_experiment_ids == 'all_experiments'):
         try:
             metrics_table = get_cell_metrics_table_for_experiment(ophys_experiment_ids, condition, stimulus, session_subset,
                                                                   use_events, filter_events)
         except BaseException:
             print('problem for all experiments metrics table generation')
     else:
-        for ophys_experiment_id in ophys_experiment_ids:
-            print(np.where(ophys_experiment_ids == ophys_experiment_id)[0][0], 'out of', len(ophys_experiment_ids))
+        for ophys_experiment_id in tqdm(ophys_experiment_ids):
             try:
                 tmp = get_cell_metrics_table_for_experiment(ophys_experiment_id, condition, stimulus, session_subset,
                                                             use_events, filter_events)
+                metrics_table = pd.concat([metrics_table, tmp])
             except BaseException:
                 print('problem for experiment', ophys_experiment_id)
                 problem_expts.append(ophys_experiment_id)
-            metrics_table = pd.concat([metrics_table, tmp])
-
-    # metrics_table = metrics_table.merge(ophys_experiment_table, on=['ophys_experiment_id', 'ophys_session_id'])
 
     return metrics_table
 
