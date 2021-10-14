@@ -60,7 +60,6 @@ experiments_table = loading.get_platform_paper_experiment_table()
 # experiments_table.keys()
 # experiments_table.project_code.unique()
 
-
 experiments_table = experiments_table.reset_index('ophys_experiment_id')
 # metadata_valid = experiments_table[experiments_table['project_code']=='VisualBehaviorMultiscope'] # multiscope sessions
 

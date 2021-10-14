@@ -16,6 +16,8 @@ import pandas as pd
 import pickle
 import sys
 import visual_behavior.data_access.loading as loading
+from visual_behavior.ophys.response_analysis.response_analysis import ResponseAnalysis
+from visual_behavior.data_access import utilities
 from svm_images_main_pbs import *
 
 
@@ -94,7 +96,19 @@ def svm_images_main_pre_pbs(isess, project_codes, use_events, to_decode, trial_t
     else:    
         print(f'Not using equal number of trials from each class for the training and testing datasets.')
 
-
+    if use_matched_cells==0: 
+        print(f'Using all cells (not matched cells)')
+    else:
+        if use_matched_cells==123:
+            print(f'Matching cells across Familiar, Novel 1 & Novel >1 sessions')
+        else:
+            if use_matched_cells==12: 
+                print(f'Matching cells across Familiar & Novel 1 sessions')
+            elif use_matched_cells==23: 
+                print(f'Matching cells across Novel 1 & Novel >1 sessions')
+            elif use_matched_cells==13: 
+                print(f'Matching cells across Familiar & Novel >1 sessions')
+                
 
     #%%
     dir_server_me = '/allen/programs/braintv/workgroups/nc-ophys/Farzaneh'
@@ -192,23 +206,49 @@ def svm_images_main_pre_pbs(isess, project_codes, use_events, to_decode, trial_t
     # use only those project codes that will be used for the paper
     experiments_table = loading.get_platform_paper_experiment_table()
     
-    # data release sessions
-    # experiments_table = loading.get_filtered_ophys_experiment_table()
-#     experiments_table = loading.get_filtered_ophys_experiment_table(release_data_only=True)
-
     
     
     
     
     ################################################################################################
     ################################################################################################
-    ###### codes below are adapted from marina's notebook: https://gist.github.com/matchings/880aee8adf9c1c6c56e994df511c4c3d ######
     ################################################################################################
     ################################################################################################
     if use_matched_cells!=0: 
 
         #%% get matched cells
         
+        #%% New method: match across the following 3 experience levels: last familiar active; Novel 1; second novel active
+
+        # from Marina's notebook: visual_behavior_analysis/notebooks/211008_validate_filtering_criteria_and_check_exposure_number.ipynb
+        
+        experiments_table = loading.get_platform_paper_experiment_table()
+        cells_table = loading.get_cell_table()
+        cells_table.shape
+
+        # limit to cells matched in all 3 experience levels, only considering last Familiar and second Novel active        df = utilities.limit_to_last_familiar_second_novel_active(cells_table) # important that this goes first
+        df = utilities.limit_to_last_familiar_second_novel_active(cells_table) # important that this goes first
+        df = utilities.limit_to_cell_specimen_ids_matched_in_all_experience_levels(df)
+                
+        '''
+        # Sanity checks:
+        
+        # count numbers of expts and cells¶
+        # there should be the same number of experiments for each experience level, and a similar number of cells        
+        # now the number of cell_specimen_ids AND the number of experiment_ids are the same across all 3 experience levels, because we have limited to only the last Familiar and first Novel active sessions
+        # this is the most conservative set of experiments and cells - matched cells across experience levels, only considering the most recent Familiar and Novel >1 sessions        
+        utilities.count_mice_expts_containers_cells(df)
+        
+        # there are only 3 experience levels per container
+        df.groupby(['ophys_container_id', 'experience_level']).count().reset_index().groupby(['ophys_container_id']).count().experience_level.unique()        
+        # there should only be 1 experiment per experience level
+        df.groupby(['ophys_container_id', 'experience_level', 'ophys_experiment_id']).count().reset_index().groupby(['ophys_container_id', 'experience_level']).count().ophys_experiment_id.unique()
+        '''        
+        
+        
+        #%% Old method: match across "sessions" (not experience levels)
+        # codes below are adapted from marina's notebook: https://gist.github.com/matchings/880aee8adf9c1c6c56e994df511c4c3d ######
+        '''
         from allensdk.brain_observatory.behavior.behavior_project_cache import VisualBehaviorOphysProjectCache
         
         cache = VisualBehaviorOphysProjectCache.from_lims()
@@ -219,6 +259,7 @@ def svm_images_main_pre_pbs(isess, project_codes, use_events, to_decode, trial_t
         # merge in metadata to get experience level
         cell_table = cell_table.merge(experiments_table, on='ophys_experiment_id')    
 
+        
         if use_matched_cells==123:
             experience_levels = ['Familiar', 'Novel 1', 'Novel >1']
         else:
@@ -230,9 +271,11 @@ def svm_images_main_pre_pbs(isess, project_codes, use_events, to_decode, trial_t
                 experience_levels = ['Familiar', 'Novel >1']
             
             # only get those rows of cell_table that belong to experience_levels
+
             cell_table = cell_table[cell_table.experience_level.isin(experience_levels)]
 
-            
+        
+
         n_sessions_matched = len(experience_levels)
         
         
@@ -242,11 +285,8 @@ def svm_images_main_pre_pbs(isess, project_codes, use_events, to_decode, trial_t
         # only keep those cells that have all the experience levels defined above
         matched_cell_table = n_unique_sessions_per_cell[n_unique_sessions_per_cell['experience_level'] == n_sessions_matched]
         matched_cell_ids = matched_cell_table['cell_specimen_id'].unique()
-        
-        
-        # also get the session ids that have all the experience levels... so you dont run the analysis on sessions that have only 2 of the experience levels.
-        
-        work here
+
+        # also get the session ids that have all the experience levels... so you dont run the analysis on sessions that only have 2 of the experience levels.
         
         
         
@@ -288,12 +328,26 @@ def svm_images_main_pre_pbs(isess, project_codes, use_events, to_decode, trial_t
         # save_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\platform_paper_cache\matched_cell_lists'
         # matched_cells.to_csv(os.path.join(save_dir, 'cells_matched_across_experience_levels.csv'))    
 
+        '''
+
     ################################################################################################
     ################################################################################################
-    ################################################################################################
-    ################################################################################################    
+
+    a = df[df['project_code']==project_codes]['ophys_session_id'].unique()
+    b = len(a) / len(list_all_sessions_valid)
+    print(f'{len(a)}/{len(list_all_sessions_valid)}, {b:.2f} sessions have matched cells in the 3 experience levels.')
+    
+    list_all_sessions_valid_matched = a
+    
+#     metadata_all = experiments_table[experiments_table['ophys_session_id'].isin(list_all_sessions_valid_matched)==True] # metadata_all = experiments_table[np.in1d(experiments_table['ophys_session_id'].values, list_all_sessions_valid)]
+#     metadata_all = metadata_all.sort_values('ophys_session_id')
+#     metadata_all.shape
+#     metadata_all.shape[0]/8
+
+
     
     
+    #############################
     
    
     experiments_table = experiments_table.reset_index('ophys_experiment_id')
@@ -309,13 +363,18 @@ def svm_images_main_pre_pbs(isess, project_codes, use_events, to_decode, trial_t
     # metadata_valid = pd.read_csv(metadata_meso_dir)
 
     list_all_sessions_valid = metadata_valid['ophys_session_id'].unique()
-
-
     print(f'{len(list_all_sessions_valid)}: Number of de-crosstalked sessions for analysis')
 
-    # get the list of 8 experiments for all sessions
-    experiments_table = loading.get_filtered_ophys_experiment_table(include_failed_data=True)
+
+    
+    ####################################################################################################################
+    #### Set metadata_all : includes metadata for all the 8 experiments of a session, even if they are failed.
+    ####################################################################################################################
+    
+    # get the list of all the 8 experiments for each session; we need this to set the depth and area for all experiments, since we need the metadata for all the 8 experiments for our analysis even if we dont analyze some experiments. this is because we want to know which experiment belongs to which plane. we later make plots for each plot individually.
+    experiments_table = loading.get_filtered_ophys_experiment_table(include_failed_data=True) # , release_data_only=False
     experiments_table = experiments_table.reset_index('ophys_experiment_id')
+#     experiments_table.shape
 
     metadata_all = experiments_table[experiments_table['ophys_session_id'].isin(list_all_sessions_valid)==True] # metadata_all = experiments_table[np.in1d(experiments_table['ophys_session_id'].values, list_all_sessions_valid)]
     metadata_all = metadata_all.sort_values('ophys_session_id')
@@ -324,7 +383,7 @@ def svm_images_main_pre_pbs(isess, project_codes, use_events, to_decode, trial_t
 
 
 
-    # set the list of experiments for each session in list_all_sessions_valid
+    # set the list of all the 8 experiments for each session in list_all_sessions_valid
     if project_codes == 'VisualBehavior':
         list_all_experiments = metadata_all['ophys_experiment_id'].values
 
@@ -357,32 +416,13 @@ def svm_images_main_pre_pbs(isess, project_codes, use_events, to_decode, trial_t
         list_all_experiments = np.sort(list_all_experiments) # sorts across axis 1, ie experiments within each session (does not change the order of sessions!)
 
     print(list_all_experiments.shape)
+    
+    ####################################################################################################################
+    ####################################################################################################################
 
 
-
-
-    '''
-    pkl = open(filen, 'rb')
-    metadata_basic = pickle.load(pkl)
-    metadata_basic
-
-
-
-    #%% Reset list_all_sessions_valid using metadata_basic
-    # note for some sessions we cant set metadata_basic because the following code fails: Session_obj = LimsOphysSession(lims_id=session_id)
-    # so, we use metadata_basic to reset list_all_sessions_valid
-
-    list_all_sessions_valid_now = metadata_basic[metadata_basic['valid']]['session_id'].unique()
-    # list_all_sessions_valid_now.shape, list_all_sessions_valid.shape
-    list_all_sessions_valid = list_all_sessions_valid_now
-    print(list_all_sessions_valid.shape)
-    '''
-
-
+    
     #%% Set experiments_table to be merged with stim response df later
-
-    # import visual_behavior.data_access.loading as loading
-    from visual_behavior.ophys.response_analysis.response_analysis import ResponseAnalysis
 
     experiments_table = loading.get_filtered_ophys_experiment_table()
 
@@ -568,7 +608,7 @@ def svm_images_main_pre_pbs(isess, project_codes, use_events, to_decode, trial_t
 
     
     ################################################################################
-    #%% redefine df_data, only keeping matched cells!
+    #%% redefine df_data, only keep matched cells!
     ################################################################################
     
     if use_matched_cells!=0:
