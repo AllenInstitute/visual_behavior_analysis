@@ -121,10 +121,13 @@ def plot_cell_response_heatmap(data, timestamps, xlabel='time after change (s)',
     ax = sns.heatmap(data, cmap='magma', linewidths=0, linecolor='white', square=False,
                      vmin=0, vmax=vmax, robust=True, cbar=True,
                      cbar_kws={"drawedges": False, "shrink": 1, "label": 'response'}, ax=ax)
-    ax.vlines(x=32, ymin=0, ymax=len(data), color='w', linestyle='--')
-    # if microscope == 'Multiscope':
-    #     ax.set_xticks([10, 21, 32, 43, 54])
-    #     ax.set_xticklabels([-2, -1, 0, 1, 2])
+    ax.vlines(x=5*11, ymin=0, ymax=len(data), color='w', linestyle='--')
+
+    if microscope == 'Multiscope':
+        ax.set_xticks(np.arange(0, 10*11, 11))
+        ax.set_xticklabels(np.arange(-5,5,1))
+    ax.set_xlim(3 * 11, 7 * 11)
+
     ax.set_xlabel(xlabel)
     ax.set_ylabel('cells')
     ax.set_ylim(0, len(data))
@@ -170,13 +173,13 @@ def plot_response_heatmaps_for_conditions(multi_session_df, df_name, timestamps,
 
             if row == 'Excitatory':
                 interval = 1000
-                vmax = 0.015
+                vmax = 0.01
             elif row == 'Vip Inhibitory':
                 interval = 200
-                vmax = 0.025
+                vmax = 0.02
             elif row == 'Sst Inhibitory':
                 interval = 100
-                vmax = 0.035
+                vmax = 0.03
             else:
                 interval = 200
 
