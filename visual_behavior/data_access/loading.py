@@ -220,7 +220,7 @@ def get_platform_paper_experiment_table(add_extra_columns=True):
 
 
 def get_filtered_ophys_experiment_table(include_failed_data=False, release_data_only=True, exclude_ai94=True,
-                                        add_extra_columns=True, from_cached_file=False, overwrite_cached_file=False):
+                                        add_extra_columns=False, from_cached_file=False, overwrite_cached_file=False):
     """
     Loads a list of available ophys experiments FROM LIMS (not S3 cache) and adds additional useful columns to the table.
     By default, loads from a saved cached file.
@@ -266,7 +266,7 @@ def get_filtered_ophys_experiment_table(include_failed_data=False, release_data_
             print('getting up-to-date experiment_table from lims')
             # get everything in lims
             cache = bpc.from_lims()
-            experiments = cache.get_ophys_experiment_table()
+            experiments = cache.get_ophys_experiment_table(passed_only=False)
             # limit to the 4 VisualBehavior project codes
             experiments = filtering.limit_to_production_project_codes(experiments)
             if add_extra_columns:
