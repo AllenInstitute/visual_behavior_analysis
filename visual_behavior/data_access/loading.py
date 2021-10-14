@@ -230,7 +230,7 @@ def get_filtered_ophys_experiment_table(include_failed_data=False, release_data_
 
         include_failed_data {bool} -- If True, return all experiments including those from failed containers and receptive field mapping experiments.
                                       If False, returns only experiments that have passed experiment level QC.
-                                      If "release_data_only" is True, failed experiments will not be retruned
+                                      Setting include_failed_data to True will automatically set release_data_only to False
                                       There is no guarantee on data quality or reprocessing for these experiments.
         release_data_only {bool} -- If True, return only experiments that were released on March 25th, 2021 and August 12, 2021.
                                     Fail tags and other extra columns will not be added if this is set to True.
@@ -245,6 +245,8 @@ def get_filtered_ophys_experiment_table(include_failed_data=False, release_data_
     Returns:
         experiment_table -- returns a dataframe with ophys_experiment_id as the index and metadata as columns.
     """
+    if include_failed_data is True:
+        release_data_only = False
     if release_data_only:
         # get cache from lims for data released on March 25th
         print('getting experiment table for March and August releases from lims')
