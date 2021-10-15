@@ -486,9 +486,9 @@ def generate_cell_metrics_table(ophys_experiment_id, use_events=False, filter_ev
     if 'passive' in dataset.metadata['session_type']:
         df['engaged'] = False
     if session_subset == 'engaged':
-        df = df[df.engaged == True]
+        df = df[df.reward_rate >= 2]
     elif session_subset == 'disengaged':
-        df = df[df.engaged == False]
+        df = df[df.reward_rate < 2]
 
     df = df.reset_index(drop=True)
 

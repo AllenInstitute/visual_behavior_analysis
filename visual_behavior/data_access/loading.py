@@ -451,6 +451,8 @@ def get_extened_stimulus_presentations(stimulus_presentations, licks, rewards, r
                                           stimulus_presentations.rewards.values]
     stimulus_presentations['reward_rate'] = stimulus_presentations['rewarded'].rolling(window=320, min_periods=1,
                                                                                        win_type='triang').mean()
+    # not sure why the output of this is two orders of magnitude off from expected units of rewards/min...
+    stimulus_presentations['reward_rate'] = stimulus_presentations['reward_rate']*100
     stimulus_presentations = reformat.add_response_latency(stimulus_presentations)
     stimulus_presentations = reformat.add_image_contrast_to_stimulus_presentations(stimulus_presentations)
     stimulus_presentations = reformat.add_time_from_last_lick(stimulus_presentations, licks)
