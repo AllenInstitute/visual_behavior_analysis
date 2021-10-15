@@ -59,6 +59,16 @@ def lighter(color, percent):
     return color + vector * percent
 
 
+def get_cre_line_colors():
+    """
+    returns colors in order of Slc17a7, Sst, Vip
+    """
+    colors = [(255/255,152/255,150/255),
+              (158/255, 218/255, 229/255),
+              (197/255, 176/255, 213/255)]
+    return colors
+
+
 def get_session_type_color_map():
     colors = np.floor(np.array([list(x) for x in get_colors_for_session_numbers()]) * 255).astype(np.uint8)
     black = np.array([0, 0, 0]).astype(np.uint8)
@@ -219,4 +229,22 @@ def plot_flashes_on_trace(ax, timestamps, change=None, omitted=False, alpha=0.15
         amin = array[i]
         amax = array[i] + stim_duration
         ax.axvspan(amin, amax, facecolor=facecolor, edgecolor='none', alpha=alpha, linewidth=0, zorder=1)
+    return ax
+
+
+def plot_mean_trace(traces, timestamps, ylabel='dF/F', legend_label=None, color='k', interval_sec=1, xlim_seconds=[-2,2],
+                    plot_sem=True, ax=None):
+    if ax is None:
+        fig, ax = plt.subplots()
+    if len(traces) > 0:
+        trace = np.mean(traces, axis=0)
+        sem = (traces.std()) / np.sqrt(float(len(traces)))
+        ax.plot(timestamps, trace, label=legend_label, linewidth=2, color=color)
+        if plot_sem:
+            ax.fill_between(timestamps, trace + sem, trace - sem, alpha=0.5, color=color)
+        ax.set_xticks(np.arange(int(timestamps[0]), int(timestamps[-1])+1, interval_sec))
+        ax.set_xlim(xlim_seconds)
+        ax.set_xlabel('time (sec)')
+        ax.set_ylabel(ylabel)
+    sns.despine(ax=ax)
     return ax

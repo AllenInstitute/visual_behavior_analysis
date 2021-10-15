@@ -1357,10 +1357,13 @@ def get_experience_level_colors():
     Novel 1 = blue
     Novel >1 = lighter blue
     """
-    import visual_behavior.visualization.utils as utils
-    original_colors = utils.get_colors_for_session_numbers()
+    import seaborn as sns
 
-    colors = [original_colors[0], original_colors[3], original_colors[4]]
+    reds = sns.color_palette('Reds_r', 6)[:5][::2]
+    blues = sns.color_palette('Blues_r', 6)[:5][::2]
+    purples = sns.color_palette('Purples_r', 6)[:5][::2]
+
+    colors = [reds[0], blues[0], purples[0]]
 
     return colors
 
@@ -1406,6 +1409,7 @@ def get_engagement_state_order(df):
         order = ['engaged', 'disengaged', 'passive']
     else:
         order = ['engaged', 'disengaged']
+
     return order
 
 
@@ -1425,30 +1429,81 @@ def add_cell_type_column(df):
     return df
 
 
+def add_average_depth_across_container(experiments_table):
+    """
+    creates a column called 'depth' that contains the mean 'imaging_depth' across all experiments in each container
+    """
+    experiments_table['depth'] = None
+    for container_id in experiments_table.ophys_container_id.unique():
+        container_data = experiments_table[experiments_table.ophys_container_id == container_id]
+        indices = container_data.index.values
+        depth = container_data.imaging_depth.mean()
+        experiments_table.loc[indices, 'depth'] = int(depth)
+    return experiments_table
+
+
+def add_area_depth_column(experiments_table):
+    """
+    creates columns called 'area_depth' and 'area_binned_depth' that contains the conjunction of 'targeted_area' and 'depth' or 'binned_depth'
+    input df must have 'depth' and 'binned_depth' columns created using add_average_depth_across_container and add_binned_depth functions
+    """
+    experiments_table['area_depth'] = None
+    experiments_table['area_binned_depth'] = None
+    for container_id in experiments_table.ophys_container_id.unique():
+        container_data = experiments_table[experiments_table.ophys_container_id == container_id]
+        indices = container_data.index.values
+        depth = container_data.depth.mean()
+        binned_depth = container_data.binned_depth.mean()
+        area = container_data.targeted_structure.unique()[0]
+        if len(container_data.targeted_structure.unique()) > 1:
+            print('should not be more than one targeted_structure per container!!!!')
+        experiments_table.loc[indices, 'area_depth'] = area + '_' + str(int(depth))
+        experiments_table.loc[indices, 'area_binned_depth'] = area + '_' + str(int(binned_depth))
+    return experiments_table
+
+
 def add_binned_depth_column(df):
     """
-    for a dataframe with column 'imaging_depth', bin the depth values into 100um bins and assign the mean depth for each bin
+    for a dataframe with column 'depth', created by the function add_depth_per_container,
+    bin the depth values into 100um bins and assign the mean depth for each bin
     :param df:
     :return:
     """
-    df = df.copy()
-    df.loc[:, 'depth'] = None
+    df.loc[:, 'binned_depth'] = None
 
-    indices = df[(df.imaging_depth < 100)].index.values
-    df.loc[indices, 'depth'] = 75
+    indices = df[(df.depth < 100)].index.values
+    df.loc[indices, 'binned_depth'] = 75
 
-    indices = df[(df.imaging_depth < 200) &
-                 (df.imaging_depth >= 100)].index.values
-    df.loc[indices, 'depth'] = 150
-
-    indices = df[
-        (df.imaging_depth >= 200) & (df.imaging_depth < 300)].index.values
-    df.loc[indices, 'depth'] = 250
+    indices = df[(df.depth >= 100) &
+                 (df.depth < 200)].index.values
+    df.loc[indices, 'binned_depth'] = 175
 
     indices = df[
-        (df.imaging_depth >= 300) & (df.imaging_depth < 400)].index.values
-    df.loc[indices, 'depth'] = 350
+        (df.depth >= 200) & (df.depth < 300)].index.values
+    df.loc[indices, 'binned_depth'] = 275
 
+    indices = df[
+        (df.depth >= 300) & (df.depth < 500)].index.values
+    df.loc[indices, 'binned_depth'] = 375
+
+    return df
+
+
+def dateformat(exp_date):
+    """
+    reformat date of acquisition for accurate sorting by date
+    """
+    from datetime import datetime
+    date = int(datetime.strptime(exp_date, '%Y-%m-%d  %H:%M:%S.%f').strftime('%Y%m%d'))
+    return date
+
+
+def add_date_string(df):
+    """
+    Adds a new column called "date" that is a string version of the date_of_acquisition column,
+    with the format year-month-date, such as 20210921
+    """
+    df['date'] = df['date_of_acquisition'].apply(dateformat)
     return df
 
 
@@ -1470,7 +1525,7 @@ def get_n_relative_to_first_novel(group):
     returns a pandas Series with column 'n_relative_to_first_novel' indicating this value for all session in the container
     If the container does not have a truly novel session, all values are set to NaN
     """
-    group = group.sort_values(by='date_of_acquisition')  # must sort for relative ordering to be accurate
+    group = group.sort_values(by='date')  # must sort for relative ordering to be accurate
     if 'Novel 1' in group.experience_level.values:
         novel_ind = np.where(group.experience_level == 'Novel 1')[0][0]
         n_relative_to_first_novel = np.arange(-novel_ind, len(group) - novel_ind, 1)
@@ -1484,10 +1539,12 @@ def add_n_relative_to_first_novel_column(df):
     """
     Add a column called 'n_relative_to_first_novel' that indicates the session number relative to the first novel session for each experiment in a container.
     If a container does not have a first novel session, the value of n_relative_to_novel for all experiments in the container is NaN.
-    Input df must have column 'experience_level'
+    Input df must have column 'experience_level' and 'date'
     Input df is typically ophys_experiment_table
     """
-    df = df.sort_values(by=['ophys_container_id', 'date_of_acquisition'])  # must sort for ordering to be accurate
+    # add simplified string date column for accurate sorting
+    df = add_date_string(df)  # should already be in the table, but adding again here just in case
+    df = df.sort_values(by=['ophys_container_id', 'date'])  # must sort for ordering to be accurate
     numbers = df.groupby('ophys_container_id').apply(get_n_relative_to_first_novel)
     df['n_relative_to_first_novel'] = np.nan
     for container_id in df.ophys_container_id.unique():
@@ -1513,9 +1570,9 @@ def get_last_familiar_active(group):
     """
     Function to apply to experiments_table data grouped by 'ophys_container_id'
     determines whether each session in the container was the last active familiar image session prior to the first novel session
-    input df must have column 'n_relative_to_first_novel'
+    input df must have column 'n_relative_to_first_novel' and 'date'
     """
-    group = group.sort_values(by='date_of_acquisition')
+    group = group.sort_values(by='date')
     last_familiar_active = np.empty(len(group))
     last_familiar_active[:] = False
     indices = np.where((group.passive == False) & (group.n_relative_to_first_novel < 0))[0]
@@ -1530,9 +1587,9 @@ def add_last_familiar_active_column(df):
     Adds a column 'last_familiar_active' that indicates (with a Boolean) whether
     a session is the last active familiar image session prior to the first novel session in each container
     If a container has no truly first novel session, all sessions are labeled as NaN
-    input df must have 'experience_level' and 'n_relative_to_first_novel'
+    input df must have 'experience_level' and 'n_relative_to_first_novel' and 'date'
     """
-    df = df.sort_values(by=['ophys_container_id', 'date_of_acquisition'])
+    df = df.sort_values(by=['ophys_container_id', 'date'])
     values = df.groupby('ophys_container_id').apply(get_last_familiar_active)
     df['last_familiar_active'] = False
     for container_id in df.ophys_container_id.unique():
@@ -1562,9 +1619,9 @@ def get_second_novel_active(group):
     Function to apply to experiments_table data grouped by 'ophys_container_id'
     determines whether each session in the container was the second passing novel image session
     after the first novel session, and was an active behavior session
-    input df must have column 'n_relative_to_first_novel'
+    input df must have column 'n_relative_to_first_novel' and 'date'
     """
-    group = group.sort_values(by='date_of_acquisition')
+    group = group.sort_values(by='date')
     second_novel_active = np.empty(len(group))
     second_novel_active[:] = False
     indices = np.where((group.passive == False) & (group.n_relative_to_first_novel > 0))[0]
@@ -1579,9 +1636,9 @@ def add_second_novel_active_column(df):
     Adds a column called 'second_novel_active' that indicates (with a Boolean) whether a session
     was the second passing novel image session after the first truly novel session, and was an active behavior session.
     If a container has no truly first novel session, all sessions are labeled as NaN
-    input df must have 'experience_level' and 'n_relative_to_first_novel'
+    input df must have 'experience_level' and 'n_relative_to_first_novel' and 'date'
     """
-    df = df.sort_values(by=['ophys_container_id', 'date_of_acquisition'])
+    df = df.sort_values(by=['ophys_container_id', 'date'])
     values = df.groupby('ophys_container_id').apply(get_second_novel_active)
     df['second_novel_active'] = False
     for container_id in df.ophys_container_id.unique():
@@ -1593,27 +1650,107 @@ def add_second_novel_active_column(df):
     return df
 
 
+def limit_to_last_familiar_second_novel_active(df):
+    """
+    Drops rows that are not the last familiar active session or the second novel active session
+    """
+    # drop novel sessions that arent the second active one
+    indices = df[(df.experience_level == 'Novel >1') & (df.second_novel_active == False)].index.values
+    df = df.drop(labels=indices, axis=0)
+
+    # drop Familiar sessions that arent the last active one
+    indices = df[(df.experience_level == 'Familiar') & (df.last_familiar_active == False)].index.values
+    df = df.drop(labels=indices, axis=0)
+
+    return df
+
+
+def limit_to_last_familiar_second_novel(df):
+    """
+    Drops rows that are not the last familiar session or the second novel session, regardless of active or passive
+    """
+    # drop novel sessions that arent the second active one
+    indices = df[(df.experience_level == 'Novel >1') & (df.second_novel == False)].index.values
+    df = df.drop(labels=indices, axis=0)
+
+    # drop Familiar sessions that arent the last active one
+    indices = df[(df.experience_level == 'Familiar') & (df.last_familiar == False)].index.values
+    df = df.drop(labels=indices, axis=0)
+
+    return df
+
+
+def limit_to_second_novel_exposure(df):
+    """
+    Drops rows where Novel >1 sessions are not the second exposure to the novel image set
+    input df must have columns 'experience_level' and 'prior_exposures_to_image_set'
+    """
+    # drop novel >1 sessions that arent the second exposure (prior exposures = 1)
+    indices = df[(df.experience_level == 'Novel >1') & (df.prior_exposures_to_image_set != 1)].index.values
+    df = df.drop(labels=indices, axis=0)
+    return df
+
+
 def get_containers_with_all_experience_levels(experiments_table):
     """
     identifies containers with all 3 experience levels in ['Familiar', 'Novel 1', 'Novel >1']
+    returns a list of container_ids
     """
     experience_level_counts = experiments_table.groupby(['ophys_container_id', 'experience_level']).count().reset_index().groupby(['ophys_container_id']).count()[['experience_level']]
     containers_with_all_experience_levels = experience_level_counts[experience_level_counts.experience_level == 3].index.unique()
     return containers_with_all_experience_levels
 
 
-def limit_to_get_containers_with_all_experience_levels(experiments_table):
+def limit_to_containers_with_all_experience_levels(experiments_table):
     """
     returns experiment_table limited to containers with all 3 experience levels in ['Familiar', 'Novel 1', 'Novel >1']
+    input dataframe is typically ophys_experiment_table but can be any df with columns 'ophys_container_id' and 'experience_level'
     """
     containers_with_all_experience_levels = get_containers_with_all_experience_levels(experiments_table)
     experiments_table = experiments_table[experiments_table.ophys_container_id.isin(containers_with_all_experience_levels)]
     return experiments_table
 
-#
-# def get_matched_cells_for_set_of_conditions(ophys_experiment_table, ophys_cells_table, column_name, column_values):
-#     """
-#     Adds a column 'image_set' to the experiment_table, determined based on the image set listed in the session_type column string
-#     """
-#     experiment_table['image_set'] = [session_type[15] for session_type in experiment_table.session_type.values]
-#     return experiment_table
+
+def get_cell_specimen_ids_with_all_experience_levels(cells_table):
+    """
+    identifies cell_specimen_ids with all 3 experience levels in ['Familiar', 'Novel 1', 'Novel >1'] in the input dataframe
+    input dataframe must have column 'cell_specimen_id', such as in ophys_cells_table
+    """
+    experience_level_counts = cells_table.groupby(['cell_specimen_id', 'experience_level']).count().reset_index().groupby(['cell_specimen_id']).count()[['experience_level']]
+    cell_specimen_ids_with_all_experience_levels = experience_level_counts[experience_level_counts.experience_level == 3].index.unique()
+    return cell_specimen_ids_with_all_experience_levels
+
+
+def limit_to_cell_specimen_ids_matched_in_all_experience_levels(cells_table):
+    """
+    returns dataframe limited to cell_specimen_ids that are present in all 3 experience levels in ['Familiar', 'Novel 1', 'Novel >1']
+    input dataframe is typically ophys_cells_table but can be any df with columns 'cell_specimen_id' and 'experience_level'
+    """
+    cell_specimen_ids_with_all_experience_levels = get_cell_specimen_ids_with_all_experience_levels(cells_table)
+    matched_cells_table = cells_table[cells_table.cell_specimen_id.isin(cell_specimen_ids_with_all_experience_levels)].copy()
+    return matched_cells_table
+
+
+def value_counts(df, conditions=['cell_type', 'experience_level', 'mouse_id']):
+    """
+    group by the first conditions and count the last one
+    """
+    counts = df.groupby(conditions).count().reset_index().groupby(conditions[:-1]).count()
+    counts = counts[[conditions[-1]]].rename(columns={conditions[-1]: 'n_' + conditions[-1]})
+    return counts
+
+
+def count_mice_expts_containers_cells(df):
+    """
+    count the number of mice, experiments, containers, and cells in input dataframe
+    input dataframe is typically ophys_cells_table merged with ophys_experiment_table
+    """
+    mice = value_counts(df, conditions=['cell_type', 'experience_level', 'mouse_id'])
+    experiments = value_counts(df, conditions=['cell_type', 'experience_level', 'ophys_experiment_id'])
+    containers = value_counts(df, conditions=['cell_type', 'experience_level', 'ophys_container_id'])
+    cells = value_counts(df, conditions=['cell_type', 'experience_level', 'cell_specimen_id'])
+
+    counts = mice.merge(experiments, on=['cell_type', 'experience_level'])
+    counts = counts.merge(containers, on=['cell_type', 'experience_level'])
+    counts = counts.merge(cells, on=['cell_type', 'experience_level'])
+    return counts

@@ -1,10 +1,12 @@
 import os
 import numpy as np
 import pandas as pd
+from tqdm import tqdm
 
 import visual_behavior.data_access.loading as loading
 
 from visual_behavior.ophys.response_analysis.response_analysis import ResponseAnalysis
+from allensdk.brain_observatory.behavior.behavior_project_cache import VisualBehaviorOphysProjectCache
 
 
 def get_pref_image_for_group(group, image_column_name='image_name'):
@@ -206,6 +208,18 @@ def get_fraction_significant_p_value_gray_screen(group):
     return pd.Series({'fraction_significant_p_value_gray_screen': fraction_significant_p_value_gray_screen})
 
 
+def get_fano_factor(group):
+    """
+    takes stimulus_response_df grouped by cell_specimen_id (with desired filtering criteria previously applied)
+    and computes the fano_factor each cell_specimen_id
+    """
+    mean_responses = group.mean_response.values
+    sd = np.nanstd(mean_responses)
+    mean_response = np.nanmean(mean_responses)
+    fano_factor = np.abs((sd * 2) / mean_response)
+    return pd.Series({'fano_factor': fano_factor})
+
+
 def compute_reliability_vectorized(traces):
     '''
     Compute average pearson correlation between pairs of rows of the input matrix.
@@ -223,7 +237,7 @@ def compute_reliability_vectorized(traces):
     lower_tri_inds = np.where(np.tril(np.ones([m, m]), k=-1))
     # Take the lower triangle values from the corrmat and averge them
     correlation_values = list(corrmat[lower_tri_inds[0], lower_tri_inds[1]])
-    reliability = np.mean(correlation_values)
+    reliability = np.nanmean(correlation_values)
     return reliability, correlation_values
 
 
@@ -361,9 +375,9 @@ def get_trace_metrics(traces):
     return trace_metrics
 
 
-def get_trace_metrics_table(ophys_experiment_id, ophys_experiment_table, use_events=False):
+def get_trace_metrics_table(ophys_experiment_id, ophys_experiment_table, use_events=False, filter_events=False):
     ophys_session_id = ophys_experiment_table.loc[ophys_experiment_id].ophys_session_id
-    dataset = loading.get_ophys_dataset(ophys_experiment_id, from_lims=False, from_nwb=False)
+    dataset = loading.get_ophys_dataset(ophys_experiment_id)
 
     if use_events:
         traces = dataset.events.copy()
@@ -389,13 +403,13 @@ def get_trace_metrics_table(ophys_experiment_id, ophys_experiment_table, use_eve
     return trace_metrics
 
 
-def generate_metrics_table(ophys_experiment_id, ophys_experiment_table, use_events=False,
+def generate_metrics_table(ophys_experiment_id, ophys_experiment_table, use_events=False, filter_events=False,
                            condition='changes', session_subset='full_session', stimuli='pref_image'):
 
     ophys_session_id = ophys_experiment_table.loc[int(ophys_experiment_id)].ophys_session_id
-    dataset = loading.get_ophys_dataset(ophys_experiment_id, from_lims=False, from_nwb=False)
+    dataset = loading.get_ophys_dataset(ophys_experiment_id)
 
-    analysis = ResponseAnalysis(dataset, use_extended_stimulus_presentations=True, use_events=use_events)
+    analysis = ResponseAnalysis(dataset, use_extended_stimulus_presentations=True, use_events=use_events, filter_events=filter_events)
     sdf = analysis.get_response_df(df_name='stimulus_response_df')
 
     if condition == 'changes':
@@ -438,6 +452,9 @@ def generate_metrics_table(ophys_experiment_id, ophys_experiment_table, use_even
     # get fraction responsive trials across all images
     fraction_responsive_trials = df.groupby(['cell_specimen_id']).apply(get_fraction_significant_p_value_gray_screen)
 
+    # get fano factor across trials
+    fano_factor = df.groupby(['cell_specimen_id']).apply(get_fano_factor)
+
     # get average trial to trial reliability across all images
     frame_rate = dataset.metadata['ophys_frame_rate']
     reliability = get_reliability_for_cell_specimen_ids(df, frame_rate)
@@ -455,6 +472,7 @@ def generate_metrics_table(ophys_experiment_id, ophys_experiment_table, use_even
     metrics_table = metrics_table.merge(image_selectivity_index, on='cell_specimen_id')
     metrics_table = metrics_table.merge(lifetime_sparseness, on='cell_specimen_id')
     metrics_table = metrics_table.merge(fraction_responsive_trials, on='cell_specimen_id')
+    metrics_table = metrics_table.merge(fano_factor, on='cell_specimen_id')
     metrics_table = metrics_table.merge(reliability, on='cell_specimen_id')
     metrics_table = metrics_table.merge(running_modulation_index, on='cell_specimen_id')
     if condition == 'changes':
@@ -474,58 +492,70 @@ def generate_metrics_table(ophys_experiment_id, ophys_experiment_table, use_even
     return metrics_table
 
 
-def get_metrics_df_filename(ophys_experiment_id, condition, stimuli, session_subset, use_events):
+def get_metrics_df_filename(ophys_experiment_id, condition, stimuli, session_subset, use_events, filter_events):
     if use_events:
-        trace_type = 'events'
+        if filter_events:
+            trace_type = 'filtered_events'
+        else:
+            trace_type = 'events'
     else:
         trace_type = 'dFF'
     filename = 'experiment_id_' + str(ophys_experiment_id) + '_' + condition + '_' + stimuli + '_' + session_subset + '_' + trace_type
     return filename
 
 
-def get_metrics_df_filepath(ophys_experiment_id, condition, stimuli, session_subset, use_events):
-    import platform
-    if platform.system() == 'Linux':
-        save_dir = r'/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/single_cell_metrics'
-    else:
-        save_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\single_cell_metrics'
-    filename = get_metrics_df_filename(ophys_experiment_id, condition, stimuli, session_subset, use_events)
+def get_metrics_df_filepath(ophys_experiment_id, condition, stimuli, session_subset, use_events, filter_events):
+    # import platform
+    # if platform.system() == 'Linux':
+    #     save_dir = r'/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/single_cell_metrics'
+    # else:
+    #     save_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\single_cell_metrics'
+    save_dir = os.path.join(loading.get_platform_analysis_cache_dir(), 'single_cell_metrics')
+    filename = get_metrics_df_filename(ophys_experiment_id, condition, stimuli, session_subset, use_events, filter_events)
     filepath = os.path.join(save_dir, 'cell_metrics', filename + '.h5')
     return filepath
 
 
-def get_cell_metrics_table_for_experiment(ophys_experiment_id, condition, stimulus, session_subset, use_events):
+def get_cell_metrics_table_for_experiment(ophys_experiment_id, condition, stimulus, session_subset, use_events, filter_events):
     filepath = get_metrics_df_filepath(ophys_experiment_id, condition, stimulus,
-                                       session_subset, use_events)
+                                       session_subset, use_events, filter_events)
     metrics_table = pd.read_hdf(filepath, key='df')
     return metrics_table
 
 
-def load_cell_metrics_table_for_experiments(ophys_experiment_ids, condition, stimulus, session_subset, use_events):
-    import visual_behavior.data_access.loading as loading
-    ophys_experiment_table = loading.get_filtered_ophys_experiment_table(release_data_only=True)
+def load_cell_metrics_table_for_experiments(ophys_experiment_ids, condition, stimulus, session_subset, use_events, filter_events):
+    '''
+        Loads a cell metric table for cells in the ophys_experiment_ids
+        condition (str): change, omissions, images, or traces
+        session_subset (str): 'full_session', 'engaged', 'disengaged'
+        stimulus (str): 'all_images', 'pref_image'
+        use_events (bool)
+        filter_events (bool)
+    '''
+
+    cache_dir = loading.get_platform_analysis_cache_dir()
+    print(cache_dir)
+    cache = VisualBehaviorOphysProjectCache.from_s3_cache(cache_dir=cache_dir)
+    ophys_experiment_table = cache.get_ophys_experiment_table()
     ophys_experiment_table = loading.add_superficial_deep_to_experiments_table(ophys_experiment_table)
 
     problem_expts = []
     metrics_table = pd.DataFrame()
-    if ophys_experiment_ids == 'all_experiments':
+    if (type(ophys_experiment_ids) is str) and (ophys_experiment_ids == 'all_experiments'):
         try:
             metrics_table = get_cell_metrics_table_for_experiment(ophys_experiment_ids, condition, stimulus, session_subset,
-                                                                  use_events)
+                                                                  use_events, filter_events)
         except BaseException:
             print('problem for all experiments metrics table generation')
     else:
-        for ophys_experiment_id in ophys_experiment_ids:
-            print(np.where(ophys_experiment_ids == ophys_experiment_id)[0][0], 'out of', len(ophys_experiment_ids))
+        for ophys_experiment_id in tqdm(ophys_experiment_ids):
             try:
                 tmp = get_cell_metrics_table_for_experiment(ophys_experiment_id, condition, stimulus, session_subset,
-                                                            use_events)
+                                                            use_events, filter_events)
+                metrics_table = pd.concat([metrics_table, tmp])
             except BaseException:
                 print('problem for experiment', ophys_experiment_id)
                 problem_expts.append(ophys_experiment_id)
-            metrics_table = pd.concat([metrics_table, tmp])
-
-    metrics_table = metrics_table.merge(ophys_experiment_table, on=['ophys_experiment_id', 'ophys_session_id'])
 
     return metrics_table
 
@@ -536,7 +566,7 @@ if __name__ == '__main__':
 
     ophys_experiment_id = ophys_experiment_table.index[50]
     ophys_session_id = ophys_experiment_table.loc[ophys_experiment_id].ophys_session_id
-    dataset = loading.get_ophys_dataset(ophys_experiment_id, from_lims=False, from_nwb=False)
+    dataset = loading.get_ophys_dataset(ophys_experiment_id)
 
     analysis = ResponseAnalysis(dataset, use_extended_stimulus_presentations=True)
 

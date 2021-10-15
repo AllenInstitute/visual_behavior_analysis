@@ -225,11 +225,12 @@ class ResponseAnalysis(object):
                 stimulus_presentations.at[stimulus_presentations[stimulus_presentations.is_change].index, 'trials_id'] = trials[trials.stimulus_change].index.values
                 columns_to_keep = [
                     'trials_id',
-                    'bias',
-                    'omissions1',
-                    'task0',
-                    'timing1D',
-                    'engagement_state',
+                    'epoch',
+                    # 'bias',
+                    # 'omissions1',
+                    # 'task0',
+                    # 'timing1D',
+                    # 'engagement_state',
                     'licked',
                     'lick_on_next_flash',
                     'lick_on_previous_flash',
