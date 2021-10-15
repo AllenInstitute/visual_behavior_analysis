@@ -671,6 +671,9 @@ def generate_and_save_all_metrics_tables_for_all_experiments(ophys_experiment_ta
 
 
     ### trace metrics ###
+    stimulus = 'full_session'
+    session_subset = 'full_session'
+    condition = 'traces'
     for use_events in [True, False]:
         if use_events:
             for filter_events in [True, False]:
@@ -686,7 +689,7 @@ def generate_and_save_all_metrics_tables_for_all_experiments(ophys_experiment_ta
                         print(e)
 
                 filepath = get_metrics_df_filepath('all_experiments', condition=condition,
-                                                   stimuli=stimuli, session_subset=session_subset,
+                                                   stimuli=stimulus, session_subset=session_subset,
                                                    use_events=use_events, filter_events=filter_events)
                 if os.path.exists(filepath):
                     os.remove(filepath)
@@ -723,7 +726,7 @@ def generate_and_save_all_metrics_tables_for_all_experiments(ophys_experiment_ta
                                     print(e)
 
                                 filepath = get_metrics_df_filepath('all_experiments', condition=condition,
-                                                                   stimuli=stimuli, session_subset=session_subset,
+                                                                   stimuli=stimulus, session_subset=session_subset,
                                                                    use_events=use_events, filter_events=filter_events)
                                 if os.path.exists(filepath):
                                     os.remove(filepath)
