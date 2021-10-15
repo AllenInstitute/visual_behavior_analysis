@@ -445,11 +445,21 @@ def generate_trace_metrics_table(ophys_experiment_id, use_events=False, filter_e
     trace_metrics['use_events'] = use_events
     trace_metrics['filter_events'] = filter_events
 
+    if save:
+        filepath = get_metrics_df_filepath(ophys_experiment_id, condition='full_trace',
+                                           stimuli='full_session', session_subset='full_session',
+                                           use_events=use_events, filter_events=filter_events)
+        if os.path.exists(filepath):
+            os.remove(filepath)
+            print('h5 file exists for', ophys_experiment_id, ' - overwriting')
+        trace_metrics.to_hdf(filepath, key='df')
+        print('trace metrics saved for', ophys_experiment_id)
+
     return trace_metrics
 
 
 def generate_cell_metrics_table(ophys_experiment_id, use_events=False, filter_events=False,
-                           condition='changes', session_subset='full_session', stimuli='pref_image'):
+                           condition='changes', session_subset='full_session', stimuli='pref_image', save=False):
     """
     Creates cell metrics table based on stimulus locked activity
     Metrics include selectivity indices, mean image response, fano factor, fraction significant trials, etc
@@ -549,6 +559,16 @@ def generate_cell_metrics_table(ophys_experiment_id, use_events=False, filter_ev
     metrics_table['filter_events'] = filter_events
 
     metrics_table = metrics_table.rename(columns={'variable': 'metric'})
+
+    if save:
+        filepath = get_metrics_df_filepath(ophys_experiment_id, condition=condition,
+                                           stimuli=stimuli, session_subset=session_subset,
+                                           use_events=use_events, filter_events=filter_events)
+        if os.path.exists(filepath):
+            os.remove(filepath)
+            print('h5 file exists for', ophys_experiment_id, ' - overwriting')
+        metrics_table.to_hdf(filepath, key='df')
+        print('cell metrics saved for', ophys_experiment_id)
 
     return metrics_table
 
