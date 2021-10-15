@@ -354,7 +354,7 @@ def get_population_coupling_for_cell_specimen_ids(traces):
     return population_coupling
 
 
-def compute_trace_metrics(traces):
+def compute_trace_metrics(traces, ophys_frame_rate):
     if 'dff' in traces.columns:
         column = 'dff'
     elif 'filtered_events' in traces.columns:
@@ -365,6 +365,9 @@ def compute_trace_metrics(traces):
     traces["trace_std"] = traces[column].apply(lambda x: np.nanstd(x))
     traces["trace_max_over_std"] = traces["trace_max"] / traces["trace_std"]
     traces["trace_mean_over_std"] = traces["trace_mean"] / traces["trace_std"]
+
+    # traces["noise_level"] = traces[column].apply(lambda x:  np.median(np.abs(np.diff(x))) / np.sqrt(ophys_frame_rate))
+
     return traces
 
 
@@ -389,7 +392,7 @@ def compute_robust_snr_on_dataframe(dataframe, use_events=False, filter_events=F
     return dataframe
 
 
-def get_trace_metrics(traces, use_events=False, filter_events=False):
+def get_trace_metrics(traces, ophys_frame_rate, use_events=False, filter_events=False):
     """
     compute metrics on a set of cell traces, including SNR, mean etc
     traces input must be a dataframe with cell_specimen_id as index and 'dff', 'events' or 'filtered_events' as column
@@ -399,14 +402,14 @@ def get_trace_metrics(traces, use_events=False, filter_events=False):
     """
     import visual_behavior.data_access.processing as processing
     traces = compute_robust_snr_on_dataframe(traces, use_events, filter_events)
-    traces = compute_trace_metrics(traces)
+    traces = compute_trace_metrics(traces, ophys_frame_rate)
     # reorder
     trace_metrics = traces[['robust_signal', 'robust_noise', 'robust_snr', 'trace_max', 'trace_mean',
                             'trace_var', 'trace_std', 'trace_max_over_std', 'trace_mean_over_std']]
     return trace_metrics
 
 
-def generate_trace_metrics_table(ophys_experiment_id, use_events=False, filter_events=False):
+def generate_trace_metrics_table(ophys_experiment_id, use_events=False, filter_events=False, save=False):
     """
     Gets metrics computed over entire cell traces, such as trace SNR, population coupling,
     :param ophys_experiment_id: experiment identifier to compute metrics for
@@ -424,7 +427,8 @@ def generate_trace_metrics_table(ophys_experiment_id, use_events=False, filter_e
         traces = dataset.dff_traces.copy()
 
     # get standard trace metrics
-    trace_metrics = get_trace_metrics(traces, use_events, filter_events)
+    ophys_frame_rate = dataset.metadata['ophys_frame_rate']
+    trace_metrics = get_trace_metrics(traces, ophys_frame_rate, use_events, filter_events)
 
     # get population coupling across all cells full dff traces
     population_coupling = get_population_coupling_for_cell_specimen_ids(traces)
