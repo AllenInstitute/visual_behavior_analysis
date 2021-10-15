@@ -433,7 +433,7 @@ def svm_images_main_pbs(session_id, data_list, experiment_ids_valid, df_data, se
         svmn = f'{e}svm_decode_{to_decode}_image_from_{trial_type}' # 'svm_gray_omit'
     
     if use_matched_cells==123:
-        svmn = svmn + '_matched_cells_FN1Nn' #Familiar, N1, N+1
+        svmn = svmn + '_matched_cells_FN1N2' #'_matched_cells_FN1Nn' #Familiar, N1, N+1
     elif use_matched_cells==12:
         svmn = svmn + '_matched_cells_FN1'
     elif use_matched_cells==23:
@@ -688,7 +688,7 @@ def svm_images_main_pbs(session_id, data_list, experiment_ids_valid, df_data, se
     exp_ids = data_list['ophys_experiment_id'].values
 #     exp_ids = image_data['ophys_experiment_id'].unique() # get all the 8 experiments of a given session
 
-    date = image_data.iloc[0]['date_of_acquisition'][:10]
+    date = str(image_data.iloc[0]['date_of_acquisition'])[:10]
     cre = image_data.iloc[0]['cre_line']    
     stage = image_data.iloc[0]['session_type']
     experience_level = image_data.iloc[0]['experience_level']

@@ -12,6 +12,7 @@ Created on Thu Oct 9 12:29:43 2020
     
 import numpy as np
 import visual_behavior.data_access.loading as loading
+from visual_behavior.data_access import utilities
 import numpy as np
 import os
 # import pickle
@@ -19,7 +20,7 @@ import os
 
 #%% Define vars for svm_images analysis
 
-project_codes = 'VisualBehavior' #'VisualBehavior' # has to only include 1 project # project_codes : ['VisualBehaviorMultiscope', 'VisualBehaviorTask1B', 'VisualBehavior', 'VisualBehaviorMultiscope4areasx2d']
+project_codes = 'VisualBehaviorMultiscope' #'VisualBehavior' # has to only include 1 project # project_codes : ['VisualBehaviorMultiscope', 'VisualBehaviorTask1B', 'VisualBehavior', 'VisualBehaviorMultiscope4areasx2d']
 
 # Note: the variable names 'to_decode' and 'trial_type' are confusing. The names really only make sense when we are decoding images (ie when trial_type is images/changes/omissions), in which case they mean we are decoding to_decode image (eg current image) from trial_type (eg images); otherwise, to_decode is useless (we just default it to 'current') and trial_type indicates what was decoded from what (eg hits_vs_misses)
 to_decode = 'current' # 'current' (default): decode current image.    'previous': decode previous image.    'next': decode next image.     # remember for omissions, you cant do "current", bc there is no current image, it has to be previous or next!
@@ -67,15 +68,52 @@ experiments_table = experiments_table.reset_index('ophys_experiment_id')
 metadata_valid = experiments_table[experiments_table['project_code'].isin([project_codes])]
 metadata_valid = metadata_valid.sort_values('ophys_session_id')
 
-
 # Use the new list of sessions that are de-crosstalked and will be released in March 2021
-# metadata_meso_dir = '/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/meso_decrosstalk/meso_experiments_in_release.csv'
-# metadata_valid = pd.read_csv(metadata_meso_dir)
+list_all_sessions_valid = metadata_valid['ophys_session_id'].unique()
+# list_all_sessions_valid = sessions_ctDone
 
-sessions_ctDone = metadata_valid['ophys_session_id'].unique()
-# sessions_ctDone.shape
 
-list_all_sessions_valid = sessions_ctDone
+################################################################################################
+if use_matched_cells!=0: 
+
+    #%% get matched cells to redeine list of valid sessions
+
+    #%% New method: match across the following 3 experience levels: last familiar active; Novel 1; second novel active
+    # from Marina's notebook: visual_behavior_analysis/notebooks/211008_validate_filtering_criteria_and_check_exposure_number.ipynb
+
+    cells_table = loading.get_cell_table()
+    cells_table.shape
+
+    # limit to cells matched in all 3 experience levels, only considering last Familiar and second Novel active        df = utilities.limit_to_last_familiar_second_novel_active(cells_table) # important that this goes first
+    df = utilities.limit_to_last_familiar_second_novel_active(cells_table) # important that this goes first
+    df = utilities.limit_to_cell_specimen_ids_matched_in_all_experience_levels(df)
+
+    # Sanity checks:        
+    # count numbers of expts and cells¶
+    # there should be the same number of experiments for each experience level, and a similar number of cells        
+    # now the number of cell_specimen_ids AND the number of experiment_ids are the same across all 3 experience levels, because we have limited to only the last Familiar and first Novel active sessions
+    # this is the most conservative set of experiments and cells - matched cells across experience levels, only considering the most recent Familiar and Novel >1 sessions        
+
+#         utilities.count_mice_expts_containers_cells(df)
+    print(utilities.count_mice_expts_containers_cells(df)['n_cell_specimen_id'])
+
+    '''
+    # there are only 3 experience levels per container
+    df.groupby(['ophys_container_id', 'experience_level']).count().reset_index().groupby(['ophys_container_id']).count().experience_level.unique()        
+    # there should only be 1 experiment per experience level
+    df.groupby(['ophys_container_id', 'experience_level', 'ophys_experiment_id']).count().reset_index().groupby(['ophys_container_id', 'experience_level']).count().ophys_experiment_id.unique()
+    '''        
+
+    list_all_sessions_valid_matched = df[df['project_code']==project_codes]['ophys_session_id'].unique()
+
+    b = len(list_all_sessions_valid_matched) / len(list_all_sessions_valid)
+    print(f'{len(list_all_sessions_valid_matched)}/{len(list_all_sessions_valid)}, {b*100:.0f}% of {project_codes} sessions have matched cells in the 3 experience levels.')
+
+    
+    ### redefine list all sessions valid if using matched cells
+    list_all_sessions_valid = list_all_sessions_valid_matched
+
+    
 print(f'{len(list_all_sessions_valid)}: Number of de-crosstalked sessions for analysis')
 
 

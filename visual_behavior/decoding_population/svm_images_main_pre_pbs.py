@@ -100,7 +100,7 @@ def svm_images_main_pre_pbs(isess, project_codes, use_events, to_decode, trial_t
         print(f'Using all cells (not matched cells)')
     else:
         if use_matched_cells==123:
-            print(f'Matching cells across Familiar, Novel 1 & Novel >1 sessions')
+            print(f'Matching cells across Familiar, Novel 1 & Novel 2 sessions')
         else:
             if use_matched_cells==12: 
                 print(f'Matching cells across Familiar & Novel 1 sessions')
@@ -204,8 +204,14 @@ def svm_images_main_pre_pbs(isess, project_codes, use_events, to_decode, trial_t
     # import visual_behavior.data_access.loading as loading
 
     # use only those project codes that will be used for the paper
-    experiments_table = loading.get_platform_paper_experiment_table()
+    experiments_table = loading.get_platform_paper_experiment_table()    
+    experiments_table = experiments_table.reset_index('ophys_experiment_id')
     
+    # get those rows of experiments_table that are for a specific project code
+    metadata_valid = experiments_table[experiments_table['project_code']==project_codes]
+    metadata_valid = metadata_valid.sort_values('ophys_session_id')
+    
+    list_all_sessions_valid = metadata_valid['ophys_session_id'].unique()
     
     
     
@@ -222,33 +228,46 @@ def svm_images_main_pre_pbs(isess, project_codes, use_events, to_decode, trial_t
 
         # from Marina's notebook: visual_behavior_analysis/notebooks/211008_validate_filtering_criteria_and_check_exposure_number.ipynb
         
-        experiments_table = loading.get_platform_paper_experiment_table()
+#         experiments_table = loading.get_platform_paper_experiment_table()
         cells_table = loading.get_cell_table()
         cells_table.shape
 
         # limit to cells matched in all 3 experience levels, only considering last Familiar and second Novel active        df = utilities.limit_to_last_familiar_second_novel_active(cells_table) # important that this goes first
         df = utilities.limit_to_last_familiar_second_novel_active(cells_table) # important that this goes first
         df = utilities.limit_to_cell_specimen_ids_matched_in_all_experience_levels(df)
-                
-        '''
-        # Sanity checks:
-        
+           
+        # Sanity checks:        
         # count numbers of expts and cells¶
         # there should be the same number of experiments for each experience level, and a similar number of cells        
         # now the number of cell_specimen_ids AND the number of experiment_ids are the same across all 3 experience levels, because we have limited to only the last Familiar and first Novel active sessions
         # this is the most conservative set of experiments and cells - matched cells across experience levels, only considering the most recent Familiar and Novel >1 sessions        
-        utilities.count_mice_expts_containers_cells(df)
         
+#         utilities.count_mice_expts_containers_cells(df)
+        print(utilities.count_mice_expts_containers_cells(df)['n_cell_specimen_id'])
+        
+        '''
         # there are only 3 experience levels per container
         df.groupby(['ophys_container_id', 'experience_level']).count().reset_index().groupby(['ophys_container_id']).count().experience_level.unique()        
         # there should only be 1 experiment per experience level
         df.groupby(['ophys_container_id', 'experience_level', 'ophys_experiment_id']).count().reset_index().groupby(['ophys_container_id', 'experience_level']).count().ophys_experiment_id.unique()
         '''        
+
+        list_all_sessions_valid_matched = df[df['project_code']==project_codes]['ophys_session_id'].unique()
+#         b = len(list_all_sessions_valid_matched) / len(list_all_sessions_valid)
+#         print(f'{len(list_all_sessions_valid_matched)}/{len(list_all_sessions_valid)}, {b*100:.0f}% of {project_codes} sessions have matched cells in the 3 experience levels.')
+
+
+        ### redefine list all sessions valid if using matched cells.
+        list_all_sessions_valid = list_all_sessions_valid_matched
+        
+        matched_cells = df
+        
         
         
         #%% Old method: match across "sessions" (not experience levels)
-        # codes below are adapted from marina's notebook: https://gist.github.com/matchings/880aee8adf9c1c6c56e994df511c4c3d ######
         '''
+        # codes below are adapted from marina's notebook: https://gist.github.com/matchings/880aee8adf9c1c6c56e994df511c4c3d ######
+
         from allensdk.brain_observatory.behavior.behavior_project_cache import VisualBehaviorOphysProjectCache
         
         cache = VisualBehaviorOphysProjectCache.from_lims()
@@ -332,40 +351,10 @@ def svm_images_main_pre_pbs(isess, project_codes, use_events, to_decode, trial_t
 
     ################################################################################################
     ################################################################################################
-
-    a = df[df['project_code']==project_codes]['ophys_session_id'].unique()
-    b = len(a) / len(list_all_sessions_valid)
-    print(f'{len(a)}/{len(list_all_sessions_valid)}, {b:.2f} sessions have matched cells in the 3 experience levels.')
     
-    list_all_sessions_valid_matched = a
-    
-#     metadata_all = experiments_table[experiments_table['ophys_session_id'].isin(list_all_sessions_valid_matched)==True] # metadata_all = experiments_table[np.in1d(experiments_table['ophys_session_id'].values, list_all_sessions_valid)]
-#     metadata_all = metadata_all.sort_values('ophys_session_id')
-#     metadata_all.shape
-#     metadata_all.shape[0]/8
-
-
-    
-    
-    #############################
-    
-   
-    experiments_table = experiments_table.reset_index('ophys_experiment_id')
-    
-    # get those rows of experiments_table that are for a specific project code
-    metadata_valid = experiments_table[experiments_table['project_code']==project_codes]
-#     metadata_valid = experiments_table[experiments_table['project_code']==project_codes[0]] #'VisualBehaviorMultiscope'] # multiscope sessions
-    metadata_valid = metadata_valid.sort_values('ophys_session_id')
-    
-
-    # Use the new list of sessions that are de-crosstalked and will be released in March 2021
-    # metadata_meso_dir = '/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/meso_decrosstalk/meso_experiments_in_release.csv'
-    # metadata_valid = pd.read_csv(metadata_meso_dir)
-
-    list_all_sessions_valid = metadata_valid['ophys_session_id'].unique()
     print(f'{len(list_all_sessions_valid)}: Number of de-crosstalked sessions for analysis')
-
-
+    
+    
     
     ####################################################################################################################
     #### Set metadata_all : includes metadata for all the 8 experiments of a session, even if they are failed.
@@ -378,8 +367,8 @@ def svm_images_main_pre_pbs(isess, project_codes, use_events, to_decode, trial_t
 
     metadata_all = experiments_table[experiments_table['ophys_session_id'].isin(list_all_sessions_valid)==True] # metadata_all = experiments_table[np.in1d(experiments_table['ophys_session_id'].values, list_all_sessions_valid)]
     metadata_all = metadata_all.sort_values('ophys_session_id')
-    metadata_all.shape
-    metadata_all.shape[0]/8
+#     metadata_all.shape
+#     metadata_all.shape[0]/8
 
 
 
@@ -499,6 +488,7 @@ def svm_images_main_pre_pbs(isess, project_codes, use_events, to_decode, trial_t
 
     stimulus_response_df_allexp = pd.DataFrame()
 
+    
     for ophys_experiment_id in experiment_ids_this_session: # ophys_experiment_id = experiment_ids_this_session[0]
 
         if sum(np.in1d(experiment_ids_valid, int(ophys_experiment_id)))>0: # make sure lims_id is among the experiments in the data release
@@ -604,7 +594,7 @@ def svm_images_main_pre_pbs(isess, project_codes, use_events, to_decode, trial_t
     df_data = stimulus_response_df_allexp
     session_trials = np.nan # we need it as an input to the function
 
-    df_data0 = copy.deepcopy(df_data)
+    df_data0 = copy.deepcopy(df_data) # each row is for a given stimulus presentation
 
     
     ################################################################################
@@ -612,16 +602,18 @@ def svm_images_main_pre_pbs(isess, project_codes, use_events, to_decode, trial_t
     ################################################################################
     
     if use_matched_cells!=0:
-        
+                
+        # get cells for this session
         cells_to_keep = matched_cells[matched_cells['ophys_session_id']==session_id]['cell_specimen_id'].unique()
 
-        if len(cells_to_keep)==0:
+        if len(cells_to_keep)==0: # this should never happen because in svm_images_init we reset list all sessions valid to list all sessions valid matched; ie we only go through sessions that have matched cells
             sys.exit(f'Exiting analysis! No matched cells across 3 experience levels for session {session_id}!')
-        
+
+            
         a = df_data0['cell_specimen_id'].unique().shape[0]
         b = cells_to_keep.shape[0]
-        print(f'{b} matched cells out of {a}')
-        print(f'\n{b/a} of cells are matched in all 3 experience levels\n')
+        # note: the number below includes all experiments of a mesoscope session if analyzing a mesosocope session
+        print(f"\n{b}/{a}, {100*b/a:.0f}% of {data_list['cre_line'].iloc[0][:3]} cells in this session are matched in all 3 experience levels.\n")
 
         df_data = df_data0[df_data0['cell_specimen_id'].isin(cells_to_keep)]
 #         df_data0.shape, df_data.shape
@@ -678,7 +670,9 @@ def svm_images_main_pre_pbs(isess, project_codes, use_events, to_decode, trial_t
     #         0.48482431,  0.51714593,  0.54946755,  0.58178917,  0.61411079,
     #         0.64643241,  0.67875403,  0.71107565,  0.74339727])
 
+    
     trace_time = df_data.iloc[0]['trace_timestamps']
+    
     # set samps_bef and samps_aft: on the image-aligned traces, samps_bef frames were before the image, and samps_aft-1 frames were after the image
     samps_bef = np.argwhere(trace_time==0)[0][0] # 5
     samps_aft = len(trace_time)-samps_bef #8 
