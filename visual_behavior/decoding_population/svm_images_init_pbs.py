@@ -20,7 +20,7 @@ import os
 
 #%% Define vars for svm_images analysis
 
-project_codes = 'VisualBehaviorMultiscope' #'VisualBehavior' # has to only include 1 project # project_codes : ['VisualBehaviorMultiscope', 'VisualBehaviorTask1B', 'VisualBehavior', 'VisualBehaviorMultiscope4areasx2d']
+project_codes = 'VisualBehaviorTask1B' #'VisualBehavior' # has to only include 1 project # project_codes : ['VisualBehaviorMultiscope', 'VisualBehaviorTask1B', 'VisualBehavior', 'VisualBehaviorMultiscope4areasx2d']
 
 # Note: the variable names 'to_decode' and 'trial_type' are confusing. The names really only make sense when we are decoding images (ie when trial_type is images/changes/omissions), in which case they mean we are decoding to_decode image (eg current image) from trial_type (eg images); otherwise, to_decode is useless (we just default it to 'current') and trial_type indicates what was decoded from what (eg hits_vs_misses)
 to_decode = 'current' # 'current' (default): decode current image.    'previous': decode previous image.    'next': decode next image.     # remember for omissions, you cant do "current", bc there is no current image, it has to be previous or next!
@@ -122,6 +122,7 @@ print(f'{len(list_all_sessions_valid)}: Number of de-crosstalked sessions for an
     
 #%% Define slurm vars   
 
+# before running the code below, you need to run the following in the terminal: pip install simple_slurm
 from simple_slurm import Slurm
 
 # define the job record output folder

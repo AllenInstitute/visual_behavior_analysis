@@ -373,7 +373,7 @@ def svm_images_main_pre_pbs(isess, project_codes, use_events, to_decode, trial_t
 
 
     # set the list of all the 8 experiments for each session in list_all_sessions_valid
-    if project_codes == 'VisualBehavior':
+    if project_codes != 'VisualBehaviorMultiscope': #project_codes == 'VisualBehavior':
         list_all_experiments = metadata_all['ophys_experiment_id'].values
 
     else:
@@ -461,7 +461,7 @@ def svm_images_main_pre_pbs(isess, project_codes, use_events, to_decode, trial_t
     # sort by area and depth
     data_list = data_list.sort_values(by=['targeted_structure', 'imaging_depth'])
 
-    if project_codes == 'VisualBehavior':
+    if project_codes != 'VisualBehaviorMultiscope':
         experiment_ids_this_session = [experiment_ids]
     else:
         experiment_ids_this_session = experiment_ids
