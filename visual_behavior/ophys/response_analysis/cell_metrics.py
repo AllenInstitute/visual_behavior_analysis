@@ -315,7 +315,9 @@ def get_hit_miss_modulation_index_for_group(group):
 
 def get_hit_miss_modulation_index(stimulus_response_df):
     """
-
+    computes diff over sum of hit trials vs. miss trials for each cell in stimulus_response_df.
+    stimulus_response_df must have a columns 'is_change', and 'licked'
+    returns a dataframe with column 'hit_miss_index' with computed value for each cell_specimen_id in stimulus_response_df
     """
     stimulus_response_df['hit'] = [True if (stimulus_response_df.iloc[row].is_change == True and stimulus_response_df.iloc[row].licked == True) else False for row in range(len(stimulus_response_df))]
     hit_miss_index = stimulus_response_df.groupby(['cell_specimen_id', 'hit']).mean()[['mean_response']].reset_index().groupby('cell_specimen_id').apply(get_hit_miss_modulation_index_for_group)
@@ -366,24 +368,63 @@ def compute_trace_metrics(traces):
     return traces
 
 
-def get_trace_metrics(traces):
+def compute_robust_snr_on_dataframe(dataframe, use_events=False, filter_events=False):
+    """takes a dataframe with cell_specimen_id as index and dff, events, or filtered_events as columns
+       and computes robust signal, noise and snr metrics
+       These metrics are borrowed from event detection code
+    Returns:
+        dataframe -- input dataframe but with the following columns added: "robust_noise", "robust_signal", "robust_snr"
+    """
     import visual_behavior.data_access.processing as processing
-    traces = processing.compute_robust_snr_on_dataframe(traces)
+    if use_events:
+        if filter_events:
+            column = 'filtered_events'
+        else:
+            column = 'events'
+    else:
+        column = 'dff'
+    dataframe["robust_noise"] = dataframe[column].apply(lambda x: processing.dff_robust_noise(x))
+    dataframe["robust_signal"] = dataframe.apply(lambda x: processing.dff_robust_signal(x[column], x["robust_noise"]), axis=1 )
+    dataframe["robust_snr"] = dataframe["robust_signal"] / dataframe["robust_noise"]
+    return dataframe
+
+
+def get_trace_metrics(traces, use_events=False, filter_events=False):
+    """
+    compute metrics on a set of cell traces, including SNR, mean etc
+    traces input must be a dataframe with cell_specimen_id as index and 'dff', 'events' or 'filtered_events' as column
+    Note that 'compute_robust_snr_on_dataframe' does not appear to work on events or filtered events, potentially due to so many zeros?
+    :param traces:
+    :return:
+    """
+    import visual_behavior.data_access.processing as processing
+    traces = compute_robust_snr_on_dataframe(traces, use_events, filter_events)
     traces = compute_trace_metrics(traces)
+    # reorder
     trace_metrics = traces[['robust_signal', 'robust_noise', 'robust_snr', 'trace_max', 'trace_mean',
                             'trace_var', 'trace_std', 'trace_max_over_std', 'trace_mean_over_std']]
     return trace_metrics
 
 
-def get_trace_metrics_table(ophys_experiment_id, ophys_experiment_table, use_events=False, filter_events=False):
-    ophys_session_id = ophys_experiment_table.loc[ophys_experiment_id].ophys_session_id
+def generate_trace_metrics_table(ophys_experiment_id, use_events=False, filter_events=False):
+    """
+    Gets metrics computed over entire cell traces, such as trace SNR, population coupling,
+    :param ophys_experiment_id: experiment identifier to compute metrics for
+    :param use_events: Boolean
+    :param filter_events: Boolean
+    :return:
+    """
+    print('generating trace metrics for', ophys_experiment_id)
+
     dataset = loading.get_ophys_dataset(ophys_experiment_id)
 
     if use_events:
         traces = dataset.events.copy()
     else:
         traces = dataset.dff_traces.copy()
-    trace_metrics = get_trace_metrics(traces)
+
+    # get standard trace metrics
+    trace_metrics = get_trace_metrics(traces, use_events, filter_events)
 
     # get population coupling across all cells full dff traces
     population_coupling = get_population_coupling_for_cell_specimen_ids(traces)
@@ -391,22 +432,35 @@ def get_trace_metrics_table(ophys_experiment_id, ophys_experiment_table, use_eve
     trace_metrics = trace_metrics.merge(population_coupling, on='cell_specimen_id')
 
     trace_metrics['ophys_experiment_id'] = ophys_experiment_id
-    trace_metrics['ophys_session_id'] = ophys_session_id
 
     trace_metrics = trace_metrics.reset_index()
     # trace_metrics = trace_metrics.melt(id_vars=['cell_specimen_id', 'ophys_experiment_id', 'ophys_session_id'])
     trace_metrics['condition'] = 'full_trace'
     trace_metrics['session_subset'] = 'full_session'
-    trace_metrics['stimuli'] = 'None'
-    trace_metrics['events'] = use_events
+    trace_metrics['stimuli'] = 'full_session'
+    trace_metrics['use_events'] = use_events
+    trace_metrics['filter_events'] = filter_events
 
     return trace_metrics
 
 
-def generate_metrics_table(ophys_experiment_id, ophys_experiment_table, use_events=False, filter_events=False,
+def generate_cell_metrics_table(ophys_experiment_id, use_events=False, filter_events=False,
                            condition='changes', session_subset='full_session', stimuli='pref_image'):
+    """
+    Creates cell metrics table based on stimulus locked activity or full traces
+    Metrics include selectivity indices, mean image response, fano factor, fraction significant trials, SNR etc
+    To get trace metrics,
+    :param ophys_experiment_id: unique identifier for experiment
+    :param condition: 'changes', 'omissions', 'images', or 'full_trace'
+    :param stimulus: 'all_images', 'pref_image', or 'full_session'
+    :param session_subset: 'engaged', 'disengaged', or 'full_session'
+    :param use_events: Boolean
+    :param filter_events: Boolean
+    :return:
+    """
 
-    ophys_session_id = ophys_experiment_table.loc[int(ophys_experiment_id)].ophys_session_id
+    print('generating cell metrics for', ophys_experiment_id)
+
     dataset = loading.get_ophys_dataset(ophys_experiment_id)
 
     analysis = ResponseAnalysis(dataset, use_extended_stimulus_presentations=True, use_events=use_events, filter_events=filter_events)
@@ -478,14 +532,14 @@ def generate_metrics_table(ophys_experiment_id, ophys_experiment_table, use_even
     if condition == 'changes':
         metrics_table = metrics_table.merge(hit_miss_modulation_index, on='cell_specimen_id')
     metrics_table['ophys_experiment_id'] = ophys_experiment_id
-    metrics_table['ophys_session_id'] = ophys_session_id
 
     metrics_table = metrics_table.reset_index()
     # metrics_table = metrics_table.melt(id_vars=['cell_specimen_id', 'ophys_experiment_id', 'ophys_session_id'])
     metrics_table['condition'] = condition
     metrics_table['session_subset'] = session_subset
     metrics_table['stimuli'] = stimuli
-    metrics_table['events'] = use_events
+    metrics_table['use_events'] = use_events
+    metrics_table['filter_events'] = filter_events
 
     metrics_table = metrics_table.rename(columns={'variable': 'metric'})
 
@@ -493,6 +547,16 @@ def generate_metrics_table(ophys_experiment_id, ophys_experiment_table, use_even
 
 
 def get_metrics_df_filename(ophys_experiment_id, condition, stimuli, session_subset, use_events, filter_events):
+    """
+    gets standard filename given a set of conditions, stimuli, etc.
+    :param ophys_experiment_id: unique identifier for experiment, or 'all_experiments' to get all experiments from a single file
+    :param condition: 'changes', 'omissions', 'images', or 'traces'
+    :param stimulus: 'all_images', 'pref_image',
+    :param session_subset: 'full_session', 'engaged', 'disengaged'
+    :param use_events: Boolean
+    :param filter_events: Boolean
+    :return:
+    """
     if use_events:
         if filter_events:
             trace_type = 'filtered_events'
@@ -565,23 +629,22 @@ if __name__ == '__main__':
     ophys_experiment_table = loading.get_filtered_ophys_experiment_table(release_data_only=True)
 
     ophys_experiment_id = ophys_experiment_table.index[50]
-    ophys_session_id = ophys_experiment_table.loc[ophys_experiment_id].ophys_session_id
     dataset = loading.get_ophys_dataset(ophys_experiment_id)
-
-    analysis = ResponseAnalysis(dataset, use_extended_stimulus_presentations=True)
-
-    sdf = analysis.get_response_df(df_name='stimulus_response_df')
 
     condition = 'changes'
     session_subset = 'full_session'
     stimuli = 'all_images'
 
-    metrics_table = generate_metrics_table(ophys_experiment_id, ophys_experiment_table, use_events=True,
+
+    # to get metrics table for a single experiment and set of conditions (does not save anything, just returns tables)
+    cell_metrics_table = generate_cell_metrics_table(ophys_experiment_id, ophys_experiment_table, use_events=True, filter_events=False,
                                            condition=condition, session_subset=session_subset, stimuli=stimuli)
 
-    trace_metrics = get_trace_metrics_table(ophys_experiment_id, ophys_experiment_table, use_events=False)
+    trace_metrics = generate_trace_metrics_table(ophys_experiment_id, use_events=False, filter_events=False)
 
     metrics_table = pd.concat([metrics_table, trace_metrics])
 
-    save_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\single_cell_metrics'
-    # metrics_table.to_hdf(os.path.join(save_dir, 'cell_metrics', 'experiment_id' + str(ophys_experiment_id) + '.h5'), key='df')
+    # to generate and save metrics tables for all possible conditions for a single experiment
+    generate_and_save_all_metrics_tables_for_experiment(ophys_experiment_id)
+
+    # to generate and save metrics tables for all experiments, all conditions
