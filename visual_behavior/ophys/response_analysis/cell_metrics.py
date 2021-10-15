@@ -468,7 +468,7 @@ def generate_cell_metrics_table(ophys_experiment_id, use_events=False, filter_ev
     in loading.get_ophys_dataset() to be able to be used here.
     :param ophys_experiment_id: unique identifier for experiment
     :param condition: 'changes', 'omissions', 'images'
-    :param stimulus: 'all_images', 'pref_image'
+    :param stimuli: 'all_images', 'pref_image'
     :param session_subset: 'engaged', 'disengaged', or 'full_session'
     :param use_events: Boolean
     :param filter_events: Boolean
@@ -760,29 +760,29 @@ def generate_and_save_all_metrics_tables_for_all_experiments(ophys_experiment_ta
 
 
 
-def load_metrics_table_for_experiment(ophys_experiment_id, condition, stimulus, session_subset, use_events, filter_events):
+def load_metrics_table_for_experiment(ophys_experiment_id, condition, stimuli, session_subset, use_events, filter_events):
     """
     Loads metrics table from file, either cell metrics (stimulus locked metrics) or full trace metrics, depending on provided conditions
     :param ophys_experiment_id: unique identifier for experiment, or 'all_experiments' to get all experiments from a single file
     :param condition: 'changes', 'omissions', 'images', or 'traces'
-    :param stimulus: 'all_images', 'pref_image', or 'full_session' (for 'traces')
+    :param stimuli: 'all_images', 'pref_image', or 'full_session' (for 'traces')
     :param session_subset: 'engaged', 'disengaged', or 'full_session' (for traces or cell metrics)
     :param use_events: Boolean
     :param filter_events: Boolean
     :return: metrics table
     """
-    filepath = get_metrics_df_filepath(ophys_experiment_id, condition, stimulus,
+    filepath = get_metrics_df_filepath(ophys_experiment_id, condition, stimuli,
                                        session_subset, use_events, filter_events)
     metrics_table = pd.read_hdf(filepath, key='df')
     return metrics_table
 
 
-def load_metrics_table_for_experiments(ophys_experiment_ids, condition, stimulus, session_subset, use_events, filter_events):
+def load_metrics_table_for_experiments(ophys_experiment_ids, condition, stimuli, session_subset, use_events, filter_events):
     '''
     Loads a metrics table, either cell metrics (stimulus locked) or full trace metrics for multiple experiments
     ophys_experiment_ids: unique identifier for experiment or 'all_experiments' to load table from single file for all expts
     :param condition: 'changes', 'omissions', 'images', or 'traces'
-    :param stimulus: 'all_images', 'pref_image', or 'full_session' (for 'traces')
+    :param stimuli: 'all_images', 'pref_image', or 'full_session' (for 'traces')
     :param session_subset: 'engaged', 'disengaged', or 'full_session' (for traces or cell metrics)
     use_events (bool)
     filter_events (bool)
@@ -792,14 +792,14 @@ def load_metrics_table_for_experiments(ophys_experiment_ids, condition, stimulus
     metrics_table = pd.DataFrame()
     if (type(ophys_experiment_ids) is str) and (ophys_experiment_ids == 'all_experiments'):
         try:
-            metrics_table = load_metrics_table_for_experiment(ophys_experiment_ids, condition, stimulus, session_subset,
+            metrics_table = load_metrics_table_for_experiment(ophys_experiment_ids, condition, stimuli, session_subset,
                                                                   use_events, filter_events)
         except BaseException:
             print('problem for all experiments metrics table generation')
     else:
         for ophys_experiment_id in tqdm(ophys_experiment_ids):
             try:
-                tmp = load_metrics_table_for_experiment(ophys_experiment_id, condition, stimulus, session_subset,
+                tmp = load_metrics_table_for_experiment(ophys_experiment_id, condition, stimuli, session_subset,
                                                             use_events, filter_events)
                 metrics_table = pd.concat([metrics_table, tmp])
             except BaseException:
