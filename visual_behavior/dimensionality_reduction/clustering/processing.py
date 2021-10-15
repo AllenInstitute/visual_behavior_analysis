@@ -2,8 +2,8 @@ from sklearn.metrics import silhouette_score
 # from sklearn.cluster import KMeans
 from sklearn.cluster import SpectralClustering
 import numpy as np
-from multiprocessing import Pool
-pool = Pool(processes=5)
+import pickle
+import os
 
 def get_silhouette_scores(X, model=SpectralClustering, n_clusters=np.arange(2, 10), metric='euclidean', n_boots=20):
     '''
@@ -22,7 +22,8 @@ def get_silhouette_scores(X, model=SpectralClustering, n_clusters=np.arange(2, 1
     for n_cluster in n_clusters:
         s_tmp = []
         for n_boot in range(0, n_boots):
-            md = model(n_clusters=n_cluster).fit(X)
+            model.n_clusters=n_cluster
+            md = model.fit(X)
             try:
                 labels = md.labels_
             except AttributeError:
@@ -72,3 +73,17 @@ def get_coClust_matrix(X, model = SpectralClustering, nboot = np.arange(100), n_
             this_coClust_matrix.append(labels[j] == id)
         coClust_matrix.append(np.sum(this_coClust_matrix, axis=0) / max(nboot))
     return coClust_matrix
+
+
+def save_clustering_results(data, filename_string):
+    '''
+    for HCP scripts to save output of spectral clustering in a specific folder
+    :param data: what to save
+    :param filename_string: name of the file, use as descriptive info as possible
+    :return:
+    '''
+    path = r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/summary_plots/glm/SpectralClustering/files'
+    filename = os.path.join(path, '{}.pkl'.format(filename_string))
+    with open(filename, 'wb') as f:
+        pickle.dump(data, f)
+    f.close()
