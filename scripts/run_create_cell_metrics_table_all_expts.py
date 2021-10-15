@@ -4,7 +4,7 @@ from simple_slurm import Slurm
 
 parser = argparse.ArgumentParser(description='run cell metrics generation functions on the cluster')
 parser.add_argument('--env', type=str, default='visual_behavior_sdk', metavar='name of conda environment to use')
-parser.add_argument('--scriptname', type=str, default='create_cell_metrics_table.py', metavar='name of script to run (must be in same folder)')
+parser.add_argument('--scriptname', type=str, default='create_cell_metrics_table_all_expts.py', metavar='name of script to run (must be in same folder)')
 
 
 if __name__ == "__main__":
