@@ -465,13 +465,7 @@ def generate_cell_metrics_table(ophys_experiment_id, use_events=False, filter_ev
 
     dataset = loading.get_ophys_dataset(ophys_experiment_id)
 
-    if session_subset in ['engaged', 'disengaged']:
-        use_extended_stimulus_presentations = True
-    else:
-        use_extended_stimulus_presentations = False
-
-    analysis = ResponseAnalysis(dataset, use_extended_stimulus_presentations=use_extended_stimulus_presentations,
-                                use_events=use_events, filter_events=filter_events)
+    analysis = ResponseAnalysis(dataset, use_extended_stimulus_presentations=True, use_events=use_events, filter_events=filter_events)
     sdf = analysis.get_response_df(df_name='stimulus_response_df')
 
     if condition == 'changes':
@@ -483,12 +477,13 @@ def generate_cell_metrics_table(ophys_experiment_id, use_events=False, filter_ev
     elif condition == 'images':
         df = sdf[sdf.omitted == False]
 
+    df['engaged'] = [True if reward_rate>=2 else False for reward_rate in df.reward_rate.values]
     if 'passive' in dataset.metadata['session_type']:
         df['engaged'] = False
     if session_subset == 'engaged':
-        df = df[df.reward_rate >= 2]
+        df = df[df['engaged']==True]
     elif session_subset == 'disengaged':
-        df = df[df.reward_rate < 2]
+        df = df[df['engaged']==False]
 
     df = df.reset_index(drop=True)
 
