@@ -15,11 +15,8 @@ if __name__ == '__main__':
     ophys_experiment_table = loading.get_filtered_ophys_experiment_table(release_data_only=True)
     ophys_experiment_ids = ophys_experiment_table.index.values
 
-    import platform
-    if platform.system() == 'Linux':
-        save_dir = r'/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/single_cell_metrics'
-    else:
-        save_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\single_cell_metrics'
+    cache_dir = loading.get_platform_analysis_cache_dir()
+    print(cache_dir)
 
     ### trace metrics ###
     for use_events in [False]:
@@ -35,7 +32,7 @@ if __name__ == '__main__':
                 print('trace metrics not generated for', ophys_experiment_id)
                 print(e)
         filename = cell_metrics.get_metrics_df_filename('all_experiments', 'traces', 'none', 'full_session', use_events)
-        filepath = os.path.join(save_dir, 'cell_metrics', filename + '.h5')
+        filepath = os.path.join(cache_dir, ,'cell_metrics', filename + '.h5')
         if os.path.exists(filepath):
             os.remove(filepath)
             print('h5 file exists for', ophys_experiment_id, ' - overwriting')
