@@ -447,12 +447,14 @@ def generate_trace_metrics_table(ophys_experiment_id, use_events=False, filter_e
 def generate_cell_metrics_table(ophys_experiment_id, use_events=False, filter_events=False,
                            condition='changes', session_subset='full_session', stimuli='pref_image'):
     """
-    Creates cell metrics table based on stimulus locked activity or full traces
-    Metrics include selectivity indices, mean image response, fano factor, fraction significant trials, SNR etc
-    To get trace metrics,
+    Creates cell metrics table based on stimulus locked activity
+    Metrics include selectivity indices, mean image response, fano factor, fraction significant trials, etc
+    NOTE: session_subset = 'engaged' or 'disengaged' currently uses reward rate as engagement metric
+    The engagement_state from the behavior model will need to be added to the extended_stimulus_presentations table
+    in loading.get_ophys_dataset() to be able to be used here.
     :param ophys_experiment_id: unique identifier for experiment
-    :param condition: 'changes', 'omissions', 'images', or 'full_trace'
-    :param stimulus: 'all_images', 'pref_image', or 'full_session'
+    :param condition: 'changes', 'omissions', 'images'
+    :param stimulus: 'all_images', 'pref_image'
     :param session_subset: 'engaged', 'disengaged', or 'full_session'
     :param use_events: Boolean
     :param filter_events: Boolean
@@ -463,11 +465,17 @@ def generate_cell_metrics_table(ophys_experiment_id, use_events=False, filter_ev
 
     dataset = loading.get_ophys_dataset(ophys_experiment_id)
 
-    analysis = ResponseAnalysis(dataset, use_extended_stimulus_presentations=True, use_events=use_events, filter_events=filter_events)
+    if session_subset in ['engaged', 'disengaged']:
+        use_extended_stimulus_presentations = True
+    else:
+        use_extended_stimulus_presentations = False
+
+    analysis = ResponseAnalysis(dataset, use_extended_stimulus_presentations=use_extended_stimulus_presentations,
+                                use_events=use_events, filter_events=filter_events)
     sdf = analysis.get_response_df(df_name='stimulus_response_df')
 
     if condition == 'changes':
-        df = sdf[sdf.change == True]
+        df = sdf[sdf.is_change == True]
     elif condition == 'omissions':
         df = sdf[sdf.omitted == True]
         # use next image name for computing pref image, selectivity, etc.
@@ -564,57 +572,212 @@ def get_metrics_df_filename(ophys_experiment_id, condition, stimuli, session_sub
             trace_type = 'events'
     else:
         trace_type = 'dFF'
-    filename = 'experiment_id_' + str(ophys_experiment_id) + '_' + condition + '_' + stimuli + '_' + session_subset + '_' + trace_type
+    filename = str(ophys_experiment_id) + '_' + condition + '_' + stimuli + '_' + session_subset + '_' + trace_type
     return filename
 
 
 def get_metrics_df_filepath(ophys_experiment_id, condition, stimuli, session_subset, use_events, filter_events):
-    # import platform
-    # if platform.system() == 'Linux':
-    #     save_dir = r'/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/single_cell_metrics'
-    # else:
-    #     save_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\single_cell_metrics'
-    save_dir = os.path.join(loading.get_platform_analysis_cache_dir(), 'single_cell_metrics')
+    """
+    gets standard filepath given a set of conditions, stimuli, etc.
+    :param ophys_experiment_id: unique identifier for experiment, or 'all_experiments' to get all experiments from a single file
+    :param condition: 'changes', 'omissions', 'images', or 'traces'
+    :param stimulus: 'all_images', 'pref_image',
+    :param session_subset: 'full_session', 'engaged', 'disengaged'
+    :param use_events: Boolean
+    :param filter_events: Boolean
+    :return:
+    """
+    cache_dir = os.path.join(loading.get_platform_analysis_cache_dir())
+    save_dir = os.path.join(cache_dir, 'cell_metrics')
+    if not os.path.exists(save_dir):
+        os.mkdir(save_dir)
     filename = get_metrics_df_filename(ophys_experiment_id, condition, stimuli, session_subset, use_events, filter_events)
-    filepath = os.path.join(save_dir, 'cell_metrics', filename + '.h5')
+    filepath = os.path.join(save_dir, filename + '.h5')
     return filepath
 
 
-def get_cell_metrics_table_for_experiment(ophys_experiment_id, condition, stimulus, session_subset, use_events, filter_events):
+def generate_and_save_all_metrics_tables_for_experiment(ophys_experiment_id):
+    """
+    For a single ophys_experiment_id, creates trace and cell (stimulus locked) metrics
+    for all possible combinations of scenarios one might want to analyze, including:
+    condition: 'changes', 'omissions', 'images', or 'traces'
+    stimulus: 'all_images', 'pref_image',
+    session_subset: 'full_session', 'engaged', 'disengaged'
+    conditions include events, filtered_events and dff
+    use_events: [True, False], when use_events=True, also go through filter_events=[True, False]
+
+    :param ophys_experiment_id: unique experiment identifier
+    :return:
+    """
+
+    ### trace metrics ###
+    for use_events in [True, False]:
+        if use_events:
+            for filter_events in [True, False]:
+                try:
+                    trace_metrics = generate_trace_metrics_table(ophys_experiment_id,
+                                                                         use_events=use_events, filter_events=filter_events)
+                    filepath = get_metrics_df_filepath(ophys_experiment_id, condition='traces',
+                                                                    stimuli='full_session', session_subset='full_session',
+                                                                    use_events=use_events, filter_events=filter_events)
+                    if os.path.exists(filepath):
+                        os.remove(filepath)
+                        print('h5 file exists for', ophys_experiment_id, ' - overwriting')
+                    trace_metrics.to_hdf(filepath, key='df')
+                    print('trace metrics saved for', ophys_experiment_id)
+                except Exception as e:
+                    print('metrics not generated for trace_metrics for experiment', ophys_experiment_id)
+                    print(e)
+
+    ### event locked response metrics ###
+    conditions = ['changes', 'omissions', 'images']
+    stimuli = ['all_images', 'pref_image']
+    session_subsets = ['engaged', 'disengaged', 'full_session']
+
+    metrics_df = pd.DataFrame()
+    for condition in conditions:
+        for stimulus in stimuli:
+            for session_subset in session_subsets:
+                for use_events in [True, False]:
+                    for filter_events in [True, False]:
+                        # need try except because code will not always run, such as in the case of passive sessions (no trials that are 'engaged')
+                        # or loops where use_events = False and filter_events = True
+                        try:
+                            metrics_df = generate_cell_metrics_table(ophys_experiment_id,
+                                                                             use_events=use_events, filter_events=filter_events,
+                                                                             condition=condition, session_subset=session_subset,
+                                                                             stimuli=stimulus)
+
+                            filepath = get_metrics_df_filepath(ophys_experiment_id, condition=condition,
+                                                               stimuli=stimulus, session_subset=session_subset,
+                                                               use_events=use_events, filter_events=filter_events)
+                            if os.path.exists(filepath):
+                                os.remove(filepath)
+                                print('h5 file exists for', ophys_experiment_id, ' - overwriting')
+                            metrics_df.to_hdf(filepath, key='df')
+                            print('metrics generated for', condition, stimulus, session_subset,
+                                  'use_events', use_events, 'filter_events', filter_events, )
+
+                        except Exception as e:
+                            print('metrics not generated for experiment_id', ophys_experiment_id,
+                                  'condition', condition, 'stimulus', stimulus,
+                                  'session_subset', session_subset, 'use_events', use_events, 'filter_events', filter_events, )
+                            print(e)
+
+
+def generate_and_save_all_metrics_tables_for_all_experiments(ophys_experiment_table):
+    """
+    creates full trace and cell (stimulus locked) metrics dataframes for all possible scenarios (dff, events, pref stim, all stim etc)
+    for all ophys_experiment_ids in the provided ophys_experiment_table
+    CAUTION: this is very slow and should only be done on the cluster via the script create_cell_metrics_table_all_experiments.py
+    :param ophys_experiment_table:
+    :return:
+    """
+
+
+    ### trace metrics ###
+    for use_events in [True, False]:
+        if use_events:
+            for filter_events in [True, False]:
+                metrics_df = pd.DataFrame()
+                for ophys_experiment_id in ophys_experiment_table.index:
+                    try:
+                        trace_metrics = generate_trace_metrics_table(ophys_experiment_id,
+                                                                     use_events=use_events, filter_events=filter_events)
+                        metrics_df = pd.concat([metrics_df, trace_metrics])
+
+                    except Exception as e:
+                        print('metrics not generated for trace_metrics for experiment', ophys_experiment_id)
+                        print(e)
+
+                filepath = get_metrics_df_filepath('all_experiments', condition=condition,
+                                                   stimuli=stimuli, session_subset=session_subset,
+                                                   use_events=use_events, filter_events=filter_events)
+                if os.path.exists(filepath):
+                    os.remove(filepath)
+                    print('h5 file exists for all experiments  - overwriting')
+                metrics_df.to_hdf(filepath, key='df')
+                print('trace metrics saved for all experiments')
+
+    ### event locked response metrics ###
+    conditions = ['changes', 'omissions', 'images']
+    stimuli = ['all_images', 'pref_image']
+    session_subsets = ['engaged', 'disengaged', 'full_session']
+
+    metrics_df = pd.DataFrame()
+    for condition in conditions:
+        for stimulus in stimuli:
+            for session_subset in session_subsets:
+                for use_events in [True, False]:
+                    if use_events:
+                        for filter_events in [True, False]:
+                            metrics_df = pd.DataFrame()
+                            for ophys_experiment_id in ophys_experiments_table.index:
+                                try:  # code will not always run, such as in the case of passive sessions (no trials that are 'engaged')
+                                    cell_metrics = cell_metrics.generate_cell_metrics_table(ophys_experiment_id,
+                                                                                          use_events=use_events,
+                                                                                          filter_events=filter_events,
+                                                                                          condition=condition,
+                                                                                          session_subset=session_subset,
+                                                                                          stimuli=stimulus)
+
+                                    metrics_df = pd.concat([metrics_df, cell_metrics])
+                                except Exception as e:
+                                    print('metrics not generated for', condition, stimulus, session_subset, use_events,
+                                          filter_events, ophys_experiment_id)
+                                    print(e)
+
+                                filepath = get_metrics_df_filepath('all_experiments', condition=condition,
+                                                                   stimuli=stimuli, session_subset=session_subset,
+                                                                   use_events=use_events, filter_events=filter_events)
+                                if os.path.exists(filepath):
+                                    os.remove(filepath)
+                                    print('h5 file exists for cell metrics all experiments  - overwriting')
+                                metrics_df.to_hdf(filepath, key='df')
+                                print('cell metrics saved for all experiments')
+
+
+
+def load_metrics_table_for_experiment(ophys_experiment_id, condition, stimulus, session_subset, use_events, filter_events):
+    """
+    Loads metrics table from file, either cell metrics (stimulus locked metrics) or full trace metrics, depending on provided conditions
+    :param ophys_experiment_id: unique identifier for experiment, or 'all_experiments' to get all experiments from a single file
+    :param condition: 'changes', 'omissions', 'images', or 'traces'
+    :param stimulus: 'all_images', 'pref_image', or 'full_session' (for 'traces')
+    :param session_subset: 'engaged', 'disengaged', or 'full_session' (for traces or cell metrics)
+    :param use_events: Boolean
+    :param filter_events: Boolean
+    :return: metrics table
+    """
     filepath = get_metrics_df_filepath(ophys_experiment_id, condition, stimulus,
                                        session_subset, use_events, filter_events)
     metrics_table = pd.read_hdf(filepath, key='df')
     return metrics_table
 
 
-def load_cell_metrics_table_for_experiments(ophys_experiment_ids, condition, stimulus, session_subset, use_events, filter_events):
+def load_metrics_table_for_experiments(ophys_experiment_ids, condition, stimulus, session_subset, use_events, filter_events):
     '''
-        Loads a cell metric table for cells in the ophys_experiment_ids
-        condition (str): change, omissions, images, or traces
-        session_subset (str): 'full_session', 'engaged', 'disengaged'
-        stimulus (str): 'all_images', 'pref_image'
-        use_events (bool)
-        filter_events (bool)
+    Loads a metrics table, either cell metrics (stimulus locked) or full trace metrics for multiple experiments
+    ophys_experiment_ids: unique identifier for experiment or 'all_experiments' to load table from single file for all expts
+    :param condition: 'changes', 'omissions', 'images', or 'traces'
+    :param stimulus: 'all_images', 'pref_image', or 'full_session' (for 'traces')
+    :param session_subset: 'engaged', 'disengaged', or 'full_session' (for traces or cell metrics)
+    use_events (bool)
+    filter_events (bool)
     '''
-
-    cache_dir = loading.get_platform_analysis_cache_dir()
-    print(cache_dir)
-    cache = VisualBehaviorOphysProjectCache.from_s3_cache(cache_dir=cache_dir)
-    ophys_experiment_table = cache.get_ophys_experiment_table()
-    ophys_experiment_table = loading.add_superficial_deep_to_experiments_table(ophys_experiment_table)
 
     problem_expts = []
     metrics_table = pd.DataFrame()
     if (type(ophys_experiment_ids) is str) and (ophys_experiment_ids == 'all_experiments'):
         try:
-            metrics_table = get_cell_metrics_table_for_experiment(ophys_experiment_ids, condition, stimulus, session_subset,
+            metrics_table = load_metrics_table_for_experiment(ophys_experiment_ids, condition, stimulus, session_subset,
                                                                   use_events, filter_events)
         except BaseException:
             print('problem for all experiments metrics table generation')
     else:
         for ophys_experiment_id in tqdm(ophys_experiment_ids):
             try:
-                tmp = get_cell_metrics_table_for_experiment(ophys_experiment_id, condition, stimulus, session_subset,
+                tmp = load_metrics_table_for_experiment(ophys_experiment_id, condition, stimulus, session_subset,
                                                             use_events, filter_events)
                 metrics_table = pd.concat([metrics_table, tmp])
             except BaseException:
