@@ -1,5 +1,5 @@
 from visual_behavior.ophys.response_analysis import cell_metrics
-
+import visual_behavior.data_access.loading as loading
 
 if __name__ == '__main__':
 
