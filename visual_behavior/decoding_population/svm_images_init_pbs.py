@@ -20,7 +20,7 @@ import os
 
 #%% Define vars for svm_images analysis
 
-project_codes = 'VisualBehaviorTask1B' #'VisualBehavior' # has to only include 1 project # project_codes : ['VisualBehaviorMultiscope', 'VisualBehaviorTask1B', 'VisualBehavior', 'VisualBehaviorMultiscope4areasx2d']
+project_codes = 'VisualBehaviorMultiscope' #'VisualBehavior' # has to only include 1 project # project_codes : ['VisualBehaviorMultiscope', 'VisualBehaviorTask1B', 'VisualBehavior', 'VisualBehaviorMultiscope4areasx2d']
 
 # Note: the variable names 'to_decode' and 'trial_type' are confusing. The names really only make sense when we are decoding images (ie when trial_type is images/changes/omissions), in which case they mean we are decoding to_decode image (eg current image) from trial_type (eg images); otherwise, to_decode is useless (we just default it to 'current') and trial_type indicates what was decoded from what (eg hits_vs_misses)
 to_decode = 'current' # 'current' (default): decode current image.    'previous': decode previous image.    'next': decode next image.     # remember for omissions, you cant do "current", bc there is no current image, it has to be previous or next!
@@ -84,7 +84,7 @@ if use_matched_cells!=0:
     cells_table = loading.get_cell_table()
     cells_table.shape
 
-    # limit to cells matched in all 3 experience levels, only considering last Familiar and second Novel active        df = utilities.limit_to_last_familiar_second_novel_active(cells_table) # important that this goes first
+    # limit to cells matched in all 3 experience levels, only considering last Familiar and second Novel active
     df = utilities.limit_to_last_familiar_second_novel_active(cells_table) # important that this goes first
     df = utilities.limit_to_cell_specimen_ids_matched_in_all_experience_levels(df)
 
@@ -94,7 +94,7 @@ if use_matched_cells!=0:
     # now the number of cell_specimen_ids AND the number of experiment_ids are the same across all 3 experience levels, because we have limited to only the last Familiar and first Novel active sessions
     # this is the most conservative set of experiments and cells - matched cells across experience levels, only considering the most recent Familiar and Novel >1 sessions        
 
-#         utilities.count_mice_expts_containers_cells(df)
+#     utilities.count_mice_expts_containers_cells(df)
     print(utilities.count_mice_expts_containers_cells(df)['n_cell_specimen_id'])
 
     '''
@@ -104,7 +104,7 @@ if use_matched_cells!=0:
     df.groupby(['ophys_container_id', 'experience_level', 'ophys_experiment_id']).count().reset_index().groupby(['ophys_container_id', 'experience_level']).count().ophys_experiment_id.unique()
     '''        
 
-    list_all_sessions_valid_matched = df[df['project_code']==project_codes]['ophys_session_id'].unique()
+    list_all_sessions_valid_matched = df[df['project_code']==project_codes]['ophys_session_id'].unique() # note that if you get ophys experiments it has to be a multiplication of 3. (not ophys sessions.)
 
     b = len(list_all_sessions_valid_matched) / len(list_all_sessions_valid)
     print(f'{len(list_all_sessions_valid_matched)}/{len(list_all_sessions_valid)}, {b*100:.0f}% of {project_codes} sessions have matched cells in the 3 experience levels.')
@@ -133,7 +133,7 @@ os.mkdir(stdout_location) if not os.path.exists(stdout_location) else None
 
     
 # define the conda environment
-conda_environment = 'visbeh'
+conda_environment = 'visbeh2' #'visbeh'
 
 jobname0 = 'SVM'
 jobname = f'{jobname0}'
