@@ -570,7 +570,7 @@ def generate_cell_metrics_table(ophys_experiment_id, use_events=False, filter_ev
             os.remove(filepath)
             print('h5 file exists for', ophys_experiment_id, ' - overwriting')
         metrics_table.to_hdf(filepath, key='df')
-        print('cell metrics saved for', ophys_experiment_id)
+        print('cell metrics saved for', ophys_experiment_id, 'at', filepath)
 
     return metrics_table
 
@@ -736,7 +736,7 @@ def generate_and_save_all_metrics_tables_for_all_experiments(ophys_experiment_ta
                     if use_events:
                         for filter_events in [True, False]:
                             metrics_df = pd.DataFrame()
-                            for ophys_experiment_id in ophys_experiments_table.index:
+                            for ophys_experiment_id in ophys_experiment_table.index:
                                 try:  # code will not always run, such as in the case of passive sessions (no trials that are 'engaged')
                                     cell_metrics = cell_metrics.generate_cell_metrics_table(ophys_experiment_id,
                                                                                           use_events=use_events,
