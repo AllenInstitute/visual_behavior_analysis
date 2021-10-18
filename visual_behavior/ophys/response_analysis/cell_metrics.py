@@ -366,7 +366,8 @@ def compute_trace_metrics(traces, ophys_frame_rate):
     traces["trace_max_over_std"] = traces["trace_max"] / traces["trace_std"]
     traces["trace_mean_over_std"] = traces["trace_mean"] / traces["trace_std"]
 
-    # traces["noise_level"] = traces[column].apply(lambda x:  np.median(np.abs(np.diff(x))) / np.sqrt(ophys_frame_rate))
+    traces["noise_level"] = traces[column].apply(lambda x:  np.median(np.abs(np.diff(x))) / np.sqrt(ophys_frame_rate))
+    traces["mean_over_noise_level"] = traces["trace_mean"] / traces["noise_level"]
 
     return traces
 
@@ -405,7 +406,8 @@ def get_trace_metrics(traces, ophys_frame_rate, use_events=False, filter_events=
     traces = compute_trace_metrics(traces, ophys_frame_rate)
     # reorder
     trace_metrics = traces[['robust_signal', 'robust_noise', 'robust_snr', 'trace_max', 'trace_mean',
-                            'trace_var', 'trace_std', 'trace_max_over_std', 'trace_mean_over_std']]
+                            'trace_var', 'trace_std', 'trace_max_over_std', 'trace_mean_over_std',
+                            'noise_level', 'mean_over_noise_level']]
     return trace_metrics
 
 
