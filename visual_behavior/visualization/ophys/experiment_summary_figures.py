@@ -362,10 +362,10 @@ def format_table_data(dataset):
     return table_data
 
 
-def plot_metrics_mask(dataset, metrics, cell_list, metric_name, max_image=True, cmap='RdBu', ax=None, save=False,
+def plot_metrics_mask(roi_mask_array, metrics, cell_list, metric_name, max_projection=None, cmap='RdBu', ax=None, save=False,
                       colorbar=False):
     # roi_dict = dataset.roi_dict.copy()
-    roi_mask_array = dataset.roi_mask_array.copy()
+    # roi_mask_array = dataset.roi_mask_array.copy()
     if cmap == 'hls':
         from matplotlib.colors import ListedColormap
         cmap = ListedColormap(sns.color_palette('hls', 8))
@@ -377,8 +377,8 @@ def plot_metrics_mask(dataset, metrics, cell_list, metric_name, max_image=True, 
     if ax is None:
         figsize = (10, 10)
         fig, ax = plt.subplots(figsize=figsize)
-    if max_image is True:
-        ax.imshow(dataset.max_projection, cmap='gray', vmin=0, vmax=np.amax(dataset.max_projection))
+    if max_projection is not None:
+        ax.imshow(max_projection, cmap='gray', vmin=0, vmax=np.amax(max_projection))
     for roi in cell_list:
         tmp = roi_mask_array[roi, :, :].copy()
         mask = np.empty(tmp.shape, dtype=np.float)
