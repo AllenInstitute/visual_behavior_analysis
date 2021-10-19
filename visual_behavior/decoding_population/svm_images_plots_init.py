@@ -22,6 +22,7 @@ import matplotlib.pyplot as plt
 import datetime
 
 import visual_behavior.data_access.loading as loading
+from visual_behavior.data_access import utilities
 from svm_images_plots_main import *
 
 # import warnings
@@ -132,28 +133,94 @@ if ~np.isnan(svm_blocks):
 
 #%% Use March 2021 data release sessions
 
-#%% Set the list of sessions
-# experiments_table = loading.get_filtered_ophys_experiment_table()
-experiments_table = loading.get_filtered_ophys_experiment_table(release_data_only=True)
+#%% Use only those project codes that will be used for the paper
+experiments_table = loading.get_platform_paper_experiment_table()
+# len(experiments_table)
+# experiments_table.keys()
+# experiments_table.project_code.unique()
+
 experiments_table = experiments_table.reset_index('ophys_experiment_id')
-metadata_valid = experiments_table[experiments_table['project_code']==project_codes[0]] # multiscope sessions
+
+# get those rows of experiments_table that are for a specific project code
+metadata_valid = experiments_table[experiments_table['project_code']==project_codes[0]]
 metadata_valid = metadata_valid.sort_values('ophys_session_id')
 
+# Use the new list of sessions that are de-crosstalked and will be released in March 2021
 list_all_sessions_valid = metadata_valid['ophys_session_id'].unique()
+# list_all_sessions_valid = sessions_ctDone
+
 print(f'{len(list_all_sessions_valid)}: Number of de-crosstalked sessions for analysis')
 
 
-#%% Get the list of 8 experiments for all sessions
-experiments_table = loading.get_filtered_ophys_experiment_table(include_failed_data=True)
+
+
+################################################################################################
+if use_matched_cells!=0: 
+
+    #%% get matched cells to redeine list of valid sessions
+
+    #%% New method: match across the following 3 experience levels: last familiar active; Novel 1; second novel active
+    # from Marina's notebook: visual_behavior_analysis/notebooks/211008_validate_filtering_criteria_and_check_exposure_number.ipynb
+
+    cells_table = loading.get_cell_table()
+    cells_table.shape
+
+    # limit to cells matched in all 3 experience levels, only considering last Familiar and second Novel active
+    df = utilities.limit_to_last_familiar_second_novel_active(cells_table) # important that this goes first
+    df = utilities.limit_to_cell_specimen_ids_matched_in_all_experience_levels(df)
+
+    # Sanity checks:        
+    # count numbers of expts and cells¶
+    # there should be the same number of experiments for each experience level, and a similar number of cells        
+    # now the number of cell_specimen_ids AND the number of experiment_ids are the same across all 3 experience levels, because we have limited to only the last Familiar and first Novel active sessions
+    # this is the most conservative set of experiments and cells - matched cells across experience levels, only considering the most recent Familiar and Novel >1 sessions        
+
+#     utilities.count_mice_expts_containers_cells(df)
+    print(utilities.count_mice_expts_containers_cells(df)['n_cell_specimen_id'])
+
+    '''
+    # there are only 3 experience levels per container
+    df.groupby(['ophys_container_id', 'experience_level']).count().reset_index().groupby(['ophys_container_id']).count().experience_level.unique()        
+    # there should only be 1 experiment per experience level
+    df.groupby(['ophys_container_id', 'experience_level', 'ophys_experiment_id']).count().reset_index().groupby(['ophys_container_id', 'experience_level']).count().ophys_experiment_id.unique()
+    '''        
+
+    list_all_sessions_valid_matched = df[df['project_code']==project_codes[0]]['ophys_session_id'].unique() # note that if you get ophys experiments it has to be a multiplication of 3. (not ophys sessions.)
+    list_all_sessions_valid_matched = np.sort(list_all_sessions_valid_matched)
+
+    b = len(list_all_sessions_valid_matched) / len(list_all_sessions_valid)
+    print(f'{len(list_all_sessions_valid_matched)}/{len(list_all_sessions_valid)}, {b*100:.0f}% of {project_codes} sessions have matched cells in the 3 experience levels.')
+
+    
+    ### redefine list all sessions valid if using matched cells
+    list_all_sessions_valid = list_all_sessions_valid_matched
+
+    
+print(f'{len(list_all_sessions_valid)}: Number of de-crosstalked sessions for analysis')
+
+################################################################################################
+
+
+
+
+####################################################################################################################
+#### Set metadata_all : includes metadata for all the 8 experiments of a session, even if they are failed.
+####################################################################################################################
+
+# get the list of all the 8 experiments for each session; we need this to set the depth and area for all experiments, since we need the metadata for all the 8 experiments for our analysis even if we dont analyze some experiments. this is because we want to know which experiment belongs to which plane. we later make plots for each plot individually.
+experiments_table = loading.get_filtered_ophys_experiment_table(include_failed_data=True) # , release_data_only=False
 experiments_table = experiments_table.reset_index('ophys_experiment_id')
+# experiments_table.shape
 
 metadata_all = experiments_table[experiments_table['ophys_session_id'].isin(list_all_sessions_valid)==True] # metadata_all = experiments_table[np.in1d(experiments_table['ophys_session_id'].values, list_all_sessions_valid)]
 metadata_all = metadata_all.sort_values('ophys_session_id')
-metadata_all.shape
-metadata_all.shape[0]/8
+# metadata_all.shape
+# metadata_all.shape[0]/8
+
+
 
 # set the list of experiments for each session in list_all_sessions_valid
-if project_codes == ['VisualBehavior']:
+if project_codes != ['VisualBehaviorMultiscope']:
     list_all_experiments = metadata_all['ophys_experiment_id'].values
                                   
 else:
@@ -308,7 +375,7 @@ for iblock in br: # iblock=0; iblock=np.nan
         
 
     if use_matched_cells==123:
-        svmn = svmn + '_matched_cells_FN1Nn' #Familiar, N1, N+1
+        svmn = svmn + '_matched_cells_FN1N2' #Familiar, N1, N+1
     elif use_matched_cells==12:
         svmn = svmn + '_matched_cells_FN1'
     elif use_matched_cells==23:

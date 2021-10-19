@@ -105,7 +105,8 @@ if use_matched_cells!=0:
     '''        
 
     list_all_sessions_valid_matched = df[df['project_code']==project_codes]['ophys_session_id'].unique() # note that if you get ophys experiments it has to be a multiplication of 3. (not ophys sessions.)
-
+    list_all_sessions_valid_matched = np.sort(list_all_sessions_valid_matched)
+    
     b = len(list_all_sessions_valid_matched) / len(list_all_sessions_valid)
     print(f'{len(list_all_sessions_valid_matched)}/{len(list_all_sessions_valid)}, {b*100:.0f}% of {project_codes} sessions have matched cells in the 3 experience levels.')
 
@@ -116,7 +117,7 @@ if use_matched_cells!=0:
     
 print(f'{len(list_all_sessions_valid)}: Number of de-crosstalked sessions for analysis')
 
-
+################################################################################################
     
     
     

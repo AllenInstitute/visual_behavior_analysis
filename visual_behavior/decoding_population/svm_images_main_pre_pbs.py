@@ -253,6 +253,7 @@ def svm_images_main_pre_pbs(isess, project_codes, use_events, to_decode, trial_t
         '''        
 
         list_all_sessions_valid_matched = df[df['project_code']==project_codes]['ophys_session_id'].unique()
+        list_all_sessions_valid_matched = np.sort(list_all_sessions_valid_matched)
 #         b = len(list_all_sessions_valid_matched) / len(list_all_sessions_valid)
 #         print(f'{len(list_all_sessions_valid_matched)}/{len(list_all_sessions_valid)}, {b*100:.0f}% of {project_codes} sessions have matched cells in the 3 experience levels.')
 

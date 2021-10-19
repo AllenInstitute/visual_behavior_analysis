@@ -44,7 +44,7 @@ def svm_images_plots_main(session_id, data_list, svm_blocks, iblock, dir_svm, fr
         svmn = f'{e}svm_decode_{to_decode}_image_from_{trial_type}' # 'svm_gray_omit'
 
     if use_matched_cells==123:
-        svmn = svmn + '_matched_cells_FN1Nn' #Familiar, N1, N+1
+        svmn = svmn + '_matched_cells_FN1N2' #Familiar, N1, N+1
     elif use_matched_cells==12:
         svmn = svmn + '_matched_cells_FN1'
     elif use_matched_cells==23:
