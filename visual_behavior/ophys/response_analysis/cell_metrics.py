@@ -697,31 +697,31 @@ def generate_and_save_all_metrics_tables_for_all_experiments(ophys_experiment_ta
 
 
     ### trace metrics ###
-    stimulus = 'full_session'
-    session_subset = 'full_session'
-    condition = 'traces'
-    for use_events in [True, False]:
-        if use_events:
-            for filter_events in [True, False]:
-                metrics_df = pd.DataFrame()
-                for ophys_experiment_id in ophys_experiment_table.index:
-                    try:
-                        trace_metrics = generate_trace_metrics_table(ophys_experiment_id,
-                                                                     use_events=use_events, filter_events=filter_events)
-                        metrics_df = pd.concat([metrics_df, trace_metrics])
-
-                    except Exception as e:
-                        print('metrics not generated for trace_metrics for experiment', ophys_experiment_id)
-                        print(e)
-
-                filepath = get_metrics_df_filepath('all_experiments', condition=condition,
-                                                   stimuli=stimulus, session_subset=session_subset,
-                                                   use_events=use_events, filter_events=filter_events)
-                if os.path.exists(filepath):
-                    os.remove(filepath)
-                    print('h5 file exists for all experiments  - overwriting')
-                metrics_df.to_hdf(filepath, key='df')
-                print('trace metrics saved for all experiments')
+    # stimulus = 'full_session'
+    # session_subset = 'full_session'
+    # condition = 'traces'
+    # for use_events in [True, False]:
+    #     if use_events:
+    #         for filter_events in [True, False]:
+    #             metrics_df = pd.DataFrame()
+    #             for ophys_experiment_id in ophys_experiment_table.index:
+    #                 try:
+    #                     trace_metrics = generate_trace_metrics_table(ophys_experiment_id,
+    #                                                                  use_events=use_events, filter_events=filter_events)
+    #                     metrics_df = pd.concat([metrics_df, trace_metrics])
+    #
+    #                 except Exception as e:
+    #                     print('metrics not generated for trace_metrics for experiment', ophys_experiment_id)
+    #                     print(e)
+    #
+    #             filepath = get_metrics_df_filepath('all_experiments', condition=condition,
+    #                                                stimuli=stimulus, session_subset=session_subset,
+    #                                                use_events=use_events, filter_events=filter_events)
+    #             if os.path.exists(filepath):
+    #                 os.remove(filepath)
+    #                 print('h5 file exists for all experiments  - overwriting')
+    #             metrics_df.to_hdf(filepath, key='df')
+    #             print('trace metrics saved for all experiments')
 
     ### event locked response metrics ###
     conditions = ['changes', 'omissions', 'images']
@@ -738,7 +738,7 @@ def generate_and_save_all_metrics_tables_for_all_experiments(ophys_experiment_ta
                             metrics_df = pd.DataFrame()
                             for ophys_experiment_id in ophys_experiment_table.index:
                                 try:  # code will not always run, such as in the case of passive sessions (no trials that are 'engaged')
-                                    cell_metrics = cell_metrics.generate_cell_metrics_table(ophys_experiment_id,
+                                    cell_metrics = generate_cell_metrics_table(ophys_experiment_id,
                                                                                           use_events=use_events,
                                                                                           filter_events=filter_events,
                                                                                           condition=condition,
