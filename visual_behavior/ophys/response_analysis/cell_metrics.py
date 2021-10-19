@@ -432,10 +432,10 @@ def generate_trace_metrics_table(ophys_experiment_id, use_events=False, filter_e
     ophys_frame_rate = dataset.metadata['ophys_frame_rate']
     trace_metrics = get_trace_metrics(traces, ophys_frame_rate, use_events, filter_events)
 
-    # get population coupling across all cells full dff traces
-    population_coupling = get_population_coupling_for_cell_specimen_ids(traces)
-
-    trace_metrics = trace_metrics.merge(population_coupling, on='cell_specimen_id')
+    # # get population coupling across all cells full dff traces
+    # population_coupling = get_population_coupling_for_cell_specimen_ids(traces)
+    #
+    # trace_metrics = trace_metrics.merge(population_coupling, on='cell_specimen_id')
 
     trace_metrics['ophys_experiment_id'] = ophys_experiment_id
 
