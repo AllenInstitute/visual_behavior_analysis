@@ -210,7 +210,6 @@ class ResponseAnalysis(object):
             self.save_response_df(df, df_name)
         else:  # default behavior - create the df
             df = self.get_df_for_df_name(df_name, df_format if df_format is not None else self.dataframe_format)
-
         if 'trials' in df_name:
             trials = self.dataset.trials
             trials = trials.rename(
@@ -254,6 +253,7 @@ class ResponseAnalysis(object):
                 stimulus_presentations = self.dataset.stimulus_presentations.copy()
             df = df.merge(stimulus_presentations, right_on='stimulus_presentations_id',
                           left_on='stimulus_presentations_id')
+
         return df
 
     def get_trials_response_df(self, df_format=None):

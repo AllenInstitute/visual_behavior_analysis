@@ -490,7 +490,7 @@ def get_stimulus_response_xr(dataset, use_events=False, filter_events=True, fram
             traces = np.stack(dataset.events['events'].values)
     else:
         traces = np.stack(dataset.dff_traces['dff'].values)
-    trace_ids = dataset.dff_traces.index.values
+    trace_ids = dataset.dff_traces.cell_roi_id.values
     timestamps = dataset.ophys_timestamps
     event_times = dataset.stimulus_presentations['start_time'].values
     event_ids = dataset.stimulus_presentations.index.values
