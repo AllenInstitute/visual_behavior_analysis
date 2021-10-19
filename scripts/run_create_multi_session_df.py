@@ -24,12 +24,14 @@ python_path = os.path.join(
 # define the job record output folder
 stdout_location = r'/allen/programs/braintv/workgroups/nc-ophys/Marina/ClusterJobs/JobRecords'
 
-cache_dir = loading.get_platform_analysis_cache_dir()
-cache = bpc.from_s3_cache(cache_dir=cache_dir)
-print(cache_dir)
+# cache_dir = loading.get_platform_analysis_cache_dir()
+# cache = bpc.from_s3_cache(cache_dir=cache_dir)
+# print(cache_dir)
+# experiments_table = cache.get_ophys_experiment_table()
 
-experiments_table = cache.get_ophys_experiment_table()
-
+cache = VisualBehaviorOphysProjectCache.from_lims()
+experiments_table = cache.get_ophys_experiment_table(passed_only=False)
+experiments_table = experiments_table[experiments_table.project_code=='LearningmFISHDevelopment']
 
 # call the `sbatch` command to run the jobs.
 for project_code in experiments_table.project_code.unique():
