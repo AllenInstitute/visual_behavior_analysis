@@ -452,7 +452,7 @@ def get_trials_response_xr(dataset, use_events=False, filter_events=False, frame
             traces = np.stack(dataset.events['events'].values)
     else:
         traces = np.stack(dataset.dff_traces['dff'].values)
-    trace_ids = dataset.dff_traces.index.values
+    trace_ids = dataset.dff_traces.cell_roi_id.values # use cell_roi_ids because no cell_specimen_ids
     timestamps = dataset.ophys_timestamps
     change_trials = dataset.trials[~pd.isnull(dataset.trials['change_time'])]  # [:-1]  # last trial can get cut off
     event_times = change_trials['change_time'].values
@@ -490,7 +490,7 @@ def get_stimulus_response_xr(dataset, use_events=False, filter_events=True, fram
             traces = np.stack(dataset.events['events'].values)
     else:
         traces = np.stack(dataset.dff_traces['dff'].values)
-    trace_ids = dataset.dff_traces.cell_roi_id.values
+    trace_ids = dataset.dff_traces.cell_roi_id.values # use cell_roi_ids because no cell_specimen_ids
     timestamps = dataset.ophys_timestamps
     event_times = dataset.stimulus_presentations['start_time'].values
     event_ids = dataset.stimulus_presentations.index.values
@@ -527,7 +527,7 @@ def get_omission_response_xr(dataset, use_events=False, filter_events=False, fra
             traces = np.stack(dataset.events['events'].values)
     else:
         traces = np.stack(dataset.dff_traces['dff'].values)
-    trace_ids = dataset.dff_traces.index.values
+    trace_ids = dataset.dff_traces.cell_roi_id.values # use cell_roi_ids because no cell_specimen_ids
     timestamps = dataset.ophys_timestamps
     stimuli = dataset.stimulus_presentations
     omission_presentations = stimuli[stimuli.image_name == 'omitted']
