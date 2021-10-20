@@ -34,7 +34,7 @@ from svm_images_plots_main import *
 
 #%% Set vars
 
-project_codes = ['VisualBehavior'] # ['VisualBehaviorMultiscope'] # ['VisualBehaviorMultiscope', 'VisualBehaviorTask1B', 'VisualBehavior', 'VisualBehaviorMultiscope4areasx2d']
+project_codes = ['VisualBehaviorMultiscope'] # ['VisualBehaviorMultiscope'] # ['VisualBehaviorMultiscope', 'VisualBehaviorTask1B', 'VisualBehavior', 'VisualBehaviorMultiscope4areasx2d']
 
 to_decode = 'current' #'next' # 'current' (default): decode current image.    'previous': decode previous image.    'next': decode next image.
 trial_type = 'changes' #'changes' #'baseline_vs_nobaseline' #'hits_vs_misses' #'changes_vs_nochanges' #'omissions' # 'omissions', 'images', 'changes' # what trials to use for SVM analysis # the population activity of these trials at time time_win will be used to decode the image identity of flashes that occurred at their time 0 (if to_decode='current') or 750ms before (if to_decode='previous'). # 'baseline_vs_nobaseline' # decode activity at each frame vs. baseline (ie the frame before omission unless use_spont_omitFrMinus1 = 1 (see below))
@@ -90,7 +90,7 @@ if trial_type=='hits_vs_misses':
 frames_svm = frames_svm_all[0] #[-3,-2,-1] # [0,1,2,3,4,5] #  which svm files to load (this will be used to set svm file name) # (frames_svm also gets saved in svm_vars if svm could be run successfully on a session)
 # print(f'Analyzing: {cre2ana}, {frames_svm}')
     
-
+doPlots = 0
 num_planes = 8
 
 if project_codes == ['VisualBehavior']:
@@ -194,7 +194,8 @@ if use_matched_cells!=0:
     
     ### redefine list all sessions valid if using matched cells
     list_all_sessions_valid = list_all_sessions_valid_matched
-
+    matched_cells = df
+    
     
 print(f'{len(list_all_sessions_valid)}: Number of de-crosstalked sessions for analysis')
 
@@ -277,7 +278,7 @@ else:
 print(br)    
 
 
-doPlots = 0
+
 
 for iblock in br: # iblock=0; iblock=np.nan
 #     for icre in np.arange(0, len(cre2ana_all)): # icre=0
@@ -317,12 +318,22 @@ for iblock in br: # iblock=0; iblock=np.nan
 
         # Note: we cant use metadata from allensdk because it doesnt include all experiments of a session, it only includes the valid experiments, so it wont allow us to set the metadata for all experiments.
         # session_id = sessions_ctDone[isess]
-        metadata_now = metadata_valid[metadata_valid['ophys_session_id']==session_id]
-        experiment_ids_valid = metadata_now['ophys_experiment_id'].values # the problem is that this wont give us the list of all experiments for a session ... it only includes the valid experiments.
+        metadata_now = metadata_valid[metadata_valid['ophys_session_id']==session_id]        
+
+        # If using matched cells, reset experiment ids valid:
+        # Because some planes (experiments) are not passed for last familiar active or second novel active, after matching cells, some planes (experiments) of a mesoscope session become invalid, so we need to reset experiment_ids_valid.
+        # For VB (or task1B) projects though, if an experiment and its session become invalid at the same time, so no need to reset the valid experiments.    
+        if use_matched_cells!=0:
+            experiment_ids_valid = matched_cells[matched_cells['ophys_session_id']==session_id]['ophys_experiment_id'].unique()
+        else:
+            experiment_ids_valid = metadata_now['ophys_experiment_id'].values # the problem is that this wont give us the list of all experiments for a session ... it only includes the valid experiments.
+
         experiment_ids_valid = np.sort(experiment_ids_valid)
 
+        if use_matched_cells!=0:
+            v = metadata_now['ophys_experiment_id'].values
+            print(f"Before matching cells across experience levels {sum(np.in1d(experiment_ids, v)==False)} experiments were invalid; but now:")
         print(f'\n{sum(np.in1d(experiment_ids, experiment_ids_valid)==False)} of the experiments are invalid!\n')
-
 
 
         #%% Set data_list: metadata for this session including a valid column

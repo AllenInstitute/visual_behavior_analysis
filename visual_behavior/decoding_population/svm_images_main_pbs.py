@@ -694,6 +694,10 @@ def svm_images_main_pbs(session_id, data_list, experiment_ids_valid, df_data, se
     experience_level = image_data.iloc[0]['experience_level']
     
     # set mouse_id ('external_donor_name')
+    mouse = int(data_list['mouse_id'].iloc[0])
+    
+    # old method:
+    '''
     session_name = str(image_data.iloc[0]['session_name'])
     uind = [m.start() for m in re.finditer('_', session_name)]
     mid = session_name[uind[0]+1 : uind[1]]
@@ -705,7 +709,7 @@ def svm_images_main_pbs(session_id, data_list, experiment_ids_valid, df_data, se
     if mouse==6:
         print('this guy has an invalid id! fixing it!')
         mouse = 453988
-        
+    '''    
 
         
         
@@ -763,7 +767,7 @@ def svm_images_main_pbs(session_id, data_list, experiment_ids_valid, df_data, se
             lims_id = exp_ids[il]
         '''            
         
-        print(f'\n\n=========== Analyzing {cre[:3]}, experiment_id: {lims_id} ===========\n\n')
+        print(f'\n\n------------- Analyzing {cre[:3]}, experiment_id: {lims_id} -------------\n\n')
         
         area = data_list.iloc[index]['targeted_structure'] #area
         depth = int(data_list.iloc[index]['imaging_depth']) #depth

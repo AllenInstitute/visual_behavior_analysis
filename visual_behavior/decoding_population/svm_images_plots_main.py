@@ -83,7 +83,7 @@ def svm_images_plots_main(session_id, data_list, svm_blocks, iblock, dir_svm, fr
         lims_id = l[1] # experiment id 
         '''
         
-        print('\n=============== Analyzing experiment %s, plane %d/%d ===============\n' %(lims_id, index, num_planes))
+        print('\n------------- Analyzing experiment %s, plane %d/%d -------------\n' %(lims_id, index, num_planes))
         
         area = data_list.iloc[index]['targeted_structure']
         depth = int(data_list.iloc[index]['imaging_depth'])
