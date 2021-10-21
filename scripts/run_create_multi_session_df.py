@@ -37,7 +37,7 @@ experiments_table = experiments_table[experiments_table.session_type!='OPHYS_7_r
 # call the `sbatch` command to run the jobs.
 for project_code in experiments_table.project_code.unique():
     print(project_code)
-    for session_number in experiments_table.session_type.unique():
+    for session_number in experiments_table.session_number.unique():
 
         # instantiate a Slurm object
         slurm = Slurm(
