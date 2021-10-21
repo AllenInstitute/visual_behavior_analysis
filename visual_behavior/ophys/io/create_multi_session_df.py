@@ -43,7 +43,7 @@ def get_multi_session_df(project_code, session_number, df_name, conditions, use_
     for experiment_id in experiments.index:
         try:
             print(experiment_id)
-            dataset = loading.get_ophys_dataset(experiment_id)
+            dataset = loading.get_ophys_dataset(experiment_id, load_from_lims=True, load_from_nwb=False)
             analysis = ResponseAnalysis(dataset, use_events=use_events, filter_events=filter_events,
                                         use_extended_stimulus_presentations=use_extended_stimulus_presentations)
             df = analysis.get_response_df(df_name)
