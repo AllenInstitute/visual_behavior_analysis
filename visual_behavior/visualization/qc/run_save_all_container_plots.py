@@ -10,7 +10,7 @@ from pbstools import pbstools  # NOQA E402
 
 
 parser = argparse.ArgumentParser(description='run container qc plot generation functions on the cluster')
-parser.add_argument('--env', type=str, default='', metavar='name of conda environment to use')
+parser.add_argument('--env', type=str, default='visual_behavior_sdk', metavar='name of conda environment to use')
 parser.add_argument('--scriptname', type=str, default='save_all_container_plots.py', metavar='name of script to run (must be in same folder)')
 parser.add_argument("--plots", type=str, default=None, metavar='plot name to generate')
 
