@@ -1,12 +1,8 @@
 import os
-import sys
-import argparse
-# from visual_behavior.data_access import loading as loading
+from simple_slurm import Slurm
+
+import visual_behavior.data_access.loading as loading
 from allensdk.brain_observatory.behavior.behavior_project_cache import VisualBehaviorOphysProjectCache
-
-
-sys.path.append('/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/src/')
-from pbstools import pbstools  # NOQA E402
 
 
 parser = argparse.ArgumentParser(description='run container qc plot generation functions on the cluster')
@@ -14,14 +10,22 @@ parser.add_argument('--env', type=str, default='visual_behavior_sdk', metavar='n
 parser.add_argument('--scriptname', type=str, default='save_all_container_plots.py', metavar='name of script to run (must be in same folder)')
 parser.add_argument("--plots", type=str, default=None, metavar='plot name to generate')
 
-job_dir = r"/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/cluster_jobs/vba_qc_plots"
+stdout_location = r"/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/cluster_jobs/vba_qc_plots"
 
-job_settings = {'queue': 'braintv',
-                'mem': '60g',
-                'walltime': '3:00:00',
-                'ppn': 1,
-                }
+# python file to execute on cluster
+python_file = r"/home/marinag/visual_behavior_analysis/visual_behavior/visualization/qc/save_all_container_plots.py"
 
+#
+# build the python path
+# this assumes that the environments are saved in the user's home directory in a folder called 'anaconda2'
+python_path = os.path.join(
+    os.path.expanduser("~"),
+    'anaconda2',
+    'envs',
+    conda_environment,
+    'bin',
+    'python'
+)
 
 # container_ids = loading.get_ophys_container_ids()
 cache = VisualBehaviorOphysProjectCache.from_lims()
@@ -32,22 +36,21 @@ container_ids = experiments.ophys_container_id.unique()
 
 if __name__ == "__main__":
     args = parser.parse_args()
-    # python_executable = "{}/.conda/envs/{}/bin/python".format(os.path.expanduser('~'), args.env)
     python_executable = "{}/anaconda2/envs/{}/bin/python".format(os.path.expanduser('~'), args.env)
     python_file = os.path.join(os.getcwd(), args.scriptname)
 
     for ii, container_id in enumerate(container_ids):
-        if args.plots is None:
-            args_to_pass = '--container-id {}'.format(container_id)
-        else:
-            args_to_pass = '--container-id {} --plots {}'.format(container_id, args.plots)
-        print('container ID = {}, number {} of {}'.format(container_id, ii + 1, len(container_ids)))
-        job_title = 'container_{}'.format(container_id)
-        pbstools.PythonJob(
-            python_file,
-            python_executable,
-            python_args=args_to_pass,
-            jobname=job_title,
-            jobdir=job_dir,
-            **job_settings
-        ).run(dryrun=False)
+        # instantiate a Slurm object
+        slurm = Slurm(
+            mem='100g',
+            cpus_per_task=1,
+            time='60:00:00',
+            partition='braintv',
+            job_name='container_' + str(container_id),
+            output=f'{stdout_location}/{Slurm.JOB_ARRAY_MASTER_ID}_{Slurm.JOB_ARRAY_ID}.out',
+        )
+
+        slurm.sbatch(python_path + ' ' + python_file + ' --container_id ' + str(container_id))
+
+
+
