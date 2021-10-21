@@ -309,7 +309,7 @@ def get_filtered_ophys_experiment_table(include_failed_data=False, release_data_
     return experiments
 
 
-def get_filtered_ophys_session_table(release_data_only=True, include_failed_data=False):
+def get_filtered_ophys_session_table(release_data_only=False, include_failed_data=True):
     """Get ophys sessions table from SDK, and add container_id and container_workflow_state to table,
         add session_workflow_state to table (defined as >1 experiment within session passing),
         and return only sessions where container and session workflow states are 'passed'.
@@ -625,7 +625,7 @@ class BehaviorOphysDataset(BehaviorOphysExperiment):
         return cell_specimen_id
 
 
-def get_ophys_dataset(ophys_experiment_id, include_invalid_rois=False, load_from_lims=False, load_from_nwb=True,
+def get_ophys_dataset(ophys_experiment_id, include_invalid_rois=False, load_from_lims=True, load_from_nwb=False,
                       get_extended_stimulus_presentations=True, get_behavior_movie_timestamps=False):
     """
     Gets behavior + ophys data for one experiment (single imaging plane), either using the SDK LIMS API,
