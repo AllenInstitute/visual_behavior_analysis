@@ -69,59 +69,57 @@ def get_platform_analysis_cache_dir():
     This is the cache directory to use for all platform paper analysis
     This cache contains NWB files downloaded directly from AWS
     """
-    return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/platform_paper_cache'
-    # return r'//allen/programs/braintv/workgroups/nc-ophys/learning/analysis_files'
-
+    return r'//allen/programs/braintv/workgroups/nc-ophys/learning_mFISH/learning_project_cache'
 
 
 def get_production_cache_dir():
     """Get directory containing a manifest file that includes all VB production data, including failed experiments"""
-    cache_dir = r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/learning_mFISH'
+    cache_dir = r'//allen/programs/braintv/workgroups/nc-ophys/learning_mFISH/learning_project_cache'
     return cache_dir
 
 
 def get_qc_plots_dir():
-    return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots'
+    return r'//allen/programs/braintv/workgroups/nc-ophys/learning_mFISH/qc_plots'
 
 
 def get_super_container_plots_dir():
-    return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/super_container_plots'
+    return r'//allen/programs/braintv/workgroups/nc-ophys/learning_mFISH/qc_plots/super_container_plots'
 
 
 def get_container_plots_dir():
-    return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/container_plots'
+    return r'//allen/programs/braintv/workgroups/nc-ophys/learning_mFISH/qc_plots/container_plots'
 
 
 def get_session_plots_dir():
-    return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/session_plots'
+    return r'//allen/programs/braintv/workgroups/nc-ophys/learning_mFISH/qc_plots/session_plots'
 
 
 def get_experiment_plots_dir():
-    return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/experiment_plots'
+    return r'//allen/programs/braintv/workgroups/nc-ophys/learning_mFISH/qc_plots/experiment_plots'
 
 
 def get_single_cell_plots_dir():
-    return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/single_cell_plots'
+    return r'//allen/programs/braintv/workgroups/nc-ophys/learning_mFISH/qc_plots/single_cell_plots'
 
 
 def get_analysis_cache_dir():
-    return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/visual_behavior_production_analysis'
+    return r'//allen/programs/braintv/workgroups/nc-ophys/learning_mFISH/learning_project_cache'
 
 
 def get_events_dir():
-    return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/event_detection'
+    return r'//allen/programs/braintv/workgroups/nc-ophys/learning_mFISH/event_detection'
 
 
 def get_behavior_model_outputs_dir():
-    return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/behavior_model_output'
+    return r'//allen/programs/braintv/workgroups/nc-ophys/learning_mFISH/behavior_model_output'
 
 
 def get_decoding_analysis_dir():
-    return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/decoding'
+    return r'//allen/programs/braintv/workgroups/nc-ophys/learning_mFISH/decoding'
 
 
 def get_ophys_glm_dir():
-    return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/ophys_glm'
+    return r'//allen/programs/braintv/workgroups/nc-ophys/learning_mFISH/ophys_glm'
 
 
 def get_manifest_path():
