@@ -2,7 +2,7 @@ import os
 from simple_slurm import Slurm
 
 import visual_behavior.data_access.loading as loading
-from allensdk.brain_observatory.behavior.behavior_project_cache import VisualBehaviorOphysProjectCache as bpc
+from allensdk.brain_observatory.behavior.behavior_project_cache import VisualBehaviorOphysProjectCache
 
 # python file to execute on cluster
 python_file = r"/home/marinag/visual_behavior_analysis/scripts/create_multi_session_df.py"
@@ -25,7 +25,7 @@ python_path = os.path.join(
 stdout_location = r'/allen/programs/braintv/workgroups/nc-ophys/Marina/ClusterJobs/JobRecords'
 
 # cache_dir = loading.get_platform_analysis_cache_dir()
-# cache = bpc.from_s3_cache(cache_dir=cache_dir)
+# cache = VisualBehaviorOphysProjectCache.from_s3_cache(cache_dir=cache_dir)
 # print(cache_dir)
 # experiments_table = cache.get_ophys_experiment_table()
 
