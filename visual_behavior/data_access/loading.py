@@ -219,7 +219,7 @@ def get_platform_paper_experiment_table(add_extra_columns=True):
 #
 
 
-def get_filtered_ophys_experiment_table(include_failed_data=False, release_data_only=True, exclude_ai94=True,
+def get_filtered_ophys_experiment_table(include_failed_data=True, release_data_only=False, exclude_ai94=False,
                                         add_extra_columns=False, from_cached_file=False, overwrite_cached_file=False):
     """
     Loads a list of available ophys experiments FROM LIMS (not S3 cache) and adds additional useful columns to the table.
@@ -270,7 +270,7 @@ def get_filtered_ophys_experiment_table(include_failed_data=False, release_data_
             cache = bpc.from_lims()
             experiments = cache.get_ophys_experiment_table(passed_only=False)
             # limit to the 4 VisualBehavior project codes
-            experiments = filtering.limit_to_production_project_codes(experiments)
+            # experiments = filtering.limit_to_production_project_codes(experiments)
             if add_extra_columns:
                 print('adding extra columns')
                 print('NOTE: this is slow. set from_cached_file to True to load cached version of experiments_table at:')
@@ -288,7 +288,7 @@ def get_filtered_ophys_experiment_table(include_failed_data=False, release_data_
             print('limiting to sessions that start with OPHYS')
             experiments = filtering.limit_to_valid_ophys_session_types(experiments)
     if experiments.index.name != 'ophys_experiment_id':
-        experiments = experiments.drop_duplicates(subset='ophys_experiment_id')
+        # experiments = experiments.drop_duplicates(subset='ophys_experiment_id')
         experiments = experiments.set_index('ophys_experiment_id')
     if exclude_ai94:
         print('excluding Ai94 data')
@@ -296,10 +296,10 @@ def get_filtered_ophys_experiment_table(include_failed_data=False, release_data_
     if 'cre_line' not in experiments.keys():
         experiments['cre_line'] = [full_genotype.split('/')[0] for full_genotype in experiments.full_genotype.values]
     # filter one more time on load to restrict to Visual Behavior project experiments ###
-    experiments = filtering.limit_to_production_project_codes(experiments)
+    # experiments = filtering.limit_to_production_project_codes(experiments)
 
     # add new columns for conditions to analyze for platform paper ###
-    experiments = utilities.add_cell_type_column(experiments)
+    # experiments = utilities.add_cell_type_column(experiments)
 
     if overwrite_cached_file == True:
         print('overwriting pre-saved experiments table file')
@@ -359,7 +359,7 @@ def get_filtered_ophys_session_table(release_data_only=False, include_failed_dat
     return sessions
 
 
-def get_filtered_behavior_session_table(release_data_only=True):
+def get_filtered_behavior_session_table(release_data_only=False):
     """
     Loads list of behavior sessions from SDK BehaviorProjectCache, and does some basic filtering and addition of columns, such as changing mouse_id from str to int and adding project code.
 
