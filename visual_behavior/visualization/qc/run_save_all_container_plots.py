@@ -1,7 +1,9 @@
 import os
 import sys
 import argparse
-from visual_behavior.data_access import loading as loading
+# from visual_behavior.data_access import loading as loading
+from allensdk.brain_observatory.behavior.behavior_project_cache import VisualBehaviorOphysProjectCache
+
 
 sys.path.append('/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/src/')
 from pbstools import pbstools  # NOQA E402
@@ -21,7 +23,11 @@ job_settings = {'queue': 'braintv',
                 }
 
 
-container_ids = loading.get_ophys_container_ids()
+# container_ids = loading.get_ophys_container_ids()
+cache = VisualBehaviorOphysProjectCache.from_lims()
+experiments = cache.get_ophys_experiment_table(passed_only=False)
+experiments = experiments[experiments.project_code=='LearningmFISHDevelopment']
+container_ids = experiments.ophys_container_id.unique()
 
 
 if __name__ == "__main__":
