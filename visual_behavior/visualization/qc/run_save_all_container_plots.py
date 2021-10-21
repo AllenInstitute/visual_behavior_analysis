@@ -16,6 +16,7 @@ stdout_location = r"/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/
 # python file to execute on cluster
 python_file = r"/home/marinag/visual_behavior_analysis/visual_behavior/visualization/qc/save_all_container_plots.py"
 
+conda_environment = 'visual_behavior_sdk'
 #
 # build the python path
 # this assumes that the environments are saved in the user's home directory in a folder called 'anaconda2'
