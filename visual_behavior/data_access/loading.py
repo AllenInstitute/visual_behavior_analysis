@@ -76,7 +76,7 @@ def get_platform_analysis_cache_dir():
 
 def get_production_cache_dir():
     """Get directory containing a manifest file that includes all VB production data, including failed experiments"""
-    cache_dir = r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/2020_cache/production_cache'
+    cache_dir = r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/learning_mFISH'
     return cache_dir
 
 
