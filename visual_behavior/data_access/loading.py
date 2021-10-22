@@ -288,7 +288,7 @@ def get_filtered_ophys_experiment_table(include_failed_data=True, release_data_o
             print('limiting to sessions that start with OPHYS')
             experiments = filtering.limit_to_valid_ophys_session_types(experiments)
     if experiments.index.name != 'ophys_experiment_id':
-        # experiments = experiments.drop_duplicates(subset='ophys_experiment_id')
+        # experiments = experiments.drop_duplicates(subset=['ophys_experiment_id', 'ophys_container_id'])
         experiments = experiments.set_index('ophys_experiment_id')
     if exclude_ai94:
         print('excluding Ai94 data')
@@ -300,6 +300,10 @@ def get_filtered_ophys_experiment_table(include_failed_data=True, release_data_o
 
     # add new columns for conditions to analyze for platform paper ###
     # experiments = utilities.add_cell_type_column(experiments)
+
+
+    ### hack because of problem container
+    experiments = experiments[experiments.ophys_container_id!=1132424700]
 
     if overwrite_cached_file == True:
         print('overwriting pre-saved experiments table file')

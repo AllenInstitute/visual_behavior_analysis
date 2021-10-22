@@ -46,7 +46,7 @@ if __name__ == "__main__":
         slurm = Slurm(
             mem='100g',
             cpus_per_task=1,
-            time='60:00:00',
+            time='120:00:00',
             partition='braintv',
             job_name='container_' + str(container_id),
             output=f'{stdout_location}/{Slurm.JOB_ARRAY_MASTER_ID}_{Slurm.JOB_ARRAY_ID}.out',
