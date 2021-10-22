@@ -878,9 +878,8 @@ def get_metadata_string(ophys_container_id):
     """
     ophys_experiment_ids = loading.get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id)
     dataset = loading.get_ophys_dataset(ophys_experiment_ids[0])
-    title = dataset.analysis_folder
-    m = title.split('_')  # dataset.analysis_folder.split('_')
-    metadata_string = str(ophys_container_id) + '_' + m[1] + '_' + m[2] + '_' + m[3] + '_' + m[4] + '_' + m[5] + '_' + m[6]
+    m = dataset.metadata.copy()
+    metadata_string = str(m['mouse_id']) + '_' str(m['ophys_experiment_id']) + '_' + m['cre_line'].split('-')[0] + '_' + m['targeted_structure'] + '_' + str(m['imaging_depth']) + '_' + m['session_type']
     return metadata_string
 
 
@@ -896,7 +895,8 @@ def plot_population_average_across_sessions(container_df, ophys_container_id, df
     :return:
     """
     dataset = loading.get_ophys_dataset(container_df.ophys_experiment_id.unique()[0])
-    title = dataset.metadata_string
+    # title = dataset.metadata_string
+    title = get_metadata_string(ophys_container_id)
     # frame_rate = dataset.metadata['ophys_frame_rate']
     if omitted:
         figsize = (12, 5)
