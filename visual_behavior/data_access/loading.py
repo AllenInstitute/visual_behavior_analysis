@@ -286,7 +286,7 @@ def get_filtered_ophys_experiment_table(include_failed_data=True, release_data_o
             experiments = filtering.remove_failed_containers(experiments)  # container_workflow_state can be anything other than 'failed'
             # limit to sessions that start with OPHYS
             print('limiting to sessions that start with OPHYS')
-            experiments = filtering.limit_to_valid_ophys_session_types(experiments)
+    experiments = filtering.limit_to_valid_ophys_session_types(experiments)
     if experiments.index.name != 'ophys_experiment_id':
         # experiments = experiments.drop_duplicates(subset=['ophys_experiment_id', 'ophys_container_id'])
         experiments = experiments.set_index('ophys_experiment_id')
