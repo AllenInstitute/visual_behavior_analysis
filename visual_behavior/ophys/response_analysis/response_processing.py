@@ -19,7 +19,7 @@ def get_default_trial_response_params():
             (dict) dict of response window params for computing trial_response_xr
         '''
     trial_response_params = {
-        "window_around_timepoint_seconds": [-5, 5],
+        "window_around_timepoint_seconds": [-2, 2],
         "response_window_duration_seconds": 0.25,
         "baseline_window_duration_seconds": 0.25
     }
@@ -452,7 +452,9 @@ def get_trials_response_xr(dataset, use_events=False, filter_events=False, frame
             traces = np.stack(dataset.events['events'].values)
     else:
         traces = np.stack(dataset.dff_traces['dff'].values)
-    trace_ids = dataset.dff_traces.cell_roi_id.values # use cell_roi_ids because no cell_specimen_ids
+    # trace_ids = dataset.dff_traces.cell_roi_id.values # use cell_roi_ids when no cell_specimen_ids
+    trace_ids = dataset.dff_traces.index.values
+
     timestamps = dataset.ophys_timestamps
     change_trials = dataset.trials[~pd.isnull(dataset.trials['change_time'])]  # [:-1]  # last trial can get cut off
     event_times = change_trials['change_time'].values
@@ -490,7 +492,9 @@ def get_stimulus_response_xr(dataset, use_events=False, filter_events=True, fram
             traces = np.stack(dataset.events['events'].values)
     else:
         traces = np.stack(dataset.dff_traces['dff'].values)
-    trace_ids = dataset.dff_traces.cell_roi_id.values # use cell_roi_ids because no cell_specimen_ids
+    # trace_ids = dataset.dff_traces.cell_roi_id.values # use cell_roi_ids when no cell_specimen_ids
+    trace_ids = dataset.dff_traces.index.values
+
     timestamps = dataset.ophys_timestamps
     event_times = dataset.stimulus_presentations['start_time'].values
     event_ids = dataset.stimulus_presentations.index.values
@@ -527,7 +531,9 @@ def get_omission_response_xr(dataset, use_events=False, filter_events=False, fra
             traces = np.stack(dataset.events['events'].values)
     else:
         traces = np.stack(dataset.dff_traces['dff'].values)
-    trace_ids = dataset.dff_traces.cell_roi_id.values # use cell_roi_ids because no cell_specimen_ids
+    # trace_ids = dataset.dff_traces.cell_roi_id.values # use cell_roi_ids when no cell_specimen_ids
+    trace_ids = dataset.dff_traces.index.values
+
     timestamps = dataset.ophys_timestamps
     stimuli = dataset.stimulus_presentations
     omission_presentations = stimuli[stimuli.image_name == 'omitted']

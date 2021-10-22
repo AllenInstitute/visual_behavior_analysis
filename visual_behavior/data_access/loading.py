@@ -2617,8 +2617,9 @@ def get_multi_session_df(cache_dir, df_name, conditions, experiments_table, remo
     """
 
     cache_dir = get_platform_analysis_cache_dir()
-    cache = bpc.from_s3_cache(cache_dir=cache_dir)
-    experiments_table = cache.get_ophys_experiment_table()
+    # cache = bpc.from_s3_cache(cache_dir=cache_dir)
+    # experiments_table = cache.get_ophys_experiment_table()
+    experiments_table = get_filtered_ophys_experiment_table()
 
     project_codes = experiments_table.project_code.unique()
     multi_session_df = pd.DataFrame()
