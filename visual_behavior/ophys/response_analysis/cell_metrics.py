@@ -493,12 +493,13 @@ def generate_cell_metrics_table(ophys_experiment_id, use_events=False, filter_ev
     elif condition == 'images':
         df = sdf[sdf.omitted == False]
 
-    df['engaged'] = [True if reward_rate>=2 else False for reward_rate in df.reward_rate.values]
     if 'passive' in dataset.metadata['session_type']:
         df['engaged'] = False
     if session_subset == 'engaged':
+        df['engaged'] = [True if reward_rate >= 2 else False for reward_rate in df.reward_rate.values]
         df = df[df['engaged']==True]
     elif session_subset == 'disengaged':
+        df['engaged'] = [True if reward_rate >= 2 else False for reward_rate in df.reward_rate.values]
         df = df[df['engaged']==False]
 
 
@@ -654,7 +655,7 @@ def generate_and_save_all_metrics_tables_for_experiment(ophys_experiment_id):
     ### event locked response metrics ###
     conditions = ['changes', 'omissions', 'images']
     stimuli = ['all_images', 'pref_image']
-    session_subsets = ['engaged', 'disengaged', 'full_session']
+    session_subsets = ['full_session', 'engaged', 'disengaged']
 
     metrics_df = pd.DataFrame()
     for condition in conditions:
