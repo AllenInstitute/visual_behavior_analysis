@@ -57,7 +57,7 @@ def get_default_omission_response_params():
             (dict) dict of response window params for computing omission_response_xr
         '''
     omission_response_params = {
-        "window_around_timepoint_seconds": [-5, 5],
+        "window_around_timepoint_seconds": [-1, 2],
         "response_window_duration_seconds": 0.75,
         "baseline_window_duration_seconds": 0.25
     }
