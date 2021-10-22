@@ -77,7 +77,7 @@ def plot_container_session_sequence(ophys_container_id, save_figure=True):
     fig.subplots_adjust(top=0.9)
     if save_figure:
         ut.save_figure(fig, figsize, loading.get_container_plots_dir(), 'ophys_session_sequence',
-                       'container_' + str(ophys_container_id))
+                       get_file_name_for_container(ophys_container_id))
 
 
 # OPHYS
@@ -108,7 +108,7 @@ def plot_sdk_max_projection_images_for_container(ophys_container_id, save_figure
 
     if save_figure:
         ut.save_figure(fig, figsize, loading.get_container_plots_dir(), 'max_intensity_projection',
-                       'container_' + str(ophys_container_id))
+                       get_file_name_for_container(ophys_container_id))
 
 
 def plot_movie_max_projection_images_for_container(ophys_container_id, save_figure=True):
@@ -137,7 +137,7 @@ def plot_movie_max_projection_images_for_container(ophys_container_id, save_figu
 
     if save_figure:
         ut.save_figure(fig, figsize, loading.get_container_plots_dir(), 'max_intensity_projection_movies',
-                       'container_' + str(ophys_container_id))
+                       get_file_name_for_container(ophys_container_id))
 
 
 def plot_sdk_average_images_for_container(ophys_container_id, save_figure=True):
@@ -166,7 +166,7 @@ def plot_sdk_average_images_for_container(ophys_container_id, save_figure=True):
 
     if save_figure:
         ut.save_figure(fig, figsize, loading.get_container_plots_dir(), 'average_images',
-                       'container_' + str(ophys_container_id))
+                       get_file_name_for_container(ophys_container_id))
 
 
 def plot_movie_average_images_for_container(ophys_container_id, save_figure=True):
@@ -195,7 +195,7 @@ def plot_movie_average_images_for_container(ophys_container_id, save_figure=True
 
     if save_figure:
         ut.save_figure(fig, figsize, loading.get_container_plots_dir(), 'average_images_movies',
-                       'container_' + str(ophys_container_id))
+                       get_file_name_for_container(ophys_container_id))
 
 
 def plot_eye_tracking_sample_frames(ophys_container_id, save_figure=True):
@@ -215,7 +215,7 @@ def plot_eye_tracking_sample_frames(ophys_container_id, save_figure=True):
 
     if save_figure:
         ut.save_figure(fig, figsize, loading.get_container_plots_dir(), 'eyetracking_sample_frames',
-                       'container_' + str(ophys_container_id))
+                       get_file_name_for_container(ophys_container_id))
 
     return fig, axes
 
@@ -233,7 +233,7 @@ def plot_segmentation_masks_for_container(ophys_container_id, save_figure=True):
 
     if save_figure:
         ut.save_figure(fig, figsize, loading.get_container_plots_dir(), 'segmentation_masks',
-                       'container_' + str(ophys_container_id))
+                       get_file_name_for_container(ophys_container_id))
 
 
 def plot_segmentation_mask_overlays_for_container(ophys_container_id, save_figure=True):
@@ -271,7 +271,7 @@ def plot_segmentation_mask_overlays_for_container(ophys_container_id, save_figur
             print('error: {}'.format(e))
 
     if save_figure:
-        ut.save_figure(fig, figsize, loading.get_container_plots_dir(), 'segmentation_mask_overlays', 'container_' + str(ophys_container_id))
+        ut.save_figure(fig, figsize, loading.get_container_plots_dir(), 'segmentation_mask_overlays', get_file_name_for_container(ophys_container_id))
 
 
 def plot_roi_filtering_metrics_for_all_rois_for_container(ophys_container_id, save_figure=True):
@@ -301,7 +301,7 @@ def plot_roi_filtering_metrics_for_all_rois_for_container(ophys_container_id, sa
 
     if save_figure:
         ut.save_figure(fig, figsize, loading.get_container_plots_dir(), 'roi_filtering_metrics_all_rois',
-                       'container_' + str(ophys_container_id))
+                       get_file_name_for_container(ophys_container_id))
 
 
 def plot_roi_filtering_metrics_for_valid_rois_for_container(ophys_container_id, save_figure=True):
@@ -331,7 +331,7 @@ def plot_roi_filtering_metrics_for_valid_rois_for_container(ophys_container_id, 
 
     if save_figure:
         ut.save_figure(fig, figsize, loading.get_container_plots_dir(), 'roi_filtering_metrics_valid_rois',
-                       'container_' + str(ophys_container_id))
+                       get_file_name_for_container(ophys_container_id))
 
 
 def plot_filtered_roi_masks_for_container(ophys_container_id, save_figure=True):
@@ -359,7 +359,7 @@ def plot_filtered_roi_masks_for_container(ophys_container_id, save_figure=True):
                                                               ax=ax[i + (n * 4)])
     if save_figure:
         ut.save_figure(fig, figsize, loading.get_container_plots_dir(), 'filtered_roi_masks',
-                       'container_' + str(ophys_container_id))
+                       get_file_name_for_container(ophys_container_id))
 
 
 def plot_dff_traces_heatmaps_for_container(ophys_container_id, save_figure=True):
@@ -376,7 +376,7 @@ def plot_dff_traces_heatmaps_for_container(ophys_container_id, save_figure=True)
     fig.tight_layout()
     if save_figure:
         ut.save_figure(fig, figsize, loading.get_container_plots_dir(), 'dff_traces_heatmaps',
-                       'container_' + str(ophys_container_id))
+                       get_file_name_for_container(ophys_container_id))
 
 
 def plot_average_intensity_timeseries_for_container(ophys_container_id, save_figure=True):
@@ -403,7 +403,7 @@ def plot_average_intensity_timeseries_for_container(ophys_container_id, save_fig
     fig.tight_layout()
     if save_figure:
         ut.save_figure(fig, figsize, loading.get_container_plots_dir(), 'average_intensity_timeseries',
-                       'container_' + str(ophys_container_id))
+                       get_file_name_for_container(ophys_container_id))
 
 
 def plot_pmt_for_container(ophys_container_id, save_figure=True):
@@ -432,7 +432,7 @@ def plot_pmt_for_container(ophys_container_id, save_figure=True):
     fig.tight_layout()
     if save_figure:
         ut.save_figure(fig, figsize, loading.get_container_plots_dir(), 'pmt_settings',
-                       'container_' + str(ophys_container_id))
+                       get_file_name_for_container(ophys_container_id))
 
 
 def plot_average_intensity_for_container(ophys_container_id, save_figure=True):
@@ -466,7 +466,7 @@ def plot_average_intensity_for_container(ophys_container_id, save_figure=True):
     fig.tight_layout()
     if save_figure:
         ut.save_figure(fig, figsize, loading.get_container_plots_dir(), 'FOV_average_intensity',
-                       'container_' + str(ophys_container_id))
+                       get_file_name_for_container(ophys_container_id))
 
 
 def plot_average_intensity_by_pmt_for_container(ophys_container_id, save_figure=True):
@@ -502,7 +502,7 @@ def plot_average_intensity_by_pmt_for_container(ophys_container_id, save_figure=
     fig.tight_layout()
     if save_figure:
         ut.save_figure(fig, figsize, loading.get_container_plots_dir(), 'average_intensity_by_pmt',
-                       'container_' + str(ophys_container_id))
+                       get_file_name_for_container(ophys_container_id))
 
 
 def plot_snr_by_pmt_gain_and_intensity_for_container(ophys_container_id, save_figure=True):
@@ -521,7 +521,7 @@ def plot_snr_by_pmt_gain_and_intensity_for_container(ophys_container_id, save_fi
     plt.title("container: " + str(ophys_container_id))
     if save_figure:
         ut.save_figure(fig, figsize, loading.get_container_plots_dir(), 'snr_by_pmt_and_intensity',
-                       'container_' + str(ophys_container_id))
+                       get_file_name_for_container(ophys_container_id))
 
 
 def plot_snr_by_pmt_for_container(ophys_container_id, save_figure=True):
@@ -557,7 +557,7 @@ def plot_snr_by_pmt_for_container(ophys_container_id, save_figure=True):
     fig.tight_layout()
     if save_figure:
         ut.save_figure(fig, figsize, loading.get_container_plots_dir(), 'snr_by_pmt',
-                       'container_' + str(ophys_container_id))
+                       get_file_name_for_container(ophys_container_id))
 
 
 def plot_cell_snr_for_container(ophys_container_id, save_figure=True):
@@ -590,7 +590,7 @@ def plot_cell_snr_for_container(ophys_container_id, save_figure=True):
     fig.tight_layout()
     if save_figure:
         ut.save_figure(fig, figsize, loading.get_container_plots_dir(), 'cell_snr_by_experiment',
-                       'container_' + str(ophys_container_id))
+                       get_file_name_for_container(ophys_container_id))
 
 
 def plot_number_segmented_rois_for_container(ophys_container_id, save_figure=True):
@@ -635,7 +635,7 @@ def plot_number_segmented_rois_for_container(ophys_container_id, save_figure=Tru
     fig.tight_layout()
     if save_figure:
         ut.save_figure(fig, figsize, loading.get_container_plots_dir(), 'segmented_rois_by_experiment',
-                       'container_' + str(ophys_container_id))
+                       get_file_name_for_container(ophys_container_id))
 
 
 def plot_number_matched_cells_for_container(ophys_container_id, save_figure=True):
@@ -656,7 +656,7 @@ def plot_number_matched_cells_for_container(ophys_container_id, save_figure=True
     fig.tight_layout()
     if save_figure:
         ut.save_figure(fig, figsize, loading.get_container_plots_dir(), 'number_matched_cells',
-                       'container_' + str(ophys_container_id))
+                       get_file_name_for_container(ophys_container_id))
 
 
 def plot_fraction_matched_cells_for_container(ophys_container_id, save_figure=True):
@@ -677,7 +677,7 @@ def plot_fraction_matched_cells_for_container(ophys_container_id, save_figure=Tr
     fig.tight_layout()
     if save_figure:
         ut.save_figure(fig, figsize, loading.get_container_plots_dir(), 'fraction_matched_cells',
-                       'container_' + str(ophys_container_id))
+                       get_file_name_for_container(ophys_container_id))
 
 
 def plot_cell_matching_registration_overlay_grid(ophys_container_id, save_figure=True):
@@ -745,7 +745,7 @@ def plot_cell_matching_registration_overlay_grid(ophys_container_id, save_figure
         fig.suptitle(get_metadata_string(ophys_container_id), x=0.5, y=1.02, horizontalalignment='center', fontsize=14)
     if save_figure:
         ut.save_figure(fig, figsize, loading.get_container_plots_dir(), 'cell_matching_registration_overlay_grid',
-                       'container_' + str(ophys_container_id))
+                       get_file_name_for_container(ophys_container_id))
 
 
 def plot_cell_matching_registration_output(ophys_container_id, save_figure=True):
@@ -816,7 +816,7 @@ def plot_cell_matching_registration_output(ophys_container_id, save_figure=True)
 
             if save_figure:
                 ut.save_figure(fig, figsize, loading.get_container_plots_dir(), 'cell_matching_registration_output',
-                               'container_' + str(ophys_container_id) + '_' + str(x))
+                               get_file_name_for_container(ophys_container_id) + '_' + str(x))
 
 
 def plot_motion_correction_xy_shift_for_container(ophys_container_id, save_figure=True):
@@ -833,7 +833,7 @@ def plot_motion_correction_xy_shift_for_container(ophys_container_id, save_figur
     fig.tight_layout()
     if save_figure:
         ut.save_figure(fig, figsize, loading.get_container_plots_dir(), 'motion_correction_xy_shift',
-                       'container_' + str(ophys_container_id))
+                       get_file_name_for_container(ophys_container_id))
 
 
 def plot_flashes_on_trace(ax, timestamps, trial_type=None, omitted=False, alpha=0.15, facecolor='gray'):
@@ -879,8 +879,21 @@ def get_metadata_string(ophys_container_id):
     ophys_experiment_ids = loading.get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id)
     dataset = loading.get_ophys_dataset(ophys_experiment_ids[0])
     m = dataset.metadata.copy()
-    metadata_string = str(m['mouse_id']) + '_' + str(m['ophys_experiment_id']) + '_' + m['cre_line'].split('-')[0] + '_' + m['targeted_structure'] + '_' + str(m['imaging_depth']) + '_' + m['session_type']
+    metadata_string = str(m['mouse_id']) + '_' + str(m['ophys_container_id']) + '_' + m['cre_line'].split('-')[0] + '_' + m['targeted_structure'] + '_' + str(m['imaging_depth']) + '_' + m['session_type']
     return metadata_string
+
+
+def get_file_name_for_container(ophys_container_id):
+    """
+    gets standardized filename for saving figures
+    format "container_id_"+str(ophys_container_id) is necessary for files to be able to be viewed in Dougs QC viewer
+    using get_metadata_string(ophys_container_id) gives a more interpretable filename with cre line, area, etc
+    :param ophys_container_id:
+    :return:
+    """
+    # filename =  "container_id_"+str(ophys_container_id)
+    filename = get_metadata_string(ophys_container_id)
+    return filename
 
 
 def plot_population_average_across_sessions(container_df, ophys_container_id, df_name, trials=False, omitted=False, save_figure=True):
@@ -944,7 +957,7 @@ def plot_population_average_across_sessions(container_df, ophys_container_id, df
     if save_figure:
         ut.save_figure(fig, figsize, loading.get_container_plots_dir(),
                        'population_average_by_session_' + df_name.split('_')[0],
-                       'container_' + str(ophys_container_id))
+                       get_file_name_for_container(ophys_container_id))
 
 
 def plot_omission_population_average_across_sessions(ophys_container_id, save_figure=True):
@@ -1017,7 +1030,7 @@ def plot_stimulus_population_average_across_sessions(ophys_container_id, save_fi
 #     fig.tight_layout()
 #     if save_figure:
 #         ut.save_figure(fig, figsize, loading.get_container_plots_dir(), 'fov_ave_intensity_by_pmt',
-#                        'container_' + str(ophys_container_id))
+#                        get_file_name_for_container(ophys_container_id))
 
 
 # BEHAVIOR
@@ -1035,7 +1048,7 @@ def plot_running_speed_for_container(ophys_container_id, save_figure=True):
     fig.tight_layout()
     if save_figure:
         ut.save_figure(fig, figsize, loading.get_container_plots_dir(), 'running_speed',
-                       'container_' + str(ophys_container_id))
+                       get_file_name_for_container(ophys_container_id))
 
 
 def plot_lick_rasters_for_container(ophys_container_id, save_figure=True):
@@ -1053,7 +1066,7 @@ def plot_lick_rasters_for_container(ophys_container_id, save_figure=True):
 
     if save_figure:
         ut.save_figure(fig, figsize, loading.get_container_plots_dir(), 'lick_rasters',
-                       'container_' + str(ophys_container_id))
+                       get_file_name_for_container(ophys_container_id))
 
 
 def plot_pupil_area_sdk(ophys_container_id, save_figure=True):
@@ -1078,7 +1091,7 @@ def plot_pupil_area_sdk(ophys_container_id, save_figure=True):
     if save_figure:
         print('saving')
         if save_figure:
-            ut.save_figure(fig, figsize, loading.get_container_plots_dir(), 'pupil_area_vs_time_sdk', 'container_' + str(ophys_container_id))
+            ut.save_figure(fig, figsize, loading.get_container_plots_dir(), 'pupil_area_vs_time_sdk', get_file_name_for_container(ophys_container_id))
 
     return fig, axes
 
@@ -1105,7 +1118,7 @@ def plot_pupil_area(ophys_container_id, save_figure=True):
     if save_figure:
         print('saving')
         if save_figure:
-            ut.save_figure(fig, figsize, loading.get_container_plots_dir(), 'pupil_area_vs_time', 'container_' + str(ophys_container_id))
+            ut.save_figure(fig, figsize, loading.get_container_plots_dir(), 'pupil_area_vs_time', get_file_name_for_container(ophys_container_id))
 
     return fig, axes
 
@@ -1131,7 +1144,7 @@ def plot_pupil_position(ophys_container_id, save_figure=True):
 
     if save_figure:
         if save_figure:
-            ut.save_figure(fig, figsize, loading.get_container_plots_dir(), 'pupil_position_vs_time', 'container_' + str(ophys_container_id))
+            ut.save_figure(fig, figsize, loading.get_container_plots_dir(), 'pupil_position_vs_time', get_file_name_for_container(ophys_container_id))
     return fig, axes
 
 
@@ -1238,7 +1251,7 @@ def plot_behavior_summary(ophys_container_id, save_figure=True):
     if save_figure:
         if save_figure:
             ut.save_figure(fig, figsize, loading.get_container_plots_dir(), 'behavior_metric_summary',
-                           'container_' + str(ophys_container_id))
+                           get_file_name_for_container(ophys_container_id))
 
 
 def plot_event_detection_for_container(ophys_container_id, save_figure=True):
@@ -1347,7 +1360,7 @@ def plot_OphysRegistrationSummaryImage(ophys_container_id, save_figure=True):
     if save_figure:
         if save_figure:
             ut.save_figure(fig, figsize, loading.get_container_plots_dir(), 'OphysRegistrationSummaryImage',
-                           'container_' + str(ophys_container_id))
+                           get_file_name_for_container(ophys_container_id))
 
 
 def plot_nway_match_fraction(ophys_container_id, save_figure=True):
@@ -1366,7 +1379,7 @@ def plot_nway_match_fraction(ophys_container_id, save_figure=True):
 
     fig.tight_layout()
     if save_figure:
-        ut.save_figure(fig, figsize, loading.get_container_plots_dir(), 'nway_match_fraction', 'container_' + str(ophys_container_id))
+        ut.save_figure(fig, figsize, loading.get_container_plots_dir(), 'nway_match_fraction', get_file_name_for_container(ophys_container_id))
 
 
 def plot_nway_warp_overlay(ophys_container_id, save_figure=True):
@@ -1385,7 +1398,7 @@ def plot_nway_warp_overlay(ophys_container_id, save_figure=True):
 
     fig.tight_layout()
     if save_figure:
-        ut.save_figure(fig, figsize, loading.get_container_plots_dir(), 'nway_warp_overlay', 'container_' + str(ophys_container_id))
+        ut.save_figure(fig, figsize, loading.get_container_plots_dir(), 'nway_warp_overlay', get_file_name_for_container(ophys_container_id))
 
 
 def plot_nway_warp_summary(ophys_container_id, save_figure=True):
@@ -1404,7 +1417,7 @@ def plot_nway_warp_summary(ophys_container_id, save_figure=True):
 
     fig.tight_layout()
     if save_figure:
-        ut.save_figure(fig, figsize, loading.get_container_plots_dir(), 'nway_warp_summary', 'container_' + str(ophys_container_id))
+        ut.save_figure(fig, figsize, loading.get_container_plots_dir(), 'nway_warp_summary', get_file_name_for_container(ophys_container_id))
 
 
 def plot_experiment_summary_figure_for_container(ophys_container_id, save_figure=True):
