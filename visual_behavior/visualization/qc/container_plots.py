@@ -933,9 +933,9 @@ def plot_population_average_across_sessions(container_df, ophys_container_id, df
         traces = df.trace.values
         mean_trace = df.trace.mean()
         timestamps = df.trace_timestamps.mean()
-        ax.plot(timestamps, mean_trace, color=colors[session_number - 1], label=session_number)
+        ax.plot(timestamps, mean_trace, color=colors[int(session_number - 1)], label=session_number)
         sem = (traces.std()) / np.sqrt(float(len(traces)))
-        ax.fill_between(timestamps, mean_trace + sem, mean_trace - sem, alpha=0.5, color=colors[session_number - 1])
+        ax.fill_between(timestamps, mean_trace + sem, mean_trace - sem, alpha=0.5, color=colors[int(session_number - 1)])
     if omitted:
         ax = plot_flashes_on_trace(ax, timestamps, trial_type=None, omitted=True, alpha=0.2,
                                    facecolor='gray')
