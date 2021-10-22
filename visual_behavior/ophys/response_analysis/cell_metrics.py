@@ -501,6 +501,7 @@ def generate_cell_metrics_table(ophys_experiment_id, use_events=False, filter_ev
     elif session_subset == 'disengaged':
         df = df[df['engaged']==False]
 
+
     df = df.reset_index(drop=True)
 
     # get pref and non-pref images for each cell
@@ -633,22 +634,22 @@ def generate_and_save_all_metrics_tables_for_experiment(ophys_experiment_id):
 
     ### trace metrics ###
     for use_events in [True, False]:
-        if use_events:
-            for filter_events in [True, False]:
-                try:
-                    trace_metrics = generate_trace_metrics_table(ophys_experiment_id,
-                                                                         use_events=use_events, filter_events=filter_events)
-                    filepath = get_metrics_df_filepath(ophys_experiment_id, condition='traces',
-                                                                    stimuli='full_session', session_subset='full_session',
-                                                                    use_events=use_events, filter_events=filter_events)
-                    if os.path.exists(filepath):
-                        os.remove(filepath)
-                        print('h5 file exists for', ophys_experiment_id, ' - overwriting')
-                    trace_metrics.to_hdf(filepath, key='df')
-                    print('trace metrics saved for', ophys_experiment_id)
-                except Exception as e:
-                    print('metrics not generated for trace_metrics for experiment', ophys_experiment_id)
-                    print(e)
+        for filter_events in [True, False]:
+            try:
+                trace_metrics = generate_trace_metrics_table(ophys_experiment_id,
+                                                                     use_events=use_events, filter_events=filter_events)
+                filepath = get_metrics_df_filepath(ophys_experiment_id, condition='traces',
+                                                                stimuli='full_session', session_subset='full_session',
+                                                                use_events=use_events, filter_events=filter_events)
+                if os.path.exists(filepath):
+                    os.remove(filepath)
+                    print('h5 file exists for', ophys_experiment_id, ' - overwriting')
+                trace_metrics.to_hdf(filepath, key='df')
+                print('trace metrics saved for', ophys_experiment_id)
+            except Exception as e:
+                print('metrics not generated for trace_metrics for experiment', ophys_experiment_id)
+                print(e)
+
 
     ### event locked response metrics ###
     conditions = ['changes', 'omissions', 'images']
@@ -797,7 +798,7 @@ def load_metrics_table_for_experiments(ophys_experiment_ids, condition, stimuli,
             metrics_table = load_metrics_table_for_experiment(ophys_experiment_ids, condition, stimuli, session_subset,
                                                                   use_events, filter_events)
         except BaseException:
-            print('problem for all experiments metrics table generation')
+            print('problem loading all experiments metrics table')
     else:
         for ophys_experiment_id in tqdm(ophys_experiment_ids):
             try:
