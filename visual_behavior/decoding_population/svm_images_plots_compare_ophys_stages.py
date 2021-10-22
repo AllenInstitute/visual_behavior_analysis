@@ -9,7 +9,7 @@ Created on Tue Apr 27 12:09:05 2021
 
 """
 
-whichStages_pval = [3,4] # compute ttest between these 2 stages
+whichStages_pval_allComparisonParis = [[3,4], [4,6]] # compute ttest between stages 3,4 also between 4,6. # whichStages_pval = [3,4] # compute ttest between these 2 stages
 ttest_actShfl_stages = 1 # 0: plot ttet comparison of actual and shuffled (it will be the default when len(whichStages)=1)); 1: plot ttest comparison between ophys stages, as long as len(whichStages)=2
 show_depth_stats = 1 # if 1, plot the bars that show anova/tukey comparison across depths
 
@@ -169,26 +169,34 @@ def add_plot_labs(top_allstage, mn_mx_allstage, ylims, addleg=1, compare_areas=F
         
         
     # add an asterisk if ttest is significant between whichStages_pval (eg ophys 3 and 4)
-    if compare_areas or (ttest_actShfl_stages == 1 and sum(np.in1d(whichStages, whichStages_pval))==2): # compare ophys stages
+    if compare_areas or (ttest_actShfl_stages == 1 and sum(np.in1d(whichStages, whichStages_pval_allComparisonParis))>=2): # compare ophys stages
         # compute x to place the asterisk
         if compare_areas==False: # place it in between the x values for sessions 3 and 4
-            xs1 = np.argwhere(whichStages == whichStages_pval[0])[0][0]
-            xs2 = np.argwhere(whichStages == whichStages_pval[1])[0][0]
             cn = 'k'
+            for whichStages_pval in whichStages_pval_allComparisonParis:
+                xs1 = np.argwhere(whichStages == whichStages_pval[0])[0][0]
+                xs2 = np.argwhere(whichStages == whichStages_pval[1])[0][0]
+                x_whichStages_pval = (xnowall[xs1] + xnowall[xs2]) / 2 # x+xgapg/2
+                
+                # plot an asterisk if p2plot is significant
+        #         print(f'test: {x_whichStages_pval, p2plot*mn_mx[1]-np.diff(mn_mx)*.03}')
+                ax1.plot(x_whichStages_pval, p2plot*mn_mx[1]-np.diff(mn_mx)*.03, '*', color=cn)
+ 
+                if compare_areas==False and ~np.isnan(inds_lm[0]):
+                    ax2.plot(x_whichStages_pval, p_sigval[icre, inds_lm]*mn_mx[1]-np.diff(mn_mx)*.03, 'k*')
+                if compare_areas==False and project_codes_all == ['VisualBehaviorMultiscope']:
+                    ax3.plot(x_whichStages_pval, p_sigval_pooled[icre, :]*mn_mx[1]-np.diff(mn_mx)*.03, 'k*')
+
         else:
+            cn = 'r'
             xs1 = 0
             xs2 = 1
-            cn = 'r'
-        x_whichStages_pval = (xnowall[xs1] + xnowall[xs2]) / 2 # x+xgapg/2
+            x_whichStages_pval = (xnowall[xs1] + xnowall[xs2]) / 2 # x+xgapg/2
         
-        # plot an asterisk if p2plot is significant
-#         print(f'test: {x_whichStages_pval, p2plot*mn_mx[1]-np.diff(mn_mx)*.03}')
-        ax1.plot(x_whichStages_pval, p2plot*mn_mx[1]-np.diff(mn_mx)*.03, '*', color=cn)
+            # plot an asterisk if p2plot is significant
+    #         print(f'test: {x_whichStages_pval, p2plot*mn_mx[1]-np.diff(mn_mx)*.03}')
+            ax1.plot(x_whichStages_pval, p2plot*mn_mx[1]-np.diff(mn_mx)*.03, '*', color=cn)
         
-        if compare_areas==False and ~np.isnan(inds_lm[0]):
-            ax2.plot(x_whichStages_pval, p_sigval[icre, inds_lm]*mn_mx[1]-np.diff(mn_mx)*.03, 'k*')
-        if compare_areas==False and project_codes_all == ['VisualBehaviorMultiscope']:
-            ax3.plot(x_whichStages_pval, p_sigval_pooled[icre, :]*mn_mx[1]-np.diff(mn_mx)*.03, 'k*')
 
 
     iax = 0 # V1, LM
@@ -281,7 +289,14 @@ def run_anova_tukey():
 if trial_type == 'hits_vs_misses':
     stages_alln = [1,3,4,6]
 else:
-    stages_alln = [1,2,3,4,5,6]
+    if use_matched_cells == 123: # 
+        print(f"Cells are matched across stages: {summary_vars_all['stage'].unique()}")
+#         if sum(summary_vars_all['stage']==1)>0:
+#             print(f'... changing stage 1 to 3, because we care about experience levels, not actual stage numbers!')
+#             summary_vars_all.loc[summary_vars_all['stage']==1, 'stage']=3
+        stages_alln = [3,4,6]
+    else:
+        stages_alln = [1,2,3,4,5,6]
 stages_alln = np.array(stages_alln)    
 if svm_blocks==-1 and engagement_pupil_running==0: # because the engagement metric relies on lick measurement, there wont be data for passive sessions
     stages_alln = stages_alln[~np.in1d(stages_alln, [2,5])]
@@ -357,70 +372,91 @@ if project_codes_all == ['VisualBehaviorMultiscope']:
 
 if np.isnan(svm_blocks) or svm_blocks==-101:
 
-    if sum(np.in1d(whichStages, whichStages_pval))==2: # only run this section when comparing sessions 3 and 4
+    if sum(np.in1d(whichStages, whichStages_pval_allComparisonParis))>=2: #==2: # not anymore (I extend the code to compute p across any number of stage pairs): only run this section when comparing sessions 3 and 4
         
-        p_all = []
-        p_all_pooled = []
+        p_all_allComparisonParis = []
+        p_all_pooled_allComparisonParis = []
         
         for crenow in cres: # crenow = cres[0]
 
-            ############### set a_amp and b_amp vectors to use as input to ttest ###############
-            
-            a = summary_vars_all[np.logical_and(summary_vars_all['cre']==crenow , summary_vars_all['stage']==whichStages_pval[0])]
-            b = summary_vars_all[np.logical_and(summary_vars_all['cre']==crenow , summary_vars_all['stage']==whichStages_pval[1])]
+            p_all = []
+            p_all_pooled = []
 
-            if len(project_codes_all)==1:
-                a_amp = a['resp_amp'].values[0][:,:,1] # actual # 8depths x sessions
-                b_amp = b['resp_amp'].values[0][:,:,1] # shuffled
-            else:
-                a_amp_allpr = []
-                b_amp_allpr = []
-                for ipc in range(len(project_codes_all)):
-                    apr = np.hstack(a['resp_amp'].values[ipc][:,:,1]) # data from 1 plane, all sessions; then 2nd plane all sessions, etc are vectorized.
-                    bpr = np.hstack(b['resp_amp'].values[ipc][:,:,1]) # data from 1 plane, all sessions; then 2nd plane all sessions, etc are vectorized.
-                    a_amp_allpr.append(apr) # actual # 8depths x sessions
-                    b_amp_allpr.append(bpr) # shuffled
-                a_amp = np.concatenate((a_amp_allpr))[np.newaxis, :]
-                b_amp = np.concatenate((b_amp_allpr))[np.newaxis, :]
+            for whichStages_pval in whichStages_pval_allComparisonParis: # whichStages_pval_allComparisonParis = [[3,4], [4,6]]
+                
+                ############### set a_amp and b_amp vectors to use as input to ttest ###############
 
-    #             a_amp.shape, b_amp.shape
+                a = summary_vars_all[np.logical_and(summary_vars_all['cre']==crenow , summary_vars_all['stage']==whichStages_pval[0])]
+                b = summary_vars_all[np.logical_and(summary_vars_all['cre']==crenow , summary_vars_all['stage']==whichStages_pval[1])]
+
+                if len(project_codes_all)==1:
+                    a_amp = a['resp_amp'].values[0][:,:,1] # actual # 8depths x sessions
+                    b_amp = b['resp_amp'].values[0][:,:,1] # shuffled
+                else:
+                    a_amp_allpr = []
+                    b_amp_allpr = []
+                    for ipc in range(len(project_codes_all)):
+                        apr = np.hstack(a['resp_amp'].values[ipc][:,:,1]) # data from 1 plane, all sessions; then 2nd plane all sessions, etc are vectorized.
+                        bpr = np.hstack(b['resp_amp'].values[ipc][:,:,1]) # data from 1 plane, all sessions; then 2nd plane all sessions, etc are vectorized.
+                        a_amp_allpr.append(apr) # actual # 8depths x sessions
+                        b_amp_allpr.append(bpr) # shuffled
+                    a_amp = np.concatenate((a_amp_allpr))[np.newaxis, :]
+                    b_amp = np.concatenate((b_amp_allpr))[np.newaxis, :]
+
+        #             a_amp.shape, b_amp.shape
 
 
-            ############## pool areas # 4pooled depths x sessions ##############
-            if project_codes_all == ['VisualBehaviorMultiscope']:
-                a_amp_pooled = np.array([a_amp[inds_pooled[idepth]].flatten() for idepth in range(num_depth)])
-                b_amp_pooled = np.array([b_amp[inds_pooled[idepth]].flatten() for idepth in range(num_depth)])
+                ############## pool areas # 4pooled depths x sessions ##############
+                if project_codes_all == ['VisualBehaviorMultiscope']:
+                    a_amp_pooled = np.array([a_amp[inds_pooled[idepth]].flatten() for idepth in range(num_depth)])
+                    b_amp_pooled = np.array([b_amp[inds_pooled[idepth]].flatten() for idepth in range(num_depth)])
 
-    #             print(a_amp.shape, b_amp.shape, a_amp_pooled.shape, b_amp_pooled.shape)
+        #             print(a_amp.shape, b_amp.shape, a_amp_pooled.shape, b_amp_pooled.shape)
 
+
+                ############### compute p value ###############
+
+                _, pi = st.ttest_ind(a_amp, b_amp, nan_policy='omit', axis=1, equal_var=equal_var)
+                
+                # pooled
+                if project_codes_all == ['VisualBehaviorMultiscope']:
+                    _, pp = st.ttest_ind(a_amp_pooled, b_amp_pooled, nan_policy='omit', axis=1, equal_var=equal_var)
+                    
+                    
+                ################### done with a given pair in whichStages_pval_allComparisonParis; keep all values for a given cre line ##################                    
+                p_all.append(pi)
+#                 p_all = np.array(p_all)                
+#                 if np.ndim(p_all)==1:
+#                     p_all = p_all[:, np.newaxis]
+
+                # pooled
+                if project_codes_all == ['VisualBehaviorMultiscope']:                    
+                    p_all_pooled.append(pp)
+#                 p_all_pooled = np.array(p_all_pooled)
+
+                    
     
-            ############### compute p value ###############
-        
-            _, p = st.ttest_ind(a_amp, b_amp, nan_policy='omit', axis=1, equal_var=equal_var)
-            p_all.append(p)
+            ################### done with looping over all values of whichStages_pval_allComparisonParis for a given cre line; keep all values for all cre lines ##################
+            p_all_allComparisonParis.append(p_all)
+            p_all_pooled_allComparisonParis.append(p_all_pooled)
+                
 
-            # pooled
-            if project_codes_all == ['VisualBehaviorMultiscope']:
-                _, p = st.ttest_ind(a_amp_pooled, b_amp_pooled, nan_policy='omit', axis=1, equal_var=equal_var)
-                p_all_pooled.append(p)
-
-        p_all = np.array(p_all)
-        p_all_pooled = np.array(p_all_pooled)
-    #         p_all.shape
-        if np.ndim(p_all)==1:
-            p_all = p_all[:, np.newaxis]
-
+                
+        ############### done with all cre lines ###############        
+        p_all_allComparisonParis = np.array(p_all_allComparisonParis)
+        p_all_pooled_allComparisonParis = np.array(p_all_pooled_allComparisonParis)
+            
             
         ############### compute significance ###############    
         
-        p_sigval = p_all+0 
-        p_sigval[p_all <= sigval] = 1
-        p_sigval[p_all > sigval] = np.nan
+        p_sigval = p_all_allComparisonParis + 0 
+        p_sigval[p_all_allComparisonParis <= sigval] = 1
+        p_sigval[p_all_allComparisonParis > sigval] = np.nan
 
         # pooled
-        p_sigval_pooled = p_all_pooled+0 
-        p_sigval_pooled[p_all_pooled <= sigval] = 1
-        p_sigval_pooled[p_all_pooled > sigval] = np.nan
+        p_sigval_pooled = p_all_pooled_allComparisonParis + 0 
+        p_sigval_pooled[p_all_pooled_allComparisonParis <= sigval] = 1
+        p_sigval_pooled[p_all_pooled_allComparisonParis > sigval] = np.nan
 
 #         print(p_sigval)
 #         print(p_sigval_pooled)

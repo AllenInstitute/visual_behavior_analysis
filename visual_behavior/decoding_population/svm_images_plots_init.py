@@ -34,7 +34,7 @@ from svm_images_plots_main import *
 
 #%% Set vars
 
-project_codes = ['VisualBehaviorMultiscope'] # ['VisualBehaviorMultiscope'] # ['VisualBehaviorMultiscope', 'VisualBehaviorTask1B', 'VisualBehavior', 'VisualBehaviorMultiscope4areasx2d']
+project_codes = ['VisualBehaviorTask1B'] # ['VisualBehaviorMultiscope'] # ['VisualBehaviorMultiscope', 'VisualBehaviorTask1B', 'VisualBehavior', 'VisualBehaviorMultiscope4areasx2d']
 
 to_decode = 'current' #'next' # 'current' (default): decode current image.    'previous': decode previous image.    'next': decode next image.
 trial_type = 'changes' #'changes' #'baseline_vs_nobaseline' #'hits_vs_misses' #'changes_vs_nochanges' #'omissions' # 'omissions', 'images', 'changes' # what trials to use for SVM analysis # the population activity of these trials at time time_win will be used to decode the image identity of flashes that occurred at their time 0 (if to_decode='current') or 750ms before (if to_decode='previous'). # 'baseline_vs_nobaseline' # decode activity at each frame vs. baseline (ie the frame before omission unless use_spont_omitFrMinus1 = 1 (see below))
@@ -78,7 +78,7 @@ else: # decoding images
 
     
 # Note: trials df has a much longer time_trace (goes up to 4.97) compared to stimulus df (goes up to .71), so frames_svm ends up being 1 element longer for trials df (ie when decoding hits from misses) compared to stimulus df (ie when decoding the images)    
-if project_codes == ['VisualBehavior']:
+if project_codes != 'VisualBehaviorMultiscope':
     frames_svm_all = [np.arange(-15,23)] #[[-3,-2,-1], [0,1,2,3,4,5]]
 else:
     frames_svm_all = [np.arange(-5,8)]
@@ -93,7 +93,7 @@ frames_svm = frames_svm_all[0] #[-3,-2,-1] # [0,1,2,3,4,5] #  which svm files to
 doPlots = 0
 num_planes = 8
 
-if project_codes == ['VisualBehavior']:
+if project_codes != ['VisualBehaviorMultiscope']:
     frame_dur = np.array([.032])
 else:
     frame_dur = np.array([.093])

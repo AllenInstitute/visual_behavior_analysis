@@ -27,7 +27,7 @@ blocks_all = svm_this_plane_allsess0['block'].values # weird: 70 block 0s, and 6
 
 #%% Loop through svm_this_plane_allsess0 and get those rows of it that belong to a given session stage and block; for each one set svm_allMice_sessPooled and svm_allMice_sessAvSd
 
-if project_codes == ['VisualBehavior']: # remove area/layer pooled columns
+if project_codes != ['VisualBehaviorMultiscope']: # remove area/layer pooled columns
     indexes = ['cre_allPlanes', 'mouse_id_allPlanes', 'session_ids', 'area_allPlanes', 'depth_allPlanes', 'block_all', 'session_labs', \
                'av_test_data_allPlanes', 'av_test_shfl_allPlanes', 'peak_amp_allPlanes']
 else:
@@ -39,7 +39,7 @@ else:
 svm_allMice_sessPooled = pd.DataFrame([], columns=indexes)
 
 
-if project_codes == ['VisualBehavior']: # remove area/layer pooled columns
+if project_codes != ['VisualBehaviorMultiscope']: # remove area/layer pooled columns
     cols0 = ['mouse_id', 'cre', 'block', 'session_ids', 'session_stages', 'session_labs', 'area', 'depth', 'plane', \
             'av_depth_avSess_eachP', 'sd_depth_avSess_eachP', 'av_n_neurons_avSess_eachP', 'sd_n_neurons_avSess_eachP', \
             'av_n_trials_avSess_eachP', 'sd_n_trials_avSess_eachP', 'av_test_data_avSess_eachP', 'sd_test_data_avSess_eachP', 'av_test_shfl_avSess_eachP', 'sd_test_shfl_avSess_eachP', \
@@ -258,7 +258,7 @@ for istage in np.unique(stages_all): # istage=1
             sd_n_trials_avSess_eachP = np.nanstd(a,axis=1).squeeze() / np.sqrt(num_sessions_valid) # num_planes # st error across sessions, for each plane
 
 
-            if project_codes == ['VisualBehavior']:
+            if project_codes != ['VisualBehaviorMultiscope']:
                 sqnv = np.sqrt(num_sessions_valid)
             else:
                 sqnv = np.sqrt(num_sessions_valid)[:, np.newaxis]

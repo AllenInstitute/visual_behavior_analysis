@@ -693,10 +693,10 @@ def svm_images_main_pbs(session_id, data_list, experiment_ids_valid, df_data, se
     stage = image_data.iloc[0]['session_type']
     experience_level = image_data.iloc[0]['experience_level']
     
-    # set mouse_id ('external_donor_name')
     mouse = int(data_list['mouse_id'].iloc[0])
+    container_id = data_list['ophys_container_id'].iloc[0]
     
-    # old method:
+    # old method for setting mouse_id ('external_donor_name')
     '''
     session_name = str(image_data.iloc[0]['session_name'])
     uind = [m.start() for m in re.finditer('_', session_name)]
@@ -773,7 +773,7 @@ def svm_images_main_pbs(session_id, data_list, experiment_ids_valid, df_data, se
         depth = int(data_list.iloc[index]['imaging_depth']) #depth
         valid = sum(np.in1d(experiment_ids_valid, int(lims_id)))>0 #data_list.iloc[index]['valid']
 
-        this_sess.at[index, cols[range(9)]] = session_id, lims_id, mouse, date, cre, stage, experience_level, area, depth #, valid
+        this_sess.at[index, cols[range(10)]] = session_id, lims_id, mouse, container_id, date, cre, stage, experience_level, area, depth #, valid
         
         if valid==False:
             print(f'Experiment {index} is not valid; skipping analysis...')

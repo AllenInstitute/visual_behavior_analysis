@@ -8,10 +8,10 @@ It sets all_sess_2an, which is a subset of all_sess that only includes desired s
 
 Its output is a pandas table "svm_this_plane_allsess" which includes svm variables for each mouse, (for each plane, for each area, and for each depth) and will be used for plotting.
 
-This script will call the following 2 scripts to make all the plots related to svm analysis:
+This script will call the following scripts to make all the plots related to svm analysis:
 "svm_images_plots_eachMouse" to make plots for each mouse.
 "svm_images_plots_setVars_sumMice.py" and "svm_images_plots_sumMice.py" which set vars and make average plots across mice (for each cre line).
-
+"svm_images_plots_compare_ophys_stages.py" to make comparison of the decoding performance across ophys stages (or experience levels if using matched cells).
 
 Note, this script is similar to part of omissions_traces_peaks_plots_setVars_ave.py.
     The variable svm_this_plane_allsess here is basically a combination of the following 2 vars in omissions_traces_peaks_plots_setVars_ave.py:
@@ -92,7 +92,7 @@ dir0 = '/home/farzaneh/OneDrive/Analysis'
 
 #%% Set the following vars
 
-project_codes = ['VisualBehavior'] #['VisualBehavior'], ['VisualBehaviorMultiscope'] # pooled: ['VisualBehavior'], ['VisualBehaviorMultiscope'] # ['VisualBehaviorMultiscope'] # both projects: #['VisualBehaviorMultiscope'] # ['VisualBehaviorMultiscope', 'VisualBehaviorTask1B', 'VisualBehavior', 'VisualBehaviorMultiscope4areasx2d']
+project_codes = ['VisualBehaviorTask1B'] #['VisualBehavior'], ['VisualBehaviorMultiscope'] # pooled: ['VisualBehavior'], ['VisualBehaviorMultiscope'] # ['VisualBehaviorMultiscope'] # both projects: #['VisualBehaviorMultiscope'] # ['VisualBehaviorMultiscope', 'VisualBehaviorTask1B', 'VisualBehavior', 'VisualBehaviorMultiscope4areasx2d']
 
 to_decode = 'current' # 'current': decode current image. # 'previous': decode previous image. # 'next': decode next image.
 trial_type = 'changes' # 'baseline_vs_nobaseline' # 'omissions' # 'changes' # 'hits_vs_misses' # 'changes_vs_nochanges' # 'images'# what trials to use for SVM analysis # the population activity of these trials at time time_win will be used to decode the image identity of flashes that occurred at their time 0 (if to_decode='current') or 750ms before (if to_decode='previous'). # eg 'omissions' means to use omission-aligned traces # 'baseline_vs_nobaseline' # decode activity at each frame vs. baseline (ie the frame before omission unless use_spont_omitFrMinus1 = 1 (see below))
@@ -170,7 +170,7 @@ else:
 
 
 if use_matched_cells==123:
-    svmn = svmn + '_matched_cells_FN1Nn' #Familiar, N1, N+1
+    svmn = svmn + '_matched_cells_FN1N2' #Familiar, N1, N+1
 elif use_matched_cells==12:
     svmn = svmn + '_matched_cells_FN1'
 elif use_matched_cells==23:
@@ -262,7 +262,7 @@ if len(project_codes_all)==1:
 
     #%% Set frames_svm, samps_bef and samps_aft
     # Note: trials df has a much longer time_trace (goes up to 4.97) compared to stimulus df (goes up to .71), so frames_svm ends up being 1 element longer for trials df (ie when decoding hits from misses) compared to stimulus df (ie when decoding the images)    
-    if project_codes == ['VisualBehavior']:
+    if project_codes != 'VisualBehaviorMultiscope':
         frames_svm = np.arange(-15,23)
         num_planes = 1
         num_depth = 1
@@ -291,7 +291,7 @@ if len(project_codes_all)==1:
     
 
     #%% Set svm vars for each plane across all sessions (for each mouse)
-    if project_codes == ['VisualBehavior']: # remove area/layer pooled columns
+    if project_codes != 'VisualBehaviorMultiscope': # remove area/layer pooled columns
         columns0 = ['mouse_id', 'cre', 'mouse_id_exp', 'cre_exp', 'block', 'session_ids', 'session_stages', 'session_labs', 'num_sessions_valid', 'area_this_plane_allsess_allp', 'depth_this_plane_allsess_allp', \
                     'area', 'depth', 'plane', \
                     'n_neurons_this_plane_allsess_allp', 'n_trials_this_plane_allsess_allp', \
@@ -333,6 +333,9 @@ if len(project_codes_all)==1:
     #####################################
     #%% Set svm_this_plane_allsess
     #####################################
+
+    
+    ######### set svm_this_plane_allsess
 
     exec(open('svm_images_plots_setVars2.py').read())     
     
@@ -466,7 +469,7 @@ else: # pooling data across multiple project codes
         
         #%% Set frames_svm, samps_bef and samps_aft
         # Note: trials df has a much longer time_trace (goes up to 4.97) compared to stimulus df (goes up to .71), so frames_svm ends up being 1 element longer for trials df (ie when decoding hits from misses) compared to stimulus df (ie when decoding the images)    
-        if project_codes == ['VisualBehavior']:
+        if project_codes != 'VisualBehaviorMultiscope':
             frames_svm = np.arange(-15,23)
             num_planes = 1
             num_depth = 1
@@ -491,7 +494,7 @@ else: # pooling data across multiple project codes
 
         
         #%% Set svm vars for each plane across all sessions (for each mouse)
-        if project_codes == ['VisualBehavior']: # remove area/layer pooled columns
+        if project_codes != 'VisualBehaviorMultiscope': # remove area/layer pooled columns
             columns0 = ['mouse_id', 'cre', 'mouse_id_exp', 'cre_exp', 'block', 'session_ids', 'session_stages', 'session_labs', 'num_sessions_valid', 'area_this_plane_allsess_allp', 'depth_this_plane_allsess_allp', \
                         'area', 'depth', 'plane', \
                         'n_neurons_this_plane_allsess_allp', 'n_trials_this_plane_allsess_allp', \

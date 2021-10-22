@@ -73,6 +73,9 @@ for iblock in br: # iblock=0 ; iblock=np.nan
         print(f'Loading: {allSessName[ia]}')
         all_sess_now = pd.read_hdf(allSessName[ia], key='all_sess') #'svm_vars')
         all_sess = pd.concat([all_sess, all_sess_now])
+#     all_sess
+#     all_sess.keys()    
+#     print(len(all_sess))
     
     all_sess0 = copy.deepcopy(all_sess)
 
@@ -84,32 +87,35 @@ for iblock in br: # iblock=0 ; iblock=np.nan
     print(f'\n{time_win}: time window that was used for response quantification.\n')
 
 
+    
     #%% Fix nan values of mouse_ids/date/stage/cre (some invalid experiments of a session have nan for mouse_id; this will cause problem later; here we replace them by the mouse_id of a valid experiment of that same session)
 
     for sess in session_ids: # sess = session_ids[0]
-        mouse_id = all_sess0[all_sess0['session_id']==sess]['mouse_id'].values
+        this_sess = all_sess0['session_id']==sess
+        
+        mouse_id = all_sess0[this_sess]['mouse_id'].values
         nans = np.array([type(m)==float for m in mouse_id]) # nans are float
         v = np.argwhere(nans==False).flatten() # valid experiments
 
-        date = all_sess0[all_sess0['session_id']==sess]['date'].values
-        stage = all_sess0[all_sess0['session_id']==sess]['stage'].values
-        cre = all_sess0[all_sess0['session_id']==sess]['cre'].values
+        date = all_sess0[this_sess]['date'].values
+        stage = all_sess0[this_sess]['stage'].values
+        cre = all_sess0[this_sess]['cre'].values
+        exp_level = all_sess0[this_sess]['experience_level'].values
 
         if len(v)>0:    
             v = v[0] # take the mouse_id, date and stage from the 1st valid experiment.
-            all_sess0.loc[all_sess0['session_id']==sess, 'mouse_id'] = mouse_id[v]
-            all_sess0.loc[all_sess0['session_id']==sess, 'date'] = date[v]
-            all_sess0.loc[all_sess0['session_id']==sess, 'stage'] = stage[v]
-            all_sess0.loc[all_sess0['session_id']==sess, 'cre'] = cre[v]
+            all_sess0.loc[this_sess, 'mouse_id'] = mouse_id[v]
+            all_sess0.loc[this_sess, 'date'] = date[v]
+            all_sess0.loc[this_sess, 'stage'] = stage[v]
+            all_sess0.loc[this_sess, 'cre'] = cre[v]
+            all_sess0.loc[this_sess, 'experience_level'] = exp_level[v]
 
         else:
             print(f'Session {sess}: all experiments are invalid')
 
-    all_sess
-    all_sess.keys()    
-    print(len(all_sess))
 
-    all_sess0[['cre', 'stage']].groupby(['stage', 'cre']).count()
+#     all_sess0[['cre', 'stage']].groupby(['stage', 'cre']).count()
+    all_sess0[['cre', 'stage', 'experience_level', 'mouse_id', 'session_id', 'experiment_id']].groupby(['experience_level', 'cre']).count()
 
 
 
@@ -232,21 +238,19 @@ for iblock in br: # iblock=0 ; iblock=np.nan
     estbl = experiments_table.index
     es = all_sess0['experiment_id'].values
 
-    try:
-        exposure_number = experiments_table[np.in1d(estbl, es)]['session_type_exposure_number'].values
-        # print(f'exposure numbers: {np.unique(exposure_number)}')
-    except Exception as E:
-        print('exposure_number does not exist in experiments_table!! For now it is fine because we are not really using exposure_number')
-        print(E)
+#     try:
+#         exposure_number = experiments_table[np.in1d(estbl, es)]['session_type_exposure_number'].values
+#         # print(f'exposure numbers: {np.unique(exposure_number)}')
+#     except Exception as E:
+#         print('exposure_number does not exist in experiments_table!! For now it is fine because we are not really using exposure_number')
+#         print(E)
         
 
     #%% Are all experiments in all_sess also in experiment_table; this should always be the case, unless experiment_table changes later bc of some qc related thing!
 
     a = sum(~np.in1d(es, estbl))
-    if a==0:
-        print(f'All experiments in all_sess exist in experiment_table, as expected')
-    else:
-        print(f'\n{a} experiments in all_sess do NOT exist in experiment_table; uncanny!')
+    if a!=0: # print(f'All experiments in all_sess exist in experiment_table, as expected')
+        sys.exit(f'\n{a} experiments in all_sess do NOT exist in experiment_table; uncanny!')
 
         
         ### make exposure_number the same size as all_sess and use some large value for the missing experiments so they will get filtered out below. 
@@ -304,10 +308,10 @@ for iblock in br: # iblock=0 ; iblock=np.nan
 #         session_numbers = [1]
 
         #%% If analyzing novel sessions, only take sessions that include the 1st presentation of the novel session (ie the ones without a retake of session ophys-3)
-        if np.in1d(4, session_numbers): # novel sessions
-            exposure_number_2an = 0 # # only take those rows of all_sess that are the 1st exposure of the mouse to the novel session
-        else:
-            exposure_number_2an = np.nan
+#         if np.in1d(4, session_numbers): # novel sessions
+#             exposure_number_2an = 0 # # only take those rows of all_sess that are the 1st exposure of the mouse to the novel session
+#         else:
+#             exposure_number_2an = np.nan
 
         '''
         ###### NOTE: here we redefine all_sess ######
@@ -323,7 +327,7 @@ for iblock in br: # iblock=0 ; iblock=np.nan
         print(all_sess.shape)
         '''
 
-        print(f'\nFor now including all sessions with any exposure_number!\n')
+#         print(f'\nFor now including all sessions with any exposure_number!\n')
 #         all_sess = copy.deepcopy(all_sess0)
 
 
@@ -786,7 +790,7 @@ for iblock in br: # iblock=0 ; iblock=np.nan
                     sd_n_trials_avSess_eachP = np.nanstd(a,axis=1).squeeze() / np.sqrt(num_sessions_valid) # num_planes # st error across sessions, for each plane
 
                     
-                    if project_codes == ['VisualBehavior']:
+                    if project_codes != ['VisualBehaviorMultiscope']:
                         sqnv = np.sqrt(num_sessions_valid)
                     else:
                         sqnv = np.sqrt(num_sessions_valid)[:, np.newaxis]
