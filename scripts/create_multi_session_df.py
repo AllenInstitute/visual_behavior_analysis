@@ -21,22 +21,22 @@ if __name__ == '__main__':
 
     # stimulus response
 
-    df_name = 'stimulus_response_df'
-    conditions = ['cell_specimen_id', 'is_change', 'image_name']
-
-    print('creating multi_session_df for', df_name, ', ', project_code, ', session number', session_number, conditions)
-    df = io.get_multi_session_df(project_code, session_number, df_name, conditions, use_events=False,
-                                 filter_events=False,
-                                 use_extended_stimulus_presentations=False)
-
-
-    df_name = 'stimulus_response_df'
-    conditions = ['cell_specimen_id', 'image_name']
-
-    print('creating multi_session_df for', df_name, ', ', project_code, ', session number', session_number, conditions)
-    df = io.get_multi_session_df(project_code, session_number, df_name, conditions, use_events=False,
-                                 filter_events=False,
-                                 use_extended_stimulus_presentations=False)
+    # df_name = 'stimulus_response_df'
+    # conditions = ['cell_specimen_id', 'is_change', 'image_name']
+    #
+    # print('creating multi_session_df for', df_name, ', ', project_code, ', session number', session_number, conditions)
+    # df = io.get_multi_session_df(project_code, session_number, df_name, conditions, use_events=False,
+    #                              filter_events=False,
+    #                              use_extended_stimulus_presentations=False)
+    #
+    #
+    # df_name = 'stimulus_response_df'
+    # conditions = ['cell_specimen_id', 'image_name']
+    #
+    # print('creating multi_session_df for', df_name, ', ', project_code, ', session number', session_number, conditions)
+    # df = io.get_multi_session_df(project_code, session_number, df_name, conditions, use_events=False,
+    #                              filter_events=False,
+    #                              use_extended_stimulus_presentations=False)
 
     # omissions
 
