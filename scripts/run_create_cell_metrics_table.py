@@ -23,11 +23,11 @@ if __name__ == "__main__":
     python_file = os.path.join(os.getcwd(), args.scriptname)
 
     # define the job record output folder
-    stdout_location = r"/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/cluster_jobs/vba_qc_plots"
+    stdout_location = r"/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/cluster_jobs/cell_metrics"
 
     # instantiate a Slurm object
     slurm = Slurm(
-        mem='60g',  # '24g'
+        mem='120g',  # '24g'
         cpus_per_task=10,
         time='60:00:00',
         partition='braintv',
