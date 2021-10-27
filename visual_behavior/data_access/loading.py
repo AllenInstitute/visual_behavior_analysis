@@ -69,6 +69,25 @@ def get_flagged_ophys_experiment_ids():
     '''
     # 856938751, SDK#794, extreme variability in image timing
     oeids = [856938751]
+
+    # Multiscope sessions with 9Hz frame rate, list from: https://github.com/AllenInstitute/visual_behavior_glm/blob/fd805ab59b81c1b60021604eb12246667aab0941/visual_behavior_glm/GLM_visualization_tools.py#L122
+    # ophys_session_ids = [873720614, 962045676, 1048363441, 1049240847, 1050231786, 1050597678, 1051107431, 1051319542, 1052096166,
+    #  1052330675, 1052512524, 1056065360, 1056238781, 1052752249, 1049240847, 1050929040, 1052330675]
+
+    # Marina's notes on problematic experiments
+
+    # ophys_session_id = 919888953, SDK#2216, OPHYS_3 listed but novel image set susepcted to have been shown based on activity profile
+    # ophys_experiment_ids for 919888953
+    # [920288855, 920288849, 920288853, 920288851, 920288845, 920288843]
+
+    # ophys_session_id = 931326814, # SDK#2215 and 2202 report mouse was shown image set B for session 2 when it should have been A
+    # this will also affect the novelty of the first novel session for this mouse (453988), but that has not been added here yet
+    # expt ids for 931326814:
+    # [932372699, 932372701, 932372707, 932372711, 932372705]
+
+    # ophys_session_id = 875259383 # SDK#2202 incorrectly shown OPHYS_6_images_A, but
+    # this session no longer shows up in the ophys experiment table for some reason
+
     return oeids
 
 #  RELEVANT DIRECTORIES
