@@ -926,7 +926,7 @@ def load_and_save_all_metrics_tables_for_all_experiments(ophys_experiment_table)
         if use_events:
             for filter_events in [True, False]:
                 try:
-                    metrics_table = cell_metrics.load_metrics_table_for_experiments(ophys_experiment_ids,
+                    metrics_table = load_metrics_table_for_experiments(ophys_experiment_ids,
                                                                                     condition=condition,
                                                                                     stimuli=stimuli,
                                                                                     session_subset=session_subset,
@@ -934,7 +934,7 @@ def load_and_save_all_metrics_tables_for_all_experiments(ophys_experiment_table)
                                                                                     filter_events=filter_events)
 
                     # save
-                    filepath = cell_metrics.get_metrics_df_filepath('all_experiments', condition, stimuli,
+                    filepath = get_metrics_df_filepath('all_experiments', condition, stimuli,
                                                                     session_subset, use_events, filter_events)
                     if os.path.exists(filepath):
                         os.remove(filepath)
@@ -960,7 +960,7 @@ def load_and_save_all_metrics_tables_for_all_experiments(ophys_experiment_table)
                     if use_events:
                         for filter_events in [True, False]:
                             try:  # code will not always run, such as in the case of passive sessions (no trials that are 'engaged')
-                                metrics_table = cell_metrics.load_metrics_table_for_experiments(ophys_experiment_ids,
+                                metrics_table = load_metrics_table_for_experiments(ophys_experiment_ids,
                                                                                                 condition=condition,
                                                                                                 stimuli=stimulus,
                                                                                                 session_subset=session_subset,
@@ -968,7 +968,7 @@ def load_and_save_all_metrics_tables_for_all_experiments(ophys_experiment_table)
                                                                                                 filter_events=filter_events)
 
                                 # save
-                                filepath = cell_metrics.get_metrics_df_filepath('all_experiments', condition, stimulus,
+                                filepath = get_metrics_df_filepath('all_experiments', condition, stimulus,
                                                                                 session_subset, use_events,
                                                                                 filter_events)
                                 if os.path.exists(filepath):
