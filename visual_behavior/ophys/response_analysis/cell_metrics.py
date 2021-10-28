@@ -564,6 +564,11 @@ def generate_cell_metrics_table(ophys_experiment_id, use_events=False, filter_ev
     metrics_table['use_events'] = use_events
     metrics_table['filter_events'] = filter_events
 
+    # add response window used to calculate mean_response and window for computing reliability
+    import visual_behavior.ophys.response_analysis.response_processing as rp
+    params = rp.get_default_stimulus_response_params()
+    metrics_table['response_window'] = params['response_window_duration_seconds']
+
     metrics_table = metrics_table.rename(columns={'variable': 'metric'})
 
     if save:
