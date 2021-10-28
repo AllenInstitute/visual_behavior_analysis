@@ -17,7 +17,7 @@ parser.add_argument('--scriptname', type=str, default='create_cell_metrics_table
 # print(cache_dir)
 
 experiments_table = loading.get_platform_paper_experiment_table()
-experiments_table = experiments_table[experiments_table.cre_line.isin(['Vip-IRES-Cre', 'Sst-IRES-Cre'])]
+experiments_table = experiments_table[experiments_table.cre_line.isin(['Vip-IRES-Cre', 'Sst-IRES-Cre'])==False]
 ophys_experiment_ids = experiments_table.index.values
 
 if __name__ == "__main__":
@@ -30,7 +30,7 @@ if __name__ == "__main__":
 
     # instantiate a Slurm object
     slurm = Slurm(
-        mem='30g',  # '24g'
+        mem='60g',  # '24g'
         cpus_per_task=10,
         time='60:00:00',
         partition='braintv',
