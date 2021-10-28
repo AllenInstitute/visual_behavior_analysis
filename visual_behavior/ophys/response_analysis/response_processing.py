@@ -459,8 +459,8 @@ def get_trials_response_xr(dataset, use_events=False, filter_events=False, frame
     event_ids = change_trials.index.values
     if time_window is None:
         response_analysis_params = get_default_trial_response_params()
-        if use_events:
-            response_analysis_params['response_window_duration_seconds'] = 0.25
+        # if use_events:
+        #     response_analysis_params['response_window_duration_seconds'] = 0.25
     else:
         response_analysis_params = get_default_trial_response_params()
         response_analysis_params['window_around_timepoint_seconds'] = time_window
@@ -496,8 +496,8 @@ def get_stimulus_response_xr(dataset, use_events=False, filter_events=True, fram
     event_ids = dataset.stimulus_presentations.index.values
     if time_window is None:
         response_analysis_params = get_default_stimulus_response_params()
-        if use_events:
-            response_analysis_params['response_window_duration_seconds'] = 0.25
+        # if use_events:
+        #     response_analysis_params['response_window_duration_seconds'] = 0.25
     else:
         response_analysis_params = get_default_stimulus_response_params()
         response_analysis_params['window_around_timepoint_seconds'] = time_window
