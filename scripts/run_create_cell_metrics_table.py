@@ -43,4 +43,4 @@ if __name__ == "__main__":
         print('experiment ID = {}, number {} of {}'.format(ophys_experiment_id, ii + 1, len(ophys_experiment_ids)))
         job_title = 'experiment_{}'.format(ophys_experiment_id)
 
-        slurm.sbatch(python_executable+' '+python_file+' '+args_to_pass)
+        slurm.sbatch(python_executable + ' ' + python_file + ' ' + args_to_pass)
