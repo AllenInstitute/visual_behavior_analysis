@@ -632,7 +632,7 @@ def generate_and_save_all_metrics_tables_for_experiment(ophys_experiment_id):
     for all possible combinations of scenarios one might want to analyze, including:
     condition: 'changes', 'omissions', 'images', or 'traces'
     stimulus: 'all_images', 'pref_image',
-    session_subset: 'full_session', 'engaged', 'disengaged'
+    session_subset: 'full_session', 'engaged', 'disengaged' (engaged defined as reward rate >2)
     conditions include events, filtered_events and dff
     use_events: [True, False], when use_events=True, also go through filter_events=[True, False]
 
@@ -823,6 +823,7 @@ def load_metrics_generation_exceptions_log_file():
 def load_metrics_table_for_experiment(ophys_experiment_id, condition, stimuli, session_subset, use_events, filter_events):
     """
     Loads metrics table from file, either cell metrics (stimulus locked metrics) or full trace metrics, depending on provided conditions
+    Note: engaged defined as reward rate >2
     :param ophys_experiment_id: unique identifier for experiment, or 'all_experiments' to get all experiments from a single file
     :param condition: 'changes', 'omissions', 'images', or 'traces'
     :param stimuli: 'all_images', 'pref_image', or 'full_session' (for 'traces')
@@ -840,6 +841,7 @@ def load_metrics_table_for_experiment(ophys_experiment_id, condition, stimuli, s
 def load_metrics_table_for_experiments(ophys_experiment_ids, condition, stimuli, session_subset, use_events, filter_events):
     '''
     Loads a metrics table, either cell metrics (stimulus locked) or full trace metrics for multiple experiments
+    Note: engaged defined as reward rate >2
     ophys_experiment_ids: unique identifier for experiment or 'all_experiments' to load table from single file for all expts
     :param condition: 'changes', 'omissions', 'images', or 'traces'
     :param stimuli: 'all_images', 'pref_image', or 'full_session' (for 'traces')
