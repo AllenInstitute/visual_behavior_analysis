@@ -17,7 +17,6 @@ parser.add_argument('--scriptname', type=str, default='create_cell_metrics_table
 # print(cache_dir)
 
 experiments_table = loading.get_platform_paper_experiment_table()
-experiments_table = experiments_table[experiments_table.cre_line.isin(['Vip-IRES-Cre', 'Sst-IRES-Cre'])==False]
 ophys_experiment_ids = experiments_table.index.values
 
 if __name__ == "__main__":

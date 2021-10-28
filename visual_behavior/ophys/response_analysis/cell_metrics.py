@@ -626,7 +626,7 @@ def get_metrics_df_filepath(ophys_experiment_id, condition, stimuli, session_sub
     return filepath
 
 
-def generate_and_save_all_metrics_tables_for_experiment(ophys_experiment_id):
+def generate_and_save_all_metrics_tables_for_experiment(ophys_experiment_id, overwrite=True):
     """
     For a single ophys_experiment_id, creates trace and cell (stimulus locked) metrics
     for all possible combinations of scenarios one might want to analyze, including:
@@ -635,6 +635,7 @@ def generate_and_save_all_metrics_tables_for_experiment(ophys_experiment_id):
     session_subset: 'full_session', 'engaged', 'disengaged' (engaged defined as reward rate >2)
     conditions include events, filtered_events and dff
     use_events: [True, False], when use_events=True, also go through filter_events=[True, False]
+    overwrite: If False, only generate metric files that don't already exist. If True, delete existing ones and regenerate everything.
 
     :param ophys_experiment_id: unique experiment identifier
     :return:
@@ -647,16 +648,28 @@ def generate_and_save_all_metrics_tables_for_experiment(ophys_experiment_id):
     for use_events in [False, True]:
         for filter_events in [False, True]:
             try:
-                trace_metrics = generate_trace_metrics_table(ophys_experiment_id,
-                                                             use_events=use_events, filter_events=filter_events)
+
                 filepath = get_metrics_df_filepath(ophys_experiment_id, condition='traces',
                                                    stimuli='full_session', session_subset='full_session',
                                                    use_events=use_events, filter_events=filter_events)
-                if os.path.exists(filepath):
-                    os.remove(filepath)
-                    print('h5 file exists for', ophys_experiment_id, ' - overwriting')
-                trace_metrics.to_hdf(filepath, key='df')
-                print('trace metrics saved for', ophys_experiment_id)
+                if overwrite:
+                    if os.path.exists(filepath): # if file exists, delete it
+                        os.remove(filepath)
+                        print('h5 file exists for', ophys_experiment_id, ' - overwriting')
+                    # regenerate metrics   and save
+                    trace_metrics = generate_trace_metrics_table(ophys_experiment_id,
+                                                            use_events=use_events, filter_events=filter_events)
+                    trace_metrics.to_hdf(filepath, key='df')
+                    print('trace metrics saved for', ophys_experiment_id)
+                else: # if you dont want to overwrite
+                    if os.path.exists(filepath): # and the file already exists
+                        pass # do nothing
+                    else: # otherwise
+                        # generate metrics and save
+                        trace_metrics = generate_trace_metrics_table(ophys_experiment_id,
+                                                                     use_events=use_events, filter_events=filter_events)
+                        trace_metrics.to_hdf(filepath, key='df')
+                        print('trace metrics saved for', ophys_experiment_id)
             except Exception as e:
                 print('metrics not generated for trace_metrics for experiment', ophys_experiment_id)
                 print(e)
@@ -678,25 +691,42 @@ def generate_and_save_all_metrics_tables_for_experiment(ophys_experiment_id):
     for condition in conditions:
         for stimulus in stimuli:
             for session_subset in session_subsets:
-                for use_events in [True, False]:
-                    for filter_events in [True, False]:
+                for use_events in [False, True]:
+                    for filter_events in [False, True]:
                         # need try except because code will not always run, such as in the case of passive sessions (no trials that are 'engaged')
                         # or loops where use_events = False and filter_events = True
                         try:
-                            metrics_df = generate_cell_metrics_table(ophys_experiment_id,
-                                                                     use_events=use_events, filter_events=filter_events,
-                                                                     condition=condition, session_subset=session_subset,
-                                                                     stimuli=stimulus)
-
                             filepath = get_metrics_df_filepath(ophys_experiment_id, condition=condition,
                                                                stimuli=stimulus, session_subset=session_subset,
                                                                use_events=use_events, filter_events=filter_events)
-                            if os.path.exists(filepath):
-                                os.remove(filepath)
-                                print('h5 file exists for', ophys_experiment_id, ' - overwriting')
-                            metrics_df.to_hdf(filepath, key='df')
-                            print('metrics generated for', condition, stimulus, session_subset,
-                                  'use_events', use_events, 'filter_events', filter_events, )
+                            if overwrite: # if you want to regenerate everything
+                                if os.path.exists(filepath):  # and file exists, delete it
+                                    os.remove(filepath)
+                                    print('h5 file exists for', ophys_experiment_id, ' - overwriting')
+                                # regenerate metrics and save
+                                metrics_df = generate_cell_metrics_table(ophys_experiment_id,
+                                                                         use_events=use_events,
+                                                                         filter_events=filter_events,
+                                                                         condition=condition,
+                                                                         session_subset=session_subset,
+                                                                         stimuli=stimulus)
+                                metrics_df.to_hdf(filepath, key='df')
+                                print('metrics generated for', condition, stimulus, session_subset,
+                                      'use_events', use_events, 'filter_events', filter_events, )
+                            else:  # if you dont want to overwrite
+                                if os.path.exists(filepath):  # and the file already exists
+                                    pass  # do nothing
+                                else:  # otherwise
+                                    # generate metrics and save
+                                    metrics_df = generate_cell_metrics_table(ophys_experiment_id,
+                                                                             use_events=use_events,
+                                                                             filter_events=filter_events,
+                                                                             condition=condition,
+                                                                             session_subset=session_subset,
+                                                                             stimuli=stimulus)
+                                    metrics_df.to_hdf(filepath, key='df')
+                                    print('metrics generated for', condition, stimulus, session_subset,
+                                          'use_events', use_events, 'filter_events', filter_events, )
 
                         except Exception as e:
                             print('metrics not generated for experiment_id', ophys_experiment_id,
@@ -851,65 +881,63 @@ def load_and_save_all_metrics_tables_for_all_experiments(ophys_experiment_table)
     stimuli = 'full_session'
     session_subset = 'full_session'
 
-    for use_events in [True, False]:
-        if use_events:
-            for filter_events in [True, False]:
-                try:
-                    metrics_table = load_metrics_table_for_experiments(ophys_experiment_ids,
-                                                                       condition=condition,
-                                                                       stimuli=stimuli,
-                                                                       session_subset=session_subset,
-                                                                       use_events=use_events,
-                                                                       filter_events=filter_events)
+    for use_events in [False, True]:
+        for filter_events in [False, True]:
+            try:
+                metrics_table = load_metrics_table_for_experiments(ophys_experiment_ids,
+                                                                   condition=condition,
+                                                                   stimuli=stimuli,
+                                                                   session_subset=session_subset,
+                                                                   use_events=use_events,
+                                                                   filter_events=filter_events)
 
-                    # save
-                    filepath = get_metrics_df_filepath('all_experiments', condition, stimuli,
-                                                       session_subset, use_events, filter_events)
-                    if os.path.exists(filepath):
-                        os.remove(filepath)
-                        print('h5 file exists for all experiments  - overwriting')
-                    metrics_table.to_hdf(filepath, key='df')
-                    print('trace metrics saved for all experiments')
+                # save
+                filepath = get_metrics_df_filepath('all_experiments', condition, stimuli,
+                                                   session_subset, use_events, filter_events)
+                if os.path.exists(filepath):
+                    os.remove(filepath)
+                    print('h5 file exists for all experiments  - overwriting')
+                metrics_table.to_hdf(filepath, key='df')
+                print('trace metrics saved for all experiments')
 
-                except Exception as e:
-                    print('metrics not loaded for trace_metrics for all experiments', condition, stimuli,
-                          session_subset, use_events, filter_events)
-                    print(e)
+            except Exception as e:
+                print('metrics not loaded for trace_metrics for all experiments', condition, stimuli,
+                      session_subset, use_events, filter_events)
+                print(e)
 
     ### event locked response metrics ###
     conditions = ['changes', 'omissions', 'images']
     stimuli = ['all_images', 'pref_image']
-    session_subsets = ['engaged', 'disengaged', 'full_session']
+    session_subsets = ['full_session', 'engaged', 'disengaged']
 
     metrics_df = pd.DataFrame()
     for condition in conditions:
         for stimulus in stimuli:
             for session_subset in session_subsets:
-                for use_events in [True, False]:
-                    if use_events:
-                        for filter_events in [True, False]:
-                            try:  # code will not always run, such as in the case of passive sessions (no trials that are 'engaged')
-                                metrics_table = load_metrics_table_for_experiments(ophys_experiment_ids,
-                                                                                   condition=condition,
-                                                                                   stimuli=stimulus,
-                                                                                   session_subset=session_subset,
-                                                                                   use_events=use_events,
-                                                                                   filter_events=filter_events)
+                for use_events in [False, True]:
+                    for filter_events in [False, True]:
+                        try:  # code will not always run, such as in the case of passive sessions (no trials that are 'engaged')
+                            metrics_table = load_metrics_table_for_experiments(ophys_experiment_ids,
+                                                                               condition=condition,
+                                                                               stimuli=stimulus,
+                                                                               session_subset=session_subset,
+                                                                               use_events=use_events,
+                                                                               filter_events=filter_events)
 
-                                # save
-                                filepath = get_metrics_df_filepath('all_experiments', condition, stimulus,
-                                                                   session_subset, use_events,
-                                                                   filter_events)
-                                if os.path.exists(filepath):
-                                    os.remove(filepath)
-                                    print('h5 file exists for all experiments  - overwriting')
-                                metrics_table.to_hdf(filepath, key='df')
-                                print('cell metrics saved for all experiments')
+                            # save
+                            filepath = get_metrics_df_filepath('all_experiments', condition, stimulus,
+                                                               session_subset, use_events,
+                                                               filter_events)
+                            if os.path.exists(filepath):
+                                os.remove(filepath)
+                                print('h5 file exists for all experiments  - overwriting')
+                            metrics_table.to_hdf(filepath, key='df')
+                            print('cell metrics saved for all experiments')
 
-                            except Exception as e:
-                                print('all_experiments metrics not loaded for', condition, stimulus, session_subset,
-                                      use_events, filter_events)
-                                print(e)
+                        except Exception as e:
+                            print('all_experiments metrics not loaded for', condition, stimulus, session_subset,
+                                  use_events, filter_events)
+                            print(e)
 
 
 if __name__ == '__main__':
