@@ -10,11 +10,14 @@ parser.add_argument('--env', type=str, default='visual_behavior_sdk', metavar='n
 parser.add_argument('--scriptname', type=str, default='create_cell_metrics_table.py', metavar='name of script to run (must be in same folder)')
 
 
-from allensdk.brain_observatory.behavior.behavior_project_cache import VisualBehaviorOphysProjectCache as bpc
-cache_dir = loading.get_platform_analysis_cache_dir()
-cache = bpc.from_s3_cache(cache_dir=cache_dir)
-print(cache_dir)
-experiments_table = cache.get_ophys_experiment_table()
+# from allensdk.brain_observatory.behavior.behavior_project_cache import VisualBehaviorOphysProjectCache as bpc
+# cache_dir = loading.get_platform_analysis_cache_dir()
+# cache = bpc.from_s3_cache(cache_dir=cache_dir)
+# experiments_table = cache.get_ophys_experiment_table()
+# print(cache_dir)
+
+experiments_table = loading.get_platform_paper_experiment_table()
+experiments_table = experiments_table[experiments_table.cre_line.isin(['Vip-IRES-Cre', 'Sst-IRES-Cre'])]
 ophys_experiment_ids = experiments_table.index.values
 
 if __name__ == "__main__":
@@ -27,7 +30,7 @@ if __name__ == "__main__":
 
     # instantiate a Slurm object
     slurm = Slurm(
-        mem='120g',  # '24g'
+        mem='30g',  # '24g'
         cpus_per_task=10,
         time='60:00:00',
         partition='braintv',
