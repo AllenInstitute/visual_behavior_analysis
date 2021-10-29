@@ -401,7 +401,6 @@ def get_trace_metrics(traces, ophys_frame_rate, use_events=False, filter_events=
     :param traces:
     :return:
     """
-    import visual_behavior.data_access.processing as processing
     traces = compute_robust_snr_on_dataframe(traces, use_events, filter_events)
     traces = compute_trace_metrics(traces, ophys_frame_rate)
     # reorder
