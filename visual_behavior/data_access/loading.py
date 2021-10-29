@@ -216,7 +216,31 @@ def get_platform_paper_experiment_table(add_extra_columns=True):
 
     return experiment_table
 
-#
+
+def get_platform_paper_behavior_session_table():
+    """
+    loads the behavior sessions table that was downloaded from AWS and saved to the the platform paper cache dir.
+    Then filter out VisualBehaviorMultiscope4areasx2d and Ai94 data.
+    And add cell_type column (values = ['Excitatory', 'Sst Inhibitory', 'Vip Inhibitory']
+    """
+    cache_dir = get_platform_analysis_cache_dir()
+    cache = bpc.from_s3_cache(cache_dir=cache_dir)
+    behavior_sessions = cache.get_behavior_session_table()
+
+    # get rid of NaNs, documented in SDK#2218
+    behavior_sessions = behavior_sessions[behavior_sessions.session_type.isnull() == False]
+
+    # remove 4x2 and Ai94 data
+    behavior_sessions = behavior_sessions[(behavior_sessions.project_code != 'VisualBehaviorMultiscope4areasx2d') &
+                                          (behavior_sessions.reporter_line != 'Ai94(TITL-GCaMP6s)')].copy()
+
+    # overwrite session number and passive columns to patch for bug flagged in this SDK issue:
+    # https://github.com/AllenInstitute/AllenSDK/issues/2251
+    behavior_sessions = utilities.add_session_number_to_experiment_table(behavior_sessions)
+    behavior_sessions = utilities.add_passive_flag_to_ophys_experiment_table(behavior_sessions)
+    behavior_sessions = utilities.add_cell_type_column(behavior_sessions)
+
+    return behavior_sessions
 
 
 def get_filtered_ophys_experiment_table(include_failed_data=False, release_data_only=True, exclude_ai94=True,
