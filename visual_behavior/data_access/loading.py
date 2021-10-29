@@ -220,7 +220,7 @@ def get_platform_paper_experiment_table(add_extra_columns=True):
 
 
 def get_filtered_ophys_experiment_table(include_failed_data=False, release_data_only=True, exclude_ai94=True,
-                                        add_extra_columns=True, from_cached_file=False, overwrite_cached_file=False):
+                                        add_extra_columns=False, from_cached_file=False, overwrite_cached_file=False):
     """
     Loads a list of available ophys experiments FROM LIMS (not S3 cache) and adds additional useful columns to the table.
     By default, loads from a saved cached file.
@@ -230,7 +230,7 @@ def get_filtered_ophys_experiment_table(include_failed_data=False, release_data_
 
         include_failed_data {bool} -- If True, return all experiments including those from failed containers and receptive field mapping experiments.
                                       If False, returns only experiments that have passed experiment level QC.
-                                      If "release_data_only" is True, failed experiments will not be retruned
+                                      Setting include_failed_data to True will automatically set release_data_only to False
                                       There is no guarantee on data quality or reprocessing for these experiments.
         release_data_only {bool} -- If True, return only experiments that were released on March 25th, 2021 and August 12, 2021.
                                     Fail tags and other extra columns will not be added if this is set to True.
@@ -245,6 +245,8 @@ def get_filtered_ophys_experiment_table(include_failed_data=False, release_data_
     Returns:
         experiment_table -- returns a dataframe with ophys_experiment_id as the index and metadata as columns.
     """
+    if include_failed_data is True:
+        release_data_only = False
     if release_data_only:
         # get cache from lims for data released on March 25th
         print('getting experiment table for March and August releases from lims')
@@ -266,7 +268,7 @@ def get_filtered_ophys_experiment_table(include_failed_data=False, release_data_
             print('getting up-to-date experiment_table from lims')
             # get everything in lims
             cache = bpc.from_lims()
-            experiments = cache.get_ophys_experiment_table()
+            experiments = cache.get_ophys_experiment_table(passed_only=False)
             # limit to the 4 VisualBehavior project codes
             experiments = filtering.limit_to_production_project_codes(experiments)
             if add_extra_columns:
@@ -449,6 +451,8 @@ def get_extened_stimulus_presentations(stimulus_presentations, licks, rewards, r
                                           stimulus_presentations.rewards.values]
     stimulus_presentations['reward_rate'] = stimulus_presentations['rewarded'].rolling(window=320, min_periods=1,
                                                                                        win_type='triang').mean()
+    # not sure why the output of this is two orders of magnitude off from expected units of rewards/min...
+    stimulus_presentations['reward_rate'] = stimulus_presentations['reward_rate'] * 100
     stimulus_presentations = reformat.add_response_latency(stimulus_presentations)
     stimulus_presentations = reformat.add_image_contrast_to_stimulus_presentations(stimulus_presentations)
     stimulus_presentations = reformat.add_time_from_last_lick(stimulus_presentations, licks)
