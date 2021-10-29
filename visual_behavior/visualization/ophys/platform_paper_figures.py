@@ -8,6 +8,7 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 import visual_behavior.visualization.utils as utils
+import visual_behavior.visualization.ophys.summary_figures as sf
 
 from visual_behavior.ophys.response_analysis.response_analysis import ResponseAnalysis
 
@@ -260,3 +261,65 @@ if __name__ == '__main__':
                                             axes_column, hue_column, palette,
                                             use_events=True, filter_events=True, xlim_seconds=xlim_seconds,
                                             horizontal=True, save_dir=None, folder=None)
+
+
+def plot_behavior_timeseries(dataset, start_time, duration_seconds=20, save_dir=None, ax=None):
+    """
+    Plots licking behavior, rewards, running speed, and pupil area for a defined window of time
+    """
+
+    xlim_seconds = [start_time-(duration_seconds/4.), start_time+duration_seconds*2]
+
+    lick_timestamps = dataset.licks.timestamps.values
+    licks = np.ones(len(lick_timestamps))
+    licks[:] = -2
+
+    reward_timestamps = dataset.rewards.timestamps.values
+    rewards = np.zeros(len(reward_timestamps))
+    rewards[:] = -4
+
+    running_speed = dataset.running_speed.speed.values
+    running_timestamps = dataset.running_speed.timestamps.values
+
+    eye_tracking = dataset.eye_tracking.copy()
+    pupil_diameter = eye_tracking.pupil_width.values
+    pupil_diameter[eye_tracking.likely_blink==True] = np.nan
+    pupil_timestamps = eye_tracking.timestamps.values
+
+    if ax is None:
+        figsize = (15, 2.5)
+        fig, ax = plt.subplots(1, 1, figsize=figsize)
+    colors = sns.color_palette()
+
+    ln0 = ax.plot(lick_timestamps, licks, '|', label='licks', color=colors[3], markersize=10)
+    ln1 = ax.plot(reward_timestamps, rewards, 'o', label='rewards', color=colors[9], markersize=10)
+
+    ln2 = ax.plot(running_timestamps, running_speed, label='running_speed', color=colors[2], zorder=100)
+    ax.set_ylabel('running speed\n(cm/s)')
+    ax.set_ylim(ymin=-8)
+
+    ax2 = ax.twinx()
+    ln3 = ax2.plot(pupil_timestamps, pupil_diameter, label='pupil_diameter', color=colors[4], zorder=0)
+
+    ax2.set_ylabel('pupil diameter \n(pixels)')
+    #     ax2.set_ylim(0, 200)
+
+    axes_to_label = ln0 + ln1 + ln2 + ln3  # +ln4
+    labels = [label.get_label() for label in axes_to_label]
+    ax.legend(axes_to_label, labels, bbox_to_anchor=(1,1), fontsize='small')
+
+    ax = sf.add_stim_color_span(dataset, ax, xlim=xlim_seconds)
+
+    ax.set_xlim(xlim_seconds)
+    ax.set_xlabel('time in session (seconds)')
+    metadata_string = utils.get_metadata_string(dataset.metadata)
+    ax.set_title(metadata_string)
+
+    # ax.tick_params(which='both', bottom=True, top=False, right=False, left=True,
+    #                 labelbottom=True, labeltop=False, labelright=True, labelleft=True)
+    # ax2.tick_params(which='both', bottom=True, top=False, right=True, left=False,
+    #                 labelbottom=True, labeltop=False, labelright=True, labelleft=True)
+    if save_dir:
+        folder = 'behavior_timeseries'
+        utils.save_figure(fig, figsize, save_dir, folder, metadata_string + '_' + str(int(start_time)),
+                          formats=['.png'])
