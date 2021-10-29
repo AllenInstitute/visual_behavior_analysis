@@ -966,9 +966,9 @@ def annotate_stimuli(dataset, inplace=False):
     '''
 
     if inplace:
-        stimulus_presentations = dataset.stimulus_presentations
+        stimulus_presentations = dataset.extended_stimulus_presentations
     else:
-        stimulus_presentations = dataset.stimulus_presentations.copy()
+        stimulus_presentations = dataset.extended_stimulus_presentations.copy()
 
     # add previous_image_name
     stimulus_presentations['previous_image_name'] = stimulus_presentations['image_name'].shift()
@@ -1066,6 +1066,8 @@ def get_behavior_stats(behavior_session_id, engaged_only=True, method='stimulus_
         if 'stimulus_based' (default), calculates hit and false alarm rates using every stimulus on which
             a change could have occurred. This dramatically increases the number of stimuli used when
             calculating the false alarm rate, reducing the noise on the false alarm estimate.
+        if 'sdk', retrieves the performance metrics saved in the NWB files that were computed by the SDK,
+            metrics are from session.get_performance_metrics()
 
     Returns:
     --------
@@ -1088,7 +1090,7 @@ def get_behavior_stats(behavior_session_id, engaged_only=True, method='stimulus_
     '''
     output_dict = {'behavior_session_id': behavior_session_id}
     try:
-        session = loading.get_behavior_dataset(behavior_session_id)
+        session = loading.get_behavior_dataset(behavior_session_id, get_extended_trials=True, get_extended_stimulus_presentations=True)
         if method == 'trial_based':
 
             trials = session.extended_trials
@@ -1114,16 +1116,11 @@ def get_behavior_stats(behavior_session_id, engaged_only=True, method='stimulus_
             )
 
         elif method == 'stimulus_based':
-            session.stimulus_presentations = loading.add_model_outputs_to_stimulus_presentations(
-                session.stimulus_presentations,
-                behavior_session_id
-            )
 
             stimulus_presentations = annotate_stimuli(session, inplace=False)
 
             go_trials = stimulus_presentations.query('auto_rewarded == False and could_change == True and is_change == True and engagement_state == "engaged"')
             catch_trials = stimulus_presentations.query('auto_rewarded == False and could_change == True and is_change == False and engagement_state == "engaged"')
-
             output_dict.update({'response_latency_{}'.format(key): value for key, value in go_trials.query('response_lick')['response_lick_latency'].astype(float).describe().to_dict().items()})
 
             output_dict['hit_rate'] = go_trials['response_lick'].mean()
@@ -1143,6 +1140,8 @@ def get_behavior_stats(behavior_session_id, engaged_only=True, method='stimulus_
                 catch_trials=catch_trials['response_lick'],
                 limits=False
             )
+        elif method == 'sdk':
+            output_dict = session.get_performance_metrics()
 
         return output_dict
 
@@ -1150,6 +1149,21 @@ def get_behavior_stats(behavior_session_id, engaged_only=True, method='stimulus_
         print('Failed!')
         print(e)
         return {'behavior_session_id': behavior_session_id, 'error': e}
+
+
+def get_behavior_stats_cache_dir(method='stimulus_based'):
+    """
+    method can be 'stimulus_based' or 'trial_based'
+    :param method:
+    :return:
+    """
+    if method == 'trial_based':
+        cache_dir = r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/platform_paper_cache/behavior_performance/behavior_perfomance_summary_trial_based'
+    elif method == 'stimulus_based':
+        cache_dir = r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/platform_paper_cache/behavior_performance/behavior_perfomance_summary_stimulus_based'
+    elif method == 'sdk':
+        cache_dir = r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/platform_paper_cache/behavior_performance/behavior_perfomance_metrics_sdk'
+    return cache_dir
 
 
 def cache_behavior_stats(behavior_session_id, engaged_only=True, method='stimulus_based'):
@@ -1174,10 +1188,7 @@ def cache_behavior_stats(behavior_session_id, engaged_only=True, method='stimulu
     None
     '''
 
-    if method == 'trial_based':
-        cache_dir = '/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/behavior_perfomance_summary_trial_based'
-    elif method == 'stimulus_based':
-        cache_dir = '/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/behavior_perfomance_summary_stimulus_based'
+    cache_dir = get_behavior_stats_cache_dir(method)
 
     behavior_stats_df = pd.DataFrame(
         get_behavior_stats(behavior_session_id, engaged_only),
@@ -1192,10 +1203,7 @@ def cache_behavior_stats(behavior_session_id, engaged_only=True, method='stimulu
 
 
 def get_cached_behavior_stats(behavior_session_id, engaged_only=True, method='stimulus_based'):
-    if method == 'trial_based':
-        cache_dir = '/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/behavior_perfomance_summary_trial_based'
-    elif method == 'stimulus_based':
-        cache_dir = '/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/behavior_perfomance_summary_stimulus_based'
+    cache_dir = get_behavior_stats_cache_dir(method)
 
     fn = os.path.join(cache_dir, 'behavior_summary_behavior_session_id={}.h5'.format(behavior_session_id))
 
