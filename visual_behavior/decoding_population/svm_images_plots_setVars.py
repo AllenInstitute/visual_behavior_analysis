@@ -92,7 +92,7 @@ dir0 = '/home/farzaneh/OneDrive/Analysis'
 
 #%% Set the following vars
 
-project_codes = ['VisualBehaviorTask1B'] #['VisualBehavior'], ['VisualBehaviorMultiscope'] # pooled: ['VisualBehavior'], ['VisualBehaviorMultiscope'] # ['VisualBehaviorMultiscope'] # both projects: #['VisualBehaviorMultiscope'] # ['VisualBehaviorMultiscope', 'VisualBehaviorTask1B', 'VisualBehavior', 'VisualBehaviorMultiscope4areasx2d']
+project_codes = ['VisualBehavior'], ['VisualBehaviorTask1B'], ['VisualBehaviorMultiscope'] # pooled: ['VisualBehavior'], ['VisualBehaviorMultiscope'] # ['VisualBehaviorMultiscope'] # ['VisualBehaviorMultiscope', 'VisualBehaviorTask1B', 'VisualBehavior', 'VisualBehaviorMultiscope4areasx2d']
 
 to_decode = 'current' # 'current': decode current image. # 'previous': decode previous image. # 'next': decode next image.
 trial_type = 'changes' # 'baseline_vs_nobaseline' # 'omissions' # 'changes' # 'hits_vs_misses' # 'changes_vs_nochanges' # 'images'# what trials to use for SVM analysis # the population activity of these trials at time time_win will be used to decode the image identity of flashes that occurred at their time 0 (if to_decode='current') or 750ms before (if to_decode='previous'). # eg 'omissions' means to use omission-aligned traces # 'baseline_vs_nobaseline' # decode activity at each frame vs. baseline (ie the frame before omission unless use_spont_omitFrMinus1 = 1 (see below))
@@ -262,7 +262,7 @@ if len(project_codes_all)==1:
 
     #%% Set frames_svm, samps_bef and samps_aft
     # Note: trials df has a much longer time_trace (goes up to 4.97) compared to stimulus df (goes up to .71), so frames_svm ends up being 1 element longer for trials df (ie when decoding hits from misses) compared to stimulus df (ie when decoding the images)    
-    if project_codes != 'VisualBehaviorMultiscope':
+    if project_codes != ['VisualBehaviorMultiscope']:
         frames_svm = np.arange(-15,23)
         num_planes = 1
         num_depth = 1
@@ -291,8 +291,8 @@ if len(project_codes_all)==1:
     
 
     #%% Set svm vars for each plane across all sessions (for each mouse)
-    if project_codes != 'VisualBehaviorMultiscope': # remove area/layer pooled columns
-        columns0 = ['mouse_id', 'cre', 'mouse_id_exp', 'cre_exp', 'block', 'session_ids', 'session_stages', 'session_labs', 'num_sessions_valid', 'area_this_plane_allsess_allp', 'depth_this_plane_allsess_allp', \
+    if project_codes != ['VisualBehaviorMultiscope']: # remove area/layer pooled columns
+        columns0 = ['mouse_id', 'cre', 'mouse_id_exp', 'cre_exp', 'block', 'session_ids', 'experience_levels', 'session_stages', 'session_labs', 'num_sessions_valid', 'area_this_plane_allsess_allp', 'depth_this_plane_allsess_allp', \
                     'area', 'depth', 'plane', \
                     'n_neurons_this_plane_allsess_allp', 'n_trials_this_plane_allsess_allp', \
                     'av_meanX_avSess_eachP', 'sd_meanX_avSess_eachP', \
@@ -306,7 +306,7 @@ if len(project_codes_all)==1:
                     ]    
 
     else:
-        columns0 = ['mouse_id', 'cre', 'mouse_id_exp', 'cre_exp', 'block', 'session_ids', 'session_stages', 'session_labs', 'num_sessions_valid', 'area_this_plane_allsess_allp', 'depth_this_plane_allsess_allp', \
+        columns0 = ['mouse_id', 'cre', 'mouse_id_exp', 'cre_exp', 'block', 'session_ids', 'experience_levels', 'session_stages', 'session_labs', 'num_sessions_valid', 'area_this_plane_allsess_allp', 'depth_this_plane_allsess_allp', \
                     'area', 'depth', 'plane', \
                     'n_neurons_this_plane_allsess_allp', 'n_trials_this_plane_allsess_allp', \
                     'av_meanX_avSess_eachP', 'sd_meanX_avSess_eachP', \
@@ -343,15 +343,15 @@ if len(project_codes_all)==1:
 
 
     ######### set svm_allMice_sessPooled and svm_allMice_sessAvSd
-    
+    # note: svm_allMice_sessPooled will be used to set summary_vars_all, which is a key paramter in svm_images_plots_compare_ophys_stages.py)    
     exec(open('svm_images_plots_setVars_sumMice.py').read()) 
 
     svm_allMice_sessPooled0 = copy.deepcopy(svm_allMice_sessPooled)
     svm_allMice_sessAvSd0 = copy.deepcopy(svm_allMice_sessAvSd)
 
-    ######### set vars and plot traces and quantifications for each ophys stage
-
-    # set vars to make mouse-averaged plots
+    
+    ######### set vars to make mouse-averaged plots for each ophys stage
+    # also set summary_vars_all (a df that includes response amplitude, computed from svm_allMice_sessPooled) which will be used in svm_images_plots_compare_ophys_stages
     exec(open('svm_images_plots_setVars_sumMice2.py').read()) 
 
     # make mouse-averaged plots
@@ -469,7 +469,7 @@ else: # pooling data across multiple project codes
         
         #%% Set frames_svm, samps_bef and samps_aft
         # Note: trials df has a much longer time_trace (goes up to 4.97) compared to stimulus df (goes up to .71), so frames_svm ends up being 1 element longer for trials df (ie when decoding hits from misses) compared to stimulus df (ie when decoding the images)    
-        if project_codes != 'VisualBehaviorMultiscope':
+        if project_codes != ['VisualBehaviorMultiscope']:
             frames_svm = np.arange(-15,23)
             num_planes = 1
             num_depth = 1
@@ -494,8 +494,8 @@ else: # pooling data across multiple project codes
 
         
         #%% Set svm vars for each plane across all sessions (for each mouse)
-        if project_codes != 'VisualBehaviorMultiscope': # remove area/layer pooled columns
-            columns0 = ['mouse_id', 'cre', 'mouse_id_exp', 'cre_exp', 'block', 'session_ids', 'session_stages', 'session_labs', 'num_sessions_valid', 'area_this_plane_allsess_allp', 'depth_this_plane_allsess_allp', \
+        if project_codes != ['VisualBehaviorMultiscope']: # remove area/layer pooled columns
+            columns0 = ['mouse_id', 'cre', 'mouse_id_exp', 'cre_exp', 'block', 'session_ids', 'experience_levels', 'session_stages', 'session_labs', 'num_sessions_valid', 'area_this_plane_allsess_allp', 'depth_this_plane_allsess_allp', \
                         'area', 'depth', 'plane', \
                         'n_neurons_this_plane_allsess_allp', 'n_trials_this_plane_allsess_allp', \
                         'av_meanX_avSess_eachP', 'sd_meanX_avSess_eachP', \
@@ -509,7 +509,7 @@ else: # pooling data across multiple project codes
                         ]    
 
         else:
-            columns0 = ['mouse_id', 'cre', 'mouse_id_exp', 'cre_exp', 'block', 'session_ids', 'session_stages', 'session_labs', 'num_sessions_valid', 'area_this_plane_allsess_allp', 'depth_this_plane_allsess_allp', \
+            columns0 = ['mouse_id', 'cre', 'mouse_id_exp', 'cre_exp', 'block', 'session_ids', 'experience_levels', 'session_stages', 'session_labs', 'num_sessions_valid', 'area_this_plane_allsess_allp', 'depth_this_plane_allsess_allp', \
                         'area', 'depth', 'plane', \
                         'n_neurons_this_plane_allsess_allp', 'n_trials_this_plane_allsess_allp', \
                         'av_meanX_avSess_eachP', 'sd_meanX_avSess_eachP', \
@@ -542,7 +542,7 @@ else: # pooling data across multiple project codes
 
         
         ######### set svm_allMice_sessPooled and svm_allMice_sessAvSd
-
+        # note: svm_allMice_sessPooled will be used to set summary_vars_all, which is a key paramter in svm_images_plots_compare_ophys_stages.py)
         exec(open('svm_images_plots_setVars_sumMice.py').read()) 
 
         
@@ -553,7 +553,6 @@ else: # pooling data across multiple project codes
     #####################################
     #%% Pool data from both project codes
     #####################################
-
 
     # svm_allMice_sessPooled0_vb.iloc[0]['av_test_shfl_allPlanes'].shape
     # (1, 34, 38)
@@ -598,6 +597,8 @@ else: # pooling data across multiple project codes
 
         project_codes = project_codes_all[ipc]
         
+        # sets summary_vars_all, a dataframe that includes response amplitude (computed from svm_allMice_sessPooled); it will be used in svm_images_plots_compare_ophys_stages.py
+        # if len(project_codes_all)==1, it calls svm_images_plots_sumMice.py to make mouse-averaged plots for each ophys stage.        
         exec(open('svm_images_plots_setVars_sumMice2.py').read()) 
 
         summary_vars_allpr.append(summary_vars_all)

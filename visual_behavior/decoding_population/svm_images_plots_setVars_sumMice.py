@@ -1,11 +1,11 @@
 """
-Set svm_allMice_sessPooled and svm_allMice_sessAvSd.
+Set svm_allMice_sessPooled and svm_allMice_sessAvSd. (note: svm_allMice_sessPooled will be used to set summary_vars_all, which is a key paramter in svm_images_plots_compare_ophys_stages.py)
 
 Run "svm_images_plots_setVars.py" to set vars needed here, mainly svm_this_plane_allsess.
 
 This script sets vars that will be used for making summary plots across mice.
 
-Follow this script by "svm_images_plots_sumMice" to make summary plots across mice (each cre line).
+Follow this script by "svm_images_plots_setVars_sumMice2.py" to set summary_vars_all (which will be used in svm_images_plots_compare_ophys_stages.py), and make summary plots across mice (if len(project_codes_all)==1).
 
 
 Note, this script is similar to part of omissions_traces_peaks_plots_setVars_ave.py, which is related to setting vars for making summary plots across mice.
@@ -20,18 +20,20 @@ Created on Wed Oct 21 15:14:05 2020
     
 """
 
+print(svm_this_plane_allsess0.shape)
+
 stages_all = (np.array([svm_this_plane_allsess0['session_labs'].values[i][0][0] for i in range(svm_this_plane_allsess0.shape[0])])).astype(int)
 blocks_all = svm_this_plane_allsess0['block'].values # weird: 70 block 0s, and 69 block 1s ... you need to figure out why some experiments have failed!
 
 
-
 #%% Loop through svm_this_plane_allsess0 and get those rows of it that belong to a given session stage and block; for each one set svm_allMice_sessPooled and svm_allMice_sessAvSd
 
+####### Set svm_allMice_sessPooled #######
 if project_codes != ['VisualBehaviorMultiscope']: # remove area/layer pooled columns
-    indexes = ['cre_allPlanes', 'mouse_id_allPlanes', 'session_ids', 'area_allPlanes', 'depth_allPlanes', 'block_all', 'session_labs', \
+    indexes = ['cre_allPlanes', 'mouse_id_allPlanes', 'session_ids', 'area_allPlanes', 'depth_allPlanes', 'block_all', 'experience_levels', 'session_labs', \
                'av_test_data_allPlanes', 'av_test_shfl_allPlanes', 'peak_amp_allPlanes']
 else:
-    indexes = ['cre_allPlanes', 'mouse_id_allPlanes', 'session_ids', 'area_allPlanes', 'depth_allPlanes', 'block_all', 'session_labs', \
+    indexes = ['cre_allPlanes', 'mouse_id_allPlanes', 'session_ids', 'area_allPlanes', 'depth_allPlanes', 'block_all', 'experience_levels', 'session_labs', \
                'av_test_data_allPlanes', 'av_test_shfl_allPlanes', 'peak_amp_allPlanes', \
                'cre_eachArea', 'av_test_data_eachArea', 'av_test_shfl_eachArea', 'peak_amp_eachArea', \
                'cre_eachDepth', 'depth_eachDepth', 'av_test_data_eachDepth', 'av_test_shfl_eachDepth', 'peak_amp_eachDepth']
@@ -39,6 +41,7 @@ else:
 svm_allMice_sessPooled = pd.DataFrame([], columns=indexes)
 
 
+####### Set svm_allMice_sessAvSd #######
 if project_codes != ['VisualBehaviorMultiscope']: # remove area/layer pooled columns
     cols0 = ['mouse_id', 'cre', 'block', 'session_ids', 'session_stages', 'session_labs', 'area', 'depth', 'plane', \
             'av_depth_avSess_eachP', 'sd_depth_avSess_eachP', 'av_n_neurons_avSess_eachP', 'sd_n_neurons_avSess_eachP', \
@@ -68,14 +71,17 @@ if ~np.isnan(svm_blocks) and svm_blocks!=-101:
 else:
     br = [np.nan]
     
-
+    
+    
+    
+########################################################
 cntall = 0
 cntall2 = 0
 
 for istage in np.unique(stages_all): # istage=1
     for iblock in br: # iblock=0 ; iblock=np.nan
         
-        if ~np.isnan(svm_blocks) and svm_blocks!=-101:
+        if ~np.isnan(svm_blocks) and svm_blocks!=-101: # block by block analysis
             svm_this_plane_allsess = svm_this_plane_allsess0[np.logical_and(stages_all==istage , blocks_all==iblock)]
         else:
             svm_this_plane_allsess = svm_this_plane_allsess0[stages_all==istage]
@@ -84,7 +90,7 @@ for istage in np.unique(stages_all): # istage=1
         cntall = cntall + 1
         
         #%% ##########################################################################################
-        ############### Set vars to make average plots across mice of the same cell line #############
+        ############### Set svm_allMice_sessPooled to make average plots of pooled data across mice sessions #############
         ################ (each plane individually, no pooling across areas or layers) ###########################
         ##############################################################################################
 
@@ -124,7 +130,12 @@ for istage in np.unique(stages_all): # istage=1
 
         session_labs_all = np.unique(np.concatenate((svm_this_plane_allsess['session_labs']).values))
         block_all = np.unique(svm_this_plane_allsess['block'].values)
-
+        
+        experience_levels_all = np.concatenate((svm_this_plane_allsess['experience_levels']).values) # num_sessions
+#         experience_levels_all = np.unique(np.concatenate((svm_this_plane_allsess['experience_levels']).values))
+        
+        print(session_labs_all, np.unique(experience_levels_all))
+        
 
         ########## individual planes ##########
 
@@ -175,14 +186,14 @@ for istage in np.unique(stages_all): # istage=1
                index=indexes)
             '''
 
-            svm_allMice_sessPooled.at[cntall, indexes] = cre_all, mouse_id_all, session_ids_all, area_all, depth_all, block_all, session_labs_all, \
+            svm_allMice_sessPooled.at[cntall, indexes] = cre_all, mouse_id_all, session_ids_all, area_all, depth_all, block_all, experience_levels_all, session_labs_all, \
                ts_all, sh_all, pa_all, \
                cre_all_eachArea, ts_all_eachArea, sh_all_eachArea, pao_all_eachArea, \
                cre_all_eachDepth, depth_all_eachDepth, ts_all_eachDepth, sh_all_eachDepth, pao_all_eachDepth
 
         else:
 
-            arrvars = cre_all, mouse_id_all, session_ids_all, area_all, depth_all, block_all, session_labs_all, ts_all, sh_all, pa_all
+            arrvars = cre_all, mouse_id_all, session_ids_all, area_all, depth_all, block_all, experience_levels_all, session_labs_all, ts_all, sh_all, pa_all
             for iar in range(len(indexes)):
                 svm_allMice_sessPooled.at[cntall, indexes[iar]] = arrvars[iar]
                 
@@ -200,13 +211,12 @@ for istage in np.unique(stages_all): # istage=1
         ######################################################################
         ######################################################################
         ######################################################################
-        #%% Compute session-averaged data for each mouse
+        #%% Set svm_allMice_sessAvSd: session-averaged data for each mouse; note we dont use svm_allMice_sessAvSd in svm_images_plots_compare_ophys_stages.py
         # pandas dataFrame "svm_allMice_sessAvSd" is created to keep the important vars below
         # use this to make summary mouse plots, by averaging across mice (each mouse is here averaged across sessions).
         ######################################################################
         ######################################################################
         ######################################################################
-
 
         for im in range(len(svm_this_plane_allsess)): # im=0
 

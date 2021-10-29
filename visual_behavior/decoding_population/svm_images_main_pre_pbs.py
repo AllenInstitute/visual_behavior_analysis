@@ -374,7 +374,7 @@ def svm_images_main_pre_pbs(isess, project_codes, use_events, to_decode, trial_t
     
     if use_matched_cells!=0:
         v = metadata_now['ophys_experiment_id'].values
-        print(f"Before matching cells across experience levels {sum(np.in1d(experiment_ids, v)==False)} experiments were invalid; but now:")
+        print(f"Before matching cells across experience levels, {sum(np.in1d(experiment_ids, v)==False)} experiments were invalid; but now:")
     print(f'\n{sum(np.in1d(experiment_ids, experiment_ids_valid)==False)} of the experiments are invalid!\n')
 
     #cnt_sess = cnt_sess + 1
@@ -496,7 +496,8 @@ def svm_images_main_pre_pbs(isess, project_codes, use_events, to_decode, trial_t
             valid = False
             stim_response_df = pd.DataFrame([np.full((len(c)), np.nan)], columns=c) 
 
-
+        ####################################################################    
+        ############ done with a given experiment (valid or not) of a session ############        
         stim_response_df['ophys_session_id'] = session_id #data_list[data_list['experiment_id']==ophys_experiment_id].iloc[0]['session_id']
         stim_response_df['ophys_experiment_id'] = ophys_experiment_id # data_list[data_list['experiment_id']==ophys_experiment_id].iloc[0]['experiment_id']
 
@@ -521,7 +522,10 @@ def svm_images_main_pre_pbs(isess, project_codes, use_events, to_decode, trial_t
 
 #     stimulus_response_df_allexp
 #     stimulus_response_df_allexp.keys()
-
+    
+    
+    ####################################################################################
+    ######################## done with all experiments of a session ########################
     df_data = stimulus_response_df_allexp
     session_trials = np.nan # we need it as an input to the function
 
@@ -590,7 +594,8 @@ def svm_images_main_pre_pbs(isess, project_codes, use_events, to_decode, trial_t
     stim_response_df[dd[1]]
     '''
 
-
+    ####################################################################################
+    ####################################################################################    
     #%% Set frames_svm
 
     # Note: trials df has a much longer time_trace (goes up to 4.97) compared to stimulus df (goes up to .71), so frames_svm ends up being 1 element longer for trials df (ie when decoding hits from misses) compared to stimulus df (ie when decoding the images)

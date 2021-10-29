@@ -57,14 +57,15 @@ def all_sess_set_h5_fileName(name, dir_now, all_files=0):
         
         if len(h5_files)==0:
             print(name)
-            print('all_sess h5 file does not exist! (run svm_init to call svm_plots_init and save all_sess)')
+            print('\nall_sess h5 file does not exist! (run svm_init to call svm_plots_init and save all_sess)')
         elif len(h5_files)>1:
-            print('More than 1 h5 file exists! Loading the latest file')
+            print('\nMore than 1 h5 file exists! Using the latest file')
             allSessName = os.path.join(dir_now, h5_files[-1])            
         else:
             allSessName = os.path.join(dir_now, h5_files[0])            
         print(allSessName)
-    
+        print(f'\n')
+        
     else:
         allSessName = []
         for i in range(len(h5_files)):

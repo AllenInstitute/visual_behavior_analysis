@@ -82,3 +82,27 @@ mouseCre_numSess.loc['10', :] = 'newrow', 120
 
 # assign some indeces of a pandas table to another pandas table: (note we dont use loc or at here!)
 all_sess_thisCre[cols0] = all_sess_now.iloc[cre_all==cre]    
+
+
+
+
+
+
+
+#%% Practice with pandas; assigning columns at once to a dataframe
+
+df = pd.DataFrame({'a':[1,2]}) #make example dataframe
+df['b'] = [np.zeros(13,) for x in df['a']] # make a new column "b" with a length 13 array for each row
+
+df = pd.DataFrame()
+df.at[0,'a'] = 1
+df.at[1,'a'] = 2
+b = []
+for x in df['a']:
+    print(x)
+    b.append(np.zeros(13,))
+np.shape(b)    
+type(b)
+df['b'] = np.array(b)
+df
+df.shape

@@ -20,6 +20,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import datetime
+import sys
 
 import visual_behavior.data_access.loading as loading
 from visual_behavior.data_access import utilities
@@ -34,7 +35,7 @@ from svm_images_plots_main import *
 
 #%% Set vars
 
-project_codes = ['VisualBehaviorTask1B'] # ['VisualBehaviorMultiscope'] # ['VisualBehaviorMultiscope', 'VisualBehaviorTask1B', 'VisualBehavior', 'VisualBehaviorMultiscope4areasx2d']
+project_codes = ['VisualBehaviorMultiscope'] # ['VisualBehaviorMultiscope'] # ['VisualBehaviorMultiscope', 'VisualBehaviorTask1B', 'VisualBehavior', 'VisualBehaviorMultiscope4areasx2d']
 
 to_decode = 'current' #'next' # 'current' (default): decode current image.    'previous': decode previous image.    'next': decode next image.
 trial_type = 'changes' #'changes' #'baseline_vs_nobaseline' #'hits_vs_misses' #'changes_vs_nochanges' #'omissions' # 'omissions', 'images', 'changes' # what trials to use for SVM analysis # the population activity of these trials at time time_win will be used to decode the image identity of flashes that occurred at their time 0 (if to_decode='current') or 750ms before (if to_decode='previous'). # 'baseline_vs_nobaseline' # decode activity at each frame vs. baseline (ie the frame before omission unless use_spont_omitFrMinus1 = 1 (see below))
@@ -78,14 +79,15 @@ else: # decoding images
 
     
 # Note: trials df has a much longer time_trace (goes up to 4.97) compared to stimulus df (goes up to .71), so frames_svm ends up being 1 element longer for trials df (ie when decoding hits from misses) compared to stimulus df (ie when decoding the images)    
-if project_codes != 'VisualBehaviorMultiscope':
+if project_codes != ['VisualBehaviorMultiscope']:
     frames_svm_all = [np.arange(-15,23)] #[[-3,-2,-1], [0,1,2,3,4,5]]
 else:
+    # NOTE: some mesoscope sessions were recorded at a different frame rate (9hz, frame duration: 0.109ms vs. 10.7hz, frame duration: 0.093ms), as a result their frames_svm are -4 to 6 instad of -5 to 7.
+    # example mesoscope sessions with this problem: 1050231786 1050597678 1051107431
     frames_svm_all = [np.arange(-5,8)]
     
 if trial_type=='hits_vs_misses':
-#     frames_svm_all[0][-1] = frames_svm_all[0][-1] + 1
-    frames_svm_all[0] = np.concatenate((frames_svm_all[0], [frames_svm_all[0][-1] + 1]))
+    frames_svm_all[0] = np.concatenate((frames_svm_all[0], [frames_svm_all[0][-1] + 1]))  # frames_svm_all[0][-1] = frames_svm_all[0][-1] + 1
 
 frames_svm = frames_svm_all[0] #[-3,-2,-1] # [0,1,2,3,4,5] #  which svm files to load (this will be used to set svm file name) # (frames_svm also gets saved in svm_vars if svm could be run successfully on a session)
 # print(f'Analyzing: {cre2ana}, {frames_svm}')
@@ -352,11 +354,45 @@ for iblock in br: # iblock=0; iblock=np.nan
         
         all_sess = all_sess.append(this_sess) 
 
+    
+    #######################################
     print(f'\n\nFinal: length of all_sess: {len(all_sess)}\n\n')
-    all_sess
+    
+    # check if there are any nan values in all_sess, so you can investigate why!
+    if project_codes == ['VisualBehaviorMultiscope']:
+        
+        ns = int(len(all_sess)/8) # number of sessioins
+        d = np.reshape(all_sess['date'].values, (8, ns), order='F') # 8 x 58
+        dr = np.reshape(d, (8*ns, 1), order='F').squeeze() # 464
+        ei = np.array([isinstance(dr[i], float) for i in range(len(dr))]) # are there any nan (float) dates? # 464
+        eir = np.reshape(ei, (8, ns), order='F') # 8 x 58
+        n_valid_exp_per_sess = np.sum(eir, axis=0)
+        alleinv = n_valid_exp_per_sess == 8 # 58 # find sessions with all experiments invalid (sum will be 8, if all the experiment dates were of type float, ie invalid)
+#         alleinv
+        aa = alleinv.any()
+        
+        ss = np.reshape(all_sess['session_id'].values, (8, ns), order='F')[0,:] # 58
+        si = ss[np.array(alleinv)] # these sessions have all experiments as invalid; investigate them!
+        if aa==True:
+            print(f'These sessions have all experiments as invalid: {si}! investigate them!')        
+        
+    else:
+        l = np.array([len(all_sess['date'].values[i]) for i in range(len(all_sess))])
+        aa = (l != 10).any()
+        
+    # if there are nan rows in all_sess, exit the analysis to investigate why those experiments dont exist!    
+    if aa:
+        sys.exit(f'There are some invalid rows in all_sess! examine those experiments!')
+    else:
+        print(f'\nAll rows in all_sess are valid! Save all_sess file!\n')
 
+#     all_sess
 
-
+        
+        
+        
+        
+        
     ##################################################################
     #%% Save all_sess
     ################################################################## 

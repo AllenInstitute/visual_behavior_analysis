@@ -121,12 +121,16 @@ def svm_images_plots_main(session_id, data_list, svm_blocks, iblock, dir_svm, fr
                 else:
                     word = 'block'
                 ending = f'{ending}{word}{iblock}_'
+            
+            
+            ##############
+            #### NOTE ####
+            ##############
+            # commenting below so we don't specify frames_svm because some mesoscope sessions were recorded at a different frame rate (9hz, frame duration: 0.109ms vs. 10.7hz, frame duration: 0.093ms), as a result their frames_svm are -4 to 6 instad of -5 to 7.
+#             name = f'(.*)_s-{session_id}_e-{lims_id}_{svmn}_frames{frames_svm[0]}to{frames_svm[-1]}_{ending}'
+            name = f'(.*)_s-{session_id}_e-{lims_id}_{svmn}_frames(.*)_{ending}'
 
-            name = f'(.*)_s-{session_id}_e-{lims_id}_{svmn}_frames{frames_svm[0]}to{frames_svm[-1]}_{ending}'
-
-#             if project_codes == ['VisualBehavior']:
             name = f'{name}{project_codes[0]}_'
-
             name = f'{name}{nown}'
             
         

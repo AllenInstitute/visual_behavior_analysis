@@ -33,9 +33,9 @@ def do_anova_tukey(summary_vars_all, crenow, stagenow, inds_v1, inds_lm, inds_po
 
     ###############
     cols = ['area', 'depth', 'value', 'idepth']
+    
+    inds_now = inds_v1    
     a_data = pd.DataFrame([], columns = cols)
-
-    inds_now = inds_v1
     i_at = -1
     for i_depth in range(len(inds_now)): # i_depth=0
         a_now = aa[inds_now[i_depth],:][~np.isnan(aa[inds_now[i_depth]])]

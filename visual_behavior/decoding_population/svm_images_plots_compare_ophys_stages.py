@@ -11,7 +11,7 @@ Created on Tue Apr 27 12:09:05 2021
 
 whichStages_pval_allComparisonParis = [[3,4], [4,6]] # compute ttest between stages 3,4 also between 4,6. # whichStages_pval = [3,4] # compute ttest between these 2 stages
 ttest_actShfl_stages = 1 # 0: plot ttet comparison of actual and shuffled (it will be the default when len(whichStages)=1)); 1: plot ttest comparison between ophys stages, as long as len(whichStages)=2
-show_depth_stats = 1 # if 1, plot the bars that show anova/tukey comparison across depths
+show_depth_stats = 0 #1 # if 1, plot the bars that show anova/tukey comparison across depths
 
 
 # whichStages: compare svm class accuracy for which stages?
@@ -74,6 +74,8 @@ if len(project_codes_all)>1:
 ###############################################################
 
 def errorbar_respamp(compare_areas=False):
+    
+#     tc = summary_vars_all[summary_vars_all['cre'] == crenow]
 
     if np.isnan(svm_blocks) or svm_blocks==-101:
         tc_stage = tc[tc['stage'] == stagenow]
@@ -163,29 +165,34 @@ def add_plot_labs(top_allstage, mn_mx_allstage, ylims, addleg=1, compare_areas=F
 
 
     if compare_areas:
-        p2plot = p_areas_sigval[icre, stagenow-1] # 4depths
+        p2plot = p_areas_sigval[icre, istage] # stagenow-1 # 4depths
     else:
-        p2plot = p_sigval[icre, inds_v1] # 4
+        if len(project_codes_all)==1:
+            p2plot = p_sigval[icre][:, inds_v1] # len(whichStages_pval_allComparisonParis) x 4  # previously: 4
+        else:
+            p2plot = p_sigval[icre] # len(whichStages_pval_allComparisonParis)
         
         
     # add an asterisk if ttest is significant between whichStages_pval (eg ophys 3 and 4)
     if compare_areas or (ttest_actShfl_stages == 1 and sum(np.in1d(whichStages, whichStages_pval_allComparisonParis))>=2): # compare ophys stages
-        # compute x to place the asterisk
+
         if compare_areas==False: # place it in between the x values for sessions 3 and 4
             cn = 'k'
+            # compute x to place the asterisk
+            cwp=-1
             for whichStages_pval in whichStages_pval_allComparisonParis:
                 xs1 = np.argwhere(whichStages == whichStages_pval[0])[0][0]
                 xs2 = np.argwhere(whichStages == whichStages_pval[1])[0][0]
                 x_whichStages_pval = (xnowall[xs1] + xnowall[xs2]) / 2 # x+xgapg/2
+                cwp = cwp+1
                 
-                # plot an asterisk if p2plot is significant
-        #         print(f'test: {x_whichStages_pval, p2plot*mn_mx[1]-np.diff(mn_mx)*.03}')
-                ax1.plot(x_whichStages_pval, p2plot*mn_mx[1]-np.diff(mn_mx)*.03, '*', color=cn)
+                # plot an asterisk if p2plot is significant    # print(f'test: {x_whichStages_pval, p2plot*mn_mx[1]-np.diff(mn_mx)*.03}')
+                ax1.plot(x_whichStages_pval, p2plot[cwp]*mn_mx[1]-np.diff(mn_mx)*.03, '*', color=cn)
  
-                if compare_areas==False and ~np.isnan(inds_lm[0]):
-                    ax2.plot(x_whichStages_pval, p_sigval[icre, inds_lm]*mn_mx[1]-np.diff(mn_mx)*.03, 'k*')
-                if compare_areas==False and project_codes_all == ['VisualBehaviorMultiscope']:
-                    ax3.plot(x_whichStages_pval, p_sigval_pooled[icre, :]*mn_mx[1]-np.diff(mn_mx)*.03, 'k*')
+                if ~np.isnan(inds_lm[0]):
+                    ax2.plot(x_whichStages_pval, p_sigval[icre, cwp, inds_lm]*mn_mx[1]-np.diff(mn_mx)*.03, 'k*')
+                if project_codes_all == ['VisualBehaviorMultiscope']:
+                    ax3.plot(x_whichStages_pval, p_sigval_pooled[icre, cwp, :]*mn_mx[1]-np.diff(mn_mx)*.03, 'k*')
 
         else:
             cn = 'r'
@@ -261,7 +268,6 @@ def run_anova_tukey():
     ylims = []
     if project_codes_all == ['VisualBehaviorMultiscope'] and show_depth_stats:
         tukey_all = anova_tukey.do_anova_tukey(summary_vars_all, crenow, stagenow, inds_v1, inds_lm, inds_pooled)
-    #                 if show_depth_stats:
         a = anova_tukey.add_tukey_lines(tukey_all, 'v1', ax1, colors[stagenow-1], inds_v1, inds_lm, inds_pooled, top, top_sd, xnowall[stcn]) # cols_stages[stcn]
         b = anova_tukey.add_tukey_lines(tukey_all, 'lm', ax2, colors[stagenow-1], inds_v1, inds_lm, inds_pooled, top, top_sd, xnowall[stcn]) # cols_stages[stcn]
         c = anova_tukey.add_tukey_lines(tukey_all, 'v1-lm', ax3, colors[stagenow-1], inds_v1, inds_lm, inds_pooled, top_pooled, top_sd_pooled, xnowall[stcn]) # cols_stages[stcn]
@@ -272,7 +278,7 @@ def run_anova_tukey():
 
     else:
         ylims.append(ax1.get_ylim())
-        if ~np.isnan(inds_lm).squeeze():
+        if ~np.isnan(inds_lm[0]): # ~np.isnan(inds_lm).squeeze():
             ylims.append(ax2.get_ylim())
             ylims.append(ax3.get_ylim())
 
@@ -372,17 +378,18 @@ if project_codes_all == ['VisualBehaviorMultiscope']:
 
 if np.isnan(svm_blocks) or svm_blocks==-101:
 
+    p_all_allComparisonParis = []
+    p_all_pooled_allComparisonParis = []
+    
     if sum(np.in1d(whichStages, whichStages_pval_allComparisonParis))>=2: #==2: # not anymore (I extend the code to compute p across any number of stage pairs): only run this section when comparing sessions 3 and 4
-        
-        p_all_allComparisonParis = []
-        p_all_pooled_allComparisonParis = []
-        
         for crenow in cres: # crenow = cres[0]
 
             p_all = []
             p_all_pooled = []
 
             for whichStages_pval in whichStages_pval_allComparisonParis: # whichStages_pval_allComparisonParis = [[3,4], [4,6]]
+                
+                # whichStages_pval = whichStages_pval_allComparisonParis[0]
                 
                 ############### set a_amp and b_amp vectors to use as input to ttest ###############
 
@@ -403,7 +410,7 @@ if np.isnan(svm_blocks) or svm_blocks==-101:
                     a_amp = np.concatenate((a_amp_allpr))[np.newaxis, :]
                     b_amp = np.concatenate((b_amp_allpr))[np.newaxis, :]
 
-        #             a_amp.shape, b_amp.shape
+#                     a_amp.shape, b_amp.shape
 
 
                 ############## pool areas # 4pooled depths x sessions ##############
@@ -437,13 +444,13 @@ if np.isnan(svm_blocks) or svm_blocks==-101:
                     
     
             ################### done with looping over all values of whichStages_pval_allComparisonParis for a given cre line; keep all values for all cre lines ##################
-            p_all_allComparisonParis.append(p_all)
+            p_all_allComparisonParis.append(p_all) # P_all size: 2: len(whichStages_pval_allComparisonParis)
             p_all_pooled_allComparisonParis.append(p_all_pooled)
                 
 
                 
         ############### done with all cre lines ###############        
-        p_all_allComparisonParis = np.array(p_all_allComparisonParis)
+        p_all_allComparisonParis = np.array(p_all_allComparisonParis) # # p_all_allComparisonParis size: 3x2: num_cre x len(whichStages_pval_allComparisonParis)
         p_all_pooled_allComparisonParis = np.array(p_all_pooled_allComparisonParis)
             
             
@@ -510,7 +517,7 @@ if project_codes_all == ['VisualBehaviorMultiscope']:
 if np.isnan(svm_blocks) or svm_blocks==-101:
     
     mn_mx_allcre = np.full((len(cres), 2), np.nan)
-    mn_mx_allstage_allcre = np.full((len(cres), len(whichStages), 2), np.nan)
+#     mn_mx_allstage_allcre = np.full((len(cres), len(whichStages), 2), np.nan)
     
     for crenow in cres: # crenow = cres[0]
         
@@ -532,18 +539,25 @@ if np.isnan(svm_blocks) or svm_blocks==-101:
                 mx = np.nanmax(top[:,1]+top_sd[:,1]) # testing accuracy + sd
                 mn_mx_allstage.append([mn, mx])
                 
-        mn_mx_allstage_allcre[icre,:] = mn_mx_allstage
+#         mn_mx_allstage_allcre[icre,:] = mn_mx_allstage
         mn_mx_allstage = np.array(mn_mx_allstage)
         mn_mx = [np.nanmin(mn_mx_allstage), np.nanmax(mn_mx_allstage)]
 
         mn_mx_allcre[icre,:] = mn_mx
     
-
+    
+    
+##############################################################################################################################
+##############################################################################################################################
+##############################################################################################################################
 ##############################################################################################################################
 ##############################################################################################################################
 ##############################################################################################################################
 #%% Plot response amplitude (errorbars) comparing ophys STAGES; also do anova/tukey
 ## make separate figures for V1 and LM
+##############################################################################################################################
+##############################################################################################################################
+##############################################################################################################################
 ##############################################################################################################################
 ##############################################################################################################################
 ##############################################################################################################################

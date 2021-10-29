@@ -8,9 +8,108 @@ Created on Tue Oct  20 13:56:00 2020
 @author: farzaneh
 """
 
+#####################################################################
+#####################################################################
+#%% Define functions to set vars needed for plotting
+
+def set_y_this_plane_allsess(y, num_sessions, takeAve=0): # set takeAve to 1 for meanX_allFrs (so we average across neurons)
+
+    #%% Get data from a given plane across all sessions (assuming that the same order of planes exist in all sessions, ie for instance plane n is always the ith experiment in all sessions.)    
+    # PERHAPS just forget about all of this below and do a reshape, you can double check reshape by doing the same thing on plane, area, depth 
+
+    y_this_plane_allsess_allp = []
+    for iplane in range(num_planes): # iplane=0 
+
+        ##### get data from a given plane across all sessions
+        y_this_plane_allsess = y.at[iplane] # num_sess        
+
+        # when the mouse had only one session, we need the following to take care of the shape of y_this_plane_allsess
+        if np.shape(y_this_plane_allsess)==(): # type(y_this_plane_allsess) == int: --> this didnt work bc populatin_sizes_to_try is of type numpy.int64
+            if type(y_this_plane_allsess) == str:
+                y_this_plane_allsess = np.array([y_this_plane_allsess])
+            else:
+                y_this_plane_allsess = np.array([np.float(y_this_plane_allsess)])
+
+        if num_sessions < 2:
+            y_this_plane_allsess = y_this_plane_allsess[np.newaxis,:]            
+#             print(np.shape(y_this_plane_allsess), y_this_plane_allsess.dtype)
+
+
+        # If y_this_plane_allsess is not a vector, take average across the 2nd dimension         
+        if takeAve==1:
+            nonNan_sess = np.array([np.sum(~np.isnan(y_this_plane_allsess[isess])) for isess in range(num_sessions)])            
+            len_trace = np.shape(y.values[0])[0] #len(y.values[0]) #y[0].shape
+            aa = np.full((num_sessions, len_trace), np.nan) # []
+            for isess in range(num_sessions): # isess = 0
+                if nonNan_sess[isess] > 0:
+                    aa[isess] = np.mean(y_this_plane_allsess[isess], axis = 1)
+            y_this_plane_allsess = aa #np.array(aa)
+
+        y_this_plane_allsess = np.vstack(y_this_plane_allsess) # num_sess x nFrames
+#        print(np.shape(y_this_plane_allsess), y_this_plane_allsess.dtype)
+
+
+        y_this_plane_allsess_allp.append(y_this_plane_allsess) # .squeeze()
+#        y_this_plane_allsess_allp.at[iplane] = area, depth, y_this_plane_allsess
+
+    y_this_plane_allsess_allp = np.array(y_this_plane_allsess_allp)
+
+    return y_this_plane_allsess_allp
+
+
+
+
+def pool_sesss_planes_eachArea(area, y):
+    #%%  Pool all sessions and layers for each area, do this for each mouse
+
+    # area: ['LM', 'LM', 'LM', 'LM', 'VISp', 'VISp', 'VISp', 'VISp', 'LM', 'LM', 'LM', 'LM', 'VISp', 'VISp', 'VISp', 'VISp'] # (8*num_sessions)
+    # y : (8*num_sessions) x time  or   # (8*num_sessions) 
+
+    # set area indeces
+#         area = trace_peak_allMice.iloc[im]['area'] # (8*num_sessions)
+    distinct_areas, i_areas = np.unique(area, return_inverse=True)
+    #    print(distinct_areas)
+    if len(distinct_areas) > 2:
+        sys.exit('There should not be more than two areas!! Fix the area names!')
+
+    # below has size: num_areas x (num_layers_per_area x num_sessions) x nFrames_upsampled
+    # so, 2 x (4 x num_sessions) x nFrames_upsampled
+    # For each area, first take all the layers of session 1, then take all the layers of session 2
+    y_pooled_sesss_planes_eachArea = np.array([y[i_areas == ida] for ida in range(len(distinct_areas))]) # 2 x (8/2 x num_sessions) x nFrames_upsampled
+
+    return y_pooled_sesss_planes_eachArea, distinct_areas, i_areas
+
+
+
+
+
+def pool_sesss_areas_eachDepth(planes_allsess, y, num_depth=4):
+    #%% For each layer (depth), pool data across sessions and areas
+
+    # planes_allsess: [0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7] # (8*num_sessions)
+    # y: (8*num_sessions) x time   or   (8*num_sessions) 
+    # num_depth: 4
+
+    y_pooled_sesss_areas_eachDepth = []
+    for idepth in range(num_depth): # idepth = 0
+        # merge data with the same depth across 2 areas 
+        # For each depth, first take all the areas of session 1, then take all the areas of session 2
+        b = np.logical_or(planes_allsess==idepth, planes_allsess==idepth + num_depth)
+        a = y[b] #np.array([t[b]]).squeeze() # (2 x num_sess) x nFrames_upsampled
+        y_pooled_sesss_areas_eachDepth.append(a)
+    y_pooled_sesss_areas_eachDepth = np.array(y_pooled_sesss_areas_eachDepth) # 4 x (2 x num_sess) x nFrames_upsampled # 4 is the number of distinct depths: depth1_area2
+
+    return y_pooled_sesss_areas_eachDepth
+
+
+
+
+##############################################################################################
+##############################################################################################
+
 
 svm_this_plane_allsess = pd.DataFrame([], columns=columns)
-cntall = 0
+cntall = 0 # index of svm_this_plane_allsess df; not really important if it starts at 1 or 0.
     
 for iblock in br: # iblock=0 ; iblock=np.nan
     
@@ -76,9 +175,21 @@ for iblock in br: # iblock=0 ; iblock=np.nan
 #     all_sess
 #     all_sess.keys()    
 #     print(len(all_sess))
-    
-    all_sess0 = copy.deepcopy(all_sess)
 
+    all_sess0 = copy.deepcopy(all_sess)
+    
+    
+    #######################################################################################
+    #%% Remove mesoscope sessions with unusual frame duration; note this is a temporary solution. We will later interpolated their traces.
+    #######################################################################################
+    print(all_sess0.shape)
+    a0 = all_sess0['session_id'].isin([1050231786, 1050597678, 1051107431])
+    if sum(a0)>0:
+        print(f'\n\n\n Removing {sum(a0)} mesoscope experiments with unusual frame duration; note this is a temporary solution\n\n\n')
+        all_sess0 = all_sess0[~a0]    
+    print(all_sess0.shape)
+    
+    #######################################################################################
     session_ids = all_sess0['session_id'].unique()
     print(f'\n {session_ids.shape[0]} sessions found!')
 
@@ -119,32 +230,42 @@ for iblock in br: # iblock=0 ; iblock=np.nan
 
 
 
-    #%% Set the stage for each session in all_sess
+    #%% Set the stage and experience level for each session in all_sess
 
-    session_stage_df = pd.DataFrame([], columns=['session_id', 'stage'])
+    session_stage_df = pd.DataFrame([], columns=['session_id', 'stage', 'experience_level'])
     stages_all_sess = []
+    explevel_all_sess = []
     for isess in range(len(session_ids)): # sess = session_ids[0]
         sess = session_ids[isess]
         stages = all_sess0[all_sess0['session_id']==sess]['stage'].values
+        explev = all_sess0[all_sess0['session_id']==sess]['experience_level'].values
 
         ts = [type(sg) for sg in stages]
-        su = stages[np.in1d(ts,str)] # take the non-nan experiments for the stage value
+        su = stages[np.in1d(ts, str)] # take the non-nan experiments for the stage value
+        eu = explev[np.in1d(ts, str)]
         if len(su)>0: # not all experiments are nan.
             sun = su[0]
+            eun = eu[0]
         else:
             sun = ''
+            eun = ''
 
-        session_stage_df.at[isess,:] = [sess, sun]
+        session_stage_df.at[isess,:] = [sess, sun, eun]
         stages_all_sess.append(sun)
+        explevel_all_sess.append(eun)
 
     stages_all_sess = np.array(stages_all_sess)    
+    explevel_all_sess = np.array(explevel_all_sess)
+    
+    session_stage_df.groupby(['stage']).count()
+    session_stage_df.groupby(['experience_level']).count()
 
     
     
     #%% Number of invalid sessions
     
     a = sum(stages_all_sess=='')    
-    print(f"{a} sessions ({a*8} experiments) have all experiments as NaN! These need further evaluation for why their svm results dont exist!")    
+    print(f"{a} sessions ({a*8} experiments, if mesoscope) have all experiments as NaN! These need further evaluation for why their svm files dont exist!")    
 
  
     
@@ -227,68 +348,20 @@ for iblock in br: # iblock=0 ; iblock=np.nan
 
 
         
-    
-    
-    ##############################################################################
     ##############################################################################
     #%% Set the exposure_number (or better to call "retake_number") for each experiment
-
-    experiments_table = loading.get_filtered_ophys_experiment_table(include_failed_data=True)
-
-    estbl = experiments_table.index
-    es = all_sess0['experiment_id'].values
-
-#     try:
-#         exposure_number = experiments_table[np.in1d(estbl, es)]['session_type_exposure_number'].values
-#         # print(f'exposure numbers: {np.unique(exposure_number)}')
-#     except Exception as E:
-#         print('exposure_number does not exist in experiments_table!! For now it is fine because we are not really using exposure_number')
-#         print(E)
-        
-
-    #%% Are all experiments in all_sess also in experiment_table; this should always be the case, unless experiment_table changes later bc of some qc related thing!
-
-    a = sum(~np.in1d(es, estbl))
-    if a!=0: # print(f'All experiments in all_sess exist in experiment_table, as expected')
-        sys.exit(f'\n{a} experiments in all_sess do NOT exist in experiment_table; uncanny!')
-
-        
-        ### make exposure_number the same size as all_sess and use some large value for the missing experiments so they will get filtered out below. 
-        # turn exposure_number to a df so we know which element belongs to which experiment, add additional rows for the experiments in all_sess that are not in exposure_number, and set their value to a ridiculus value like 100.
-
-        # i dont think the method below is useful, bc still we cant apply exposure_number onto all_sess ...
-        '''
-        ### set svm outputs of all_sess experiments missing from exp_table to nan
-        print(f'NOTE: Turning their SVM outputs to nan!\n')
-
-    #     'meanX_allFrs', 'stdX_allFrs', 'av_train_data', 'av_test_data', 'av_test_shfl',
-    #     'av_test_chance', 'sd_train_data', 'sd_test_data', 'sd_test_shfl',
-    #     'sd_test_chance', 'peak_amp_trainTestShflChance', 'av_w_data', 'av_b_data'
-
-    #     all_sess_missing_from_estable = all_sess0[~np.in1d(es, estbl)]
-    #     aa = np.argwhere(~np.in1d(es, estbl))
-
-        all_sess0.at[~np.in1d(es, estbl), 'av_train_data'] = [np.full((all_sess0.iloc[0]['av_test_data'].shape), np.nan)]    
-        all_sess0.at[~np.in1d(es, estbl), 'av_test_data'] = [np.full((all_sess0.iloc[0]['av_test_data'].shape), np.nan)]
-        all_sess0.at[~np.in1d(es, estbl), 'av_test_shfl'] = [np.full((all_sess0.iloc[0]['av_test_shfl'].shape), np.nan)]
-        all_sess0.at[~np.in1d(es, estbl), 'av_test_chance'] = [np.full((all_sess0.iloc[0]['av_test_shfl'].shape), np.nan)]
-        all_sess0.at[~np.in1d(es, estbl), 'peak_amp_trainTestShflChance'] = [np.full((all_sess0.iloc[0]['peak_amp_trainTestShflChance'].shape), np.nan)]    
-        all_sess0.at[~np.in1d(es, estbl), 'meanX_allFrs'] = [np.full((all_sess0.iloc[0]['meanX_allFrs'].shape), np.nan)]        
-        '''
-    ##############################################################################
+    # this part is all commented and moved to the end of this page; grab it if you ever need it!
     ##############################################################################
     
     
-
-    
-    
-    #%% correlate classification accuracy with behavioral strategy
+    ##############################################################################
+    #%% Correlate classification accuracy with behavioral strategy
     
     if trial_type =='changes_vs_nochanges' or trial_type =='hits_vs_misses' or trial_type == 'baseline_vs_nobaseline':
         
         exec(open('svm_images_plots_corr_beh_strategy.py').read()) 
-    
-    
+        
+    ##############################################################################
     
     
     
@@ -339,7 +412,10 @@ for iblock in br: # iblock=0 ; iblock=np.nan
     
         l = stages_all_sess
         stage_inds_all = []
-        for ise in range(len(session_numbers)):
+        
+        for ise in range(len(session_numbers)): # ise=0
+            
+            print(f'\n\n')
             s = session_numbers[ise]
             name = f'OPHYS_{s}_.'
 
@@ -351,7 +427,7 @@ for iblock in br: # iblock=0 ; iblock=np.nan
             stage_inds_all.append(stage_inds)
 
         if len(stage_inds)==0:
-            print(f'There are no sessions in {name}')
+            print(f'\tskipping this stage') # no sessions in {name}
 
         else:
             stage_inds_all = np.concatenate((stage_inds_all))    
@@ -417,6 +493,7 @@ for iblock in br: # iblock=0 ; iblock=np.nan
             ######################################################################################################
             #%% Set a number of useful variables
             ######################################################################################################
+
             #%%
             frame_dur = all_sess['frame_dur'].mode().values[0]
             print(f'frame duration: {frame_dur}')
@@ -453,7 +530,8 @@ for iblock in br: # iblock=0 ; iblock=np.nan
             all_mice_id = np.sort(all_sess['mouse_id'].unique())
             # remove nans: this should be for sessions whose all experiments are invalid
             all_mice_id = all_mice_id[[~np.isnan(all_mice_id[i]) for i in range(len(all_mice_id))]]
-            len(all_mice_id)
+            
+            print(f'There are {len(all_mice_id)} mice in this stage.')
 
             '''
             mouse_trainHist_all = pd.DataFrame([], columns=['mouse_id', 'date', 'session_id', 'stage']) # total number of sessions x 3
@@ -474,8 +552,9 @@ for iblock in br: # iblock=0 ; iblock=np.nan
             '''
 
 
-            #%% Set plane indeces for each area (V1 and LM)
-
+            #%% Set plane indices for each area (V1 and LM)
+            # I think you can just move this section all the way up, outside the loop.
+            
             distinct_areas, i_areas = np.unique(all_sess[all_sess['mouse_id']==all_mice_id[0]]['area'].values, return_inverse=True) # take this info from any mouse ... it doesn't matter... we go with mouse 0
             i_areas = i_areas[range(num_planes)]
             # distinct_areas = np.array(['VISl', 'VISp'])
@@ -508,103 +587,6 @@ for iblock in br: # iblock=0 ; iblock=np.nan
 
 
 
-            #####################################################################
-            #####################################################################
-            #%% Functions to set vars needed for plotting
-
-
-            def set_y_this_plane_allsess(y, num_sessions, takeAve=0): # set takeAve to 1 for meanX_allFrs (so we average across neurons)
-
-                #%% Get data from a given plane across all sessions (assuming that the same order of planes exist in all sessions, ie for instance plane n is always the ith experiment in all sessions.)    
-                # PERHAPS just forget about all of this below and do a reshape, you can double check reshape by doing the same thing on plane, area, depth 
-
-                y_this_plane_allsess_allp = []
-                for iplane in range(num_planes): # iplane=0 
-
-                    ##### get data from a given plane across all sessions
-                    y_this_plane_allsess = y.at[iplane] # num_sess        
-
-                    # when the mouse had only one session, we need the following to take care of the shape of y_this_plane_allsess
-                    if np.shape(y_this_plane_allsess)==(): # type(y_this_plane_allsess) == int: --> this didnt work bc populatin_sizes_to_try is of type numpy.int64
-                        if type(y_this_plane_allsess) == str:
-                            y_this_plane_allsess = np.array([y_this_plane_allsess])
-                        else:
-                            y_this_plane_allsess = np.array([np.float(y_this_plane_allsess)])
-
-                    if num_sessions < 2:
-                        y_this_plane_allsess = y_this_plane_allsess[np.newaxis,:]            
-            #             print(np.shape(y_this_plane_allsess), y_this_plane_allsess.dtype)
-
-
-                    # If y_this_plane_allsess is not a vector, take average across the 2nd dimension         
-                    if takeAve==1:
-                        nonNan_sess = np.array([np.sum(~np.isnan(y_this_plane_allsess[isess])) for isess in range(num_sessions)])            
-                        len_trace = np.shape(y.values[0])[0] #len(y.values[0]) #y[0].shape
-                        aa = np.full((num_sessions, len_trace), np.nan) # []
-                        for isess in range(num_sessions): # isess = 0
-                            if nonNan_sess[isess] > 0:
-                                aa[isess] = np.mean(y_this_plane_allsess[isess], axis = 1)
-                        y_this_plane_allsess = aa #np.array(aa)
-
-                    y_this_plane_allsess = np.vstack(y_this_plane_allsess) # num_sess x nFrames
-            #        print(np.shape(y_this_plane_allsess), y_this_plane_allsess.dtype)
-
-
-                    y_this_plane_allsess_allp.append(y_this_plane_allsess) # .squeeze()
-            #        y_this_plane_allsess_allp.at[iplane] = area, depth, y_this_plane_allsess
-
-                y_this_plane_allsess_allp = np.array(y_this_plane_allsess_allp)
-
-                return y_this_plane_allsess_allp
-
-
-
-
-            def pool_sesss_planes_eachArea(area, y):
-                #%%  Pool all sessions and layers for each area, do this for each mouse
-
-                # area: ['LM', 'LM', 'LM', 'LM', 'VISp', 'VISp', 'VISp', 'VISp', 'LM', 'LM', 'LM', 'LM', 'VISp', 'VISp', 'VISp', 'VISp'] # (8*num_sessions)
-                # y : (8*num_sessions) x time  or   # (8*num_sessions) 
-
-                # set area indeces
-            #         area = trace_peak_allMice.iloc[im]['area'] # (8*num_sessions)
-                distinct_areas, i_areas = np.unique(area, return_inverse=True)
-                #    print(distinct_areas)
-                if len(distinct_areas) > 2:
-                    sys.exit('There should not be more than two areas!! Fix the area names!')
-
-                # below has size: num_areas x (num_layers_per_area x num_sessions) x nFrames_upsampled
-                # so, 2 x (4 x num_sessions) x nFrames_upsampled
-                # For each area, first take all the layers of session 1, then take all the layers of session 2
-                y_pooled_sesss_planes_eachArea = np.array([y[i_areas == ida] for ida in range(len(distinct_areas))]) # 2 x (8/2 x num_sessions) x nFrames_upsampled
-
-                return y_pooled_sesss_planes_eachArea, distinct_areas, i_areas
-
-
-
-
-
-            def pool_sesss_areas_eachDepth(planes_allsess, y, num_depth=4):
-                #%% For each layer (depth), pool data across sessions and areas
-
-                # planes_allsess: [0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7] # (8*num_sessions)
-                # y: (8*num_sessions) x time   or   (8*num_sessions) 
-                # num_depth: 4
-
-                y_pooled_sesss_areas_eachDepth = []
-                for idepth in range(num_depth): # idepth = 0
-                    # merge data with the same depth across 2 areas 
-                    # For each depth, first take all the areas of session 1, then take all the areas of session 2
-                    b = np.logical_or(planes_allsess==idepth, planes_allsess==idepth + num_depth)
-                    a = y[b] #np.array([t[b]]).squeeze() # (2 x num_sess) x nFrames_upsampled
-                    y_pooled_sesss_areas_eachDepth.append(a)
-                y_pooled_sesss_areas_eachDepth = np.array(y_pooled_sesss_areas_eachDepth) # 4 x (2 x num_sess) x nFrames_upsampled # 4 is the number of distinct depths: depth1_area2
-
-                return y_pooled_sesss_areas_eachDepth
-
-
-            ##############################################################################################
-            ##############################################################################################
             ##############################################################################################
             ##############################################################################################
             ##############################################################################################
@@ -639,7 +621,7 @@ for iblock in br: # iblock=0 ; iblock=np.nan
             svm_this_plane_allsess = pd.DataFrame([], columns=columns)
             '''
 
-            # loop over mice based on the order in all_mice_id
+            # for a given stage, if there are sessions in all_sess, now loop over mice based on the order in all_mice_id
             # Note: if you want to use all sessions (not just those in all_sess_2n), replace all_sess_2n with all_sess below, also uncomment the currerntly commented out defintion of session_stages
 
             ### in svm_this_plane_allsess, each row is for one stage, includes data from all sessions that belong to that stage, also from all planes; in the following format: 1st session of that given stage: all planes; then 2nd session of that given stage: all planes; and so on. 
@@ -648,12 +630,12 @@ for iblock in br: # iblock=0 ; iblock=np.nan
 
                 cntall = cntall+1
                 mouse_id = all_mice_id[im]
-
+                
                 if sum((all_sess_2an['mouse_id']==mouse_id).values) <= 0:
                     print(f'mouse {im} doesnt have data!')
 
                 else: #sum((all_sess_2an['mouse_id']==mouse_id).values) > 0: # make sure there is data for this mouse, for the specific session: A, B, etc that you care about
-#                     print(f'there is data for mouse {im}')
+                    print(f'\nanalyzing mouse {mouse_id}')
     #                 svm_this_plane_allsess.at[cntall, 'block'] = iblock
 
 
@@ -671,7 +653,9 @@ for iblock in br: # iblock=0 ; iblock=np.nan
             #         session_stages = mouse_trainHist_all[mouse_trainHist_all['mouse_id']==mouse_id]['stage'].values
                     num_sessions = len(session_stages)     # some planes for some sessions could be nan (because they had fewer neurons than 3 (svm_min_neurs)), so below we will get the accurate number of sessions for each plane separately
             #         print(cre, num_sessions)
-
+                
+                    experience_levels = all_sess_2an_this_mouse['experience_level'].values[np.arange(0, all_sess_2an_this_mouse.shape[0], num_planes)]
+                
                     ######## Set session labels (stage names are too long)
                 #    session_beg_inds = np.concatenate(([0], np.cumsum(num_trs_each_sess[:-1])+1))
                     session_labs = []
@@ -968,7 +952,7 @@ for iblock in br: # iblock=0 ; iblock=np.nan
                         ###############################################################
                         # areas.values, depth.values, plane, 
                         svm_this_plane_allsess.at[cntall, columns0] = \
-                                   mouse_id, cre, mouse_id_exp, cre_exp, iblock, session_ids_now, session_stages, session_labs, num_sessions_valid, area_this_plane_allsess_allp, depth_this_plane_allsess_allp, \
+                                   mouse_id, cre, mouse_id_exp, cre_exp, iblock, session_ids_now, experience_levels, session_stages, session_labs, num_sessions_valid, area_this_plane_allsess_allp, depth_this_plane_allsess_allp, \
                                    areas.values, depths.values, planes, \
                                    n_neurons_this_plane_allsess_allp, n_trials_this_plane_allsess_allp, \
                                    av_meanX_avSess_eachP, sd_meanX_avSess_eachP, \
@@ -989,7 +973,7 @@ for iblock in br: # iblock=0 ; iblock=np.nan
                         ###############################################################
                         # areas.values, depth.values, plane, 
                         svm_this_plane_allsess.at[cntall, columns0] = \
-                                   mouse_id, cre, mouse_id_exp, cre_exp, iblock, session_ids_now, session_stages, session_labs, num_sessions_valid, area_this_plane_allsess_allp, depth_this_plane_allsess_allp, \
+                                   mouse_id, cre, mouse_id_exp, cre_exp, iblock, session_ids_now, experience_levels, session_stages, session_labs, num_sessions_valid, area_this_plane_allsess_allp, depth_this_plane_allsess_allp, \
                                    areas.values, depths.values, planes, \
                                    n_neurons_this_plane_allsess_allp, n_trials_this_plane_allsess_allp, \
                                    av_meanX_avSess_eachP, sd_meanX_avSess_eachP, \
@@ -1008,11 +992,15 @@ for iblock in br: # iblock=0 ; iblock=np.nan
                         svm_this_plane_allsess.at[cntall, ['sd_n_neurons_svm_trained_avSess_eachP']] = [sd_n_neurons_svm_trained_avSess_eachP]
 
 
+                # done with setting svm_this_plane_allsess for each mouse of a given ophys session and a given block (for iblock; for isession; for imouse)
+#                 print(svm_this_plane_allsess.shape) 
+#                 print(f'\n')
+            
+            
             # done with setting svm_this_plane_allsess for all mice of a given ophys session and a given block (for iblock; for isession; for imouse)
             print(svm_this_plane_allsess.shape) 
-    #         svm_this_plane_allsess
-
-
+            print(f'\n')
+#             svm_this_plane_allsess
 
             #%%
             #####################################################################################
@@ -1043,3 +1031,60 @@ for iblock in br: # iblock=0 ; iblock=np.nan
 
 print(svm_this_plane_allsess.shape)
 svm_this_plane_allsess
+
+
+
+
+
+
+
+
+
+#%% Set the exposure_number (or better to call "retake_number") for each experiment
+# this part is all commented and moved at the end of this page; grab it if you ever need it!
+"""
+experiments_table = loading.get_filtered_ophys_experiment_table(include_failed_data=True)
+
+estbl = experiments_table.index
+es = all_sess0['experiment_id'].values
+
+#     try:
+#         exposure_number = experiments_table[np.in1d(estbl, es)]['session_type_exposure_number'].values
+#         # print(f'exposure numbers: {np.unique(exposure_number)}')
+#     except Exception as E:
+#         print('exposure_number does not exist in experiments_table!! For now it is fine because we are not really using exposure_number')
+#         print(E)
+
+
+#%% Are all experiments in all_sess also in experiment_table; this should always be the case, unless experiment_table changes later bc of some qc related thing!
+
+a = sum(~np.in1d(es, estbl))
+if a!=0: # print(f'All experiments in all_sess exist in experiment_table, as expected')
+    sys.exit(f'\n{a} experiments in all_sess do NOT exist in experiment_table; uncanny!')
+
+
+    ### make exposure_number the same size as all_sess and use some large value for the missing experiments so they will get filtered out below. 
+    # turn exposure_number to a df so we know which element belongs to which experiment, add additional rows for the experiments in all_sess that are not in exposure_number, and set their value to a ridiculus value like 100.
+
+    # i dont think the method below is useful, bc still we cant apply exposure_number onto all_sess ...
+    '''
+    ### set svm outputs of all_sess experiments missing from exp_table to nan
+    print(f'NOTE: Turning their SVM outputs to nan!\n')
+
+#     'meanX_allFrs', 'stdX_allFrs', 'av_train_data', 'av_test_data', 'av_test_shfl',
+#     'av_test_chance', 'sd_train_data', 'sd_test_data', 'sd_test_shfl',
+#     'sd_test_chance', 'peak_amp_trainTestShflChance', 'av_w_data', 'av_b_data'
+
+#     all_sess_missing_from_estable = all_sess0[~np.in1d(es, estbl)]
+#     aa = np.argwhere(~np.in1d(es, estbl))
+
+    all_sess0.at[~np.in1d(es, estbl), 'av_train_data'] = [np.full((all_sess0.iloc[0]['av_test_data'].shape), np.nan)]    
+    all_sess0.at[~np.in1d(es, estbl), 'av_test_data'] = [np.full((all_sess0.iloc[0]['av_test_data'].shape), np.nan)]
+    all_sess0.at[~np.in1d(es, estbl), 'av_test_shfl'] = [np.full((all_sess0.iloc[0]['av_test_shfl'].shape), np.nan)]
+    all_sess0.at[~np.in1d(es, estbl), 'av_test_chance'] = [np.full((all_sess0.iloc[0]['av_test_shfl'].shape), np.nan)]
+    all_sess0.at[~np.in1d(es, estbl), 'peak_amp_trainTestShflChance'] = [np.full((all_sess0.iloc[0]['peak_amp_trainTestShflChance'].shape), np.nan)]    
+    all_sess0.at[~np.in1d(es, estbl), 'meanX_allFrs'] = [np.full((all_sess0.iloc[0]['meanX_allFrs'].shape), np.nan)]        
+    '''
+##############################################################################
+##############################################################################
+"""

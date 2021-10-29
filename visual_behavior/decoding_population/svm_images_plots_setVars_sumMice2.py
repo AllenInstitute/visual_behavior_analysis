@@ -1,13 +1,11 @@
 """
 Gets called in svm_images_plots_setVars.py
-Set vars and plot traces and quantifications for each ophys stage
 
-Make summary plots across mice (each cre line) for the svm analysis.
+Sets summary_vars_all, a dataframe that includes response amplitude (computed from svm_allMice_sessPooled); it will be used in svm_images_plots_compare_ophys_stages.py
+
+If len(project_codes_all)==1, it calls svm_images_plots_sumMice.py to make mouse-averaged plots for each ophys stage.
 
 Vars needed here are set in "svm_images_plots_setVars_sumMice.py"
-
-
-Set vars to make mouse-averaged plots
 
 
 Created on Wed Oct 21 15:22:05 2020
@@ -126,15 +124,17 @@ if ~np.isnan(svm_blocks) and svm_blocks!=-101: # svm was run on blocks
 
 
                 
-
+##########################################################################################
+##########################################################################################
 #%% SUMMARY ACROSS MICE 
 ##########################################################################################
 ##########################################################################################
-############# Plot traces averaged across mice of the same cre line ################
+############# Set summary_vars_all, a dataframe that includes response amplitude (computed from svm_allMice_sessPooled); it will be used in svm_images_plots_compare_ophys_stages.py
+############# Also plot traces averaged across mice of the same cre line ################
 ##########################################################################################    
 ##########################################################################################
 
-cols_sum = ['stage', 'cre', 'block', 'depth_ave', 'resp_amp']
+cols_sum = ['stage', 'experience_level', 'cre', 'block', 'depth_ave', 'resp_amp']
 summary_vars_all = pd.DataFrame([], columns=cols_sum)
 
 xgap_areas = .3
@@ -144,11 +144,7 @@ cols_area_all = [cols_area , ['skyblue', 'dimgray']]
 
 cntn = 0
 for istage in np.unique(stages_all): # istage=1
-
-    #%% Plot averages of all mice in each cell line
-
     for cre in ['Slc17a7', 'Sst', 'Vip']: # cre = 'Slc17a7'
-#     for icre in range(len(cre_lines)): # icre=0
         
         ###############################         
         plt.figure(figsize=(8,11))  
@@ -264,7 +260,7 @@ for istage in np.unique(stages_all): # istage=1
     #                 depth_ave = np.mean(depth_eachDepth[:, cre_eachDepth[0,:]==cre], axis=1).astype(float) # 4 # average across areas and sessions
                     pallnow = pa_all[:, cre_all[0,:]==cre]
 
-                    summary_vars_all.at[cntn, cols_sum] = istage, cre, iblock, depth_ave, pallnow
+                    summary_vars_all.at[cntn, cols_sum] = istage, exp_level, cre, iblock, depth_ave, pallnow
 
 
 
@@ -296,10 +292,10 @@ for istage in np.unique(stages_all): # istage=1
 
 
                     ################################################################
-                    ################################################################
+                    ##############%% Plot averages of all mice in each cell line ###################
                     ################################################################
 
-                    plots_make_finalize = [1,0]
+                    plots_make_finalize = [1,0] # make the plot
 
                     if len(project_codes_all)==1:
                         exec(open('svm_images_plots_sumMice.py').read())
@@ -308,7 +304,7 @@ for istage in np.unique(stages_all): # istage=1
 
         ################################################################
         ################################################################            
-        if thisCre_pooledSessNum > 0: # done with both blocks of a given ophys stage
+        if thisCre_pooledSessNum > 0: # done with both blocks of a given ophys stage; now add labels etc to the plot
             
             plots_make_finalize = [0,1]
 
@@ -317,3 +313,289 @@ for istage in np.unique(stages_all): # istage=1
             
             
 
+
+            
+            
+            
+            
+            
+            
+##########################################################################################
+##########################################################################################
+############# create svm_df, a proper pandas table ################
+##########################################################################################    
+##########################################################################################            
+
+#%% Function to concatenate data in svm_allMice_sessPooled0 in the following way: 
+# concatenate data from plane 1 all sessions, then plane 2 all sessions, then plane 3 all sessions,..., then plane 8 all sessions. Therefore, first data from one area (the first 4 planes), then data from another area (the last 4 planes) 
+
+def concatall(df, col):
+    # df = svm_allMice_sessPooled0.copy()
+    # col = 'av_test_data_allPlanes'    
+    # df[col].iloc[0].shape # size: sess   or    planes x sess    or    planes x sess x time  (it must have )
+    
+    df = df.copy()
+    
+    if np.ndim(df[col].iloc[0])==1: # data is for all sessions but only 1 plane; we need to replicate it so the size becomes planes x sessions
+        for i in range(df.shape[0]): #i=0
+            df[col].iloc[i] = [df[col].iloc[i][:] for j in range(8)] # planes x sess
+
+    a = np.concatenate((df[col].iloc[0]))
+#     print(a.shape)
+    for i in np.arange(1, df.shape[0]): #i=0
+        a = np.concatenate((a, np.concatenate((df[col].iloc[i]))))
+    print(a.shape)
+    a = list(a) # we do this because the matrix that we want to assign to a column of df at once has to be a LIST… it cannot be an array.
+
+    return(a)
+
+
+################################################
+#%% Initiate svm_df out of svm_allMice_sessPooled0. The idea is to create a proper pandas table out of the improper table svm_allMice_sessPooled0!!! Proper because each entry is for one experiment! 
+# rows in svm_df are like: plane 1 all sessions, then plane 2 all sessions, etc
+
+svm_df = pd.DataFrame()
+cnt = -1
+for i in range(svm_allMice_sessPooled0.shape[0]): #i=0 # go through each row of svm_allMice_sessPooled0, ie an ophys stage
+    nsess = len(svm_allMice_sessPooled0['experience_levels'].iloc[i])    
+    for iplane in range(num_planes): #iplane=0
+        for isess in range(nsess): #isess=0
+            cnt = cnt + 1
+            session_id = svm_allMice_sessPooled0['session_ids'].iloc[i][iplane, isess]
+            experiment_id = all_sess0[all_sess0['session_id']==session_id]['experiment_id'].iloc[iplane]
+            
+            svm_df.at[cnt, 'session_id'] = session_id
+            svm_df.at[cnt, 'experiment_id'] = experiment_id
+            svm_df.at[cnt, 'session_labs'] = svm_allMice_sessPooled0['session_labs'].iloc[i][0]    
+# svm_df.head(300)
+
+
+################################################
+#%% For the rest of the columns we create an entire array/matrix and then add it to the df; as opposed to looping over each value:
+
+#%% Array columns; ie each entry in df is 1 element
+
+# create arrays/matrices for each column of df
+cre_allPlanes_allExp = concatall(svm_allMice_sessPooled0, 'cre_allPlanes')
+mouse_id_allPlanes_allExp = concatall(svm_allMice_sessPooled0, 'mouse_id_allPlanes')
+area_allPlanes_allExp = concatall(svm_allMice_sessPooled0, 'area_allPlanes')
+depth_allPlanes_allExp = concatall(svm_allMice_sessPooled0, 'depth_allPlanes')
+experience_level_allExp = concatall(svm_allMice_sessPooled0, 'experience_levels')
+# create matrix columns
+av_test_data_allPlanes_allExp = concatall(svm_allMice_sessPooled0, 'av_test_data_allPlanes')
+av_test_shfl_allPlanes_allExp = concatall(svm_allMice_sessPooled0, 'av_test_shfl_allPlanes')
+peak_amp_allPlanes_allExp = concatall(svm_allMice_sessPooled0, 'peak_amp_allPlanes')
+# session_id_allExp = concatall(svm_allMice_sessPooled0, 'session_ids')
+# session_labs_allExp = concatall(svm_allMice_sessPooled0, 'session_labs') # we cant use it with the function concatall because svm_allMice_sessPooled0['session_labs'] is only for 1 session.
+
+# now add columns at once to svm_df 
+svm_df['cre_allPlanes'] = cre_allPlanes_allExp
+svm_df['mouse_id_allPlanes'] = mouse_id_allPlanes_allExp
+svm_df['area_allPlanes'] = area_allPlanes_allExp
+svm_df['depth_allPlanes'] = depth_allPlanes_allExp
+svm_df['experience_levels'] = experience_level_allExp
+svm_df['av_test_data_allPlanes'] = av_test_data_allPlanes_allExp
+svm_df['av_test_shfl_allPlanes'] = av_test_shfl_allPlanes_allExp
+svm_df['peak_amp_allPlanes_allExp'] = peak_amp_allPlanes_allExp
+
+svm_df #.head(300)
+
+# svm_allMice_sessPooled0.keys()
+
+
+################################################################################################
+### Create a dataframe: resp_amp_sum_df, that includes the mean and stdev of response amplitude across all experiments of all sessions
+################################################################################################
+exp_level_all = svm_df['experience_levels'].unique()
+cresdf = svm_df['cre_allPlanes'].unique()
+resp_amp_sum_df = pd.DataFrame()
+cnt = -1
+for cre in cresdf: # cre = cresdf[0]
+    for i in range(len(exp_level_all)):
+        cnt = cnt+1
+        # svm_df for a given cre and experience level
+        thiscre = svm_df[svm_df['cre_allPlanes']==cre]
+        thiscre = thiscre[thiscre['experience_levels']==exp_level_all[i]]
+        
+        depthav = thiscre['depth_allPlanes'].mean()
+#         areasu = thiscre['area_allPlanes'].unique()        
+        ampall = np.vstack(thiscre['peak_amp_allPlanes_allExp']) # ampall.shape # exp x 4 # pooled_experiments x 4_trTsShCh
+        nexp = sum(~np.isnan(ampall[:,1]))
+
+        # testing data
+        testav = np.nanmean(ampall[:,1])
+        testsd = np.nanstd(ampall[:,1]) / np.sqrt(ampall[:,1].shape[0])
+        
+        # shuffled
+        shflav = np.nanmean(ampall[:,2])  
+        shflsd = np.nanstd(ampall[:,2]) / np.sqrt(nexp) # ampall[:,2].shape[0]
+
+        # create the summary df
+        resp_amp_sum_df.at[cnt, 'cre'] = cre
+        resp_amp_sum_df.at[cnt, 'experience_level'] = exp_level_all[i]
+        resp_amp_sum_df.at[cnt, 'depth_av'] = depthav
+        resp_amp_sum_df.at[cnt, 'n_experiments'] = nexp
+        
+        resp_amp_sum_df.at[cnt, 'test_av'] = testav
+        resp_amp_sum_df.at[cnt, 'test_sd'] = testsd        
+        resp_amp_sum_df.at[cnt, 'shfl_av'] = shflav
+        resp_amp_sum_df.at[cnt, 'shfl_sd'] = shflsd
+        
+resp_amp_sum_df
+# [areasu for x in resp_amp_sum_df['cre']]
+
+
+
+
+
+
+
+
+
+
+
+
+
+# move below to ophys sum comp
+
+#%% Make error bars 
+# set xnow
+
+cres = ['Slc17a7', 'Sst', 'Vip']
+
+if project_codes_all == ['VisualBehaviorMultiscope']:
+    x = np.array([0,1,2,3])*len(whichStages)*1.1 #/1.5 #np.array([0,2,4,6]) # gap between depths
+else:
+    x = np.array([0])
+
+cols_stages = plt.rcParams['axes.prop_cycle'].by_key()['color']
+
+if len(project_codes_all)==1:
+    areasn = ['V1', 'LM', 'V1,LM']
+else:
+    areasn = ['V1,LM', 'V1,LM', 'V1,LM'] # distinct_areas  #['VISp']
+
+    
+    
+if np.isnan(svm_blocks) or svm_blocks==-101: # svm was run on the whole session (no block by block analysis)
+    
+    xgapg = .15*len(whichStages)/1.1  # gap between sessions within a depth
+
+    for crenow in cres: # crenow = cres[0]
+
+        plt.figure(figsize=(6,2.5))  
+        gs1 = gridspec.GridSpec(1,3) #, width_ratios=[3, 1]) 
+        gs1.update(bottom=.15, top=0.8, left=0.05, right=0.95, wspace=.55, hspace=.5)
+
+        allaxes = []
+        ax1 = plt.subplot(gs1[0])
+        allaxes.append(ax1)
+        if ~np.isnan(inds_lm).squeeze().all():
+            ax2 = plt.subplot(gs1[1])
+            ax3 = plt.subplot(gs1[2])
+            allaxes.append(ax2)
+            allaxes.append(ax3)
+            
+        xgap = 0
+        top_allstage = []
+        mn_mx_allstage = []    
+        stcn = -1
+        xnowall = []
+
+        for expl in exp_level_all: # expl = exp_level_all[0]
+
+            stcn = stcn+1
+
+            df = resp_amp_sum_df[resp_amp_sum_df['cre']==crenow]
+            df = df[df['experience_level']==expl]
+#             (df['shfl_av']-df['shfl_sd']).values
+#             mn = np.nanmin(top[:,2]-top_sd[:,2])
+#             mx = np.nanmax(top[:,1]+top_sd[:,1])
+
+            xnow = x + xgapg*stcn
+
+#             top_allstage.append(top)
+#             mn_mx_allstage.append([mn, mx])            
+#             xnowall.append(xnow)
+    #         print(x+xgap)
+
+            #######################################
+            ############# plot errorbars #############        
+            #######################################
+            # test
+            ax1.errorbar(xnow, df['test_av'], yerr=df['test_sd'], fmt=fmt_now, markersize=5, capsize=0, label=f'{ophys_stage_labels[stagenow-1]}', color=colors[stagenow-1]) #cols_stages[stcn]
+            # shuffle
+            ax1.errorbar(xnow, df['shfl_av'], yerr=df['shfl_sd'], fmt=fmt_now, markersize=3, capsize=0, color='gray')
+            # test - shuffle
+            ax2.errorbar(xnow, df['test_av']-df['shfl_av'], yerr=df['test_sd']-df['shfl_sd'], fmt=fmt_now, markersize=5, capsize=0, label=f'{ophys_stage_labels[stagenow-1]}', color=colors[stagenow-1]) #cols_stages[stcn]
+            
+            
+            
+#         HERE: work on labels, figure aesthetics. then ttest. then save the figure. then move the code to the right place. then git. 
+            
+        ##############################################################################    
+        ####### take care of plot labels, etc; done with all stages; do this for each cre line 
+        ##############################################################################                
+        add_plot_labs(top_allstage, mn_mx_allstage, ylims, addleg=1)
+        
+        
+        
+
+        ####
+        if dosavefig:
+
+            snn = [str(sn) for sn in whichStages]
+            snn = '_'.join(snn)
+            whatSess = f'_summaryStages_{snn}'
+
+            fgn = '' #f'{whatSess}'
+            if same_num_neuron_all_planes:
+                fgn = fgn + '_sameNumNeursAllPlanes'
+            
+            if baseline_subtract==1:
+                bln = f'timewin{time_win}_blSubtracted'
+            else:
+                bln = f'timewin{time_win}_blNotSubtracted'                
+
+            if svm_blocks==-1:
+                word = 'engaged_disengaged_blocks_'
+            elif svm_blocks==-101:
+                word = 'only_engaged_'
+            elif ~np.isnan(svm_blocks):
+                word = 'blocks_'
+            else:
+                word = ''
+            
+            if use_events:
+                word = word + 'events'
+            
+            if show_depth_stats:
+                word = word + '_anova'
+
+                
+            fgn = f'{fgn}_{word}'
+            if len(project_codes_all)==1:
+                fgn = f'{fgn}_frames{frames_svm[0]}to{frames_svm[-1]}'                        
+            fgn = fgn + '_ClassAccur'
+#             if project_codes_all == ['VisualBehavior']:
+#             fgn = f'{fgn}_{project_codes_all[0]}'
+
+            if len(project_codes_all)==1:
+                pcn = project_codes_all[0] + '_'
+            else:
+                pcn = ''
+                for ipc in range(len(project_codes_all)):
+                    pcn = pcn + project_codes_all[ipc][0] + '_'
+            pcn = pcn[:-1]
+            
+            fgn = f'{fgn}_{pcn}'            
+                
+            nam = f'{crenow[:3]}{whatSess}_{bln}_aveMice_aveSessPooled{fgn}_{now}'
+            
+            fign = os.path.join(dir0, 'svm', dir_now, nam+fmt)
+            print(fign)
+            
+            
+            plt.savefig(fign, bbox_inches='tight') # , bbox_extra_artists=(lgd,)    
+
+        
