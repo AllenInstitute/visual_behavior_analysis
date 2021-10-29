@@ -19,4 +19,4 @@ if __name__ == '__main__':
     save_dir = r'/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/platform_paper_plots'
 
     for start_time in start_times[::4][:20]:
-        plot_behavior_timeseries(dataset, start_time, duration_seconds=20, save_dir=save_dir, ax=None)
+        ppf.plot_behavior_timeseries(dataset, start_time, duration_seconds=20, save_dir=save_dir, ax=None)
