@@ -822,16 +822,28 @@ def get_behavior_dataset(behavior_session_id, from_lims=False, from_nwb=True, ge
     if from_lims:
         dataset = BehaviorSession.from_lims(behavior_session_id)
     elif from_nwb:
-        nwb_file = get_release_behavior_nwb_file_path(behavior_session_id).values[0]
-        if len(nwb_file) > 0:
-            nwb_path = nwb_file[0]
-            if 'win' in sys.platform:
-                nwb_path = '\\' + os.path.abspath(nwb_path)[2:]
-            dataset = BehaviorSession.from_nwb_path(nwb_path)
-        else:
-            print('no NWB file path found for', behavior_session_id)
+        cache_dir = get_platform_analysis_cache_dir()
+        cache = bpc.from_s3_cache(cache_dir=cache_dir)
+        dataset = cache.get_behavior_session(behavior_session_id)
     else:
         raise Exception('Set load_from_lims or load_from_nwb to True')
+
+    if get_extended_stimulus_presentations:
+        # add extended stimulus presentations
+        dataset.extended_stimulus_presentations = get_extended_stimulus_presentations_table(
+            dataset.stimulus_presentations.copy(),
+            dataset.licks, dataset.rewards,
+            dataset.running_speed, behavior_session_id=dataset.metadata['behavior_session_id'])
+
+    if get_extended_trials and get_extended_stimulus_presentations is False:
+        dataset.extended_stimulus_presentations = get_extended_stimulus_presentations_table(
+            dataset.stimulus_presentations.copy(),
+            dataset.licks, dataset.rewards,
+            dataset.running_speed, behavior_session_id=dataset.metadata['behavior_session_id'])
+        dataset.extended_trials = get_extended_trials_table(dataset.trials, dataset.extended_stimulus_presentations)
+    elif get_extended_trials:
+        dataset.extended_trials = get_extended_trials_table(dataset.trials, dataset.extended_stimulus_presentations)
+
     return dataset
 
 #
