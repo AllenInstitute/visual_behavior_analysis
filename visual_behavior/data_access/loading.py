@@ -442,13 +442,16 @@ def get_second_release_candidates():
     return release_candidates
 
 
-def get_extened_stimulus_presentations(stimulus_presentations, licks, rewards, running_speed, eye_tracking):
+def get_extended_stimulus_presentations_table(stimulus_presentations, licks, rewards, running_speed, eye_tracking=None, behavior_session_id=None):
     """
     Takes SDK stimulus presentations table and adds a bunch of useful columns by incorporating data from other tables
     and reformatting existing column data
     Additional columns include epoch #s for 10 minute bins in the session, whether a flash was a pre or post change or omission,
     the mean running speed per flash, mean pupil area per flash, licks per flash, rewards per flash, lick rate, reward rate,
     time since last change, time since last omission, time since last lick
+
+    Set eye_tracking to None by default so that things still run for behavior only sessions
+    If behavior_session_id is provided, will load metrics from behavior model outputs file
     """
     if 'time' in licks.keys():
         licks = licks.rename(columns={'time': 'timestamps'})
@@ -460,28 +463,40 @@ def get_extened_stimulus_presentations(stimulus_presentations, licks, rewards, r
     stimulus_presentations['pre_omitted'] = stimulus_presentations['omitted'].shift(-1)
     stimulus_presentations = reformat.add_epoch_times(stimulus_presentations)
     stimulus_presentations = reformat.add_mean_running_speed(stimulus_presentations, running_speed)
-    try:  # if eye tracking data is not present or cant be loaded
-        stimulus_presentations = reformat.add_mean_pupil_area(stimulus_presentations, eye_tracking)
-    except BaseException:  # set to NaN
-        stimulus_presentations['mean_pupil_area'] = np.nan
+    if eye_tracking:
+        try:  # if eye tracking data is not present or cant be loaded
+            stimulus_presentations = reformat.add_mean_pupil_area(stimulus_presentations, eye_tracking)
+        except BaseException:  # set to NaN
+            stimulus_presentations['mean_pupil_area'] = np.nan
     stimulus_presentations = reformat.add_licks_each_flash(stimulus_presentations, licks)
     stimulus_presentations = reformat.add_response_latency(stimulus_presentations)
     stimulus_presentations = reformat.add_rewards_each_flash(stimulus_presentations, rewards)
     stimulus_presentations['licked'] = [True if len(licks) > 0 else False for licks in
                                         stimulus_presentations.licks.values]
+    # lick rate per second
     stimulus_presentations['lick_rate'] = stimulus_presentations['licked'].rolling(window=320, min_periods=1,
                                                                                    win_type='triang').mean() / .75
-    stimulus_presentations['rewarded'] = [True if len(rewards) > 0 else False for rewards in
-                                          stimulus_presentations.rewards.values]
+    stimulus_presentations['rewarded'] = [True if len(rewards) > 0 else False for rewards in stimulus_presentations.rewards.values]
+    # (rewards/stimulus)*(1 stimulus/.750s) = rewards/second
+    stimulus_presentations['reward_rate_per_second'] = stimulus_presentations['rewarded'].rolling(window=320, min_periods=1,
+                                                                                                  win_type='triang').mean() / .75  # units of rewards per second
+    # (rewards/stimulus)*(1 stimulus/.750s)*(60s/min) = rewards/min
     stimulus_presentations['reward_rate'] = stimulus_presentations['rewarded'].rolling(window=320, min_periods=1,
-                                                                                       win_type='triang').mean()
+                                                                                       win_type='triang').mean() * (60 / .75)  # units of rewards/min
+
+    reward_threshold = 2  # threshold of 2 rewards per minute; if using rewards per second, use 1/90
+    stimulus_presentations['engaged'] = [x > reward_threshold for x in stimulus_presentations['reward_rate']]
+    stimulus_presentations['engagement_state'] = ['engaged' if True else 'disengaged' for engaged in stimulus_presentations['engaged'].values]
     stimulus_presentations = reformat.add_response_latency(stimulus_presentations)
     stimulus_presentations = reformat.add_image_contrast_to_stimulus_presentations(stimulus_presentations)
     stimulus_presentations = reformat.add_time_from_last_lick(stimulus_presentations, licks)
     stimulus_presentations = reformat.add_time_from_last_reward(stimulus_presentations, rewards)
     stimulus_presentations = reformat.add_time_from_last_change(stimulus_presentations)
-    stimulus_presentations = reformat.add_time_from_last_omission(stimulus_presentations)
-    stimulus_presentations['flash_after_omitted'] = stimulus_presentations['omitted'].shift(1)
+    try:  # behavior only sessions dont have omissions
+        stimulus_presentations = reformat.add_time_from_last_omission(stimulus_presentations)
+        stimulus_presentations['flash_after_omitted'] = stimulus_presentations['omitted'].shift(1)
+    except BaseException:
+        pass
     stimulus_presentations['flash_after_change'] = stimulus_presentations['change'].shift(1)
     stimulus_presentations['image_name_next_flash'] = stimulus_presentations['image_name'].shift(-1)
     stimulus_presentations['image_index_next_flash'] = stimulus_presentations['image_index'].shift(-1)
@@ -491,6 +506,12 @@ def get_extened_stimulus_presentations(stimulus_presentations, licks, rewards, r
     stimulus_presentations['lick_rate_next_flash'] = stimulus_presentations['lick_rate'].shift(-1)
     stimulus_presentations['lick_on_previous_flash'] = stimulus_presentations['licked'].shift(1)
     stimulus_presentations['lick_rate_previous_flash'] = stimulus_presentations['lick_rate'].shift(1)
+    # if behavior_session_id:
+    #     if check_if_model_output_available(behavior_session_id):
+    #         stimulus_presentations = add_model_outputs_to_stimulus_presentations(
+    #             stimulus_presentations, behavior_session_id)
+    #     else:
+    #         print('model outputs not available')
     return stimulus_presentations
 
 # LOAD OPHYS DATA FROM SDK AND EDIT OR ADD METHODS/ATTRIBUTES WITH BUGS OR INCOMPLETE FEATURES #
@@ -682,7 +703,7 @@ def get_ophys_dataset(ophys_experiment_id, include_invalid_rois=False, load_from
 
     if get_extended_stimulus_presentations:
         # add extended stimulus presentations
-        dataset.extended_stimulus_presentations = get_extened_stimulus_presentations(
+        dataset.extended_stimulus_presentations = get_extended_stimulus_presentations_table(
             dataset.stimulus_presentations.copy(),
             dataset.licks, dataset.rewards,
             dataset.running_speed, dataset.eye_tracking)
