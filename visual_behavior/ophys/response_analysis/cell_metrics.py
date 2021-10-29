@@ -6,7 +6,7 @@ from tqdm import tqdm
 import visual_behavior.data_access.loading as loading
 
 from visual_behavior.ophys.response_analysis.response_analysis import ResponseAnalysis
-from allensdk.brain_observatory.behavior.behavior_project_cache import VisualBehaviorOphysProjectCache
+# from allensdk.brain_observatory.behavior.behavior_project_cache import VisualBehaviorOphysProjectCache
 
 
 def get_pref_image_for_group(group, image_column_name='image_name'):
@@ -644,27 +644,30 @@ def generate_and_save_all_metrics_tables_for_experiment(ophys_experiment_id, ove
     i = 0
     problem_expts = pd.DataFrame()
 
-    ### trace metrics ###
+    # trace metrics ###
+    condition = 'traces'
+    session_subset = 'full_session'
+    stimuli = 'full_session'
     for use_events in [False, True]:
         for filter_events in [False, True]:
             try:
 
-                filepath = get_metrics_df_filepath(ophys_experiment_id, condition='traces',
-                                                   stimuli='full_session', session_subset='full_session',
+                filepath = get_metrics_df_filepath(ophys_experiment_id, condition=condition,
+                                                   stimuli=stimuli, session_subset=session_subset,
                                                    use_events=use_events, filter_events=filter_events)
                 if overwrite:
-                    if os.path.exists(filepath): # if file exists, delete it
+                    if os.path.exists(filepath):  # if file exists, delete it
                         os.remove(filepath)
                         print('h5 file exists for', ophys_experiment_id, ' - overwriting')
                     # regenerate metrics   and save
                     trace_metrics = generate_trace_metrics_table(ophys_experiment_id,
-                                                            use_events=use_events, filter_events=filter_events)
+                                                                 use_events=use_events, filter_events=filter_events)
                     trace_metrics.to_hdf(filepath, key='df')
                     print('trace metrics saved for', ophys_experiment_id)
-                else: # if you dont want to overwrite
-                    if os.path.exists(filepath): # and the file already exists
-                        pass # do nothing
-                    else: # otherwise
+                else:  # if you dont want to overwrite
+                    if os.path.exists(filepath):  # and the file already exists
+                        pass  # do nothing
+                    else:  # otherwise
                         # generate metrics and save
                         trace_metrics = generate_trace_metrics_table(ophys_experiment_id,
                                                                      use_events=use_events, filter_events=filter_events)
@@ -682,7 +685,7 @@ def generate_and_save_all_metrics_tables_for_experiment(ophys_experiment_id, ove
                 problem_expts.loc[i, 'exception'] = e
                 i += 1
 
-    ### event locked response metrics ###
+    # event locked response metrics ###
     conditions = ['changes', 'omissions', 'images']
     stimuli = ['all_images', 'pref_image']
     session_subsets = ['full_session', 'engaged', 'disengaged']
@@ -699,7 +702,7 @@ def generate_and_save_all_metrics_tables_for_experiment(ophys_experiment_id, ove
                             filepath = get_metrics_df_filepath(ophys_experiment_id, condition=condition,
                                                                stimuli=stimulus, session_subset=session_subset,
                                                                use_events=use_events, filter_events=filter_events)
-                            if overwrite: # if you want to regenerate everything
+                            if overwrite:  # if you want to regenerate everything
                                 if os.path.exists(filepath):  # and file exists, delete it
                                     os.remove(filepath)
                                     print('h5 file exists for', ophys_experiment_id, ' - overwriting')
@@ -876,7 +879,7 @@ def load_and_save_all_metrics_tables_for_all_experiments(ophys_experiment_table)
 
     ophys_experiment_ids = ophys_experiment_table.index.values
 
-    ### trace metrics ###
+    # trace metrics ###
     condition = 'traces'
     stimuli = 'full_session'
     session_subset = 'full_session'
@@ -905,12 +908,11 @@ def load_and_save_all_metrics_tables_for_all_experiments(ophys_experiment_table)
                       session_subset, use_events, filter_events)
                 print(e)
 
-    ### event locked response metrics ###
+    # event locked response metrics ###
     conditions = ['changes', 'omissions', 'images']
     stimuli = ['all_images', 'pref_image']
     session_subsets = ['full_session', 'engaged', 'disengaged']
 
-    metrics_df = pd.DataFrame()
     for condition in conditions:
         for stimulus in stimuli:
             for session_subset in session_subsets:
@@ -956,8 +958,6 @@ if __name__ == '__main__':
                                                      condition=condition, session_subset=session_subset, stimuli=stimuli)
 
     trace_metrics = generate_trace_metrics_table(ophys_experiment_id, use_events=False, filter_events=False)
-
-    metrics_table = pd.concat([metrics_table, trace_metrics])
 
     # to generate and save metrics tables for all possible conditions for a single experiment
     generate_and_save_all_metrics_tables_for_experiment(ophys_experiment_id)
