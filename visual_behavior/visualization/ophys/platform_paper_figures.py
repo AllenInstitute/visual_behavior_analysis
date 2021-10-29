@@ -122,11 +122,11 @@ def plot_cell_response_heatmap(data, timestamps, xlabel='time after change (s)',
     ax = sns.heatmap(data, cmap='magma', linewidths=0, linecolor='white', square=False,
                      vmin=0, vmax=vmax, robust=True, cbar=True,
                      cbar_kws={"drawedges": False, "shrink": 1, "label": 'response'}, ax=ax)
-    ax.vlines(x=5*11, ymin=0, ymax=len(data), color='w', linestyle='--')
+    ax.vlines(x=5 * 11, ymin=0, ymax=len(data), color='w', linestyle='--')
 
     if microscope == 'Multiscope':
-        ax.set_xticks(np.arange(0, 10*11, 11))
-        ax.set_xticklabels(np.arange(-5,5,1))
+        ax.set_xticks(np.arange(0, 10 * 11, 11))
+        ax.set_xticklabels(np.arange(-5, 5, 1))
     ax.set_xlim(3 * 11, 7 * 11)
 
     ax.set_xlabel(xlabel)
@@ -268,7 +268,7 @@ def plot_behavior_timeseries(dataset, start_time, duration_seconds=20, save_dir=
     Plots licking behavior, rewards, running speed, and pupil area for a defined window of time
     """
 
-    xlim_seconds = [start_time-(duration_seconds/4.), start_time+duration_seconds*2]
+    xlim_seconds = [start_time - (duration_seconds / 4.), start_time + duration_seconds * 2]
 
     lick_timestamps = dataset.licks.timestamps.values
     licks = np.ones(len(lick_timestamps))
@@ -283,7 +283,7 @@ def plot_behavior_timeseries(dataset, start_time, duration_seconds=20, save_dir=
 
     eye_tracking = dataset.eye_tracking.copy()
     pupil_diameter = eye_tracking.pupil_width.values
-    pupil_diameter[eye_tracking.likely_blink==True] = np.nan
+    pupil_diameter[eye_tracking.likely_blink == True] = np.nan
     pupil_timestamps = eye_tracking.timestamps.values
 
     if ax is None:
@@ -306,7 +306,7 @@ def plot_behavior_timeseries(dataset, start_time, duration_seconds=20, save_dir=
 
     axes_to_label = ln0 + ln1 + ln2 + ln3  # +ln4
     labels = [label.get_label() for label in axes_to_label]
-    ax.legend(axes_to_label, labels, bbox_to_anchor=(1,1), fontsize='small')
+    ax.legend(axes_to_label, labels, bbox_to_anchor=(1, 1), fontsize='small')
 
     ax = sf.add_stim_color_span(dataset, ax, xlim=xlim_seconds)
 
@@ -323,3 +323,78 @@ def plot_behavior_timeseries(dataset, start_time, duration_seconds=20, save_dir=
         folder = 'behavior_timeseries'
         utils.save_figure(fig, figsize, save_dir, folder, metadata_string + '_' + str(int(start_time)),
                           formats=['.png'])
+
+
+def plot_matched_roi_and_trace(ophys_container_id, cell_specimen_id, use_events=False, filter_events=False,
+                               save_figure=True):
+    """
+    Generates plots characterizing single cell activity in response to stimulus, omissions, and changes.
+    Compares across all sessions in a container for each cell, including the ROI mask across days.
+    Useful to validate cell matching as well as examine changes in activity profiles over days.
+    """
+    container_expts = experiments_table[experiments_table.ophys_container_id == ophys_container_id]
+    container_expts = container_expts.sort_values(by=['experience_level'])
+    expts = np.sort(container_expts.index.values)
+
+    if use_events:
+        if filter_events:
+            suffix = 'filtered_events'
+        else:
+            suffix = 'events'
+    else:
+        suffix = 'dff'
+
+    n = len(expts)
+    figsize = (9, 6)
+    fig, ax = plt.subplots(2, n, figsize=figsize, sharey='row')
+    ax = ax.ravel()
+    print('ophys_container_id:', ophys_container_id)
+    for i, ophys_experiment_id in enumerate(expts):
+        print('ophys_experiment_id:', ophys_experiment_id)
+        try:
+            dataset = loading.get_ophys_dataset(ophys_experiment_id, get_extended_stimulus_presentations=False)
+            if cell_specimen_id in dataset.dff_traces.index:
+
+                ct = dataset.cell_specimen_table.copy()
+                cell_roi_id = ct.loc[cell_specimen_id].cell_roi_id
+                roi_masks = dataset.roi_masks.copy()  # save this to use if subsequent session is missing the ROI
+                ax[i] = sf.plot_cell_zoom(dataset.roi_masks, dataset.max_projection, cell_roi_id,
+                                          spacex=30, spacey=30, show_mask=True, ax=ax[i])
+                ax[i].set_title(container_expts.loc[ophys_experiment_id].experience_level)
+
+                analysis = ResponseAnalysis(dataset, use_events=use_events, filter_events=filter_events,
+                                            use_extended_stimulus_presentations=False)
+                sdf = ut.get_mean_df(analysis.get_response_df(df_name='stimulus_response_df'), analysis=analysis,
+                                     conditions=['cell_specimen_id', 'is_change'], flashes=True, omitted=False,
+                                     get_reliability=False, get_pref_stim=False, exclude_omitted_from_pref_stim=True)
+
+                window = rp.get_default_stimulus_response_params()["window_around_timepoint_seconds"]
+                cell_data = sdf[(sdf.cell_specimen_id == cell_specimen_id) & (sdf.is_change == True)]
+                ax[i + n] = sf.plot_mean_trace_from_mean_df(cell_data,
+                                                            frame_rate=analysis.ophys_frame_rate, ylabel='response',
+                                                            legend_label=None, color='gray', interval_sec=0.5,
+                                                            xlims=window, ax=ax[i + n])
+
+                ax[i + n] = sf.plot_flashes_on_trace(ax[i + n], analysis, window=window, trial_type=None, omitted=False,
+                                                     alpha=0.15, facecolor='gray')
+                ax[i + n].set_title('')
+            else:
+                # plot the max projection image with the xy location of the previous ROI
+                # this will fail if the familiar session is the one without the cell matched
+                ax[i] = sf.plot_cell_zoom(roi_masks, dataset.max_projection, cell_roi_id,
+                                          spacex=30, spacey=30, show_mask=False, ax=ax[i])
+                ax[i].set_title(container_expts.loc[ophys_experiment_id].experience_level)
+
+            metadata_string = utils.get_metadata_string(dataset.metadata)
+
+            fig.tight_layout()
+            fig.suptitle(str(cell_specimen_id) + '_' + metadata_string, x=0.52, y=1.02,
+                         horizontalalignment='center', fontsize=16)
+        except Exception as e:
+            print('problem for cell_specimen_id:', cell_specimen_id, ', ophys_experiment_id:', ophys_experiment_id)
+            print(e)
+    if save_figure:
+        save_dir = r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/platform_paper_plots/cell_matching'
+        utils.save_figure(fig, figsize, save_dir, 'mask_mean_response_exp_levels', str(
+            cell_specimen_id) + '_' + metadata_string + '_' + suffix)
+        plt.close()
