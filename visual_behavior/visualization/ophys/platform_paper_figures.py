@@ -317,7 +317,7 @@ def plot_matched_roi_and_trace(ophys_container_id, cell_specimen_id, use_events=
                 cell_roi_id = ct.loc[cell_specimen_id].cell_roi_id
                 roi_masks = dataset.roi_masks.copy()  # save this to use if subsequent session is missing the ROI
                 ax[i] = sf.plot_cell_zoom(dataset.roi_masks, dataset.max_projection, cell_roi_id,
-                                          spacex=30, spacey=30, show_mask=True, ax=ax[i])
+                                          spacex=50, spacey=50, show_mask=True, ax=ax[i])
                 ax[i].set_title(container_expts.loc[ophys_experiment_id].experience_level)
 
                 analysis = ResponseAnalysis(dataset, use_events=use_events, filter_events=filter_events,
@@ -342,7 +342,7 @@ def plot_matched_roi_and_trace(ophys_container_id, cell_specimen_id, use_events=
                 # plot the max projection image with the xy location of the previous ROI
                 # this will fail if the familiar session is the one without the cell matched
                 ax[i] = sf.plot_cell_zoom(roi_masks, dataset.max_projection, cell_roi_id,
-                                          spacex=30, spacey=30, show_mask=False, ax=ax[i])
+                                          spacex=50, spacey=50, show_mask=False, ax=ax[i])
                 ax[i].set_title(container_expts.loc[ophys_experiment_id].experience_level)
 
             metadata_string = utils.get_metadata_string(dataset.metadata)
@@ -355,7 +355,7 @@ def plot_matched_roi_and_trace(ophys_container_id, cell_specimen_id, use_events=
             print(e)
     if save_figure:
         save_dir = r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/platform_paper_plots/cell_matching'
-        utils.save_figure(fig, figsize, save_dir, 'mask_mean_response_exp_levels', str(
+        utils.save_figure(fig, figsize, save_dir, 'mask_mean_response_3_exp_levels', str(
             cell_specimen_id) + '_' + metadata_string + '_' + suffix)
         plt.close()
 

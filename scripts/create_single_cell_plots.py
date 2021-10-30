@@ -16,6 +16,8 @@ if __name__ == '__main__':
     filter_events = True
 
     cells_table = loading.get_cell_table()
+    cells_table = utilities.limit_to_last_familiar_second_novel_active(cells_table)
+    cells_table = utilities.limit_to_containers_with_all_experience_levels(cells_table)
 
     for cell_specimen_id in cells_table[cells_table.ophys_container_id == ophys_container_id].cell_specimen_id.unique():
         try:
