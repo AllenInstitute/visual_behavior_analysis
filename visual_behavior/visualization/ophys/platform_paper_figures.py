@@ -334,21 +334,16 @@ def plot_matched_roi_and_trace(ophys_container_id, cell_specimen_id, limit_to_la
 
                 analysis = ResponseAnalysis(dataset, use_events=use_events, filter_events=filter_events,
                                             use_extended_stimulus_presentations=False)
-                sdf = ut.get_mean_df(analysis.get_response_df(df_name='stimulus_response_df'), analysis=analysis,
-                                     conditions=['cell_specimen_id', 'is_change'], flashes=True, omitted=False,
-                                     get_reliability=False, get_pref_stim=False,
-                                     exclude_omitted_from_pref_stim=True)
+                sdf = analysis.get_response_df(df_name='stimulus_response_df')
+                cell_data = sdf[(sdf.cell_specimen_id == cell_specimen_id) & (sdf.is_change == True)]
 
                 window = rp.get_default_stimulus_response_params()["window_around_timepoint_seconds"]
-                cell_data = sdf[(sdf.cell_specimen_id == cell_specimen_id) & (sdf.is_change == True)]
-                ax[i + n] = sf.plot_mean_trace_from_mean_df(cell_data,
-                                                            frame_rate=analysis.ophys_frame_rate, ylabel=ylabel,
-                                                            legend_label=None, color='gray', interval_sec=0.5,
-                                                            xlims=window, ax=ax[i + n])
+                ax[i+n] = utils.plot_mean_trace(cell_data.trace.values, cell_data.trace_timestamps.values[0],
+                                           ylabel=ylabel, legend_label=None, color='gray', interval_sec=0.5,
+                                           xlim_seconds=window, plot_sem=True, ax=ax[i+n])
 
-                ax[i + n] = sf.plot_flashes_on_trace(ax[i + n], analysis, window=window, trial_type=None,
-                                                     omitted=False,
-                                                     alpha=0.15, facecolor='gray')
+                ax[i + n] = utils.plot_flashes_on_trace(ax[i+n], cell_data.trace_timestamps.values[0], change=True, omitted=False,
+                                                 alpha=0.15, facecolor='gray')
                 ax[i + n].set_title('')
                 if i != 0:
                     ax[i + n].set_ylabel('')
@@ -362,7 +357,7 @@ def plot_matched_roi_and_trace(ophys_container_id, cell_specimen_id, limit_to_la
             metadata_string = utils.get_metadata_string(dataset.metadata)
 
             fig.tight_layout()
-            fig.suptitle(str(cell_specimen_id) + '_' + metadata_string, x=0.52, y=1.02,
+            fig.suptitle(str(cell_specimen_id) + '_' + metadata_string, x=0.53, y=1.02,
                          horizontalalignment='center', fontsize=16)
         except Exception as e:
             print('problem for cell_specimen_id:', cell_specimen_id, ', ophys_experiment_id:', ophys_experiment_id)
