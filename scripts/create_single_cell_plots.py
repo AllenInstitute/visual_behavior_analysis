@@ -1,6 +1,7 @@
 import argparse
 
 import visual_behavior.data_access.loading as loading
+import visual_behavior.data_access.utilities as utilities
 import visual_behavior.visualization.ophys.platform_paper_figures as ppf
 
 
