@@ -584,7 +584,7 @@ def addSpan(ax, amin, amax, color='k', alpha=0.3, axtype='x', zorder=1):
         ax.axhspan(amin, amax, facecolor=color, edgecolor='none', alpha=alpha, linewidth=0, zorder=zorder)
 
 
-def add_stim_color_span(dataset, ax, xlim=None):
+def add_stim_color_span(dataset, ax, xlim=None, color=None):
     # xlim should be in seconds
     if xlim is None:
         stim_table = dataset.stimulus_presentations.copy()
@@ -597,7 +597,8 @@ def add_stim_color_span(dataset, ax, xlim=None):
         start_time = stim_table.loc[idx]['start_time']
         stop_time = stim_table.loc[idx]['stop_time']
         image_name = stim_table.loc[idx]['image_name']
-        color = get_color_for_image_name(stim_table, image_name)
+        if color is None:
+            color = get_color_for_image_name(stim_table, image_name)
         # color = ut.get_color_for_image_name(image_names, image_name)
         addSpan(ax, start_time, stop_time, color=color)
     return ax

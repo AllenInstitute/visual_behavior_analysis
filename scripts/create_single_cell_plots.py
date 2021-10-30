@@ -22,8 +22,8 @@ if __name__ == '__main__':
 
     for cell_specimen_id in cells_table[cells_table.ophys_container_id == ophys_container_id].cell_specimen_id.unique():
         try:
-            ppf.plot_matched_roi_and_trace(ophys_container_id, cell_specimen_id, use_events=use_events,
-                                           filter_events=filter_events, save_figure=True)
+            ppf.plot_matched_roi_and_trace(ophys_container_id, cell_specimen_id, limit_to_last_familiar_second_novel=True,
+                                           use_events=use_events, filter_events=filter_events, save_figure=True)
             print('plot saved for', cell_specimen_id)
         except Exception as e:
             print('problem for', cell_specimen_id)

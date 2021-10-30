@@ -624,7 +624,7 @@ class BehaviorOphysDataset(BehaviorOphysExperiment):
 
 
 def get_ophys_dataset(ophys_experiment_id, include_invalid_rois=False, load_from_lims=False, load_from_nwb=True,
-                      get_extended_stimulus_presentations=True, get_behavior_movie_timestamps=False):
+                      get_extended_stimulus_presentations=False, get_behavior_movie_timestamps=False):
     """
     Gets behavior + ophys data for one experiment (single imaging plane), either using the SDK LIMS API,
     SDK NWB API, or using BehaviorOphysDataset wrapper which inherits the LIMS API BehaviorOphysSession object,
