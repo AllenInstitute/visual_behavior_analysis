@@ -11,6 +11,8 @@ def deploy_get_behavior_summary_for_all_sessions():
     current_location = pathlib.Path(__file__).parent.resolve()
     python_script_to_run = os.path.join(current_location, 'cache_behavior_performance_for_one_session.py')
 
+    python_executable = "{}/anaconda2/envs/{}/bin/python".format(os.path.expanduser('~'), 'visual_behavior_sdk')
+
     # define the job record output folder
     stdout_location = r"/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/cluster_jobs/behavior_metrics"
 
