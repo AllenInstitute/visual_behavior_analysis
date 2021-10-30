@@ -608,7 +608,19 @@ else: # pooling data across multiple project codes
 #     exec(open('svm_images_plots_sumMice.py').read()) 
 
 
-    ######### compare quantifications across ophys stages
+
+    ################## make svm_df which is a proper pandas table including svm response amplitude results for each experiment ##################
+    # svm_df will be used to make summary plots across experience levels
+    
+    exec(open('svm_images_plots_setVars_sumMice3_svmdf.py').read())
+
+              
+    ################## compare quantifications across ophys experience levels ##################
+    
+    exec(open('svm_images_plots_compare_ophys_experience_levels.py').read())
+    
+
+    ################## compare quantifications across ophys stages ##################
     
     # pool summary_vars_all of the 2 projects
     

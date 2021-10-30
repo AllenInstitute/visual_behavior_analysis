@@ -16,6 +16,8 @@ import pandas as pd
 
 import statsmodels.api as sm
 from statsmodels.formula.api import ols
+from statsmodels.stats.multicomp import (pairwise_tukeyhsd, MultiComparison)
+
 
 def do_anova_tukey(summary_vars_all, crenow, stagenow, inds_v1, inds_lm, inds_pooled):
     
@@ -84,8 +86,8 @@ def do_anova_tukey(summary_vars_all, crenow, stagenow, inds_v1, inds_lm, inds_po
     for ars in ['V1', 'LM', 'V1-LM']: # ars = 'V1'
 #         print(ars)
         a_data_now = a_data[a_data['area'].values==ars]
-    #     a_data_now = a_data
-
+#         a_data_now = a_data
+        
         ### ANOVA
         # https://reneshbedre.github.io/blog/anova.html        
         # https://pythonhealthcare.org/2018/04/13/55-statistics-multi-comparison-with-tukeys-test-and-the-holm-bonferroni-method/
@@ -95,24 +97,23 @@ def do_anova_tukey(summary_vars_all, crenow, stagenow, inds_v1, inds_lm, inds_po
         # Ordinary Least Squares (OLS) model
         # 2-way
         # C(Genotype):C(years) represent interaction term        
-    #         model = ols('value ~ C(area) + C(depth) + C(area):C(depth)', data=a_data).fit()
+#         model = ols('value ~ C(area) + C(depth) + C(area):C(depth)', data=a_data).fit()
 
         # 1-way
         model = ols('value ~ C(depth)', data=a_data_now).fit() 
-    #         anova_table = sm.stats.anova_lm(model, typ=3)
+#         anova_table = sm.stats.anova_lm(model, typ=3)
         anova_table = sm.stats.anova_lm(model, typ=2)
-
 #         print(anova_table)        
 #         print('\n')
 
         # scipy anova: same result as above
-    #                 a = aa[inds_v1,:]
-    #                 fvalue, pvalue = st.f_oneway(a[0][~np.isnan(a[0])], a[1][~np.isnan(a[1])], a[2][~np.isnan(a[2])], a[3][~np.isnan(a[3])])
-    #                 print(fvalue, pvalue)
+#         a = aa[inds_v1,:]
+#         fvalue, pvalue = st.f_oneway(a[0][~np.isnan(a[0])], a[1][~np.isnan(a[1])], a[2][~np.isnan(a[2])], a[3][~np.isnan(a[3])])
+#         print(fvalue, pvalue)
 
 
         ### TUKEY HSD        
-        from statsmodels.stats.multicomp import (pairwise_tukeyhsd, MultiComparison)
+#         from statsmodels.stats.multicomp import (pairwise_tukeyhsd, MultiComparison)
 
     #     v = a_data['value']
     #     f = a_data['depth']

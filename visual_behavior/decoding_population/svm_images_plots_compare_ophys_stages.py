@@ -1,6 +1,7 @@
 """
 This script is called in "svm_images_plots_setVars_blocks.py"
 Plot and compare svm class accuracy across ophys stages
+Also make plots comparing experience levels
 Do statistical tests (ttest; anova/tukey) between actual and shuffle; across depths; across ophys stages
 
 
@@ -149,7 +150,7 @@ def errorbar_respamp(compare_areas=False):
 
 def add_plot_labs(top_allstage, mn_mx_allstage, ylims, addleg=1, compare_areas=False):
     
-    top_allstage = np.array(top_allstage)
+    top_allstage = np.array(top_allstage) # we are not using this in this function!!!
     mn_mx_allstage = np.array(mn_mx_allstage)
     
     mn_mx = [np.nanmin(mn_mx_allstage), np.nanmax(mn_mx_allstage)]
