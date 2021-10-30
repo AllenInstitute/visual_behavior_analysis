@@ -1,6 +1,6 @@
 import os
 # import allensdk.brain_observatory.behavior.behavior_project_cache as bpc
-from slurm_deploy import Slurm
+from simple_slurm import Slurm
 import argparse
 import pathlib
 import time
