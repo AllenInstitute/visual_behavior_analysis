@@ -304,7 +304,7 @@ def plot_matched_roi_and_trace(ophys_container_id, cell_specimen_id, limit_to_la
             suffix = 'filtered_events'
         else:
             suffix = 'events'
-        y_label = 'response'
+        ylabel = 'response'
     else:
         suffix = 'dff'
         ylabel = 'dF/F'
