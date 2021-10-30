@@ -219,52 +219,6 @@ def plot_response_heatmaps_for_conditions(multi_session_df, df_name, timestamps,
         utils.save_figure(fig, figsize, save_dir, folder, fig_title)
 
 
-# examples
-if __name__ == '__main__':
-
-    import visual_behavior.data_access.loading as loading
-    from allensdk.brain_observatory.behavior.behavior_project_cache import VisualBehaviorOphysProjectCache
-
-    # load cache
-    cache_dir = loading.get_platform_analysis_cache_dir()
-    cache = VisualBehaviorOphysProjectCache.from_s3_cache(cache_dir)
-    experiments_table = loading.get_platform_paper_experiment_table()
-
-    # load multi_session_df
-    df_name = 'omission_response_df'
-    conditions = ['cell_specimen_id']
-    use_events = True
-    filter_events = True
-
-    multi_session_df = loading.get_multi_session_df(cache_dir, df_name, conditions, experiments_table,
-                                                    use_events=use_events, filter_events=filter_events)
-
-    # limit to platform paper dataset
-    multi_session_df = multi_session_df[multi_session_df.ophys_experiment_id.isin(experiments_table.index.values)]
-    # merge with metadata
-    multi_session_df = multi_session_df.merge(experiments_table, on='ophys_experiment_id')
-
-    # set project code & df_name to plot
-    project_code = 'VisualBehaviorMultiscope'
-    df_name = 'omission_response_df'
-
-    # get timestamps for population average
-    experiment_id = experiments_table[experiments_table.project_code == project_code].index.values[9]
-    timestamps = get_timestamps_for_response_df_type(cache, experiment_id, df_name)
-
-    # plot population average for experience_level
-    axes_column = 'cell_type'
-    hue_column = 'experience_level'
-    palette = utils.get_experience_level_colors()
-    xlim_seconds = [-1.8, 2.25]
-
-    df = multi_session_df[multi_session_df.project_code == project_code]
-    plot_population_averages_for_conditions(df, df_name, timestamps,
-                                            axes_column, hue_column, palette,
-                                            use_events=True, filter_events=True, xlim_seconds=xlim_seconds,
-                                            horizontal=True, save_dir=None, folder=None)
-
-
 def plot_behavior_timeseries(dataset, start_time, duration_seconds=20, save_dir=None, ax=None):
     """
     Plots licking behavior, rewards, running speed, and pupil area for a defined window of time
@@ -327,6 +281,7 @@ def plot_behavior_timeseries(dataset, start_time, duration_seconds=20, save_dir=
                           formats=['.png'])
 
 
+
 def plot_matched_roi_and_trace(ophys_container_id, cell_specimen_id, use_events=False, filter_events=False,
                                save_figure=True):
     """
@@ -369,7 +324,8 @@ def plot_matched_roi_and_trace(ophys_container_id, cell_specimen_id, use_events=
                                             use_extended_stimulus_presentations=False)
                 sdf = ut.get_mean_df(analysis.get_response_df(df_name='stimulus_response_df'), analysis=analysis,
                                      conditions=['cell_specimen_id', 'is_change'], flashes=True, omitted=False,
-                                     get_reliability=False, get_pref_stim=False, exclude_omitted_from_pref_stim=True)
+                                     get_reliability=False, get_pref_stim=False,
+                                     exclude_omitted_from_pref_stim=True)
 
                 window = rp.get_default_stimulus_response_params()["window_around_timepoint_seconds"]
                 cell_data = sdf[(sdf.cell_specimen_id == cell_specimen_id) & (sdf.is_change == True)]
@@ -378,7 +334,8 @@ def plot_matched_roi_and_trace(ophys_container_id, cell_specimen_id, use_events=
                                                             legend_label=None, color='gray', interval_sec=0.5,
                                                             xlims=window, ax=ax[i + n])
 
-                ax[i + n] = sf.plot_flashes_on_trace(ax[i + n], analysis, window=window, trial_type=None, omitted=False,
+                ax[i + n] = sf.plot_flashes_on_trace(ax[i + n], analysis, window=window, trial_type=None,
+                                                     omitted=False,
                                                      alpha=0.15, facecolor='gray')
                 ax[i + n].set_title('')
             else:
@@ -401,3 +358,51 @@ def plot_matched_roi_and_trace(ophys_container_id, cell_specimen_id, use_events=
         utils.save_figure(fig, figsize, save_dir, 'mask_mean_response_exp_levels', str(
             cell_specimen_id) + '_' + metadata_string + '_' + suffix)
         plt.close()
+
+
+# examples
+if __name__ == '__main__':
+
+    import visual_behavior.data_access.loading as loading
+    from allensdk.brain_observatory.behavior.behavior_project_cache import VisualBehaviorOphysProjectCache
+
+    # load cache
+    cache_dir = loading.get_platform_analysis_cache_dir()
+    cache = VisualBehaviorOphysProjectCache.from_s3_cache(cache_dir)
+    experiments_table = loading.get_platform_paper_experiment_table()
+
+    # load multi_session_df
+    df_name = 'omission_response_df'
+    conditions = ['cell_specimen_id']
+    use_events = True
+    filter_events = True
+
+    multi_session_df = loading.get_multi_session_df(cache_dir, df_name, conditions, experiments_table,
+                                                    use_events=use_events, filter_events=filter_events)
+
+    # limit to platform paper dataset
+    multi_session_df = multi_session_df[multi_session_df.ophys_experiment_id.isin(experiments_table.index.values)]
+    # merge with metadata
+    multi_session_df = multi_session_df.merge(experiments_table, on='ophys_experiment_id')
+
+    # set project code & df_name to plot
+    project_code = 'VisualBehaviorMultiscope'
+    df_name = 'omission_response_df'
+
+    # get timestamps for population average
+    experiment_id = experiments_table[experiments_table.project_code == project_code].index.values[9]
+    timestamps = get_timestamps_for_response_df_type(cache, experiment_id, df_name)
+
+    # plot population average for experience_level
+    axes_column = 'cell_type'
+    hue_column = 'experience_level'
+    palette = utils.get_experience_level_colors()
+    xlim_seconds = [-1.8, 2.25]
+
+    df = multi_session_df[multi_session_df.project_code == project_code]
+    plot_population_averages_for_conditions(df, df_name, timestamps,
+                                            axes_column, hue_column, palette,
+                                            use_events=True, filter_events=True, xlim_seconds=xlim_seconds,
+                                            horizontal=True, save_dir=None, folder=None)
+
+
