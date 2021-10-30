@@ -290,6 +290,9 @@ def plot_matched_roi_and_trace(ophys_container_id, cell_specimen_id, use_events=
     Useful to validate cell matching as well as examine changes in activity profiles over days.
     """
     experiments_table = loading.get_platform_paper_experiment_table()
+    experiments_table = utilities.limit_to_last_familiar_second_novel_active(experiments_table)
+    experiments_table = utilities.limit_to_containers_with_all_experience_levels(experiments_table)
+
     container_expts = experiments_table[experiments_table.ophys_container_id == ophys_container_id]
     container_expts = container_expts.sort_values(by=['experience_level'])
     expts = np.sort(container_expts.index.values)
