@@ -21,7 +21,7 @@ def deploy_get_behavior_summary_for_all_sessions():
         job_name='cache_performance',
         partition='braintv', 
         cpus_per_task=1, 
-        mem='20g',
+        mem='40g',
         time='01:00:00',
         output=f'{stdout_location}/{Slurm.JOB_ARRAY_MASTER_ID}_{Slurm.JOB_ARRAY_ID}.out',
     )

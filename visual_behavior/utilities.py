@@ -1187,7 +1187,7 @@ def cache_behavior_stats(behavior_session_id, engaged_only=True, method='stimulu
     --------
     None
     '''
-
+    print('behavior_session_id:', behavior_session_id)
     cache_dir = get_behavior_stats_cache_dir(method)
 
     behavior_stats_df = pd.DataFrame(get_behavior_stats(behavior_session_id, engaged_only), index=[0])
