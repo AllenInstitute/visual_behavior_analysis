@@ -7,9 +7,11 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
+import visual_behavior.data_access.loading as loading
 import visual_behavior.visualization.utils as utils
 import visual_behavior.visualization.ophys.summary_figures as sf
-
+import visual_behavior.ophys.response_analysis.utilities as ut
+import visual_behavior.ophys.response_analysis.response_processing as rp
 from visual_behavior.ophys.response_analysis.response_analysis import ResponseAnalysis
 
 # formatting
@@ -332,6 +334,7 @@ def plot_matched_roi_and_trace(ophys_container_id, cell_specimen_id, use_events=
     Compares across all sessions in a container for each cell, including the ROI mask across days.
     Useful to validate cell matching as well as examine changes in activity profiles over days.
     """
+    experiments_table = loading.get_platform_paper_experiments_table()
     container_expts = experiments_table[experiments_table.ophys_container_id == ophys_container_id]
     container_expts = container_expts.sort_values(by=['experience_level'])
     expts = np.sort(container_expts.index.values)

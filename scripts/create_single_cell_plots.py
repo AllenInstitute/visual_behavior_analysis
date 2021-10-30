@@ -22,7 +22,8 @@ if __name__ == '__main__':
             ppf.plot_matched_roi_and_trace(ophys_container_id, cell_specimen_id, use_events=use_events,
                                            filter_events=filter_events, save_figure=True)
             print('plot saved for', cell_specimen_id)
-        except:
+        except Exception as e:
             print('problem for', cell_specimen_id)
+            print(e)
 
 
