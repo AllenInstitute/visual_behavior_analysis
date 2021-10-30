@@ -1090,7 +1090,7 @@ def get_behavior_stats(behavior_session_id, engaged_only=True, method='stimulus_
     '''
     output_dict = {'behavior_session_id': behavior_session_id}
     try:
-        session = loading.get_behavior_dataset(behavior_session_id, get_extended_trials=True, get_extended_stimulus_presentations=True)
+        session = loading.get_behavior_dataset(behavior_session_id, from_nwb=True, get_extended_trials=True)
         if method == 'trial_based':
 
             trials = session.extended_trials
