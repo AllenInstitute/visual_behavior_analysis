@@ -282,16 +282,17 @@ def plot_behavior_timeseries(dataset, start_time, duration_seconds=20, save_dir=
 
 
 
-def plot_matched_roi_and_trace(ophys_container_id, cell_specimen_id, use_events=False, filter_events=False,
-                               save_figure=True):
+def plot_matched_roi_and_trace(ophys_container_id, cell_specimen_id, limit_to_last_familiar_second_novel=True,
+                               use_events=False, filter_events=False, save_figure=True):
     """
     Generates plots characterizing single cell activity in response to stimulus, omissions, and changes.
     Compares across all sessions in a container for each cell, including the ROI mask across days.
     Useful to validate cell matching as well as examine changes in activity profiles over days.
     """
     experiments_table = loading.get_platform_paper_experiment_table()
-    experiments_table = utilities.limit_to_last_familiar_second_novel_active(experiments_table)
-    experiments_table = utilities.limit_to_containers_with_all_experience_levels(experiments_table)
+    if limit_to_last_familiar_second_novel:
+        experiments_table = utilities.limit_to_last_familiar_second_novel_active(experiments_table)
+        experiments_table = utilities.limit_to_containers_with_all_experience_levels(experiments_table)
 
     container_expts = experiments_table[experiments_table.ophys_container_id == ophys_container_id]
     container_expts = container_expts.sort_values(by=['experience_level'])
@@ -302,11 +303,18 @@ def plot_matched_roi_and_trace(ophys_container_id, cell_specimen_id, use_events=
             suffix = 'filtered_events'
         else:
             suffix = 'events'
+        y_label = 'response'
     else:
         suffix = 'dff'
+        ylabel = 'dF/F'
 
     n = len(expts)
-    figsize = (9, 6)
+    if limit_to_last_familiar_second_novel:
+        figsize = (9, 6)
+        folder = 'matched_cells_exp_levels'
+    else:
+        figsize = (20, 6)
+        folder = 'matched_cells_all_sessions'
     fig, ax = plt.subplots(2, n, figsize=figsize, sharey='row')
     ax = ax.ravel()
     print('ophys_container_id:', ophys_container_id)
@@ -333,7 +341,7 @@ def plot_matched_roi_and_trace(ophys_container_id, cell_specimen_id, use_events=
                 window = rp.get_default_stimulus_response_params()["window_around_timepoint_seconds"]
                 cell_data = sdf[(sdf.cell_specimen_id == cell_specimen_id) & (sdf.is_change == True)]
                 ax[i + n] = sf.plot_mean_trace_from_mean_df(cell_data,
-                                                            frame_rate=analysis.ophys_frame_rate, ylabel='response',
+                                                            frame_rate=analysis.ophys_frame_rate, ylabel=ylabel,
                                                             legend_label=None, color='gray', interval_sec=0.5,
                                                             xlims=window, ax=ax[i + n])
 
@@ -341,6 +349,8 @@ def plot_matched_roi_and_trace(ophys_container_id, cell_specimen_id, use_events=
                                                      omitted=False,
                                                      alpha=0.15, facecolor='gray')
                 ax[i + n].set_title('')
+                if i != 0:
+                    ax[i + n].set_ylabel('')
             else:
                 # plot the max projection image with the xy location of the previous ROI
                 # this will fail if the familiar session is the one without the cell matched
@@ -358,8 +368,7 @@ def plot_matched_roi_and_trace(ophys_container_id, cell_specimen_id, use_events=
             print(e)
     if save_figure:
         save_dir = r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/platform_paper_plots/cell_matching'
-        utils.save_figure(fig, figsize, save_dir, 'mask_mean_response_3_exp_levels', str(
-            cell_specimen_id) + '_' + metadata_string + '_' + suffix)
+        utils.save_figure(fig, figsize, save_dir, folder, str(cell_specimen_id) + '_' + metadata_string + '_' + suffix)
         plt.close()
 
 
