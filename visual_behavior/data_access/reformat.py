@@ -258,7 +258,7 @@ def add_trial_type_to_trials_table(trials):
 
 def add_reward_rate_to_trials_table(trials):
     trials['rewarded'] = [1 if np.isnan(reward_time) == False else 0 for reward_time in trials.reward_time.values]
-    trials['reward_rate'] = trials['rewarded'].rolling(window=100, min_periods=1, win_type='triang').mean()
+    trials['reward_rate'] = trials['rewarded'].rolling(window=100, min_periods=1, win_type='triang').mean() * (60 / .75)  # units of rewards/min
     return trials
 
 
