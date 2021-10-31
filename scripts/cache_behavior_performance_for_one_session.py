@@ -1,8 +1,8 @@
 import visual_behavior.utilities as vbu
 import argparse
 
-def cache_behavior_performance(behavior_session_id, method):
-    vbu.cache_behavior_stats(behavior_session_id, method)
+# def cache_behavior_performance(behavior_session_id, method):
+#     vbu.cache_behavior_stats(behavior_session_id, method)
 
 if __name__ == "__main__":
     # define args
@@ -13,4 +13,5 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     print(args.behavior_session_id, args.method)
-    cache_behavior_performance(args.behavior_session_id, args.method)
+    vbu.cache_behavior_stats(behavior_session_id=behavior_session_id, method=method)
+    # cache_behavior_performance(args.behavior_session_id, args.method)

@@ -1090,7 +1090,7 @@ def get_behavior_stats(behavior_session_id, engaged_only=True, method='stimulus_
     '''
     output_dict = {'behavior_session_id': behavior_session_id}
     try:
-        print('getting status for behavior_session_id:', behavior_session_id)
+        print('getting metrics for behavior_session_id:', behavior_session_id)
         session = loading.get_behavior_dataset(behavior_session_id, from_nwb=True, get_extended_trials=True)
         if method == 'trial_based':
 
@@ -1167,7 +1167,7 @@ def get_behavior_stats_cache_dir(method='stimulus_based'):
     return cache_dir
 
 
-def cache_behavior_stats(behavior_session_id, engaged_only=True, method='stimulus_based'):
+def cache_behavior_stats(behavior_session_id, method='stimulus_based', engaged_only=True):
     '''
     calculates behavior stats for a given session, saves to file
     file format is behavior_summary_behavior_session_id={behavior_session_id}.h5 with key = 'data'
@@ -1198,6 +1198,7 @@ def cache_behavior_stats(behavior_session_id, engaged_only=True, method='stimulu
     if os.path.exists(filepath):
         os.remove(filepath)
     behavior_stats_df.to_hdf(filepath, key='data')
+    print('behavior stats cached for', behavior_session_id, method)
 
 
 def get_cached_behavior_stats(behavior_session_id, engaged_only=True, method='stimulus_based'):
