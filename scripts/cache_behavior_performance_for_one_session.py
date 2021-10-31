@@ -8,8 +8,9 @@ if __name__ == "__main__":
     # define args
     parser = argparse.ArgumentParser()
     parser.add_argument('--behavior-session-id', type=int)
-    parser.add_argument('--method', type=str, default='stimulus_based')
+    parser.add_argument('--method', type=str)
 
     args = parser.parse_args()
 
+    print(args.behavior_session_id, args.method)
     cache_behavior_performance(args.behavior_session_id, args.method)
