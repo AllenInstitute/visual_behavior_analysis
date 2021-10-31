@@ -29,6 +29,7 @@ def deploy_get_behavior_summary_for_all_sessions():
     # import visual_behavior.data_access.utilities as utilities
     # behavior_session_ids = utilities.get_behavior_session_ids_to_analyze()
 
+    import pandas as pd
     import visual_behavior.data_access.loading as loading
     df = pd.read_csv(os.path.join(loading.get_platform_analysis_cache_dir(), 'behavior_only_sessions_without_nwbs.csv'))
     behavior_session_ids = df.behavior_session_id.values
