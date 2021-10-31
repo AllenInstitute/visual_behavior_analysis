@@ -1047,7 +1047,7 @@ def annotate_stimuli(dataset, inplace=False):
         return stimulus_presentations
 
 
-def get_behavior_stats(behavior_session_id, engaged_only=True, method='stimulus_based'):
+def get_behavior_stats(behavior_session_id, method='stimulus_based', engaged_only=True):
     '''
     gets behavior stats for a given behavior session
     relies on the existence of a behavioral model for a given session
@@ -1089,9 +1089,9 @@ def get_behavior_stats(behavior_session_id, engaged_only=True, method='stimulus_
 
     '''
     output_dict = {'behavior_session_id': behavior_session_id}
+    print('getting metrics for behavior_session_id:', behavior_session_id)
+    session = loading.get_behavior_dataset(behavior_session_id, from_nwb=True, get_extended_trials=True)
     try:
-        print('getting metrics for behavior_session_id:', behavior_session_id)
-        session = loading.get_behavior_dataset(behavior_session_id, from_nwb=True, get_extended_trials=True)
         if method == 'trial_based':
 
             trials = session.extended_trials
@@ -1190,8 +1190,8 @@ def cache_behavior_stats(behavior_session_id, method='stimulus_based', engaged_o
     '''
 
     cache_dir = get_behavior_stats_cache_dir(method)
-
-    behavior_stats_df = pd.DataFrame(get_behavior_stats(behavior_session_id, engaged_only), index=[0])
+    behavior_stats = get_behavior_stats(behavior_session_id, method=method, engaged_only=engaged_only)
+    behavior_stats_df = pd.DataFrame(behavior_stats, index=[0])
 
     filename = 'behavior_summary_behavior_session_id={}.h5'.format(behavior_session_id)
     filepath = os.path.join(cache_dir, filename)
