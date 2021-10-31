@@ -13,8 +13,8 @@ if __name__ == '__main__':
     ophys_container_id = args.ophys_container_id
     print('ophys_container_id:', ophys_container_id)
 
-    use_events = True
-    filter_events = True
+    use_events = False
+    filter_events = False
 
     cells_table = loading.get_cell_table()
     cells_table = utilities.limit_to_last_familiar_second_novel_active(cells_table)

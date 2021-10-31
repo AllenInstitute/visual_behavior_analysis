@@ -805,7 +805,8 @@ def get_extended_trials_table(trials, extended_stimulus_presentations):
     return extended_trials
 
 
-def get_behavior_dataset(behavior_session_id, from_lims=False, from_nwb=True, get_extended_stimulus_presentations=False, get_extended_trials=True):
+def get_behavior_dataset(behavior_session_id, from_lims=False, from_nwb=True,
+                         get_extended_stimulus_presentations=False, get_extended_trials=True):
     """
     Gets behavior data for one session, either using the SDK LIMS API, SDK NWB API, or using BehaviorDataset wrapper which inherits the LIMS API BehaviorSession object, and adds access to extended stimulus_presentations and trials.
 
