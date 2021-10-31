@@ -1159,11 +1159,11 @@ def get_behavior_stats_cache_dir(method='stimulus_based'):
     :return:
     """
     if method == 'trial_based':
-        cache_dir = r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/platform_paper_cache/behavior_performance/behavior_perfomance_summary_trial_based'
+        cache_dir = r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/platform_paper_cache/behavior_performance/behavior_performance_summary_trial_based'
     elif method == 'stimulus_based':
-        cache_dir = r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/platform_paper_cache/behavior_performance/behavior_perfomance_summary_stimulus_based'
+        cache_dir = r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/platform_paper_cache/behavior_performance/behavior_performance_summary_stimulus_based'
     elif method == 'sdk':
-        cache_dir = r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/platform_paper_cache/behavior_performance/behavior_perfomance_metrics_sdk'
+        cache_dir = r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/platform_paper_cache/behavior_performance/behavior_performance_metrics_sdk'
     return cache_dir
 
 
