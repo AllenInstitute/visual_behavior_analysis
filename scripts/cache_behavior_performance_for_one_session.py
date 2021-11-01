@@ -31,4 +31,7 @@ if __name__ == "__main__":
     behavior_session_ids = behavior_sessions.index.values
 
     for behavior_session_id in behavior_session_ids:
-        vbu.cache_behavior_stats(behavior_session_id, 'sdk')
+        try:
+            vbu.cache_behavior_stats(behavior_session_id, 'sdk')
+        except:
+            print('problem for behavior_session_id:', behavior_session_id)

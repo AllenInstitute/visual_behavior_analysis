@@ -1090,7 +1090,7 @@ def get_behavior_stats(behavior_session_id, method='stimulus_based', engaged_onl
     '''
     output_dict = {'behavior_session_id': behavior_session_id}
     print('getting metrics for behavior_session_id:', behavior_session_id)
-    session = loading.get_behavior_dataset(behavior_session_id, from_nwb=True, get_extended_trials=True)
+    session = loading.get_behavior_dataset(behavior_session_id, from_nwb=True, get_extended_trials=False)
     try:
         if method == 'trial_based':
 
