@@ -21,8 +21,8 @@ def deploy_get_behavior_summary_for_all_sessions():
         job_name='cache_performance',
         partition='braintv', 
         cpus_per_task=1, 
-        mem='20g',
-        time='01:00:00',
+        mem='40g',
+        time='10:00:00',
         output=f'{stdout_location}/{Slurm.JOB_ARRAY_MASTER_ID}_{Slurm.JOB_ARRAY_ID}.out',
     )
 
@@ -30,19 +30,22 @@ def deploy_get_behavior_summary_for_all_sessions():
     # behavior_session_ids = utilities.get_behavior_session_ids_to_analyze()
 
     import pandas as pd
-    import visual_behavior.data_access.loading as loading
-    df = pd.read_csv(os.path.join(loading.get_platform_analysis_cache_dir(), 'behavior_only_sessions_without_nwbs.csv'))
+    # import visual_behavior.data_access.loading as loading
+    # df = pd.read_csv(os.path.join(loading.get_platform_analysis_cache_dir(), 'behavior_only_sessions_without_nwbs.csv'))
+    filepath = r"//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/platform_paper_cache/behavior_only_sessions_without_nwbs.csv"
+    df = pd.read_csv(filepath)
     behavior_session_ids = df.behavior_session_id.values
 
     # methods = ['stimulus_based', 'trial_based', 'sdk']
     method = 'sdk'
     # for method in methods:
-    for behavior_session_id in behavior_session_ids:
-        print('deploying job for bsid {}'.format(behavior_session_id))
-        args_to_pass = '--behavior-session-id {} --method {}'.format(behavior_session_id, method)
-        job_title = 'behavior_session_id_{}'.format(behavior_session_id)
+    # for behavior_session_id in behavior_session_ids:
+    behavior_session_id = behavior_session_ids[0]
+    print('deploying job for bsid {}'.format(behavior_session_id))
+    args_to_pass = '--behavior-session-id {} --method {}'.format(behavior_session_id, method)
+    job_title = 'behavior_session_id_{}'.format(behavior_session_id)
 
-        slurm.sbatch(python_executable + ' ' + python_script_to_run + ' ' + args_to_pass)
+    slurm.sbatch(python_executable + ' ' + python_script_to_run + ' ' + args_to_pass)
 
 
 if __name__ == "__main__":

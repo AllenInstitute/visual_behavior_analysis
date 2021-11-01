@@ -1774,7 +1774,7 @@ def get_behavior_session_ids_to_analyze():
     """
     Gets a list of behavior_session_ids by combining the behavior_session_ids present in the platform paper experiments table
     with the behavior_session_ids for non-ophys sessions from the behavior session table,
-    only for mice present in the platform paper experiments table
+    for mice present in the platform paper experiments table
     """
     # ophys data
     experiments_table = loading.get_platform_paper_experiment_table()
