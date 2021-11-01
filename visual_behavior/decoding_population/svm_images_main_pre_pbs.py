@@ -657,7 +657,8 @@ def svm_images_main_pre_pbs(isess, project_codes, use_events, to_decode, trial_t
 
 
     #%% Run the SVM function
-
+    
+    # numSamples = 2
     print('\n\n======================== Analyzing session %d, %d/%d ========================\n' %(session_id, isess, len(list_all_sessions_valid)))
 
     # Use below if you set session_data and session_trials above: for VIP and SST
