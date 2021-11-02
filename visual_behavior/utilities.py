@@ -1191,7 +1191,7 @@ def cache_behavior_stats(behavior_session_id, method='stimulus_based', engaged_o
 
     cache_dir = get_behavior_stats_cache_dir(method)
     behavior_stats = get_behavior_stats(behavior_session_id, method=method, engaged_only=engaged_only)
-    behavior_stats_df = pd.DataFrame(behavior_stats, index=[0])
+    behavior_stats_df = pd.DataFrame(behavior_stats, index=behavior_session_id)
 
     filename = 'behavior_summary_behavior_session_id={}.h5'.format(behavior_session_id)
     filepath = os.path.join(cache_dir, filename)
