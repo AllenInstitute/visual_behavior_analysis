@@ -220,12 +220,15 @@ def plot_response_heatmaps_for_conditions(multi_session_df, df_name, timestamps,
         utils.save_figure(fig, figsize, save_dir, folder, fig_title)
 
 
-def plot_behavior_timeseries(dataset, start_time, duration_seconds=20, save_dir=None, ax=None):
+def plot_behavior_timeseries(dataset, start_time, duration_seconds=20, xlim_seconds=None, save_dir=None, ax=None):
     """
     Plots licking behavior, rewards, running speed, and pupil area for a defined window of time
     """
-
-    xlim_seconds = [start_time - (duration_seconds / 4.), start_time + duration_seconds * 2]
+    if xlim_seconds is None:
+        xlim_seconds = [start_time - (duration_seconds / 4.), start_time + duration_seconds * 2]
+    else:
+        if start_time != xlim_seconds[0]:
+            start_time = xlim_seconds[0]
 
     lick_timestamps = dataset.licks.timestamps.values
     licks = np.ones(len(lick_timestamps))
@@ -280,6 +283,7 @@ def plot_behavior_timeseries(dataset, start_time, duration_seconds=20, save_dir=
         folder = 'behavior_timeseries'
         utils.save_figure(fig, figsize, save_dir, folder, metadata_string + '_' + str(int(start_time)),
                           formats=['.png'])
+    return ax
 
 
 
