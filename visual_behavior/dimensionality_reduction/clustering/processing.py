@@ -4,6 +4,14 @@ from sklearn.cluster import SpectralClustering
 import numpy as np
 import pickle
 import os
+import visual_behavior.data_access.loading as loading
+
+from allensdk.brain_observatory.behavior.behavior_project_cache import VisualBehaviorOphysProjectCache as bpc
+#cache_dir = loading.get_analysis_cache_dir()
+#cache = bpc.from_s3_cache(cache_dir)
+
+import visual_behavior_glm.GLM_analysis_tools as gat #to get recent glm results
+import visual_behavior_glm.GLM_params as glm_params
 
 def get_silhouette_scores(X, model=SpectralClustering, n_clusters=np.arange(2, 10), metric='euclidean', n_boots=20):
     '''
@@ -45,9 +53,10 @@ def get_labels_for_coclust_matrix(X, model = SpectralClustering, nboot = np.aran
     '''
 
     labels = []
-    md = model(n_clusters = n_clusters)
+    if n_clusters is not None:
+        model.n_clusters = n_clusters
     for _ in nboot:
-        md = md.fit(X)
+        md = model.fit(X)
         labels.append(md.labels_)
     return labels
 
@@ -75,15 +84,58 @@ def get_coClust_matrix(X, model = SpectralClustering, nboot = np.arange(100), n_
     return coClust_matrix
 
 
-def save_clustering_results(data, filename_string):
+def clean_cells_table(cells_table=None, columns = None, add_binned_depth=True):
+
+    '''
+    Adds metadata to cells table using ophys_experiment_id. Removes NaNs and duplicates
+    :param cells_table: vba loading.get_cell_table()
+    :param columns: columns to add, default = ['cre_line', 'imaging_depth', 'targeted_structure']
+    :return: cells_table with selected columns
+    '''
+
+    if cells_table is None:
+        cells_table = loading.get_cell_table()
+
+    if columns is None:
+        columns = ['cre_line', 'imaging_depth', 'targeted_structure', 'binned_depth', 'cell_type']
+
+    cells_table = cells_table[columns]
+
+    # drop NaNs
+    cells_table.dropna(inplace=True)
+
+    # drop duplicated cells
+    cells_table.drop_duplicates('cell_specimen_id', inplace=True)
+
+    # set cell specimen ids as index
+    cells_table.set_index('cell_specimen_id', inplace=True)
+
+    if add_binned_depth is True and 'imaging_depth' in cells_table.keys():
+        depths = [75, 175, 275, 375]
+        cells_table['binned_depth'] = np.nan
+        for i, imaging_depth in enumerate(cells_table['imaging_depth']):
+            for depth in depths[::-1]:
+                if imaging_depth < depth:
+                    cells_table['binned_depth'].iloc[i] = depth
+
+    # print number of cells
+    print('N cells {}'.format(len(cells_table)))
+
+    return cells_table
+
+
+def save_clustering_results(data, filename_string ='', path = None):
     '''
     for HCP scripts to save output of spectral clustering in a specific folder
     :param data: what to save
     :param filename_string: name of the file, use as descriptive info as possible
     :return:
     '''
-    path = r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/summary_plots/glm/SpectralClustering/files'
-    filename = os.path.join(path, '{}.pkl'.format(filename_string))
+    if path is None:
+        path = r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/summary_plots/glm/SpectralClustering/files'
+    filename = os.path.join(path, '{}'.format(filename_string))
     with open(filename, 'wb') as f:
         pickle.dump(data, f)
     f.close()
+
+
