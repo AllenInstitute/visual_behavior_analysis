@@ -60,7 +60,7 @@ def get_labels_for_coclust_matrix(X, model = SpectralClustering, nboot = np.aran
         labels.append(md.labels_)
     return labels
 
-def get_coClust_matrix(X, model = SpectralClustering, nboot = np.arange(100), n_clusters = 8):
+def get_coClust_matrix(X, model = SpectralClustering, nboot = np.arange(150), n_clusters = 8):
     '''
 
     :param X: (ndarray) data, n observations by n features

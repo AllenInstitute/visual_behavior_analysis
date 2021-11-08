@@ -144,7 +144,7 @@ def plot_umap_with_labels(X, labels, save_plot = False, path = None, ax = None, 
         fig.savefig(os.path.join(path, filename))
     plt.tight_layout()
     ax.set_title(filename_string)
-    return ax
+    return fig, ax
 
 def plot_clusters(dropout_df, cluster_df=None, mean_response_df = None, save_plots = False, path = None):
     '''
