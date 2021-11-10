@@ -248,3 +248,15 @@ def plot_mean_trace(traces, timestamps, ylabel='dF/F', legend_label=None, color=
         ax.set_ylabel(ylabel)
     sns.despine(ax=ax)
     return ax
+
+
+def get_metadata_string(metadata):
+    """
+    Create a string of metadata information to be used in filenames and figure titles.
+    Includes information such as experiment_id, cre_line, acquisition_date, rig_id, etc
+    :param metadata: metadata attribute of dataset object
+    :return:
+    """
+    m = metadata.copy()
+    metadata_string = str(m['mouse_id']) + '_' + str(m['ophys_experiment_id']) + '_' + m['cre_line'].split('-')[0] + '_' + m['targeted_structure'] + '_' + str(m['imaging_depth']) + '_' + m['session_type']
+    return metadata_string
