@@ -53,7 +53,37 @@ def add_session_type_exposure_number_to_experiments_table(experiments):
     return experiments
 
 
-def add_reward_rate_and_engagement_state_to_trials_table(trials, extended_stimulus_presentations):
+def add_reward_rate_to_trials_table(trials, extended_stimulus_presentations):
+    '''
+    adds 'reward_rate' field to the trial table from extended_stimulus_presentations
+    pulled from the value of the stimulus table that is closest to the time at the start of each trial
+    '''
+    extended_stimulus_presentations = extended_stimulus_presentations
+
+    # for each trial, find the stimulus index that is closest to the trial start
+    # add to a new column called 'first_stim_presentation_index'
+    for idx, trial in trials.iterrows():
+        start_time = trial['start_time']
+        query_string = 'start_time > @start_time - 1 and start_time < @start_time + 1'
+        first_stim_presentation_index = (np.abs(start_time - extended_stimulus_presentations.query(query_string)['start_time'])).idxmin()
+        trials.at[idx, 'first_stim_presentation_index'] = first_stim_presentation_index
+
+    # define the columns from extended_stimulus_presentations that we want to merge into trials
+    cols_to_merge = [
+        'reward_rate',
+    ]
+
+    # merge the desired columns into trials on the stimulus_presentations_id indices
+    trials = trials.merge(
+        extended_stimulus_presentations[cols_to_merge].reset_index(),
+        left_on='first_stim_presentation_index',
+        right_on='stimulus_presentations_id',
+    )
+
+    return trials
+
+
+def add_engagement_state_to_trials_table(trials, extended_stimulus_presentations):
     '''
     adds `engaged` and `engagement_state` fields to the trial table
     both are pulled from the value of the stimulus table that is closest to the time at the start of each trial
@@ -254,12 +284,6 @@ def add_trial_type_to_trials_table(trials):
     trials.loc[trials[trials.miss].index, 'trial_type'] = 'miss'
     trials.loc[trials[trials.correct_reject].index, 'trial_type'] = 'correct_reject'
     trials.loc[trials[trials.false_alarm].index, 'trial_type'] = 'false_alarm'
-    return trials
-
-
-def add_reward_rate_to_trials_table(trials):
-    trials['rewarded'] = [1 if np.isnan(reward_time) == False else 0 for reward_time in trials.reward_time.values]
-    trials['reward_rate'] = trials['rewarded'].rolling(window=100, min_periods=1, win_type='triang').mean() * (60 / .75)  # units of rewards/min
     return trials
 
 
