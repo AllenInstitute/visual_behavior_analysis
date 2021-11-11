@@ -483,7 +483,7 @@ def get_extended_stimulus_presentations_table(stimulus_presentations, licks, rew
     stimulus_presentations['reward_rate'] = stimulus_presentations['rewarded'].rolling(window=320, min_periods=1,
                                                                                        win_type='triang').mean() * (60 / .75)  # units of rewards/min
 
-    reward_threshold = 2/3  # 2/3 rewards per minute = 1/90 rewards/second
+    reward_threshold = 2 / 3  # 2/3 rewards per minute = 1/90 rewards/second
     stimulus_presentations['engaged'] = [x > reward_threshold for x in stimulus_presentations['reward_rate']]
     stimulus_presentations['engagement_state'] = ['engaged' if True else 'disengaged' for engaged in stimulus_presentations['engaged'].values]
     stimulus_presentations = reformat.add_response_latency(stimulus_presentations)
@@ -606,7 +606,7 @@ class BehaviorOphysDataset(BehaviorOphysExperiment):
     @property
     def extended_stimulus_presentations(self):
         extended_stimulus_presentations = get_extended_stimulus_presentations_table(self.stimulus_presentations.copy(),
-                                                                              self.licks, self.rewards, self.running_speed, self.eye_tracking)
+                                                                                    self.licks, self.rewards, self.running_speed, self.eye_tracking)
         self._extended_stimulus_presentations = extended_stimulus_presentations
         return self._extended_stimulus_presentations
 
