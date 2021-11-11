@@ -605,7 +605,7 @@ class BehaviorOphysDataset(BehaviorOphysExperiment):
 
     @property
     def extended_stimulus_presentations(self):
-        extended_stimulus_presentations = get_extended_stimulus_presentations(self.stimulus_presentations.copy(),
+        extended_stimulus_presentations = get_extended_stimulus_presentations_table(self.stimulus_presentations.copy(),
                                                                               self.licks, self.rewards, self.running_speed, self.eye_tracking)
         self._extended_stimulus_presentations = extended_stimulus_presentations
         return self._extended_stimulus_presentations
