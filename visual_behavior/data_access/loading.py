@@ -480,8 +480,7 @@ def get_extended_stimulus_presentations_table(stimulus_presentations, licks, rew
     stimulus_presentations['reward_rate_per_second'] = stimulus_presentations['rewarded'].rolling(window=320, min_periods=1,
                                                                                                   win_type='triang').mean() / .75  # units of rewards per second
     # (rewards/stimulus)*(1 stimulus/.750s)*(60s/min) = rewards/min
-    stimulus_presentations['reward_rate'] = stimulus_presentations['rewarded'].rolling(window=320, min_periods=1,
-                                                                                       win_type='triang').mean() * (60 / .75)  # units of rewards/min
+    stimulus_presentations['reward_rate'] = stimulus_presentations['rewarded'].rolling(window=320, min_periods=1, win_type='triang').mean() * (60 / .75)  # units of rewards/min
 
     reward_threshold = 2 / 3  # 2/3 rewards per minute = 1/90 rewards/second
     stimulus_presentations['engaged'] = [x > reward_threshold for x in stimulus_presentations['reward_rate']]
