@@ -615,8 +615,7 @@ class BehaviorOphysDataset(BehaviorOphysExperiment):
         trials = super().trials.copy()
         trials = reformat.add_epoch_times(trials)
         trials = reformat.add_trial_type_to_trials_table(trials)
-        trials = reformat.add_reward_rate_to_trials_table(trials)
-        trials = reformat.add_engagement_state_to_trials_table(trials, self.extended_stimulus_presentations)
+        trials = reformat.add_reward_rate_and_engagement_state_to_trials_table(trials, self.extended_stimulus_presentations)
         self._extended_trials = trials
         return self._extended_trials
 
@@ -790,8 +789,7 @@ class BehaviorDataset(BehaviorSession):
         trials = super().trials.copy()
         trials = reformat.add_epoch_times(trials)
         trials = reformat.add_trial_type_to_trials_table(trials)
-        trials = reformat.add_reward_rate_to_trials_table(trials)
-        trials = reformat.add_engagement_state_to_trials_table(trials, self.extended_stimulus_presentations)
+        trials = reformat.add_reward_rate_and_engagement_state_to_trials_table(trials, self.extended_stimulus_presentations)
         self._extended_trials = trials
         return self._extended_trials
 
@@ -799,8 +797,7 @@ class BehaviorDataset(BehaviorSession):
 def get_extended_trials_table(trials, extended_stimulus_presentations):
     extended_trials = reformat.add_epoch_times(trials)
     extended_trials = reformat.add_trial_type_to_trials_table(extended_trials)
-    extended_trials = reformat.add_reward_rate_to_trials_table(extended_trials)
-    extended_trials = reformat.add_engagement_state_to_trials_table(extended_trials, extended_stimulus_presentations)
+    extended_trials = reformat.add_reward_rate_and_engagement_state_to_trials_table(extended_trials, extended_stimulus_presentations)
     return extended_trials
 
 

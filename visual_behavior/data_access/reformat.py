@@ -53,7 +53,7 @@ def add_session_type_exposure_number_to_experiments_table(experiments):
     return experiments
 
 
-def add_engagement_state_to_trials_table(trials, extended_stimulus_presentations):
+def add_reward_rate_and_engagement_state_to_trials_table(trials, extended_stimulus_presentations):
     '''
     adds `engaged` and `engagement_state` fields to the trial table
     both are pulled from the value of the stimulus table that is closest to the time at the start of each trial
@@ -70,6 +70,7 @@ def add_engagement_state_to_trials_table(trials, extended_stimulus_presentations
 
     # define the columns from extended_stimulus_presentations that we want to merge into trials
     cols_to_merge = [
+        'reward_rate',
         'engaged',
         'engagement_state'
     ]
