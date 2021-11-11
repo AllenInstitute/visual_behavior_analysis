@@ -10,8 +10,9 @@ from allensdk.brain_observatory.behavior.behavior_project_cache import VisualBeh
 #cache_dir = loading.get_analysis_cache_dir()
 #cache = bpc.from_s3_cache(cache_dir)
 
-import visual_behavior_glm.GLM_analysis_tools as gat #to get recent glm results
+import visual_behavior_glm.GLM_analysis_tools as gat  # to get recent glm results
 import visual_behavior_glm.GLM_params as glm_params
+
 
 def get_silhouette_scores(X, model=SpectralClustering, n_clusters=np.arange(2, 10), metric='euclidean', n_boots=20):
     '''
@@ -30,7 +31,7 @@ def get_silhouette_scores(X, model=SpectralClustering, n_clusters=np.arange(2, 1
     for n_cluster in n_clusters:
         s_tmp = []
         for n_boot in range(0, n_boots):
-            model.n_clusters=n_cluster
+            model.n_clusters = n_cluster
             md = model.fit(X)
             try:
                 labels = md.labels_
@@ -41,7 +42,8 @@ def get_silhouette_scores(X, model=SpectralClustering, n_clusters=np.arange(2, 1
         print('n {} clusters mean score = {}'.format(n_cluster, np.mean(s_tmp)))
     return silhouette_scores
 
-def get_labels_for_coclust_matrix(X, model = SpectralClustering, nboot = np.arange(100), n_clusters = 8):
+
+def get_labels_for_coclust_matrix(X, model=SpectralClustering, nboot=np.arange(100), n_clusters=8):
     '''
 
     :param X: (ndarray) data, n observations by n features
@@ -60,7 +62,8 @@ def get_labels_for_coclust_matrix(X, model = SpectralClustering, nboot = np.aran
         labels.append(md.labels_)
     return labels
 
-def get_coClust_matrix(X, model = SpectralClustering, nboot = np.arange(150), n_clusters = 8):
+
+def get_coClust_matrix(X, model=SpectralClustering, nboot=np.arange(150), n_clusters=8):
     '''
 
     :param X: (ndarray) data, n observations by n features
@@ -70,22 +73,21 @@ def get_coClust_matrix(X, model = SpectralClustering, nboot = np.arange(150), n_
     ______________
     returns: coClust_matrix: (ndarray) probability matrix of co-clustering together.
     '''
-    labels = get_labels_for_coclust_matrix(X = X,
-                                           model = model,
-                                           nboot = nboot,
-                                           n_clusters = n_clusters)
+    labels = get_labels_for_coclust_matrix(X=X,
+                                           model=model,
+                                           nboot=nboot,
+                                           n_clusters=n_clusters)
     coClust_matrix = []
-    for i in range(np.shape(labels)[1]): # get cluster id of this observation
+    for i in range(np.shape(labels)[1]):  # get cluster id of this observation
         this_coClust_matrix = []
-        for j in nboot: # find other observations with this cluster id
+        for j in nboot:  # find other observations with this cluster id
             id = labels[j][i]
             this_coClust_matrix.append(labels[j] == id)
         coClust_matrix.append(np.sum(this_coClust_matrix, axis=0) / max(nboot))
     return coClust_matrix
 
 
-def clean_cells_table(cells_table=None, columns = None, add_binned_depth=True):
-
+def clean_cells_table(cells_table=None, columns=None, add_binned_depth=True):
     '''
     Adds metadata to cells table using ophys_experiment_id. Removes NaNs and duplicates
     :param cells_table: vba loading.get_cell_table()
@@ -124,7 +126,7 @@ def clean_cells_table(cells_table=None, columns = None, add_binned_depth=True):
     return cells_table
 
 
-def save_clustering_results(data, filename_string ='', path = None):
+def save_clustering_results(data, filename_string='', path=None):
     '''
     for HCP scripts to save output of spectral clustering in a specific folder
     :param data: what to save
@@ -137,5 +139,3 @@ def save_clustering_results(data, filename_string ='', path = None):
     with open(filename, 'wb') as f:
         pickle.dump(data, f)
     f.close()
-
-
