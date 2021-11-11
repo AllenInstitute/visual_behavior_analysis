@@ -6,12 +6,12 @@ import pickle
 import os
 import visual_behavior.data_access.loading as loading
 
-from allensdk.brain_observatory.behavior.behavior_project_cache import VisualBehaviorOphysProjectCache as bpc
-#cache_dir = loading.get_analysis_cache_dir()
-#cache = bpc.from_s3_cache(cache_dir)
+# from allensdk.brain_observatory.behavior.behavior_project_cache import VisualBehaviorOphysProjectCache as bpc
+# cache_dir = loading.get_analysis_cache_dir()
+# cache = bpc.from_s3_cache(cache_dir)
 
-import visual_behavior_glm.GLM_analysis_tools as gat  # to get recent glm results
-import visual_behavior_glm.GLM_params as glm_params
+# import visual_behavior_glm.GLM_analysis_tools as gat  # to get recent glm results
+# import visual_behavior_glm.GLM_params as glm_params
 
 
 def get_silhouette_scores(X, model=SpectralClustering, n_clusters=np.arange(2, 10), metric='euclidean', n_boots=20):
