@@ -136,7 +136,7 @@ def get_image_selectivity_index_one_vs_all(stimulus_response_df):
     pref_image_df = stimulus_response_df[stimulus_response_df.pref_image]
     mean_response_pref_image = pref_image_df.groupby(['cell_specimen_id']).mean()[['mean_response']]
 
-    non_pref_images_df = stimulus_response_df[(stimulus_response_df.pref_image is not True)]
+    non_pref_images_df = stimulus_response_df[(stimulus_response_df.pref_image == False)]
     mean_response_non_pref_images = non_pref_images_df.groupby(['cell_specimen_id']).mean()[['mean_response']]
 
     image_selectivity_index = (mean_response_pref_image - mean_response_non_pref_images) / (
@@ -287,7 +287,7 @@ def get_running_modulation_index_for_group(group):
     computes the difference over sum of running vs not running mean response values
     """
     running = group[group.running].mean_response.values
-    not_running = group[group.running is not True].mean_response.values
+    not_running = group[group.running == False].mean_response.values
     running_modulation_index = (running - not_running) / (running + not_running)
     return pd.Series({'running_modulation_index': running_modulation_index})
 
@@ -308,7 +308,7 @@ def get_hit_miss_modulation_index_for_group(group):
     """
     """
     hit = group[group.hit].mean_response.values
-    miss = group[group.hit is not True].mean_response.values
+    miss = group[group.hit == False].mean_response.values
     hit_miss_index = (hit - miss) / (hit + miss)
     return pd.Series({'hit_miss_index': hit_miss_index})
 
@@ -490,7 +490,7 @@ def generate_cell_metrics_table(ophys_experiment_id, use_events=False, filter_ev
         # use next image name for computing pref image, selectivity, etc.
         df['image_name'] = [df.iloc[row].image_name_next_flash for row in range(len(df))]
     elif condition is 'images':
-        df = sdf[sdf.omitted is not True]
+        df = sdf[sdf.omitted == False]
     else:
         print('condition name provided does not meet requirements:', condition)
         print('please check documentation for cell_metrics.generate_cell_metrics_table()')
@@ -502,7 +502,7 @@ def generate_cell_metrics_table(ophys_experiment_id, use_events=False, filter_ev
         df = df[df['engaged']]
     elif session_subset is 'disengaged':
         df['engaged'] = [True if reward_rate >= 2 else False for reward_rate in df.reward_rate.values]
-        df = df[df['engaged'] is not True]
+        df = df[df['engaged'] == False]
 
     df = df.reset_index(drop=True)
 
