@@ -483,13 +483,13 @@ def generate_cell_metrics_table(ophys_experiment_id, use_events=False, filter_ev
     analysis = ResponseAnalysis(dataset, use_extended_stimulus_presentations=True, use_events=use_events, filter_events=filter_events)
     sdf = analysis.get_response_df(df_name='stimulus_response_df')
 
-    if condition is 'changes':
+    if condition == 'changes':
         df = sdf[sdf.is_change]
-    elif condition is 'omissions':
+    elif condition == 'omissions':
         df = sdf[sdf.omitted]
         # use next image name for computing pref image, selectivity, etc.
         df['image_name'] = [df.iloc[row].image_name_next_flash for row in range(len(df))]
-    elif condition is 'images':
+    elif condition == 'images':
         df = sdf[sdf.omitted == False]
     else:
         print('condition name provided does not meet requirements:', condition)
@@ -497,10 +497,10 @@ def generate_cell_metrics_table(ophys_experiment_id, use_events=False, filter_ev
 
     if 'passive' in dataset.metadata['session_type']:
         df['engaged'] = False
-    if session_subset is 'engaged':
+    if session_subset == 'engaged':
         df['engaged'] = [True if reward_rate >= 2 else False for reward_rate in df.reward_rate.values]
         df = df[df['engaged']]
-    elif session_subset is 'disengaged':
+    elif session_subset == 'disengaged':
         df['engaged'] = [True if reward_rate >= 2 else False for reward_rate in df.reward_rate.values]
         df = df[df['engaged'] == False]
 
@@ -518,7 +518,7 @@ def generate_cell_metrics_table(ophys_experiment_id, use_events=False, filter_ev
     # get lifetime sparseness value for each cell
     lifetime_sparseness = get_lifetime_sparseness_for_cell_specimen_ids(df)
 
-    if stimuli is 'pref_image':
+    if stimuli == 'pref_image':
         # restrict further analysis to pref stim condition
         df = df[df.pref_image]
 
@@ -538,7 +538,7 @@ def generate_cell_metrics_table(ophys_experiment_id, use_events=False, filter_ev
     # get running modulation - diff over sum of mean image response for running vs. not running trials
     running_modulation_index = get_running_modulation_index_for_cell_specimen_ids(df)
 
-    if condition is 'changes':
+    if condition == 'changes':
         # get choice modulation - diff over sum of mean image response for hit vs. miss trials
         hit_miss_modulation_index = get_hit_miss_modulation_index(df)
 
@@ -551,7 +551,7 @@ def generate_cell_metrics_table(ophys_experiment_id, use_events=False, filter_ev
     metrics_table = metrics_table.merge(fano_factor, on='cell_specimen_id')
     metrics_table = metrics_table.merge(reliability, on='cell_specimen_id')
     metrics_table = metrics_table.merge(running_modulation_index, on='cell_specimen_id')
-    if condition is 'changes':
+    if condition == 'changes':
         metrics_table = metrics_table.merge(hit_miss_modulation_index, on='cell_specimen_id')
     metrics_table['ophys_experiment_id'] = ophys_experiment_id
 
