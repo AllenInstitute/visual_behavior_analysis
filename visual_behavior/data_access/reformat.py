@@ -100,7 +100,6 @@ def add_engagement_state_to_trials_table(trials, extended_stimulus_presentations
 
     # define the columns from extended_stimulus_presentations that we want to merge into trials
     cols_to_merge = [
-        'reward_rate',
         'engaged',
         'engagement_state'
     ]
