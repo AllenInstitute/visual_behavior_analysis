@@ -10,7 +10,6 @@ from visual_behavior.data_access import from_lims
 import visual_behavior.database as db
 
 import os
-import sys
 import glob
 import h5py  # for loading motion corrected movie
 import numpy as np
@@ -606,8 +605,8 @@ class BehaviorOphysDataset(BehaviorOphysExperiment):
 
     @property
     def extended_stimulus_presentations(self):
-        extended_stimulus_presentations = get_extened_stimulus_presentations(self.stimulus_presentations.copy(),
-                                                                             self.licks, self.rewards, self.running_speed, self.eye_tracking)
+        extended_stimulus_presentations = get_extended_stimulus_presentations(self.stimulus_presentations.copy(),
+                                                                              self.licks, self.rewards, self.running_speed, self.eye_tracking)
         self._extended_stimulus_presentations = extended_stimulus_presentations
         return self._extended_stimulus_presentations
 

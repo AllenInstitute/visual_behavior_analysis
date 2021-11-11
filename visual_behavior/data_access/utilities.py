@@ -1779,7 +1779,7 @@ def get_behavior_session_ids_to_analyze():
     # ophys data
     experiments_table = loading.get_platform_paper_experiment_table()
     # skip passive sessions
-    experiments_table = experiments_table[experiments_table.passive==False]
+    experiments_table = experiments_table[experiments_table.passive == False]
     ophys_behavior_session_ids = list(experiments_table.behavior_session_id.unique())
 
     # behavior only data
