@@ -11,9 +11,10 @@ from scipy import signal
 import visual_behavior.visualization.utils as utils
 
 # figure settings
-plt.rcParams['font.size']=16
-plt.rcParams['ytick.labelsize']=16
-plt.rcParams['xtick.labelsize']=16
+plt.rcParams['font.size'] = 16
+plt.rcParams['ytick.labelsize'] = 16
+plt.rcParams['xtick.labelsize'] = 16
+
 
 def plot_clustered_dropout_scores(df, labels=None, cmap='RdBu_r', model_output_type='', ax=None,):
     sort_order = np.argsort(labels)
@@ -43,7 +44,6 @@ def plot_clustered_dropout_scores(df, labels=None, cmap='RdBu_r', model_output_t
     for y in cluster_divisions:
         ax.hlines(y, xmin=0, xmax=df.shape[1], color='k')
 
-
     # set cluster labels
     cluster_divisions = np.hstack([0, cluster_divisions, len(labels)])
     mid_cluster_divisions = []
@@ -56,7 +56,7 @@ def plot_clustered_dropout_scores(df, labels=None, cmap='RdBu_r', model_output_t
     ax.set_yticklabels(unique_cluster_ids)
     ax.set_ylabel('cluster ID')
 
-    #separate regressors
+    # separate regressors
     for x in np.arange(0, df.shape[0], 3):
         ax.vlines(x, ymin=0, ymax=df.shape[0], color='gray', linestyle='--', linewidth=0.5)
 
@@ -104,8 +104,8 @@ def get_elbow_plots(X, n_clusters=range(2, 20), ax=None):
     ax[1].set_title('Elbow for KMeans clustering')
 
 
-def plot_silhouette_scores(X = None, model=KMeans, silhouette_scores = None, n_clusters=np.arange(2, 10), metric=None, n_boots=20, ax=None,
-                         model_output_type=''):
+def plot_silhouette_scores(X=None, model=KMeans, silhouette_scores=None, n_clusters=np.arange(2, 10), metric=None, n_boots=20, ax=None,
+                           model_output_type=''):
     assert X is not None or silhouette_scores is not None, 'must provide either data to cluster or recomputed scores'
     assert X is None or silhouette_scores is None, 'cannot provide data to cluster and silhouette scores'
 
@@ -115,7 +115,7 @@ def plot_silhouette_scores(X = None, model=KMeans, silhouette_scores = None, n_c
         silhouette_scores = get_silhouette_scores(X=X, model=model, n_clusters=n_clusters, metric=metric, n_boots=n_boots)
     elif silhouette_scores is not None:
         if len(silhouette_scores) != len(n_clusters):
-            n_clusters = np.arange(0,len(silhouette_scores))
+            n_clusters = np.arange(0, len(silhouette_scores))
 
         if metric is None:
             metric = ''
@@ -124,7 +124,7 @@ def plot_silhouette_scores(X = None, model=KMeans, silhouette_scores = None, n_c
         fig, ax = plt.subplots(1, 1, figsize=(7, 7))
 
     ax.plot(n_clusters, silhouette_scores, 'ko-')
-    ax.set_title('{}, {}'.format(model_output_type, metric), fontsize = 16)
+    ax.set_title('{}, {}'.format(model_output_type, metric), fontsize=16)
     ax.set_xlabel('Number of clusters')
     ax.set_ylabel('Silhouette score')
     plt.grid()
@@ -132,7 +132,8 @@ def plot_silhouette_scores(X = None, model=KMeans, silhouette_scores = None, n_c
 
     return ax
 
-def plot_umap_with_labels(X, labels, save_plot = False, path = None, ax = None, filename_string = ''):
+
+def plot_umap_with_labels(X, labels, save_plot=False, path=None, ax=None, filename_string=''):
     fit = umap.UMAP()
     u = fit.fit_transform(X)
     if ax is None:
@@ -146,7 +147,8 @@ def plot_umap_with_labels(X, labels, save_plot = False, path = None, ax = None, 
     ax.set_title(filename_string)
     return fig, ax
 
-def plot_clusters(dropout_df, cluster_df=None, mean_response_df = None, save_plots = False, path = None):
+
+def plot_clusters(dropout_df, cluster_df=None, mean_response_df=None, save_plots=False, path=None):
     '''
     Plots heatmaps and descriptors of clusters.
     dropout_df: dataframe of dropout scores, n cells by n regressors by experience level
@@ -158,7 +160,7 @@ def plot_clusters(dropout_df, cluster_df=None, mean_response_df = None, save_plo
 
     # Set up the variables
 
-    cluster_ids = cluster_df['cluster_id'].value_counts().index.values # sort cluster ids by size
+    cluster_ids = cluster_df['cluster_id'].value_counts().index.values  # sort cluster ids by size
     n_clusters = len(cluster_ids)
     palette = utils.get_cre_line_colors()
     palette_exp = utils.get_experience_level_colors()
@@ -179,7 +181,7 @@ def plot_clusters(dropout_df, cluster_df=None, mean_response_df = None, save_plo
     for i, cluster_id in enumerate(cluster_ids):
 
         # 1. Mean dropout scores
-        this_cluster_ids = cluster_df[cluster_df['cluster_id']==cluster_id]['cell_specimen_id'].unique()
+        this_cluster_ids = cluster_df[cluster_df['cluster_id'] == cluster_id]['cell_specimen_id'].unique()
         mean_dropout_df = dropout_df.loc[this_cluster_ids].mean().unstack()
         ax[i] = sns.heatmap(mean_dropout_df,
                             cmap='RdBu',
@@ -188,15 +190,14 @@ def plot_clusters(dropout_df, cluster_df=None, mean_response_df = None, save_plo
                             ax=ax[i],
                             cbar=False, )
 
-
         # 2. By cre line
         # % of total cells in this cluster
         within_cluster_df = \
-        cluster_df[cluster_df['cluster_id'] == cluster_id].drop_duplicates('cell_specimen_id').groupby(
-            'cell_type').count()[['cluster_id']]
+            cluster_df[cluster_df['cluster_id'] == cluster_id].drop_duplicates('cell_specimen_id').groupby(
+                'cell_type').count()[['cluster_id']]
         n_cells = within_cluster_df.sum().values[0]
         all_df = cluster_df.drop_duplicates('cell_specimen_id').groupby('cell_type').count()[['cluster_id']]
-        fraction_cre = within_cluster_df/all_df
+        fraction_cre = within_cluster_df / all_df
         fraction_cre.sort_index(inplace=True)
         # add numerical column for sns.barplot
         fraction_cre['cell_type_index'] = np.arange(0, fraction_cre.shape[0])
@@ -207,18 +208,16 @@ def plot_clusters(dropout_df, cluster_df=None, mean_response_df = None, save_plo
                                                x='cell_type_index',
                                                palette=palette,
                                                ax=ax[i + len(cluster_ids)])
-        if fraction_cre.shape[0]==3:
+        if fraction_cre.shape[0] == 3:
             ax[i + len(cluster_ids)].set_xticklabels(['Exc', 'SST', 'VIP'], rotation=90)
-        #else:
+        # else:
         #    ax[i + len(cluster_ids)].set_xticklabels(fraction_cre.index.values, rotation=90)
-        ax[i+len(cluster_ids)].set_ylabel('fraction cells\nper class')
+        ax[i + len(cluster_ids)].set_ylabel('fraction cells\nper class')
         ax[i + len(cluster_ids)].set_xlabel('')
         #ax[i+ len(cluster_ids)].set_title('n mice = ' + str(N_mice.loc[cluster_id].values), fontsize=16)
 
-
-
         # set title and labels
-        ax[i].set_title('cluster ' + str(int(cluster_id)) + '\n' + str(fraction) + '%, n=' + str(n_cells)\
+        ax[i].set_title('cluster ' + str(int(cluster_id)) + '\n' + str(fraction) + '%, n=' + str(n_cells)
                         + '\n' + 'n mice = ' + str(N_mice.loc[cluster_id].values),
                         fontsize=16)
         ax[i].set_yticklabels(mean_dropout_df.index.values, rotation=0)
@@ -228,14 +227,14 @@ def plot_clusters(dropout_df, cluster_df=None, mean_response_df = None, save_plo
         # 3. Plot by depth
         within_cluster_df = \
             cluster_df[cluster_df['cluster_id'] == cluster_id].drop_duplicates('cell_specimen_id').groupby(
-            'binned_depth').count()[['cluster_id']]
+                'binned_depth').count()[['cluster_id']]
         all_df = cluster_df.drop_duplicates('cell_specimen_id').groupby('binned_depth').count()[['cluster_id']]
         fraction_depth = within_cluster_df / all_df
         fraction_depth.reset_index(inplace=True)
         ax[i + (len(cluster_ids) * 2)] = sns.barplot(data=fraction_depth,
                                                      x='binned_depth',
                                                      y='cluster_id',
-                                                     #orient='h',
+                                                     # orient='h',
                                                      palette='gray',
                                                      ax=ax[i + (len(cluster_ids) * 2)])
         # set labels
@@ -243,7 +242,6 @@ def plot_clusters(dropout_df, cluster_df=None, mean_response_df = None, save_plo
         ax[i + (len(cluster_ids) * 2)].set_ylabel('fraction cells\nper depth')
         ax[i + (len(cluster_ids) * 2)].set_xticks(np.arange(0, len(depths)))
         ax[i + (len(cluster_ids) * 2)].set_xticklabels(depths, rotation=90)
-
 
         # 4. Plot by area
         within_cluster_df = \
@@ -254,7 +252,7 @@ def plot_clusters(dropout_df, cluster_df=None, mean_response_df = None, save_plo
         fraction_area.reset_index(inplace=True, drop=False)
 
         ax[i + (len(cluster_ids) * 3)] = sns.barplot(data=fraction_area,
-                                                     #orient='h',
+                                                     # orient='h',
                                                      x='targeted_structure',
                                                      y='cluster_id',
                                                      palette='gray',
@@ -303,4 +301,3 @@ def plot_clusters(dropout_df, cluster_df=None, mean_response_df = None, save_plo
             ax[i + (len(cluster_ids) * 4)].set_ylabel('')
     return fig
     plt.tight_layout()
-
