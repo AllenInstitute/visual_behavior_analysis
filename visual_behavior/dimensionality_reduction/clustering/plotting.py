@@ -1,5 +1,5 @@
 import numpy as np
-import pandas as pd
+# import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.cluster import KMeans
@@ -214,7 +214,7 @@ def plot_clusters(dropout_df, cluster_df=None, mean_response_df=None, save_plots
         #    ax[i + len(cluster_ids)].set_xticklabels(fraction_cre.index.values, rotation=90)
         ax[i + len(cluster_ids)].set_ylabel('fraction cells\nper class')
         ax[i + len(cluster_ids)].set_xlabel('')
-        #ax[i+ len(cluster_ids)].set_title('n mice = ' + str(N_mice.loc[cluster_id].values), fontsize=16)
+        # ax[i+ len(cluster_ids)].set_title('n mice = ' + str(N_mice.loc[cluster_id].values), fontsize=16)
 
         # set title and labels
         ax[i].set_title('cluster ' + str(int(cluster_id)) + '\n' + str(fraction) + '%, n=' + str(n_cells)
@@ -264,7 +264,7 @@ def plot_clusters(dropout_df, cluster_df=None, mean_response_df=None, save_plots
 
         # plot mean traces
 
-        axes_column = 'cluster_id'
+        # axes_column = 'cluster_id'
         hue_column = 'experience_level'
         hue_conditions = np.sort(cluster_df[hue_column].unique())
         timestamps = cluster_df['trace_timestamps'][0]
