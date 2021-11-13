@@ -10,7 +10,6 @@ from visual_behavior.data_access import from_lims
 import visual_behavior.database as db
 
 import os
-import sys
 import glob
 import h5py  # for loading motion corrected movie
 import numpy as np
@@ -463,7 +462,7 @@ def get_extended_stimulus_presentations_table(stimulus_presentations, licks, rew
     stimulus_presentations['pre_omitted'] = stimulus_presentations['omitted'].shift(-1)
     stimulus_presentations = reformat.add_epoch_times(stimulus_presentations)
     stimulus_presentations = reformat.add_mean_running_speed(stimulus_presentations, running_speed)
-    if eye_tracking:
+    if eye_tracking is not None:
         try:  # if eye tracking data is not present or cant be loaded
             stimulus_presentations = reformat.add_mean_pupil_area(stimulus_presentations, eye_tracking)
         except BaseException:  # set to NaN
@@ -481,10 +480,9 @@ def get_extended_stimulus_presentations_table(stimulus_presentations, licks, rew
     stimulus_presentations['reward_rate_per_second'] = stimulus_presentations['rewarded'].rolling(window=320, min_periods=1,
                                                                                                   win_type='triang').mean() / .75  # units of rewards per second
     # (rewards/stimulus)*(1 stimulus/.750s)*(60s/min) = rewards/min
-    stimulus_presentations['reward_rate'] = stimulus_presentations['rewarded'].rolling(window=320, min_periods=1,
-                                                                                       win_type='triang').mean() * (60 / .75)  # units of rewards/min
+    stimulus_presentations['reward_rate'] = stimulus_presentations['rewarded'].rolling(window=320, min_periods=1, win_type='triang').mean() * (60 / .75)  # units of rewards/min
 
-    reward_threshold = 2  # threshold of 2 rewards per minute; if using rewards per second, use 1/90
+    reward_threshold = 2 / 3  # 2/3 rewards per minute = 1/90 rewards/second
     stimulus_presentations['engaged'] = [x > reward_threshold for x in stimulus_presentations['reward_rate']]
     stimulus_presentations['engagement_state'] = ['engaged' if True else 'disengaged' for engaged in stimulus_presentations['engaged'].values]
     stimulus_presentations = reformat.add_response_latency(stimulus_presentations)
@@ -606,8 +604,8 @@ class BehaviorOphysDataset(BehaviorOphysExperiment):
 
     @property
     def extended_stimulus_presentations(self):
-        extended_stimulus_presentations = get_extened_stimulus_presentations(self.stimulus_presentations.copy(),
-                                                                             self.licks, self.rewards, self.running_speed, self.eye_tracking)
+        extended_stimulus_presentations = get_extended_stimulus_presentations_table(self.stimulus_presentations.copy(),
+                                                                                    self.licks, self.rewards, self.running_speed, self.eye_tracking)
         self._extended_stimulus_presentations = extended_stimulus_presentations
         return self._extended_stimulus_presentations
 
@@ -616,7 +614,7 @@ class BehaviorOphysDataset(BehaviorOphysExperiment):
         trials = super().trials.copy()
         trials = reformat.add_epoch_times(trials)
         trials = reformat.add_trial_type_to_trials_table(trials)
-        trials = reformat.add_reward_rate_to_trials_table(trials)
+        trials = reformat.add_reward_rate_to_trials_table(trials, self.extended_stimulus_presentations)
         trials = reformat.add_engagement_state_to_trials_table(trials, self.extended_stimulus_presentations)
         self._extended_trials = trials
         return self._extended_trials
@@ -791,7 +789,7 @@ class BehaviorDataset(BehaviorSession):
         trials = super().trials.copy()
         trials = reformat.add_epoch_times(trials)
         trials = reformat.add_trial_type_to_trials_table(trials)
-        trials = reformat.add_reward_rate_to_trials_table(trials)
+        trials = reformat.add_reward_rate_to_trials_table(trials, self.extended_stimulus_presentations)
         trials = reformat.add_engagement_state_to_trials_table(trials, self.extended_stimulus_presentations)
         self._extended_trials = trials
         return self._extended_trials
@@ -800,7 +798,7 @@ class BehaviorDataset(BehaviorSession):
 def get_extended_trials_table(trials, extended_stimulus_presentations):
     extended_trials = reformat.add_epoch_times(trials)
     extended_trials = reformat.add_trial_type_to_trials_table(extended_trials)
-    extended_trials = reformat.add_reward_rate_to_trials_table(extended_trials)
+    extended_trials = reformat.add_reward_rate_to_trials_table(extended_trials, extended_stimulus_presentations)
     extended_trials = reformat.add_engagement_state_to_trials_table(extended_trials, extended_stimulus_presentations)
     return extended_trials
 

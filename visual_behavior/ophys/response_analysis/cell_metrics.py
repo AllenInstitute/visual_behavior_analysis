@@ -115,10 +115,10 @@ def get_image_selectivity_index_pref_non_pref(stimulus_response_df):
     takes stimulus_response_df as input, must have columns 'pref_image' and 'non_pref_image'
     returns a dataframe with index cell_specimen_id and column 'image_selectivity_index'
     """
-    pref_image_df = stimulus_response_df[stimulus_response_df.pref_image == True]
+    pref_image_df = stimulus_response_df[stimulus_response_df.pref_image]
     mean_response_pref_image = pref_image_df.groupby(['cell_specimen_id']).mean()[['mean_response']]
 
-    non_pref_image_df = stimulus_response_df[stimulus_response_df.non_pref_image == True]
+    non_pref_image_df = stimulus_response_df[stimulus_response_df.non_pref_image]
     mean_response_non_pref_image = non_pref_image_df.groupby(['cell_specimen_id']).mean()[['mean_response']]
 
     image_selectivity_index = (mean_response_pref_image - mean_response_non_pref_image) / (
@@ -133,7 +133,7 @@ def get_image_selectivity_index_one_vs_all(stimulus_response_df):
     takes stimulus_response_df as input, must have column 'pref_image'
     returns a dataframe with index cell_specimen_id and column 'image_selectivity_index_one_vs_all'
     """
-    pref_image_df = stimulus_response_df[stimulus_response_df.pref_image == True]
+    pref_image_df = stimulus_response_df[stimulus_response_df.pref_image]
     mean_response_pref_image = pref_image_df.groupby(['cell_specimen_id']).mean()[['mean_response']]
 
     non_pref_images_df = stimulus_response_df[(stimulus_response_df.pref_image == False)]
@@ -286,7 +286,7 @@ def get_running_modulation_index_for_group(group):
     takes group with index cell_specimen_id, column 'running' that is a Boolean, and 'mean_response' column
     computes the difference over sum of running vs not running mean response values
     """
-    running = group[group.running == True].mean_response.values
+    running = group[group.running].mean_response.values
     not_running = group[group.running == False].mean_response.values
     running_modulation_index = (running - not_running) / (running + not_running)
     return pd.Series({'running_modulation_index': running_modulation_index})
@@ -307,7 +307,7 @@ def get_running_modulation_index_for_cell_specimen_ids(stimulus_response_df):
 def get_hit_miss_modulation_index_for_group(group):
     """
     """
-    hit = group[group.hit == True].mean_response.values
+    hit = group[group.hit].mean_response.values
     miss = group[group.hit == False].mean_response.values
     hit_miss_index = (hit - miss) / (hit + miss)
     return pd.Series({'hit_miss_index': hit_miss_index})
@@ -319,7 +319,7 @@ def get_hit_miss_modulation_index(stimulus_response_df):
     stimulus_response_df must have a columns 'is_change', and 'licked'
     returns a dataframe with column 'hit_miss_index' with computed value for each cell_specimen_id in stimulus_response_df
     """
-    stimulus_response_df['hit'] = [True if (stimulus_response_df.iloc[row].is_change == True and stimulus_response_df.iloc[row].licked == True) else False for row in range(len(stimulus_response_df))]
+    stimulus_response_df['hit'] = [True if (stimulus_response_df.iloc[row].is_change and stimulus_response_df.iloc[row].licked) else False for row in range(len(stimulus_response_df))]
     hit_miss_index = stimulus_response_df.groupby(['cell_specimen_id', 'hit']).mean()[['mean_response']].reset_index().groupby('cell_specimen_id').apply(get_hit_miss_modulation_index_for_group)
     hit_miss_index['hit_miss_index'] = [np.nan if len(index) == 0 else index[0] for index in hit_miss_index.hit_miss_index.values]
     return hit_miss_index
@@ -484,9 +484,9 @@ def generate_cell_metrics_table(ophys_experiment_id, use_events=False, filter_ev
     sdf = analysis.get_response_df(df_name='stimulus_response_df')
 
     if condition == 'changes':
-        df = sdf[sdf.is_change == True]
+        df = sdf[sdf.is_change]
     elif condition == 'omissions':
-        df = sdf[sdf.omitted == True]
+        df = sdf[sdf.omitted]
         # use next image name for computing pref image, selectivity, etc.
         df['image_name'] = [df.iloc[row].image_name_next_flash for row in range(len(df))]
     elif condition == 'images':
@@ -499,7 +499,7 @@ def generate_cell_metrics_table(ophys_experiment_id, use_events=False, filter_ev
         df['engaged'] = False
     if session_subset == 'engaged':
         df['engaged'] = [True if reward_rate >= 2 else False for reward_rate in df.reward_rate.values]
-        df = df[df['engaged'] == True]
+        df = df[df['engaged']]
     elif session_subset == 'disengaged':
         df['engaged'] = [True if reward_rate >= 2 else False for reward_rate in df.reward_rate.values]
         df = df[df['engaged'] == False]
@@ -520,7 +520,7 @@ def generate_cell_metrics_table(ophys_experiment_id, use_events=False, filter_ev
 
     if stimuli == 'pref_image':
         # restrict further analysis to pref stim condition
-        df = df[df.pref_image == True]
+        df = df[df.pref_image]
 
     # get mean response across all images
     mean_response = get_mean_response_cell_specimen_ids(df)

@@ -1047,7 +1047,7 @@ def annotate_stimuli(dataset, inplace=False):
         return stimulus_presentations
 
 
-def get_behavior_stats(behavior_session_id, engaged_only=True, method='stimulus_based'):
+def get_behavior_stats(behavior_session_id, method='stimulus_based', engaged_only=True):
     '''
     gets behavior stats for a given behavior session
     relies on the existence of a behavioral model for a given session
@@ -1089,8 +1089,9 @@ def get_behavior_stats(behavior_session_id, engaged_only=True, method='stimulus_
 
     '''
     output_dict = {'behavior_session_id': behavior_session_id}
+    print('getting metrics for behavior_session_id:', behavior_session_id)
+    session = loading.get_behavior_dataset(behavior_session_id, from_nwb=True, get_extended_trials=False)
     try:
-        session = loading.get_behavior_dataset(behavior_session_id, from_nwb=True, get_extended_trials=True)
         if method == 'trial_based':
 
             trials = session.extended_trials
@@ -1158,15 +1159,15 @@ def get_behavior_stats_cache_dir(method='stimulus_based'):
     :return:
     """
     if method == 'trial_based':
-        cache_dir = r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/platform_paper_cache/behavior_performance/behavior_perfomance_summary_trial_based'
+        cache_dir = r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/platform_paper_cache/behavior_performance/behavior_performance_summary_trial_based'
     elif method == 'stimulus_based':
-        cache_dir = r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/platform_paper_cache/behavior_performance/behavior_perfomance_summary_stimulus_based'
+        cache_dir = r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/platform_paper_cache/behavior_performance/behavior_performance_summary_stimulus_based'
     elif method == 'sdk':
-        cache_dir = r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/platform_paper_cache/behavior_performance/behavior_perfomance_metrics_sdk'
+        cache_dir = r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/platform_paper_cache/behavior_performance/behavior_performance_metrics_sdk'
     return cache_dir
 
 
-def cache_behavior_stats(behavior_session_id, engaged_only=True, method='stimulus_based'):
+def cache_behavior_stats(behavior_session_id, method='stimulus_based', engaged_only=True):
     '''
     calculates behavior stats for a given session, saves to file
     file format is behavior_summary_behavior_session_id={behavior_session_id}.h5 with key = 'data'
@@ -1189,14 +1190,15 @@ def cache_behavior_stats(behavior_session_id, engaged_only=True, method='stimulu
     '''
     print('behavior_session_id:', behavior_session_id)
     cache_dir = get_behavior_stats_cache_dir(method)
-
-    behavior_stats_df = pd.DataFrame(get_behavior_stats(behavior_session_id, engaged_only), index=[0])
+    behavior_stats = get_behavior_stats(behavior_session_id, method=method, engaged_only=engaged_only)
+    behavior_stats_df = pd.DataFrame(behavior_stats, index=behavior_session_id)
 
     filename = 'behavior_summary_behavior_session_id={}.h5'.format(behavior_session_id)
     filepath = os.path.join(cache_dir, filename)
     if os.path.exists(filepath):
         os.remove(filepath)
     behavior_stats_df.to_hdf(filepath, key='data')
+    print('behavior stats cached for', behavior_session_id, method)
 
 
 def get_cached_behavior_stats(behavior_session_id, engaged_only=True, method='stimulus_based'):
