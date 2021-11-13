@@ -237,8 +237,8 @@ def plot_mean_trace(traces, timestamps, ylabel='dF/F', legend_label=None, color=
     if ax is None:
         fig, ax = plt.subplots()
     if len(traces) > 0:
-        trace = np.mean(traces, axis=0)
-        sem = (traces.std()) / np.sqrt(float(len(traces)))
+        trace = np.nanmean(traces, axis=0)
+        sem = (np.nanstd(traces)) / np.sqrt(float(len(traces)))
         ax.plot(timestamps, trace, label=legend_label, linewidth=2, color=color)
         if plot_sem:
             ax.fill_between(timestamps, trace + sem, trace - sem, alpha=0.5, color=color)
