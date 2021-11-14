@@ -11,11 +11,14 @@ if __name__ == '__main__':
     args = parser.parse_args()
     ophys_experiment_id = args.ophys_experiment_id
     print(ophys_experiment_id)
+
     # set params for
     interpolate = True
     sampling_rate = 30
     time_window = [-3, 3]
+
     # set up save folder
+    sdf_save_dir = r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/platform_paper_cache/stimulus_response_dfs'
     if interpolate:
         folder = 'interpolate_' + str(sampling_rate) + 'Hz'
     else:
