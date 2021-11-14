@@ -260,3 +260,9 @@ def get_metadata_string(metadata):
     m = metadata.copy()
     metadata_string = str(m['mouse_id']) + '_' + str(m['ophys_experiment_id']) + '_' + m['cre_line'].split('-')[0] + '_' + m['targeted_structure'] + '_' + str(m['imaging_depth']) + '_' + m['session_type']
     return metadata_string
+
+
+def get_container_metadata_string(metadata):
+    m = metadata
+    metadata_string = str(m['mouse_id'])+'_'+str(m['experiment_container_id'])+'_'+m['cre_line'].split('-')[0]+'_'+m['targeted_structure']+'_'+str(m['imaging_depth'])
+    return metadata_string
