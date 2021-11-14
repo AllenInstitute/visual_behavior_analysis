@@ -8,6 +8,8 @@ This script calls the function: svm_images_plots_main.py
 
 After this script, run svm_images_plots_setVars.py to make plots.
 
+Note: run this script for individual project codes to save their all_sess files.
+
 
 Created on Tue Oct 13 20:48:43 2020
 @author: farzaneh
@@ -35,10 +37,10 @@ from svm_images_plots_main import *
 
 #%% Set vars
 
-project_codes = ['VisualBehaviorMultiscope'] # ['VisualBehaviorMultiscope'] # ['VisualBehaviorMultiscope', 'VisualBehaviorTask1B', 'VisualBehavior', 'VisualBehaviorMultiscope4areasx2d']
+project_codes = ['VisualBehaviorTask1B'] # ['VisualBehaviorMultiscope'] # ['VisualBehaviorMultiscope', 'VisualBehaviorTask1B', 'VisualBehavior', 'VisualBehaviorMultiscope4areasx2d']
 
-to_decode = 'current' #'next' # 'current' (default): decode current image.    'previous': decode previous image.    'next': decode next image.
-trial_type = 'changes' #'changes' #'baseline_vs_nobaseline' #'hits_vs_misses' #'changes_vs_nochanges' #'omissions' # 'omissions', 'images', 'changes' # what trials to use for SVM analysis # the population activity of these trials at time time_win will be used to decode the image identity of flashes that occurred at their time 0 (if to_decode='current') or 750ms before (if to_decode='previous'). # 'baseline_vs_nobaseline' # decode activity at each frame vs. baseline (ie the frame before omission unless use_spont_omitFrMinus1 = 1 (see below))
+to_decode = 'next' #'next' # 'current' (default): decode current image.    'previous': decode previous image.    'next': decode next image.
+trial_type = 'omissions' #'changes' #'baseline_vs_nobaseline' #'hits_vs_misses' #'changes_vs_nochanges' #'omissions' # 'omissions', 'images', 'changes' # what trials to use for SVM analysis # the population activity of these trials at time time_win will be used to decode the image identity of flashes that occurred at their time 0 (if to_decode='current') or 750ms before (if to_decode='previous'). # 'baseline_vs_nobaseline' # decode activity at each frame vs. baseline (ie the frame before omission unless use_spont_omitFrMinus1 = 1 (see below))
 
 use_events = True #False # whether to run the analysis on detected events (inferred spikes) or dff traces.
 svm_blocks = np.nan #-101 #np.nan # -1: divide trials based on engagement #2 # number of trial blocks to divide the session to, and run svm on. # set to np.nan to run svm analysis on the whole session
@@ -190,6 +192,20 @@ if use_matched_cells!=0:
     list_all_sessions_valid_matched = df[df['project_code']==project_codes[0]]['ophys_session_id'].unique() # note that if you get ophys experiments it has to be a multiplication of 3. (not ophys sessions.)
     list_all_sessions_valid_matched = np.sort(list_all_sessions_valid_matched)
 
+
+    
+    
+    
+    # TEMPORARY SOLUTION: remove this session; 
+    # SOLUTION: switch to sdk branch rc/2.13.2 to fix : dataset.running_speed has issues.
+    print(len(list_all_sessions_valid_matched))
+    list_all_sessions_valid_matched = list_all_sessions_valid_matched[list_all_sessions_valid_matched!=795625712] # it's a novel 1 session, VB project
+    print(len(list_all_sessions_valid_matched))
+
+    
+    
+    
+    
     b = len(list_all_sessions_valid_matched) / len(list_all_sessions_valid)
     print(f'{len(list_all_sessions_valid_matched)}/{len(list_all_sessions_valid)}, {b*100:.0f}% of {project_codes} sessions have matched cells in the 3 experience levels.')
 

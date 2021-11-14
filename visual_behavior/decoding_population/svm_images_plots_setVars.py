@@ -92,10 +92,12 @@ dir0 = '/home/farzaneh/OneDrive/Analysis'
 
 #%% Set the following vars
 
-project_codes = ['VisualBehavior'], ['VisualBehaviorTask1B'], ['VisualBehaviorMultiscope'] # pooled: ['VisualBehavior'], ['VisualBehaviorMultiscope'] # ['VisualBehaviorMultiscope'] # ['VisualBehaviorMultiscope', 'VisualBehaviorTask1B', 'VisualBehavior', 'VisualBehaviorMultiscope4areasx2d']
+project_codes = ['VisualBehavior'], ['VisualBehaviorTask1B'], ['VisualBehaviorMultiscope'] # pooled project codes for the paper: ['VisualBehavior'], ['VisualBehaviorTask1B'], ['VisualBehaviorMultiscope'] # if making plots for multiple project codes: ['VisualBehavior'], ['VisualBehaviorMultiscope'] # if making plots for a single project code: ['VisualBehaviorTask1B']       # all project codes: 'VisualBehaviorMultiscope', 'VisualBehaviorTask1B', 'VisualBehavior', 'VisualBehaviorMultiscope4areasx2d'
+
+dosavefig = 1 # 0
 
 to_decode = 'current' # 'current': decode current image. # 'previous': decode previous image. # 'next': decode next image.
-trial_type = 'changes' # 'baseline_vs_nobaseline' # 'omissions' # 'changes' # 'hits_vs_misses' # 'changes_vs_nochanges' # 'images'# what trials to use for SVM analysis # the population activity of these trials at time time_win will be used to decode the image identity of flashes that occurred at their time 0 (if to_decode='current') or 750ms before (if to_decode='previous'). # eg 'omissions' means to use omission-aligned traces # 'baseline_vs_nobaseline' # decode activity at each frame vs. baseline (ie the frame before omission unless use_spont_omitFrMinus1 = 1 (see below))
+trial_type = 'changes' # 'baseline_vs_nobaseline' # 'omissions' # 'changes' # 'changes_vs_nochanges' # 'hits_vs_misses' # 'images'# what trials to use for SVM analysis # the population activity of these trials at time time_win will be used to decode the image identity of flashes that occurred at their time 0 (if to_decode='current') or 750ms before (if to_decode='previous'). # eg 'omissions' means to use omission-aligned traces # 'baseline_vs_nobaseline' # decode activity at each frame vs. baseline (ie the frame before omission unless use_spont_omitFrMinus1 = 1 (see below))
 # Note: when trial_type is 'hits_vs_misses' or 'changes_vs_nochanges', to_decode will be 'current' and wont really make sense.
 # in all other cases, we decode "to_decode" image from "trial_type", e.g. we decode 'current' image from 'changes' (ie change-aligned traces)
 
@@ -108,7 +110,6 @@ engagement_pupil_running = 0 # applicable when svm_blocks=-1 # np.nan or 0,1,2 f
 baseline_subtract = 0 #1 # subtract the baseline (CA average during baseline, ie before time 0) from the evoked CA (classification accuracy)
 
 summary_which_comparison = [3, 4, 6] #'all' # an array of session numbers: [3, 4, 6] or the following strings: # 'novelty' # 'engagement' # 'all' # determins sessions to use for plotting summary of ophys stages in svm_images_plots_compare_ophys_stages.py # 'novelty' will use [1,3,4,6] # 'engagement' will use [1,2,3] # 'all' will use [1,2,3,4,5,6]
-dosavefig = 1 # 0
 fmt = '.pdf' # '.png' # '.svg'
 
 
@@ -350,12 +351,13 @@ if len(project_codes_all)==1:
     svm_allMice_sessAvSd0 = copy.deepcopy(svm_allMice_sessAvSd)
 
     
-    ######### set vars to make mouse-averaged plots for each ophys stage
+    ######### set vars to make decoding timecourse plots, mouse-averaged, for each ophys stage
     # also set summary_vars_all (a df that includes response amplitude, computed from svm_allMice_sessPooled) which will be used in svm_images_plots_compare_ophys_stages
     exec(open('svm_images_plots_setVars_sumMice2.py').read()) 
 
     # make mouse-averaged plots
-    exec(open('svm_images_plots_sumMice.py').read()) 
+    # it gets called in svm_images_plots_setVars_sumMice2.py
+#     exec(open('svm_images_plots_sumMice.py').read()) 
 
 
     ######### compare quantifications across ophys stages
@@ -460,6 +462,10 @@ if len(project_codes_all)==1:
 
 else: # pooling data across multiple project codes    
     
+    #####################################################################################
+    #%% Set svm_allMice_sessPooled_allprojects and svm_allMice_sessAvSd_allprojects
+    
+    all_sess0_allprojects = []
     svm_allMice_sessPooled_allprojects = []
     svm_allMice_sessAvSd_allprojects = []
     
@@ -490,8 +496,6 @@ else: # pooling data across multiple project codes
 
         #%%    
         cols_each = colorOrder(num_planes)
-
-
         
         #%% Set svm vars for each plane across all sessions (for each mouse)
         if project_codes != ['VisualBehaviorMultiscope']: # remove area/layer pooled columns
@@ -533,7 +537,7 @@ else: # pooling data across multiple project codes
             columns = columns0        
         
         #####################################
-        #%% Set svm_this_plane_allsess
+        #%% Loads and concatenates all_sess from all cre lines into a df called all_sess0. Also sets svm_this_plane_allsess.
         #####################################
 
         exec(open('svm_images_plots_setVars2.py').read())     
@@ -545,11 +549,75 @@ else: # pooling data across multiple project codes
         # note: svm_allMice_sessPooled will be used to set summary_vars_all, which is a key paramter in svm_images_plots_compare_ophys_stages.py)
         exec(open('svm_images_plots_setVars_sumMice.py').read()) 
 
-        
+        all_sess0_allprojects.append(all_sess0)
         svm_allMice_sessPooled_allprojects.append(svm_allMice_sessPooled)
         svm_allMice_sessAvSd_allprojects.append(svm_allMice_sessAvSd)
 
 
+        
+        
+    ####################################################
+    #%% make svm_df which is a proper pandas table including svm response amplitude results for each experiment ##################
+    # these dfs will be used to make summary plots across experience levels, and also for doing stats.
+
+    svm_df_allpr = []
+    resp_amp_sum_df_allpr = [] # we dont really use this; instead we set it in "svm_images_plots_setVars_sumMice3_resp_sum" for all projects codes pooled (ie ave and sd of resp amp across all project codes)
+    for ipc in range(len(project_codes_all)):
+        
+        project_code = project_codes_all[ipc]
+        all_sess0 = all_sess0_allprojects[ipc]
+        svm_allMice_sessPooled0 = svm_allMice_sessPooled_allprojects[ipc]
+
+        exec(open('svm_images_plots_setVars_sumMice3_svmdf.py').read())
+
+        svm_df_allpr.append(svm_df)
+        resp_amp_sum_df_allpr.append(resp_amp_sum_df)
+    
+
+    ################## set resp_amp_sum_df: it includes the average of response amplitude across all experiments of all projects ##################
+    
+    exec(open('svm_images_plots_setVars_sumMice3_resp_sum.py').read())
+
+              
+    ################## compare quantifications across experience levels ##################
+    
+    exec(open('svm_images_plots_compare_experience_levels.py').read())
+
+    
+    ################## plot decoding traces for each experience level ##################
+    exec(open('svm_images_plots_compare_traces_experience_levels.py').read())
+    
+    
+    ######################################################
+    #%% set summary_vars_all, a dataframe that includes response amplitude (computed from svm_allMice_sessPooled); it will be used in svm_images_plots_compare_ophys_stages.py
+
+    summary_vars_allpr = []
+    for ipc in range(len(project_codes_all)):
+        
+        svm_allMice_sessPooled0 = svm_allMice_sessPooled_allprojects[ipc]
+        svm_allMice_sessAvSd0 = svm_allMice_sessAvSd_allprojects[ipc]
+
+        project_codes = project_codes_all[ipc]
+        
+        exec(open('svm_images_plots_setVars_sumMice2.py').read()) 
+
+        summary_vars_allpr.append(summary_vars_all)
+            
+
+    ################## compare quantifications across ophys stages ##################
+    
+    # pool summary_vars_all of the 2 projects
+    
+    summary_vars_all = pd.concat((summary_vars_allpr))
+    summary_vars_all.shape
+    
+    exec(open('svm_images_plots_compare_ophys_stages.py').read())
+    
+    
+    
+    
+    
+    
     #####################################
     #%% Pool data from both project codes
     #####################################
@@ -565,16 +633,15 @@ else: # pooling data across multiple project codes
     # (8, 21, 4)
 
 
-
-    #%% turn the vars into a single long vector, independent of the area/depth
-
+    #%% turn the variables into a single long vector, independent of the area/depth
+    '''
     # for each project code: concatenate data from all planes and sessions    
     pa_allpr = []
     for ipc in range(len(project_codes_all)):
         
 #         svm_allMice_sessPooled_allprojects[ipc].iloc[0]['peak_amp_allPlanes'].shape
-        pa_now = np.vstack(svm_allMice_sessPooled_allprojects[ipc].iloc[0]['peak_amp_allPlanes'])
-        pa_now.shape
+        pa_now = np.vstack(svm_allMice_sessPooled_allprojects[ipc].iloc[0]['peak_amp_allPlanes']) # you are doing iloc[0] so you are taking data only from one session
+        print(pa_now.shape)
 
         pa_allpr.append(pa_now)
         
@@ -582,54 +649,5 @@ else: # pooling data across multiple project codes
     # now concatenate data from all projects
     pa_pooled_projects = np.concatenate((pa_allpr), axis=0) # pooled_session_planes_projects x 4
     pa_pooled_projects.shape
-
-    
-    
-    ######################################################
-    #%% set vars and plot traces and quantifications for each ophys stage
-    
-    # for each project code: set vars to make mouse-averaged plots
-    summary_vars_allpr = []
-    for ipc in range(len(project_codes_all)):
-        
-        svm_allMice_sessPooled0 = svm_allMice_sessPooled_allprojects[ipc]
-        svm_allMice_sessAvSd0 = svm_allMice_sessAvSd_allprojects[ipc]
-
-        project_codes = project_codes_all[ipc]
-        
-        # sets summary_vars_all, a dataframe that includes response amplitude (computed from svm_allMice_sessPooled); it will be used in svm_images_plots_compare_ophys_stages.py
-        # if len(project_codes_all)==1, it calls svm_images_plots_sumMice.py to make mouse-averaged plots for each ophys stage.        
-        exec(open('svm_images_plots_setVars_sumMice2.py').read()) 
-
-        summary_vars_allpr.append(summary_vars_all)
-        
-        
-    # make mouse-averaged plots
-#     exec(open('svm_images_plots_sumMice.py').read()) 
-
-
-
-    ################## make svm_df which is a proper pandas table including svm response amplitude results for each experiment ##################
-    # svm_df will be used to make summary plots across experience levels
-    
-    exec(open('svm_images_plots_setVars_sumMice3_svmdf.py').read())
-
-              
-    ################## compare quantifications across ophys experience levels ##################
-    
-    exec(open('svm_images_plots_compare_ophys_experience_levels.py').read())
-    
-
-    ################## compare quantifications across ophys stages ##################
-    
-    # pool summary_vars_all of the 2 projects
-    
-    summary_vars_all = pd.concat((summary_vars_allpr))
-    summary_vars_all.shape
-    
-    exec(open('svm_images_plots_compare_ophys_stages.py').read())
-    
-    
-    
-    
+    '''
     

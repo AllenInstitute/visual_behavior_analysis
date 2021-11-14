@@ -398,7 +398,7 @@ if plots_make_finalize[1] == 1:
         #             fgn = fgn + f'_block{iblock}'
 
         if svm_blocks==-1:
-            word = 'engagement_'
+            word = 'engaged_disengaged_blocks_'
         elif svm_blocks==-101:
             word = 'only_engaged_'
         elif ~np.isnan(svm_blocks):

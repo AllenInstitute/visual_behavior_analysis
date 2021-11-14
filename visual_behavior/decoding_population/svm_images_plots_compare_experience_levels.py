@@ -10,25 +10,73 @@ Created on Fri Oct 29 22:02:05 2021
 
 """
 
-        
-##############################################################################################################################
-##############################################################################################################################        
-##############################################################################################################################
-#%% Plot response amplitude for **experience levels**: errorbars comparing SVM decoding accuracy across experience levels; also do anova/tukey
-##############################################################################################################################
-##############################################################################################################################
-##############################################################################################################################        
-        
-#%% Make errorbars for response amplitude (averaged across all experiments for each experience level)
-
+import matplotlib.gridspec as gridspec
+import seaborn
 import visual_behavior.visualization.utils as utils
+import scipy.stats as st
 import statsmodels.api as sm
 from statsmodels.formula.api import ols
 from statsmodels.stats.multicomp import (pairwise_tukeyhsd, MultiComparison)
 
+sigval = .05 # value for ttest significance
+fmt_all = ['o', 'x']
+fmt_now = fmt_all[0]
+if baseline_subtract: # subtract the baseline (CA average during baseline, ie before time 0) from the evoked CA (classification accuracy)
+    ylabs = '% Class accuracy rel. baseline' #'Amplitude'
+else:
+    ylabs = '% Classification accuracy' #'Amplitude'    
 cres = ['Slc17a7', 'Sst', 'Vip']
 
-#%% Do stats; for each cre line, are the 3 experience levels significantly different? anova; then tukey
+
+
+##############################################################################################################################        
+##############################################################################################################################
+#%% Plot response amplitude for **experience levels**: 
+# errorbars comparing SVM decoding accuracy (averaged across all experiemnts) across experience levels; 
+# also do anova/tukey
+##############################################################################################################################
+##############################################################################################################################
+
+
+
+##############################################################################################################################        
+#%% Compute p values and ttest stats between actual and shuffled 
+##############################################################################################################################        
+
+p_act_shfl = np.full((len(cres), len(exp_level_all)), np.nan)
+icre = -1
+for crenow in cres: # crenow = cres[0]
+    icre = icre+1
+    iexpl = -1    
+    for expl in exp_level_all: # expl = exp_level_all[0]
+        iexpl = iexpl+1
+
+        a = svm_df[np.logical_and(svm_df['cre_allPlanes']==crenow , svm_df['experience_levels']==expl)]
+        
+        a_amp = np.vstack(a['peak_amp_allPlanes_allExp'].values)[:,1] # n_exp
+        b_amp = np.vstack(a['peak_amp_allPlanes_allExp'].values)[:,2] # n_exp
+        print(a_amp.shape, b_amp.shape)
+        print(sum(~np.isnan(a_amp)), sum(~np.isnan(b_amp)))
+        
+        _, p = st.ttest_ind(a_amp, b_amp, nan_policy='omit') #, axis=1, equal_var=equal_var)
+        p_act_shfl[icre, iexpl] = p
+        
+p_act_shfl_sigval = p_act_shfl+0 
+p_act_shfl_sigval[p_act_shfl <= sigval] = 1
+p_act_shfl_sigval[p_act_shfl > sigval] = np.nan
+
+print(f'\n---------------------\n')
+print(f'Actual vs. shuffled data significance, for each experience level')
+print(p_act_shfl_sigval)
+print(f'\n---------------------\n')    
+    
+    
+    
+
+##############################################################################################################################        
+#%% Do stats; for each cre line, are the 3 experience levels significantly different? do anova; then tukey
+##############################################################################################################################        
+
 if np.isnan(svm_blocks) or svm_blocks==-101: # svm was run on the whole session (no block by block analysis)    
 
     tukey_all = []
@@ -101,7 +149,9 @@ if np.isnan(svm_blocks) or svm_blocks==-101: # svm was run on the whole session 
 
 
         
+##############################################################################################################################                
 #%% Plot error bars for the SVM decoding accuracy across the 3 experience levels, for each cre line
+##############################################################################################################################        
 
 colors = utils.get_experience_level_colors() # will always be in order of Familiar, Novel 1, Novel >1
 
@@ -197,6 +247,8 @@ if np.isnan(svm_blocks) or svm_blocks==-101: # svm was run on the whole session 
                 ax.set_title(f'data\n{areasn[iax]}', y=1.1)
             if ax==ax2:
                 ax.set_title(f'data-shuffle\n{areasn[iax]}', y=1.1)
+            if ax==ax3: # print number of experiments per experience level
+                ax.set_title(f"n experiments\n{df['n_experiments'].values.astype(int)}", y=1.1)
 
         
         ####### add legend
@@ -304,8 +356,7 @@ if np.isnan(svm_blocks) or svm_blocks==-101: # svm was run on the whole session 
             if len(project_codes_all)==1:
                 fgn = f'{fgn}_frames{frames_svm[0]}to{frames_svm[-1]}'                        
             fgn = fgn + '_ClassAccur'
-#             if project_codes_all == ['VisualBehavior']:
-#             fgn = f'{fgn}_{project_codes_all[0]}'
+            fgn = f'{fgn}_allProjects'
 
             if len(project_codes_all)==1:
                 pcn = project_codes_all[0] + '_'
@@ -317,7 +368,7 @@ if np.isnan(svm_blocks) or svm_blocks==-101: # svm was run on the whole session 
             
             fgn = f'{fgn}_{pcn}'            
                 
-            nam = f'{crenow[:3]}{whatSess}_{bln}_aveSessPooled{fgn}_{now}'
+            nam = f'{crenow[:3]}{whatSess}_{bln}_aveExpPooled{fgn}_{now}'
             
             fign = os.path.join(dir0, 'svm', dir_now, nam+fmt)
             print(fign)
@@ -327,4 +378,12 @@ if np.isnan(svm_blocks) or svm_blocks==-101: # svm was run on the whole session 
 
         
         
+        
+#%% Print these p values
+
+print(f'\n---------------------\n')
+print(f'Actual vs. shuffled data significance, for each experience level')
+print(p_act_shfl_sigval)
+print(f'\n---------------------\n')    
+    
         

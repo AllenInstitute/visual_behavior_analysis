@@ -2,7 +2,9 @@
 # -*- coding: utf-8 -*-
 """
 Gets called in svm_images_plots_setVars.py (Read the comments in that script for more info.)
-Set svm_this_plane_allsess.
+
+Loads and concatenates all_sess from all cre lines into a df called all_sess0
+Also sets svm_this_plane_allsess.
 
 Created on Tue Oct  20 13:56:00 2020
 @author: farzaneh
@@ -164,9 +166,15 @@ for iblock in br: # iblock=0 ; iblock=np.nan
     #     iblock = np.nan
 
 
-
+    
+    #########################################################################
+    #########################################################################
+    #########################################################################
     #%% Load all_sess dataframe for all cre lines, for a given block
-
+    #########################################################################
+    #########################################################################
+    #########################################################################
+    
     all_sess = pd.DataFrame()
     for ia in range(len(allSessName)):
         print(f'Loading: {allSessName[ia]}')
@@ -229,7 +237,29 @@ for iblock in br: # iblock=0 ; iblock=np.nan
     all_sess0[['cre', 'stage', 'experience_level', 'mouse_id', 'session_id', 'experiment_id']].groupby(['experience_level', 'cre']).count()
 
 
+    ###################################################################
+    #%% Set time trace (timestamps for the decoding trace)
+    ###################################################################
 
+    frame_dur = all_sess0['frame_dur'].mode().values[0]
+    print(f'frame duration: {frame_dur}')
+
+    if type(time_win)==str:
+        time_win = (frames_svm*frame_dur)[[0,-1]]
+
+    # set the entire time_trace for the flash-aligned traces, on which we applied frames_svm to get svm results.
+    samps_bef_time = (samps_bef+1) * frame_dur # 1 is added bc below we do np.arange(0,-samps_bef), so we get upto one value below samps_bef
+    samps_aft_time = samps_aft * frame_dur # frames_after_omission in svm_main # we trained the classifier until 30 frames after omission    
+    time_trace0 = np.unique(np.concatenate((np.arange(0, -samps_bef_time, -frame_dur)[0:samps_bef+1], np.arange(0, samps_aft_time, frame_dur)[0:samps_aft])))
+
+    # set trace_time corresponding to svm traces
+    rt = np.arange(samps_bef+frames_svm[0] , min(len(time_trace0), samps_bef+frames_svm[-1]+1))
+#     rt = samps_bef+frames_svm
+    time_trace = time_trace0[rt]
+
+    
+    
+    ###################################################################
     #%% Set the stage and experience level for each session in all_sess
 
     session_stage_df = pd.DataFrame([], columns=['session_id', 'stage', 'experience_level'])
@@ -494,7 +524,9 @@ for iblock in br: # iblock=0 ; iblock=np.nan
             #%% Set a number of useful variables
             ######################################################################################################
 
-            #%%
+            #%% 
+            # below moved up
+            '''
             frame_dur = all_sess['frame_dur'].mode().values[0]
             print(f'frame duration: {frame_dur}')
 
@@ -510,7 +542,7 @@ for iblock in br: # iblock=0 ; iblock=np.nan
             rt = np.arange(samps_bef+frames_svm[0] , min(len(time_trace0), samps_bef+frames_svm[-1]+1))
 #             rt = samps_bef+frames_svm
             time_trace = time_trace0[rt]
-
+            '''
     
             xlim = [time_trace[0], time_trace[-1]] #[-1.2, 2.25] # [-13, 24]
 

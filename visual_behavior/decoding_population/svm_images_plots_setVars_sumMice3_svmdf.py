@@ -1,7 +1,7 @@
 """
 Gets called in svm_images_plots_setVars.py
 
-Sets svm_df, a proper pandas table, that will be used to make summary plots for experience levels in svm_images_plots_compare_ophys_experience_levels.py
+Here, we set svm_df, a proper pandas table, that will be used to make summary plots for experience levels in svm_images_plots_compare_ophys_experience_levels.py
 
 Vars needed here are set in svm_images_plots_setVars_sumMice3_svmdf.py
 
@@ -10,7 +10,13 @@ Created on Fri Oct 29 22:02:05 2021
 
 """
 
-            
+ 
+if project_code == ['VisualBehaviorMultiscope']:
+    num_planes = 8
+else:
+    num_planes = 1
+    
+    
 ##########################################################################################
 ##########################################################################################
 ############# Create svm_df, a proper pandas table #######################################
@@ -24,14 +30,18 @@ Created on Fri Oct 29 22:02:05 2021
 def concatall(df, col):
     # df = svm_allMice_sessPooled0.copy()
     # col = 'av_test_data_allPlanes'    
-    # df[col].iloc[0].shape # size: sess   or    planes x sess    or    planes x sess x time  (it must have )
+    # df[col].iloc[0].shape    # sess   or    planes x sess    or    planes x sess x time  (it must have )
     
     df = df.copy()
     
     if np.ndim(df[col].iloc[0])==1: # data is for all sessions but only 1 plane; we need to replicate it so the size becomes planes x sessions
-        for i in range(df.shape[0]): #i=0
-            df[col].iloc[i] = [df[col].iloc[i][:] for j in range(8)] # planes x sess
-
+        if project_code == ['VisualBehaviorMultiscope']:
+            for i in range(df.shape[0]): #i=0
+                df[col].iloc[i] = [df[col].iloc[i][:] for j in range(8)] # planes x sess
+        else:
+            for i in range(df.shape[0]): #i=0
+                df[col].iloc[i] = df[col].iloc[i][np.newaxis,:] # 1 x sess
+            
     a = np.concatenate((df[col].iloc[0]))
 #     print(a.shape)
     for i in np.arange(1, df.shape[0]): #i=0
@@ -53,12 +63,14 @@ for i in range(svm_allMice_sessPooled0.shape[0]): #i=0 # go through each row of 
     for iplane in range(num_planes): #iplane=0
         for isess in range(nsess): #isess=0
             cnt = cnt + 1
+            svm_df.at[cnt, 'project_code'] = project_code
             session_id = svm_allMice_sessPooled0['session_ids'].iloc[i][iplane, isess]
             experiment_id = all_sess0[all_sess0['session_id']==session_id]['experiment_id'].iloc[iplane]
             
             svm_df.at[cnt, 'session_id'] = session_id
             svm_df.at[cnt, 'experiment_id'] = experiment_id
-            svm_df.at[cnt, 'session_labs'] = svm_allMice_sessPooled0['session_labs'].iloc[i][0]    
+            svm_df.at[cnt, 'session_labs'] = svm_allMice_sessPooled0['session_labs'].iloc[i][0]
+            
 # svm_df.head(300)
 
 
@@ -91,23 +103,45 @@ svm_df['av_test_shfl_allPlanes'] = av_test_shfl_allPlanes_allExp
 svm_df['peak_amp_allPlanes_allExp'] = peak_amp_allPlanes_allExp
 
 svm_df #.head(300)
+print(np.shape(svm_df))
 
 # svm_allMice_sessPooled0.keys()
 
 
+
+"""
+Gets called in svm_images_plots_setVars.py
+
+Here, we use svm_df from all projects to set resp_amp_sum_df, a df that includes the mean and stdev of decoding magnitude (aka response amplitude) across all experiments of all sessions
+
+Vars needed here are set in svm_images_plots_setVars_sumMice3_svmdf.py
+
+Created on Fri Oct 29 22:02:05 2021
+@author: farzaneh
+
+"""
+
+
+
+### Note, when pooling across projects, we dont really use below. We call the codes below in a separate script, which sets resp_amp_sum_df for svm_df_allpr (ie svm_df pooled across all project codes)
+
 ################################################################################################
 ### Create a dataframe: resp_amp_sum_df, that includes the mean and stdev of response amplitude across all experiments of all sessions
 ################################################################################################
+
 exp_level_all = svm_df['experience_levels'].unique()
 cresdf = svm_df['cre_allPlanes'].unique()
 resp_amp_sum_df = pd.DataFrame()
+
 cnt = -1
 for cre in cresdf: # cre = cresdf[0]
-    for i in range(len(exp_level_all)):
+    for i in range(len(exp_level_all)): # i=0
         cnt = cnt+1
+        
         # svm_df for a given cre and experience level
         thiscre = svm_df[svm_df['cre_allPlanes']==cre]
         thiscre = thiscre[thiscre['experience_levels']==exp_level_all[i]]
+        print(len(thiscre))
         
         depthav = thiscre['depth_allPlanes'].mean()
 #         areasu = thiscre['area_allPlanes'].unique()        

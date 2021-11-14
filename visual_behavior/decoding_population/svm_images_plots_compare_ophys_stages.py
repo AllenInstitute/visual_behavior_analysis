@@ -349,7 +349,7 @@ for crenow in cres: # crenow = cres[0]
             a_amp_pooled = np.array([a_amp[inds_pooled[idepth]].flatten() for idepth in range(num_depth)])
             b_amp_pooled = np.array([b_amp[inds_pooled[idepth]].flatten() for idepth in range(num_depth)])
         
-#         print(a_amp.shape, b_amp_pooled.shape)
+#         print(a_amp_pooled.shape, b_amp_pooled.shape)
 
         _, p = st.ttest_ind(a_amp, b_amp, nan_policy='omit', axis=1, equal_var=equal_var)
         p_act_shfl[icre, istage, :] = p
