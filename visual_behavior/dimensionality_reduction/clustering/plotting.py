@@ -301,3 +301,30 @@ def plot_clusters(dropout_df, cluster_df=None, mean_response_df=None, save_plots
             ax[i + (len(cluster_ids) * 4)].set_ylabel('')
     return fig
     plt.tight_layout()
+
+
+def get_cluster_colors(labels):
+    '''
+    generates a list of unique colors for each cluster for plots
+    :param labels: list of cluster labels, length of N cells
+    :return: label_colors: a list of strings for color names
+    '''
+
+    color_map = get_cluster_color_map(labels)
+    label_colors = []
+    for label in labels:
+        label_colors.append(color_map[label])
+    return label_colors
+
+def get_cluster_color_map(labels):
+    '''
+    # generates a dictionary of cluster label: color
+    :param labels: list of cluster labels, length of N cells
+    :return: dictionary color number: color string
+    '''
+    unique_labels = np.sort(np.unique(labels))
+    color_map = {}
+    for i in unique_labels:
+        color_map[i] = '#%06X' % randint(0, 0xFFFFFF)
+    return color_map
+
