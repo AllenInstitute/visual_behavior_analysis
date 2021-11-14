@@ -2,6 +2,7 @@ import os
 import argparse
 import visual_behavior.data_access.loading as loading
 from allensdk.brain_observatory.behavior.behavior_project_cache import VisualBehaviorOphysProjectCache
+import mindscope_utilities.visual_behavior_ophys.data_formatting as vb_ophys
 
 
 if __name__ == '__main__':
