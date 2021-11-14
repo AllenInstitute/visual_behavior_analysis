@@ -9,6 +9,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import visual_behavior.visualization.utils as utils
 import visual_behavior.data_access.loading as loading
+import visual_behavior.data_access.reformat as reformat
 import visual_behavior.data_access.utilities as utilities
 import visual_behavior.ophys.response_analysis.utilities as ut
 import visual_behavior.visualization.ophys.summary_figures as sf
@@ -286,7 +287,6 @@ def plot_behavior_timeseries(dataset, start_time, duration_seconds=20, xlim_seco
     return ax
 
 
-
 def plot_matched_roi_and_trace(ophys_container_id, cell_specimen_id, limit_to_last_familiar_second_novel=True,
                                use_events=False, filter_events=False, save_figure=True):
     """
@@ -342,12 +342,12 @@ def plot_matched_roi_and_trace(ophys_container_id, cell_specimen_id, limit_to_la
                 cell_data = sdf[(sdf.cell_specimen_id == cell_specimen_id) & (sdf.is_change == True)]
 
                 window = rp.get_default_stimulus_response_params()["window_around_timepoint_seconds"]
-                ax[i+n] = utils.plot_mean_trace(cell_data.trace.values, cell_data.trace_timestamps.values[0],
-                                           ylabel=ylabel, legend_label=None, color='gray', interval_sec=0.5,
-                                           xlim_seconds=window, plot_sem=True, ax=ax[i+n])
+                ax[i + n] = utils.plot_mean_trace(cell_data.trace.values, cell_data.trace_timestamps.values[0],
+                                                  ylabel=ylabel, legend_label=None, color='gray', interval_sec=0.5,
+                                                  xlim_seconds=window, plot_sem=True, ax=ax[i + n])
 
-                ax[i + n] = utils.plot_flashes_on_trace(ax[i+n], cell_data.trace_timestamps.values[0], change=True, omitted=False,
-                                                 alpha=0.15, facecolor='gray')
+                ax[i + n] = utils.plot_flashes_on_trace(ax[i + n], cell_data.trace_timestamps.values[0], change=True, omitted=False,
+                                                        alpha=0.15, facecolor='gray')
                 ax[i + n].set_title('')
                 if i != 0:
                     ax[i + n].set_ylabel('')
@@ -370,6 +370,120 @@ def plot_matched_roi_and_trace(ophys_container_id, cell_specimen_id, limit_to_la
         save_dir = r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/platform_paper_plots/cell_matching'
         utils.save_figure(fig, figsize, save_dir, folder, str(cell_specimen_id) + '_' + metadata_string + '_' + suffix)
         plt.close()
+
+
+# code using response_df computed from mindscope_utilities
+
+
+def get_data_dict(ophys_experiment_ids, save_dir=None):
+    """
+    create dictionary of stimulus_response_dfs for all data types for a set of ophys_experiment_ids
+    data types include [filtered_events, events, dff, running_speed, pupil_diameter, lick_rate]
+    If stimulus_response_df files have been pre-computed, load from file, otherwise generate new response df
+    """
+    # define data types
+    data_types = ['filtered_events', 'events', 'dff', 'running_speed', 'pupil_diameter', 'lick_rate']
+    # set up dict to collect data in
+    data_dict = {}
+    for ophys_experiment_id in ophys_experiment_ids:
+        data_dict[ophys_experiment_id] = {}
+        data_dict[ophys_experiment_id]['dataset'] = {}
+        for data_type in data_types:
+            data_dict[ophys_experiment_id][data_type] = {}
+
+    # aggregate data
+    for ophys_experiment_id in ophys_experiment_ids:
+
+        dataset = loading.get_ophys_dataset(ophys_experiment_id)
+        #         dataset = cache.get_behavior_ophys_experiment(ophys_experiment_id)
+        data_dict[ophys_experiment_id]['dataset']['dataset'] = dataset
+
+        for data_type in data_types:
+            try:
+                if save_dir:
+                    print('loading response df from file for', ophys_experiment_id, data_type)
+                    sdf = pd.read_hdf(os.path.join(save_dir, str(ophys_experiment_id) + '_' + data_type + '.h5'))
+                    stimulus_presentations = reformat.add_trials_to_stimulus_presentations_table(dataset)
+                    sdf = sdf.merge(stimulus_presentations, on='stimulus_presentations_id')
+                else:
+                    print('generating response df')
+                    sdf = loading.get_stimulus_response_df(dataset, time_window, sampling_rate, data_type=data_type)
+            except BaseException:
+                print('could not load response df for', ophys_experiment_id, data_type)
+
+        data_dict[ophys_experiment_id][data_type]['changes'] = sdf[sdf.is_change]
+        data_dict[ophys_experiment_id][data_type]['omissions'] = sdf[sdf.omitted]
+
+    return data_dict
+
+
+def plot_timeseries_for_container(data_dict, ophys_experiment_ids, time_window=[-1, 2.1], save_dir=None):
+    colors = utils.get_experience_level_colors()
+    figsize = (12, 12)
+    fig, ax = plt.subplots(4, 2, figsize=figsize, sharey='row')
+    ax = ax.ravel()
+
+    for c, ophys_experiment_id in enumerate(ophys_experiment_ids):
+        experience_level = container.loc[ophys_experiment_id]['experience_level']
+        print(ophys_experiment_id, experience_level)
+
+        for t, trace_type in enumerate(['changes', 'omissions']):
+            if trace_type == 'changes':
+                change = True
+                omitted = False
+            elif trace_type == 'omissions':
+                change = False
+                omitted = True
+
+            # traces
+            sdf = data_dict[ophys_experiment_id]['filtered_events'][trace_type]
+            ax[0 + (t * 1)] = utils.plot_stimulus_response_df_trace(sdf, time_window=time_window, change=change,
+                                                                    omitted=omitted,
+                                                                    ylabel='population\nresponse',
+                                                                    legend_label=experience_level, title=None,
+                                                                    color=colors[c], ax=ax[0 + (t * 1)])
+
+            # running speed
+            sdf = data_dict[ophys_experiment_id]['running_speed'][trace_type]
+            ax[2 + (t * 1)] = utils.plot_stimulus_response_df_trace(sdf, time_window, ylabel='running speed\n(cm/s)',
+                                                                    change=change, omitted=omitted,
+                                                                    legend_label=experience_level, color=colors[c],
+                                                                    ax=ax[2 + (t * 1)])
+
+            # pupil diameter
+            try:
+                ax[4 + (t * 1)].set_xlabel('time after ' + trace_type[:-1] + ' (sec)')
+                sdf = data_dict[ophys_experiment_id]['pupil_diameter'][trace_type]
+                ax[4 + (t * 1)] = utils.plot_stimulus_response_df_trace(sdf, time_window, ylabel='pupil diameter\n(pixels)',
+                                                                        change=change, omitted=omitted,
+                                                                        legend_label=experience_level, color=colors[c],
+                                                                        ax=ax[4 + (t * 1)])
+
+            except BaseException:
+                print('no pupil for', ophys_experiment_id)
+
+            # lick rate
+            sdf = data_dict[ophys_experiment_id]['lick_rate'][trace_type]
+            ax[6 + (t * 1)] = utils.plot_stimulus_response_df_trace(sdf, time_window, ylabel='lick rate (avg per time bin)',
+                                                                    change=change, omitted=omitted,
+                                                                    legend_label=experience_level, color=colors[c],
+                                                                    ax=ax[6 + (t * 1)])
+
+    for i in range(8):
+        ax[i].set_xlabel('')
+        ax[i].legend(fontsize='small', title='', loc='upper right')
+    ax[6].set_xlabel('time after change (sec)')
+    ax[7].set_xlabel('time after omission (sec)')
+    for i in [1, 3, 5, 7]:
+        ax[i].set_ylabel('')
+        ax[i].axvline(x=0, ymin=0, ymax=1, linestyle='--', color='gray')
+
+    metadata_string = utils.get_container_metadata_string(dataset.metadata)
+    plt.suptitle(metadata_string, x=0.55, y=1.04, fontsize=18)
+    fig.tight_layout()
+
+    if save_dir:
+        utils.save_figure(fig, figsize, save_dir, 'all_timeseries', metadata_string)
 
 
 # examples
@@ -416,5 +530,3 @@ if __name__ == '__main__':
                                             axes_column, hue_column, palette,
                                             use_events=True, filter_events=True, xlim_seconds=xlim_seconds,
                                             horizontal=True, save_dir=None, folder=None)
-
-

@@ -8,11 +8,14 @@ import seaborn as sns
 def get_container_plots_dir():
     return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/container_plots'
 
+
 def get_session_plots_dir():
     return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/session_plots'
 
+
 def get_experiment_plots_dir():
     return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/experiment_plots'
+
 
 def get_single_cell_plots_dir():
     return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/single_cell_plots'
@@ -52,6 +55,7 @@ def get_experience_level_colors():
 
     return colors
 
+
 def lighter(color, percent):
     color = np.array(color)
     white = np.array([255, 255, 255])
@@ -63,9 +67,9 @@ def get_cre_line_colors():
     """
     returns colors in order of Slc17a7, Sst, Vip
     """
-    colors = [(255/255,152/255,150/255),
-              (158/255, 218/255, 229/255),
-              (197/255, 176/255, 213/255)]
+    colors = [(255 / 255, 152 / 255, 150 / 255),
+              (158 / 255, 218 / 255, 229 / 255),
+              (197 / 255, 176 / 255, 213 / 255)]
     return colors
 
 
@@ -149,6 +153,7 @@ def make_color_transparent(rgb_color, background_rgb=[255, 255, 255], alpha=0.5)
     return [alpha * c1 + (1 - alpha) * c2
             for (c1, c2) in zip(rgb_color, background_rgb)]
 
+
 def placeAxesOnGrid(fig, dim=[1, 1], xspan=[0, 1], yspan=[0, 1], wspace=None, hspace=None, sharex=False, sharey=False):
     '''
     Takes a figure with a gridspec defined and places an array of sub-axes on a portion of the gridspec
@@ -168,8 +173,8 @@ def placeAxesOnGrid(fig, dim=[1, 1], xspan=[0, 1], yspan=[0, 1], wspace=None, hs
     outer_grid = gridspec.GridSpec(100, 100)
     inner_grid = gridspec.GridSpecFromSubplotSpec(dim[0], dim[1],
                                                   subplot_spec=outer_grid[int(100 * yspan[0]):int(100 * yspan[1]),
-                                                               # flake8: noqa: E999
-                                                               int(100 * xspan[0]):int(100 * xspan[1])], wspace=wspace,
+                                                                          # flake8: noqa: E999
+                                                                          int(100 * xspan[0]):int(100 * xspan[1])], wspace=wspace,
                                                   hspace=hspace)  # flake8: noqa: E999
 
     # NOTE: A cleaner way to do this is with list comprehension:
@@ -196,7 +201,6 @@ def placeAxesOnGrid(fig, dim=[1, 1], xspan=[0, 1], yspan=[0, 1], wspace=None, hs
 
     inner_ax = np.array(inner_ax).squeeze().tolist()  # remove redundant dimension
     return inner_ax
-
 
 
 def plot_flashes_on_trace(ax, timestamps, change=None, omitted=False, alpha=0.15, facecolor='gray'):
@@ -232,7 +236,7 @@ def plot_flashes_on_trace(ax, timestamps, change=None, omitted=False, alpha=0.15
     return ax
 
 
-def plot_mean_trace(traces, timestamps, ylabel='dF/F', legend_label=None, color='k', interval_sec=1, xlim_seconds=[-2,2],
+def plot_mean_trace(traces, timestamps, ylabel='dF/F', legend_label=None, color='k', interval_sec=1, xlim_seconds=[-2, 2],
                     plot_sem=True, ax=None):
     if ax is None:
         fig, ax = plt.subplots()
@@ -242,11 +246,43 @@ def plot_mean_trace(traces, timestamps, ylabel='dF/F', legend_label=None, color=
         ax.plot(timestamps, trace, label=legend_label, linewidth=2, color=color)
         if plot_sem:
             ax.fill_between(timestamps, trace + sem, trace - sem, alpha=0.5, color=color)
-        ax.set_xticks(np.arange(int(timestamps[0]), int(timestamps[-1])+1, interval_sec))
+        ax.set_xticks(np.arange(int(timestamps[0]), int(timestamps[-1]) + 1, interval_sec))
         ax.set_xlim(xlim_seconds)
         ax.set_xlabel('time (sec)')
         ax.set_ylabel(ylabel)
     sns.despine(ax=ax)
+    return ax
+
+
+def plot_stimulus_response_df_trace(stimulus_response_df, time_window=[-1, 1], change=True, omitted=False,
+                                    ylabel=None, legend_label=None, title=None, color='k', ax=None):
+    """
+    Plot average +/- sem trace for a subset of a stimulus_response_df, loaded via loading.get_stimulus_response_df()
+    or directly from mindscope_utilities.visual_behavior_ophys.data_formatting.get_stimulus_response_df()
+    :param stimulus_response_df:
+    :param time_window:
+    :param change:
+    :param omitted:
+    :param ylabel:
+    :param legend_label:
+    :param title:
+    :param color:
+    :param ax:
+    :return:
+    """
+    traces = np.vstack(stimulus_response_df.trace.values)
+    timestamps = stimulus_response_df.trace_timestamps.values[0]
+
+    if ax is None:
+        fig, ax = plt.subplots(figsize=(6, 4))
+    ax = plot_mean_trace(traces, timestamps, ylabel=ylabel, legend_label=legend_label, color=color,
+                         interval_sec=1, xlim_seconds=time_window, plot_sem=True, ax=ax)
+
+    ax = plot_flashes_on_trace(ax, timestamps, change=change, omitted=omitted, alpha=0.15, facecolor='gray')
+
+    if title:
+        ax.set_title(title)
+
     return ax
 
 
@@ -264,5 +300,5 @@ def get_metadata_string(metadata):
 
 def get_container_metadata_string(metadata):
     m = metadata
-    metadata_string = str(m['mouse_id'])+'_'+str(m['experiment_container_id'])+'_'+m['cre_line'].split('-')[0]+'_'+m['targeted_structure']+'_'+str(m['imaging_depth'])
+    metadata_string = str(m['mouse_id']) + '_' + str(m['experiment_container_id']) + '_' + m['cre_line'].split('-')[0] + '_' + m['targeted_structure'] + '_' + str(m['imaging_depth'])
     return metadata_string
