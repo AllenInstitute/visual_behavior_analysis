@@ -11,7 +11,7 @@ parser.add_argument('--scriptname', type=str, default='save_stimulus_response_df
 
 
 experiments_table = loading.get_platform_paper_experiment_table()
-ophys_experiment_ids = experiments_table.index.values[:10]
+ophys_experiment_ids = experiments_table.index.values
 
 if __name__ == "__main__":
     args = parser.parse_args()
