@@ -512,6 +512,32 @@ def get_extended_stimulus_presentations_table(stimulus_presentations, licks, rew
     #         print('model outputs not available')
     return stimulus_presentations
 
+
+def get_stimulus_response_df(dataset, time_window=[-1, 2.1], interpolate=True, sampling_rate=None,
+                             data_type='filtered_events'):
+    """
+    load stimulus response df using mindscope_utilities and merge with stimulus_presentations that has trials metadata added
+    inputs:
+        dataset: BehaviorOphysExperiment instance
+        time_window: window over which to extract the event triggered response around each stimulus presentation time
+        interpolate: Boolean, whether or not to interpolate traces
+        sampling_rate: sampling rate for interpolation
+        data_type: which timeseries to get event triggered responses for
+                    options: 'filtered_events', 'events', 'dff', 'running_speed', 'pupil_diameter', 'lick_rate'
+    """
+    import mindscope_utilities.visual_behavior_ophys.data_formatting as vb_ophys
+
+    # get stimulus presentations with trial info merged in
+    stimulus_presentations = reformat.get_annotated_stimulus_presentations_table(dataset)
+    # stimulus response df
+    sdf = vb_ophys.get_stimulus_response_df(dataset, data_type=data_type, event_type='all',
+                                            time_window=time_window, interpolate=interpolate,
+                                            output_sampling_rate=sampling_rate)
+    sdf = sdf.merge(stimulus_presentations, on='stimulus_presentations_id')
+
+    return sdf
+
+
 # LOAD OPHYS DATA FROM SDK AND EDIT OR ADD METHODS/ATTRIBUTES WITH BUGS OR INCOMPLETE FEATURES #
 
 
