@@ -114,6 +114,41 @@ def add_engagement_state_to_trials_table(trials, extended_stimulus_presentations
     return trials
 
 
+def add_trials_id_to_stimulus_presentations(trials, stimulus_presentations):
+    """
+    Add trials_id to stimulus presentations by finding the closest change time to each stimulus start time
+    If there is no corresponding change time, the trials_id is Nan
+    """
+
+    # for each stimulus_presentation, find the trials_id that is closest to the start time
+    # add to a new column called 'trials_id'
+    for idx, stimulus_presentation in stimulus_presentations.iterrows():
+        start_time = stimulus_presentation['start_time']
+        query_string = 'change_time > @start_time - 1 and change_time < @start_time + 1'
+        trials_id = (np.abs(start_time - trials.query(query_string)['change_time']))
+        if len(trials_id) == 1:
+            trials_id = trials_id.idxmin()
+        else:
+            trials_id = np.nan
+        stimulus_presentations.loc[idx, 'trials_id'] = trials_id
+
+    return stimulus_presentations
+
+
+def add_trials_to_stimulus_presentations_table(dataset):
+    """
+    add trials_id to stimulus presentations table then join all trial metrics with stimulus_presentations
+    """
+    # get stimulus presentations
+    stimulus_presentations = dataset.stimulus_presentations.copy()
+    # add trials_id and merge to get trial type information
+    trials = dataset.trials.copy()
+    stimulus_presentations = add_trials_id_to_stimulus_presentations(trials, stimulus_presentations)
+    stimulus_presentations = stimulus_presentations.reset_index().merge(trials.drop(columns=['start_time', 'stop_time']), on='trials_id')
+    stimulus_presentations = stimulus_presentations.set_index('stimulus_presentations_id')
+    return stimulus_presentations
+
+
 def get_image_set_exposures_for_behavior_session_id(behavior_session_id, behavior_session_table):
     """
     Gets the number of sessions an image set has been presented in prior to the date of the given behavior_session_id
