@@ -145,12 +145,13 @@ def save_clustering_results(data, filename_string='', path=None):
         pickle.dump(data, f)
     f.close()
 
+
 def get_cre_line_cell_specimen_ids(df):
     cre_lines = df.cre_line.unique()
     cre_line_ids = {}
     for cre_line in cre_lines:
-        ids=df[df.cre_line==cre_line]['cell_specimen_id'].unique()
-        cre_line_ids[cre_line]=ids
+        ids = df[df.cre_line == cre_line]['cell_specimen_id'].unique()
+        cre_line_ids[cre_line] = ids
     return cre_line_ids
 
 
@@ -163,14 +164,15 @@ def kruskal_by_experience_level(df_pivoted, posthoc=True):
     k, p = kruskal(f, n, nn)
     stats['KW'] = (k, p)
     if posthoc:
-        t, p = ttest_ind(f, n)
+        t, p = ttest_ind(f, n, nan_policy='omit')
         stats['Familiar_vs_Novel'] = (t, p)
-        t, p = ttest_ind(f, nn)
+        t, p = ttest_ind(f, nn, nan_policy='omit')
         stats['Familiar_vs_Novel>1'] = (t, p)
-        t, p = ttest_ind(n, nn)
+        t, p = ttest_ind(n, nn, nan_policy='omit')
         stats['Novel_vs_Novel>1'] = (t, p)
 
     return stats
+
 
 def pivot_df(df, dropna=True):
     if dropna is True:
@@ -180,7 +182,7 @@ def pivot_df(df, dropna=True):
     return df_pivoted
 
 
-def build_stats_table(metrics_df, metrics_columns=None, dropna=True):
+def build_stats_table(metrics_df, metrics_columns=None, dropna=True, pivot=False):
     # check for cre lines
     if 'cre_line' in metrics_df.keys():
         cre_lines = metrics_df['cre_line'].unique()
@@ -203,36 +205,32 @@ def build_stats_table(metrics_df, metrics_columns=None, dropna=True):
         if metric in metrics_df.keys():
             metrics_columns_corrected.append(metric)
 
-    stats_table = pd.DataFrame(columns=['cre_line', 'comparison', 'statistic', *metrics_columns_corrected])
-
+    stats_table = pd.DataFrame(columns=['cre_line', 'comparison', 'statistic', 'metric', 'data'])
     statistics = ('t', 'pvalue')
     for c, cre_line in enumerate(cre_lines):
         # dummy table
-        tmp_table = pd.DataFrame(columns=['cre_line', 'comparison', 'statistic', *metrics_columns_corrected])
-
         if cre_line == 'all':
             tmp_cre = metrics_df
         else:
             tmp_cre = metrics_df[metrics_df['cell_specimen_id'].isin(cre_line_ids[cre_line])]
 
-        # group df by cell id and experience sevel
+        # group df by cell id and experience level
         metrics_df_pivoted = pivot_df(tmp_cre, dropna=dropna)
-        for metric in metrics_columns_corrected:
+        for m, metric in enumerate(metrics_columns_corrected):
             stats = kruskal_by_experience_level(metrics_df_pivoted[metric])
-
             for i, stat in enumerate(statistics):
-                start = stats_table.shape[0] * (1 + i)
-                end = stats_table.shape[0] + len(stats) * (1 + i)
-                data = []
                 for key in stats.keys():
-                    data.append(stats[key][i])
-                tmp_table['statistic'] = np.repeat(stat, len(stats))
-                tmp_table['cre_line'] = np.repeat(cre_line, len(stats))
-                tmp_table['comparison'] = stats.keys()
-                tmp_table[metric] = data
-        stats_table = stats_table.append(tmp_table, ignore_index=True)
+                    data = {'cre_line': cre_line,
+                            'comparison': key,
+                            'statistic': stat,
+                            'metric': metric,
+                            'data': stats[key][i], }
+                    tmp_table = pd.DataFrame(data, index=[0])
+                    stats_table = stats_table.append(tmp_table, ignore_index=True)
 
+    if pivot and stats_table['data'].sum() != 0:
+        stats_table = pd.pivot_table(stats_table, columns=['metric'],
+                                     index=['cre_line', 'comparison', 'statistic']).unstack()
+    elif stats_table['data'].sum() == 0:
+        print('Cannot pivot table when all data is NaNs')
     return stats_table
-
-
-

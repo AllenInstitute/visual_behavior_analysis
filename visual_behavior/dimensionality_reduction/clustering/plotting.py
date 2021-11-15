@@ -317,6 +317,7 @@ def get_cluster_colors(labels):
         label_colors.append(color_map[label])
     return label_colors
 
+
 def get_cluster_color_map(labels):
     '''
     # generates a dictionary of cluster label: color
@@ -325,28 +326,29 @@ def get_cluster_color_map(labels):
     '''
     unique_labels = np.sort(np.unique(labels))
     color_map = {}
-    #r = int(random.random() * 256)
-    #g = int(random.random() * 256)
-    #b = int(random.random() * 256)
-    #step = 256 / len(unique_labels)
+    # r = int(random.random() * 256)
+    # g = int(random.random() * 256)
+    # b = int(random.random() * 256)
+    # step = 256 / len(unique_labels)
     for i in unique_labels:
-        #r += step
-        #g += step
-        #b += step
-        #r = int(r) % 256
-        #g = int(g) % 256
-        #b = int(b) % 256
-        #color_map[i] = (r, g, b)
+        # r += step
+        # g += step
+        # b += step
+        # r = int(r) % 256
+        # g = int(g) % 256
+        # b = int(b) % 256
+        # color_map[i] = (r, g, b)
         color_map[i] = '#%06X' % random.randint(0, 0xFFFFFF)
     return color_map
+
 
 def plot_N_clusters_by_cre_line(labels_cre, ax=None, palette=None):
     if ax is None:
         fig, ax = plt.subplots(1, 1, figsize=(7, 7))
     if palette is None:
         palette = [(1.0, 0.596078431372549, 0.5882352941176471),
-                    (0.6196078431372549, 0.8549019607843137, 0.8980392156862745),
-                    (0.7725490196078432, 0.6901960784313725, 0.8352941176470589)]
+                   (0.6196078431372549, 0.8549019607843137, 0.8980392156862745),
+                   (0.7725490196078432, 0.6901960784313725, 0.8352941176470589)]
     for i, cre_line in enumerate(labels_cre.keys()):
         labels = labels_cre[cre_line]
         (unique, counts) = np.unique(labels, return_counts=True)
