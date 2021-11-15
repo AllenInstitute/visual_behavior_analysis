@@ -121,6 +121,16 @@ def get_ophys_glm_dir():
     return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/ophys_glm'
 
 
+def get_stimulus_response_df_dir(interpolate=True, sampling_rate=30):
+    base_dir = r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/platform_paper_cache/stimulus_response_dfs'
+    if interpolate:
+        save_dir = os.path.join(base_dir, 'interpolate_'+str(sampling_rate)+'Hz')
+    else:
+        save_dir = os.path.join(base_dir, 'original_frame_rate')
+    return save_dir
+
+
+
 def get_manifest_path():
     """
     Get path to default manifest file for analysis
@@ -514,7 +524,7 @@ def get_extended_stimulus_presentations_table(stimulus_presentations, licks, rew
 
 
 def get_stimulus_response_df(dataset, time_window=[-1, 2.1], interpolate=True, sampling_rate=None,
-                             data_type='filtered_events'):
+                             data_type='filtered_events', load_from_file=True):
     """
     load stimulus response df using mindscope_utilities and merge with stimulus_presentations that has trials metadata added
     inputs:
@@ -526,13 +536,21 @@ def get_stimulus_response_df(dataset, time_window=[-1, 2.1], interpolate=True, s
                     options: 'filtered_events', 'events', 'dff', 'running_speed', 'pupil_diameter', 'lick_rate'
     """
     import mindscope_utilities.visual_behavior_ophys.data_formatting as vb_ophys
-
-    # get stimulus presentations with trial info merged in
-    stimulus_presentations = reformat.get_annotated_stimulus_presentations_table(dataset)
-    # stimulus response df
-    sdf = vb_ophys.get_stimulus_response_df(dataset, data_type=data_type, event_type='all',
-                                            time_window=time_window, interpolate=interpolate,
-                                            output_sampling_rate=sampling_rate)
+    # load stimulus response df from file if it exists otherwise generate it
+    ophys_experiment_id = dataset.ophys_experiment_id
+    filepath = os.path.join(get_stimulus_response_df_dir(interpolate, sampling_rate), str(ophys_experiment_id) + '_' + data_type + '.h5')
+    if load_from_file and os.path.exists(filepath):
+        print('loading response df from file for', ophys_experiment_id, data_type)
+        sdf = pd.read_hdf(filepath)
+    else:
+        print('generating response df')
+        sdf = vb_ophys.get_stimulus_response_df(dataset, data_type=data_type, event_type='all',
+                                                time_window=time_window, interpolate=interpolate,
+                                                output_sampling_rate=sampling_rate)
+    # get stimulus presentations and merge in trial info
+    trials = dataset.trials.copy()
+    stimulus_presentations = dataset.stimulus_presentations.copy()
+    stimulus_presentations = reformat.add_trials_to_stimulus_presentations_table(stimulus_presentations, trials)
     sdf = sdf.merge(stimulus_presentations, on='stimulus_presentations_id')
 
     return sdf
@@ -890,7 +908,7 @@ def get_ophys_container_ids(platform_paper_only=False, add_extra_columns=True):
     if platform_paper_only:
         experiments = get_platform_paper_experiment_table(add_extra_columns=add_extra_columns)
     else:
-        cache_dir = get_platform_analysis_cache_dir
+        cache_dir = get_platform_analysis_cache_dir()
         cache = bpc.from_s3_cache(cache_dir)
         experiments = cache.get_ophys_experiment_table()
     container_ids = np.sort(experiments.ophys_container_id.unique())

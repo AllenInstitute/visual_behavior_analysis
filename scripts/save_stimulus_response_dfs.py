@@ -16,7 +16,7 @@ if __name__ == '__main__':
     # set params for
     interpolate = True
     sampling_rate = 30
-    time_window = [-3, 3]
+    time_window = [-2, 2.5]
 
     # set up save folder
     sdf_save_dir = r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/platform_paper_cache/stimulus_response_dfs'

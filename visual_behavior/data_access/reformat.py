@@ -135,14 +135,11 @@ def add_trials_id_to_stimulus_presentations(trials, stimulus_presentations):
     return stimulus_presentations
 
 
-def add_trials_to_stimulus_presentations_table(dataset):
+def add_trials_to_stimulus_presentations_table(stimulus_presentations, trials):
     """
     add trials_id to stimulus presentations table then join all trial metrics with stimulus_presentations
     """
-    # get stimulus presentations
-    stimulus_presentations = dataset.stimulus_presentations.copy()
     # add trials_id and merge to get trial type information
-    trials = dataset.trials.copy()
     stimulus_presentations = add_trials_id_to_stimulus_presentations(trials, stimulus_presentations)
     stimulus_presentations = stimulus_presentations.reset_index().merge(trials.drop(columns=['start_time', 'stop_time']), on='trials_id')
     stimulus_presentations = stimulus_presentations.set_index('stimulus_presentations_id')
