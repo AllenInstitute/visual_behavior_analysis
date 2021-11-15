@@ -134,19 +134,15 @@ def plot_silhouette_scores(X=None, model=KMeans, silhouette_scores=None, n_clust
     return ax
 
 
-def plot_umap_with_labels(X, labels, save_plot=False, path=None, ax=None, filename_string=''):
+def plot_umap_with_labels(X, labels, ax=None, filename_string=''):
     fit = umap.UMAP()
     u = fit.fit_transform(X)
     if ax is None:
         fig, ax = plt.subplots(1, 1, figsize=(10, 10))
     ax.scatter(u[:, 0], u[:, 1], c=labels)
-
-    if save_plot is True:
-        filename = 'UMAP_{}.png'.fomrat(filename_string)
-        fig.savefig(os.path.join(path, filename))
     plt.tight_layout()
     ax.set_title(filename_string)
-    return fig, ax
+    return ax
 
 
 def plot_clusters(dropout_df, cluster_df=None, mean_response_df=None, save_plots=False, path=None):
