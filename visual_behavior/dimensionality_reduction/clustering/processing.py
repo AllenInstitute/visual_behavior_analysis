@@ -2,9 +2,14 @@ from sklearn.metrics import silhouette_score
 # from sklearn.cluster import KMeans
 from sklearn.cluster import SpectralClustering
 import numpy as np
+import pandas as pd
 import pickle
 import os
 import visual_behavior.data_access.loading as loading
+
+from scipy.stats import kruskal
+from scipy.stats import ttest_ind
+# from scipy.stats import ttest_1samp
 
 # from allensdk.brain_observatory.behavior.behavior_project_cache import VisualBehaviorOphysProjectCache as bpc
 # cache_dir = loading.get_analysis_cache_dir()
@@ -139,3 +144,95 @@ def save_clustering_results(data, filename_string='', path=None):
     with open(filename, 'wb') as f:
         pickle.dump(data, f)
     f.close()
+
+def get_cre_line_cell_specimen_ids(df):
+    cre_lines = df.cre_line.unique()
+    cre_line_ids = {}
+    for cre_line in cre_lines:
+        ids=df[df.cre_line==cre_line]['cell_specimen_id'].unique()
+        cre_line_ids[cre_line]=ids
+    return cre_line_ids
+
+
+def kruskal_by_experience_level(df_pivoted, posthoc=True):
+    stats = {}
+    f = df_pivoted['Familiar'].values
+    n = df_pivoted['Novel 1'].values
+    nn = df_pivoted['Novel >1'].values
+
+    k, p = kruskal(f, n, nn)
+    stats['KW'] = (k, p)
+    if posthoc:
+        t, p = ttest_ind(f, n)
+        stats['Familiar_vs_Novel'] = (t, p)
+        t, p = ttest_ind(f, nn)
+        stats['Familiar_vs_Novel>1'] = (t, p)
+        t, p = ttest_ind(n, nn)
+        stats['Novel_vs_Novel>1'] = (t, p)
+
+    return stats
+
+def pivot_df(df, dropna=True):
+    if dropna is True:
+        df_pivoted = df.groupby(['cell_specimen_id', 'experience_level']).mean().unstack().dropna()
+    else:
+        df_pivoted = df.groupby(['cell_specimen_id', 'experience_level']).mean().unstack()
+    return df_pivoted
+
+
+def build_stats_table(metrics_df, metrics_columns=None, dropna=True):
+    # check for cre lines
+    if 'cre_line' in metrics_df.keys():
+        cre_lines = metrics_df['cre_line'].unique()
+        cre_line_ids = get_cre_line_cell_specimen_ids(metrics_df)
+    else:
+        cre_lines = ['all']
+        cre_line_ids = metrics_df['cell_specimen_id'].unique()
+
+    # get selected columns
+    if metrics_columns is None:
+        metrics_columns = ['image_selectivity_index', 'image_selectivity_index_one_vs_all',
+                           'lifetime_sparseness', 'fraction_significant_p_value_gray_screen',
+                           'fano_factor', 'reliability', 'running_modulation_index']
+        if 'hit_miss_index' in metrics_df.keys():
+            metrics_columns = [*metrics_columns, 'hit_miss_index']
+
+    # check which columns are in the dataframe
+    metrics_columns_corrected = []
+    for metric in metrics_columns:
+        if metric in metrics_df.keys():
+            metrics_columns_corrected.append(metric)
+
+    stats_table = pd.DataFrame(columns=['cre_line', 'comparison', 'statistic', *metrics_columns_corrected])
+
+    statistics = ('t', 'pvalue')
+    for c, cre_line in enumerate(cre_lines):
+        # dummy table
+        tmp_table = pd.DataFrame(columns=['cre_line', 'comparison', 'statistic', *metrics_columns_corrected])
+
+        if cre_line == 'all':
+            tmp_cre = metrics_df
+        else:
+            tmp_cre = metrics_df[metrics_df['cell_specimen_id'].isin(cre_line_ids[cre_line])]
+
+        # group df by cell id and experience sevel
+        metrics_df_pivoted = pivot_df(tmp_cre, dropna=dropna)
+        for metric in metrics_columns_corrected:
+            stats = kruskal_by_experience_level(metrics_df_pivoted[metric])
+
+            for i, stat in enumerate(statistics):
+                start = stats_table.shape[0] * (1 + i)
+                end = stats_table.shape[0] + len(stats) * (1 + i)
+                data = []
+                for key in stats.keys():
+                    data.append(stats[key][i])
+                tmp_table['statistic'] = np.repeat(stat, len(stats))
+                tmp_table['cre_line'] = np.repeat(cre_line, len(stats))
+                tmp_table['comparison'] = stats.keys()
+                tmp_table[metric] = data
+        stats_table = stats_table.append(tmp_table, ignore_index=True)
+
+    return stats_table
+
+
+
