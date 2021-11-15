@@ -6,7 +6,7 @@ from sklearn.cluster import KMeans
 from scipy.spatial.distance import cdist, pdist
 from visual_behavior.dimensionality_reduction.clustering.processing import get_silhouette_scores
 import umap
-import os
+# import os
 from scipy import signal
 import visual_behavior.visualization.utils as utils
 import random
