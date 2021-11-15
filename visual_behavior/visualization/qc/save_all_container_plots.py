@@ -4,6 +4,7 @@ import argparse
 
 def main():
     possible_plots = {
+        "average_timeseries":plot_average_timeseries_for_container,
         "ophys_session_sequence": cp.plot_container_session_sequence,
         "max_projection_images": cp.plot_sdk_max_projection_images_for_container,
         "average_images": cp.plot_sdk_average_images_for_container,

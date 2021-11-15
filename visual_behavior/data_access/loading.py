@@ -3146,3 +3146,46 @@ def get_cell_table(platform_paper_only=True, add_extra_columns=True):
         cell_table = cell_table.reset_index().merge(experiment_table, on='ophys_experiment_id')
         cell_table = cell_table.set_index('cell_roi_id')
     return cell_table
+
+
+def get_data_dict(ophys_experiment_ids, data_types=None, save_dir=None):
+    """
+    create dictionary of stimulus_response_dfs for all data types for a set of ophys_experiment_ids
+    data types include [filtered_events, events, dff, running_speed, pupil_diameter, lick_rate]
+    If stimulus_response_df files have been pre-computed, load from file, otherwise generate new response df
+    """
+    if data_types is None:
+        data_types = ['filtered_events', 'running_speed', 'pupil_diameter', 'lick_rate']
+    # get cache
+    from allensdk.brain_observatory.behavior.behavior_project_cache import VisualBehaviorOphysProjectCache
+    cache_dir = get_platform_analysis_cache_dir()
+    cache = VisualBehaviorOphysProjectCache.from_s3_cache(cache_dir)
+    # define params
+    time_window = [-3, 3.1]
+    interpolate = True
+    sampling_rate = 30
+    # set up dict to collect data in
+    data_dict = {}
+    for ophys_experiment_id in ophys_experiment_ids:
+        data_dict[ophys_experiment_id] = {}
+        data_dict[ophys_experiment_id]['dataset'] = {}
+        for data_type in data_types:
+            data_dict[ophys_experiment_id][data_type] = {}
+
+    # aggregate data
+    for ophys_experiment_id in ophys_experiment_ids:
+
+        # dataset = get_ophys_dataset(ophys_experiment_id)
+        dataset = cache.get_behavior_ophys_experiment(ophys_experiment_id)
+        data_dict[ophys_experiment_id]['dataset']['dataset'] = dataset
+
+        for data_type in data_types:
+            try:
+                sdf = get_stimulus_response_df(dataset, time_window=time_window, interpolate=interpolate, sampling_rate=sampling_rate,
+                                         data_type=data_type, load_from_file=True)
+                data_dict[ophys_experiment_id][data_type]['changes'] = sdf[sdf.is_change]
+                data_dict[ophys_experiment_id][data_type]['omissions'] = sdf[sdf.omitted]
+            except BaseException:
+                print('could not get response df for', ophys_experiment_id, data_type)
+
+    return data_dict

@@ -1429,3 +1429,99 @@ def generate_snr_metrics_df_for_container(ophys_container_id):
     metrics_df.to_csv(os.path.join(save_dir, str(ophys_container_id) + '_snr_metrics.csv'))
     problems_list = pd.DataFrame(problems_list)
     problems_list.to_csv(os.path.join(save_dir, str(ophys_container_id) + '_problem_expts.csv'))
+
+
+def plot_average_timeseries_for_container(ophys_container_id, save_figure=True):
+    """
+    Plots change and omission triggered average filtered events, running speed, pupil diameter, and lick rate
+    for experiments in a container, limited to last familiar and second novel active sessions
+    :param ophys_container_id:
+    :param time_window:
+    :param save_dir:
+    :return:
+    """
+    interpolate = True
+    sampling_rate = 30
+    time_window = [-2, 2.5]
+    experiments_table = loading.get_platform_paper_experiment_table()
+    # limit to containers with all experience levels, active only
+    expts = utilities.limit_to_last_familiar_second_novel_active(experiments_table)
+    expts = utilities.limit_to_containers_with_all_experience_levels(expts)
+    # get container data and expt IDS for container
+    container = expts[expts.ophys_container_id == ophys_container_id]
+    # sort experience levels so we can apply standard colors in expected order
+    container = container.sort_values(by=['experience_level'])
+    ophys_experiment_ids = container.index.values
+    # get dictionary of all event triggered average timeseries
+    data_dict = loading.get_data_dict(ophys_experiment_ids, save_dir=loading.get_stimulus_response_df_dir(interpolate, sampling_rate))
+
+    colors = ut.get_experience_level_colors()
+    figsize = (12, 12)
+    fig, ax = plt.subplots(4, 2, figsize=figsize, sharey='row')
+    ax = ax.ravel()
+
+    for c, ophys_experiment_id in enumerate(ophys_experiment_ids):
+        experience_level = container.loc[ophys_experiment_id]['experience_level']
+        print(ophys_experiment_id, experience_level)
+
+        for t, trace_type in enumerate(['changes', 'omissions']):
+            if trace_type == 'changes':
+                change = True
+                omitted = False
+            elif trace_type == 'omissions':
+                change = False
+                omitted = True
+
+            # traces
+            sdf = data_dict[ophys_experiment_id]['filtered_events'][trace_type]
+            ax[0 + (t * 1)] = ut.plot_stimulus_response_df_trace(sdf, time_window=time_window, change=change,
+                                                                    omitted=omitted,
+                                                                    ylabel='population\nresponse',
+                                                                    legend_label=experience_level, title=None,
+                                                                    color=colors[c], ax=ax[0 + (t * 1)])
+
+            # running speed
+            sdf = data_dict[ophys_experiment_id]['running_speed'][trace_type]
+            ax[2 + (t * 1)] = ut.plot_stimulus_response_df_trace(sdf, time_window, ylabel='running speed\n(cm/s)',
+                                                                    change=change, omitted=omitted,
+                                                                    legend_label=experience_level, color=colors[c],
+                                                                    ax=ax[2 + (t * 1)])
+
+            # pupil diameter
+            try:
+                ax[4 + (t * 1)].set_xlabel('time after ' + trace_type[:-1] + ' (sec)')
+                sdf = data_dict[ophys_experiment_id]['pupil_diameter'][trace_type]
+                ax[4 + (t * 1)] = ut.plot_stimulus_response_df_trace(sdf, time_window, ylabel='pupil diameter\n(pixels)',
+                                                                        change=change, omitted=omitted,
+                                                                        legend_label=experience_level, color=colors[c],
+                                                                        ax=ax[4 + (t * 1)])
+
+            except BaseException:
+                print('no pupil for', ophys_experiment_id)
+
+            # lick rate
+            try:
+                sdf = data_dict[ophys_experiment_id]['lick_rate'][trace_type]
+                ax[6 + (t * 1)] = ut.plot_stimulus_response_df_trace(sdf, time_window, ylabel='lick rate\n(licks per 100ms)',
+                                                                        change=change, omitted=omitted,
+                                                                        legend_label=experience_level, color=colors[c],
+                                                                        ax=ax[6 + (t * 1)])
+            except BaseException:
+                print('no lick rate for', ophys_experiment_id, trace_type)
+
+    for i in range(8):
+        ax[i].set_xlabel('')
+        ax[i].legend(fontsize='small', title='', loc='upper right')
+    ax[6].set_xlabel('time after change (sec)')
+    ax[7].set_xlabel('time after omission (sec)')
+    for i in [1, 3, 5, 7]:
+        ax[i].set_ylabel('')
+        ax[i].axvline(x=0, ymin=0, ymax=1, linestyle='--', color='gray')
+
+    metadata_string = ut.get_container_metadata_string(data_dict[ophys_experiment_id]['dataset']['dataset'].metadata)
+    plt.suptitle(metadata_string, x=0.55, y=1.04, fontsize=18)
+    fig.tight_layout()
+
+    if save_figure:
+        ut.save_figure(fig, figsize, loading.get_container_plots_dir(), 'average_timeseries', metadata_string+'_resampled_30Hz')
+
