@@ -340,4 +340,18 @@ def get_cluster_color_map(labels):
         #color_map[i] = '#%06X' % randint(0, 0xFFFFFF)
     return color_map
 
+def plot_N_clusters_by_cre_line(labels_cre, ax=None, palette=None):
+    if ax is None:
+        fig, ax = plt.subplots(1, 1, figsize=(7, 7))
+    for i, cre_line in enumerate(labels_cre.keys()):
+        labels = labels_cre[cre_line]
+        (unique, counts) = np.unique(labels, return_counts=True)
+        sorted_counts = np.sort(counts)[::-1]
+        frequencies = sorted_counts / sum(counts) * 100
+        ax.grid()
+        ax.plot(range(0, len(frequencies)), frequencies, 'o-', color=palette[i], LineWidth=4, MarkerSize=10)
+        ax.set_xlabel('Cluster number')
+        ax.set_ylabel('Number of cells per cluster (%)')
+    ax.legend(labels_cre.keys())
 
+    return ax
