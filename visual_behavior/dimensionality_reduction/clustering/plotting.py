@@ -9,6 +9,7 @@ import umap
 import os
 from scipy import signal
 import visual_behavior.visualization.utils as utils
+import random
 
 # figure settings
 plt.rcParams['font.size'] = 16
@@ -324,7 +325,19 @@ def get_cluster_color_map(labels):
     '''
     unique_labels = np.sort(np.unique(labels))
     color_map = {}
+    r = int(random.random() * 256)
+    g = int(random.random() * 256)
+    b = int(random.random() * 256)
+    step = 256 / len(unique_labels)
     for i in unique_labels:
-        color_map[i] = '#%06X' % randint(0, 0xFFFFFF)
+        r += step
+        g += step
+        b += step
+        r = int(r) % 256
+        g = int(g) % 256
+        b = int(b) % 256
+        color_map[i] = (r, g, b)
+        #color_map[i] = '#%06X' % randint(0, 0xFFFFFF)
     return color_map
+
 
