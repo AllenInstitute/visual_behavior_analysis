@@ -32,7 +32,7 @@ def anova_tukey(svm_df, values_stat, label_stat='experience_levels'):
         print(thiscre.shape)
 
 
-        ############ create dataframe "c", which is suitable for doing anova ############
+        ############ create dataframe "stats_df", which is suitable for doing anova ############
 
         # rename the column that is used for doing anova to "value"
         stats_df = thiscre.rename(columns={'decoding_magnitude': 'value'})
@@ -62,7 +62,7 @@ def anova_tukey(svm_df, values_stat, label_stat='experience_levels'):
         anova_all.append(anova_table)
 
 
-        ############ TUKEY HSD ############        
+        ############ TUKEY HSD : compare stats_df['value'] across pairs of stats_df['experience_levels]'  ############        
         v = stats_df['value']
         f = stats_df['experience_levels']
 
