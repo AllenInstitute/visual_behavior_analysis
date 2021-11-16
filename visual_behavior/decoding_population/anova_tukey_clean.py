@@ -13,30 +13,31 @@ for cre in cres:
     # take testing dataset decoding accuracy
     test = np.array([thiscre['decoding_magnitude_train_test_shfl_chance'].values[i][1] for i in range(thiscre.shape[0])])
     thiscre['decoding_magnitude_train_test_shfl_chance'] = list(test)
-        
-        
-    ############ create dataframe suitable as input to run anova ############
-    thiscre_anova = thiscre[['cre', 'experience_levels', 'decoding_magnitude_train_test_shfl_chance']]
-    thiscre_anova = thiscre_anova.rename(columns={'decoding_magnitude_train_test_shfl_chance': 'value'})
 
-    c = thiscre_anova.copy()
-    print(c.shape)
+    # only take the relevant columns
+    thiscre = thiscre[['cre', 'experience_levels', 'decoding_magnitude_train_test_shfl_chance']]
     
+    print(thiscre.shape)
+    
+        
+    ############ create dataframe "c", which is suitable for running anova ############
+
+    # rename the column that is used for stats to "value"    
+    c = thiscre.rename(columns={'decoding_magnitude_train_test_shfl_chance': 'value'})
 
     # only take valid values
     c = c[~np.isnan(c['value'])]
     print(c.shape)
 
-
     # replace Familiar, Novel 1, and Novel >1 in the df with 0, 1, and 2
     cnt = -1
-    b = pd.DataFrame()
+    dfall = pd.DataFrame()
     for expl in exp_level_all:
         cnt = cnt+1
-        a = c[c['experience_levels']==expl]
-        a['experience_levels'] = [cnt for x in a['experience_levels']]
-        b = pd.concat([b,a])
-    c = b
+        dfnow = c[c['experience_levels']==expl]
+        dfnow['experience_levels'] = [cnt for x in dfnow['experience_levels']]
+        dfall = pd.concat([dfall, dfnow])
+    c = dfall
 #     c
 
 

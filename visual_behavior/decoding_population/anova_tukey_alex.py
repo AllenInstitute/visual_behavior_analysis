@@ -7,30 +7,29 @@ for cre in cres:
     print(f'\n\n----------- Perfoming ANOVA/TUKEY on {cre} -----------\n')
     
     thiscre = svm_df[svm_df['cre']==cre]
-    thiscre = thiscre[['cre', 'experience_levels', 'decoding_magnitude']]        
+    thiscre = thiscre[['cre', 'experience_levels', 'decoding_magnitude']] # only take the relevant columns       
+
+    print(thiscre.shape)
         
         
     ############ create dataframe "c", which is suitable for doing anova ############
-    thiscre_anova = thiscre.rename(columns={'decoding_magnitude': 'value'})
-
-    c = thiscre_anova.copy()
-    print(c.shape)
     
+    # rename the column that is used for stats to "value"
+    c = thiscre.rename(columns={'decoding_magnitude': 'value'})
 
     # only take valid values
     c = c[~np.isnan(c['value'])]
     print(c.shape)
 
-
     # replace Familiar, Novel 1, and Novel >1 in the df with 0, 1, and 2
     cnt = -1
-    b = pd.DataFrame()
+    dfall = pd.DataFrame()
     for expl in exp_level_all:
         cnt = cnt+1
-        a = c[c['experience_levels']==expl]
-        a['experience_levels'] = [cnt for x in a['experience_levels']]
-        b = pd.concat([b,a])
-    c = b
+        dfnow = c[c['experience_levels']==expl]
+        dfnow['experience_levels'] = [cnt for x in dfnow['experience_levels']]
+        dfall = pd.concat([dfall, dfnow])
+    c = dfall
 #     c
 
     
