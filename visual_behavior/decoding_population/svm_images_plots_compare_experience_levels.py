@@ -278,7 +278,7 @@ if np.isnan(svm_blocks) or svm_blocks==-101: # svm was run on the whole session 
         
 
 
-        ############### add_tukey_lines: if a pariwaise tukey comparison is significant add a line and a start
+        ############### add_tukey_lines: if a pariwaise tukey comparison is significant add a line and an asterisk symbol
         iax = -1
         for ax in [ax1, ax2]: # test, test-shfl
             iax = iax+1
