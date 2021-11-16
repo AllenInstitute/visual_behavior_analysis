@@ -27,7 +27,7 @@ def anova_tukey(svm_df, values_stat, label_stat='experience_levels'):
         print(f'\n\n----------- Perfoming ANOVA/TUKEY on {cre} -----------\n')
 
         thiscre = svm_df[svm_df['cre']==cre]
-        thiscre = thiscre[['cre', 'experience_levels', values_stat]] # only take the relevant columns       
+        thiscre = thiscre[['cre', label_stat, values_stat]] # only take the relevant columns       
 
         print(thiscre.shape)
 
@@ -46,15 +46,16 @@ def anova_tukey(svm_df, values_stat, label_stat='experience_levels'):
         dfall = pd.DataFrame()
         for expl in exp_level_all:
             cnt = cnt+1
-            dfnow = stats_df[stats_df['experience_levels']==expl]
-            dfnow['experience_levels'] = [cnt for x in dfnow['experience_levels']]
+            dfnow = stats_df[stats_df[label_stat]==expl]
+            dfnow[label_stat] = [cnt for x in dfnow[label_stat]]
             dfall = pd.concat([dfall, dfnow])
         stats_df = dfall
     #     stats_df
 
 
         ############ ANOVA, 1-way : compare stats_df['value'] across stats_df['experience_levels]' ############
-        model = ols('value ~ C(experience_levels)', data=stats_df).fit() 
+        # model = ols('value ~ C(experience_levels)', data=stats_df).fit()
+        model = ols('value ~ C(eval(label_stat))', data=stats_df).fit() 
         anova_table = sm.stats.anova_lm(model, typ=2)
         print(anova_table)
         print('\n')
@@ -64,7 +65,7 @@ def anova_tukey(svm_df, values_stat, label_stat='experience_levels'):
 
         ############ TUKEY HSD : compare stats_df['value'] across pairs of stats_df['experience_levels]'  ############        
         v = stats_df['value']
-        f = stats_df['experience_levels']
+        f = stats_df[label_stat]
 
         MultiComp = MultiComparison(v, f)
         tukey_table = MultiComp.tukeyhsd().summary()    
