@@ -423,21 +423,23 @@ def get_mean_df(response_df, analysis=None, conditions=['cell', 'change_image_na
         except:  # NOQA E722
             pass
 
-    fraction_significant_p_value_gray_screen = rdf.groupby(conditions).apply(
-        get_fraction_significant_p_value_gray_screen)
-    fraction_significant_p_value_gray_screen = fraction_significant_p_value_gray_screen.reset_index()
-    mdf[
-        'fraction_significant_p_value_gray_screen'] = fraction_significant_p_value_gray_screen.fraction_significant_p_value_gray_screen
 
-    fraction_significant_p_value_omission = rdf.groupby(conditions).apply(get_fraction_significant_p_value_omission)
-    fraction_significant_p_value_omission = fraction_significant_p_value_omission.reset_index()
-    mdf[
-        'fraction_significant_p_value_omission'] = fraction_significant_p_value_omission.fraction_significant_p_value_omission
+    if 'p_value_gray_screen' in rdf.keys():
+        fraction_significant_p_value_gray_screen = rdf.groupby(conditions).apply(
+            get_fraction_significant_p_value_gray_screen)
+        fraction_significant_p_value_gray_screen = fraction_significant_p_value_gray_screen.reset_index()
+        mdf[
+            'fraction_significant_p_value_gray_screen'] = fraction_significant_p_value_gray_screen.fraction_significant_p_value_gray_screen
 
-    fraction_significant_p_value_stimulus = rdf.groupby(conditions).apply(get_fraction_significant_p_value_stimulus)
-    fraction_significant_p_value_stimulus = fraction_significant_p_value_stimulus.reset_index()
-    mdf[
-        'fraction_significant_p_value_stimulus'] = fraction_significant_p_value_stimulus.fraction_significant_p_value_stimulus
+        fraction_significant_p_value_omission = rdf.groupby(conditions).apply(get_fraction_significant_p_value_omission)
+        fraction_significant_p_value_omission = fraction_significant_p_value_omission.reset_index()
+        mdf[
+            'fraction_significant_p_value_omission'] = fraction_significant_p_value_omission.fraction_significant_p_value_omission
+
+        fraction_significant_p_value_stimulus = rdf.groupby(conditions).apply(get_fraction_significant_p_value_stimulus)
+        fraction_significant_p_value_stimulus = fraction_significant_p_value_stimulus.reset_index()
+        mdf[
+            'fraction_significant_p_value_stimulus'] = fraction_significant_p_value_stimulus.fraction_significant_p_value_stimulus
 
     if 'p_value_baseine' in rdf.keys():
         fraction_responsive_trials = rdf.groupby(conditions).apply(get_fraction_responsive_trials)
