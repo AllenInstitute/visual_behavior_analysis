@@ -10,4 +10,5 @@ if __name__ == '__main__':
     args = parser.parse_args()
     ophys_container_id = args.ophys_container_id
 
+    print('ophys_container_id =', ophys_container_id)
     cp.plot_average_timeseries_for_container(ophys_container_id, save_figure=True)

@@ -1453,7 +1453,8 @@ def plot_average_timeseries_for_container(ophys_container_id, save_figure=True):
     container = container.sort_values(by=['experience_level'])
     ophys_experiment_ids = container.index.values
     # get dictionary of all event triggered average timeseries
-    data_dict = loading.get_data_dict(ophys_experiment_ids, save_dir=loading.get_stimulus_response_df_dir(interpolate, sampling_rate))
+    data_dict = loading.get_data_dict(ophys_experiment_ids,
+                                      save_dir=loading.get_stimulus_response_df_dir(interpolate, sampling_rate))
 
     colors = ut.get_experience_level_colors()
     figsize = (12, 12)
@@ -1511,14 +1512,14 @@ def plot_average_timeseries_for_container(ophys_container_id, save_figure=True):
 
     for i in range(8):
         ax[i].set_xlabel('')
-        ax[i].legend(fontsize='small', title='', loc='upper right')
+        ax[i].legend(fontsize='x-small', title='', loc='upper right')
     ax[6].set_xlabel('time after change (sec)')
     ax[7].set_xlabel('time after omission (sec)')
     for i in [1, 3, 5, 7]:
         ax[i].set_ylabel('')
         ax[i].axvline(x=0, ymin=0, ymax=1, linestyle='--', color='gray')
 
-    metadata_string = ut.get_container_metadata_string(data_dict[ophys_experiment_id]['dataset']['dataset'].metadata)
+    metadata_string = ut.get_container_metadata_string(data_dict[ophys_experiment_ids[0]]['dataset']['dataset'].metadata)
     plt.suptitle(metadata_string, x=0.55, y=1.04, fontsize=18)
     fig.tight_layout()
 
