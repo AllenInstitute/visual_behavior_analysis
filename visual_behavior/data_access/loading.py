@@ -523,7 +523,7 @@ def get_extended_stimulus_presentations_table(stimulus_presentations, licks, rew
     return stimulus_presentations
 
 
-def get_stimulus_response_df(dataset, time_window=[-1, 2.1], interpolate=True, sampling_rate=None,
+def get_stimulus_response_df(dataset, time_window=[-1, 2.1], interpolate=True, sampling_rate=30,
                              data_type='filtered_events', load_from_file=True):
     """
     load stimulus response df using mindscope_utilities and merge with stimulus_presentations that has trials metadata added
@@ -539,9 +539,14 @@ def get_stimulus_response_df(dataset, time_window=[-1, 2.1], interpolate=True, s
     # load stimulus response df from file if it exists otherwise generate it
     ophys_experiment_id = dataset.ophys_experiment_id
     filepath = os.path.join(get_stimulus_response_df_dir(interpolate, sampling_rate), str(ophys_experiment_id) + '_' + data_type + '.h5')
-    if load_from_file and os.path.exists(filepath):
-        print('loading response df from file for', ophys_experiment_id, data_type)
-        sdf = pd.read_hdf(filepath)
+    if load_from_file:
+        if os.path.exists(filepath):
+            print('loading response df from file for', ophys_experiment_id, data_type)
+            sdf = pd.read_hdf(filepath)
+        else:
+            print('stimulus_response_df does not exist for', filepath)
+            print('set load_from_file to False to generate new stimulus_response_df')
+            sdf = pd.DataFrame(columns=['stimulus_presentations_id'])
     else:
         print('generating response df')
         sdf = vb_ophys.get_stimulus_response_df(dataset, data_type=data_type, event_type='all',
