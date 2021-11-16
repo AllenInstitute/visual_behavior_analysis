@@ -1,4 +1,4 @@
-# Perform Anova (1 way) and paiwise Tukey HSD
+# Perform Anova (1 way) and pairwise Tukey HSD
 
 import statsmodels.api as sm
 from statsmodels.formula.api import ols
