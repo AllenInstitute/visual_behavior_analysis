@@ -14,7 +14,7 @@ for cre in cres:
         
     ############ create dataframe "c", which is suitable for doing anova ############
     
-    # rename the column that is used for stats to "value"
+    # rename the column that is used for doing anova to "value"
     c = thiscre.rename(columns={'decoding_magnitude': 'value'})
 
     # only take valid values
@@ -47,11 +47,10 @@ for cre in cres:
     f = c['experience_levels']
 
     MultiComp = MultiComparison(v, f)
-    print(MultiComp.tukeyhsd().summary()) # Show all pair-wise comparisons
+    tukey_table = MultiComp.tukeyhsd().summary()    
+    
+    print(tukey_table) # Show all pair-wise comparisons
 
-
-    tukey_all_ts_tsSh = MultiComp.tukeyhsd().summary()
-
-    tukey_all.append(tukey_all_ts_tsSh) # cres x 2 (test-shfl ; test) x tukey_table (ie 4 x7)
+    tukey_all.append(tukey_table) # cres x 2 (test-shfl ; test) x tukey_table (ie 4 x7)
 
 
