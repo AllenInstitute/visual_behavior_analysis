@@ -52,7 +52,7 @@ def get_labels_for_coclust_matrix(X, model=SpectralClustering, nboot=np.arange(1
     '''
 
     :param X: (ndarray) data, n observations by n features
-    :param model: (clustering object) default =  SpectralClustering; clustering method to use.
+    :param model: (clustering object) default =  SpectralClustering; clustering method to use. Object must be initialized.
     :param nboot: (list or an array) default = 100, number of clustering repeats
     :param n_clusters: (num) default = 8
     ___________
@@ -72,7 +72,7 @@ def get_coClust_matrix(X, model=SpectralClustering, nboot=np.arange(150), n_clus
     '''
 
     :param X: (ndarray) data, n observations by n features
-    :param model: (clustering object) default =  SpectralClustering; clustering method to use.
+    :param model: (clustering object) default =  SpectralClustering; clustering method to use. Model must be initialized.
     :param nboot: (list or an array) default = 100, number of clustering repeats
     :param n_clusters: (num) default = 8
     ______________
