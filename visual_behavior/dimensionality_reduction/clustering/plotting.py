@@ -350,11 +350,14 @@ def plot_N_clusters_by_cre_line(labels_cre, ax=None, palette=None):
         (unique, counts) = np.unique(labels, return_counts=True)
         sorted_counts = np.sort(counts)[::-1]
         frequencies = sorted_counts / sum(counts) * 100
+        cumulative_sum = [0]
+        for freq in frequencies:
+            cumulative_sum.append(cumulative_sum[-1] + freq)
         ax.grid()
-        ax.plot(range(0, len(frequencies)), frequencies, 'o-', color=palette[i],
+        ax.plot(range(0, len(cumulative_sum)), cumulative_sum, 'o-', color=palette[i],
                 linewidth=4, markersize=10)
         ax.set_xlabel('Cluster number')
-        ax.set_ylabel('Number of cells per cluster (%)')
+        ax.set_ylabel('Cells per cluster (%)')
     ax.legend(labels_cre.keys())
 
-    return ax
+    return ax, frequencies
