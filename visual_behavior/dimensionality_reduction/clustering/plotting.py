@@ -214,9 +214,7 @@ def plot_clusters(dropout_df, cluster_df=None, mean_response_df=None, save_plots
         # ax[i+ len(cluster_ids)].set_title('n mice = ' + str(N_mice.loc[cluster_id].values), fontsize=16)
 
         # set title and labels
-        ax[i].set_title('cluster ' + str(int(cluster_id)) + '\n' + str(fraction) + '%, n=' + str(n_cells)
-                        + '\n' + 'n mice = ' + str(N_mice.loc[cluster_id].values),
-                        fontsize=16)
+        ax[i].set_title('cluster ' + str(i) + '\n' + str(fraction[0][0]) + '%, n=' + str(n_cells),  fontsize=16)
         ax[i].set_yticklabels(mean_dropout_df.index.values, rotation=0)
         ax[i].set_ylim(-0.5, 4.5)
         ax[i].set_xlabel('')
