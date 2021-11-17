@@ -360,4 +360,4 @@ def plot_N_clusters_by_cre_line(labels_cre, ax=None, palette=None):
         ax.set_ylabel('Cells per cluster (%)')
     ax.legend(labels_cre.keys())
 
-    return ax, frequencies
+    return ax
