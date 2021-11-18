@@ -25,7 +25,7 @@ sns.set_palette('deep')
 
 def plot_population_averages_for_conditions(multi_session_df, df_name, timestamps, axes_column, hue_column, project_code,
                                             use_events=True, filter_events=True, palette=None, data_type='events',
-                                            horizontal=True, xlim_seconds=None, save_dir=None, folder=None):
+                                            horizontal=True, xlim_seconds=None, save_dir=None, folder=None, suffix=''):
     if palette is None:
         palette = sns.color_palette()
 
@@ -33,7 +33,7 @@ def plot_population_averages_for_conditions(multi_session_df, df_name, timestamp
 
     # remove traces with incorrect length - why does this happen?
     sdf = sdf.reset_index(drop=True)
-    indices = [index for index in sdf.index if len(sdf.iloc[index].mean_trace) == len(sdf.mean_trace.values[0])]
+    indices = [index for index in sdf.index if len(sdf.iloc[index].mean_trace) == len(sdf.mean_trace.values[100])]
     sdf = sdf.loc[indices]
 
     if xlim_seconds is None:
@@ -102,7 +102,7 @@ def plot_population_averages_for_conditions(multi_session_df, df_name, timestamp
     fig.tight_layout()
 
     if save_dir:
-        fig_title = trace_type + '_population_average_response_' + project_code[14:] + '_' + axes_column + '_' + hue_column
+        fig_title = trace_type + '_population_average_response_' + project_code[14:] + '_' + axes_column + '_' + hue_column + suffix
         utils.save_figure(fig, figsize, save_dir, folder, fig_title)
 
 
@@ -118,6 +118,112 @@ def get_timestamps_for_response_df_type(cache, experiment_id, df_name):
     print(len(timestamps))
 
     return timestamps
+
+
+def get_fraction_responsive_cells(multi_session_df, conditions=['cell_type', 'experience_level'], responsiveness_threshold=0.1):
+    """
+    Computes the fraction of cells for each condition with fraction_significant_p_value_gray_screen > responsiveness_threshold
+    :param multi_session_df: dataframe of trial averaged responses for each cell for some set of conditions
+    :param conditions: conditions defined by columns in df over which to group to quantify fraction responsive cells
+    :param responsiveness_threshold: threshold on fraction_significant_p_value_gray_screen to determine whether a cell is responsive or not
+    :return:
+    """
+    df = multi_session_df.copy()
+    total_cells = df.groupby(conditions).count()[['cell_specimen_id']].rename(columns={'cell_specimen_id':'total_cells'})
+    responsive = df[df.fraction_significant_p_value_gray_screen>responsiveness_threshold].copy()
+    responsive_cells = responsive.groupby(conditions).count()[['cell_specimen_id']].rename(columns={'cell_specimen_id':'responsive_cells'})
+    fraction = total_cells.merge(responsive_cells, on=conditions, how='left')  # need to use 'left' to prevent dropping of NaN values
+    # set sessions with no responsive cells (NaN) to zero
+    fraction.loc[fraction[fraction.responsive_cells.isnull()].index.values, 'responsive_cells'] = 0
+    fraction['fraction_responsive'] = fraction.responsive_cells/fraction.total_cells
+    return fraction
+
+
+def plot_fraction_responsive_cells(multi_session_df, df_name, responsiveness_threshold=0.1, save_dir=None, suffix=''):
+    """
+    Plots the fraction of responsive cells across cre lines
+    :param multi_session_df: dataframe of trial averaged responses for each cell for some set of conditions
+    :param df_name: name of the type of response_df used to make multi_session_df, such as 'omission_response_df' or 'stimulus_response_df'
+    :param responsiveness_threshold: threshold on fraction_significant_p_value_gray_screen to determine whether a cell is responsive or not
+    :param save_dir: directory to save figures to. if None, will not save.
+    :param suffix: string starting with '_' to append to end of filename of saved plot
+    :return:
+    """
+    df = multi_session_df.copy()
+
+    experience_levels = np.sort(df.experience_level.unique())
+    cell_types = np.sort(df.cell_type.unique())[::-1]
+
+    fraction_responsive = get_fraction_responsive_cells(df, conditions=['cell_type', 'experience_level', 'ophys_container_id', 'ophys_experiment_id'],
+                                                        responsiveness_threshold=responsiveness_threshold)
+    fraction_responsive = fraction_responsive.reset_index()
+
+    palette = utils.get_experience_level_colors()
+    figsize = (3.5, 10.5)
+    fig, ax = plt.subplots(3,1, figsize=figsize, sharex=True)
+    for i, cell_type in enumerate(cell_types):
+        data = fraction_responsive[fraction_responsive.cell_type==cell_type]
+        for ophys_container_id in data.ophys_container_id.unique():
+            ax[i] = sns.pointplot(data=data[data.ophys_container_id==ophys_container_id], x='experience_level', y='fraction_responsive',
+                     color='gray', join=True, markers='.', scale=0.25, errwidth=0.25, ax=ax[i], zorder=500)
+        plt.setp(ax[i].collections, alpha=.3) #for the markers
+        plt.setp(ax[i].lines, alpha=.3)
+        ax[i] = sns.pointplot(data=data, x='experience_level', y='fraction_responsive', hue='experience_level',
+                     hue_order=experience_levels, palette=palette, dodge=0, join=False, ax=ax[i])
+        ax[i].set_xticklabels(experience_levels, rotation=45)
+    #     ax[i].legend(fontsize='xx-small', title='')
+        ax[i].get_legend().remove()
+        ax[i].set_title(cell_type)
+        ax[i].set_ylim(ymin=0)
+        ax[i].set_xlabel('')
+        ax[i].set_ylim(0,1)
+    fig.tight_layout()
+    if save_dir:
+        fig_title = df_name.split('-')[0] + '_fraction_responsive_cells' + suffix
+        utils.save_figure(fig, figsize, save_dir, 'fraction_responsive_cells', fig_title)
+
+
+def plot_n_segmented_cells(multi_session_df, df_name, save_dir=None, suffix=''):
+    """
+    Plots the fraction of responsive cells across cre lines
+    :param multi_session_df: dataframe of trial averaged responses for each cell for some set of conditions
+    :param df_name: name of the type of response_df used to make multi_session_df, such as 'omission_response_df' or 'stimulus_response_df'
+    :param responsiveness_threshold: threshold on fraction_significant_p_value_gray_screen to determine whether a cell is responsive or not
+    :param save_dir: directory to save figures to. if None, will not save.
+    :param suffix: string starting with '_' to append to end of filename of saved plot
+    :return:
+    """
+    df = multi_session_df.copy()
+
+    experience_levels = np.sort(df.experience_level.unique())
+    cell_types = np.sort(df.cell_type.unique())[::-1]
+
+    fraction_responsive = get_fraction_responsive_cells(df, conditions=['cell_type', 'experience_level', 'ophys_container_id', 'ophys_experiment_id'])
+    fraction_responsive = fraction_responsive.reset_index()
+
+    palette = utils.get_experience_level_colors()
+    figsize = (3.5, 10.5)
+    fig, ax = plt.subplots(3,1, figsize=figsize, sharex=True)
+    for i, cell_type in enumerate(cell_types):
+        data = fraction_responsive[fraction_responsive.cell_type==cell_type]
+        for ophys_container_id in data.ophys_container_id.unique():
+            ax[i] = sns.pointplot(data=data[data.ophys_container_id==ophys_container_id], x='experience_level', y='total_cells',
+                     color='gray', join=True, markers='.', scale=0.25, errwidth=0.25, ax=ax[i], zorder=500)
+        plt.setp(ax[i].collections, alpha=.3) #for the markers
+        plt.setp(ax[i].lines, alpha=.3)
+        ax[i] = sns.pointplot(data=data, x='experience_level', y='total_cells', hue='experience_level',
+                     hue_order=experience_levels, palette=palette, dodge=0, join=False, ax=ax[i])
+        ax[i].set_xticklabels(experience_levels, rotation=45)
+    #     ax[i].legend(fontsize='xx-small', title='')
+        ax[i].get_legend().remove()
+        ax[i].set_title(cell_type)
+        ax[i].set_ylim(ymin=0)
+        ax[i].set_xlabel('')
+#         ax[i].set_ylim(0,1)
+    fig.tight_layout()
+    if save_dir:
+        fig_title = df_name.split('-')[0] + '_n_total_cells' + suffix
+        utils.save_figure(fig, figsize, save_dir, 'n_segmented_cells', fig_title)
 
 
 def plot_cell_response_heatmap(data, timestamps, xlabel='time after change (s)', vmax=0.05,
