@@ -21,7 +21,7 @@ def get_single_cell_plots_dir():
     return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/single_cell_plots'
 
 
-def save_figure(fig, figsize, save_dir, folder, fig_title, formats=['.png']):
+def save_figure(fig, figsize, save_dir, folder, fig_title, formats=['.png', '.pdf']):
     fig_dir = os.path.join(save_dir, folder)
     if not os.path.exists(fig_dir):
         os.mkdir(fig_dir)
@@ -241,8 +241,8 @@ def plot_mean_trace(traces, timestamps, ylabel='dF/F', legend_label=None, color=
     if ax is None:
         fig, ax = plt.subplots()
     if len(traces) > 0:
-        trace = np.nanmean(traces, axis=0)
-        sem = (np.nanstd(traces)) / np.sqrt(float(len(traces)))
+        trace = np.mean(traces, axis=0)
+        sem = (np.std(traces)) / np.sqrt(float(len(traces)))
         ax.plot(timestamps, trace, label=legend_label, linewidth=2, color=color)
         if plot_sem:
             ax.fill_between(timestamps, trace + sem, trace - sem, alpha=0.5, color=color)
