@@ -93,7 +93,7 @@ if __name__ == '__main__':
     #
     #
     df_name = 'stimulus_response_df'
-    conditions = ['cell_specimen_id', 'pre_change', 'epoch']
+    conditions = ['cell_specimen_id', 'is_change', 'image_name', 'epoch']
 
     print('creating multi_session_df for', df_name, ', ', project_code, ', session number', session_number, conditions)
     df = io.get_multi_session_df(project_code, session_number, df_name, conditions, use_events=True,

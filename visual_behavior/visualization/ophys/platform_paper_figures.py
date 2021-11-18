@@ -226,6 +226,37 @@ def plot_n_segmented_cells(multi_session_df, df_name, save_dir=None, suffix=''):
         utils.save_figure(fig, figsize, save_dir, 'n_segmented_cells', fig_title)
 
 
+def plot_mean_response_by_epoch(df, df_name, save_dir=None, suffix=''):
+    xticks = [experience_epoch.split(' ')[-1] for experience_epoch in np.sort(df.experience_epoch.unique())]
+
+    cell_types = np.sort(df.cell_type.unique())[::-1]
+    experience_epoch = np.sort(df.experience_epoch.unique())
+
+    palette = utils.get_experience_level_colors()
+    figsize=(4.5,10.5)
+    fig, ax = plt.subplots(3,1, figsize=figsize, sharex=False, sharey=False)
+
+    for i,cell_type in enumerate(cell_types):
+        data = df[df.cell_type==cell_type]
+        ax[i] = sns.pointplot(data=data, x='experience_epoch', y='mean_response', hue='experience_level',
+                           order=experience_epoch, palette=palette, ax=ax[i])
+        ax[i].set_ylim(ymin=0)
+        ax[i].set_title(cell_type)
+        ax[i].set_xlabel('')
+        ax[i].get_legend().remove()
+    #     ax[i].set_ylim(0,0.022)
+    #     ax[i].set_xticklabels(experience_epoch, rotation=90);
+        ax[i].set_xticklabels(xticks, fontsize=16)
+        ax[i].vlines(x=5.5, ymin=0, ymax=1, color='gray', linestyle='--')
+        ax[i].vlines(x=11.5, ymin=0, ymax=1, color='gray', linestyle='--')
+        ax[i].set_xlabel('10 min epoch within session', fontsize=16)
+    plt.suptitle('mean response over time', x=0.62, y=1.01, fontsize=18)
+    fig.tight_layout()
+    if save_dir:
+        fig_title = df_name.split('-')[0] + '_epochs' + suffix
+        utils.save_figure(fig, figsize, save_dir, 'epochs', fig_title)
+
+
 def plot_cell_response_heatmap(data, timestamps, xlabel='time after change (s)', vmax=0.05,
                                microscope='Multiscope', ax=None):
     if ax is None:

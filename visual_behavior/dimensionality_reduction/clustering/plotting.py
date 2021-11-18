@@ -121,7 +121,7 @@ def plot_silhouette_scores(X=None, model=KMeans, silhouette_scores=None, n_clust
             metric = ''
 
     if ax is None:
-        fig, ax = plt.subplots(1, 1, figsize=(7, 7))
+        fig, ax = plt.subplots(1, 1, figsize=(5,5))
 
     ax.plot(n_clusters, silhouette_scores, 'ko-')
     ax.set_title('{}, {}'.format(model_output_type, metric), fontsize=16)
