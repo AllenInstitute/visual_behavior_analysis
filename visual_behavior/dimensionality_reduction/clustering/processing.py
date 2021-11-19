@@ -32,6 +32,8 @@ def get_silhouette_scores(X, model=SpectralClustering, n_clusters=np.arange(2, 1
     _____________
     :return: silhouette_scores: a list of scores for each n cluster
     '''
+    print('size of X = '+ str(np.shape(X)))
+    print('NaNs in the array = ' + str(np.sum(X==np.nan)))
     silhouette_scores = []
     for n_cluster in n_clusters:
         s_tmp = []
