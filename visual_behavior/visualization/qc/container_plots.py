@@ -1431,7 +1431,7 @@ def generate_snr_metrics_df_for_container(ophys_container_id):
     problems_list.to_csv(os.path.join(save_dir, str(ophys_container_id) + '_problem_expts.csv'))
 
 
-def plot_average_timeseries_for_container(ophys_container_id, save_figure=True):
+def plot_event_triggered_averages_for_container(ophys_container_id, save_figure=True):
     """
     Plots change and omission triggered average filtered events, running speed, pupil diameter, and lick rate
     for experiments in a container, limited to last familiar and second novel active sessions
@@ -1524,5 +1524,68 @@ def plot_average_timeseries_for_container(ophys_container_id, save_figure=True):
     fig.tight_layout()
 
     if save_figure:
-        ut.save_figure(fig, figsize, loading.get_container_plots_dir(), 'average_timeseries', metadata_string+'_resampled_30Hz')
+        ut.save_figure(fig, figsize, loading.get_container_plots_dir(), 'behavior_timeseries', metadata_string+'_resampled_30Hz')
 
+
+def plot_pupil_timeseries_for_container(ophys_container_id, save_figure=True):
+    """
+    creates plot of raw and z-scored pupil radius over time, for two windows,
+    from 300-500seconds after session start, around the time that behavior stimuli begin
+    and the full session
+    for experiments in a container, limited to most recent active sessions
+
+    """
+    import visual_behavior.visualization.ophys.summary_figures as sf
+    # cache_dir = loading.get_platform_analysis_cache_dir()
+    # cache = VisualBehaviorOphysProjectCache.from_s3_cache(cache_dir)
+    # get experiments_table
+    experiments_table = loading.get_platform_paper_experiment_table()
+    # limit to containers with all experience levels, active only
+    expts = utilities.limit_to_last_familiar_second_novel_active(experiments_table)
+    expts = utilities.limit_to_containers_with_all_experience_levels(expts)
+    # get container data and expt IDS for container
+    container = expts[expts.ophys_container_id == ophys_container_id]
+    # sort experience levels so we can apply standard colors in expected order
+    container = container.sort_values(by=['experience_level'])
+    ophys_experiment_ids = container.index.values
+
+    for xlim in [(300, 320), (-100, 4600)]:
+        figsize = (15, 5)
+        fig, ax = plt.subplots(2, 1, figsize=figsize, sharex=True)
+        colors = ut.get_experience_level_colors()
+        ax = ax.ravel()
+
+        i = 0
+        for c, experiment_id in enumerate(ophys_experiment_ids):
+
+            dataset = loading.get_ophys_dataset(experiment_id)
+            # try:
+            eye_tracking = processing.zscore_pupil_data(dataset.eye_tracking.copy())
+            timestamps = eye_tracking['timestamps'].values
+            experience_level = expts.loc[experiment_id].experience_level
+
+            ax[i].plot(timestamps, eye_tracking.pupil_radius.values, color=colors[c])
+            ax[i].set_ylabel('pupil radius\n(pixels)')
+            ax[i].axvline(x=dataset.stimulus_presentations.start_time.values[0], ymin=0, ymax=1, color=colors[c],
+                          linestyle='--')
+
+            ax[i + 1].plot(timestamps, eye_tracking.pupil_radius_zscored.values, color=colors[c])
+            ax[i + 1].set_xlabel('time in session (seconds)')
+            ax[i + 1].set_ylabel('z-score')
+            ax[i + 1].axvline(x=dataset.stimulus_presentations.start_time.values[0], ymin=0, ymax=1,
+                              color=colors[c], linestyle='--')
+            if xlim[0] == 300:
+                ax[i + 1] = sf.add_stim_color_span(dataset, ax[i + 1], xlim=xlim, color='gray')
+            # except:
+            #     print('no eye tracking for', experiment_id)
+
+        for i in range(2):
+            ax[i].set_xlim(xlim)
+
+        metadata_string = ut.get_container_metadata_string(dataset.metadata)
+        plt.suptitle(metadata_string, x=0.5, y=1.02, fontsize=16)
+        fig.tight_layout()
+
+        if save_figure:
+            ut.save_figure(fig, figsize, loading.get_container_plots_dir(), 'behavior_timeseries',
+                          metadata_string + '_pupil_timeseries_' + str(xlim[0]))

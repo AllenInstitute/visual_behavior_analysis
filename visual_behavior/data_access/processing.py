@@ -1313,3 +1313,28 @@ def get_multi_session_df(experiments, df_name, conditions, use_events=False, fil
 
     print('finished creating multi_session_df')
     return mega_mdf
+
+
+def zscore_pupil_data(eye_tracking):
+    """
+    removes likely blinks from all columns of eye_tracking attribute of VisualBehaviorOphysDataset object
+    adds a pupil radius column based on pupil area
+    and z-scores pupil radius and pupil width
+    :param eye_tracking:
+    :return:
+    """
+    import scipy
+
+    eye = eye_tracking.copy()
+
+    # Compute pupil radius
+    eye['pupil_radius'] = np.sqrt(eye['pupil_area']*(1/np.pi))
+
+    # Remove likely blinks and interpolate
+    eye.loc[eye['likely_blink'],:] = np.nan
+    eye = eye.interpolate()
+
+    eye['pupil_radius_zscored'] = scipy.stats.zscore(eye['pupil_radius'], nan_policy='omit')
+    eye['pupil_width_zscored'] = scipy.stats.zscore(eye['pupil_width'], nan_policy='omit')
+    eye['pupil_area_zscored'] = scipy.stats.zscore(eye['pupil_area'], nan_policy='omit')
+    return eye
