@@ -1,3 +1,4 @@
+# The following are done in omissions_traces_peaks_plots_setVars_corr.py
 
 ##########################################
 # codes summary that gives us cc traces:
@@ -31,6 +32,7 @@ cc11_aveNPairs[:,ilc] = np.nanmean(cc_a11[ilc], axis=1) # num_frames # ave cc ac
 # for each mouse, average cc_peak_amp is computed across sessions
 # a final average is computed across mice
 
+###NOTE: the type of reshape that we do is with order='C', so rows are concatenated (ie 1st row 1, then row 2, then row 3, then row 4)
 
 cc11_aveNPairs_allSess
 cc11_peak_avMice_flash
@@ -46,7 +48,8 @@ corr_trace_peak_allMice.at[im, 'cc11_peak_amp_omit_sessAv'] = cc11_peak_amp_omit
 cc11_peak_amp_omit_sessAv = np.nanmean(cc11_peak_amp_omit_eachSess, axis=0)
 
 # note: baseline will be subtracted in quant_cc if sameBl_allLayerPairs=1
-cc11_peak_amp_omit_eachSess[ise], cc11_peak_amp_flash_eachSess[ise] = quant_cc(cc11_aveNPairs_allSess[ise], fo_dur, list_times, list_times_flash_final, samps_bef, bl_percentile, frame_dur, num_depth, sameBl_allLayerPairs)         
+cc11_peak_amp_omit_eachSess[ise], cc11_peak_amp_flash_eachSess[ise] = quant_cc \
+    (cc11_aveNPairs_allSess[ise], fo_dur, list_times, list_times_flash_final, samps_bef, bl_percentile, frame_dur, num_depth, sameBl_allLayerPairs)         
 
 cc11_aveNPairs_allSess[ise] = cc11_aveNPairs
 
@@ -55,5 +58,13 @@ cc11_aveNPairs[:,ilc] = np.nanmean(cc_a11[ilc], axis=1) # num_frames
 cc_a11 = all_sess_2an_this_mouse['cc_a11'].iloc[ise]
 
 
+
+
+#%% Sanity check for how _allPairs and _sessAv vars relate to each other:
+# the following 2 are identical
+# 1. get average of neuron pairs, per session (s), compute each for each layer(l)
+np.reshape([np.nanmean([np.nanmean(corr_trace_peak_allMice['cc12_peak_amp_flash_allPairs_allSess'].iloc[6][s][l]) for s in range(5)]) for l in range(16)], (4,4), order='C')
+# 2. get session-averaged neuron-pair-averaged values for each layer
+corr_trace_peak_allMice['cc12_peak_amp_flash_sessAv'].iloc[6]
 
 

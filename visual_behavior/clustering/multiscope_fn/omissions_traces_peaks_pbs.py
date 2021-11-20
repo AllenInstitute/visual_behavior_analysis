@@ -7,6 +7,8 @@ includes vars related to median traces across trials, aligned on omission, and t
 
 To make plots, after this function is run, run the script: omissions_traces_peaks_plots_setVars.py
 
+To understand how correlation scripts work, see: omissions_traces_peaks_plots_setVars_corr_sumMice_summaryCodeNotes.py
+
 # Note: if you are going to follow this script by "omissions_traces_peaks_plots_setVars.py", 
 # in addition to saving updated all_sess to file, you also need to save to file the updated "mouse_trainHist_all2". 
 # You do this by: 1) updating the list of all_mice_id in set_mouse_trainHist_all2.py, and 

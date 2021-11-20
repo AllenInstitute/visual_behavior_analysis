@@ -82,7 +82,7 @@ def anova_tukey(svm_df, values_stat, label_stat='experience_levels'):
 
 
 
-############### Add tukey lines in the plot: if a pariwaise tukey comparison is significant add a line and an asterisk
+############### Add tukey lines in the plot: if a pariwaise tukey comparison is significant, add a line and an asterisk
 ## NOTE: the code below needs further refinement!
 
 def add_tukey_lines_new(ax, df, tukey_all, icre):

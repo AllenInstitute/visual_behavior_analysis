@@ -3,6 +3,8 @@
 """
 First script that we need to run (for post analysis) after omissions_traces_peaks.py is run and the main vars are saved. 
 
+To understand how correlation scripts work, see: omissions_traces_peaks_plots_setVars_corr_sumMice_summaryCodeNotes.py
+
 ############## NOTE ##############
 This script loads mouse_trainHist_all2.h5 file, which shows the entire training history of a mouse
 We have to fist save this file by running, on the cluster, set_mouse_trainHist_init_pbs.py which calls set_mouse_trainHist_all2.py 

@@ -5,6 +5,8 @@ Run "omissions_traces_peaks_plots_setVars.py" to set the variable "all_sess_2an"
 
 Follow this code by "omissions_traces_peaks_plots_setVars_corr_eachCre.py"
 
+To understand how correlation scripts work, see: omissions_traces_peaks_plots_setVars_corr_sumMice_summaryCodeNotes.py
+
 This script contains all the functions (plotting, etc), and also
 sets dataframe "corr_trace_peak_allMice", which includes corr and p traces and their quantification for each layer pair, for each mouse:
     # cc traces (session-averaged) for each layer pair: eg. cc12_sessAv_44
@@ -18,6 +20,7 @@ cc traces and cc quantification are done in three different ways:
 
 Remember: baselines are not subtracted from the traces; but when we quantify the peak we subtract the baseline if sameBl_allLayerPairs is set to 1. Remember: baselines are not subtracted from the traces; but when we quantify the peak we subtract the baseline if sameBl_allLayerPairs is set to 1.
 
+To plot histograms of cc across all neurons pairs, run: multiscope_fn/omissions_traces_peaks_plots_sumMice_cc_dist.py
 
 Created on Mon Sep 23 15:58:29 2019
 @author: farzaneh
@@ -130,7 +133,7 @@ def set_flash_win_final(cre, session_novel, flash_win, flash_win_vip):
 
 #%% Quantify corr after flash, and after omission (to get the heatmap of corrs!)
 
-def quant_cc(cc_sessAv, fo_dur, list_times, list_times_flash, samps_bef, flash_win_final0, frame_dur, num_depth, sameBl_allLayerPairs): # cc_sessAv = cc11_sessAv
+def quant_cc(cc_sessAv, fo_dur, list_times, list_times_flash, samps_bef, flash_win_final0, frame_dur, num_depth, sameBl_allLayerPairs, allpairs=0): # cc_sessAv = cc11_sessAv
 
     if sameBl_allLayerPairs:
         # Note: instead of defining a single flash_index for all sessions, I would use flash_omit_dur_fr_all (which now we are saving in this_sess (and all_sess)) for each session individually.
@@ -193,29 +196,33 @@ def quant_cc(cc_sessAv, fo_dur, list_times, list_times_flash, samps_bef, flash_w
 
     ##################################################    
     # now reshape to 4x4 (area by area matrix of cc)
-    if np.ndim(cc_sessAv)==1:
-        peak_amp_omit44 = peak_amp_omit
-        peak_amp_flash44 = peak_amp_flash
-    
-    else:
-        if cc_sessAv.shape[1]==16: # across area correlations
-            peak_amp_omit44 = np.reshape(peak_amp_omit, (num_depth, num_depth), order='C') # 4 x 4
-            peak_amp_flash44 = np.reshape(peak_amp_flash, (num_depth, num_depth), order='C') # 4 x 4
-            
-        elif cc_sessAv.shape[1]==10: # within area correlations; # create a nan 4x4 matrix and fill in the upper triangular with the values computed above.
-            indsr, indsc = np.triu_indices(num_depth)
-    
-            a = np.full((num_depth, num_depth), np.nan)
-            a[indsr,indsc] = peak_amp_omit
-            peak_amp_omit44 = a
-    
-            a = np.full((num_depth, num_depth), np.nan)
-            a[indsr,indsc] = peak_amp_flash
-            peak_amp_flash44 = a
-            
-        else:
+    if allpairs==0:
+        if np.ndim(cc_sessAv)==1:
             peak_amp_omit44 = peak_amp_omit
             peak_amp_flash44 = peak_amp_flash
+
+        else:
+            if cc_sessAv.shape[1]==16: # across area correlations
+                peak_amp_omit44 = np.reshape(peak_amp_omit, (num_depth, num_depth), order='C') # 4 x 4
+                peak_amp_flash44 = np.reshape(peak_amp_flash, (num_depth, num_depth), order='C') # 4 x 4
+
+            elif cc_sessAv.shape[1]==10: # within area correlations; # create a nan 4x4 matrix and fill in the upper triangular with the values computed above.
+                indsr, indsc = np.triu_indices(num_depth)
+
+                a = np.full((num_depth, num_depth), np.nan)
+                a[indsr,indsc] = peak_amp_omit
+                peak_amp_omit44 = a
+
+                a = np.full((num_depth, num_depth), np.nan)
+                a[indsr,indsc] = peak_amp_flash
+                peak_amp_flash44 = a
+
+            else:
+                peak_amp_omit44 = peak_amp_omit
+                peak_amp_flash44 = peak_amp_flash
+    else:
+        peak_amp_omit44 = peak_amp_omit
+        peak_amp_flash44 = peak_amp_flash
 
     
     return peak_amp_omit44, peak_amp_flash44
@@ -1425,6 +1432,7 @@ cols = ['mouse_id', 'cre', 'session_stages', 'session_labs', 'areas', 'depths', 
         'p12_sessAv_44', 'p12_sessSd_44', 'p11_sessAv_44', 'p11_sessSd_44', 'p22_sessAv_44', 'p22_sessSd_44', \
         'cc12_sessAv_44_shfl', 'cc12_sessSd_44_shfl', 'cc11_sessAv_44_shfl', 'cc11_sessSd_44_shfl', 'cc22_sessAv_44_shfl', 'cc22_sessSd_44_shfl', \
         'p12_sessAv_44_shfl', 'p12_sessSd_44_shfl', 'p11_sessAv_44_shfl', 'p11_sessSd_44_shfl', 'p22_sessAv_44_shfl', 'p22_sessSd_44_shfl', \
+        'cc12_peak_amp_omit_allPairs_allSess', 'cc12_peak_amp_flash_allPairs_allSess', 'cc11_peak_amp_omit_allPairs_allSess', 'cc11_peak_amp_flash_allPairs_allSess', 'cc22_peak_amp_omit_allPairs_allSess', 'cc22_peak_amp_flash_allPairs_allSess', \
         'cc12_peak_amp_omit_sessAv', 'cc12_peak_amp_omit_sessSd', 'cc12_peak_amp_flash_sessAv', 'cc12_peak_amp_flash_sessSd', \
         'cc11_peak_amp_omit_sessAv', 'cc11_peak_amp_omit_sessSd', 'cc11_peak_amp_flash_sessAv', 'cc11_peak_amp_flash_sessSd', \
         'cc22_peak_amp_omit_sessAv', 'cc22_peak_amp_omit_sessSd', 'cc22_peak_amp_flash_sessAv', 'cc22_peak_amp_flash_sessSd', \
@@ -1587,6 +1595,10 @@ for im in range(len(all_mice_id)): # im=0
         flash_omit_dur_all_allSess = []
         flash_omit_dur_fr_all_allSess = []
         
+        cc_a12_allPairs_allSess = []
+        cc_a11_allPairs_allSess = []
+        cc_a22_allPairs_allSess = []
+        
         # get cc and p data for each session
         for ise in range(num_sessions): # ise=0 # loop through all sessions of this mouse
 
@@ -1599,10 +1611,10 @@ for im in range(len(all_mice_id)): # im=0
             cc_a12 = all_sess_2an_this_mouse['cc_a12'].iloc[ise] # size: 16 (num_layerPairs between area 1 and 2); # each element: num_frs x (nu1*nu2)   
             p_a12 = all_sess_2an_this_mouse['p_a12'].iloc[ise]
 
-            cc_a11 = all_sess_2an_this_mouse['cc_a11'].iloc[ise] # size: 10 (num_layerPairs between area 1 and 1); # each element: num_frs x (nu1*nu2)   
+            cc_a11 = all_sess_2an_this_mouse['cc_a11'].iloc[ise] # size: 10 (num_layerPairs between area 1 and 1); # each element: num_frs x (nu1*nu1)   
             p_a11 = all_sess_2an_this_mouse['p_a11'].iloc[ise]
             
-            cc_a22 = all_sess_2an_this_mouse['cc_a22'].iloc[ise] # size: 10 (num_layerPairs between area 2 and 2); # each element: num_frs x (nu1*nu2)   
+            cc_a22 = all_sess_2an_this_mouse['cc_a22'].iloc[ise] # size: 10 (num_layerPairs between area 2 and 2); # each element: num_frs x (nu2*nu2)   
             p_a22 = all_sess_2an_this_mouse['p_a22'].iloc[ise]
                 
             # shfl p (same dimensions as actual data (cc and p))             
@@ -1616,6 +1628,13 @@ for im in range(len(all_mice_id)): # im=0
             cc11_aveNPairs_shfl = all_sess_2an_this_mouse['cc_a11_shfl'].iloc[ise] # size: num_frs x 10
             cc22_aveNPairs_shfl = all_sess_2an_this_mouse['cc_a22_shfl'].iloc[ise] # size: num_frs x 10
 
+            
+            ######### keep cc of all neuron pairs for each session
+            # one difference with _aveNPairs vars below is that in _allPairs vars, we keep all pairs, but when we compute average across pairs, we only do it if a layer has >th_neurons neurons.
+            cc_a12_allPairs_allSess.append(cc_a12) # each element is for 1 session; within each session, each element is for 1 layer; within each layer, each element is of size 40(frames) x num_neuron_pairs
+            cc_a11_allPairs_allSess.append(cc_a11)
+            cc_a22_allPairs_allSess.append(cc_a22)
+            
             
             
             ######### Loop through each layer combination, and compute average of corrs across all neuron pairs.
@@ -2193,6 +2212,13 @@ for im in range(len(all_mice_id)): # im=0
         p22_peak_amp_omit_eachSess_pooledAll_shfl = np.full((num_sessions), np.nan)
         p22_peak_amp_flash_eachSess_pooledAll_shfl = np.full((num_sessions), np.nan)
         
+        cc12_peak_amp_omit_allPairs_allSess = []
+        cc12_peak_amp_flash_allPairs_allSess = []
+        cc11_peak_amp_omit_allPairs_allSess = []
+        cc11_peak_amp_flash_allPairs_allSess = []
+        cc22_peak_amp_omit_allPairs_allSess = []
+        cc22_peak_amp_flash_allPairs_allSess = []
+        
         for ise in range(num_sessions): # ise=0 # loop through all sessions of this mouse
             
             fo_dur = flash_omit_dur_all_allSess[ise] # flash-omission interval of all trials. We use max of this to compute bl_index_pre_flash.
@@ -2212,7 +2238,46 @@ for im in range(len(all_mice_id)): # im=0
             
             flash_win_final = set_flash_win_final(cre, session_novel, flash_win, flash_win_vip)
             flash_win_final0 = flash_win_final[0] + .75 # we add .75 because here flash_win_final is relative to omission (unlike in omission_xx_init code, where it is relative to flash)
+            
 
+            ###### do cc quantification for all neuron pairs (across all layer pairs) of a session
+            cc12_peak_amp_omit_allPairs_eachSess = []
+            cc12_peak_amp_flash_allPairs_eachSess = []
+            for ilc in range(len(layerPairs_a12)):
+#                 cc_a12_allPairs_allSess[ise][ilc] # 40 x num_neuron_pairs
+                # o12 and f12: size: num_neuron_pairs
+                o12, f12 = quant_cc(cc_a12_allPairs_allSess[ise][ilc], fo_dur, list_times, list_times_flash_final, samps_bef, flash_win_final0, frame_dur, num_depth, sameBl_allLayerPairs, allpairs=1) 
+                cc12_peak_amp_omit_allPairs_eachSess.append(o12)
+                cc12_peak_amp_flash_allPairs_eachSess.append(f12)                
+                
+            cc11_peak_amp_omit_allPairs_eachSess = []
+            cc11_peak_amp_flash_allPairs_eachSess = []
+            cc22_peak_amp_omit_allPairs_eachSess = []
+            cc22_peak_amp_flash_allPairs_eachSess = []            
+            for ilc in range(len(layerPairs_aSame)):
+                o11,f11 = quant_cc(cc_a11_allPairs_allSess[ise][ilc], fo_dur, list_times, list_times_flash_final, samps_bef, flash_win_final0, frame_dur, num_depth, sameBl_allLayerPairs, allpairs=1)
+                o22,f22 = quant_cc(cc_a22_allPairs_allSess[ise][ilc], fo_dur, list_times, list_times_flash_final, samps_bef, flash_win_final0, frame_dur, num_depth, sameBl_allLayerPairs, allpairs=1)
+                cc11_peak_amp_omit_allPairs_eachSess.append(o11)
+                cc11_peak_amp_flash_allPairs_eachSess.append(f11)
+                cc22_peak_amp_omit_allPairs_eachSess.append(o22)
+                cc22_peak_amp_flash_allPairs_eachSess.append(f22)                
+            
+            # keep vars for all sessions
+            cc12_peak_amp_omit_allPairs_allSess.append(cc12_peak_amp_omit_allPairs_eachSess)
+            cc12_peak_amp_flash_allPairs_allSess.append(cc12_peak_amp_flash_allPairs_eachSess)
+            cc11_peak_amp_omit_allPairs_allSess.append(cc11_peak_amp_omit_allPairs_eachSess)
+            cc11_peak_amp_flash_allPairs_allSess.append(cc11_peak_amp_flash_allPairs_eachSess)
+            cc22_peak_amp_omit_allPairs_allSess.append(cc22_peak_amp_omit_allPairs_eachSess)
+            cc22_peak_amp_flash_allPairs_allSess.append(cc22_peak_amp_flash_allPairs_eachSess)
+
+            # sanity check
+            # the following 2 plots should be superimposed; 
+            # one difference is that in _allPairs vars, we keep all pairs, but when we compute average across pairs, we only do it if a layer has >th_neurons neurons.
+#             plt.plot([np.nanmean(cc12_peak_amp_omit_allPairs_allSess[0][i]) for i in range(16)]) # cc is quantified for each neuron pair; then averaged acorss pairs
+#             plt.plot(cc12_peak_amp_omit_eachSess[0].flatten()) # traces are averaged across neuron pairs; then cc is quantified
+            
+            
+            
             cc12_peak_amp_omit_eachSess[ise], cc12_peak_amp_flash_eachSess[ise] = quant_cc(cc12_aveNPairs_allSess[ise], fo_dur, list_times, list_times_flash_final, samps_bef, flash_win_final0, frame_dur, num_depth, sameBl_allLayerPairs) 
             cc11_peak_amp_omit_eachSess[ise], cc11_peak_amp_flash_eachSess[ise] = quant_cc(cc11_aveNPairs_allSess[ise], fo_dur, list_times, list_times_flash_final, samps_bef, flash_win_final0, frame_dur, num_depth, sameBl_allLayerPairs) 
             cc22_peak_amp_omit_eachSess[ise], cc22_peak_amp_flash_eachSess[ise] = quant_cc(cc22_aveNPairs_allSess[ise], fo_dur, list_times, list_times_flash_final, samps_bef, flash_win_final0, frame_dur, num_depth, sameBl_allLayerPairs) 
@@ -2637,8 +2702,16 @@ for im in range(len(all_mice_id)): # im=0
         corr_trace_peak_allMice.at[im, 'p22_pooledAll_sessSd_shfl'] = p22_pooledAll_sessSd_shfl
 
         
-        
+        ######################################################################
         ########## Peak quantification vars (omit and flash evoked) ##########
+        corr_trace_peak_allMice.at[im, 'cc12_peak_amp_omit_allPairs_allSess'] = cc12_peak_amp_omit_allPairs_allSess
+        corr_trace_peak_allMice.at[im, 'cc12_peak_amp_flash_allPairs_allSess'] = cc12_peak_amp_flash_allPairs_allSess
+        corr_trace_peak_allMice.at[im, 'cc11_peak_amp_omit_allPairs_allSess'] = cc11_peak_amp_omit_allPairs_allSess
+        corr_trace_peak_allMice.at[im, 'cc11_peak_amp_flash_allPairs_allSess'] = cc11_peak_amp_flash_allPairs_allSess
+        corr_trace_peak_allMice.at[im, 'cc22_peak_amp_omit_allPairs_allSess'] = cc22_peak_amp_omit_allPairs_allSess
+        corr_trace_peak_allMice.at[im, 'cc22_peak_amp_flash_allPairs_allSess'] = cc22_peak_amp_flash_allPairs_allSess        
+        
+        
         corr_trace_peak_allMice.at[im, 'cc12_peak_amp_omit_sessAv'] = cc12_peak_amp_omit_sessAv
         corr_trace_peak_allMice.at[im, 'cc12_peak_amp_omit_sessSd'] = cc12_peak_amp_omit_sessSd        
         corr_trace_peak_allMice.at[im, 'cc12_peak_amp_flash_sessAv'] = cc12_peak_amp_flash_sessAv
@@ -2798,6 +2871,16 @@ print(len(corr_trace_peak_allMice))
 corr_trace_peak_allMice #.iloc[:2]
 #corr_trace_peak_allMice.iloc[0]['cc12_sessSd_44'].shape
 
+
+
+#%% Sanity check for how _allPairs and _sessAv vars relate to each other:
+# the following 2 are identical
+# 1. get average of neuron pairs, per session (s), compute each for each layer(l)
+# np.reshape([np.nanmean([np.nanmean(corr_trace_peak_allMice['cc12_peak_amp_flash_allPairs_allSess'].iloc[6][s][l]) for s in range(5)]) for l in range(16)], (4,4), order='C')
+# 2. get session-averaged neuron-pair-averaged values for each layer
+# corr_trace_peak_allMice['cc12_peak_amp_flash_sessAv'].iloc[6]
+
+# To plot histograms of cc across all neurons pairs, run: multiscope_fn/omissions_traces_peaks_plots_cc_dist.py
 
 
 
