@@ -15,7 +15,7 @@ if __name__ == '__main__':
 
     # set params for
     interpolate = True
-    sampling_rate = 30
+    output_sampling_rate = 30
     time_window = [-3, 3.1]
 
     # set up save folder
@@ -31,7 +31,7 @@ if __name__ == '__main__':
         for event_type in ['all', 'omissions', 'changes']:
             sdf = vb_ophys.get_stimulus_response_df(dataset, data_type=data_type, event_type=event_type,
                                                     time_window=time_window, interpolate=interpolate,
-                                                    output_sampling_rate=sampling_rate)
+                                                    output_sampling_rate=output_sampling_rate)
             # if file already exists, overwrite it
             filepath = loading.get_stimulus_response_df_filepath_for_experiment(ophys_experiment_id, data_type, event_type,
                                                                     interpolate=interpolate, output_sampling_rate=output_sampling_rate)
