@@ -59,9 +59,9 @@ def get_multi_session_df(project_code, session_number, conditions, data_type, ev
                                                   interpolate=interpolate, output_sampling_rate=output_sampling_rate,
                                                   load_from_file=True)
             df['ophys_experiment_id'] = experiment_id
-            # if using omissions, only include omissions where time from last change is more than 3 seconds
-            if event_type == 'omissions':
-                df = df[df.time_from_last_change>3]
+            # # if using omissions, only include omissions where time from last change is more than 3 seconds
+            # if event_type == 'omissions':
+            #     df = df[df.time_from_last_change>3]
             # modify columns for specific conditions
             if 'passive' in dataset.metadata['session_type']:
                 df['lick_on_next_flash'] = False
@@ -105,8 +105,12 @@ def get_multi_session_df(project_code, session_number, conditions, data_type, ev
     filename = loading.get_file_name_for_multi_session_df(data_type, event_type, project_code, session_type, conditions)
     mega_mdf_write_dir = loading.get_multi_session_df_df_dir(interpolate=interpolate,
                                                              output_sampling_rate=output_sampling_rate)
+    filepath = os.path.join(mega_mdf_write_dir, filename)
+    # if file of the same name exists, delete & overwrite to prevent files from getting huge
+    if os.path.exists(filepath):
+        os.remove(filepath)
     print('saving multi session mean df as ', filename)
-    mega_mdf.to_hdf(os.path.join(mega_mdf_write_dir, filename), key='df')
+    mega_mdf.to_hdf(filepath, key='df')
     print('saved to', mega_mdf_write_dir)
 
     return mega_mdf
