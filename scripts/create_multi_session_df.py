@@ -58,23 +58,23 @@ if __name__ == '__main__':
                                     'all', 'all']
 
 
-    # # create dfs for all data types and conditions for physio data
-    # for data_type in physio_data_types:
-    #     for i, conditions in enumerate(physio_conditions):
-    #         event_type = event_types_for_conditions[i]
-    #         print('creating multi_session_df for', data_type, event_type, conditions)
-    #         df = io.get_multi_session_df(project_code, session_number, conditions, data_type, event_type,
-    #                              time_window=time_window, interpolate=interpolate, output_sampling_rate=output_sampling_rate,
-    #                              response_window_duration_seconds=response_window_duration_seconds,
-    #                                      use_extended_stimulus_presentations=use_extended_stimulus_presentations)
-
-    # create dfs for all data types and conditions for behavior data
-    for data_type in behavior_data_types:
-        for i, conditions in enumerate(behavior_conditions):
+    # create dfs for all data types and conditions for physio data
+    for data_type in physio_data_types:
+        for i, conditions in enumerate(physio_conditions):
             event_type = event_types_for_conditions[i]
             print('creating multi_session_df for', data_type, event_type, conditions)
             df = io.get_multi_session_df(project_code, session_number, conditions, data_type, event_type,
-                                         time_window=time_window, interpolate=interpolate,
-                                         output_sampling_rate=output_sampling_rate,
-                                         response_window_duration_seconds=response_window_duration_seconds,
+                                 time_window=time_window, interpolate=interpolate, output_sampling_rate=output_sampling_rate,
+                                 response_window_duration_seconds=response_window_duration_seconds,
                                          use_extended_stimulus_presentations=use_extended_stimulus_presentations)
+
+    # # create dfs for all data types and conditions for behavior data
+    # for data_type in behavior_data_types:
+    #     for i, conditions in enumerate(behavior_conditions):
+    #         event_type = event_types_for_conditions[i]
+    #         print('creating multi_session_df for', data_type, event_type, conditions)
+    #         df = io.get_multi_session_df(project_code, session_number, conditions, data_type, event_type,
+    #                                      time_window=time_window, interpolate=interpolate,
+    #                                      output_sampling_rate=output_sampling_rate,
+    #                                      response_window_duration_seconds=response_window_duration_seconds,
+    #                                      use_extended_stimulus_presentations=use_extended_stimulus_presentations)
