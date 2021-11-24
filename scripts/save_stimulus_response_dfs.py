@@ -27,7 +27,7 @@ if __name__ == '__main__':
     cache = VisualBehaviorOphysProjectCache.from_s3_cache(cache_dir)
     dataset = cache.get_behavior_ophys_experiment(ophys_experiment_id)
     # create and save stimulus response df for all data types
-    for data_type in ['filtered_events', 'dff', 'events', 'running_speed', 'pupil_diameter', 'lick_rate']:
+    for data_type in ['filtered_events', 'dff', 'events', 'running_speed', 'pupil_width', 'lick_rate']:
         for event_type in ['all', 'omissions', 'changes']:
             sdf = vb_ophys.get_stimulus_response_df(dataset, data_type=data_type, event_type=event_type,
                                                     time_window=time_window, interpolate=interpolate,
