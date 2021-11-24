@@ -22,7 +22,7 @@ python_path = os.path.join(
 )
 
 # define the job record output folder
-stdout_location = r'/allen/programs/braintv/workgroups/nc-ophys/Marina/ClusterJobs/JobRecords'
+stdout_location = r"/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/cluster_jobs/multi_session_dfs"
 
 cache_dir = loading.get_platform_analysis_cache_dir()
 cache = bpc.from_s3_cache(cache_dir=cache_dir)
