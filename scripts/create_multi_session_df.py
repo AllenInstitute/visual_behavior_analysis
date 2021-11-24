@@ -41,7 +41,7 @@ if __name__ == '__main__':
                          ['cell_specimen_id', 'hit', 'miss', 'epoch']]
 
     behavior_conditions = [['omitted'],
-                           ['omitted', 'epoch']
+                           ['omitted', 'epoch'],
                            ['is_change'],
                            ['is_change', 'epoch'],
                            ['is_change', 'image_name'],
