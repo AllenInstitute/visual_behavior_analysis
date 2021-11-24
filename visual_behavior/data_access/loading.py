@@ -538,7 +538,7 @@ def get_stimulus_response_df_filepath_for_experiment(ophys_experiment_id, data_t
     return filepath
 
 
-def get_stimulus_response_df(dataset, time_window=[-3,3.1], interpolate=True, output_sampling_rate=30.,
+def get_stimulus_response_df(dataset, time_window=[-3, 3.1], interpolate=True, output_sampling_rate=30,
                              data_type='filtered_events', event_type='all', load_from_file=True):
     """
     load stimulus response df using mindscope_utilities and merge with stimulus_presentations that has trials metadata added
@@ -558,8 +558,8 @@ def get_stimulus_response_df(dataset, time_window=[-3,3.1], interpolate=True, ou
     if load_from_file:
         if os.path.exists(filepath):
             print('loading response df from file for', ophys_experiment_id, data_type, event_type)
-            sdf = pd.read_hdf(filepath)
-        else: # if it doesnt exist, create it and save it
+            sdf = pd.read_hdf(filepath, key='df')
+        else:  # if it doesnt exist, create it and save it
             print('stimulus_response_df does not exist for', filepath)
             print('generating response df')
             sdf = vb_ophys.get_stimulus_response_df(dataset, data_type=data_type, event_type=event_type,
@@ -2718,7 +2718,7 @@ def load_multi_session_df(data_type, event_type, conditions, interpolate=True, o
             try:
                 filename = get_file_name_for_multi_session_df(data_type, event_type, project_code, session_type, conditions)
                 multi_session_df_dir = get_multi_session_df_df_dir(interpolate=interpolate,
-                                                             output_sampling_rate=output_sampling_rate)
+                                                                   output_sampling_rate=output_sampling_rate)
                 df = pd.read_hdf(os.path.join(multi_session_df_dir, filename), key='df')
                 multi_session_df = pd.concat([multi_session_df, df])
             except BaseException:
@@ -3135,7 +3135,7 @@ def get_cell_table(platform_paper_only=True, add_extra_columns=True):
     return cell_table
 
 
-def get_data_dict(ophys_experiment_ids, data_types=None, save_dir=None):
+def get_data_dict(ophys_experiment_ids, data_types=None):
     """
     create dictionary of stimulus_response_dfs for all data types for a set of ophys_experiment_ids
     data types include [filtered_events, events, dff, running_speed, pupil_diameter, lick_rate]
@@ -3168,8 +3168,10 @@ def get_data_dict(ophys_experiment_ids, data_types=None, save_dir=None):
 
         for data_type in data_types:
             try:
-                sdf = get_stimulus_response_df(dataset, time_window=time_window, interpolate=interpolate, output_sampling_rate=output_sampling_rate,
-                                               data_type=data_type, load_from_file=True)
+                sdf = get_stimulus_response_df(dataset, data_type=data_type, event_type='all',
+                                               time_window=time_window, interpolate=interpolate,
+                                               output_sampling_rate=output_sampling_rate,
+                                               load_from_file=True)
                 data_dict[ophys_experiment_id][data_type]['changes'] = sdf[sdf.is_change]
                 data_dict[ophys_experiment_id][data_type]['omissions'] = sdf[sdf.omitted]
             except BaseException:

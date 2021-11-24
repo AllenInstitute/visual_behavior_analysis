@@ -1442,7 +1442,7 @@ def plot_event_triggered_averages_for_container(ophys_container_id, save_figure=
     """
     interpolate = True
     sampling_rate = 30
-    time_window = [-2, 2.5]
+    time_window = [-3, 3.1]
     experiments_table = loading.get_platform_paper_experiment_table()
     # limit to containers with all experience levels, active only
     expts = utilities.limit_to_last_familiar_second_novel_active(experiments_table)
