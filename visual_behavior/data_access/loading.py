@@ -124,7 +124,7 @@ def get_ophys_glm_dir():
 def get_stimulus_response_df_dir(interpolate=True, output_sampling_rate=30):
     base_dir = r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/platform_paper_cache/stimulus_response_dfs'
     if interpolate:
-        save_dir = os.path.join(base_dir, 'interpolate_'+str(output_sampling_rate)+'Hz')
+        save_dir = os.path.join(base_dir, 'interpolate_' + str(output_sampling_rate) + 'Hz')
     else:
         save_dir = os.path.join(base_dir, 'original_frame_rate')
     return save_dir
@@ -133,7 +133,7 @@ def get_stimulus_response_df_dir(interpolate=True, output_sampling_rate=30):
 def get_multi_session_df_df_dir(interpolate=True, output_sampling_rate=30):
     base_dir = get_platform_analysis_cache_dir()
     if interpolate:
-        save_dir = os.path.join(base_dir, 'multi_session_mean_response_dfs','interpolate_'+str(output_sampling_rate)+'Hz')
+        save_dir = os.path.join(base_dir, 'multi_session_mean_response_dfs', 'interpolate_' + str(output_sampling_rate) + 'Hz')
     else:
         save_dir = os.path.join(base_dir, 'multi_session_mean_response_dfs', 'original_frame_rate')
     return save_dir
@@ -2732,7 +2732,7 @@ def get_file_name_for_multi_session_df(data_type, event_type, project_code, sess
 
 
 def load_multi_session_df(cache_dir, df_name, conditions, experiments_table, remove_outliers=False, use_session_type=True,
-                         use_events=True, filter_events=False):
+                          use_events=True, filter_events=False):
     """
     Loops through all experiments in the provided experiments_table, creates a response dataframe indicated by df_name,
     creates a mean response dataframe for a given set of conditions, and concatenates across all experiments to create
@@ -3233,7 +3233,7 @@ def get_data_dict(ophys_experiment_ids, data_types=None, save_dir=None):
         for data_type in data_types:
             try:
                 sdf = get_stimulus_response_df(dataset, time_window=time_window, interpolate=interpolate, output_sampling_rate=output_sampling_rate,
-                                         data_type=data_type, load_from_file=True)
+                                               data_type=data_type, load_from_file=True)
                 data_dict[ophys_experiment_id][data_type]['changes'] = sdf[sdf.is_change]
                 data_dict[ophys_experiment_id][data_type]['omissions'] = sdf[sdf.omitted]
             except BaseException:

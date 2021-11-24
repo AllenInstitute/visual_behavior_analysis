@@ -344,7 +344,7 @@ def compute_reliability_vectorized(traces):
     return reliability, correlation_values
 
 
-def compute_reliability(group, window=[-3,3], response_window_duration=0.5, frame_rate=30.):
+def compute_reliability(group, window=[-3, 3], response_window_duration=0.5, frame_rate=30.):
     # computes trial to trial correlation across input traces in group,
     # only for portion of the trace after the change time or flash onset time
 
@@ -378,7 +378,7 @@ def get_window(analysis=None, flashes=False, omitted=False):
 
 
 def get_mean_df(response_df, conditions=['cell', 'change_image_name'], frame_rate=30.,
-                window_around_timepoint_seconds = [-3,3], response_window_duration_seconds=0.5,
+                window_around_timepoint_seconds=[-3, 3], response_window_duration_seconds=0.5,
                 get_pref_stim=True, exclude_omitted_from_pref_stim=True):
 
     import visual_behavior.ophys.response_analysis.response_processing as rp
@@ -406,7 +406,6 @@ def get_mean_df(response_df, conditions=['cell', 'change_image_name'], frame_rat
     except Exception as e:  # NOQA E722
         print(e)
         pass
-
 
     if 'p_value_gray_screen' in rdf.keys():
         fraction_significant_p_value_gray_screen = rdf.groupby(conditions).apply(
