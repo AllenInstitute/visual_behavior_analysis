@@ -1453,8 +1453,7 @@ def plot_event_triggered_averages_for_container(ophys_container_id, save_figure=
     container = container.sort_values(by=['experience_level'])
     ophys_experiment_ids = container.index.values
     # get dictionary of all event triggered average timeseries
-    data_dict = loading.get_data_dict(ophys_experiment_ids,
-                                      save_dir=loading.get_stimulus_response_df_dir(interpolate, sampling_rate))
+    data_dict = loading.get_data_dict(ophys_experiment_ids)
 
     colors = ut.get_experience_level_colors()
     figsize = (12, 12)
