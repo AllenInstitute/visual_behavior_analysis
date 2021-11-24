@@ -1560,16 +1560,24 @@ def plot_pupil_timeseries_for_container(ophys_container_id, save_figure=True):
 
             dataset = loading.get_ophys_dataset(experiment_id)
             # try:
-            eye_tracking = processing.zscore_pupil_data(dataset.eye_tracking.copy())
+            eye_tracking = vb_ophys.get_pupil_data(eye_tracking, interpolate_likely_blinks=False, normalize_to_gray_screen=False, zscore=False,
+                   interpolate_to_ophys=False, ophys_timestamps=dataset.ophys_timestamps, stimulus_presentations=dataset.stimulus_presentations)
+            # eye_tracking = processing.zscore_pupil_data(dataset.eye_tracking.copy())
             timestamps = eye_tracking['timestamps'].values
             experience_level = expts.loc[experiment_id].experience_level
 
-            ax[i].plot(timestamps, eye_tracking.pupil_radius.values, color=colors[c])
+            ax[i].plot(timestamps, eye_tracking.pupil_width.values, color=colors[c])
             ax[i].set_ylabel('pupil radius\n(pixels)')
             ax[i].axvline(x=dataset.stimulus_presentations.start_time.values[0], ymin=0, ymax=1, color=colors[c],
                           linestyle='--')
 
-            ax[i + 1].plot(timestamps, eye_tracking.pupil_radius_zscored.values, color=colors[c])
+            eye_tracking = vb_ophys.get_pupil_data(eye_tracking, interpolate_likely_blinks=True,
+                                                   normalize_to_gray_screen=True, zscore=False,
+                                                   interpolate_to_ophys=False,
+                                                   ophys_timestamps=dataset.ophys_timestamps,
+                                                   stimulus_presentations=dataset.stimulus_presentations)
+
+            ax[i + 1].plot(timestamps, eye_tracking.pupil_width.values, color=colors[c])
             ax[i + 1].set_xlabel('time in session (seconds)')
             ax[i + 1].set_ylabel('z-score')
             ax[i + 1].axvline(x=dataset.stimulus_presentations.start_time.values[0], ymin=0, ymax=1,
