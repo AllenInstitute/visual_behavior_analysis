@@ -1535,6 +1535,8 @@ def plot_pupil_timeseries_for_container(ophys_container_id, save_figure=True):
 
     """
     import visual_behavior.visualization.ophys.summary_figures as sf
+    import mindscope_utilities.visual_behavior_ophys.data_formatting as vb_ophys
+
     # cache_dir = loading.get_platform_analysis_cache_dir()
     # cache = VisualBehaviorOphysProjectCache.from_s3_cache(cache_dir)
     # get experiments_table
