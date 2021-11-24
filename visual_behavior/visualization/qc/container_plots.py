@@ -1580,7 +1580,7 @@ def plot_pupil_timeseries_for_container(ophys_container_id, save_figure=True):
 
             ax[i + 1].plot(timestamps, eye_tracking.pupil_width.values, color=colors[c])
             ax[i + 1].set_xlabel('time in session (seconds)')
-            ax[i + 1].set_ylabel('z-score')
+            ax[i + 1].set_ylabel('normalized\npupil_width')
             ax[i + 1].axvline(x=dataset.stimulus_presentations.start_time.values[0], ymin=0, ymax=1,
                               color=colors[c], linestyle='--')
             if xlim[0] == 300:
