@@ -1561,7 +1561,7 @@ def plot_pupil_timeseries_for_container(ophys_container_id, save_figure=True):
 
             dataset = loading.get_ophys_dataset(experiment_id)
             # try:
-            eye_tracking = vb_ophys.get_pupil_data(eye_tracking, interpolate_likely_blinks=False, normalize_to_gray_screen=False, zscore=False,
+            eye_tracking = vb_ophys.get_pupil_data(dataset.eye_tracking, interpolate_likely_blinks=False, normalize_to_gray_screen=False, zscore=False,
                    interpolate_to_ophys=False, ophys_timestamps=dataset.ophys_timestamps, stimulus_presentations=dataset.stimulus_presentations)
             # eye_tracking = processing.zscore_pupil_data(dataset.eye_tracking.copy())
             timestamps = eye_tracking['timestamps'].values
