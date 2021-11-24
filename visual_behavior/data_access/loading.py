@@ -538,7 +538,7 @@ def get_stimulus_response_df_filepath_for_experiment(ophys_experiment_id, data_t
     return filepath
 
 
-def get_stimulus_response_df(dataset, time_window=[-1, 2.1], interpolate=True, output_sampling_rate=30.,
+def get_stimulus_response_df(dataset, time_window=[-3,3.1], interpolate=True, output_sampling_rate=30.,
                              data_type='filtered_events', event_type='all', load_from_file=True):
     """
     load stimulus response df using mindscope_utilities and merge with stimulus_presentations that has trials metadata added
@@ -2674,58 +2674,6 @@ def add_superficial_deep_to_experiments_table(experiments_table):
     return experiments_table
 
 
-def get_file_name_for_multi_session_df_no_session_type(df_name, project_code, conditions, use_events, filter_events):
-    if use_events:
-        if filter_events:
-            suffix = '_filtered_events'
-        else:
-            suffix = '_events'
-    else:
-        suffix = ''
-
-    if len(conditions) == 5:
-        filename = 'mean_' + df_name + '_' + project_code + '_' + conditions[1] + '_' + conditions[
-            2] + '_' + conditions[3] + '_' + conditions[4] + suffix + '.h5'
-    elif len(conditions) == 4:
-        filename = 'mean_' + df_name + '_' + project_code + '_' + conditions[1] + '_' + conditions[
-            2] + '_' + conditions[3] + suffix + '.h5'
-    elif len(conditions) == 3:
-        filename = 'mean_' + df_name + '_' + project_code + '_' + conditions[1] + '_' + conditions[
-            2] + suffix + '.h5'
-    elif len(conditions) == 2:
-        filename = 'mean_' + df_name + '_' + project_code + '_' + conditions[1] + suffix + '.h5'
-    elif len(conditions) == 1:
-        filename = 'mean_' + df_name + '_' + project_code + '_' + conditions[0] + suffix + '.h5'
-
-    return filename
-
-
-# def get_file_name_for_multi_session_df(df_name, project_code, session_type, conditions, use_events, filter_events):
-#     if use_events:
-#         if filter_events:
-#             suffix = '_filtered_events'
-#         else:
-#             suffix = '_events'
-#     else:
-#         suffix = ''
-#
-#     if len(conditions) == 6:
-#         filename = 'mean_' + df_name + '_' + project_code + '_' + session_type + '_' + conditions[1] + '_' + conditions[2] + '_' + conditions[3] + '_' + conditions[4] + '_' + conditions[5] + suffix + '.h5'
-#     elif len(conditions) == 5:
-#         filename = 'mean_' + df_name + '_' + project_code + '_' + session_type + '_' + conditions[1] + '_' + conditions[2] + '_' + conditions[3] + '_' + conditions[4] + suffix + '.h5'
-#     elif len(conditions) == 4:
-#         filename = 'mean_' + df_name + '_' + project_code + '_' + session_type + '_' + conditions[1] + '_' + conditions[2] + '_' + conditions[
-#             3] + suffix + '.h5'
-#     elif len(conditions) == 3:
-#         filename = 'mean_' + df_name + '_' + project_code + '_' + session_type + '_' + conditions[1] + '_' + conditions[2] + suffix + '.h5'
-#     elif len(conditions) == 2:
-#         filename = 'mean_' + df_name + '_' + project_code + '_' + session_type + '_' + conditions[1] + suffix + '.h5'
-#     elif len(conditions) == 1:
-#         filename = 'mean_' + df_name + '_' + project_code + '_' + session_type + '_' + conditions[0] + suffix + '.h5'
-#
-#     return filename
-
-
 def get_file_name_for_multi_session_df(data_type, event_type, project_code, session_type, conditions):
 
     if len(conditions) == 6:
@@ -2769,7 +2717,7 @@ def load_multi_session_df(data_type, event_type, conditions, interpolate=True, o
         for session_type in np.sort(experiments.session_type.unique()):
             try:
                 filename = get_file_name_for_multi_session_df(data_type, event_type, project_code, session_type, conditions)
-                multi_session_df_dir = loading.get_multi_session_df_df_dir(interpolate=interpolate,
+                multi_session_df_dir = get_multi_session_df_df_dir(interpolate=interpolate,
                                                              output_sampling_rate=output_sampling_rate)
                 df = pd.read_hdf(os.path.join(multi_session_df_dir, filename), key='df')
                 multi_session_df = pd.concat([multi_session_df, df])
