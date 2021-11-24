@@ -531,8 +531,15 @@ def get_extended_stimulus_presentations_table(stimulus_presentations, licks, rew
     return stimulus_presentations
 
 
+def get_stimulus_response_df_filepath_for_experiment(ophys_experiment_id, data_type, event_type, interpolate=True, output_sampling_rate=30):
+
+    filepath = os.path.join(get_stimulus_response_df_dir(interpolate, int(output_sampling_rate)),
+                            str(ophys_experiment_id) + '_' + data_type + '_' + event_type + '.h5')
+    return filepath
+
+
 def get_stimulus_response_df(dataset, time_window=[-1, 2.1], interpolate=True, output_sampling_rate=30.,
-                             data_type='filtered_events', load_from_file=True):
+                             data_type='filtered_events', event_type='all', load_from_file=True):
     """
     load stimulus response df using mindscope_utilities and merge with stimulus_presentations that has trials metadata added
     inputs:
@@ -546,18 +553,24 @@ def get_stimulus_response_df(dataset, time_window=[-1, 2.1], interpolate=True, o
     import mindscope_utilities.visual_behavior_ophys.data_formatting as vb_ophys
     # load stimulus response df from file if it exists otherwise generate it
     ophys_experiment_id = dataset.ophys_experiment_id
-    filepath = os.path.join(get_stimulus_response_df_dir(interpolate, int(output_sampling_rate)), str(ophys_experiment_id) + '_' + data_type + '.h5')
+    filepath = get_stimulus_response_df_filepath_for_experiment(ophys_experiment_id, data_type, event_type,
+                                                                interpolate=interpolate, output_sampling_rate=output_sampling_rate)
     if load_from_file:
         if os.path.exists(filepath):
-            print('loading response df from file for', ophys_experiment_id, data_type)
+            print('loading response df from file for', ophys_experiment_id, data_type, event_type)
             sdf = pd.read_hdf(filepath)
-        else:
+        else: # if it doesnt exist, create it and save it
             print('stimulus_response_df does not exist for', filepath)
-            print('set load_from_file to False to generate new stimulus_response_df')
-            sdf = pd.DataFrame(columns=['stimulus_presentations_id'])
+            print('generating response df')
+            sdf = vb_ophys.get_stimulus_response_df(dataset, data_type=data_type, event_type=event_type,
+                                                    time_window=time_window, interpolate=interpolate,
+                                                    output_sampling_rate=output_sampling_rate)
+            # if file already exists, overwrite it
+            sdf.to_hdf(filepath, key='df')
+            print('saved response df to', filepath)
     else:
         print('generating response df')
-        sdf = vb_ophys.get_stimulus_response_df(dataset, data_type=data_type, event_type='all',
+        sdf = vb_ophys.get_stimulus_response_df(dataset, data_type=data_type, event_type=event_type,
                                                 time_window=time_window, interpolate=interpolate,
                                                 output_sampling_rate=output_sampling_rate)
 
@@ -2731,26 +2744,18 @@ def get_file_name_for_multi_session_df(data_type, event_type, project_code, sess
     return filename
 
 
-def load_multi_session_df(cache_dir, df_name, conditions, experiments_table, remove_outliers=False, use_session_type=True,
-                          use_events=True, filter_events=False):
+def load_multi_session_df(data_type, event_type, conditions, interpolate=True, output_sampling_rate=30):
     """
-    Loops through all experiments in the provided experiments_table, creates a response dataframe indicated by df_name,
-    creates a mean response dataframe for a given set of conditions, and concatenates across all experiments to create
-    one large multi session dataframe with trial averaged responses and other relevant metrics. Saves multi_session_df
-    to the cache dir as a separate .h5 file per project_code and session_type combination present in the provided
-    experiments_table.
-    :param cache_dir: to level directory directory to save resulting dataframes, must contain folder called 'multi_session_summary_dfs'
-    :param df_name: the name of the response dataframe to be created using the ResponseAnalysis class, such as 'stimulus_response_df'
-    :param conditions: the set of conditions over which to group and average cell responses using the get_mean_df()
-                        function in response_analysis.utilities, such as ['cell_specimen_id', 'engagement_state', 'image_name']
-    :param experiments_table: full or subset of experiments_table from loading.get_filtered_ophys_experiments_table()
-    :param remove_outliers: Boolean, whether to remove cells with a max average dF/F > 5 (not a principled way of doing this)
-    :param use_session_type: Boolean for whether or not to save resulting dataframes by session type or to aggregate across session types.
-                        Grouping and saving by session type is typically necessary given the large size of these dataframes.
-    :param use_events: Boolean, whether to use events instead of dF/F when creating response dataframes
-    :return: multi_session_df for conditions specified above
-    """
+    Loops through all experiments in the provided experiments_table and loads pre-generated dataframes containing
+    trial averaged responses for each cell in each session, for the provided set of conditions, data_type, and event_type.
 
+    :param data_type:
+    :param event_type:
+    :param conditions:
+    :param interpolate:
+    :param output_sampling_rate:
+    :return:
+    """
     cache_dir = get_platform_analysis_cache_dir()
     cache = bpc.from_s3_cache(cache_dir=cache_dir)
     experiments_table = cache.get_ophys_experiment_table()
@@ -2761,32 +2766,15 @@ def load_multi_session_df(cache_dir, df_name, conditions, experiments_table, rem
         experiments = experiments_table[(experiments_table.project_code == project_code)]
         if project_code == 'VisualBehaviorMultiscope':
             experiments = experiments[experiments.session_type != 'OPHYS_2_images_B_passive']
-        # expts = experiments_table.reset_index()
-        if use_session_type:
-            for session_type in np.sort(experiments.session_type.unique()):
-                try:
-                    filename = get_file_name_for_multi_session_df(df_name, project_code, session_type, conditions,
-                                                                  use_events, filter_events)
-                    filepath = os.path.join(get_platform_analysis_cache_dir(), 'multi_session_summary_dfs', filename)
-                    # print('reading file at', filepath)
-                    df = pd.read_hdf(filepath, key='df')
-                    # df = df.merge(expts, on='ophys_experiment_id')
-                    if remove_outliers:
-                        outlier_cells = df[df.mean_response > 5].cell_specimen_id.unique()
-                        df = df[df.cell_specimen_id.isin(outlier_cells) == False]
-                    multi_session_df = pd.concat([multi_session_df, df])
-                except BaseException:
-                    print('no multi_session_df for', project_code, session_type)
-        else:
-            filename = get_file_name_for_multi_session_df_no_session_type(df_name, project_code, conditions, use_events, filter_events)
-            filepath = os.path.join(cache_dir, 'multi_session_summary_dfs', filename)
-            df = pd.read_hdf(filepath, key='df')
-            # df = df.merge(expts[['ophys_experiment_id', 'cre_line', 'location', 'location_layer',
-            #                      'layer', 'ophys_session_id', 'project_code', 'session_type',
-            #                      'specimen_id', 'depth', 'exposure_number', 'ophys_container_id']], on='ophys_experiment_id')
-            if remove_outliers:
-                outlier_cells = df[df.mean_response > 5].cell_specimen_id.unique()
-            df = df[df.cell_specimen_id.isin(outlier_cells) == False]
+        for session_type in np.sort(experiments.session_type.unique()):
+            try:
+                filename = get_file_name_for_multi_session_df(data_type, event_type, project_code, session_type, conditions)
+                multi_session_df_dir = loading.get_multi_session_df_df_dir(interpolate=interpolate,
+                                                             output_sampling_rate=output_sampling_rate)
+                df = pd.read_hdf(os.path.join(multi_session_df_dir, filename), key='df')
+                multi_session_df = pd.concat([multi_session_df, df])
+            except BaseException:
+                print('no multi_session_df for', project_code, session_type)
     return multi_session_df
 
 
