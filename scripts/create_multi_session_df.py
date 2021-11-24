@@ -19,138 +19,62 @@ if __name__ == '__main__':
 
     print(project_code, session_number)
 
-    # omissions
+    # params for stim response df creation
+    time_window = [-3, 3.1]
+    interpolate = True
+    output_sampling_rate = 30
+    response_window_duration_seconds = 0.5
+    use_extended_stimulus_presentations = False
 
-    # df_name = 'omission_response_df'
-    # conditions = ['cell_specimen_id']
-    #
-    # print('creating multi_session_df for', df_name, ', ', project_code, ', session number', session_number, conditions)
-    # df = io.get_multi_session_df(project_code, session_number, df_name, conditions, use_events=False, filter_events=False,
-    #                              use_extended_stimulus_presentations=False)
-    #
-    # df_name = 'omission_response_df'
-    # conditions = ['cell_specimen_id', 'epoch']
-    #
-    # print('creating multi_session_df for', df_name, ', ', project_code, ', session number', session_number, conditions)
-    # df = io.get_multi_session_df(project_code, session_number, df_name, conditions, use_events=False, filter_events=False,
-    #                              use_extended_stimulus_presentations=True)
+    # set up conditions to make multi session dfs for
+    physio_data_types = ['filtered_events', 'events', 'dff']
+    behavior_data_types = ['pupil_width', 'running_speed', 'lick_rate']
 
-    # trials
+    physio_conditions = [['cell_specimen_id', 'omitted'],
+                         ['cell_specimen_id', 'omitted', 'epoch'],
+                         ['cell_specimen_id', 'is_change'],
+                         ['cell_specimen_id', 'is_change', 'epoch'],
+                         ['cell_specimen_id', 'is_change', 'image_name'],
+                         ['cell_specimen_id', 'is_change', 'image_name', 'epoch'],
+                         ['cell_specimen_id', 'is_change', 'hit'],
+                         ['cell_specimen_id', 'is_change', 'pre_change', 'epoch'],
+                         ['cell_specimen_id', 'hit', 'miss', 'epoch']]
 
-    # df_name = 'trials_response_df'
-    # conditions = ['cell_specimen_id', 'stimulus_change']
-    #
-    # print('creating multi_session_df for', df_name, ', ', project_code, ', session number', session_number, conditions)
-    # df = io.get_multi_session_df(project_code, session_number, df_name, conditions, use_events=True, filter_events=False,
-    #                              use_extended_stimulus_presentations=False)
-    #
-    # df_name = 'trials_response_df'
-    # conditions = ['cell_specimen_id', 'stimulus_change', 'epoch']
-    #
-    # print('creating multi_session_df for', df_name, ', ', project_code, ', session number', session_number, conditions)
-    # df = io.get_multi_session_df(project_code, session_number, df_name, conditions, use_events=True, filter_events=False,
-    #                              use_extended_stimulus_presentations=True)
-    #
-    # df_name = 'trials_response_df'
-    # conditions = ['cell_specimen_id', 'stimulus_change', 'change_image_name', 'epoch']
-    #
-    # print('creating multi_session_df for', df_name, ', ', project_code, ', session number', session_number, conditions)
-    # df = io.get_multi_session_df(project_code, session_number, df_name, conditions, use_events=True, filter_events=False,
-    #                              use_extended_stimulus_presentations=True)
-    #
-    # df_name = 'trials_response_df'
-    # conditions = ['cell_specimen_id', 'stimulus_change', 'hit', 'epoch']
-    #
-    # print('creating multi_session_df for', df_name, ', ', project_code, ', session number', session_number, conditions)
-    # df = io.get_multi_session_df(project_code, session_number, df_name, conditions, use_events=True, filter_events=False,
-    #                              use_extended_stimulus_presentations=True)
-    #
-    # df_name = 'trials_response_df'
-    # conditions = ['cell_specimen_id', 'engagement_state', 'stimulus_change', 'epoch']
-    #
-    # print('creating multi_session_df for', df_name, ', ', project_code, ', session number', session_number, conditions)
-    # df = io.get_multi_session_df(project_code, session_number, df_name, conditions, use_events=True,
-    #                              filter_events=False, use_extended_stimulus_presentations=True)
+    behavior_conditions = [['omitted'],
+                           ['omitted', 'epoch']
+                           ['is_change'],
+                           ['is_change', 'epoch'],
+                           ['is_change', 'image_name'],
+                           ['is_change', 'image_name', 'epoch'],
+                           ['is_change', 'hit'],
+                           ['is_change', 'pre_change', 'epoch'],
+                           ['hit', 'miss', 'epoch']]
 
-    # print('done')
 
-    # stim response df
-    #
-    # df_name = 'stimulus_response_df'
-    # conditions = ['cell_specimen_id', 'is_change', 'image_name']
-    #
-    # print('creating multi_session_df for', df_name, ', ', project_code, ', session number', session_number, conditions)
-    # df = io.get_multi_session_df(project_code, session_number, df_name, conditions, use_events=True,
-    #                              filter_events=False,
-    #                              use_extended_stimulus_presentations=False)
-    # #
-    # df_name = 'stimulus_response_df'
-    # conditions = ['cell_specimen_id', 'is_change',  'image_name', 'epoch']
-    #
-    # print('creating multi_session_df for', df_name, ', ', project_code, ', session number', session_number, conditions)
-    # df = io.get_multi_session_df(project_code, session_number, df_name, conditions, use_events=True, filter_events=False,
-    #                              use_extended_stimulus_presentations=True)
-    #
-    #
-    df_name = 'stimulus_response_df'
-    conditions = ['cell_specimen_id', 'is_change', 'image_name', 'epoch']
+    # event types corresponding to the above physio and behavior conditions - must be in same sequential order
+    event_types_for_conditions = ['omissions', 'omissions',
+                                    'changes', 'changes', 'changes',
+                                    'changes', 'changes',
+                                    'all', 'all']
 
-    print('creating multi_session_df for', df_name, ', ', project_code, ', session number', session_number, conditions)
-    df = io.get_multi_session_df(project_code, session_number, df_name, conditions, use_events=True,
-                                 filter_events=False,
-                                 use_extended_stimulus_presentations=True)
 
-    df_name = 'stimulus_response_df'
-    conditions = ['cell_specimen_id', 'pre_change', 'epoch']
+    # # create dfs for all data types and conditions for physio data
+    # for data_type in physio_data_types:
+    #     for i, conditions in enumerate(physio_conditions):
+    #         event_type = event_types_for_conditions[i]
+    #         print('creating multi_session_df for', data_type, event_type, conditions)
+    #         df = io.get_multi_session_df(project_code, session_number, conditions, data_type, event_type,
+    #                              time_window=time_window, interpolate=interpolate, output_sampling_rate=output_sampling_rate,
+    #                              response_window_duration_seconds=response_window_duration_seconds,
+    #                                      use_extended_stimulus_presentations=use_extended_stimulus_presentations)
 
-    print('creating multi_session_df for', df_name, ', ', project_code, ', session number', session_number, conditions)
-    df = io.get_multi_session_df(project_code, session_number, df_name, conditions, use_events=True,
-                                 filter_events=True,
-                                 use_extended_stimulus_presentations=True)
-
-    #
-    # # pupil ###
-    #
-    # # omissions
-    #
-    # df_name = 'omission_pupil_area_df'
-    # conditions = ['ophys_experiment_id']
-    #
-    # print('creating multi_session_df for', df_name, ', ', project_code, ', session number', session_number, conditions)
-    # df = io.get_multi_session_df(project_code, session_number, df_name, conditions, use_events=False,
-    #                              filter_events=False,
-    #                              use_extended_stimulus_presentations=False)
-    #
-    # df_name = 'omission_pupil_area_df'
-    # conditions = ['ophys_experiment_id', 'epoch']
-    #
-    # print('creating multi_session_df for', df_name, ', ', project_code, ', session number', session_number, conditions)
-    # df = io.get_multi_session_df(project_code, session_number, df_name, conditions, use_events=False, filter_events=False,
-    #                              use_extended_stimulus_presentations=True)
-    #
-    # # trials
-
-    # df_name = 'trials_run_speed_df'
-    # conditions = ['ophys_experiment_id', 'stimulus_change']
-    #
-    # print('creating multi_session_df for', df_name, ', ', project_code, ', session number', session_number, conditions)
-    # df = io.get_multi_session_df(project_code, session_number, df_name, conditions, use_events=False,
-    #                              filter_events=False,
-    #                              use_extended_stimulus_presentations=False)
-    #
-    # df_name = 'trials_run_speed_df'
-    # conditions = ['ophys_experiment_id', 'stimulus_change', 'epoch']
-    #
-    # print('creating multi_session_df for', df_name, ', ', project_code, ', session number', session_number, conditions)
-    # df = io.get_multi_session_df(project_code, session_number, df_name, conditions, use_events=False, filter_events=False,
-    #                              use_extended_stimulus_presentations=True)
-    #
-    # df_name = 'trials_run_speed_df'
-    # conditions = ['ophys_experiment_id', 'stimulus_change', 'change_image_name']
-    #
-    # print('creating multi_session_df for', df_name, ', ', project_code, ', session number', session_number, conditions)
-    # df = io.get_multi_session_df(project_code, session_number, df_name, conditions, use_events=False, filter_events=False,
-    #                              use_extended_stimulus_presentations=False)
-    #
-    # print('done')
-
+    # create dfs for all data types and conditions for behavior data
+    for data_type in behavior_data_types:
+        for i, conditions in enumerate(behavior_conditions):
+            event_type = event_types_for_conditions[i]
+            print('creating multi_session_df for', data_type, event_type, conditions)
+            df = io.get_multi_session_df(project_code, session_number, conditions, data_type, event_type,
+                                         time_window=time_window, interpolate=interpolate,
+                                         output_sampling_rate=output_sampling_rate,
+                                         response_window_duration_seconds=response_window_duration_seconds,
+                                         use_extended_stimulus_presentations=use_extended_stimulus_presentations)

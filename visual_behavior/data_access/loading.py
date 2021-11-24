@@ -121,14 +121,22 @@ def get_ophys_glm_dir():
     return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/ophys_glm'
 
 
-def get_stimulus_response_df_dir(interpolate=True, sampling_rate=30):
+def get_stimulus_response_df_dir(interpolate=True, output_sampling_rate=30):
     base_dir = r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/platform_paper_cache/stimulus_response_dfs'
     if interpolate:
-        save_dir = os.path.join(base_dir, 'interpolate_'+str(sampling_rate)+'Hz')
+        save_dir = os.path.join(base_dir, 'interpolate_'+str(output_sampling_rate)+'Hz')
     else:
         save_dir = os.path.join(base_dir, 'original_frame_rate')
     return save_dir
 
+
+def get_multi_session_df_df_dir(interpolate=True, output_sampling_rate=30):
+    base_dir = get_platform_analysis_cache_dir()
+    if interpolate:
+        save_dir = os.path.join(base_dir, 'multi_session_mean_response_dfs','interpolate_'+str(output_sampling_rate)+'Hz')
+    else:
+        save_dir = os.path.join(base_dir, 'multi_session_mean_response_dfs', 'original_frame_rate')
+    return save_dir
 
 
 def get_manifest_path():
@@ -523,7 +531,7 @@ def get_extended_stimulus_presentations_table(stimulus_presentations, licks, rew
     return stimulus_presentations
 
 
-def get_stimulus_response_df(dataset, time_window=[-1, 2.1], interpolate=True, sampling_rate=30,
+def get_stimulus_response_df(dataset, time_window=[-1, 2.1], interpolate=True, output_sampling_rate=30.,
                              data_type='filtered_events', load_from_file=True):
     """
     load stimulus response df using mindscope_utilities and merge with stimulus_presentations that has trials metadata added
@@ -531,14 +539,14 @@ def get_stimulus_response_df(dataset, time_window=[-1, 2.1], interpolate=True, s
         dataset: BehaviorOphysExperiment instance
         time_window: window over which to extract the event triggered response around each stimulus presentation time
         interpolate: Boolean, whether or not to interpolate traces
-        sampling_rate: sampling rate for interpolation
+        output_sampling_rate: sampling rate for interpolation, only used if interpolate is True
         data_type: which timeseries to get event triggered responses for
                     options: 'filtered_events', 'events', 'dff', 'running_speed', 'pupil_diameter', 'lick_rate'
     """
     import mindscope_utilities.visual_behavior_ophys.data_formatting as vb_ophys
     # load stimulus response df from file if it exists otherwise generate it
     ophys_experiment_id = dataset.ophys_experiment_id
-    filepath = os.path.join(get_stimulus_response_df_dir(interpolate, sampling_rate), str(ophys_experiment_id) + '_' + data_type + '.h5')
+    filepath = os.path.join(get_stimulus_response_df_dir(interpolate, int(output_sampling_rate)), str(ophys_experiment_id) + '_' + data_type + '.h5')
     if load_from_file:
         if os.path.exists(filepath):
             print('loading response df from file for', ophys_experiment_id, data_type)
@@ -551,11 +559,13 @@ def get_stimulus_response_df(dataset, time_window=[-1, 2.1], interpolate=True, s
         print('generating response df')
         sdf = vb_ophys.get_stimulus_response_df(dataset, data_type=data_type, event_type='all',
                                                 time_window=time_window, interpolate=interpolate,
-                                                output_sampling_rate=sampling_rate)
-    # get stimulus presentations and merge in trial info
-    trials = dataset.trials.copy()
-    stimulus_presentations = dataset.stimulus_presentations.copy()
-    stimulus_presentations = reformat.add_trials_to_stimulus_presentations_table(stimulus_presentations, trials)
+                                                output_sampling_rate=output_sampling_rate)
+
+    # if extended_stimulus_presentations is an attribute of the dataset object, use it, otherwise get regular stimulus_presentations
+    if 'extended_stimulus_presentations' in dir(dataset):
+        stimulus_presentations = dataset.extended_stimulus_presentations.copy()
+    else:
+        stimulus_presentations = vb_ophys.get_annotated_stimulus_presentations(dataset)
     sdf = sdf.merge(stimulus_presentations, on='stimulus_presentations_id')
 
     return sdf
@@ -2677,33 +2687,51 @@ def get_file_name_for_multi_session_df_no_session_type(df_name, project_code, co
     return filename
 
 
-def get_file_name_for_multi_session_df(df_name, project_code, session_type, conditions, use_events, filter_events):
-    if use_events:
-        if filter_events:
-            suffix = '_filtered_events'
-        else:
-            suffix = '_events'
-    else:
-        suffix = ''
+# def get_file_name_for_multi_session_df(df_name, project_code, session_type, conditions, use_events, filter_events):
+#     if use_events:
+#         if filter_events:
+#             suffix = '_filtered_events'
+#         else:
+#             suffix = '_events'
+#     else:
+#         suffix = ''
+#
+#     if len(conditions) == 6:
+#         filename = 'mean_' + df_name + '_' + project_code + '_' + session_type + '_' + conditions[1] + '_' + conditions[2] + '_' + conditions[3] + '_' + conditions[4] + '_' + conditions[5] + suffix + '.h5'
+#     elif len(conditions) == 5:
+#         filename = 'mean_' + df_name + '_' + project_code + '_' + session_type + '_' + conditions[1] + '_' + conditions[2] + '_' + conditions[3] + '_' + conditions[4] + suffix + '.h5'
+#     elif len(conditions) == 4:
+#         filename = 'mean_' + df_name + '_' + project_code + '_' + session_type + '_' + conditions[1] + '_' + conditions[2] + '_' + conditions[
+#             3] + suffix + '.h5'
+#     elif len(conditions) == 3:
+#         filename = 'mean_' + df_name + '_' + project_code + '_' + session_type + '_' + conditions[1] + '_' + conditions[2] + suffix + '.h5'
+#     elif len(conditions) == 2:
+#         filename = 'mean_' + df_name + '_' + project_code + '_' + session_type + '_' + conditions[1] + suffix + '.h5'
+#     elif len(conditions) == 1:
+#         filename = 'mean_' + df_name + '_' + project_code + '_' + session_type + '_' + conditions[0] + suffix + '.h5'
+#
+#     return filename
+
+
+def get_file_name_for_multi_session_df(data_type, event_type, project_code, session_type, conditions):
 
     if len(conditions) == 6:
-        filename = 'mean_' + df_name + '_' + project_code + '_' + session_type + '_' + conditions[1] + '_' + conditions[2] + '_' + conditions[3] + '_' + conditions[4] + '_' + conditions[5] + suffix + '.h5'
+        filename = 'mean_response_df_' + data_type + '_' + event_type + '_' + project_code + '_' + session_type + '_' + conditions[1] + '_' + conditions[2] + '_' + conditions[3] + '_' + conditions[4] + '_' + conditions[5] + '.h5'
     elif len(conditions) == 5:
-        filename = 'mean_' + df_name + '_' + project_code + '_' + session_type + '_' + conditions[1] + '_' + conditions[2] + '_' + conditions[3] + '_' + conditions[4] + suffix + '.h5'
+        filename = 'mean_response_df_' + data_type + '_' + event_type + '_' + project_code + '_' + session_type + '_' + conditions[1] + '_' + conditions[2] + '_' + conditions[3] + '_' + conditions[4] + '.h5'
     elif len(conditions) == 4:
-        filename = 'mean_' + df_name + '_' + project_code + '_' + session_type + '_' + conditions[1] + '_' + conditions[2] + '_' + conditions[
-            3] + suffix + '.h5'
+        filename = 'mean_response_df_' + data_type + '_' + event_type + '_' + project_code + '_' + session_type + '_' + conditions[1] + '_' + conditions[2] + '_' + conditions[3] + '.h5'
     elif len(conditions) == 3:
-        filename = 'mean_' + df_name + '_' + project_code + '_' + session_type + '_' + conditions[1] + '_' + conditions[2] + suffix + '.h5'
+        filename = 'mean_response_df_' + data_type + '_' + event_type + '_' + project_code + '_' + session_type + '_' + conditions[1] + '_' + conditions[2] + '.h5'
     elif len(conditions) == 2:
-        filename = 'mean_' + df_name + '_' + project_code + '_' + session_type + '_' + conditions[1] + suffix + '.h5'
+        filename = 'mean_response_df_' + data_type + '_' + event_type + '_' + project_code + '_' + session_type + '_' + conditions[1] + '.h5'
     elif len(conditions) == 1:
-        filename = 'mean_' + df_name + '_' + project_code + '_' + session_type + '_' + conditions[0] + suffix + '.h5'
+        filename = 'mean_response_df_' + data_type + '_' + event_type + '_' + project_code + '_' + session_type + '_' + conditions[0] + '.h5'
 
     return filename
 
 
-def get_multi_session_df(cache_dir, df_name, conditions, experiments_table, remove_outliers=False, use_session_type=True,
+def load_multi_session_df(cache_dir, df_name, conditions, experiments_table, remove_outliers=False, use_session_type=True,
                          use_events=True, filter_events=False):
     """
     Loops through all experiments in the provided experiments_table, creates a response dataframe indicated by df_name,
@@ -3186,7 +3214,7 @@ def get_data_dict(ophys_experiment_ids, data_types=None, save_dir=None):
     # define params
     time_window = [-3, 3.1]
     interpolate = True
-    sampling_rate = 30
+    output_sampling_rate = 30
     # set up dict to collect data in
     data_dict = {}
     for ophys_experiment_id in ophys_experiment_ids:
@@ -3204,7 +3232,7 @@ def get_data_dict(ophys_experiment_ids, data_types=None, save_dir=None):
 
         for data_type in data_types:
             try:
-                sdf = get_stimulus_response_df(dataset, time_window=time_window, interpolate=interpolate, sampling_rate=sampling_rate,
+                sdf = get_stimulus_response_df(dataset, time_window=time_window, interpolate=interpolate, output_sampling_rate=output_sampling_rate,
                                          data_type=data_type, load_from_file=True)
                 data_dict[ophys_experiment_id][data_type]['changes'] = sdf[sdf.is_change]
                 data_dict[ophys_experiment_id][data_type]['omissions'] = sdf[sdf.omitted]
