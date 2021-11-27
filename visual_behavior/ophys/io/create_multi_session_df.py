@@ -28,9 +28,6 @@ def get_multi_session_df(project_code, session_number, conditions, data_type, ev
         get_pref_stim = False
     else:
         get_pref_stim = True
-    # use extended stim presentations when conditions require it (this is not an exhaustive list of conditions)
-    if ('engaged' in conditions) or ('engagement_state' in conditions) or ('epoch' in conditions):
-        use_extended_stimulus_presentations = True
 
     cache_dir = loading.get_platform_analysis_cache_dir()
     cache = VisualBehaviorOphysProjectCache.from_s3_cache(cache_dir=cache_dir)
@@ -124,8 +121,11 @@ def get_multi_session_df(project_code, session_number, conditions, data_type, ev
         print('saving multi session mean df as ', filename)
         mega_mdf.to_hdf(filepath, key='df')
         print('saved to', mega_mdf_write_dir)
+
+        return mega_mdf
+
     else:
-        print('')
+        print('multi_session_df not created')
 
 
-    return mega_mdf
+

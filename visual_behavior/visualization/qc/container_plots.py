@@ -1523,7 +1523,7 @@ def plot_event_triggered_averages_for_container(ophys_container_id, save_figure=
     fig.tight_layout()
 
     if save_figure:
-        ut.save_figure(fig, figsize, loading.get_container_plots_dir(), 'behavior_timeseries', metadata_string+'_resampled_30Hz')
+        ut.save_figure(fig, figsize, loading.get_container_plots_dir(), 'event_triggered_average', metadata_string+'_resampled_30Hz')
 
 
 def plot_pupil_timeseries_for_container(ophys_container_id, save_figure=True):
