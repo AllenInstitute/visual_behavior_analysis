@@ -29,17 +29,22 @@ if __name__ == '__main__':
     # create and save stimulus response df for all data types
     # for data_type in ['filtered_events', 'dff', 'events', 'running_speed', 'pupil_width', 'lick_rate']:
     #     for event_type in ['all', 'omissions', 'changes']:
-    data_type = 'events'
-    event_type = 'all'
-
-    sdf = vb_ophys.get_stimulus_response_df(dataset, data_type=data_type, event_type=event_type,
-                                            time_window=time_window, interpolate=interpolate,
-                                            output_sampling_rate=output_sampling_rate)
-    # if file already exists, overwrite it
-    filepath = loading.get_stimulus_response_df_filepath_for_experiment(ophys_experiment_id, data_type, event_type,
-                                                            interpolate=interpolate, output_sampling_rate=output_sampling_rate)
-    if os.path.exists(filepath):
-        os.remove(filepath)
-        print('h5 file exists for', ophys_experiment_id, ' - overwriting')
-    sdf.to_hdf(filepath, key='df')
-    print('saved response df for', data_type)
+    # for data_type in ['filtered_events', 'dff', 'events']:
+    #     event_type = 'all'
+    data_type = 'filtered_events'
+    for event_type in ['all', 'omissions', 'changes']:
+        try:
+            sdf = vb_ophys.get_stimulus_response_df(dataset, data_type=data_type, event_type=event_type,
+                                                    time_window=time_window, interpolate=interpolate,
+                                                    output_sampling_rate=output_sampling_rate)
+            # if file already exists, overwrite it
+            filepath = loading.get_stimulus_response_df_filepath_for_experiment(ophys_experiment_id, data_type, event_type,
+                                                                    interpolate=interpolate, output_sampling_rate=output_sampling_rate)
+            if os.path.exists(filepath):
+                os.remove(filepath)
+                print('h5 file exists for', ophys_experiment_id, ' - overwriting')
+            sdf.to_hdf(filepath, key='df')
+            print('saved response df for', data_type)
+        except Exception as e:
+            print('could not save stimulus_response_df for', ophys_experiment_id, data_type, event_type)
+            print(e)
