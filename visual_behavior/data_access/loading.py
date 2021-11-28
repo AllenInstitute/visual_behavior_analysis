@@ -3183,3 +3183,17 @@ def get_data_dict(ophys_experiment_ids, data_types=None):
                 print('could not get response df for', ophys_experiment_id, data_type)
 
     return data_dict
+
+
+def check_whether_multi_session_df_has_all_platform_experiments(multi_session_df):
+    mdf = multi_session_df.copy()
+    platform_experiments_table = get_platform_paper_experiment_table()
+    platform_experiments_table = platform_experiments_table.reset_index()
+    platform_experiment_ids = platform_experiments_table.ophys_experiment_id.unique()
+    print('there are', len(platform_experiment_ids), 'experiments in the platform paper experiments table')
+    platform_mdf = mdf[mdf.ophys_experiment_id.isin(platform_experiment_ids)]
+    platform_mdf_experiment_ids = platform_mdf.ophys_experiment_id.unique()
+    print('there are', len(platform_mdf_experiment_ids), 'experiments in the multi_session_df')
+    missing_expts = platform_experiments_table[platform_experiments_table.ophys_experiment_id.isin(platform_mdf_experiment_ids)==False].ophys_experiment_id.unique()
+    print('there are', len(missing_expts), 'missing experiments')
+    return missing_expts

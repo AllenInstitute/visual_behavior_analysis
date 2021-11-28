@@ -10,4 +10,4 @@ if __name__ == '__main__':
     args = parser.parse_args()
     ophys_experiment_id = args.ophys_experiment_id
 
-    cell_metrics.generate_and_save_all_metrics_tables_for_experiment(ophys_experiment_id, overwrite=False)
+    cell_metrics.generate_and_save_all_metrics_tables_for_experiment(ophys_experiment_id, overwrite=True)

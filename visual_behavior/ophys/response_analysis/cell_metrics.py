@@ -241,12 +241,12 @@ def compute_reliability_vectorized(traces):
     return reliability, correlation_values
 
 
-def compute_reliability(group, params, frame_rate):
+def compute_reliability(group, frame_rate, time_window=[-3,3.1], response_window_duration=0.5):
     # computes trial to trial correlation across input traces in group,
     # only for portion of the trace after the change time or flash onset time
 
-    onset = int(np.abs(params['window_around_timepoint_seconds'][0]) * frame_rate)
-    response_window = [onset, onset + (int(params['response_window_duration_seconds'] * frame_rate))]
+    onset = int(np.abs(time_window[0]) * frame_rate)
+    response_window = [onset, onset + (int(response_window_duration * frame_rate))]
     traces = group['trace'].values
     traces = np.vstack(traces)
     if traces.shape[0] > 5:
@@ -257,7 +257,7 @@ def compute_reliability(group, params, frame_rate):
     return pd.Series({'reliability': reliability})
 
 
-def get_reliability_for_cell_specimen_ids(stimulus_response_df, frame_rate):
+def get_reliability_for_cell_specimen_ids(stimulus_response_df, frame_rate, time_window, response_window_duration):
     """
     computes the average trial to trial correlation of the dF/F or events trace in the stimulus window
     returns a dataframe with index cell_specimen_id and columns for the reliability value,
@@ -266,7 +266,7 @@ def get_reliability_for_cell_specimen_ids(stimulus_response_df, frame_rate):
     import visual_behavior.ophys.response_analysis.response_processing as rp
     params = rp.get_default_stimulus_response_params()
 
-    reliability = stimulus_response_df.groupby(['cell_specimen_id']).apply(compute_reliability, params, frame_rate)
+    reliability = stimulus_response_df.groupby(['cell_specimen_id']).apply(compute_reliability, frame_rate, time_window, response_window_duration)
     # reliability = reliability.drop(columns=['correlation_values'])
     return reliability
 
@@ -323,6 +323,29 @@ def get_hit_miss_modulation_index(stimulus_response_df):
     hit_miss_index = stimulus_response_df.groupby(['cell_specimen_id', 'hit']).mean()[['mean_response']].reset_index().groupby('cell_specimen_id').apply(get_hit_miss_modulation_index_for_group)
     hit_miss_index['hit_miss_index'] = [np.nan if len(index) == 0 else index[0] for index in hit_miss_index.hit_miss_index.values]
     return hit_miss_index
+
+
+def get_change_modulation_index(stimulus_response_df):
+    """
+    compute the diff over the sum of the change to pre-change response for each cell in stimulus_response_df
+    if stimulus_response_df has been limited to pref_stim, metric will be for pref stim only
+    """
+    sdf = stimulus_response_df.copy()
+    change = sdf.groupby(['cell_specimen_id', 'is_change']).mean()[['mean_response']].rename(
+        columns={'mean_response': 'change_response'})
+    change = change.reset_index()
+    change = change[change.is_change]
+
+    pre_change = sdf.groupby(['cell_specimen_id', 'pre_change']).mean()[['mean_response']].rename(
+        columns={'mean_response': 'pre_change_response'})
+    pre_change = pre_change.reset_index()
+    pre_change = pre_change[pre_change.pre_change]
+
+    change = change.merge(pre_change, on='cell_specimen_id')
+    change['change_modulation_index'] = (change.change_response - change.pre_change_response) / (
+    change.change_response + change.pre_change_response)
+
+    return change
 
 
 def get_population_coupling_for_cell_specimen_ids(traces):
@@ -459,8 +482,10 @@ def generate_trace_metrics_table(ophys_experiment_id, use_events=False, filter_e
     return trace_metrics
 
 
-def generate_cell_metrics_table(ophys_experiment_id, use_events=False, filter_events=False,
-                                condition='changes', session_subset='full_session', stimuli='pref_image', save=False):
+def generate_cell_metrics_table(ophys_experiment_id, data_type,
+                                condition='changes', session_subset='full_session', stimuli='pref_image',
+                                time_window=[-3, 3.1], output_sampling_rate=30, response_window_duration=0.5, interpolate=True,
+                                save=False):
     """
     Creates cell metrics table based on stimulus locked activity
     Metrics include selectivity indices, mean image response, fano factor, fraction significant trials, etc
@@ -478,10 +503,30 @@ def generate_cell_metrics_table(ophys_experiment_id, use_events=False, filter_ev
 
     print('generating cell metrics for', ophys_experiment_id)
 
-    dataset = loading.get_ophys_dataset(ophys_experiment_id)
+    dataset = loading.get_ophys_dataset(ophys_experiment_id, get_extended_stimulus_presentations=False)
 
-    analysis = ResponseAnalysis(dataset, use_extended_stimulus_presentations=True, use_events=use_events, filter_events=filter_events)
-    sdf = analysis.get_response_df(df_name='stimulus_response_df')
+    # get stimulus_response_df
+    if data_type == 'events':
+        use_events = True
+        filter_events = False
+    elif data_type == 'filtered_events':
+        use_events = True
+        filter_events = True
+    else:
+        use_events = False
+        filter_events = False
+
+    # time_window = [-3, 3.1]
+    # interpolate = True
+    # output_sampling_rate = 30
+
+    # event_type must be all so that we can filter as needed
+    sdf = loading.get_stimulus_response_df(dataset, data_type=data_type, event_type='all', time_window=time_window,
+                                          interpolate=interpolate, output_sampling_rate=output_sampling_rate,
+                                          load_from_file=True)
+
+    # analysis = ResponseAnalysis(dataset, use_extended_stimulus_presentations=True, use_events=use_events, filter_events=filter_events)
+    # sdf = analysis.get_response_df(df_name='stimulus_response_df')
 
     if condition == 'changes':
         df = sdf[sdf.is_change]
@@ -498,10 +543,10 @@ def generate_cell_metrics_table(ophys_experiment_id, use_events=False, filter_ev
     if 'passive' in dataset.metadata['session_type']:
         df['engaged'] = False
     if session_subset == 'engaged':
-        df['engaged'] = [True if reward_rate >= 2 else False for reward_rate in df.reward_rate.values]
+        # df['engaged'] = [True if reward_rate >= 2 else False for reward_rate in df.reward_rate.values]
         df = df[df['engaged']]
     elif session_subset == 'disengaged':
-        df['engaged'] = [True if reward_rate >= 2 else False for reward_rate in df.reward_rate.values]
+        # df['engaged'] = [True if reward_rate >= 2 else False for reward_rate in df.reward_rate.values]
         df = df[df['engaged'] == False]
 
     df = df.reset_index(drop=True)
@@ -512,6 +557,7 @@ def generate_cell_metrics_table(ophys_experiment_id, use_events=False, filter_ev
 
     # add pref & non pref images
     df = add_pref_and_non_pref_stim_columns_to_df(df)
+    sdf = add_pref_and_non_pref_stim_columns_to_df(sdf)
     # compute image selectivity index (diff over sum of pref and non pref images)
     image_selectivity_index = get_image_selectivity_index(df)
 
@@ -521,6 +567,7 @@ def generate_cell_metrics_table(ophys_experiment_id, use_events=False, filter_ev
     if stimuli == 'pref_image':
         # restrict further analysis to pref stim condition
         df = df[df.pref_image]
+        sdf = sdf[sdf.pref_image]
 
     # get mean response across all images
     mean_response = get_mean_response_cell_specimen_ids(df)
@@ -532,8 +579,12 @@ def generate_cell_metrics_table(ophys_experiment_id, use_events=False, filter_ev
     fano_factor = df.groupby(['cell_specimen_id']).apply(get_fano_factor)
 
     # get average trial to trial reliability across all images
-    frame_rate = dataset.metadata['ophys_frame_rate']
-    reliability = get_reliability_for_cell_specimen_ids(df, frame_rate)
+    if output_sampling_rate:
+        frame_rate = output_sampling_rate
+    else:
+        frame_rate = dataset.metadata['ophys_frame_rate']
+    reliability = get_reliability_for_cell_specimen_ids(df, frame_rate=output_sampling_rate, time_window=time_window,
+                                                        response_window_duration=response_window_duration)
 
     # get running modulation - diff over sum of mean image response for running vs. not running trials
     running_modulation_index = get_running_modulation_index_for_cell_specimen_ids(df)
@@ -541,6 +592,7 @@ def generate_cell_metrics_table(ophys_experiment_id, use_events=False, filter_ev
     if condition == 'changes':
         # get choice modulation - diff over sum of mean image response for hit vs. miss trials
         hit_miss_modulation_index = get_hit_miss_modulation_index(df)
+        change_modulation_index = get_change_modulation_index(sdf)
 
     metrics_table = pref_image.copy()
     metrics_table = metrics_table.merge(non_pref_image, on='cell_specimen_id')
@@ -553,6 +605,7 @@ def generate_cell_metrics_table(ophys_experiment_id, use_events=False, filter_ev
     metrics_table = metrics_table.merge(running_modulation_index, on='cell_specimen_id')
     if condition == 'changes':
         metrics_table = metrics_table.merge(hit_miss_modulation_index, on='cell_specimen_id')
+        metrics_table = metrics_table.merge(change_modulation_index, on='cell_specimen_id')
     metrics_table['ophys_experiment_id'] = ophys_experiment_id
 
     metrics_table = metrics_table.reset_index()
@@ -617,7 +670,7 @@ def get_metrics_df_filepath(ophys_experiment_id, condition, stimuli, session_sub
     :return:
     """
     cache_dir = loading.get_platform_analysis_cache_dir()
-    save_dir = os.path.join(cache_dir, 'cell_metrics')
+    save_dir = os.path.join(cache_dir, 'cell_metrics', 'interpolated_30Hz')
     if not os.path.exists(save_dir):
         os.mkdir(save_dir)
     filename = get_metrics_df_filename(ophys_experiment_id, condition, stimuli, session_subset, use_events, filter_events)
@@ -647,9 +700,21 @@ def generate_and_save_all_metrics_tables_for_experiment(ophys_experiment_id, ove
     condition = 'traces'
     session_subset = 'full_session'
     stimuli = 'full_session'
+
+    time_window = [-3, 3.1]
+    output_sampling_rate = 30
+    response_window_duration = 0.5
+    interpolate = True
+
     for use_events in [False, True]:
         for filter_events in [False, True]:
             try:
+                if use_events and filter_events:
+                    data_type = 'filtered_events'
+                elif use_events:
+                    data_type = 'events'
+                else:
+                    data_type = 'dff'
 
                 filepath = get_metrics_df_filepath(ophys_experiment_id, condition=condition,
                                                    stimuli=stimuli, session_subset=session_subset,
@@ -707,11 +772,14 @@ def generate_and_save_all_metrics_tables_for_experiment(ophys_experiment_id, ove
                                     print('h5 file exists for', ophys_experiment_id, ' - overwriting')
                                 # regenerate metrics and save
                                 metrics_df = generate_cell_metrics_table(ophys_experiment_id,
-                                                                         use_events=use_events,
-                                                                         filter_events=filter_events,
+                                                                         data_type=data_type,
                                                                          condition=condition,
                                                                          session_subset=session_subset,
-                                                                         stimuli=stimulus)
+                                                                         stimuli=stimulus,
+                                                                         time_window=time_window,
+                                                                         output_sampling_rate=output_sampling_rate,
+                                                                         response_window_duration=0.5, interpolate=interpolate,
+                                                                         )
                                 metrics_df.to_hdf(filepath, key='df')
                                 print('metrics generated for', condition, stimulus, session_subset,
                                       'use_events', use_events, 'filter_events', filter_events, )
@@ -721,11 +789,15 @@ def generate_and_save_all_metrics_tables_for_experiment(ophys_experiment_id, ove
                                 else:  # otherwise
                                     # generate metrics and save
                                     metrics_df = generate_cell_metrics_table(ophys_experiment_id,
-                                                                             use_events=use_events,
-                                                                             filter_events=filter_events,
+                                                                             data_type=data_type,
                                                                              condition=condition,
                                                                              session_subset=session_subset,
-                                                                             stimuli=stimulus)
+                                                                             stimuli=stimulus,
+                                                                             time_window=time_window,
+                                                                             output_sampling_rate=output_sampling_rate,
+                                                                             response_window_duration=0.5,
+                                                                             interpolate=interpolate,
+                                                                             )
                                     metrics_df.to_hdf(filepath, key='df')
                                     print('metrics generated for', condition, stimulus, session_subset,
                                           'use_events', use_events, 'filter_events', filter_events, )
@@ -790,7 +862,7 @@ def load_metrics_table_for_experiment(ophys_experiment_id, condition, stimuli, s
     :return: metrics table
     """
     filepath = get_metrics_df_filepath(ophys_experiment_id, condition, stimuli,
-                                       session_subset, use_events, filter_events)
+                                       session_subset, use_events=use_events, filter_events=filter_events)
     metrics_table = pd.read_hdf(filepath, key='df')
     return metrics_table
 
@@ -895,7 +967,7 @@ def load_and_save_all_metrics_tables_for_all_experiments(ophys_experiment_table)
 
                 # save
                 filepath = get_metrics_df_filepath('all_experiments', condition, stimuli,
-                                                   session_subset, use_events, filter_events)
+                                       session_subset, use_events=use_events, filter_events=filter_events)
                 if os.path.exists(filepath):
                     os.remove(filepath)
                     print('h5 file exists for all experiments  - overwriting')
@@ -926,9 +998,8 @@ def load_and_save_all_metrics_tables_for_all_experiments(ophys_experiment_table)
                                                                                filter_events=filter_events)
 
                             # save
-                            filepath = get_metrics_df_filepath('all_experiments', condition, stimulus,
-                                                               session_subset, use_events,
-                                                               filter_events)
+                            filepath = get_metrics_df_filepath('all_experiments', condition, stimuli,
+                                       session_subset, use_events=use_events, filter_events=filter_events)
                             if os.path.exists(filepath):
                                 os.remove(filepath)
                                 print('h5 file exists for all experiments  - overwriting')
@@ -953,8 +1024,12 @@ if __name__ == '__main__':
     stimuli = 'all_images'
 
     # to get metrics table for a single experiment and set of conditions (does not save anything, just returns tables)
-    cell_metrics_table = generate_cell_metrics_table(ophys_experiment_id, ophys_experiment_table, use_events=True, filter_events=False,
-                                                     condition=condition, session_subset=session_subset, stimuli=stimuli)
+    cell_metrics_table = generate_cell_metrics_table(ophys_experiment_id, ophys_experiment_table, data_type=data_type,
+                                                     condition=condition, session_subset=session_subset, stimuli=stimuli,
+                                                     time_window=time_window,
+                                                     output_sampling_rate=output_sampling_rate,
+                                                     response_window_duration=0.5, interpolate=interpolate,
+                                                     )
 
     trace_metrics = generate_trace_metrics_table(ophys_experiment_id, use_events=False, filter_events=False)
 
