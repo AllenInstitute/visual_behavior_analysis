@@ -10,8 +10,14 @@ parser.add_argument('--env', type=str, default='visual_behavior_sdk', metavar='n
 parser.add_argument('--scriptname', type=str, default='save_stimulus_response_dfs.py', metavar='name of script to run (must be in same folder)')
 
 
-experiments_table = loading.get_platform_paper_experiment_table()
-ophys_experiment_ids = experiments_table.index.values
+# experiments_table = loading.get_platform_paper_experiment_table()
+# ophys_experiment_ids = experiments_table.index.values
+
+import pandas as pd
+import numpy as np
+df = pd.read_csv(os.path.join(loading.get_stimulus_response_df_dir(), 'expts_to_reprocess_events.csv'))
+ophys_experiment_ids = np.unique(df.ophys_experiment_id.values)
+
 
 if __name__ == "__main__":
     args = parser.parse_args()

@@ -3142,7 +3142,7 @@ def get_data_dict(ophys_experiment_ids, data_types=None):
     If stimulus_response_df files have been pre-computed, load from file, otherwise generate new response df
     """
     if data_types is None:
-        data_types = ['filtered_events', 'running_speed', 'pupil_diameter', 'lick_rate']
+        data_types = ['filtered_events', 'running_speed', 'pupil_width', 'lick_rate']
     # get cache
     from allensdk.brain_observatory.behavior.behavior_project_cache import VisualBehaviorOphysProjectCache
     cache_dir = get_platform_analysis_cache_dir()
