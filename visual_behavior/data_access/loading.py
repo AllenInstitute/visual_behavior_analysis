@@ -556,24 +556,29 @@ def get_stimulus_response_df(dataset, time_window=[-3, 3.1], interpolate=True, o
     filepath = get_stimulus_response_df_filepath_for_experiment(ophys_experiment_id, data_type, event_type,
                                                                 interpolate=interpolate, output_sampling_rate=output_sampling_rate)
     if load_from_file:
-        try: # attempt to load from file
-            print('file exists:', os.path.exists(filepath))
-            print('loading response df from file for', ophys_experiment_id, data_type, event_type)
-            sdf = pd.read_hdf(filepath, key='df')
-        except Exception as e:  # if it doesnt exist or cant be loaded for whatever reason, create it and save it
-            print('stimulus_response_df does not exist or could not be loaded for', filepath)
-            print(e)
+        if os.path.exists(filepath):
+            try: # attempt to load from file
+                print('file exists:', )
+                print('loading response df from file for', ophys_experiment_id, data_type, event_type)
+                sdf = pd.read_hdf(filepath, key='df')
+            except Exception as e:  # if it cant be loaded for whatever reason, create it and save it
+                print('stimulus_response_df does not exist or could not be loaded for', filepath)
+                print(e)
+                print('generating response df')
+                sdf = vb_ophys.get_stimulus_response_df(dataset, data_type=data_type, event_type=event_type,
+                                                        time_window=time_window, interpolate=interpolate,
+                                                        output_sampling_rate=output_sampling_rate)
+                try:  # some experiments with lots of neurons cant save
+                    sdf.to_hdf(filepath, key='df')
+                    print('saved response df to', filepath)
+                except:
+                    print('could not save', filepath)
+        else: # if file does not exist, generate response df
             print('generating response df')
             sdf = vb_ophys.get_stimulus_response_df(dataset, data_type=data_type, event_type=event_type,
                                                     time_window=time_window, interpolate=interpolate,
                                                     output_sampling_rate=output_sampling_rate)
-            # if file already exists, overwrite it
-            try: # some experiments with lots of neurons cant save
-                sdf.to_hdf(filepath, key='df')
-                print('saved response df to', filepath)
-            except:
-                print('could not save', filepath)
-    else:
+    else: # if load_from_file is False, generate response df
         print('generating response df')
         sdf = vb_ophys.get_stimulus_response_df(dataset, data_type=data_type, event_type=event_type,
                                                 time_window=time_window, interpolate=interpolate,
