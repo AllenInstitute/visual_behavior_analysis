@@ -67,7 +67,7 @@ if __name__ == '__main__':
                                          time_window=time_window, interpolate=interpolate, output_sampling_rate=output_sampling_rate,
                                          response_window_duration_seconds=response_window_duration_seconds,
                                          use_extended_stimulus_presentations=use_extended_stimulus_presentations,
-                                         overwrite=False)
+                                         overwrite=True)
 
     # # create dfs for all data types and conditions for behavior data
     # for data_type in behavior_data_types:

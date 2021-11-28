@@ -33,6 +33,8 @@ def get_multi_session_df(project_code, session_number, conditions, data_type, ev
     cache = VisualBehaviorOphysProjectCache.from_s3_cache(cache_dir=cache_dir)
     print(cache_dir)
     experiments_table = cache.get_ophys_experiment_table()
+    # dont include Ai94 experiments because they makes things too slow
+    experiments_table = experiments_table[(experiments_table.reporter_line != 'Ai94(TITL-GCaMP6s)')]
 
     session_number = float(session_number)
     experiments = experiments_table[(experiments_table.project_code == project_code) &
@@ -60,7 +62,7 @@ def get_multi_session_df(project_code, session_number, conditions, data_type, ev
 
     if process_data:
         mega_mdf = pd.DataFrame()
-        for experiment_id in experiments.index:
+        for experiment_id in experiments.index.unique():
             try:
                 print(experiment_id)
                 # get dataset
