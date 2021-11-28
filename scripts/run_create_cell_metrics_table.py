@@ -29,7 +29,7 @@ if __name__ == "__main__":
 
     # instantiate a Slurm object
     slurm = Slurm(
-        mem='120g',  # '24g'
+        mem='100g',  # '24g'
         cpus_per_task=10,
         time='60:00:00',
         partition='braintv',
