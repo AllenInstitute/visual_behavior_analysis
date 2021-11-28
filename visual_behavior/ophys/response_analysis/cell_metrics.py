@@ -645,7 +645,7 @@ def get_cell_metrics_dir(interpolate=False, output_sampling_rate=None):
     """
     base_dir = r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/platform_paper_cache/cell_metrics'
     if interpolate:
-        save_dir = os.path.join(base_dir, 'interpolate_' + str(output_sampling_rate) + 'Hz')
+        save_dir = os.path.join(base_dir, 'interpolated_' + str(output_sampling_rate) + 'Hz')
     else:
         save_dir = os.path.join(base_dir, 'original_frame_rate')
     if not os.path.exists(save_dir):
