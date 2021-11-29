@@ -593,6 +593,6 @@ def plot_N_clusters_by_cre_line(labels_cre, ax=None, palette=None):
                 linewidth=4, markersize=10)
         ax.set_xlabel('Cluster number')
         ax.set_ylabel('Cells per cluster (%)')
-    ax.legend(labels_cre.keys())
+    ax.legend(['Excitatory', 'SST inhibitory', 'VIP inhibitory'])
 
     return ax

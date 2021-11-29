@@ -60,7 +60,6 @@ def get_labels_for_coclust_matrix(X, model=SpectralClustering, nboot=np.arange(1
     ___________
     :return: labels: matrix of labels, n repeats by n observations
     '''
-
     labels = []
     if n_clusters is not None:
         model.n_clusters = n_clusters
