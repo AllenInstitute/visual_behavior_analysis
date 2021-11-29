@@ -515,7 +515,7 @@ def generate_cell_metrics_table(dataset, stimulus_response_df, data_type='events
     elif condition == 'omissions':
         df = sdf[sdf.omitted]
         # use next image name for computing pref image, selectivity, etc.
-        df['image_name'] = [df.iloc[row].image_name_next_flash for row in range(len(df))]
+        # df['image_name'] = [df.iloc[row].image_name_next_flash for row in range(len(df))]
     elif condition == 'images':
         df = sdf[sdf.omitted == False]
     else:
@@ -568,15 +568,21 @@ def generate_cell_metrics_table(dataset, stimulus_response_df, data_type='events
                                                         response_window_duration=response_window_duration)
 
     # get running modulation - diff over sum of mean image response for running vs. not running trials
-    running_modulation_index = get_running_modulation_index_for_cell_specimen_ids(df)
+    try:
+        running_modulation_index = get_running_modulation_index_for_cell_specimen_ids(df)
+    except:
+        print('could not generate running_modulation_index for', condition, session_subset)
 
     if condition == 'changes':
         # get choice modulation - diff over sum of mean image response for hit vs. miss trials
-        hit_miss_modulation_index = get_hit_miss_modulation_index(df)
+        try: #disenegaged conditions dont have hits usually
+            hit_miss_modulation_index = get_hit_miss_modulation_index(df)
+        except:
+            print('hit_miss_index could not be computed for', condition, session_subset)
         change_modulation_index = get_change_modulation_index(sdf)
 
     # create dataframe with one row per cell_specimen_id
-    metrics_table = pd.DataFrame(index=sdf.cell_specimen_id.unique())
+    metrics_table = pd.DataFrame(data=sdf.cell_specimen_id.unique(), columns=['cell_specimen_id'])
     if condition != 'omissions':
         metrics_table = metrics_table.merge(pref_image, on='cell_specimen_id')
         metrics_table = metrics_table.merge(non_pref_image, on='cell_specimen_id')
@@ -591,7 +597,10 @@ def generate_cell_metrics_table(dataset, stimulus_response_df, data_type='events
     except:
         print('running modulation could not be computed for this experiment')
     if condition == 'changes':
-        metrics_table = metrics_table.merge(hit_miss_modulation_index, on='cell_specimen_id')
+        try:
+            metrics_table = metrics_table.merge(hit_miss_modulation_index, on='cell_specimen_id')
+        except:
+            print('hit_miss_index could not be computed for', condition, session_subset)
         metrics_table = metrics_table.merge(change_modulation_index, on='cell_specimen_id')
     metrics_table['ophys_experiment_id'] = ophys_experiment_id
 
