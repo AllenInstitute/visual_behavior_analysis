@@ -58,8 +58,9 @@ if __name__ == '__main__':
                                   'all', 'all']
 
     # add engagement state to all conditions
-    for i in range(len(conditions)):
-        conditions[i].insert(1, 'engagement_state')
+    for i in range(len(physio_conditions)):
+        physio_conditions[i].insert(1, 'engagement_state')
+        behavior_conditions[i].insert(1, 'engagement_state')
 
     # create dfs for all data types and conditions for physio data
     # for data_type in physio_data_types:
