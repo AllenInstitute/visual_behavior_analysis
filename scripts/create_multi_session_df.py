@@ -81,7 +81,7 @@ if __name__ == '__main__':
 
     # create dfs for all data types and conditions for behavior data
     # for data_type in behavior_data_types:
-    data_type = 'pupil_width'
+    data_type = 'running_speed'
     for i, conditions in enumerate(behavior_conditions):
         event_type = event_types_for_conditions[i]
         print('creating multi_session_df for', data_type, event_type, conditions)
