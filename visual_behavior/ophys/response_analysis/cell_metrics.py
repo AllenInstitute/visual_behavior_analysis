@@ -899,12 +899,12 @@ def load_metrics_table_for_experiments(ophys_experiment_ids, condition, stimuli,
     problem_expts = pd.DataFrame()
     metrics_table = pd.DataFrame()
     if (isinstance(ophys_experiment_ids, str)) and (ophys_experiment_ids == 'all_experiments'):
-        # try:
-        metrics_table = load_metrics_table_for_experiment(ophys_experiment_ids, condition, stimuli, session_subset,
+        try:
+            metrics_table = load_metrics_table_for_experiment(ophys_experiment_ids, condition, stimuli, session_subset,
                                                               data_type=data_type, interpolate=interpolate,
                                                               output_sampling_rate=output_sampling_rate)
-        # except BaseException:
-        #     print('problem loading all experiments metrics table')
+        except BaseException:
+            print('problem loading all experiments metrics table')
     else:
         for ophys_experiment_id in tqdm(ophys_experiment_ids):
             try:
