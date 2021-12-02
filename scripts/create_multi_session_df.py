@@ -64,7 +64,7 @@ if __name__ == '__main__':
 
     # create dfs for all data types and conditions for physio data
     # for data_type in physio_data_types:
-    data_type = 'events'
+    data_type = 'filtered_events'
     for i, conditions in enumerate(physio_conditions):
         event_type = event_types_for_conditions[i]
         print('creating multi_session_df for', data_type, event_type, conditions)
