@@ -58,9 +58,9 @@ if __name__ == '__main__':
                                   'all', 'all']
 
     # add engagement state to all conditions
-    # for i in range(len(physio_conditions)):
-    #     physio_conditions[i].insert(1, 'engagement_state')
-    #     behavior_conditions[i].insert(1, 'engagement_state')
+    for i in range(len(physio_conditions)):
+        physio_conditions[i].insert(1, 'engagement_state')
+        behavior_conditions[i].insert(1, 'engagement_state')
 
     # create dfs for all data types and conditions for physio data
     # for data_type in physio_data_types:
@@ -80,7 +80,7 @@ if __name__ == '__main__':
 
 
     # create dfs for all data types and conditions for behavior data
-    for data_type in behavior_data_types:
+    for data_type in behavior_data_types[1:]:
         for i, conditions in enumerate(behavior_conditions):
             event_type = event_types_for_conditions[i]
             print('creating multi_session_df for', data_type, event_type, conditions)
