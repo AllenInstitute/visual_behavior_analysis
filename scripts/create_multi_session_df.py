@@ -58,9 +58,9 @@ if __name__ == '__main__':
                                   'all', 'all']
 
     # add engagement state to all conditions
-    for i in range(len(physio_conditions)):
-        physio_conditions[i].insert(1, 'engagement_state')
-        behavior_conditions[i].insert(1, 'engagement_state')
+    # for i in range(len(physio_conditions)):
+    #     physio_conditions[i].insert(1, 'engagement_state')
+    #     behavior_conditions[i].insert(1, 'engagement_state')
 
     # create dfs for all data types and conditions for physio data
     # for data_type in physio_data_types:
@@ -80,18 +80,17 @@ if __name__ == '__main__':
 
 
     # create dfs for all data types and conditions for behavior data
-    # for data_type in behavior_data_types:
-    data_type = 'running_speed'
-    for i, conditions in enumerate(behavior_conditions):
-        event_type = event_types_for_conditions[i]
-        print('creating multi_session_df for', data_type, event_type, conditions)
-        try: # use try except so that it skips over any conditions that fail to generate for some reason
-            df = io.get_multi_session_df(project_code, session_number, conditions, data_type, event_type,
-                                         time_window=time_window, interpolate=interpolate,
-                                         output_sampling_rate=output_sampling_rate,
-                                         response_window_duration_seconds=response_window_duration_seconds,
-                                         use_extended_stimulus_presentations=use_extended_stimulus_presentations,
-                                         overwrite=True)
-        except Exception as e:
-            print('failed to create multi_session_df for', data_type, event_type, conditions)
-            print(e)
+    for data_type in behavior_data_types:
+        for i, conditions in enumerate(behavior_conditions):
+            event_type = event_types_for_conditions[i]
+            print('creating multi_session_df for', data_type, event_type, conditions)
+            try: # use try except so that it skips over any conditions that fail to generate for some reason
+                df = io.get_multi_session_df(project_code, session_number, conditions, data_type, event_type,
+                                             time_window=time_window, interpolate=interpolate,
+                                             output_sampling_rate=output_sampling_rate,
+                                             response_window_duration_seconds=response_window_duration_seconds,
+                                             use_extended_stimulus_presentations=use_extended_stimulus_presentations,
+                                             overwrite=True)
+            except Exception as e:
+                print('failed to create multi_session_df for', data_type, event_type, conditions)
+                print(e)
