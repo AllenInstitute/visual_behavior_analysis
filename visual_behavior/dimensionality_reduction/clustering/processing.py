@@ -6,7 +6,7 @@ import pandas as pd
 import pickle
 import os
 import visual_behavior.data_access.loading as loading
-
+from scipy.stats import spearmanr
 from scipy.stats import kruskal
 from scipy.stats import ttest_ind
 # from scipy.stats import ttest_1samp
@@ -32,8 +32,8 @@ def get_silhouette_scores(X, model=SpectralClustering, n_clusters=np.arange(2, 1
     _____________
     :return: silhouette_scores: a list of scores for each n cluster
     '''
-    print('size of X = '+ str(np.shape(X)))
-    print('NaNs in the array = ' + str(np.sum(X==np.nan)))
+    print('size of X = ' + str(np.shape(X)))
+    print('NaNs in the array = ' + str(np.sum(X == np.nan)))
     silhouette_scores = []
     for n_cluster in n_clusters:
         s_tmp = []
@@ -235,3 +235,22 @@ def build_stats_table(metrics_df, metrics_columns=None, dropna=True, pivot=False
     elif stats_table['data'].sum() == 0:
         print('Cannot pivot table when all data is NaNs')
     return stats_table
+
+
+def get_cluster_density(df_dropouts, labels_list, use_spearmanr=False):
+    '''
+    Computes correlation coefficients for clusters computed on glm dropouts
+    '''
+    labels = np.unique(labels_list)
+    cluster_corrs = {}
+    for label in labels:
+        cluster_means = df_dropouts[labels_list == label].mean().abs().values
+        within_cluster = df_dropouts[labels_list == label].abs()
+        corr_coeffs = []
+        for cid in within_cluster.index.values:
+            if use_spearmanr is False:
+                corr_coeffs.append(np.corrcoef(cluster_means, within_cluster.loc[cid].values)[0][1])
+            elif use_spearmanr is True:
+                corr_coeffs.append(spearmanr(cluster_means, within_cluster.loc[cid].values)[0])
+        cluster_corrs[label] = corr_coeffs
+    return cluster_corrs

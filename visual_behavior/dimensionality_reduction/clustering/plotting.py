@@ -1,4 +1,3 @@
-import os
 import umap
 import random
 import numpy as np
@@ -9,7 +8,7 @@ from sklearn.cluster import KMeans
 from scipy.spatial.distance import cdist, pdist
 import visual_behavior.visualization.utils as utils
 import visual_behavior.data_access.loading as loading
-from visual_behavior.dimensionality_reduction.clustering.processing import get_silhouette_scores
+from visual_behavior.dimensionality_reduction.clustering.processing import get_silhouette_scores, get_cluster_density
 
 import seaborn as sns
 # figure settings
@@ -594,5 +593,21 @@ def plot_N_clusters_by_cre_line(labels_cre, ax=None, palette=None):
         ax.set_xlabel('Cluster number')
         ax.set_ylabel('Cells per cluster (%)')
     ax.legend(['Excitatory', 'SST inhibitory', 'VIP inhibitory'])
+
+    return ax
+
+
+def plot_cluster_density(df_dropouts=None, labels_list=None, cluster_corrs=None, ax=None):
+    if cluster_corrs is None:
+        cluster_corrs = get_cluster_density(df_dropouts, labels_list)
+    df_labels = pd.DataFrame(columns=['corr', 'labels'])
+    for key in cluster_corrs.keys():
+        data = np.array([cluster_corrs[key], np.repeat(key, len(cluster_corrs[key]))])
+        tmp = pd.DataFrame(data.transpose(), columns=['corr', 'labels'])
+        df_labels = df_labels.append(tmp, ignore_index=True)
+    if ax is None:
+        fig, ax = plt.subplots(1, 1, figsize=(max(cluster_corrs.keys()), 6))
+    ax.axhline(xmin=-1, xmax=max(cluster_corrs.keys()) + 1, color='grey')
+    sns.violinplot(data=df_labels, x='labels', y='corr', ax=ax)
 
     return ax
