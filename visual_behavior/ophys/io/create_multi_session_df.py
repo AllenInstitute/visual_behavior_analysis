@@ -8,7 +8,7 @@ from visual_behavior.data_access import loading
 
 def get_multi_session_df(project_code, session_number, conditions, data_type, event_type,
                          time_window=[-3, 3.1], interpolate=True, output_sampling_rate=30,
-                         response_window_duration_seconds=0.5, use_extended_stimulus_presentations=False, overwrite=False):
+                         response_window_duration=0.5, use_extended_stimulus_presentations=False, overwrite=False):
     """
 
     :param project_code:
@@ -19,7 +19,7 @@ def get_multi_session_df(project_code, session_number, conditions, data_type, ev
     :param time_window:
     :param interpolate:
     :param output_sampling_rate:
-    :param response_window_duration_seconds:
+    :param response_window_duration:
     :param use_extended_stimulus_presentations:
     :return:
     """
@@ -72,6 +72,9 @@ def get_multi_session_df(project_code, session_number, conditions, data_type, ev
                 df = loading.get_stimulus_response_df(dataset, data_type=data_type, event_type=event_type, time_window=time_window,
                                                       interpolate=interpolate, output_sampling_rate=output_sampling_rate,
                                                       load_from_file=True)
+                # use response_window duration from stim response df if it exists
+                if response_window_duration in df.keys():
+                    response_window_duration = df.response_window_duration.values[0]
                 df['ophys_experiment_id'] = experiment_id
                 # if using omissions, only include omissions where time from last change is more than 3 seconds
                 if event_type == 'omissions':
@@ -100,7 +103,7 @@ def get_multi_session_df(project_code, session_number, conditions, data_type, ev
 
                 mdf = ut.get_mean_df(df, conditions=conditions, frame_rate=output_sampling_rate,
                                      window_around_timepoint_seconds=time_window,
-                                     response_window_duration_seconds=response_window_duration_seconds,
+                                     response_window_duration_seconds=response_window_duration,
                                      get_pref_stim=get_pref_stim, exclude_omitted_from_pref_stim=True)
                 if 'correlation_values' in mdf.keys():
                     mdf = mdf.drop(columns=['correlation_values'])
