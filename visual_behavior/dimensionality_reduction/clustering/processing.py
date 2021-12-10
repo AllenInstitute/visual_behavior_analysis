@@ -254,3 +254,36 @@ def get_cluster_density(df_dropouts, labels_list, use_spearmanr=False):
                 corr_coeffs.append(spearmanr(cluster_means, within_cluster.loc[cid].values)[0])
         cluster_corrs[label] = corr_coeffs
     return cluster_corrs
+
+
+def shuffle_dropout_score(df_dropout, shuffle_type='all'):
+    '''
+    Shuffles dataframe with dropout scores from GLM.
+    shuffle_type: str, default='all', other options= 'experience', 'regressors'
+    '''
+    df_shuffled = df_dropout.copy()
+    regressors = df_dropout.columns.levels[0].values
+    experience_levels = df_dropout.columns.levels[1].values
+    if shuffle_type == 'all':
+        for column in df_dropout.columns:
+            df_shuffled[column] = df_dropout[column].sample(frac=1).values
+
+    elif shuffle_type == 'experience':
+        assert np.shape(df_dropout.columns.levels)[
+                   0] == 2, 'df should have two level column structure, 1 - regressors, 2 - experience'
+        for experience_level in experience_levels:
+            randomized_cids = df_dropout.sample(frac=1).index.values
+            for i, cid in enumerate(randomized_cids):
+                for regressor in regressors:
+                    df_shuffled.iloc[i][regressor][experience_level] = df_dropout.loc[cid][regressor][experience_level]
+
+    elif shuffle_type == 'regressors':
+        assert np.shape(df_dropout.columns.levels)[
+                   0] == 2, 'df should have two level column structure, 1 - regressors, 2 - experience'
+        for regressor in regressors:
+            randomized_cids = df_dropout.sample(frac=1).index.values
+            for i, cid in enumerate(randomized_cids):
+                for experience_level in experience_levels:
+                    df_shuffled.iloc[i][regressor][experience_level] = df_dropout.loc[cid][regressor][experience_level]
+    return df_shuffled
+

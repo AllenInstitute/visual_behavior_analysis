@@ -608,6 +608,6 @@ def plot_cluster_density(df_dropouts=None, labels_list=None, cluster_corrs=None,
     if ax is None:
         fig, ax = plt.subplots(1, 1, figsize=(max(cluster_corrs.keys()), 6))
     ax.axhline(xmin=-1, xmax=max(cluster_corrs.keys()) + 1, color='grey')
-    sns.violinplot(data=df_labels, x='labels', y='corr', ax=ax)
-
+    #sns.violinplot(data=df_labels, x='labels', y='corr', ax=ax)
+    sns.boxplot(data=df_labels, x='labels', y='corr', ax=ax)
     return ax
