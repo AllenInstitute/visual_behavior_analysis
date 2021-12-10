@@ -121,21 +121,25 @@ def get_ophys_glm_dir():
     return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/ophys_glm'
 
 
-def get_stimulus_response_df_dir(interpolate=True, output_sampling_rate=30):
+def get_stimulus_response_df_dir(interpolate=True, output_sampling_rate=30, event_type='all'):
     base_dir = r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/platform_paper_cache/stimulus_response_dfs'
     if interpolate:
-        save_dir = os.path.join(base_dir, 'interpolate_' + str(output_sampling_rate) + 'Hz')
+        save_dir = os.path.join(base_dir, event_type, 'interpolate_' + str(output_sampling_rate) + 'Hz')
     else:
-        save_dir = os.path.join(base_dir, 'original_frame_rate')
+        save_dir = os.path.join(base_dir, event_type, 'original_frame_rate')
+    if not os.path.exists(save_dir):
+        os.mkdir(save_dir)
     return save_dir
 
 
-def get_multi_session_df_df_dir(interpolate=True, output_sampling_rate=30):
+def get_multi_session_df_dir(interpolate=True, output_sampling_rate=30, event_type='all'):
     base_dir = get_platform_analysis_cache_dir()
     if interpolate:
-        save_dir = os.path.join(base_dir, 'multi_session_mean_response_dfs', 'interpolate_' + str(output_sampling_rate) + 'Hz')
+        save_dir = os.path.join(base_dir, 'multi_session_mean_response_dfs', event_type, 'interpolate_' + str(output_sampling_rate) + 'Hz')
     else:
-        save_dir = os.path.join(base_dir, 'multi_session_mean_response_dfs', 'original_frame_rate')
+        save_dir = os.path.join(base_dir, 'multi_session_mean_response_dfs', event_type, 'original_frame_rate')
+    if not os.path.exists(save_dir):
+        os.mkdir(save_dir)
     return save_dir
 
 
@@ -533,7 +537,7 @@ def get_extended_stimulus_presentations_table(stimulus_presentations, licks, rew
 
 def get_stimulus_response_df_filepath_for_experiment(ophys_experiment_id, data_type, event_type, interpolate=True, output_sampling_rate=30):
 
-    filepath = os.path.join(get_stimulus_response_df_dir(interpolate, int(output_sampling_rate)),
+    filepath = os.path.join(get_stimulus_response_df_dir(interpolate, int(output_sampling_rate), event_type),
                             str(ophys_experiment_id) + '_' + data_type + '_' + event_type + '.h5')
     return filepath
 
@@ -555,6 +559,12 @@ def get_stimulus_response_df(dataset, time_window=[-3, 3.1], interpolate=True, o
     ophys_experiment_id = dataset.ophys_experiment_id
     filepath = get_stimulus_response_df_filepath_for_experiment(ophys_experiment_id, data_type, event_type,
                                                                 interpolate=interpolate, output_sampling_rate=output_sampling_rate)
+
+    if event_type == 'omissions':
+        response_window_duration = 0.75
+    else:
+        response_window_duration = 0.5
+
     if load_from_file:
         if os.path.exists(filepath):
             try: # attempt to load from file
@@ -567,7 +577,8 @@ def get_stimulus_response_df(dataset, time_window=[-3, 3.1], interpolate=True, o
                 print('generating response df')
                 sdf = vb_ophys.get_stimulus_response_df(dataset, data_type=data_type, event_type=event_type,
                                                         time_window=time_window, interpolate=interpolate,
-                                                        output_sampling_rate=output_sampling_rate)
+                                                        output_sampling_rate=output_sampling_rate,
+                                                        response_window_duration=response_window_duration)
                 try:  # some experiments with lots of neurons cant save
                     sdf.to_hdf(filepath, key='df')
                     print('saved response df to', filepath)
@@ -577,12 +588,14 @@ def get_stimulus_response_df(dataset, time_window=[-3, 3.1], interpolate=True, o
             print('generating response df')
             sdf = vb_ophys.get_stimulus_response_df(dataset, data_type=data_type, event_type=event_type,
                                                     time_window=time_window, interpolate=interpolate,
-                                                    output_sampling_rate=output_sampling_rate)
+                                                    output_sampling_rate=output_sampling_rate,
+                                                    response_window_duration=response_window_duration)
     else: # if load_from_file is False, generate response df
         print('generating response df')
         sdf = vb_ophys.get_stimulus_response_df(dataset, data_type=data_type, event_type=event_type,
                                                 time_window=time_window, interpolate=interpolate,
-                                                output_sampling_rate=output_sampling_rate)
+                                                output_sampling_rate=output_sampling_rate,
+                                                response_window_duration=response_window_duration)
 
     # if extended_stimulus_presentations is an attribute of the dataset object, use it, otherwise get regular stimulus_presentations
     if 'extended_stimulus_presentations' in dir(dataset):
@@ -2727,8 +2740,8 @@ def load_multi_session_df(data_type, event_type, conditions, interpolate=True, o
         for session_type in np.sort(experiments.session_type.unique()):
             try:
                 filename = get_file_name_for_multi_session_df(data_type, event_type, project_code, session_type, conditions)
-                multi_session_df_dir = get_multi_session_df_df_dir(interpolate=interpolate,
-                                                                   output_sampling_rate=output_sampling_rate)
+                multi_session_df_dir = get_multi_session_df_dir(interpolate=interpolate,
+                                                                   output_sampling_rate=output_sampling_rate, event_type=event_type)
                 df = pd.read_hdf(os.path.join(multi_session_df_dir, filename), key='df')
                 multi_session_df = pd.concat([multi_session_df, df])
             except BaseException:
