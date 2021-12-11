@@ -65,7 +65,8 @@ if __name__ == '__main__':
     # create dfs for all data types and conditions for physio data
     # for data_type in physio_data_types:
     data_type = 'events'
-    for i, conditions in enumerate(physio_conditions):
+    for i, conditions in enumerate(physio_conditions[4:6]):
+        print(conditions)
         event_type = event_types_for_conditions[i]
         if event_type == 'omissions':
             response_window_duration = 0.75

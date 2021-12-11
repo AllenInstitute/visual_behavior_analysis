@@ -24,10 +24,11 @@ def get_multi_session_df(project_code, session_number, conditions, data_type, ev
     :return:
     """
     # cant get prefered stimulus if images are not in the set of conditions
-    if ('image_name' not in conditions) or ('change_image_name' not in conditions):
-        get_pref_stim = False
-    else:
+    if ('image_name' in conditions) or ('change_image_name' in conditions):
         get_pref_stim = True
+    else:
+        get_pref_stim = False
+    print('get_pref_stim', get_pref_stim)
 
     cache_dir = loading.get_platform_analysis_cache_dir()
     cache = VisualBehaviorOphysProjectCache.from_s3_cache(cache_dir=cache_dir)

@@ -392,7 +392,7 @@ def get_mean_df(response_df, conditions=['cell', 'change_image_name'], frame_rat
     mdf = mdf[['mean_response', 'sem_response', 'mean_trace', 'sem_trace', 'trace_timestamps', 'mean_responses', 'mean_baseline', 'sem_baseline']]
     mdf = mdf.reset_index()
     # save response window duration as a column for reference
-    mdf['response_window_duration_seconds'] = response_window_duration
+    mdf['response_window_duration'] = response_window_duration
 
     if get_pref_stim:
         if ('image_name' in conditions) or ('change_image_name' in conditions) or ('prior_image_name' in conditions):
