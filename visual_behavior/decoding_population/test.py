@@ -152,7 +152,7 @@ jobname = f'{jobname0}'
 # jobname = f'{jobname0}:{session_id}'
 
 
-python_file = r"/home/farzaneh.najafi/analysis_codes/visual_behavior_analysis/visual_behavior/decoding_population/svm_images_main_pre_pbs.py" #r"/home/farzaneh.najafi/analysis_codes/multiscope_fn/svm_main_pbs.py"
+python_file = r"/home/farzaneh.najafi/analysis_codes/visual_behavior_analysis/visual_behavior/decoding_population/test_function.py" #r"/home/farzaneh.najafi/analysis_codes/multiscope_fn/svm_main_pbs.py"
 
 
 
@@ -172,6 +172,7 @@ python_path = os.path.join(
     
 print(python_path)
 
+import sys
 print('___')
 print(sys.path)
 print('___')
