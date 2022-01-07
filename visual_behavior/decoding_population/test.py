@@ -168,10 +168,13 @@ python_path = os.path.join(
     'bin',
     'python'
 )    
-    
+# /home/farzaneh.najafi/anaconda3/envs/visbeh2/bin/python    
     
 print(python_path)
 
+print('___')
+print(sys.path)
+print('___')
 
 # instantiate a Slurm object    
 slurm = Slurm(
@@ -199,7 +202,7 @@ print(slurm)
 
 # example active session: isess = -2; session_id = 914639324; isess = -30; session_id = 981845703
 cnt_sess = -1     
-for isess in range(len(list_all_sessions_valid)): # [0,1]: # isess = -35 # session_id = list_all_sessions_valid[0] #[num_valid_exps_each_sess == 8][0]
+for isess in [0]: #range(len(list_all_sessions_valid)): # [0,1]: # isess = -35 # session_id = list_all_sessions_valid[0] #[num_valid_exps_each_sess == 8][0]
     
     session_id = int(list_all_sessions_valid[isess])
 
@@ -215,21 +218,10 @@ for isess in range(len(list_all_sessions_valid)): # [0,1]: # isess = -35 # sessi
     ##### call the `sbatch` command to run the jobs
 #     slurm.sbatch(f'{python_path} {python_file} --isess {isess} --use_events {use_events} --to_decode {to_decode} --trial_type {trial_type} --svm_blocks {svm_blocks} --engagement_pupil_running {engagement_pupil_running} --use_spont_omitFrMinus1 {use_spont_omitFrMinus1} --use_balanced_trials {use_balanced_trials}') #  + Slurm.SLURM_ARRAY_TASK_ID
 
-    slurm.sbatch('{} {} --isess {} --project_codes {} --use_events {} --to_decode {} --trial_type {} --svm_blocks {} --engagement_pupil_running {} --use_spont_omitFrMinus1 {} --use_balanced_trials {} --use_matched_cells {}'.format(
+    slurm.sbatch('{} {}'.format(
         python_path,
         python_file,
-        isess,
-        project_codes,
-        use_events,
-        to_decode,
-        trial_type,
-        svm_blocks,
-        engagement_pupil_running,
-        use_spont_omitFrMinus1,
-        use_balanced_trials,
-        use_matched_cells,
-            )
-                )
+            ))
     
 #     slurm.sbatch('{} ../demo_python_scripts/plotting_demo.py --frequency {} --save-loc {}'.format(
 #             python_path,
