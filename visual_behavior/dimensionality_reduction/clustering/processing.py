@@ -141,6 +141,10 @@ def save_clustering_results(data, filename_string='', path=None):
     '''
     if path is None:
         path = r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/summary_plots/glm/SpectralClustering/files'
+
+    if os.path.exists(path) is False:
+        os.mkdir(path)
+
     filename = os.path.join(path, '{}'.format(filename_string))
     with open(filename, 'wb') as f:
         pickle.dump(data, f)
@@ -269,8 +273,9 @@ def shuffle_dropout_score(df_dropout, shuffle_type='all'):
             df_shuffled[column] = df_dropout[column].sample(frac=1).values
 
     elif shuffle_type == 'experience':
+        print('shuffling data across experience')
         assert np.shape(df_dropout.columns.levels)[
-                   0] == 2, 'df should have two level column structure, 1 - regressors, 2 - experience'
+            0] == 2, 'df should have two level column structure, 1 - regressors, 2 - experience'
         for experience_level in experience_levels:
             randomized_cids = df_dropout.sample(frac=1).index.values
             for i, cid in enumerate(randomized_cids):
@@ -278,12 +283,12 @@ def shuffle_dropout_score(df_dropout, shuffle_type='all'):
                     df_shuffled.iloc[i][regressor][experience_level] = df_dropout.loc[cid][regressor][experience_level]
 
     elif shuffle_type == 'regressors':
+        print('shuffling data across regressors')
         assert np.shape(df_dropout.columns.levels)[
-                   0] == 2, 'df should have two level column structure, 1 - regressors, 2 - experience'
+            0] == 2, 'df should have two level column structure, 1 - regressors, 2 - experience'
         for regressor in regressors:
             randomized_cids = df_dropout.sample(frac=1).index.values
             for i, cid in enumerate(randomized_cids):
                 for experience_level in experience_levels:
                     df_shuffled.iloc[i][regressor][experience_level] = df_dropout.loc[cid][regressor][experience_level]
     return df_shuffled
-
