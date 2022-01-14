@@ -17,6 +17,7 @@ import scipy.stats as st
 import statsmodels.api as sm
 from statsmodels.formula.api import ols
 from statsmodels.stats.multicomp import (pairwise_tukeyhsd, MultiComparison)
+from anova_tukey_fn import *
 
 sigval = .05 # value for ttest significance
 fmt_all = ['o', 'x']
@@ -27,6 +28,8 @@ else:
     ylabs = '% Classification accuracy' #'Amplitude'    
 cres = ['Slc17a7', 'Sst', 'Vip']
 
+
+# svm_df_all = pd.concat(svm_df_allpr)
 
 
 ##############################################################################################################################        
@@ -51,7 +54,7 @@ for crenow in cres: # crenow = cres[0]
     for expl in exp_level_all: # expl = exp_level_all[0]
         iexpl = iexpl+1
 
-        a = svm_df[np.logical_and(svm_df['cre_allPlanes']==crenow , svm_df['experience_levels']==expl)]
+        a = svm_df_all[np.logical_and(svm_df_all['cre_allPlanes']==crenow , svm_df_all['experience_levels']==expl)]
         
         a_amp = np.vstack(a['peak_amp_allPlanes_allExp'].values)[:,1] # n_exp
         b_amp = np.vstack(a['peak_amp_allPlanes_allExp'].values)[:,2] # n_exp
@@ -79,18 +82,35 @@ print(f'\n---------------------\n')
 
 if np.isnan(svm_blocks) or svm_blocks==-101: # svm was run on the whole session (no block by block analysis)    
 
-    svm_df = svm_df.rename(columns={'cre_allPlanes': 'cre'})
-    svm_df = svm_df.rename(columns={'peak_amp_allPlanes_allExp':'decoding_magnitude'})
+    svm_df = svm_df_all.rename(columns={'cre_allPlanes': 'cre'})
+    svm_df = svm_df.rename(columns={'peak_amp_allPlanes_allExp':'decoding_magnitude0'})
 
-    # take testing dataset decoding accuracy
-    test = np.array([svm_df['decoding_magnitude'].values[i][1] for i in range(svm_df.shape[0])])
+    ########## take testing dataset decoding accuracy
+    test = np.array([svm_df['decoding_magnitude0'].values[i][1] for i in range(svm_df.shape[0])])
     svm_df['decoding_magnitude'] = list(test)
 
     ### call the anova/tukey function
     label_stat='experience_levels'
     values_stat = 'decoding_magnitude'
-    anova_all, tukey_all = anova_tukey(svm_df, values_stat, label_stat)
+    anova_all, tukey_all_ts = anova_tukey(svm_df, values_stat, label_stat)
+    
 
+    ########## take testing minus shuffled dataset decoding accuracy
+    shfl = np.array([svm_df['decoding_magnitude0'].values[i][2] for i in range(svm_df.shape[0])])
+    svm_df['decoding_magnitude'] = list(test-shfl)
+    
+    ### call the anova/tukey function
+    label_stat='experience_levels'
+    values_stat = 'decoding_magnitude'
+    anova_all, tukey_all_tsSh = anova_tukey(svm_df, values_stat, label_stat)
+
+    
+    ########### keep tukey results for both test and test minus shuffled cases
+    tukey_all = []
+    tukey_all.append(tukey_all_ts) # 2 (test-shfl ; test) x cres x tukey_table (ie 4 x7) :  2 x 3 x 4 x 7   
+    tukey_all.append(tukey_all_tsSh) 
+    
+    
     '''
     tukey_all = []
     for cre in cres: # cre = cresdf[0]
@@ -284,7 +304,7 @@ if np.isnan(svm_blocks) or svm_blocks==-101: # svm was run on the whole session 
             iax = iax+1
             
             x_new = xnowall
-            tukey = tukey_all[icre][iax]
+            tukey = tukey_all[iax][icre]
 #             print(tukey)
 
             if ax==ax1: # testing data
@@ -320,7 +340,7 @@ if np.isnan(svm_blocks) or svm_blocks==-101: # svm was run on the whole session 
                         r = cntr*((mx-mn)/10)
 
                         x1, x2 = x_new[group1_ind], x_new[group2_ind]   
-                        y, h, col = np.max([y_new[group1_ind], y_new[group2_ind]]) + r, (mx-mn)/20, 'k'
+                        y, h, col = np.max([y_new.values[group1_ind], y_new.values[group2_ind]]) + r, (mx-mn)/20, 'k'
 
                         ax.plot([x1, x1, x2, x2], [y, y+h, y+h, y], lw=1.5, c=col, clip_on=True) #, transform=trans)
                         ax.text((x1+x2)*.5, y+h, txtsig, ha='center', va='bottom', color=col)

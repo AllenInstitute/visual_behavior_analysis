@@ -1,10 +1,12 @@
 # Perform Anova (1 way) and pairwise Tukey HSD
 
+import numpy as np
+import pandas as pd
 import statsmodels.api as sm
 from statsmodels.formula.api import ols
 from statsmodels.stats.multicomp import (pairwise_tukeyhsd, MultiComparison)
 
-def anova_tukey(svm_df, values_stat, label_stat='experience_levels'):
+def anova_tukey(svm_df, values_stat, label_stat='experience_levels', exp_level_all=['Familiar', 'Novel 1', 'Novel >1']):
     
 #     svm_df is a df which contains the following columns: 
 #     'cre': identifies mouse cre line

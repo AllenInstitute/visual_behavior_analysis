@@ -83,6 +83,8 @@ for cren in cres: # cren = cres[0]
             traces_ms[:, np.argwhere(time_trace_ms==0)-1] = np.nan
             traces_vb[:, np.argwhere(time_trace_vb==0)-1] = np.nan
             traces_1b[:, np.argwhere(time_trace_vb==0)-1] = np.nan
+
+        if trial_type=='baseline_vs_nobaseline' or trial_type=='omissions':
             omit_aligned = 1
         else:
             omit_aligned = 0
@@ -108,16 +110,21 @@ for cren in cres: # cren = cres[0]
 
         # plot the average traces across project codes
         m = np.concatenate((traces_ms_interp, traces_vb, traces_1b))
-        print(m.shape)
+#         print(m.shape)
 
-        hn = plt.plot(x, np.nanmean(m, axis=0), color=colors[iel], label=el)
+        av = np.nanmean(m, axis=0)
+        se = np.nanstd(m, axis=0) / np.sqrt(sum(~np.isnan(m[:,0])))
+        
+        plt.fill_between(x, av-se, av+se, alpha=.3, edgecolor=colors[iel], facecolor=colors[iel])
+        hn = plt.plot(x, av, color=colors[iel], label=el)
+        
         h.append(hn)
 
         
     #### done with all exp levels for a given cre line
     handles, labels = plt.gca().get_legend_handles_labels();
 #     lims = [np.min(np.min(lims_v1lm, axis=1)), np.max(np.max(lims_v1lm, axis=1))]
-    plot_flashLines_ticks_legend([], handles, flashes_win_trace_index_unq_time, grays_win_trace_index_unq_time, time_trace_vb, xmjn=xmjn, bbox_to_anchor=bb, ylab=ylabel, xlab='Time rel. trial onset (sec)', omit_aligned=omit_aligned)
+    plot_flashLines_ticks_legend([], handles, flashes_win_trace_index_unq_time, grays_win_trace_index_unq_time, time_trace_vb, xmjn=xmjn, bbox_to_anchor=bb, ylab=ylabel, xlab=xlabel, omit_aligned=omit_aligned)
     plt.xlim(xlim);
     plt.title(cren, fontsize=13, y=1); # np.unique(area)
     # mark time_win: the window over which the response quantification (peak or mean) was computed 

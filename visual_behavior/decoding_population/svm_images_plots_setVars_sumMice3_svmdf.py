@@ -102,8 +102,10 @@ svm_df['av_test_data_allPlanes'] = av_test_data_allPlanes_allExp
 svm_df['av_test_shfl_allPlanes'] = av_test_shfl_allPlanes_allExp
 svm_df['peak_amp_allPlanes_allExp'] = peak_amp_allPlanes_allExp
 
-svm_df #.head(300)
+# svm_df #.head(300)
 print(np.shape(svm_df))
+
+svm_df0 = copy.deepcopy(svm_df)
 
 # svm_allMice_sessPooled0.keys()
 

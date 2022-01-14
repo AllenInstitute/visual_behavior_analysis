@@ -20,7 +20,7 @@ import os
 
 #%% Define vars for svm_images analysis
 
-project_codes = 'VisualBehavior' #'VisualBehavior' # has to only include 1 project # project_codes : ['VisualBehaviorMultiscope', 'VisualBehaviorTask1B', 'VisualBehavior', 'VisualBehaviorMultiscope4areasx2d']
+project_codes = 'VisualBehaviorMultiscope' #'VisualBehavior' # has to only include 1 project # project_codes : ['VisualBehaviorMultiscope', 'VisualBehaviorTask1B', 'VisualBehavior', 'VisualBehaviorMultiscope4areasx2d']
 
 # Note: the variable names 'to_decode' and 'trial_type' are confusing. The names really only make sense when we are decoding images (ie when trial_type is images/changes/omissions), in which case they mean we are decoding to_decode image (eg current image) from trial_type (eg images); otherwise, to_decode is useless (we just default it to 'current') and trial_type indicates what was decoded from what (eg hits_vs_misses)
 to_decode = 'current' # 'current' (default): decode current image.    'previous': decode previous image.    'next': decode next image.     # remember for omissions, you cant do "current", bc there is no current image, it has to be previous or next!
@@ -181,6 +181,14 @@ print(slurm)
 
 
 
+list_all_sessions_valid = [847758278, 848401585, 850667270, 857040020, 903621170, 904418381, 906299056,
+ 906968227, 907177554, 907753304, 908441202, 911719666, 913564409, 914161594,
+ 914639324, 915306390, 937682841, 938898514, 940145217, 940775208, 946015345,
+ 948252173, 952430817, 975452945, 976167513, 976382032, 977760370, 978201478,
+ 980062339, 981845703, 983913570, 986130604, 1051107431, 1051319542, 1075872563,
+ 1076418903, 1076653403, 1077471417, 1077882399, 1078559482, 1080522184,
+ 1081012515, 1081652280, 1082262218, 1082487233, 1083168137, 1085718692,
+ 1086362421, 1087664594]
 
 
 

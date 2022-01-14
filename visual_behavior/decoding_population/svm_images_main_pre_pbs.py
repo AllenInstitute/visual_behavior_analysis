@@ -613,8 +613,9 @@ def svm_images_main_pre_pbs(isess, project_codes, use_events, to_decode, trial_t
     #         0.48482431,  0.51714593,  0.54946755,  0.58178917,  0.61411079,
     #         0.64643241,  0.67875403,  0.71107565,  0.74339727])
 
-    
-    trace_time = df_data.iloc[0]['trace_timestamps']
+
+    first_valid_row = int(np.argwhere(np.array([type(df_data['trace_timestamps'].iloc[i])==float for i in range(len(df_data))])==False)[0])    
+    trace_time = df_data.iloc[first_valid_row]['trace_timestamps']
     
     # set samps_bef and samps_aft: on the image-aligned traces, samps_bef frames were before the image, and samps_aft-1 frames were after the image
     samps_bef = np.argwhere(trace_time==0)[0][0] # 5

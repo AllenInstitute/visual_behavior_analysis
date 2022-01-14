@@ -97,7 +97,7 @@ project_codes = ['VisualBehavior'], ['VisualBehaviorTask1B'], ['VisualBehaviorMu
 dosavefig = 1 # 0
 
 to_decode = 'current' # 'current': decode current image. # 'previous': decode previous image. # 'next': decode next image.
-trial_type = 'changes' # 'baseline_vs_nobaseline' # 'omissions' # 'changes' # 'changes_vs_nochanges' # 'hits_vs_misses' # 'images'# what trials to use for SVM analysis # the population activity of these trials at time time_win will be used to decode the image identity of flashes that occurred at their time 0 (if to_decode='current') or 750ms before (if to_decode='previous'). # eg 'omissions' means to use omission-aligned traces # 'baseline_vs_nobaseline' # decode activity at each frame vs. baseline (ie the frame before omission unless use_spont_omitFrMinus1 = 1 (see below))
+trial_type = 'changes_vs_nochanges' # 'baseline_vs_nobaseline' # 'omissions' # 'changes' # 'changes_vs_nochanges' # 'hits_vs_misses' # 'images'# what trials to use for SVM analysis # the population activity of these trials at time time_win will be used to decode the image identity of flashes that occurred at their time 0 (if to_decode='current') or 750ms before (if to_decode='previous'). # eg 'omissions' means to use omission-aligned traces # 'baseline_vs_nobaseline' # decode activity at each frame vs. baseline (ie the frame before omission unless use_spont_omitFrMinus1 = 1 (see below))
 # Note: when trial_type is 'hits_vs_misses' or 'changes_vs_nochanges', to_decode will be 'current' and wont really make sense.
 # in all other cases, we decode "to_decode" image from "trial_type", e.g. we decode 'current' image from 'changes' (ie change-aligned traces)
 
@@ -218,6 +218,13 @@ alph = .3 # for plots, transparency of errorbars
 bb = (.92, .7) # (.9, .7)
 
 ylabel = '% Classification accuracy'
+
+if trial_type=='baseline_vs_nobaseline' or trial_type=='omissions':
+    xlabel = 'Time from omission (sec)' #'Time rel. trial onset (sec)'
+elif trial_type=='changes' or trial_type=='changes_vs_nochanges':
+    xlabel = 'Time from image change (sec)'    
+else:
+    xlabel = 'Time from image (sec)'
 
     
     

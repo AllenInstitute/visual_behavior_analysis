@@ -37,15 +37,15 @@ from svm_images_plots_main import *
 
 #%% Set vars
 
-project_codes = ['VisualBehaviorTask1B'] # ['VisualBehaviorMultiscope'] # ['VisualBehaviorMultiscope', 'VisualBehaviorTask1B', 'VisualBehavior', 'VisualBehaviorMultiscope4areasx2d']
+project_codes = ['VisualBehaviorMultiscope'] # ['VisualBehaviorMultiscope'] # ['VisualBehaviorMultiscope', 'VisualBehaviorTask1B', 'VisualBehavior', 'VisualBehaviorMultiscope4areasx2d']
 
-to_decode = 'next' #'next' # 'current' (default): decode current image.    'previous': decode previous image.    'next': decode next image.
-trial_type = 'omissions' #'changes' #'baseline_vs_nobaseline' #'hits_vs_misses' #'changes_vs_nochanges' #'omissions' # 'omissions', 'images', 'changes' # what trials to use for SVM analysis # the population activity of these trials at time time_win will be used to decode the image identity of flashes that occurred at their time 0 (if to_decode='current') or 750ms before (if to_decode='previous'). # 'baseline_vs_nobaseline' # decode activity at each frame vs. baseline (ie the frame before omission unless use_spont_omitFrMinus1 = 1 (see below))
+to_decode = 'current' #'next' # 'current' (default): decode current image.    'previous': decode previous image.    'next': decode next image.
+trial_type = 'changes' #'changes' #'baseline_vs_nobaseline' #'hits_vs_misses' #'changes_vs_nochanges' #'omissions' # 'omissions', 'images', 'changes' # what trials to use for SVM analysis # the population activity of these trials at time time_win will be used to decode the image identity of flashes that occurred at their time 0 (if to_decode='current') or 750ms before (if to_decode='previous'). # 'baseline_vs_nobaseline' # decode activity at each frame vs. baseline (ie the frame before omission unless use_spont_omitFrMinus1 = 1 (see below))
 
 use_events = True #False # whether to run the analysis on detected events (inferred spikes) or dff traces.
 svm_blocks = np.nan #-101 #np.nan # -1: divide trials based on engagement #2 # number of trial blocks to divide the session to, and run svm on. # set to np.nan to run svm analysis on the whole session
 
-use_matched_cells = 123 # 0: analyze all cells of an experiment. 123: analyze cells matched in all experience levels (familiar, novel 1 , novel >1); 12: cells matched in familiar and novel 1.  23: cells matched in novel 1 and novel >1.  13: cells matched in familiar and novel >1
+use_matched_cells = 0 #123 # 0: analyze all cells of an experiment. 123: analyze cells matched in all experience levels (familiar, novel 1 , novel >1); 12: cells matched in familiar and novel 1.  23: cells matched in novel 1 and novel >1.  13: cells matched in familiar and novel >1
 
 # use ['20210722'] for vb-ms, 'current', 'changes', events, svm_blocks=-1, no matched cells
 analysis_dates = [''] #['20210722'] #['20210708'] # ['2020507'] #set to [''] if you want to load the latest file. # the date on which the svm files were saved.
@@ -390,7 +390,7 @@ for iblock in br: # iblock=0; iblock=np.nan
         ss = np.reshape(all_sess['session_id'].values, (8, ns), order='F')[0,:] # 58
         si = ss[np.array(alleinv)] # these sessions have all experiments as invalid; investigate them!
         if aa==True:
-            print(f'These sessions have all experiments as invalid: {si}! investigate them!')        
+            print(f'{len(si)} sessions have all experiments as invalid:\n\n{si}! investigate them!')        
         
     else:
         l = np.array([len(all_sess['date'].values[i]) for i in range(len(all_sess))])

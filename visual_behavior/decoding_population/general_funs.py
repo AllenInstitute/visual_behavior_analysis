@@ -5,6 +5,11 @@ Created on Tue Oct 13 21:23:43 2019
 
 @author: farzaneh
 """
+'''
+from importlib import reload
+import x
+reload(x)
+'''
 
 import numpy as np
 import matplotlib.pyplot as plt
