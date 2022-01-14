@@ -19,40 +19,47 @@ from visual_behavior.ophys.response_analysis.response_analysis import ResponseAn
 
 # formatting
 sns.set_context('notebook', font_scale=1.5, rc={'lines.markeredgewidth': 2})
-sns.set_style('white', {'axes.spines.right': False, 'axes.spines.top': False, 'xtick.bottom': True, 'ytick.left': True, })
+sns.set_style('white', {'axes.spines.right': False, 'axes.spines.top': False})
 sns.set_palette('deep')
 
 
-def plot_population_averages_for_conditions(multi_session_df, df_name, timestamps, axes_column, hue_column, project_code,
-                                            use_events=True, filter_events=True, palette=None, data_type='events',
-                                            horizontal=True, xlim_seconds=None, save_dir=None, folder=None, suffix=''):
+def plot_population_averages_for_conditions(multi_session_df, data_type, event_type, axes_column, hue_column,
+                                            project_code=None, timestamps=None, palette=None, title=None, suptitle=None,
+                                            horizontal=True, xlim_seconds=None, save_dir=None, folder=None, suffix='', ax=None):
     if palette is None:
-        palette = sns.color_palette()
+        palette = utils.get_experience_level_colors()
 
     sdf = multi_session_df.copy()
+    if 'trace_timestamps' in sdf.keys():
+        timestamps = sdf.trace_timestamps.values[0]
+    elif timestamps is not None:
+        timestamps = timestamps
+    else:
+        print('provide timestamps or provide a multi_session_df with a trace_timestamps column')
 
-    # remove traces with incorrect length - why does this happen?
-    sdf = sdf.reset_index(drop=True)
-    indices = [index for index in sdf.index if len(sdf.iloc[index].mean_trace) == len(sdf.mean_trace.values[100])]
-    sdf = sdf.loc[indices]
+    if project_code is not None:
+        # remove traces with incorrect length - why does this happen?
+        sdf = sdf.reset_index(drop=True)
+        indices = [index for index in sdf.index if len(sdf.iloc[index].mean_trace) == len(sdf.mean_trace.values[100])]
+        sdf = sdf.loc[indices]
 
     if xlim_seconds is None:
         xlim_seconds = [timestamps[0], timestamps[-1]]
-    if use_events or filter_events:
-        ylabel = 'population response'
-    elif 'dFF' in data_type:
+    if 'dff' in data_type:
         ylabel = 'dF/F'
     elif 'events' in data_type:
-        ylabel = 'response'
-    elif 'pupil_area' in data_type:
-        ylabel = 'pupil area (pix^2)'
+        ylabel = 'population response'
+    elif 'pupil' in data_type:
+        ylabel = data_type+'\n normalized'
     elif 'running' in data_type:
         ylabel = 'running speed (cm/s)'
-    if 'omission' in df_name:
+    else:
+        ylabel = 'response'
+    if event_type == 'omissions':
         omitted = True
         change = False
         xlabel = 'time after omission (s)'
-    elif 'trials' in df_name:
+    elif event_type == 'changes':
         omitted = False
         change = True
         xlabel = 'time after change (s)'
@@ -61,49 +68,77 @@ def plot_population_averages_for_conditions(multi_session_df, df_name, timestamp
         change = False
         xlabel = 'time (s)'
 
-    hue_conditions = np.sort(sdf[hue_column].unique())
-    axes_conditions = np.sort(sdf[axes_column].unique())[::-1]
-    if horizontal:
-        figsize = (6 * len(axes_conditions), 4)
-        fig, ax = plt.subplots(1, len(axes_conditions), figsize=figsize, sharey=False)
+    if hue_column == 'experience_level':
+        hue_conditions = ['Familiar', 'Novel 1', 'Novel >1']
     else:
-        figsize = (5, 3.5 * len(axes_conditions))
-        fig, ax = plt.subplots(len(axes_conditions), 1, figsize=figsize, sharey=False)
-    ax = ax.ravel()
+        hue_conditions = np.sort(sdf[hue_column].unique())
+    if axes_column == 'experience_level':
+        axes_conditions = ['Familiar', 'Novel 1', 'Novel >1']
+    else:
+        axes_conditions = np.sort(sdf[axes_column].unique())[::-1]
+    # if there is only one axis condition, set n conditions for plotting to 2 so it can still iterate
+    if len(axes_conditions) == 1:
+        n_axes_conditions = 2
+    else:
+        n_axes_conditions = len(axes_conditions)
+    if ax is None:
+        format_fig = True
+        if horizontal:
+            figsize = (3 * n_axes_conditions, 3)
+            fig, ax = plt.subplots(1, n_axes_conditions, figsize=figsize, sharey=False)
+        else:
+            figsize = (5, 3.5 * n_axes_conditions)
+            fig, ax = plt.subplots(n_axes_conditions, 1, figsize=figsize, sharex=True)
+    else:
+        format_fig = False
     for i, axis in enumerate(axes_conditions):
         for c, hue in enumerate(hue_conditions):
-            traces = sdf[(sdf[axes_column] == axis) & (sdf[hue_column] == hue)].mean_trace.values
-            #             traces = [trace for trace in traces if np.amax(trace) < 4]
-            ax[i] = utils.plot_mean_trace(np.asarray(traces), timestamps, ylabel=ylabel,
-                                          legend_label=hue, color=palette[c], interval_sec=1,
-                                          xlim_seconds=xlim_seconds, ax=ax[i])
-            ax[i] = utils.plot_flashes_on_trace(ax[i], timestamps, change=change, omitted=omitted)
-            ax[i].axvline(x=0, ymin=0, ymax=1, linestyle='--', color='gray')
-            ax[i].set_title(axis)
-            ax[i].set_xlim(xlim_seconds)
-            ax[i].set_xlabel(xlabel)
-            if horizontal:
-                ax[i].set_ylabel('')
-            else:
-                ax[i].set_ylabel(ylabel)
-                ax[i].set_xlabel('')
+            try:
+                cdf = sdf[(sdf[axes_column] == axis) & (sdf[hue_column] == hue)]
+                traces = cdf.mean_trace.values
+                #             traces = [trace for trace in traces if np.amax(trace) < 4]
+                ax[i] = utils.plot_mean_trace(np.asarray(traces), timestamps, ylabel=ylabel,
+                                              legend_label=hue, color=palette[c], interval_sec=1,
+                                              xlim_seconds=xlim_seconds, ax=ax[i])
+                ax[i] = utils.plot_flashes_on_trace(ax[i], timestamps, change=change, omitted=omitted)
+                ax[i].axvline(x=0, ymin=0, ymax=1, linestyle='--', color='gray')
+                if title == 'metadata':
+                    metadata_string = utils.get_container_metadata_string(utils.get_metadata_for_row_of_multi_session_df(cdf))
+                    ax[i].set_title(metadata_string)
+                else:
+                    ax[i].set_title(axis)
+                ax[i].set_xlim(xlim_seconds)
+                ax[i].set_xlabel(xlabel)
+                if horizontal:
+                    ax[i].set_ylabel('')
+                else:
+                    ax[i].set_ylabel(ylabel)
+                    ax[i].set_xlabel('')
+            except:
+                print('no data for', axis, hue)
     if horizontal:
         ax[0].set_ylabel(ylabel)
     else:
         ax[i].set_xlabel(xlabel)
-    ax[i].legend(loc='upper left', fontsize='x-small')
-    if change:
-        trace_type = 'change'
-    elif omitted:
-        trace_type = 'omission'
+    # ax[0].legend(loc='upper left', fontsize='xx-small')
+
+    if project_code:
+        if suptitle is None:
+            suptitle = 'population average - ' + data_type + ' response - ' + project_code[14:]
     else:
-        trace_type = 'unknown'
-    plt.suptitle('population average ' + trace_type + ' response - ' + project_code[14:], x=0.52, y=1.04, fontsize=18)
-    fig.tight_layout()
+        if suptitle is None:
+            suptitle = 'population average response - ' + data_type + '_' + event_type
+    if format_fig:
+        plt.suptitle(suptitle, x=0.52, y=1.04, fontsize=18)
+        fig.tight_layout()
+    if horizontal:
+        fig.subplots_adjust(wspace=0.3)
 
     if save_dir:
-        fig_title = trace_type + '_population_average_response_' + project_code[14:] + '_' + axes_column + '_' + hue_column + suffix
+        fig_title = 'population_average_' + axes_column + '_' + hue_column + suffix
         utils.save_figure(fig, figsize, save_dir, folder, fig_title)
+
+    return ax
 
 
 def get_timestamps_for_response_df_type(cache, experiment_id, df_name):
@@ -139,13 +174,15 @@ def get_fraction_responsive_cells(multi_session_df, conditions=['cell_type', 'ex
     return fraction
 
 
-def plot_fraction_responsive_cells(multi_session_df, df_name, responsiveness_threshold=0.1, save_dir=None, suffix=''):
+def plot_fraction_responsive_cells(multi_session_df, responsiveness_threshold=0.1, horizontal=True, ylim=(0,1),
+                                   save_dir=None, folder=None, suffix='', ax=None):
     """
     Plots the fraction of responsive cells across cre lines
     :param multi_session_df: dataframe of trial averaged responses for each cell for some set of conditions
     :param df_name: name of the type of response_df used to make multi_session_df, such as 'omission_response_df' or 'stimulus_response_df'
     :param responsiveness_threshold: threshold on fraction_significant_p_value_gray_screen to determine whether a cell is responsive or not
     :param save_dir: directory to save figures to. if None, will not save.
+    :param folder: folder within save_dir to save figures to
     :param suffix: string starting with '_' to append to end of filename of saved plot
     :return:
     """
@@ -159,8 +196,16 @@ def plot_fraction_responsive_cells(multi_session_df, df_name, responsiveness_thr
     fraction_responsive = fraction_responsive.reset_index()
 
     palette = utils.get_experience_level_colors()
-    figsize = (3.5, 10.5)
-    fig, ax = plt.subplots(3,1, figsize=figsize, sharex=True)
+    if ax is None:
+        format_fig = True
+        if horizontal:
+            figsize = (9, 3.5)
+            fig, ax = plt.subplots(1, 3, figsize=figsize, sharex=False)
+        else:
+            figsize = (3, 8)
+            fig, ax = plt.subplots(3, 1, figsize=figsize, sharex=True)
+    else:
+        format_fig = False
     for i, cell_type in enumerate(cell_types):
         data = fraction_responsive[fraction_responsive.cell_type==cell_type]
         for ophys_container_id in data.ophys_container_id.unique():
@@ -171,19 +216,89 @@ def plot_fraction_responsive_cells(multi_session_df, df_name, responsiveness_thr
         ax[i] = sns.pointplot(data=data, x='experience_level', y='fraction_responsive', hue='experience_level',
                      hue_order=experience_levels, palette=palette, dodge=0, join=False, ax=ax[i])
         ax[i].set_xticklabels(experience_levels, rotation=45)
+        ax[i].set_ylabel('fraction\nresponsive')
     #     ax[i].legend(fontsize='xx-small', title='')
         ax[i].get_legend().remove()
         ax[i].set_title(cell_type)
-        ax[i].set_ylim(ymin=0)
         ax[i].set_xlabel('')
-        ax[i].set_ylim(0,1)
-    fig.tight_layout()
+        if ylim is not None:
+            ax[i].set_ylim(0,1)
+
+    if format_fig:
+        fig.tight_layout()
+        fig_title ='fraction_responsive_cells' + suffix
+        plt.suptitle(fig_title, x=0.52, y=1.02, fontsize=16)
+
+    if save_dir and format_fig:
+        fig_title = 'fraction_responsive_cells' + suffix
+        utils.save_figure(fig, figsize, save_dir, folder, fig_title)
+
+    return ax
+
+
+def plot_average_metric_value_for_experience_levels_across_containers(df, metric, ylim=None, horizontal=True,
+                                                                      save_dir=None, folder=None, suffix='', ax=None):
+    """
+    Plots the average metric value across experience levels for each cre line in color,
+    with individual containers shown as connected gray lines
+
+    :param df: dataframe with columns ['cell_type', 'experience_level', 'ophys_container_id', 'ophys_experiment_id']
+                and a column with some metric value to compute the mean of, such as 'mean_response' or 'reliability'
+                if 'cell_specimen_id' is included in the dataframe, will average across cells per experiment / container for the plot
+    :param ylim: ylimits, in units of metric value provided, to constrain the plot.
+    :param save_dir: directory to save figures to. if None, will not save.
+    :param folder: sub folder of save_dir to save figures to
+    :param suffix: string starting with '_' to append to end of filename of saved plot
+    :return:
+    """
+
+    experience_levels = np.sort(df.experience_level.unique())
+    cell_types = np.sort(df.cell_type.unique())[::-1]
+
+    # get mean value per container
+    mean_df = df.groupby(['cell_type', 'experience_level', 'ophys_container_id', 'ophys_experiment_id']).mean()[
+        [metric]].reset_index()
+
+    palette = utils.get_experience_level_colors()
+    if ax is None:
+        format_fig = True
+        if horizontal:
+            figsize = (10, 4)
+            fig, ax = plt.subplots(1, 3, figsize=figsize, sharex=False)
+        else:
+            figsize = (3.5, 10.5)
+            fig, ax = plt.subplots(3, 1, figsize=figsize, sharex=True)
+    else:
+        format_fig = False
+    for i, cell_type in enumerate(cell_types):
+        data = mean_df[mean_df.cell_type == cell_type]
+        # plot each container as gray lines
+        for ophys_container_id in data.ophys_container_id.unique():
+            ax[i] = sns.pointplot(data=data[data.ophys_container_id == ophys_container_id], x='experience_level',
+                                  y=metric,
+                                  color='gray', join=True, markers='.', scale=0.25, errwidth=0.25, ax=ax[i], zorder=500)
+        plt.setp(ax[i].collections, alpha=.3)  # for the markers
+        plt.setp(ax[i].lines, alpha=.3)
+        # plot the population average in color
+        ax[i] = sns.pointplot(data=data, x='experience_level', y=metric, hue='experience_level',
+                              hue_order=experience_levels, palette=palette, dodge=0, join=False, ax=ax[i])
+        ax[i].set_xticklabels(experience_levels, rotation=45)
+        #     ax[i].legend(fontsize='xx-small', title='')
+        ax[i].get_legend().remove()
+        ax[i].set_title(cell_type)
+        ax[i].set_xlabel('')
+        if ylim is not None:
+            ax[i].set_ylim(ylim)
+    if format_fig:
+        fig.tight_layout()
+        fig_title = metric + '_across_containers' + suffix
+        plt.suptitle(fig_title, x=0.52, y=1.02, fontsize=16)
     if save_dir:
-        fig_title = df_name.split('-')[0] + '_fraction_responsive_cells' + suffix
-        utils.save_figure(fig, figsize, save_dir, 'fraction_responsive_cells', fig_title)
+        utils.save_figure(fig, figsize, save_dir, folder, fig_title)
+    return ax
 
 
-def plot_n_segmented_cells(multi_session_df, df_name, save_dir=None, suffix=''):
+def plot_n_segmented_cells(multi_session_df, df_name, horizontal=True, save_dir=None, folder='cell_matching', suffix='', ax=None):
     """
     Plots the fraction of responsive cells across cre lines
     :param multi_session_df: dataframe of trial averaged responses for each cell for some set of conditions
@@ -202,8 +317,17 @@ def plot_n_segmented_cells(multi_session_df, df_name, save_dir=None, suffix=''):
     fraction_responsive = fraction_responsive.reset_index()
 
     palette = utils.get_experience_level_colors()
-    figsize = (3.5, 10.5)
-    fig, ax = plt.subplots(3,1, figsize=figsize, sharex=True)
+    if ax is None:
+        format_fig = True
+        if horizontal:
+            figsize = (10, 4)
+            fig, ax = plt.subplots(1, 3, figsize=figsize, sharex=False)
+        else:
+            figsize = (3.5, 10.5)
+            fig, ax = plt.subplots(3, 1, figsize=figsize, sharex=True)
+    else:
+        format_fig = False
+
     for i, cell_type in enumerate(cell_types):
         data = fraction_responsive[fraction_responsive.cell_type==cell_type]
         for ophys_container_id in data.ophys_container_id.unique():
@@ -220,56 +344,92 @@ def plot_n_segmented_cells(multi_session_df, df_name, save_dir=None, suffix=''):
         ax[i].set_ylim(ymin=0)
         ax[i].set_xlabel('')
 #         ax[i].set_ylim(0,1)
-    fig.tight_layout()
+    if format_fig:
+        fig.tight_layout()
     if save_dir:
         fig_title = df_name.split('-')[0] + '_n_total_cells' + suffix
         utils.save_figure(fig, figsize, save_dir, 'n_segmented_cells', fig_title)
 
 
-def plot_mean_response_by_epoch(df, df_name, save_dir=None, suffix=''):
+def plot_mean_response_by_epoch(df, metric='mean_response', horizontal=True, ymin=0, ylabel='mean response', estimator=np.mean,
+                                save_dir=None, folder='epochs', suffix='', ax=None):
+    """
+    Plots the mean metric value across 10 minute epochs within a session
+    :param df: dataframe of cell activity with one row per cell_specimen_id / ophys_experiment_id
+                must include columns 'cell_type', 'experience_level', 'epoch', and a column for the metric provided (ex: 'mean_response')
+    :param metric: metric value to average over epochs; must be a column of df
+    :param save_dir: top level directory to save figure to
+    :param folder: folder within save_dir to save figure to; will create folder if it doesnt exist
+    :param suffix: string to append at end of saved filename
+    :return:
+    """
+
+    # get rid of short 7th epoch (just a few mins at end of session)
+    df = df[df.epoch != 6]
+
+    # add experience epoch column in case it doesnt already exist
+    if 'experience_epoch' not in df.keys():
+        def merge_experience_epoch(row):
+            return row.experience_level + ' epoch ' + str(int(row.epoch) + 1)
+        df['experience_epoch'] = df[['experience_level', 'epoch']].apply(axis=1, func=merge_experience_epoch)
+
     xticks = [experience_epoch.split(' ')[-1] for experience_epoch in np.sort(df.experience_epoch.unique())]
 
     cell_types = np.sort(df.cell_type.unique())[::-1]
     experience_epoch = np.sort(df.experience_epoch.unique())
+    experience_levels = np.sort(df.experience_level.unique())
+
 
     palette = utils.get_experience_level_colors()
-    figsize=(4.5,10.5)
-    fig, ax = plt.subplots(3,1, figsize=figsize, sharex=False, sharey=False)
+    if ax is None:
+        format_fig = True
+        if horizontal:
+            figsize = (13, 3.5)
+            fig, ax = plt.subplots(1, 3, figsize=figsize, sharex=False, sharey=True)
+        else:
+            figsize = (4.5, 10.5)
+            fig, ax = plt.subplots(3, 1, figsize=figsize, sharex=True)
+    else:
+        format_fig = False
 
-    for i,cell_type in enumerate(cell_types):
+    for i, cell_type in enumerate(cell_types):
         data = df[df.cell_type==cell_type]
-        ax[i] = sns.pointplot(data=data, x='experience_epoch', y='mean_response', hue='experience_level',
-                           order=experience_epoch, palette=palette, ax=ax[i])
-        ax[i].set_ylim(ymin=0)
+        ax[i] = sns.pointplot(data=data, x='experience_epoch', y=metric, hue='experience_level', hue_order=experience_levels,
+                           order=experience_epoch, palette=palette, ax=ax[i], estimator=estimator)
+        if ymin is not None:
+            ax[i].set_ylim(ymin=ymin)
         ax[i].set_title(cell_type)
+        ax[i].set_ylabel(ylabel)
         ax[i].set_xlabel('')
         ax[i].get_legend().remove()
-    #     ax[i].set_ylim(0,0.022)
-    #     ax[i].set_xticklabels(experience_epoch, rotation=90);
-        ax[i].set_xticklabels(xticks, fontsize=16)
+        ax[i].set_xticklabels(xticks, fontsize=14)
         ax[i].vlines(x=5.5, ymin=0, ymax=1, color='gray', linestyle='--')
         ax[i].vlines(x=11.5, ymin=0, ymax=1, color='gray', linestyle='--')
-        ax[i].set_xlabel('10 min epoch within session', fontsize=16)
-    plt.suptitle('mean response over time', x=0.62, y=1.01, fontsize=18)
-    fig.tight_layout()
+    ax[i].set_xlabel('10 min epoch within session', fontsize=14)
+    if format_fig:
+        plt.suptitle(metric+' over time', x=0.52, y=1.03, fontsize=18)
+        fig.tight_layout()
     if save_dir:
-        fig_title = df_name.split('-')[0] + '_epochs' + suffix
-        utils.save_figure(fig, figsize, save_dir, 'epochs', fig_title)
+        fig_title = metric + '_epochs' + suffix
+        utils.save_figure(fig, figsize, save_dir, folder, fig_title)
+    return ax
 
 
 def plot_cell_response_heatmap(data, timestamps, xlabel='time after change (s)', vmax=0.05,
-                               microscope='Multiscope', ax=None):
+                               microscope='Multiscope', cbar=True, ax=None):
     if ax is None:
         fig, ax = plt.subplots()
-    ax = sns.heatmap(data, cmap='magma', linewidths=0, linecolor='white', square=False,
-                     vmin=0, vmax=vmax, robust=True, cbar=True,
+    ax = sns.heatmap(data, cmap='binary', linewidths=0, linecolor='white', square=False,
+                     vmin=0, vmax=vmax, robust=True, cbar=cbar,
                      cbar_kws={"drawedges": False, "shrink": 1, "label": 'response'}, ax=ax)
-    ax.vlines(x=5 * 11, ymin=0, ymax=len(data), color='w', linestyle='--')
 
-    if microscope == 'Multiscope':
-        ax.set_xticks(np.arange(0, 10 * 11, 11))
-        ax.set_xticklabels(np.arange(-5, 5, 1))
-    ax.set_xlim(3 * 11, 7 * 11)
+    zero_index = np.where(timestamps==0)[0][0]
+    ax.vlines(x=zero_index, ymin=0, ymax=len(data), color='gray', linestyle='--')
+
+    # if microscope == 'Multiscope':
+    #     ax.set_xticks(np.arange(0, 10 * 11, 11))
+    #     ax.set_xticklabels(np.arange(-5, 5, 1))
+    # ax.set_xlim(3 * 11, 7 * 11)
 
     ax.set_xlabel(xlabel)
     ax.set_ylabel('cells')
@@ -280,34 +440,32 @@ def plot_cell_response_heatmap(data, timestamps, xlabel='time after change (s)',
     return ax
 
 
-def plot_response_heatmaps_for_conditions(multi_session_df, df_name, timestamps,
-                                          row_condition, col_condition, use_events, filter_events, project_code,
-                                          microscope='Multiscope', vmax=0.05, xlim_seconds=None, match_cells=False,
-                                          save_dir=None, folder=None):
+def plot_response_heatmaps_for_conditions(multi_session_df, timestamps, data_type, event_type,
+                                          row_condition, col_condition, cols_to_sort_by=None, suptitle=None,
+                                          microscope=None, vmax=0.05, xlim_seconds=None, match_cells=False, cbar=True,
+                                          save_dir=None, folder=None, suffix='', ax=None):
     sdf = multi_session_df.copy()
 
-    # remove traces with incorrect length - why does this happen?
-    sdf = sdf.reset_index(drop=True)
-    indices = [index for index in sdf.index if len(sdf.iloc[index].mean_trace) == len(sdf.mean_trace.values[0])]
-    sdf = sdf.loc[indices]
-
-    if 'omission' in df_name:
+    if 'omission' in event_type:
         xlabel = 'time after omission (s)'
         trace_type = 'omitted'
-    elif 'change' in df_name:
-        xlabel = 'time after change (s)',
+    elif 'change' in event_type:
+        xlabel = 'time after change (s)'
         trace_type = 'change'
     else:
         xlabel = 'time (s)'
         trace_type = 'unknown'
 
+    if xlim_seconds is None:
+        xlim_seconds = (timestamps[0], timestamps[-1])
+
     row_conditions = np.sort(sdf[row_condition].unique())
     col_conditions = np.sort(sdf[col_condition].unique())
 
-    print(len(col_conditions), len(row_conditions))
-    figsize = (4 * len(col_conditions), 4 * len(row_conditions))
-    fig, ax = plt.subplots(len(row_conditions), len(col_conditions), figsize=figsize, sharex=True)
-    ax = ax.ravel()
+    if ax is None:
+        figsize = (3 * len(col_conditions), 3 * len(row_conditions))
+        fig, ax = plt.subplots(len(row_conditions), len(col_conditions), figsize=figsize, sharex=True)
+        ax = ax.ravel()
 
     i = 0
     for r, row in enumerate(row_conditions):
@@ -315,48 +473,122 @@ def plot_response_heatmaps_for_conditions(multi_session_df, df_name, timestamps,
         for c, col in enumerate(col_conditions):
 
             if row == 'Excitatory':
-                interval = 1000
                 vmax = 0.01
             elif row == 'Vip Inhibitory':
-                interval = 200
                 vmax = 0.02
             elif row == 'Sst Inhibitory':
-                interval = 100
                 vmax = 0.03
             else:
-                interval = 200
+                vmax = 0.02
 
             tmp = row_sdf[(row_sdf[col_condition] == col)]
             tmp = tmp.reset_index()
-            if match_cells:
-                if c == 0:
-                    tmp = tmp.sort_values(by='mean_response', ascending=True)
-                    order = tmp.index.values
-                else:
-                    tmp = tmp.loc[order]
+            if cols_to_sort_by:
+                tmp = tmp.sort_values(by=cols_to_sort_by, ascending=True)
             else:
-                tmp = tmp.sort_values(by='mean_response', ascending=True)
+                if match_cells:
+                    if c == 0:
+                        tmp = tmp.sort_values(by='mean_response', ascending=True)
+                        order = tmp.index.values
+                    else:
+                        tmp = tmp.loc[order]
+                else:
+                    tmp = tmp.sort_values(by='mean_response', ascending=True)
             data = pd.DataFrame(np.vstack(tmp.mean_trace.values), columns=timestamps)
+            n_cells = len(data)
 
-            ax[i] = plot_cell_response_heatmap(data, timestamps, vmax=vmax, xlabel=xlabel,
+            ax[i] = plot_cell_response_heatmap(data, timestamps, vmax=vmax, xlabel=xlabel, cbar=cbar,
                                                microscope=microscope, ax=ax[i])
             ax[i].set_title(row + '\n' + col)
+            # label y with total number of cells
+            ax[i].set_yticks([0, n_cells])
+            ax[i].set_yticklabels([0, n_cells], fontsize=12)
+            # set xticks to every 1 second, assuming 30Hz traces
+            ax[i].set_xticks(np.arange(0, len(timestamps), 30)) # assuming 30Hz traces
+            ax[i].set_xticklabels([int(t) for t in timestamps[::30]])
+            # set xlims according to input
+            start_index = np.where(timestamps == xlim_seconds[0])[0][0]
+            end_index = np.where(timestamps == xlim_seconds[1])[0][0]
+            xlims = [start_index, end_index]
+            ax[i].set_xlim(xlims)
+            ax[i].set_ylabel('')
 
-            ax[i].set_yticks(np.arange(0, len(data), interval))
-            ax[i].set_yticklabels(np.arange(0, len(data), interval))
-            ax[i].set_xlim(xlim_seconds)
-            if r == len(row_conditions):
+            if r == len(row_conditions)-1:
                 ax[i].set_xlabel(xlabel)
             else:
                 ax[i].set_xlabel('')
             i += 1
 
-    # plt.suptitle('response_heatmap '+trace_type+' response - '+project_code[14:], x=0.52, y=1.04, fontsize=18)
+    for i in np.arange(0, (len(col_conditions)*len(row_conditions)), len(col_conditions)):
+        ax[i].set_ylabel('cells')
+
+    if suptitle:
+        plt.suptitle(suptitle, x=0.52, y=1.04, fontsize=18)
     fig.tight_layout()
 
     if save_dir:
-        fig_title = trace_type + '_response_heatmap_' + project_code[14:] + '_' + col_condition + '_' + row_condition
+        fig_title = event_type + '_response_heatmap_' + data_type + '_' + col_condition + '_' + row_condition + '_' + suffix
         utils.save_figure(fig, figsize, save_dir, folder, fig_title)
+
+    return ax
+
+
+def addSpan(ax, amin, amax, color='k', alpha=0.3, axtype='x', zorder=1):
+    """
+    adds a vertical span to an axis
+    """
+    if axtype == 'x':
+        ax.axvspan(amin, amax, facecolor=color, edgecolor='none', alpha=alpha, linewidth=0, zorder=zorder)
+    if axtype == 'y':
+        ax.axhspan(amin, amax, facecolor=color, edgecolor='none', alpha=alpha, linewidth=0, zorder=zorder)
+
+
+def add_stim_color_span(dataset, ax, xlim=None, color=None, label_changes=False, label_omissions=False):
+    """
+    adds a vertical span for all stimulus presentations contained within xlim
+    xlim is a time in seconds during a behavior session
+    if label_changes is True, changes will be blue and all other flashes will be gray
+    if label_changes is False, each flash will be colored according to image identity
+    if label_omissions is True, a dotted line will be shown at the time of omission
+    if a color is provided, all stimulus presentations will be that color
+    """
+    # set default alpha. If label_changes=True, alphas will be reset below.
+    alpha = 0.3
+    # get stim table
+    stim_table = dataset.stimulus_presentations.copy()
+    # remove omissions because they dont get labeled
+    #     stim_table = stim_table[stim_table.omitted == False].copy()
+    # get all images & assign colors (image colors wont be used if a color is provided or if label_changes is True)
+    images = np.sort(stim_table[stim_table.omitted == False].image_name.unique())
+    image_colors = sns.color_palette("hls", len(images))
+    # limit to time window if provided
+    if xlim != None:
+        stim_table = stim_table[(stim_table.start_time >= xlim[0]) & (stim_table.stop_time <= xlim[1])]
+    # loop through stimulus presentations and add a span with appropriate color
+    for idx in stim_table.index:
+        start_time = stim_table.loc[idx]['start_time']
+        stop_time = stim_table.loc[idx]['stop_time']
+        image_name = stim_table.loc[idx]['image_name']
+        image_index = stim_table.loc[idx]['image_index']
+        if image_name == 'omitted':
+            if label_omissions:
+                ax.axvline(x=start_time, ymin=0, ymax=1, linestyle='--', color=sns.color_palette()[9])
+        else:
+            if label_changes:
+                if stim_table.loc[idx]['is_change']:  # if its a change, make it blue with higher alpha
+                    image_color = sns.color_palette()[0]
+                    alpha = 0.5
+                else:  # if its a non-change make it gray with low alpha
+                    image_color = 'gray'
+                    alpha = 0.25
+            else:
+                if color == None:
+                    image_color = image_colors[image_index]
+                else:
+                    image_color = color
+            addSpan(ax, start_time, stop_time, color=image_color, alpha=alpha)
+    return ax
+
 
 
 def plot_behavior_timeseries(dataset, start_time, duration_seconds=20, xlim_seconds=None, save_dir=None, ax=None):
@@ -407,7 +639,7 @@ def plot_behavior_timeseries(dataset, start_time, duration_seconds=20, xlim_seco
     labels = [label.get_label() for label in axes_to_label]
     ax.legend(axes_to_label, labels, bbox_to_anchor=(1, 1), fontsize='small')
 
-    ax = sf.add_stim_color_span(dataset, ax, xlim=xlim_seconds)
+    ax = add_stim_color_span(dataset, ax, xlim=xlim_seconds)
 
     ax.set_xlim(xlim_seconds)
     ax.set_xlabel('time in session (seconds)')
@@ -422,6 +654,104 @@ def plot_behavior_timeseries(dataset, start_time, duration_seconds=20, xlim_seco
         folder = 'behavior_timeseries'
         utils.save_figure(fig, figsize, save_dir, folder, metadata_string + '_' + str(int(start_time)),
                           formats=['.png'])
+    return ax
+
+
+def plot_behavior_timeseries_stacked(dataset, start_time, duration_seconds=20,
+                                     label_changes=True, label_omissions=True,
+                                     save_dir=None, ax=None):
+    """
+    Plots licking behavior, rewards, running speed, and pupil area for a defined window of time.
+    Each timeseries gets its own row. If label_changes=True, all flashes are gray, changes are blue.
+    If label_changes=False, unique colors are given to each image.
+    If label_omissions=True, a dotted line will be plotted at the time of omissions.
+    """
+
+    if label_changes:
+        suffix = '_changes'
+    else:
+        suffix = '_colors'
+
+    xlim_seconds = [start_time-(duration_seconds/4.), start_time+duration_seconds*2]
+
+    lick_timestamps = dataset.licks.timestamps.values
+    licks = np.ones(len(lick_timestamps))
+    licks[:] = -2
+
+    reward_timestamps = dataset.rewards.timestamps.values
+    rewards = np.zeros(len(reward_timestamps))
+    rewards[:] = -4
+
+    # get run speed trace and timestamps
+    running_speed = dataset.running_speed.speed.values
+    running_timestamps = dataset.running_speed.timestamps.values
+    # limit running trace to window so yaxes scale properly
+    start_ind = np.where(running_timestamps<xlim_seconds[0])[0][-1]
+    stop_ind = np.where(running_timestamps>xlim_seconds[1])[0][0]
+    running_speed = running_speed[start_ind:stop_ind]
+    running_timestamps = running_timestamps[start_ind:stop_ind]
+
+    # get pupil width trace and timestamps
+    eye_tracking = dataset.eye_tracking.copy()
+    pupil_diameter = eye_tracking.pupil_width.values
+    pupil_diameter[eye_tracking.likely_blink==True] = np.nan
+    pupil_timestamps = eye_tracking.timestamps.values
+    # smooth pupil diameter
+    from scipy.signal import medfilt
+    pupil_diameter = medfilt(pupil_diameter, kernel_size=5)
+    # limit pupil trace to window so yaxes scale properly
+    start_ind = np.where(pupil_timestamps<xlim_seconds[0])[0][-1]
+    stop_ind = np.where(pupil_timestamps>xlim_seconds[1])[0][0]
+    pupil_diameter = pupil_diameter[start_ind:stop_ind]
+    pupil_timestamps = pupil_timestamps[start_ind:stop_ind]
+
+    if ax is None:
+        figsize = (15, 5)
+        fig, ax = plt.subplots(4, 1, figsize=figsize, sharex=True, gridspec_kw={'height_ratios': [1, 1, 3, 3]})
+        ax = ax.ravel()
+
+    colors = sns.color_palette()
+
+    ax[0].plot(lick_timestamps, licks, '|', label='licks', color=colors[3], markersize=10)
+    ax[0].set_yticklabels([])
+    ax[0].set_ylabel('licks', rotation=0, horizontalalignment='right', verticalalignment='center')
+    ax[0].tick_params(which='both', bottom=False, top=False, right=False, left=False,
+                      labelbottom=False, labeltop=False, labelright=False, labelleft=False)
+
+    ax[1].plot(reward_timestamps, rewards, 'o', label='rewards', color=colors[8], markersize=10)
+    ax[1].set_yticklabels([])
+    ax[1].set_ylabel('rewards', rotation=0, horizontalalignment='right', verticalalignment='center')
+    ax[1].tick_params(which='both', bottom=False, top=False, right=False, left=False,
+                      labelbottom=False, labeltop=False, labelright=False, labelleft=False)
+
+    ax[2].plot(running_timestamps, running_speed, label='running_speed', color=colors[2], zorder=100)
+    ax[2].set_ylabel('running\nspeed\n(cm/s)', rotation=0, horizontalalignment='right', verticalalignment='center')
+    ax[2].set_ylim(ymin=-8)
+
+    ax[3].plot(pupil_timestamps, pupil_diameter, label='pupil_diameter', color=colors[4], zorder=0)
+    ax[3].set_ylabel('pupil\ndiameter\n(pixels)', rotation=0, horizontalalignment='right', verticalalignment='center')
+
+    for i in range(4):
+        ax[i] = add_stim_color_span(dataset, ax[i], xlim=xlim_seconds, label_changes=label_changes, label_omissions=label_omissions)
+        ax[i].set_xlim(xlim_seconds)
+        ax[i].tick_params(which='both', bottom=False, top=False, right=False, left=True,
+                    labelbottom=False, labeltop=False, labelright=False, labelleft=True)
+        sns.despine(ax=ax[i], bottom=True)
+    sns.despine(ax=ax[i], bottom=False)
+
+    # label bottom row of plot
+    ax[i].set_xlabel('time in session (seconds)')
+    ax[i].tick_params(which='both', bottom=True, top=False, right=False, left=True,
+                    labelbottom=True, labeltop=False, labelright=False, labelleft=True)
+    # add title to top row
+    metadata_string = utils.get_metadata_string(dataset.metadata)
+    ax[0].set_title(metadata_string)
+
+    plt.subplots_adjust(hspace=0)
+    if save_dir:
+        folder = 'behavior_timeseries_stacked'
+        utils.save_figure(fig, figsize, save_dir, folder, metadata_string + '_' + str(int(start_time))+'_'+suffix,
+                          formats=['.png', '.pdf'])
     return ax
 
 

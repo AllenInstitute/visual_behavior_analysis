@@ -203,7 +203,7 @@ def placeAxesOnGrid(fig, dim=[1, 1], xspan=[0, 1], yspan=[0, 1], wspace=None, hs
     return inner_ax
 
 
-def plot_flashes_on_trace(ax, timestamps, change=None, omitted=False, alpha=0.15, facecolor='gray'):
+def plot_flashes_on_trace(ax, timestamps, change=None, omitted=False, alpha=0.075, facecolor='gray'):
     """
     plot stimulus flash durations on the given axis according to the provided timestamps
     """
@@ -222,8 +222,8 @@ def plot_flashes_on_trace(ax, timestamps, change=None, omitted=False, alpha=0.15
         amin = array[i]
         amax = array[i] + stim_duration
         ax.axvspan(amin, amax, facecolor=facecolor, edgecolor='none', alpha=alpha, linewidth=0, zorder=1)
-    if change == True:
-        alpha = alpha * 3
+    # if change == True:
+    #     alpha = alpha / 2.
     else:
         alpha
     # before time 0
@@ -302,3 +302,48 @@ def get_container_metadata_string(metadata):
     m = metadata
     metadata_string = str(m['mouse_id']) + '_' + str(m['experiment_container_id']) + '_' + m['cre_line'].split('-')[0] + '_' + m['targeted_structure'] + '_' + str(m['imaging_depth'])
     return metadata_string
+
+
+def get_metadata_for_row_of_multi_session_df(df):
+    if len(df) > 1:
+        metadata = {}
+        metadata['mouse_id'] = df.mouse_id.unique()[0]
+        metadata['experiment_container_id'] = df.ophys_container_id.unique()[0]
+        metadata['cre_line'] = df.cre_line.unique()[0]
+        metadata['targeted_structure'] = df.targeted_structure.unique()[0]
+        metadata['imaging_depth'] = df.imaging_depth.unique()[0]
+    else:
+        metadata = {}
+        metadata['mouse_id'] = df.mouse_id
+        metadata['experiment_container_id'] = df.ophys_container_id
+        metadata['cre_line'] = df.cre_line
+        metadata['targeted_structure'] = df.targeted_structure
+        metadata['imaging_depth'] = df.imaging_depth
+    return metadata
+
+
+def get_conditions_string(data_type, conditions):
+    """
+    creates a string containing the data_type and conditions corresponding to a given multi_session_df.
+    ignores first element in conditions which is usually 'cell_specimen_id' or 'ophys_experiment_id'
+    :param data_type: 'events', 'filtered_events', 'dff'
+    :param conditions: list of conditions used to group for averaging in multi_session_df
+                        ex: ['cell_specimen_id', 'is_change', 'image_name'], or ['cell_specimen_id', 'engagement_state', 'omitted']
+    """
+
+    if len(conditions) == 6:
+        conditions_string = data_type + '_' + conditions[1] + '_' + conditions[2] + '_' + conditions[3] + '_' + \
+                            conditions[4] + '_' + conditions[5]
+    elif len(conditions) == 5:
+        conditions_string = data_type + '_' + conditions[1] + '_' + conditions[2] + '_' + conditions[3] + '_' + \
+                            conditions[4]
+    elif len(conditions) == 4:
+        conditions_string = data_type + '_' + conditions[1] + '_' + conditions[2] + '_' + conditions[3]
+    elif len(conditions) == 3:
+        conditions_string = data_type + '_' + conditions[1] + '_' + conditions[2]
+    elif len(conditions) == 2:
+        conditions_string = data_type + '_' + conditions[1]
+    elif len(conditions) == 1:
+        conditions_string = data_typ + '_' + conditions[0]
+
+    return conditions_string

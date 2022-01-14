@@ -326,9 +326,9 @@ def make_multi_cmap_heatmap(df, heatmap_defs, figsize=(6, 6), n_cbar_rows=2, cba
         heatmap_defs (list of dictionaries) - a list of dictionaries specifiying the different heatmap parameters. Each dict contains the following key/value pairs:
             'columns': (required) a list of column names for which this parameter set applies
             'cbar_label': (required) label to apply to the colorbar
-            'colormap': (optional) colormap to apply. Uses seaborn default if not specified
+            'cmap': (optional) colormap to apply. Uses seaborn default if not specified
             'cbar_ticks': (optional) ticks for cbar. Uses seaborn default if not specified
-            'cbar_tick_labels: (optional) labels for cbar_ticks. Must be same length as 'cbar_ticks'
+            'cbar_ticklabels: (optional) labels for cbar_ticks. Must be same length as 'cbar_ticks'
             'vmin': (optional) lower limit for colormap. Uses seaborn default if not specified
             'vmax': (optional) upper limit for colormap. Uses seaborn default if not specified
         figsize (tuple): figsize default = (6,6))
