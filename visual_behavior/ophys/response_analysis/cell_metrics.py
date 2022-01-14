@@ -211,12 +211,12 @@ def get_fraction_significant_p_value_gray_screen(group):
 def get_fano_factor(group):
     """
     takes stimulus_response_df grouped by cell_specimen_id (with desired filtering criteria previously applied)
-    and computes the fano_factor each cell_specimen_id
+    and computes the fano_factor each cell_specimen_id (squared standard deviation over the mean)
     """
     mean_responses = group.mean_response.values
     sd = np.nanstd(mean_responses)
     mean_response = np.nanmean(mean_responses)
-    fano_factor = np.abs((sd * 2) / mean_response)
+    fano_factor = np.abs((sd ** 2) / mean_response)
     return pd.Series({'fano_factor': fano_factor})
 
 
