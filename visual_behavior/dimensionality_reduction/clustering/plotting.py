@@ -163,8 +163,8 @@ def plot_clusters(dropout_df, cluster_df=None, mean_response_df=None, save_plots
     areas = ['VISp', 'VISl']
 
     # get number of animals per cluster
-    grouped_df = cluster_df.groupby('cluster_id')
-    N_mice = grouped_df.agg({"mouse_id": "nunique"})
+    # grouped_df = cluster_df.groupby('cluster_id')
+    # N_mice = grouped_df.agg({"mouse_id": "nunique"})
 
     # Set up figure
     fig, ax = plt.subplots(5, n_clusters, figsize=(n_clusters * 2, 14),
@@ -331,13 +331,13 @@ def plot_clusters_columns_all_cre_lines(df, df_meta, labels_cre, multi_session_d
         # cluster_ids = cluster_df['cluster_id'].value_counts().index.values  # sort cluster ids by size
         cluster_ids = cluster_df.groupby(['cluster_id']).count()[['cell_specimen_id']].sort_values(by='cell_specimen_id').index.values
         n_clusters = len(cluster_ids)
-        palette = utils.get_cre_line_colors()
+        # palette = utils.get_cre_line_colors()
         palette_exp = utils.get_experience_level_colors()
         depths = [75, 175, 275, 375]
         areas = ['VISp', 'VISl']
 
         # get number of animals per cluster
-        grouped_df = cluster_df.groupby('cluster_id')
+        # grouped_df = cluster_df.groupby('cluster_id')
         # N_mice = grouped_df.agg({"mouse_id": "nunique"})
 
         # Set up figure
@@ -427,7 +427,7 @@ def plot_clusters_columns_all_cre_lines(df, df_meta, labels_cre, multi_session_d
             xlim_seconds = [-1, 1.5]
             change = False
             omitted = True
-            xlabel = 'time (sec)'
+            # xlabel = 'time (sec)'
 
             for c, hue in enumerate(hue_conditions):
 
@@ -493,7 +493,7 @@ def plot_clusters_compact_all_cre_lines(df, df_meta, labels_cre, save_dir=None):
         n_clusters = len(cluster_ids)
 
         # get number of animals per cluster
-        grouped_df = cluster_df.groupby('cluster_id')
+        # grouped_df = cluster_df.groupby('cluster_id')
         # N_mice = grouped_df.agg({"mouse_id": "nunique"})
 
         # Set up figure
@@ -608,6 +608,6 @@ def plot_cluster_density(df_dropouts=None, labels_list=None, cluster_corrs=None,
     if ax is None:
         fig, ax = plt.subplots(1, 1, figsize=(max(cluster_corrs.keys()), 6))
     ax.axhline(xmin=-1, xmax=max(cluster_corrs.keys()) + 1, color='grey')
-    #sns.violinplot(data=df_labels, x='labels', y='corr', ax=ax)
+    # sns.violinplot(data=df_labels, x='labels', y='corr', ax=ax)
     sns.boxplot(data=df_labels, x='labels', y='corr', ax=ax)
     return ax
