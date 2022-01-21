@@ -132,6 +132,16 @@ def get_stimulus_response_df_dir(interpolate=True, output_sampling_rate=30, even
     return save_dir
 
 
+# def get_multi_session_df_dir(interpolate=True, output_sampling_rate=30, event_type='all'):
+#     base_dir = get_platform_analysis_cache_dir()
+#     if interpolate:
+#         save_dir = os.path.join(base_dir, 'multi_session_mean_response_dfs', 'interpolate_' + str(output_sampling_rate) + 'Hz')
+#     else:
+#         save_dir = os.path.join(base_dir, 'multi_session_mean_response_dfs', 'original_frame_rate')
+#     if not os.path.exists(save_dir):
+#         os.mkdir(save_dir)
+#     return save_dir
+
 def get_multi_session_df_dir(interpolate=True, output_sampling_rate=30, event_type='all'):
     base_dir = get_platform_analysis_cache_dir()
     if interpolate:
@@ -176,7 +186,7 @@ def get_visual_behavior_cache(from_s3=True, release_data_only=True, cache_dir=No
 
 def get_released_ophys_experiment_table(exclude_ai94=True):
     '''
-    gets the released ophys experiment table from AWS
+    gets the released ophys experiment table from lims
 
     Keyword Arguments:
         exclude_ai94 {bool} -- If True, exclude data from mice with Ai94(GCaMP6s) as the reporter line. (default: {True})
@@ -560,6 +570,7 @@ def get_stimulus_response_df(dataset, time_window=[-3, 3.1], interpolate=True, o
     filepath = get_stimulus_response_df_filepath_for_experiment(ophys_experiment_id, data_type, event_type,
                                                                 interpolate=interpolate, output_sampling_rate=output_sampling_rate)
 
+
     if event_type == 'omissions':
         response_window_duration = 0.75
     else:
@@ -602,6 +613,7 @@ def get_stimulus_response_df(dataset, time_window=[-3, 3.1], interpolate=True, o
         stimulus_presentations = dataset.extended_stimulus_presentations.copy()
     else:
         stimulus_presentations = vb_ophys.get_annotated_stimulus_presentations(dataset)
+        print(stimulus_presentations.engagement_state.unique())
     sdf = sdf.merge(stimulus_presentations, on='stimulus_presentations_id')
 
     return sdf
@@ -3204,6 +3216,11 @@ def get_data_dict(ophys_experiment_ids, data_types=None):
 
 
 def check_whether_multi_session_df_has_all_platform_experiments(multi_session_df):
+    """
+    Prints the number of experiments in the input dataframe compared to the platform paper experiments table
+    :param multi_session_df:
+    :return:
+    """
     mdf = multi_session_df.copy()
     platform_experiments_table = get_platform_paper_experiment_table()
     platform_experiments_table = platform_experiments_table.reset_index()
@@ -3215,3 +3232,44 @@ def check_whether_multi_session_df_has_all_platform_experiments(multi_session_df
     missing_expts = platform_experiments_table[platform_experiments_table.ophys_experiment_id.isin(platform_mdf_experiment_ids)==False].ophys_experiment_id.unique()
     print('there are', len(missing_expts), 'missing experiments')
     return missing_expts
+
+
+def get_multi_session_df_for_conditions(data_type, event_type, conditions, inclusion_criteria='full_dataset'):
+    # params for stim_response_df to use
+    time_window = [-3, 3.1]
+    interpolate = True
+    output_sampling_rate = 30
+    response_window_duration_seconds = 0.5
+    use_extended_stimulus_presentations = False
+
+    multi_session_df = load_multi_session_df(data_type=data_type, event_type=event_type, conditions=conditions,
+                                                     interpolate=interpolate, output_sampling_rate=output_sampling_rate)
+    print('there are', len(multi_session_df.ophys_experiment_id.unique()), 'experiments in the full multi_session_df')
+
+    # limit to platform expts
+    platform_experiments = get_platform_paper_experiment_table()
+    multi_session_df = multi_session_df[multi_session_df.ophys_experiment_id.isin(platform_experiments.index.values)]
+    print('there are', len(multi_session_df.ophys_experiment_id.unique()),
+          'experiments in the multi_session_df after limiting to platform experiments')
+
+    # merge with metadata
+    multi_session_df = multi_session_df.merge(platform_experiments, on='ophys_experiment_id')
+
+    multi_session_df = multi_session_df.reset_index(drop=True)
+
+    #     missing_expts = loading.check_whether_multi_session_df_has_all_platform_experiments(multi_session_df)
+
+    # need to filter for active first so that subsequent criteria area applied to that set
+    if 'active_only' in inclusion_criteria:
+        multi_session_df = multi_session_df[multi_session_df.passive == False]
+
+    if 'closest_familiar_and_novel' in inclusion_criteria:
+        multi_session_df = utilities.limit_to_last_familiar_second_novel_active(multi_session_df)
+
+    if 'containers_with_all_levels' in inclusion_criteria:
+        multi_session_df = utilities.limit_to_containers_with_all_experience_levels(multi_session_df)
+
+    print('there are', len(multi_session_df.ophys_experiment_id.unique()),
+          'experiments after filtering for inclusion criteria - ', inclusion_criteria)
+
+    return multi_session_df

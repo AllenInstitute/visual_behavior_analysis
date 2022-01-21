@@ -24,7 +24,7 @@ if __name__ == '__main__':
     interpolate = True
     output_sampling_rate = 30
     # response_window_duration_seconds = 0.5
-    use_extended_stimulus_presentations = False
+    use_extended_stimulus_presentations = True
 
     # set up conditions to make multi session dfs for
     physio_data_types = ['filtered_events', 'events', 'dff']
@@ -38,7 +38,8 @@ if __name__ == '__main__':
                          ['cell_specimen_id', 'is_change', 'image_name', 'epoch'],
                          ['cell_specimen_id', 'is_change', 'hit'],
                          ['cell_specimen_id', 'pre_change', 'epoch'],
-                         ['cell_specimen_id', 'is_change', 'hit', 'epoch']]
+                         ['cell_specimen_id', 'is_change', 'hit', 'epoch'],
+                         ['cell_specimen_id', 'omitted', 'pre_omitted'],]
 
     behavior_conditions = [['ophys_experiment_id', 'is_change'],
                             ['ophys_experiment_id', 'is_change', 'epoch'],
@@ -48,14 +49,15 @@ if __name__ == '__main__':
                             ['ophys_experiment_id', 'is_change', 'image_name', 'epoch'],
                             ['ophys_experiment_id', 'is_change', 'hit'],
                             ['ophys_experiment_id', 'is_change', 'pre_change', 'epoch'],
-                            ['ophys_experiment_id', 'is_change', 'hit', 'epoch']]
+                            ['ophys_experiment_id', 'is_change', 'hit', 'epoch'],
+                            ['cell_specimen_id', 'omitted', 'pre_omitted'],]
 
 
     # event types corresponding to the above physio and behavior conditions - must be in same sequential order
     event_types_for_conditions = ['changes', 'changes',
                                   'omissions', 'omissions',
                                   'changes', 'changes', 'changes',
-                                  'all', 'all']
+                                  'all', 'all', 'all']
 
     # add engagement state to all conditions
     # for i in range(len(physio_conditions)):
@@ -65,7 +67,7 @@ if __name__ == '__main__':
     # create dfs for all data types and conditions for physio data
     # for data_type in physio_data_types:
     data_type = 'events'
-    for i, conditions in enumerate(physio_conditions[4:6]):
+    for i, conditions in enumerate(physio_conditions[-1:]):
         print(conditions)
         event_type = event_types_for_conditions[i]
         if event_type == 'omissions':
