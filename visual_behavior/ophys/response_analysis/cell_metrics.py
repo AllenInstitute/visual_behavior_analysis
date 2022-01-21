@@ -1035,6 +1035,66 @@ def load_and_save_all_metrics_tables_for_all_experiments(ophys_experiment_table,
                     print(e)
 
 
+def get_cell_metrics_for_conditions(data_type, condition, stimuli, session_subset, inclusion_criteria='full_dataset'):
+    """
+    Loads cell metrics for all experiments in the platform paper experiments table, merges with metadata, and limits based on provided inclusion_criteria
+    :param data_type: 'dff', 'events', 'filtered_events'
+    :param condition: 'changes', 'omissions', 'images' or 'traces
+    :param stimuli: 'all_images', 'pref_image', or 'full_session' (for data_type='traces')
+    :param session_subset: 'engaged', 'disengaged', 'full_session'
+    :param inclusion_criteria: a string including any combination of the following:
+                    ['full_dataset', 'active_only', 'closest_familiar_and_novel', 'containers_with_all_levels']
+                    criteria will be applied to output dataframe
+    :return:
+    """
+    # params for stim_response_df to use
+    interpolate = True
+    output_sampling_rate = 30
+    response_window_duration_seconds = 0.5
+    use_extended_stimulus_presentations = False
+
+    platform_experiments = loading.get_platform_paper_experiment_table()
+    selected_experiments = platform_experiments.copy()
+
+    # need to filter for active first so that subsequent criteria area applied to that set
+    if 'active_only' in inclusion_criteria:
+        selected_experiments = selected_experiments[selected_experiments.passive == False]
+
+    if 'closest_familiar_and_novel' in inclusion_criteria:
+        selected_experiments = utilities.limit_to_last_familiar_second_novel_active(selected_experiments)
+
+    if 'containers_with_all_levels' in inclusion_criteria:
+        selected_experiments = utilities.limit_to_containers_with_all_experience_levels(selected_experiments)
+
+    print('there are', len(selected_experiments.ophys_experiment_id.unique()),
+          'experiments after filtering for inclusion criteria - ', inclusion_criteria)
+
+    # only load selected experiments
+    ophys_experiment_ids = selected_experiments.index.values
+
+    metrics_table = load_metrics_table_for_experiments(ophys_experiment_ids, condition, stimuli, session_subset,
+                                                          data_type=data_type, interpolate=interpolate,
+                                                          output_sampling_rate=output_sampling_rate)
+    print('there are', len(metrics_table.ophys_experiment_id.unique()), 'experiments in the full cell_metrics table')
+
+    # limit to platform expts
+    metrics_table = metrics_table[metrics_table.ophys_experiment_id.isin(platform_experiments.index.values)]
+    print('there are', len(metrics_table.ophys_experiment_id.unique()),
+          'experiments in the returned cell_metrics table')
+
+    # merge with metadata
+    cells_table = loading.get_cell_table()
+    metrics_table = metrics_table.merge(cells_table, on=['cell_specimen_id', 'ophys_experiment_id'])
+
+    metrics_table = metrics_table.reset_index()
+
+    #     missing_expts = loading.check_whether_multi_session_df_has_all_platform_experiments(multi_session_df)
+
+
+    return metrics_table
+
+
+
 if __name__ == '__main__':
 
 

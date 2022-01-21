@@ -93,33 +93,36 @@ def plot_population_averages_for_conditions(multi_session_df, data_type, event_t
         format_fig = False
     for i, axis in enumerate(axes_conditions):
         for c, hue in enumerate(hue_conditions):
-            try:
-                cdf = sdf[(sdf[axes_column] == axis) & (sdf[hue_column] == hue)]
-                traces = cdf.mean_trace.values
-                #             traces = [trace for trace in traces if np.amax(trace) < 4]
-                ax[i] = utils.plot_mean_trace(np.asarray(traces), timestamps, ylabel=ylabel,
-                                              legend_label=hue, color=palette[c], interval_sec=1,
-                                              xlim_seconds=xlim_seconds, ax=ax[i])
-                ax[i] = utils.plot_flashes_on_trace(ax[i], timestamps, change=change, omitted=omitted)
-                ax[i].axvline(x=0, ymin=0, ymax=1, linestyle='--', color='gray')
-                if title == 'metadata':
-                    metadata_string = utils.get_container_metadata_string(utils.get_metadata_for_row_of_multi_session_df(cdf))
-                    ax[i].set_title(metadata_string)
-                else:
-                    ax[i].set_title(axis)
-                ax[i].set_xlim(xlim_seconds)
-                ax[i].set_xlabel(xlabel)
-                if horizontal:
-                    ax[i].set_ylabel('')
-                else:
-                    ax[i].set_ylabel(ylabel)
-                    ax[i].set_xlabel('')
-            except:
-                print('no data for', axis, hue)
-    if horizontal:
-        ax[0].set_ylabel(ylabel)
-    else:
-        ax[i].set_xlabel(xlabel)
+            # try:
+            cdf = sdf[(sdf[axes_column] == axis) & (sdf[hue_column] == hue)]
+            traces = cdf.mean_trace.values
+            #             traces = [trace for trace in traces if np.amax(trace) < 4]
+            ax[i] = utils.plot_mean_trace(np.asarray(traces), timestamps, ylabel=ylabel,
+                                          legend_label=hue, color=palette[c], interval_sec=1,
+                                          xlim_seconds=xlim_seconds, ax=ax[i])
+            ax[i] = utils.plot_flashes_on_trace(ax[i], timestamps, change=change, omitted=omitted)
+            if omitted:
+                omission_color = sns.color_palette()[9]
+                ax[i].axvline(x=0, ymin=0, ymax=1, linestyle='--', color=omission_color)
+            if title == 'metadata':
+                metadata_string = utils.get_container_metadata_string(utils.get_metadata_for_row_of_multi_session_df(cdf))
+                ax[i].set_title(metadata_string)
+            else:
+                ax[i].set_title(axis)
+            ax[i].set_xlim(xlim_seconds)
+            ax[i].set_xlabel(xlabel, fontsize=16)
+            if horizontal:
+                ax[i].set_ylabel('')
+            else:
+                ax[i].set_ylabel(ylabel)
+                ax[i].set_xlabel('')
+            # except:
+            #     print('no data for', axis, hue)
+    if format_fig:
+        if horizontal:
+            ax[0].set_ylabel(ylabel)
+        else:
+            ax[i].set_xlabel(xlabel)
     # ax[0].legend(loc='upper left', fontsize='xx-small')
 
     if project_code:
@@ -131,8 +134,8 @@ def plot_population_averages_for_conditions(multi_session_df, data_type, event_t
     if format_fig:
         plt.suptitle(suptitle, x=0.52, y=1.04, fontsize=18)
         fig.tight_layout()
-    if horizontal:
-        fig.subplots_adjust(wspace=0.3)
+        if horizontal:
+            fig.subplots_adjust(wspace=0.3)
 
     if save_dir:
         fig_title = 'population_average_' + axes_column + '_' + hue_column + suffix

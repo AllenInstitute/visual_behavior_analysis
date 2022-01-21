@@ -221,7 +221,11 @@ def plot_flashes_on_trace(ax, timestamps, change=None, omitted=False, alpha=0.07
     for i, vals in enumerate(array):
         amin = array[i]
         amax = array[i] + stim_duration
-        ax.axvspan(amin, amax, facecolor=facecolor, edgecolor='none', alpha=alpha, linewidth=0, zorder=1)
+        if change and (i == 0):
+            change_color = sns.color_palette()[0]
+            ax.axvspan(amin, amax, facecolor=change_color, edgecolor='none', alpha=alpha*1.5, linewidth=0, zorder=1)
+        else:
+            ax.axvspan(amin, amax, facecolor=facecolor, edgecolor='none', alpha=alpha, linewidth=0, zorder=1)
     # if change == True:
     #     alpha = alpha / 2.
     else:
