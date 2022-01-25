@@ -103,18 +103,20 @@ def get_elbow_plots(X, n_clusters=range(2, 20), ax=None):
     ax[1].set_title('Elbow for KMeans clustering')
 
 
-def plot_silhouette_scores(X=None, model=KMeans, silhouette_scores=None, n_clusters=np.arange(2, 10), metric=None, n_boots=20, ax=None,
+def plot_silhouette_scores(X=None, model=KMeans, silhouette_scores=None, silhouette_std=None,
+                           n_clusters=np.arange(2, 10), metric=None, n_boots=20, ax=None,
                            model_output_type=''):
+
     assert X is not None or silhouette_scores is not None, 'must provide either data to cluster or recomputed scores'
     assert X is None or silhouette_scores is None, 'cannot provide data to cluster and silhouette scores'
 
     if silhouette_scores is None:
         if metric is None:
             metric = 'euclidean'
-        silhouette_scores = get_silhouette_scores(X=X, model=model, n_clusters=n_clusters, metric=metric, n_boots=n_boots)
+        silhouette_scores, silhouette_std = get_silhouette_scores(X=X, model=model, n_clusters=n_clusters, metric=metric, n_boots=n_boots)
     elif silhouette_scores is not None:
         if len(silhouette_scores) != len(n_clusters):
-            n_clusters = np.arange(0, len(silhouette_scores))
+            n_clusters = np.arange(1, len(silhouette_scores)+1)
 
         if metric is None:
             metric = ''
@@ -123,6 +125,8 @@ def plot_silhouette_scores(X=None, model=KMeans, silhouette_scores=None, n_clust
         fig, ax = plt.subplots(1, 1, figsize=(7, 7))
 
     ax.plot(n_clusters, silhouette_scores, 'ko-')
+    if silhouette_std is not None:
+        ax.errorbar(n_clusters, silhouette_scores, silhouette_std, color='k')
     ax.set_title('{}, {}'.format(model_output_type, metric), fontsize=16)
     ax.set_xlabel('Number of clusters')
     ax.set_ylabel('Silhouette score')

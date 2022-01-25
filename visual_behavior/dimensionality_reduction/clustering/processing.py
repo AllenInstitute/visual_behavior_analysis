@@ -9,6 +9,7 @@ import visual_behavior.data_access.loading as loading
 from scipy.stats import spearmanr
 from scipy.stats import kruskal
 from scipy.stats import ttest_ind
+from sklearn.metrics import pairwise_distances
 # from scipy.stats import ttest_1samp
 
 # from allensdk.brain_observatory.behavior.behavior_project_cache import VisualBehaviorOphysProjectCache as bpc
@@ -35,6 +36,7 @@ def get_silhouette_scores(X, model=SpectralClustering, n_clusters=np.arange(2, 1
     print('size of X = ' + str(np.shape(X)))
     print('NaNs in the array = ' + str(np.sum(X == np.nan)))
     silhouette_scores = []
+    silhouette_std = []
     for n_cluster in n_clusters:
         s_tmp = []
         for n_boot in range(0, n_boots):
@@ -46,8 +48,9 @@ def get_silhouette_scores(X, model=SpectralClustering, n_clusters=np.arange(2, 1
                 labels = md
             s_tmp.append(silhouette_score(X, labels, metric=metric))
         silhouette_scores.append(np.mean(s_tmp))
+        silhouette_std.append(np.std(s_tmp))
         print('n {} clusters mean score = {}'.format(n_cluster, np.mean(s_tmp)))
-    return silhouette_scores
+    return silhouette_scores, silhouette_std
 
 
 def get_labels_for_coclust_matrix(X, model=SpectralClustering, nboot=np.arange(100), n_clusters=8):
@@ -179,11 +182,21 @@ def kruskal_by_experience_level(df_pivoted, posthoc=True):
     return stats
 
 
-def pivot_df(df, dropna=True):
+def pivot_df(df, dropna=True, drop_duplicated_cells=True):
+    df_pivoted = df.groupby(['cell_specimen_id', 'experience_level']).mean()
     if dropna is True:
-        df_pivoted = df.groupby(['cell_specimen_id', 'experience_level']).mean().unstack().dropna()
+        df_pivoted = df_pivoted.unstack().dropna()
     else:
-        df_pivoted = df.groupby(['cell_specimen_id', 'experience_level']).mean().unstack()
+        df_pivoted = df_pivoted.unstack()
+
+    if drop_duplicated_cells is True:
+        if len(df) == len(np.unique(df.index.values)):
+            print('No duplicated cells found')
+        elif len(df) > len(np.unique(df.index.values)):
+            print('found {} duplicated cells. But not removed. This needs to be fixed'.format(len(df) - len(np.unique(df.index.values))))
+        elif len(df) < len(np.unique(df.index.values)):
+            print('something weird happened!!')
+
     return df_pivoted
 
 
@@ -292,3 +305,31 @@ def shuffle_dropout_score(df_dropout, shuffle_type='all'):
                 for experience_level in experience_levels:
                     df_shuffled.iloc[i][regressor][experience_level] = df_dropout.loc[cid][regressor][experience_level]
     return df_shuffled
+
+
+def compute_inertia(a, X):
+    W = [np.mean(pairwise_distances(X[a == c, :])) for c in np.unique(a)]
+    return np.mean(W)
+
+
+def compute_gap(clustering, data, k_max=5, n_references=20):
+    if len(data.shape) == 1:
+        data = data.reshape(-1, 1)
+    reference = np.random.rand(*data.shape)
+    reference_inertia = []
+    for k in range(1, k_max + 1):
+        local_inertia = []
+        for _ in range(n_references):
+            clustering.n_clusters = k
+            assignments = clustering.fit_predict(reference)
+            local_inertia.append(compute_inertia(assignments, reference))
+        reference_inertia.append(np.mean(local_inertia))
+
+    ondata_inertia = []
+    for k in range(1, k_max + 1):
+        clustering.n_clusters = k
+        assignments = clustering.fit_predict(data)
+        ondata_inertia.append(compute_inertia(assignments, data))
+
+    gap = np.log(reference_inertia) - np.log(ondata_inertia)
+    return gap, np.log(reference_inertia), np.log(ondata_inertia)
