@@ -766,7 +766,7 @@ def plot_matched_roi_and_trace(ophys_container_id, cell_specimen_id, limit_to_la
     Useful to validate cell matching as well as examine changes in activity profiles over days.
     """
     experiments_table = loading.get_platform_paper_experiment_table()
-    if limit_to_last_familiar_second_novel:
+    if limit_to_last_familiar_second_novel: # this ensures only one session per experience level
         experiments_table = utilities.limit_to_last_familiar_second_novel_active(experiments_table)
         experiments_table = utilities.limit_to_containers_with_all_experience_levels(experiments_table)
 
@@ -802,7 +802,7 @@ def plot_matched_roi_and_trace(ophys_container_id, cell_specimen_id, limit_to_la
 
                 ct = dataset.cell_specimen_table.copy()
                 cell_roi_id = ct.loc[cell_specimen_id].cell_roi_id
-                roi_masks = dataset.roi_masks.copy()  # save this to use if subsequent session is missing the ROI
+                roi_masks = dataset.roi_masks.copy()  # save this to get approx ROI position if subsequent session is missing the ROI (fails if the first session is the one missing the ROI)
                 ax[i] = sf.plot_cell_zoom(dataset.roi_masks, dataset.max_projection, cell_roi_id,
                                           spacex=50, spacey=50, show_mask=True, ax=ax[i])
                 ax[i].set_title(container_expts.loc[ophys_experiment_id].experience_level)
@@ -840,6 +840,122 @@ def plot_matched_roi_and_trace(ophys_container_id, cell_specimen_id, limit_to_la
     if save_figure:
         save_dir = r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/platform_paper_plots/cell_matching'
         utils.save_figure(fig, figsize, save_dir, folder, str(cell_specimen_id) + '_' + metadata_string + '_' + suffix)
+        plt.close()
+
+
+
+def plot_matched_roi_and_traces_example(cell_metadata, include_omissions=True,
+                                        use_events=False, filter_events=False, save_dir=None, folder=None):
+    """
+    Plots the ROI masks and cell traces for a cell matched across sessions
+    Cell_metadata is a subset of the ophys_cells_table limited to the cell_specimen_id of interest
+    Masks and traces will be plotted for all ophys_experiment_ids in the cell_metadata table
+    To limit to a single session of each type, set last_familiar_second_novel to True
+    ROI mask for each ophys_experiment_id in cell_metadata is plotted on its own axis
+    Average cell traces across all experiments are plotted on a single axis with each trace colored by its experience_level
+    if include_omissions is True, there will be one axis for the change response and one axis for the omission response across sessions
+    if include_omissions is False, only change responses will be plotted
+    Only plots data for ophys_experiment_ids where the cell_specimen_id is present, does not plot max projections without an ROI mask for expts in a container where the cell was not detected
+    To generate plots showing max projections from experiments in a container where a cell was not detected, use plot_matched_roi_and_trace
+    """
+
+    if len(cell_metadata.cell_specimen_id.unique()) > 1:
+        print('There is more than one cell_specimen_id in the provided cell_metadata table')
+        print('Please limit input to a single cell_specimen_id')
+
+    # get relevant info for this cell
+    cell_metadata = cell_metadata.sort_values(by='experience_level')
+    cell_specimen_id = cell_metadata.cell_specimen_id.unique()[0]
+    ophys_container_id = cell_metadata.ophys_container_id.unique()[0]
+    ophys_experiment_ids = cell_metadata.ophys_experiment_id.unique()
+    n_expts = len(ophys_experiment_ids)
+
+    # set up labels for different trace types
+    if use_events:
+        if filter_events:
+            suffix = 'filtered_events'
+        else:
+            suffix = 'events'
+        ylabel = 'response'
+    else:
+        suffix = 'dff'
+        ylabel = 'dF/F'
+
+    # number of columns is one for each experiments ROI mask, plus additional columns for stimulus and omission traces
+    if include_omissions:
+        n_cols = n_expts + 2
+    else:
+        n_cols = n_expts + 1
+
+    experience_levels = ['Familiar', 'Novel 1', 'Novel >1']
+    colors = utils.get_experience_level_colors()
+
+    figsize = (3 * n_cols, 3)
+    fig, ax = plt.subplots(1, n_cols, figsize=figsize)
+
+    print('cell_specimen_id:', cell_specimen_id)
+    print('ophys_container_id:', ophys_container_id)
+    for i, ophys_experiment_id in enumerate(ophys_experiment_ids):
+        print('ophys_experiment_id:', ophys_experiment_id)
+        experience_level = \
+        cell_metadata[cell_metadata.ophys_experiment_id == ophys_experiment_id].experience_level.values[0]
+        ind = experience_levels.index(experience_level)
+        color = colors[ind]
+        try:
+            dataset = loading.get_ophys_dataset(ophys_experiment_id, get_extended_stimulus_presentations=False)
+            if cell_specimen_id in dataset.dff_traces.index:
+
+                ct = dataset.cell_specimen_table.copy()
+                cell_roi_id = ct.loc[cell_specimen_id].cell_roi_id
+                roi_masks = dataset.roi_masks.copy()  # save this to get approx ROI position if subsequent session is missing the ROI (fails if the first session is the one missing the ROI)
+                ax[i] = sf.plot_cell_zoom(dataset.roi_masks, dataset.max_projection, cell_roi_id,
+                                          spacex=50, spacey=50, show_mask=True, ax=ax[i])
+                ax[i].set_title(experience_level)
+
+                # get change responses and plot on second to last axis
+                window = [-1, 1.5]  # window around event
+                sdf = loading.get_stimulus_response_df(dataset, time_window=window, interpolate=True,
+                                                       output_sampling_rate=30,
+                                                       data_type='events', event_type='changes',
+                                                       load_from_file=True)
+                cell_data = sdf[(sdf.cell_specimen_id == cell_specimen_id) & (sdf.is_change == True)]
+
+                ax[n_expts] = utils.plot_mean_trace(cell_data.trace.values, cell_data.trace_timestamps.values[0],
+                                                    ylabel=ylabel, legend_label=None, color=color, interval_sec=1,
+                                                    xlim_seconds=window, plot_sem=True, ax=ax[n_expts])
+                ax[n_expts] = utils.plot_flashes_on_trace(ax[n_expts], cell_data.trace_timestamps.values[0],
+                                                          change=True, omitted=False)
+                ax[n_expts].set_title('changes')
+
+                # get omission responses and plot on last axis
+                if include_omissions:
+                    sdf = loading.get_stimulus_response_df(dataset, time_window=window, interpolate=True,
+                                                           output_sampling_rate=30,
+                                                           data_type='events', event_type='omissions',
+                                                           load_from_file=True)
+                    cell_data = sdf[(sdf.cell_specimen_id == cell_specimen_id) & (sdf.omitted == True)]
+
+                    ax[n_expts + 1] = utils.plot_mean_trace(cell_data.trace.values,
+                                                            cell_data.trace_timestamps.values[0],
+                                                            ylabel=ylabel, legend_label=None, color=color,
+                                                            interval_sec=1,
+                                                            xlim_seconds=window, plot_sem=True, ax=ax[n_expts + 1])
+                    ax[n_expts + 1] = utils.plot_flashes_on_trace(ax[n_expts + 1],
+                                                                  cell_data.trace_timestamps.values[0],
+                                                                  change=False, omitted=True)
+                    ax[n_expts + 1].set_title('omissions')
+
+            metadata_string = utils.get_metadata_string(dataset.metadata)
+
+            fig.tight_layout()
+            fig.suptitle(str(cell_specimen_id) + '_' + metadata_string, x=0.53, y=1.02,
+                         horizontalalignment='center', fontsize=16)
+        except Exception as e:
+            print('problem for cell_specimen_id:', cell_specimen_id, ', ophys_experiment_id:', ophys_experiment_id)
+            print(e)
+    if save_dir:
+        utils.save_figure(fig, figsize, save_dir, folder,
+                          str(cell_specimen_id) + '_' + metadata_string + '_' + suffix)
         plt.close()
 
 
