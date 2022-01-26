@@ -613,7 +613,6 @@ def get_stimulus_response_df(dataset, time_window=[-3, 3.1], interpolate=True, o
         stimulus_presentations = dataset.extended_stimulus_presentations.copy()
     else:
         stimulus_presentations = vb_ophys.get_annotated_stimulus_presentations(dataset)
-        print(stimulus_presentations.engagement_state.unique())
     sdf = sdf.merge(stimulus_presentations, on='stimulus_presentations_id')
 
     return sdf
