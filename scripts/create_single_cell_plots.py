@@ -17,7 +17,7 @@ if __name__ == '__main__':
     filter_events = True
 
     folder = 'matched_cell_roi_and_trace_examples'
-    save_dir = r'\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\platform_paper_plots\cell_matching'
+    save_dir = r'/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/platform_paper_plots/cell_matching'
 
     cells_table = loading.get_cell_table()
     cells_table = utilities.limit_to_last_familiar_second_novel_active(cells_table)
