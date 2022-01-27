@@ -216,7 +216,8 @@ def plot_flashes_on_trace(ax, timestamps, change=None, omitted=False, alpha=0.07
     # after time 0
     if omitted:
         array = np.arange((change_time + interval), end_time, interval) # image array starts at the next interval
-        ax.axvline(x=change_time, ymin=0, ymax=1, linestyle='--', color=sns.color_palette()[9]) # plot a dashed line where the stimulus time would have been
+        # plot a dashed line where the stimulus time would have been
+        ax.axvline(x=change_time, ymin=0, ymax=1, linestyle='--', color=sns.color_palette()[9], linewidth=1.5)
     else:
         array = np.arange(change_time, end_time, interval)
     for i, vals in enumerate(array):

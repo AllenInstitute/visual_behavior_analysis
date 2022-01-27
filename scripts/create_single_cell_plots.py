@@ -13,8 +13,8 @@ if __name__ == '__main__':
     ophys_container_id = args.ophys_container_id
     print('ophys_container_id:', ophys_container_id)
 
-    use_events = True
-    filter_events = True
+    use_events = False
+    filter_events = False
 
     folder = 'matched_cell_roi_and_trace_examples'
     save_dir = r'/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/platform_paper_plots/cell_matching'
