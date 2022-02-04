@@ -1489,6 +1489,24 @@ def add_binned_depth_column(df):
     return df
 
 
+def add_layer_column(df):
+    """
+    Adds a column called 'layer' that is based on the 'imaging_depth' for each experiment.
+    if imaging_depth is <200um, layer is 'upper, if >200um, layer is 'lower'
+    :param df:
+    :return:
+    """
+    df.loc[:, 'layer'] = None
+
+    indices = df[(df.depth < 200)].index.values
+    df.loc[indices, 'layer'] = 'upper'
+
+    indices = df[(df.depth > 200)].index.values
+    df.loc[indices, 'layer'] = 'lower'
+
+    return df
+
+
 def dateformat(exp_date):
     """
     reformat date of acquisition for accurate sorting by date

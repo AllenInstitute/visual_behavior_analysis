@@ -4,6 +4,7 @@ import pandas as pd
 from tqdm import tqdm
 
 import visual_behavior.data_access.loading as loading
+import visual_behavior.data_access.utilities as utilities
 
 from visual_behavior.ophys.response_analysis.response_analysis import ResponseAnalysis
 # from allensdk.brain_observatory.behavior.behavior_project_cache import VisualBehaviorOphysProjectCache
@@ -1066,7 +1067,7 @@ def get_cell_metrics_for_conditions(data_type, condition, stimuli, session_subse
     if 'containers_with_all_levels' in inclusion_criteria:
         selected_experiments = utilities.limit_to_containers_with_all_experience_levels(selected_experiments)
 
-    print('there are', len(selected_experiments.ophys_experiment_id.unique()),
+    print('there are', len(selected_experiments.index.values),
           'experiments after filtering for inclusion criteria - ', inclusion_criteria)
 
     # only load selected experiments
@@ -1075,15 +1076,14 @@ def get_cell_metrics_for_conditions(data_type, condition, stimuli, session_subse
     metrics_table = load_metrics_table_for_experiments(ophys_experiment_ids, condition, stimuli, session_subset,
                                                           data_type=data_type, interpolate=interpolate,
                                                           output_sampling_rate=output_sampling_rate)
-    print('there are', len(metrics_table.ophys_experiment_id.unique()), 'experiments in the full cell_metrics table')
 
-    # limit to platform expts
-    metrics_table = metrics_table[metrics_table.ophys_experiment_id.isin(platform_experiments.index.values)]
     print('there are', len(metrics_table.ophys_experiment_id.unique()),
           'experiments in the returned cell_metrics table')
 
     # merge with metadata
     cells_table = loading.get_cell_table()
+    # limit to selected experiments
+    cells_table = cells_table[cells_table.ophys_experiment_id.isin(ophys_experiment_ids)]
     metrics_table = metrics_table.merge(cells_table, on=['cell_specimen_id', 'ophys_experiment_id'])
 
     metrics_table = metrics_table.reset_index()

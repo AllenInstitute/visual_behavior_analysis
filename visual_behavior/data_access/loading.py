@@ -232,6 +232,7 @@ def get_platform_paper_experiment_table(add_extra_columns=True):
         experiment_table = utilities.add_average_depth_across_container(experiment_table)
         experiment_table = utilities.add_binned_depth_column(experiment_table)
         experiment_table = utilities.add_area_depth_column(experiment_table)
+        experiment_table = utilities.add_layer_column(experiment_table)
         # add other columns indicating whether a session was the last familiar before the first novel session,
         # or the second passing novel session after the first truly novel one
         experiment_table = utilities.add_date_string(experiment_table)  # add simplified date string for sorting
@@ -3206,8 +3207,7 @@ def get_data_dict(ophys_experiment_ids, data_types=None):
                                                time_window=time_window, interpolate=interpolate,
                                                output_sampling_rate=output_sampling_rate,
                                                load_from_file=True)
-                data_dict[ophys_experiment_id][data_type]['changes'] = sdf[sdf.is_change]
-                data_dict[ophys_experiment_id][data_type]['omissions'] = sdf[sdf.omitted]
+                data_dict[ophys_experiment_id][data_type]['stimulus_response_df'] = sdf
             except BaseException:
                 print('could not get response df for', ophys_experiment_id, data_type)
 
