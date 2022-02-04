@@ -14,7 +14,7 @@ if __name__ == '__main__':
     time_window = [-3, 3.1]
     response_window_duration = 0.5
 
-    for data_type in ['events', 'filtered_events']:
+    for data_type in ['events', 'filtered_events', 'dff']:
         cell_metrics.generate_and_save_all_metrics_tables_for_experiment(ophys_experiment_id, data_type=data_type, interpolate=interpolate,
                                                         time_window=time_window, response_window_duration=response_window_duration,
                                                         overwrite=True)
