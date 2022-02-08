@@ -307,29 +307,30 @@ def shuffle_dropout_score(df_dropout, shuffle_type='all'):
     return df_shuffled
 
 
-def compute_inertia(a, X):
-    W = [np.mean(pairwise_distances(X[a == c, :])) for c in np.unique(a)]
+def compute_inertia(a, X, metric = 'euclidean'):
+    W = [np.mean(pairwise_distances(X[a == c, :], metric=metric)) for c in np.unique(a)]
     return np.mean(W)
 
 
-def compute_gap(clustering, data, k_max=5, n_references=20):
+def compute_gap(clustering, data, k_max=5, n_references=20, reference = None, metric='euclidean'):
     if len(data.shape) == 1:
         data = data.reshape(-1, 1)
-    reference = np.random.rand(*data.shape)
+    if reference is None:
+        reference = np.random.rand(*data.shape)*-1
     reference_inertia = []
-    for k in range(1, k_max + 1):
+    for k in range(1, k_max ):
         local_inertia = []
         for _ in range(n_references):
             clustering.n_clusters = k
             assignments = clustering.fit_predict(reference)
-            local_inertia.append(compute_inertia(assignments, reference))
+            local_inertia.append(compute_inertia(assignments, reference, metric=metric))
         reference_inertia.append(np.mean(local_inertia))
 
     ondata_inertia = []
-    for k in range(1, k_max + 1):
+    for k in range(1, k_max ):
         clustering.n_clusters = k
         assignments = clustering.fit_predict(data)
-        ondata_inertia.append(compute_inertia(assignments, data))
+        ondata_inertia.append(compute_inertia(assignments, reference, metric=metric))
 
     gap = np.log(reference_inertia) - np.log(ondata_inertia)
     return gap, np.log(reference_inertia), np.log(ondata_inertia)

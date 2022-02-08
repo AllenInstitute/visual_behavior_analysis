@@ -147,11 +147,12 @@ def plot_umap_with_labels(X, labels, ax=None, filename_string=''):
     return ax
 
 
-def plot_clusters(dropout_df, cluster_df=None, mean_response_df=None, save_plots=False, path=None):
+def plot_clusters(dropout_df, cluster_df=None, plot_difference=False, mean_response_df=None, save_plots=False, path=None):
     '''
     Plots heatmaps and descriptors of clusters.
     dropout_df: dataframe of dropout scores, n cells by n regressors by experience level
     cluster_df: df with cluster id and cell specimen id columns
+    plot_difference: Boolean to plot difference (cluster - population) of mean dropout scores on the heatmap
     mean_response_df: dataframe with mean responseswith cell specimen id, timestamps, and mean_response columns
 
     :return:
@@ -182,12 +183,21 @@ def plot_clusters(dropout_df, cluster_df=None, mean_response_df=None, save_plots
         # 1. Mean dropout scores
         this_cluster_ids = cluster_df[cluster_df['cluster_id'] == cluster_id]['cell_specimen_id'].unique()
         mean_dropout_df = dropout_df.loc[this_cluster_ids].mean().unstack()
-        ax[i] = sns.heatmap(mean_dropout_df,
+        if plot_difference is False:
+            ax[i] = sns.heatmap(mean_dropout_df,
                             cmap='RdBu',
                             vmin=-1,
                             vmax=1,
                             ax=ax[i],
                             cbar=False, )
+        elif plot_difference is True:
+            mean_dropout_df_diff = mean_dropout_df.abs() - dropout_df.mean().unstack().abs()
+            ax[i] = sns.heatmap(mean_dropout_df_diff,
+                                cmap='RdBu',
+                                vmin=-1,
+                                vmax=1,
+                                ax=ax[i],
+                                cbar=False, )
 
         # 2. By cre line
         # % of total cells in this cluster
@@ -298,6 +308,7 @@ def plot_clusters(dropout_df, cluster_df=None, mean_response_df=None, save_plots
             ax[i + (len(cluster_ids) * 4)].set_ylabel('')
     return fig
     plt.tight_layout()
+
 
 
 def plot_clusters_columns_all_cre_lines(df, df_meta, labels_cre, multi_session_df, save_dir=None):
@@ -479,8 +490,9 @@ def plot_clusters_compact_all_cre_lines(df, df_meta, labels_cre, save_dir=None):
         cell_type = df_meta[df_meta.cre_line == cre_line].cell_type.unique()[0]
 
         print(cre_line, cell_type)
-        cids = df_meta[df_meta['cre_line'] == cre_line]['cell_specimen_id']
-        df_sel = df.loc[cids]
+        # cids = df_meta[df_meta['cre_line'] == cre_line]['cell_specimen_id']
+        # df_sel = df.loc[cids]
+        df_sel = df[cre_line]
         labels = labels_cre[cre_line]
         cluster_df = pd.DataFrame(index=df_sel.index, columns=['cluster_id'], data=labels)
         cluster_df = cluster_df.merge(cells_table[['cell_specimen_id', 'cell_type', 'cre_line', 'experience_level',
