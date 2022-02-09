@@ -241,7 +241,7 @@ def plot_clusters(dropout_df, cluster_df=None, plot_difference=False, mean_respo
         ax[i + (len(cluster_ids) * 2)] = sns.barplot(data=fraction_depth,
                                                      x='binned_depth',
                                                      y='cluster_id',
-                                                     # orient='h',
+                                                     order=depths,
                                                      palette='gray',
                                                      ax=ax[i + (len(cluster_ids) * 2)])
         # set labels
@@ -262,6 +262,7 @@ def plot_clusters(dropout_df, cluster_df=None, plot_difference=False, mean_respo
                                                      # orient='h',
                                                      x='targeted_structure',
                                                      y='cluster_id',
+                                                     order=areas,
                                                      palette='gray',
                                                      ax=ax[i + (len(cluster_ids) * 3)])
         # set labels
