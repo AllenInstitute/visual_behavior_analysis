@@ -328,9 +328,12 @@ def compute_gap(clustering, data, k_max=5, n_references=20, reference = None, me
 
     ondata_inertia = []
     for k in range(1, k_max ):
-        clustering.n_clusters = k
-        assignments = clustering.fit_predict(data)
-        ondata_inertia.append(compute_inertia(assignments, reference, metric=metric))
+        local_inertia = []
+        for _ in range(n_references):
+            clustering.n_clusters = k
+            assignments = clustering.fit_predict(data)
+            local_inertia.append(compute_inertia(assignments, data, metric=metric))
+        ondata_inertia.append(np.mean(local_inertia))
 
     gap = np.log(reference_inertia) - np.log(ondata_inertia)
     return gap, np.log(reference_inertia), np.log(ondata_inertia)
