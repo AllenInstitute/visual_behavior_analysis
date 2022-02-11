@@ -242,7 +242,7 @@ def get_platform_paper_behavior_session_table():
     return behavior_sessions
 
 
-def get_filtered_ophys_experiment_table(include_failed_data=True, release_data_only=False, exclude_ai94=False,
+def get_filtered_ophys_experiment_table(include_failed_data=False, release_data_only=False, exclude_ai94=True,
                                         add_extra_columns=False, from_cached_file=False, overwrite_cached_file=False):
     """
     Loads a list of available ophys experiments FROM LIMS (not S3 cache) and adds additional useful columns to the table.

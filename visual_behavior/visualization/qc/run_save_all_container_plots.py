@@ -11,30 +11,20 @@ parser.add_argument('--env', type=str, default='visual_behavior_sdk', metavar='n
 parser.add_argument('--scriptname', type=str, default='save_all_container_plots.py', metavar='name of script to run (must be in same folder)')
 parser.add_argument("--plots", type=str, default=None, metavar='plot name to generate')
 
-stdout_location = r"/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/cluster_jobs/vba_qc_plots"
+# job_dir = r"/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/cluster_jobs/vba_qc_plots"
+job_dir = r"/allen/programs/mindscope/workgroups/learning/ophys/cluster_jobs/qc_plots"
 
 # python file to execute on cluster
 python_file = r"/home/marinag/visual_behavior_analysis/visual_behavior/visualization/qc/save_all_container_plots.py"
 
-conda_environment = 'visual_behavior_sdk'
-#
-# build the python path
-# this assumes that the environments are saved in the user's home directory in a folder called 'anaconda2'
-python_path = os.path.join(
-    os.path.expanduser("~"),
-    'anaconda2',
-    'envs',
-    conda_environment,
-    'bin',
-    'python'
-)
-
 # container_ids = loading.get_ophys_container_ids()
-cache = VisualBehaviorOphysProjectCache.from_lims()
-experiments = cache.get_ophys_experiment_table(passed_only=False)
-experiments = experiments[experiments.project_code=='LearningmFISHDevelopment']
-container_ids = experiments.ophys_container_id.unique()
 
+from allensdk.brain_observatory.behavior.behavior_project_cache import VisualBehaviorOphysProjectCache
+
+cache = VisualBehaviorOphysProjectCache.from_lims()
+experiments = experiments_table[experiments_table.project_code=='LearningmFISHTask1A']
+experiments_table = cache.get_ophys_experiment_table(passed_only=False)
+container_ids = experiments.ophys_container_id.unique()
 
 if __name__ == "__main__":
     args = parser.parse_args()
