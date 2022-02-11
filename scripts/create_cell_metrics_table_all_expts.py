@@ -2,7 +2,12 @@ from visual_behavior.ophys.response_analysis import cell_metrics
 import visual_behavior.data_access.loading as loading
 
 if __name__ == '__main__':
+    # from allensdk.brain_observatory.behavior.behavior_project_cache import VisualBehaviorOphysProjectCache as bpc
+    # cache_dir = loading.get_platform_analysis_cache_dir()
+    # cache = bpc.from_s3_cache(cache_dir=cache_dir)
+    # experiments_table = cache.get_ophys_experiment_table()
+    # print(cache_dir)
 
-    ophys_experiment_table = loading.get_filtered_ophys_experiment_table(release_data_only=True)
+    experiments_table = loading.get_platform_paper_experiment_table()
 
-    cell_metrics.generate_and_save_all_metrics_tables_for_all_experiments(ophys_experiment_table)
+    cell_metrics.load_and_save_all_metrics_tables_for_all_experiments(experiments_table)

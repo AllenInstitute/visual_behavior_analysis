@@ -461,8 +461,8 @@ def get_trials_response_xr(dataset, use_events=False, filter_events=False, frame
     event_ids = change_trials.index.values
     if time_window is None:
         response_analysis_params = get_default_trial_response_params()
-        if use_events:
-            response_analysis_params['response_window_duration_seconds'] = 0.25
+        # if use_events:
+        #     response_analysis_params['response_window_duration_seconds'] = 0.25
     else:
         response_analysis_params = get_default_trial_response_params()
         response_analysis_params['window_around_timepoint_seconds'] = time_window
@@ -479,6 +479,10 @@ def get_trials_response_df(dataset, use_events=False, filter_events=False, frame
         df = response_df(response_xr)
     elif df_format == 'tidy' or df_format == 'long':
         df = response_xr.to_dataframe().reset_index()
+
+    # include response window used to create df
+    params = get_default_trial_response_params()
+    df['response_window'] = params['response_window_duration_seconds']
 
     df = df.rename(columns={'trial_id': 'trials_id', 'trace_id': 'cell_specimen_id'})
     return df
@@ -500,8 +504,8 @@ def get_stimulus_response_xr(dataset, use_events=False, filter_events=True, fram
     event_ids = dataset.stimulus_presentations.index.values
     if time_window is None:
         response_analysis_params = get_default_stimulus_response_params()
-        if use_events:
-            response_analysis_params['response_window_duration_seconds'] = 0.25
+        # if use_events:
+        #     response_analysis_params['response_window_duration_seconds'] = 0.25
     else:
         response_analysis_params = get_default_stimulus_response_params()
         response_analysis_params['window_around_timepoint_seconds'] = time_window
@@ -518,6 +522,10 @@ def get_stimulus_response_df(dataset, use_events=False, filter_events=False, fra
         df = response_df(response_xr)
     elif df_format == 'tidy' or df_format == 'long':
         df = response_xr.to_dataframe().reset_index()
+
+    # include response window used to create df
+    params = get_default_stimulus_response_params()
+    df['response_window'] = params['response_window_duration_seconds']
 
     df = df.rename(columns={'trial_id': 'stimulus_presentations_id', 'trace_id': 'cell_specimen_id'})
     return df
@@ -559,6 +567,11 @@ def get_omission_response_df(dataset, use_events=False, filter_events=False, fra
         df = response_df(response_xr)
     elif df_format == 'tidy' or df_format == 'long':
         df = response_xr.to_dataframe().reset_index()
+
+    # include response window used to create df
+    params = get_default_omission_response_params()
+    df['response_window'] = params['response_window_duration_seconds']
+
     df = df.rename(
         columns={'trial_id': 'stimulus_presentations_id', 'trace_id': 'cell_specimen_id'})
     return df
