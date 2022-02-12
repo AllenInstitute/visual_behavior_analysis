@@ -15,14 +15,32 @@ import seaborn as sns
 sns.set_context('notebook', font_scale=1.5, rc={'lines.markeredgewidth': 2})
 
 
-def plot_clustered_dropout_scores(df, labels=None, cmap='RdBu_r', model_output_type='', ax=None,):
+def plot_clustered_dropout_scores(df, labels=None, cmap='Blues', plot_difference=False, ax=None,):
+    '''
+    params:
+    df: pd.DataFrame, pivoted glm output
+    labels: array, clustering labels
+    cmap: str, matplotlib color map to use, default= "Blues"
+    plot_difference: Boolean, default=False, whether to plot dropout scores or difference
+        (cluster - population) in dropout scores.
+    ax: figure ax
+
+    '''
     sort_order = np.argsort(labels)
     sorted_labels = labels[sort_order]
     if ax is None:
         fig, ax = plt.subplots(figsize=(8, 12))
-    ax = sns.heatmap(df.abs().values[sort_order], cmap='Blues', ax=ax, vmin=0, vmax=1,
+    if plot_difference is True:
+        df_diff = df.abs() - df.abs().mean()
+        ax = sns.heatmap(df_diff.values[sort_order], cmap=cmap, ax=ax, vmin=0, vmax=1,
+                         robust=True,
+                         cbar_kws={"drawedges": False, "shrink": 0.8,
+                         "label": 'difference in fraction change in explained variance'})
+    elif plot_difference is False:
+        ax = sns.heatmap(df.abs().values[sort_order], cmap=cmap, ax=ax, vmin=0, vmax=1,
                      robust=True,
-                     cbar_kws={"drawedges": False, "shrink": 0.8, "label": 'fraction change in explained variance'})
+                     cbar_kws={"drawedges": False, "shrink": 0.8,
+                     "label": 'fraction change in explained variance'})
     ax.set_ylabel('cells')
     ax.set_xlabel('features')
     ax.set_title('sorted dropout scores')
@@ -86,7 +104,7 @@ def get_elbow_plots(X, n_clusters=range(2, 20), ax=None):
     bss = tss - wcss
 
     if ax is None:
-        fig, ax = plt.figure(2, 1, figsize=(8, 12))
+        fig, ax = plt.subplots(2, 1, figsize=(8, 12))
 
     # elbow curve
 
@@ -101,6 +119,8 @@ def get_elbow_plots(X, n_clusters=range(2, 20), ax=None):
     ax[1].set_xlabel('Number of clusters')
     ax[1].set_ylabel('Percentage of variance explained')
     ax[1].set_title('Elbow for KMeans clustering')
+
+    return ax
 
 
 def plot_silhouette_scores(X=None, model=KMeans, silhouette_scores=None, silhouette_std=None,
