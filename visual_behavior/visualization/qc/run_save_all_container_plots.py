@@ -42,7 +42,7 @@ if __name__ == "__main__":
             output=f'{stdout_location}/{Slurm.JOB_ARRAY_MASTER_ID}_{Slurm.JOB_ARRAY_ID}.out',
         )
 
-        slurm.sbatch(python_path + ' ' + python_file + ' --container-id ' + str(container_id))
+        slurm.sbatch(python_executable + ' ' + python_file + ' --container-id ' + str(container_id))
 
 
 
