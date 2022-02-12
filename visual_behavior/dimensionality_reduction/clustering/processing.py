@@ -10,6 +10,8 @@ from scipy.stats import spearmanr
 from scipy.stats import kruskal
 from scipy.stats import ttest_ind
 from sklearn.metrics import pairwise_distances
+from numpy import linalg as linalg
+
 # from scipy.stats import ttest_1samp
 
 # from allensdk.brain_observatory.behavior.behavior_project_cache import VisualBehaviorOphysProjectCache as bpc
@@ -154,7 +156,24 @@ def save_clustering_results(data, filename_string='', path=None):
     f.close()
 
 
-def get_cre_line_cell_specimen_ids(df):
+def get_cre_line_cell_specimen_ids(df_no_cre, df_cre):
+    '''
+    This function is used to assign correct cre line to cell specimen ids.
+    First df (glm_pivoted) is
+    Input:
+    df_no_cre: pd.DataFrame with cell_specimen_id as index or column but no cre line
+    df_cre: pd.DataFrame with columns ['cre_line', 'cell_specimen_id']
+
+    Returns:
+        cre_line_ids: dictionary with cre lines and their assossiated cell specimen ids
+    '''
+    if df_no_cre.index.name=='cell_specimen_id':
+        ids = df_no_cre.index.values
+    else:
+        ids = df_no_cre['cell_spedimen_id'].values
+
+    df=df_cre[df_cre['cell_specimen_id'].isin(ids)][['cell_specimen_id', 'cre_line']].drop_duplicates(
+        'cell_specimen_id')
     cre_lines = df.cre_line.unique()
     cre_line_ids = {}
     for cre_line in cre_lines:
@@ -312,7 +331,7 @@ def compute_inertia(a, X, metric = 'euclidean'):
     return np.mean(W)
 
 
-def compute_gap(clustering, data, k_max=5, n_references=20, reference = None, metric='euclidean'):
+def compute_gap(clustering, data, k_max=5, n_boots=20, reference = None, metric='euclidean'):
     if len(data.shape) == 1:
         data = data.reshape(-1, 1)
     if reference is None:
@@ -320,7 +339,7 @@ def compute_gap(clustering, data, k_max=5, n_references=20, reference = None, me
     reference_inertia = []
     for k in range(1, k_max ):
         local_inertia = []
-        for _ in range(n_references):
+        for _ in range(n_boots):
             clustering.n_clusters = k
             assignments = clustering.fit_predict(reference)
             local_inertia.append(compute_inertia(assignments, reference, metric=metric))
@@ -329,7 +348,7 @@ def compute_gap(clustering, data, k_max=5, n_references=20, reference = None, me
     ondata_inertia = []
     for k in range(1, k_max ):
         local_inertia = []
-        for _ in range(n_references):
+        for _ in range(n_boots):
             clustering.n_clusters = k
             assignments = clustering.fit_predict(data)
             local_inertia.append(compute_inertia(assignments, data, metric=metric))
@@ -337,3 +356,36 @@ def compute_gap(clustering, data, k_max=5, n_references=20, reference = None, me
 
     gap = np.log(reference_inertia) - np.log(ondata_inertia)
     return gap, np.log(reference_inertia), np.log(ondata_inertia)
+
+
+def get_eigenDecomposition(A, max_n_clusters=25):
+    """
+    Input:
+    A: Affinity matrix from spectral clustering
+    max_n_clusters
+
+    :return A tuple containing:
+    - the optimal number of clusters by eigengap heuristic
+    - all eigen values
+    - all eigen vectors
+
+    This method performs the eigen decomposition on a given affinity matrix,
+    following the steps recommended in the paper:
+    1. Construct the normalized laplacian matrix: L = D−1/2ADˆ −1/2.
+    2. Find the eigenvalues and their associated eigen vectors
+    3. Identify the maximum gap which corresponds to the number of clusters
+    by eigengap heuristic
+
+    References:
+    https://papers.nips.cc/paper/2619-self-tuning-spectral-clustering.pdf
+    """
+    L = csgraph.laplacian(A, normed=True)
+    # n_components = A.shape[0]
+    eigenvalues, eigenvectors = linalg.eigh(L)
+
+    # Identify the optimal number of clusters as the index corresponding
+    # to the larger gap between eigen values
+    index_largest_gap = np.argsort(np.diff(eigenvalues))[::-1][:max_n_clusters]
+    nb_clusters = index_largest_gap + 1
+
+    return eigenvalues, eigenvectors, nb_clusters
