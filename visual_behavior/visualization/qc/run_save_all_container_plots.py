@@ -12,7 +12,7 @@ parser.add_argument('--scriptname', type=str, default='save_all_container_plots.
 parser.add_argument("--plots", type=str, default=None, metavar='plot name to generate')
 
 # job_dir = r"/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/cluster_jobs/vba_qc_plots"
-job_dir = r"/allen/programs/mindscope/workgroups/learning/ophys/cluster_jobs/qc_plots"
+stdout_location = r"/allen/programs/mindscope/workgroups/learning/ophys/cluster_jobs/qc_plots"
 
 # python file to execute on cluster
 python_file = r"/home/marinag/visual_behavior_analysis/visual_behavior/visualization/qc/save_all_container_plots.py"
