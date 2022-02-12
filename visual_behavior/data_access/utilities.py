@@ -1489,6 +1489,24 @@ def add_binned_depth_column(df):
     return df
 
 
+def add_layer_column(df):
+    """
+    Adds a column called 'layer' that is based on the 'imaging_depth' for each experiment.
+    if imaging_depth is <200um, layer is 'upper, if >200um, layer is 'lower'
+    :param df:
+    :return:
+    """
+    df.loc[:, 'layer'] = None
+
+    indices = df[(df.depth < 200)].index.values
+    df.loc[indices, 'layer'] = 'upper'
+
+    indices = df[(df.depth > 200)].index.values
+    df.loc[indices, 'layer'] = 'lower'
+
+    return df
+
+
 def dateformat(exp_date):
     """
     reformat date of acquisition for accurate sorting by date
@@ -1740,19 +1758,24 @@ def value_counts(df, conditions=['cell_type', 'experience_level', 'mouse_id']):
     return counts
 
 
-def count_mice_expts_containers_cells(df):
+def count_mice_expts_containers_cells(df, conditions_to_group=['cell_type', 'experience_level']):
     """
-    count the number of mice, experiments, containers, and cells in input dataframe
+    count the number of mice, sessions, experiments, containers, and cells in input dataframe
     input dataframe is typically ophys_cells_table merged with ophys_experiment_table
-    """
-    mice = value_counts(df, conditions=['cell_type', 'experience_level', 'mouse_id'])
-    experiments = value_counts(df, conditions=['cell_type', 'experience_level', 'ophys_experiment_id'])
-    containers = value_counts(df, conditions=['cell_type', 'experience_level', 'ophys_container_id'])
-    cells = value_counts(df, conditions=['cell_type', 'experience_level', 'cell_specimen_id'])
 
-    counts = mice.merge(experiments, on=['cell_type', 'experience_level'])
-    counts = counts.merge(containers, on=['cell_type', 'experience_level'])
-    counts = counts.merge(cells, on=['cell_type', 'experience_level'])
+    conditions_to_group: list of columns in df to use to groupby before counting number of experiments, cells etc
+
+    """
+    mice = value_counts(df, conditions=conditions_to_group + ['mouse_id'])
+    sessions = value_counts(df, conditions=conditions_to_group + ['ophys_session_id'])
+    experiments = value_counts(df, conditions=conditions_to_group + ['ophys_experiment_id'])
+    containers = value_counts(df, conditions=conditions_to_group + ['ophys_container_id'])
+    cells = value_counts(df, conditions=conditions_to_group + ['cell_specimen_id'])
+
+    counts = mice.merge(sessions, on=conditions_to_group)
+    counts = counts.merge(experiments, on=conditions_to_group)
+    counts = counts.merge(containers, on=conditions_to_group)
+    counts = counts.merge(cells, on=conditions_to_group)
     return counts
 
 
