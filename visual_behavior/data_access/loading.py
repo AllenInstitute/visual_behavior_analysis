@@ -68,57 +68,57 @@ def get_platform_analysis_cache_dir():
     This is the cache directory to use for all platform paper analysis
     This cache contains NWB files downloaded directly from AWS
     """
-    return r'//allen/programs/braintv/workgroups/nc-ophys/learning_mFISH/learning_project_cache'
+    return r'/allen/programs/braintv/workgroups/nc-ophys/learning_mFISH/learning_project_cache'
 
 
 def get_production_cache_dir():
     """Get directory containing a manifest file that includes all VB production data, including failed experiments"""
-    cache_dir = r'//allen/programs/braintv/workgroups/nc-ophys/learning_mFISH/learning_project_cache'
+    cache_dir = r'/allen/programs/braintv/workgroups/nc-ophys/learning_mFISH/learning_project_cache'
     return cache_dir
 
 
 def get_qc_plots_dir():
-    return r'//allen/programs/braintv/workgroups/nc-ophys/learning_mFISH/qc_plots'
+    return r'/allen/programs/braintv/workgroups/nc-ophys/learning_mFISH/qc_plots'
 
 
 def get_super_container_plots_dir():
-    return r'//allen/programs/braintv/workgroups/nc-ophys/learning_mFISH/qc_plots/super_container_plots'
+    return r'/allen/programs/braintv/workgroups/nc-ophys/learning_mFISH/qc_plots/super_container_plots'
 
 
 def get_container_plots_dir():
-    return r'//allen/programs/braintv/workgroups/nc-ophys/learning_mFISH/qc_plots/container_plots'
+    return r'/allen/programs/braintv/workgroups/nc-ophys/learning_mFISH/qc_plots/container_plots'
 
 
 def get_session_plots_dir():
-    return r'//allen/programs/braintv/workgroups/nc-ophys/learning_mFISH/qc_plots/session_plots'
+    return r'/allen/programs/braintv/workgroups/nc-ophys/learning_mFISH/qc_plots/session_plots'
 
 
 def get_experiment_plots_dir():
-    return r'//allen/programs/braintv/workgroups/nc-ophys/learning_mFISH/qc_plots/experiment_plots'
+    return r'/allen/programs/braintv/workgroups/nc-ophys/learning_mFISH/qc_plots/experiment_plots'
 
 
 def get_single_cell_plots_dir():
-    return r'//allen/programs/braintv/workgroups/nc-ophys/learning_mFISH/qc_plots/single_cell_plots'
+    return r'/allen/programs/braintv/workgroups/nc-ophys/learning_mFISH/qc_plots/single_cell_plots'
 
 
 def get_analysis_cache_dir():
-    return r'//allen/programs/braintv/workgroups/nc-ophys/learning_mFISH/learning_project_cache'
+    return r'/allen/programs/braintv/workgroups/nc-ophys/learning_mFISH/learning_project_cache'
 
 
 def get_events_dir():
-    return r'//allen/programs/braintv/workgroups/nc-ophys/learning_mFISH/event_detection'
+    return r'/allen/programs/braintv/workgroups/nc-ophys/learning_mFISH/event_detection'
 
 
 def get_behavior_model_outputs_dir():
-    return r'//allen/programs/braintv/workgroups/nc-ophys/learning_mFISH/behavior_model_output'
+    return r'/allen/programs/braintv/workgroups/nc-ophys/learning_mFISH/behavior_model_output'
 
 
 def get_decoding_analysis_dir():
-    return r'//allen/programs/braintv/workgroups/nc-ophys/learning_mFISH/decoding'
+    return r'/allen/programs/braintv/workgroups/nc-ophys/learning_mFISH/decoding'
 
 
 def get_ophys_glm_dir():
-    return r'//allen/programs/braintv/workgroups/nc-ophys/learning_mFISH/ophys_glm'
+    return r'/allen/programs/braintv/workgroups/nc-ophys/learning_mFISH/ophys_glm'
 
 
 def get_stimulus_response_df_dir(interpolate=True, output_sampling_rate=30, event_type='all'):
@@ -275,7 +275,7 @@ def get_platform_paper_behavior_session_table():
     return behavior_sessions
 
 
-def get_filtered_ophys_experiment_table(include_failed_data=False, release_data_only=False, exclude_ai94=True,
+def get_filtered_ophys_experiment_table(include_failed_data=True, release_data_only=False, exclude_ai94=True,
                                         add_extra_columns=False, from_cached_file=False, overwrite_cached_file=False):
     """
     Loads a list of available ophys experiments FROM LIMS (not S3 cache) and adds additional useful columns to the table.
@@ -342,7 +342,7 @@ def get_filtered_ophys_experiment_table(include_failed_data=False, release_data_
             experiments = filtering.remove_failed_containers(experiments)  # container_workflow_state can be anything other than 'failed'
             # limit to sessions that start with OPHYS
             print('limiting to sessions that start with OPHYS')
-    experiments = filtering.limit_to_valid_ophys_session_types(experiments)
+    # experiments = filtering.limit_to_valid_ophys_session_types(experiments)
     if experiments.index.name != 'ophys_experiment_id':
         # experiments = experiments.drop_duplicates(subset=['ophys_experiment_id', 'ophys_container_id'])
         experiments = experiments.set_index('ophys_experiment_id')
@@ -568,6 +568,8 @@ def get_stimulus_response_df(dataset, time_window=[-3, 3.1], interpolate=True, o
         output_sampling_rate: sampling rate for interpolation, only used if interpolate is True
         data_type: which timeseries to get event triggered responses for
                     options: 'filtered_events', 'events', 'dff', 'running_speed', 'pupil_diameter', 'lick_rate'
+        event_type: how to filter stimulus presentations before creating table
+                    options: 'all', 'omissions', 'changes'
     """
     import mindscope_utilities.visual_behavior_ophys.data_formatting as vb_ophys
     # load stimulus response df from file if it exists otherwise generate it
@@ -1007,7 +1009,8 @@ def get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id):
                     ophys_experiment_ids -- list of ophys_experiment_ids that meet filtering criteria
                 """
     experiments = get_filtered_ophys_experiment_table()
-    ophys_experiment_ids = np.sort(experiments[(experiments.ophys_container_id == ophys_container_id)].index.values)
+    experiments = experiments.sort_values(by='date_of_acquisition')
+    ophys_experiment_ids = experiments[(experiments.ophys_container_id == ophys_container_id)].index.values
     return ophys_experiment_ids
 
 
@@ -2988,22 +2991,26 @@ def get_cell_info(cell_specimen_ids=None, ophys_experiment_ids=None):
     return db.lims_query(query.format(search_key, search_vals))
 
 
-def get_container_response_df(ophys_container_id, df_name='omission_response_df', use_events=False):
+def get_container_response_df(ophys_container_id, data_type='dff', event_type='all'):
     """
-    get concatenated dataframe of response_df type specificied by df_name, across all experiments from a container,
+    get concatenated dataframe of stimulus_response_df with stimulus aligned traces across all experiments in a container
+    data_type: can be 'dff', 'events', 'filtered_events',
     using the ResponseAnalysis class to build event locked response dataframes
     """
-    from visual_behavior.ophys.response_analysis.response_analysis import ResponseAnalysis
     experiments_table = get_filtered_ophys_experiment_table()
     container_expts = experiments_table[experiments_table.ophys_container_id == ophys_container_id]
     container_df = pd.DataFrame()
     for ophys_experiment_id in container_expts.index.values:
-        dataset = get_ophys_dataset(ophys_experiment_id)
-        analysis = ResponseAnalysis(dataset, use_events)
-        odf = analysis.get_response_df(df_name=df_name)
-        odf['ophys_experiment_id'] = ophys_experiment_id
-        odf['session_number'] = experiments_table.loc[ophys_experiment_id].session_number
-        container_df = pd.concat([container_df, odf])
+        print(ophys_experiment_id)
+        try:
+            dataset = get_ophys_dataset(ophys_experiment_id)
+            sdf = get_stimulus_response_df(dataset, time_window=[-3, 3.1], interpolate=True, output_sampling_rate=30,
+                                     data_type=data_type, event_type=event_type, load_from_file=False)
+            sdf['ophys_experiment_id'] = ophys_experiment_id
+            sdf['session_number'] = experiments_table.loc[ophys_experiment_id].session_number
+            container_df = pd.concat([container_df, sdf])
+        except:
+            print('problem for', ophys_experiment_id)
     return container_df
 
 

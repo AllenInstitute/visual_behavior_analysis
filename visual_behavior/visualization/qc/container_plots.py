@@ -42,13 +42,13 @@ def plot_container_session_sequence(ophys_container_id, save_figure=True):
     n_expts = len(expts)
     img = np.empty((n_expts, 1, 3))
     fail_x = []
-    fail_tags = []
+    # fail_tags = []
     for expt_ind, expt_id in enumerate(experiment_ids):
         this_expt = expts.loc[expt_id]
         img[expt_ind, 0, :] = session_type_color_map[this_expt['session_type']]
         if this_expt['experiment_workflow_state'] == 'failed':
             fail_x.append(expt_ind)
-            fail_tags.append(this_expt['failure_tags'])
+            # fail_tags.append(this_expt['failure_tags'])
 
     # create plot with expt colors image
     figsize = (20, n_expts)
@@ -67,8 +67,8 @@ def plot_container_session_sequence(ophys_container_id, save_figure=True):
     # add X for fails and list fail tags
     for ind_fail, x in enumerate(fail_x):
         ax.text(x=0, y=x, s='X', ha='center', va='center', fontsize=60)
-        fail_string = 'Failure: ' + str(fail_tags[ind_fail])
-        ax.text(x=8.5, y=x, s=fail_string, ha='left', va='center', fontsize=20)
+        # fail_string = 'Failure: ' + str(fail_tags[ind_fail])
+        # ax.text(x=8.5, y=x, s=fail_string, ha='left', va='center', fontsize=20)
 
     plt.suptitle('specimen_id: {}'.format(specimen_id) + ', ophys_container_id: {}'.format(ophys_container_id),
                  fontsize=25, ha='left', x=0.06, y=.97)
@@ -101,10 +101,12 @@ def plot_sdk_max_projection_images_for_container(ophys_container_id, save_figure
     fig, ax = plt.subplots(1, len(ophys_experiment_ids), figsize=figsize)
     ax = ax_to_array(ax)
     for i, ophys_experiment_id in enumerate(ophys_experiment_ids):
-        ax[i] = ep.plot_max_intensity_projection_for_experiment(ophys_experiment_id, ax=ax[i])
-        session_type = loading.get_session_type_for_ophys_experiment_id(ophys_experiment_id)
-        # exp_stage_name = exp_order_and_stage.loc[exp_order_and_stage["ophys_experiment_id"]== ophys_experiment_id, "stage_name_lims"].reset_index(drop=True)[0]
-        ax[i].set_title(str(ophys_experiment_id) + '\n' + session_type)
+        try:
+            ax[i] = ep.plot_max_intensity_projection_for_experiment(ophys_experiment_id, ax=ax[i])
+        except:
+            session_type = loading.get_session_type_for_ophys_experiment_id(ophys_experiment_id)
+            # exp_stage_name = exp_order_and_stage.loc[exp_order_and_stage["ophys_experiment_id"]== ophys_experiment_id, "stage_name_lims"].reset_index(drop=True)[0]
+            ax[i].set_title(str(ophys_experiment_id) + '\n' + session_type)
 
     if save_figure:
         ut.save_figure(fig, figsize, loading.get_container_plots_dir(), 'max_intensity_projection',
@@ -130,7 +132,10 @@ def plot_movie_max_projection_images_for_container(ophys_container_id, save_figu
     fig, ax = plt.subplots(1, len(ophys_experiment_ids), figsize=figsize)
     ax = ax_to_array(ax)
     for i, ophys_experiment_id in enumerate(ophys_experiment_ids):
-        ax[i] = ep.plot_motion_correction_max_image_for_experiment(ophys_experiment_id, ax=ax[i])
+        try:
+            ax[i] = ep.plot_motion_correction_max_image_for_experiment(ophys_experiment_id, ax=ax[i])
+        except:
+            pass
         session_type = loading.get_session_type_for_ophys_experiment_id(ophys_experiment_id)
         # exp_stage_name = exp_order_and_stage.loc[exp_order_and_stage["ophys_experiment_id"]== ophys_experiment_id, "stage_name_lims"].reset_index(drop=True)[0]
         ax[i].set_title(str(ophys_experiment_id) + '\n' + session_type)
@@ -159,7 +164,10 @@ def plot_sdk_average_images_for_container(ophys_container_id, save_figure=True):
     fig, ax = plt.subplots(1, len(ophys_experiment_ids), figsize=figsize)
     ax = ax_to_array(ax)
     for i, ophys_experiment_id in enumerate(ophys_experiment_ids):
-        ax[i] = ep.plot_average_image_for_experiment(ophys_experiment_id, ax=ax[i])
+        try:
+            ax[i] = ep.plot_average_image_for_experiment(ophys_experiment_id, ax=ax[i])
+        except:
+            pass
         session_type = loading.get_session_type_for_ophys_experiment_id(ophys_experiment_id)
         # exp_stage_name = exp_order_and_stage.loc[exp_order_and_stage["ophys_experiment_id"]== ophys_experiment_id, "stage_name_lims"].reset_index(drop=True)[0]
         ax[i].set_title(str(ophys_experiment_id) + '\n' + session_type)
@@ -188,7 +196,10 @@ def plot_movie_average_images_for_container(ophys_container_id, save_figure=True
     fig, ax = plt.subplots(1, len(ophys_experiment_ids), figsize=figsize)
     ax = ax_to_array(ax)
     for i, ophys_experiment_id in enumerate(ophys_experiment_ids):
-        ax[i] = ep.plot_motion_correction_average_image_for_experiment(ophys_experiment_id, ax=ax[i])
+        try:
+            ax[i] = ep.plot_motion_correction_average_image_for_experiment(ophys_experiment_id, ax=ax[i])
+        except:
+            pass
         session_type = loading.get_session_type_for_ophys_experiment_id(ophys_experiment_id)
         # exp_stage_name = exp_order_and_stage.loc[exp_order_and_stage["ophys_experiment_id"]== ophys_experiment_id, "stage_name_lims"].reset_index(drop=True)[0]
         ax[i].set_title(str(ophys_experiment_id) + '\n' + session_type)
@@ -211,7 +222,10 @@ def plot_eye_tracking_sample_frames(ophys_container_id, save_figure=True):
     for ii, ophys_experiment_id in enumerate(ophys_experiment_ids):
         print('on ophys_experiment_id {}, #{} of {}'.format(ophys_experiment_id, ii + 1, nplots))
         axes.append(vbp.placeAxesOnGrid(fig, dim=(3, 10), xspan=(0, 1), yspan=(ii / nplots + buffer, (ii + 1) / nplots)))
-        axes[-1] = ep.make_eye_matrix_plot(ophys_experiment_id, axes[-1])
+        try:
+            axes[-1] = ep.make_eye_matrix_plot(ophys_experiment_id, axes[-1])
+        except:
+            pass
 
     if save_figure:
         ut.save_figure(fig, figsize, loading.get_container_plots_dir(), 'eyetracking_sample_frames',
@@ -227,7 +241,10 @@ def plot_segmentation_masks_for_container(ophys_container_id, save_figure=True):
     fig, ax = plt.subplots(1, len(ophys_experiment_ids), figsize=figsize)
     ax = ax_to_array(ax)
     for i, ophys_experiment_id in enumerate(ophys_experiment_ids):
-        ax[i] = ep.plot_valid_segmentation_mask_outlines_per_cell_for_experiment(ophys_experiment_id, ax=ax[i])
+        try:
+            ax[i] = ep.plot_valid_segmentation_mask_outlines_per_cell_for_experiment(ophys_experiment_id, ax=ax[i])
+        except:
+            pass
         session_type = loading.get_session_type_for_ophys_experiment_id(ophys_experiment_id)
         ax[i].set_title(str(ophys_experiment_id) + '\n' + session_type)
 
@@ -245,7 +262,10 @@ def plot_segmentation_mask_overlays_for_container(ophys_container_id, save_figur
     ax = ax.ravel()
     for i, ophys_experiment_id in enumerate(ophys_experiment_ids):
 
-        ax[i] = ep.plot_max_intensity_projection_for_experiment(ophys_experiment_id, ax=ax[i])
+        try:
+            ax[i] = ep.plot_max_intensity_projection_for_experiment(ophys_experiment_id, ax=ax[i])
+        except:
+            pass
         session_type = loading.get_session_type_for_ophys_experiment_id(ophys_experiment_id)
         ax[i].set_title(str(ophys_experiment_id) + '\n' + session_type)
 
@@ -260,8 +280,11 @@ def plot_segmentation_mask_overlays_for_container(ophys_container_id, save_figur
         # except:
         #     print('cant plot valid masks for', ophys_experiment_id)
 
-        ax[i + (n * 2)] = ep.plot_valid_and_invalid_segmentation_mask_overlay_per_cell_for_experiment(ophys_experiment_id, ax=ax[i + (n * 2)])
-        ax[i + (n * 2)].set_title('red=valid, blue=invalid, \ngreen=crosstalk, cyan=both')
+        try:
+            ax[i + (n * 2)] = ep.plot_valid_and_invalid_segmentation_mask_overlay_per_cell_for_experiment(ophys_experiment_id, ax=ax[i + (n * 2)])
+            ax[i + (n * 2)].set_title('red=valid, blue=invalid, \ngreen=crosstalk, cyan=both')
+        except:
+            pass
 
         try:
             ax[i + (n * 3)] = ep.plot_remaining_decrosstalk_masks_for_experiment(ophys_experiment_id, ax=ax[i + (n * 3)])
@@ -369,7 +392,10 @@ def plot_dff_traces_heatmaps_for_container(ophys_container_id, save_figure=True)
     fig, ax = plt.subplots(len(ophys_experiment_ids), 1, figsize=figsize)
     ax = ax_to_array(ax)
     for i, ophys_experiment_id in enumerate(ophys_experiment_ids):
-        ax[i] = ep.plot_traces_heatmap_for_experiment(ophys_experiment_id, ax=ax[i])
+        try:
+            ax[i] = ep.plot_traces_heatmap_for_experiment(ophys_experiment_id, ax=ax[i])
+        except:
+            pass
         session_type = loading.get_session_type_for_ophys_experiment_id(ophys_experiment_id)
         ax[i].set_title(str(ophys_experiment_id) + ' - ' + session_type)
 
@@ -396,7 +422,10 @@ def plot_average_intensity_timeseries_for_container(ophys_container_id, save_fig
     figsize = (9, 5)
     fig, ax = plt.subplots(figsize=figsize)
     for i, ophys_experiment_id in enumerate(container_df["ophys_experiment_id"].unique()):
-        ax = ep.plot_average_intensity_timeseries_for_experiment(ophys_experiment_id, ax=ax)
+        try:
+            ax = ep.plot_average_intensity_timeseries_for_experiment(ophys_experiment_id, ax=ax)
+        except:
+            pass
     ax.legend(exp_order_and_stage["stage_name_lims"], fontsize='xx-small', title='stage name', title_fontsize='xx-small',
               bbox_to_anchor=(1.01, 1), loc=2)
     ax.set_title('full field average fluorescence intensity over time')
@@ -896,7 +925,7 @@ def get_file_name_for_container(ophys_container_id):
     return filename
 
 
-def plot_population_average_across_sessions(container_df, ophys_container_id, df_name, trials=False, omitted=False, save_figure=True):
+def plot_population_average_across_sessions(container_df, ophys_container_id, data_type='dff', event_type='all', save_figure=True):
     """
     Plots population average response across all sessions within a container
     :param container_df: response dataframe for all sessions in a container, can be stimulus_response_df, omission_response_df, etc
@@ -936,12 +965,12 @@ def plot_population_average_across_sessions(container_df, ophys_container_id, df
         ax.plot(timestamps, mean_trace, color=colors[int(session_number - 1)], label=session_number)
         sem = (traces.std()) / np.sqrt(float(len(traces)))
         ax.fill_between(timestamps, mean_trace + sem, mean_trace - sem, alpha=0.5, color=colors[int(session_number - 1)])
-    if omitted:
+    if event_type == 'omissions':
         ax = plot_flashes_on_trace(ax, timestamps, trial_type=None, omitted=True, alpha=0.2,
                                    facecolor='gray')
         ax.axvline(x=0, ymin=0, ymax=1, linestyle='--', color='gray')
         ax.set_xlabel('time relative to omission (sec)')
-    elif trials:
+    elif event_type == 'changes':
         ax = plot_flashes_on_trace(ax, timestamps, trial_type='go', omitted=False, alpha=0.2,
                                    facecolor='gray')
         ax.set_xlabel('time relative to change (sec)')
@@ -967,9 +996,8 @@ def plot_omission_population_average_across_sessions(ophys_container_id, save_fi
     :param save_figure:
     :return:
     """
-    df_name = 'omission_response_df'
-    container_df = loading.get_container_response_df(ophys_container_id, df_name, use_events=False)
-    plot_population_average_across_sessions(container_df, ophys_container_id, df_name, trials=False, omitted=True,
+    container_df = loading.get_container_response_df(ophys_container_id, data_type='dff', event_type='all')
+    plot_population_average_across_sessions(container_df, ophys_container_id, data_type='dff', event_type='all',
                                             save_figure=save_figure)
 
 
@@ -980,9 +1008,8 @@ def plot_trials_population_average_across_sessions(ophys_container_id, save_figu
     :param save_figure:
     :return:
     """
-    df_name = 'trials_response_df'
-    container_df = loading.get_container_response_df(ophys_container_id, df_name, use_events=False)
-    plot_population_average_across_sessions(container_df, ophys_container_id, df_name, trials=True, omitted=False,
+    container_df = loading.get_container_response_df(ophys_container_id, data_type='dff', event_type='changes')
+    plot_population_average_across_sessions(container_df, ophys_container_id, data_type='dff', event_type='changes',
                                             save_figure=save_figure)
 
 
@@ -993,9 +1020,9 @@ def plot_stimulus_population_average_across_sessions(ophys_container_id, save_fi
     :param save_figure:
     :return:
     """
-    df_name = 'stimulus_response_df'
-    container_df = loading.get_container_response_df(ophys_container_id, df_name, use_events=False)
-    plot_population_average_across_sessions(container_df, ophys_container_id, df_name, trials=False, omitted=False,
+    container_df = loading.get_container_response_df(ophys_container_id, data_type='dff', event_type='all')
+    container_df = container_df[container_df.omitted == False]
+    plot_population_average_across_sessions(container_df, ophys_container_id, data_type='dff', event_type='all',
                                             save_figure=save_figure)
 
 

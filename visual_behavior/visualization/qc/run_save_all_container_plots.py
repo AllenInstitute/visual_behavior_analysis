@@ -22,8 +22,8 @@ python_file = r"/home/marinag/visual_behavior_analysis/visual_behavior/visualiza
 from allensdk.brain_observatory.behavior.behavior_project_cache import VisualBehaviorOphysProjectCache
 
 cache = VisualBehaviorOphysProjectCache.from_lims()
-experiments = experiments_table[experiments_table.project_code=='LearningmFISHTask1A']
 experiments_table = cache.get_ophys_experiment_table(passed_only=False)
+experiments = experiments_table[experiments_table.project_code=='LearningmFISHTask1A']
 container_ids = experiments.ophys_container_id.unique()
 
 if __name__ == "__main__":

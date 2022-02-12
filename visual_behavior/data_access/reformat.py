@@ -250,8 +250,8 @@ def reformat_experiments_table(experiments):
     experiments = experiments[experiments.cre_line != 'Cux2-CreERT2']  # why is this in the VB dataset?
     # replace session types that are NaN with string None
     experiments.at[experiments[experiments.session_type.isnull()].index.values, 'session_type'] = 'None'
-    experiments = add_mouse_seeks_fail_tags_to_experiments_table(experiments)
-    experiments = add_model_outputs_availability_to_table(experiments)
+    # experiments = add_mouse_seeks_fail_tags_to_experiments_table(experiments)
+    # experiments = add_model_outputs_availability_to_table(experiments)
     if 'level_0' in experiments.columns:
         experiments = experiments.drop(columns='level_0')
     if 'index' in experiments.columns:
