@@ -11,6 +11,8 @@ from scipy.stats import kruskal
 from scipy.stats import ttest_ind
 from sklearn.metrics import pairwise_distances
 from numpy import linalg as linalg
+from scipy.sparse import csgraph
+from tqdm import tqdm
 
 # from scipy.stats import ttest_1samp
 
@@ -68,7 +70,7 @@ def get_labels_for_coclust_matrix(X, model=SpectralClustering, nboot=np.arange(1
     labels = []
     if n_clusters is not None:
         model.n_clusters = n_clusters
-    for _ in nboot:
+    for _ in tqdm(nboot):
         md = model.fit(X)
         labels.append(md.labels_)
     return labels
@@ -301,6 +303,7 @@ def shuffle_dropout_score(df_dropout, shuffle_type='all'):
     regressors = df_dropout.columns.levels[0].values
     experience_levels = df_dropout.columns.levels[1].values
     if shuffle_type == 'all':
+        print('shuffling all data')
         for column in df_dropout.columns:
             df_shuffled[column] = df_dropout[column].sample(frac=1).values
 
