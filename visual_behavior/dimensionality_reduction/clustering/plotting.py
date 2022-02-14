@@ -35,12 +35,12 @@ def plot_clustered_dropout_scores(df, labels=None, cmap='Blues', plot_difference
         ax = sns.heatmap(df_diff.values[sort_order], cmap=cmap, ax=ax, vmin=0, vmax=1,
                          robust=True,
                          cbar_kws={"drawedges": False, "shrink": 0.8,
-                         "label": 'difference in fraction change in explained variance'})
+                                   "label": 'difference in fraction change in explained variance'})
     elif plot_difference is False:
         ax = sns.heatmap(df.abs().values[sort_order], cmap=cmap, ax=ax, vmin=0, vmax=1,
-                     robust=True,
-                     cbar_kws={"drawedges": False, "shrink": 0.8,
-                     "label": 'fraction change in explained variance'})
+                         robust=True,
+                         cbar_kws={"drawedges": False, "shrink": 0.8,
+                                   "label": 'fraction change in explained variance'})
     ax.set_ylabel('cells')
     ax.set_xlabel('features')
     ax.set_title('sorted dropout scores')
@@ -136,7 +136,7 @@ def plot_silhouette_scores(X=None, model=KMeans, silhouette_scores=None, silhoue
         silhouette_scores, silhouette_std = get_silhouette_scores(X=X, model=model, n_clusters=n_clusters, metric=metric, n_boots=n_boots)
     elif silhouette_scores is not None:
         if len(silhouette_scores) != len(n_clusters):
-            n_clusters = np.arange(1, len(silhouette_scores)+1)
+            n_clusters = np.arange(1, len(silhouette_scores) + 1)
 
         if metric is None:
             metric = ''
@@ -205,11 +205,11 @@ def plot_clusters(dropout_df, cluster_df=None, plot_difference=False, mean_respo
         mean_dropout_df = dropout_df.loc[this_cluster_ids].mean().unstack()
         if plot_difference is False:
             ax[i] = sns.heatmap(mean_dropout_df,
-                            cmap='RdBu',
-                            vmin=-1,
-                            vmax=1,
-                            ax=ax[i],
-                            cbar=False, )
+                                cmap='RdBu',
+                                vmin=-1,
+                                vmax=1,
+                                ax=ax[i],
+                                cbar=False, )
         elif plot_difference is True:
             mean_dropout_df_diff = mean_dropout_df.abs() - dropout_df.mean().unstack().abs()
             ax[i] = sns.heatmap(mean_dropout_df_diff,
@@ -329,7 +329,6 @@ def plot_clusters(dropout_df, cluster_df=None, plot_difference=False, mean_respo
             ax[i + (len(cluster_ids) * 4)].set_ylabel('')
     return fig
     plt.tight_layout()
-
 
 
 def plot_clusters_columns_all_cre_lines(df, df_meta, labels_cre, multi_session_df, save_dir=None):

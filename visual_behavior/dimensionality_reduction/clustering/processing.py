@@ -169,12 +169,12 @@ def get_cre_line_cell_specimen_ids(df_no_cre, df_cre):
     Returns:
         cre_line_ids: dictionary with cre lines and their assossiated cell specimen ids
     '''
-    if df_no_cre.index.name=='cell_specimen_id':
+    if df_no_cre.index.name == 'cell_specimen_id':
         ids = df_no_cre.index.values
     else:
         ids = df_no_cre['cell_spedimen_id'].values
 
-    df=df_cre[df_cre['cell_specimen_id'].isin(ids)][['cell_specimen_id', 'cre_line']].drop_duplicates(
+    df = df_cre[df_cre['cell_specimen_id'].isin(ids)][['cell_specimen_id', 'cre_line']].drop_duplicates(
         'cell_specimen_id')
     cre_lines = df.cre_line.unique()
     cre_line_ids = {}
@@ -329,16 +329,16 @@ def shuffle_dropout_score(df_dropout, shuffle_type='all'):
     return df_shuffled
 
 
-def compute_inertia(a, X, metric = 'euclidean'):
+def compute_inertia(a, X, metric='euclidean'):
     W = [np.mean(pairwise_distances(X[a == c, :], metric=metric)) for c in np.unique(a)]
     return np.mean(W)
 
 
-def compute_gap(clustering, data, k_max=5, n_boots=20, reference = None, metric='euclidean'):
+def compute_gap(clustering, data, k_max=5, n_boots=20, reference=None, metric='euclidean'):
     if len(data.shape) == 1:
         data = data.reshape(-1, 1)
     if reference is None:
-        reference = np.random.rand(*data.shape)*-1
+        reference = np.random.rand(*data.shape) * -1
     reference_inertia = []
     for k in range(1, k_max ):
         local_inertia = []
