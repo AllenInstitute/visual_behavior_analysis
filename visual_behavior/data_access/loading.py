@@ -68,61 +68,64 @@ def get_platform_analysis_cache_dir():
     This is the cache directory to use for all platform paper analysis
     This cache contains NWB files downloaded directly from AWS
     """
-    return r'/allen/programs/braintv/workgroups/nc-ophys/learning_mFISH/learning_project_cache'
+    return r'//allen/programs/mindscope/workgroups/learning/ophys/learning_project_cache'
 
 
 def get_production_cache_dir():
     """Get directory containing a manifest file that includes all VB production data, including failed experiments"""
-    cache_dir = r'/allen/programs/braintv/workgroups/nc-ophys/learning_mFISH/learning_project_cache'
+    # cache_dir = r'/allen/programs/braintv/workgroups/nc-ophys/learning_mFISH/learning_project_cache'
+    cache_dir = r'//allen/programs/mindscope/workgroups/learning/ophys/learning_project_cache'
+
     return cache_dir
 
 
 def get_qc_plots_dir():
-    return r'/allen/programs/braintv/workgroups/nc-ophys/learning_mFISH/qc_plots'
+    return r'//allen/programs/mindscope/workgroups/learning/ophys/qc_plots'
+    # return r'//allen/programs/braintv/workgroups/nc-ophys/learning_mFISH/qc_plots'
 
 
 def get_super_container_plots_dir():
-    return r'/allen/programs/braintv/workgroups/nc-ophys/learning_mFISH/qc_plots/super_container_plots'
+    return os.path.join(get_qc_plots_dir(), 'super_container_plots')
 
 
 def get_container_plots_dir():
-    return r'/allen/programs/braintv/workgroups/nc-ophys/learning_mFISH/qc_plots/container_plots'
+    return os.path.join(get_qc_plots_dir(), 'container_plots')
 
 
 def get_session_plots_dir():
-    return r'/allen/programs/braintv/workgroups/nc-ophys/learning_mFISH/qc_plots/session_plots'
+    return os.path.join(get_qc_plots_dir(), 'session_plots')
 
 
 def get_experiment_plots_dir():
-    return r'/allen/programs/braintv/workgroups/nc-ophys/learning_mFISH/qc_plots/experiment_plots'
+    return os.path.join(get_qc_plots_dir(), 'experiment_plots')
 
 
 def get_single_cell_plots_dir():
-    return r'/allen/programs/braintv/workgroups/nc-ophys/learning_mFISH/qc_plots/single_cell_plots'
+    return os.path.join(get_qc_plots_dir(), 'single_cell_plots')
 
 
 def get_analysis_cache_dir():
-    return r'/allen/programs/braintv/workgroups/nc-ophys/learning_mFISH/learning_project_cache'
+    return r'//allen/programs/braintv/workgroups/nc-ophys/learning_mFISH/learning_project_cache'
 
 
 def get_events_dir():
-    return r'/allen/programs/braintv/workgroups/nc-ophys/learning_mFISH/event_detection'
+    return r'//allen/programs/braintv/workgroups/nc-ophys/learning_mFISH/event_detection'
 
 
 def get_behavior_model_outputs_dir():
-    return r'/allen/programs/braintv/workgroups/nc-ophys/learning_mFISH/behavior_model_output'
+    return r'//allen/programs/braintv/workgroups/nc-ophys/learning_mFISH/behavior_model_output'
 
 
 def get_decoding_analysis_dir():
-    return r'/allen/programs/braintv/workgroups/nc-ophys/learning_mFISH/decoding'
+    return r'//allen/programs/braintv/workgroups/nc-ophys/learning_mFISH/decoding'
 
 
 def get_ophys_glm_dir():
-    return r'/allen/programs/braintv/workgroups/nc-ophys/learning_mFISH/ophys_glm'
+    return r'//allen/programs/braintv/workgroups/nc-ophys/learning_mFISH/ophys_glm'
 
 
 def get_stimulus_response_df_dir(interpolate=True, output_sampling_rate=30, event_type='all'):
-    base_dir = r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/platform_paper_cache/stimulus_response_dfs'
+    base_dir = os.path.join(get_production_cache_dir, 'stimulus_response_dfs')
     if interpolate:
         save_dir = os.path.join(base_dir, event_type, 'interpolate_' + str(output_sampling_rate) + 'Hz')
     else:

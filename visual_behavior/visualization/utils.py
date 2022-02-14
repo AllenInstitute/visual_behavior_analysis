@@ -79,6 +79,15 @@ def get_session_type_color_map():
     black = np.array([0, 0, 0]).astype(np.uint8)
 
     session_type_color_map = {
+
+        'TRAINING_0_gratings_autorewards_15min': lighter(black, 0.1),
+        'TRAINING_1_gratings': lighter(black, 0.2),
+        'TRAINING_2_gratings_flashed': lighter(black, 0.3),
+        'TRAINING_3_images_A_10uL_reward': lighter(black, 0.4),
+        'TRAINING_4_images_A_training': lighter(black, 0.5),
+        'TRAINING_5_images_A_epilogue': lighter(black, 0.6),
+        'TRAINING_5_images_A_handoff_ready': lighter(black, 0.7),
+
         'OPHYS_0_images_A_habituation': lighter(colors[0, :], 0.8),
         'OPHYS_1_images_A': colors[0, :],
         'OPHYS_2_images_A_passive': colors[1, :],

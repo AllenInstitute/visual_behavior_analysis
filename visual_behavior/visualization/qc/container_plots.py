@@ -35,7 +35,7 @@ def ax_to_array(ax):
 def plot_container_session_sequence(ophys_container_id, save_figure=True):
     experiments_table = loading.get_filtered_ophys_experiment_table(include_failed_data=True)
     expts = experiments_table[experiments_table.ophys_container_id == ophys_container_id].sort_values('date_of_acquisition')
-    specimen_id = expts.specimen_id.unique()[0]
+    mouse_id = expts.mouse_id.unique()[0]
     experiment_ids = expts.index.values
     session_type_color_map = ut.get_session_type_color_map()
 
@@ -70,7 +70,7 @@ def plot_container_session_sequence(ophys_container_id, save_figure=True):
         # fail_string = 'Failure: ' + str(fail_tags[ind_fail])
         # ax.text(x=8.5, y=x, s=fail_string, ha='left', va='center', fontsize=20)
 
-    plt.suptitle('specimen_id: {}'.format(specimen_id) + ', ophys_container_id: {}'.format(ophys_container_id),
+    plt.suptitle('mouse_id: {}'.format(mouse_id) + ', ophys_container_id: {}'.format(ophys_container_id),
                  fontsize=25, ha='left', x=0.06, y=.97)
     fig.subplots_adjust(left=0.05)
     fig.subplots_adjust(right=0.1)
@@ -940,11 +940,11 @@ def plot_population_average_across_sessions(container_df, ophys_container_id, da
     # title = dataset.metadata_string
     title = get_metadata_string(ophys_container_id)
     # frame_rate = dataset.metadata['ophys_frame_rate']
-    if omitted:
+    if event_type == 'omissions':
         figsize = (12, 5)
         m = title.split('_')  # dataset.analysis_folder.split('_')
         title = str(ophys_container_id) + '_' + m[1] + '_' + m[2] + '_' + m[3] + '_' + m[4] + '_' + m[5] + '_' + m[6]
-    elif trials:
+    elif event_type == 'changes':
         figsize = (12, 5)
         container_df = container_df[container_df.go == True]
         m = title.split('_')  # dataset.analysis_folder.split('_')
