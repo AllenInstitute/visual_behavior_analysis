@@ -6,7 +6,7 @@ import visual_behavior.ophys.response_analysis.utilities as ut
 from visual_behavior.data_access import loading
 
 
-def get_multi_session_df(project_code, session_number, conditions, data_type, event_type,
+def get_multi_session_df(project_code, session_type, conditions, data_type, event_type,
                          time_window=[-3, 3.1], interpolate=True, output_sampling_rate=30,
                          response_window_duration=0.5, use_extended_stimulus_presentations=False, overwrite=False):
     """
@@ -30,16 +30,19 @@ def get_multi_session_df(project_code, session_number, conditions, data_type, ev
         get_pref_stim = False
     print('get_pref_stim', get_pref_stim)
 
-    cache_dir = loading.get_platform_analysis_cache_dir()
-    cache = VisualBehaviorOphysProjectCache.from_s3_cache(cache_dir=cache_dir)
-    print(cache_dir)
-    experiments_table = cache.get_ophys_experiment_table()
-    # dont include Ai94 experiments because they makes things too slow
-    experiments_table = experiments_table[(experiments_table.reporter_line != 'Ai94(TITL-GCaMP6s)')]
+    # cache_dir = loading.get_platform_analysis_cache_dir()
+    # cache = VisualBehaviorOphysProjectCache.from_s3_cache(cache_dir=cache_dir)
+    # print(cache_dir)
+    # experiments_table = cache.get_ophys_experiment_table()
+    # # dont include Ai94 experiments because they makes things too slow
+    # experiments_table = experiments_table[(experiments_table.reporter_line != 'Ai94(TITL-GCaMP6s)')]
 
-    session_number = float(session_number)
+    experiments_table = loading.get_filtered_ophys_experiment_table()
+    experiments_table = experiments_table[experiments_table.project_code == 'LearningmFISHTask1A']
+
+    # session_type = float(session_type)
     experiments = experiments_table[(experiments_table.project_code == project_code) &
-                                    (experiments_table.session_number == session_number)].copy()
+                                    (experiments_table.session_type == session_type)].copy()
     print('session_types:', experiments.session_type.unique(),
           ' - there should only be one session_type per session_number')
     session_type = experiments.session_type.unique()[0]

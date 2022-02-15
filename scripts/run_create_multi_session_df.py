@@ -22,33 +22,32 @@ python_path = os.path.join(
 )
 
 # define the job record output folder
-stdout_location = r"/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/cluster_jobs/multi_session_dfs"
+stdout_location = r"/allen/programs/mindscope/workgroups/learning/cluster_jobs/multi_session_dfs"
 
-# cache_dir = loading.get_platform_analysis_cache_dir()
-# cache = VisualBehaviorOphysProjectCache.from_s3_cache(cache_dir=cache_dir)
-# print(cache_dir)
-# experiments_table = cache.get_ophys_experiment_table()
 
-cache = VisualBehaviorOphysProjectCache.from_lims()
-experiments_table = cache.get_ophys_experiment_table(passed_only=False)
-experiments_table = experiments_table[experiments_table.project_code=='LearningmFISHDevelopment']
-experiments_table = experiments_table[experiments_table.session_type!='OPHYS_7_receptive_field_mapping']
+# cache = VisualBehaviorOphysProjectCache.from_lims()
+# experiments_table = cache.get_ophys_experiment_table(passed_only=False)
+# experiments_table = experiments_table[experiments_table.project_code=='LearningmFISHDevelopment']
+# experiments_table = experiments_table[experiments_table.session_type!='OPHYS_7_receptive_field_mapping']
+
+experiments_table = loading.get_filtered_ophys_experiment_table()
+experiments_table = experiments_table[experiments_table.project_code=='LearningmFISHTask1A']
 
 # call the `sbatch` command to run the jobs.
 for project_code in experiments_table.project_code.unique():
     print(project_code)
-    for session_number in experiments_table.session_number.unique():
+    for session_type in experiments_table.session_type.unique():
 
         # instantiate a Slurm object
         slurm = Slurm(
             mem='120g',  # '24g'
             cpus_per_task=1,
-            time='60:00:00',
+            time='20:00:00',
             partition='braintv',
-            job_name='multi_session_df_'+project_code+'_'+str(session_number),
+            job_name='multi_session_df_'+project_code+'_'+session_type,
             output=f'{stdout_location}/{Slurm.JOB_ARRAY_MASTER_ID}_{Slurm.JOB_ARRAY_ID}.out',
         )
 
-        slurm.sbatch(python_path+' '+python_file+' --project_code '+str(project_code)+' --session_number'+' '+str(session_number))
+        slurm.sbatch(python_path+' '+python_file+' --project_code '+str(project_code)+' --session_type'+' '+str(session_type))
 
 

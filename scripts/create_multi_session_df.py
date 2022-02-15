@@ -12,12 +12,12 @@ if __name__ == '__main__':
     # define args
     parser = argparse.ArgumentParser()
     parser.add_argument('--project_code', type=str, help='project code to use')
-    parser.add_argument('--session_number', type=str, help='session number to use')
+    parser.add_argument('--session_type', type=str, help='session type to use')
     args = parser.parse_args()
     project_code = args.project_code
-    session_number = float(args.session_number)
+    session_type = args.session_type
 
-    print(project_code, session_number)
+    print(project_code, session_type)
 
     # params for stim response df creation
     time_window = [-3, 3.1]
@@ -27,12 +27,12 @@ if __name__ == '__main__':
     use_extended_stimulus_presentations = False
 
     # set up conditions to make multi session dfs for
-    physio_data_types = ['filtered_events', 'events', 'dff']
+    physio_data_types = ['dff', 'filtered_events', 'events']
     behavior_data_types = ['pupil_width', 'running_speed', 'lick_rate']
 
     physio_conditions = [['cell_specimen_id', 'is_change'],
-                         ['cell_specimen_id', 'is_change', 'epoch'],
                          ['cell_specimen_id', 'omitted'],
+                         ['cell_specimen_id', 'is_change', 'epoch'],
                          ['cell_specimen_id', 'omitted', 'epoch'],
                          ['cell_specimen_id', 'is_change', 'image_name'],
                          ['cell_specimen_id', 'is_change', 'image_name', 'epoch'],
@@ -42,8 +42,8 @@ if __name__ == '__main__':
                          ['cell_specimen_id', 'omitted', 'pre_omitted'],]
 
     behavior_conditions = [['ophys_experiment_id', 'is_change'],
-                            ['ophys_experiment_id', 'is_change', 'epoch'],
-                            ['ophys_experiment_id', 'omitted'],
+                           ['ophys_experiment_id', 'omitted'],
+                           ['ophys_experiment_id', 'is_change', 'epoch'],
                             ['ophys_experiment_id', 'omitted', 'epoch'],
                             ['ophys_experiment_id', 'is_change', 'image_name'],
                             ['ophys_experiment_id', 'is_change', 'image_name', 'epoch'],
@@ -54,8 +54,8 @@ if __name__ == '__main__':
 
 
     # event types corresponding to the above physio and behavior conditions - must be in same sequential order
-    event_types_for_conditions = ['changes', 'changes',
-                                  'omissions', 'omissions',
+    event_types_for_conditions = ['changes', 'omissions',
+                                  'changes', 'omissions',
                                   'changes', 'changes', 'changes',
                                   'all', 'all', 'all']
 
@@ -67,7 +67,7 @@ if __name__ == '__main__':
     # create dfs for all data types and conditions for physio data
     for data_type in physio_data_types:
     # data_type = 'events'
-        for i, conditions in enumerate(physio_conditions[-1:]):
+        for i, conditions in enumerate(physio_conditions):
             print(conditions)
             event_type = event_types_for_conditions[i]
             if event_type == 'omissions':
@@ -76,11 +76,11 @@ if __name__ == '__main__':
                 response_window_duration = 0.5
             print('creating multi_session_df for', data_type, event_type, conditions)
             try: # use try except so that it skips over any conditions that fail to generate for some reason
-                df = io.get_multi_session_df(project_code, session_number, conditions, data_type, event_type,
+                df = io.get_multi_session_df(project_code, session_type, conditions, data_type, event_type,
                                              time_window=time_window, interpolate=interpolate, output_sampling_rate=output_sampling_rate,
                                              response_window_duration=response_window_duration,
                                              use_extended_stimulus_presentations=use_extended_stimulus_presentations,
-                                             overwrite=False)
+                                             overwrite=True)
             except Exception as e:
                 print('failed to create multi_session_df for', data_type, event_type, conditions)
                 print(e)
@@ -96,7 +96,7 @@ if __name__ == '__main__':
     #             response_window_duration_seconds = 0.5
     #         print('creating multi_session_df for', data_type, event_type, conditions)
     #         try: # use try except so that it skips over any conditions that fail to generate for some reason
-    #             df = io.get_multi_session_df(project_code, session_number, conditions, data_type, event_type,
+    #             df = io.get_multi_session_df(project_code, session_type, conditions, data_type, event_type,
     #                                          time_window=time_window, interpolate=interpolate,
     #                                          output_sampling_rate=output_sampling_rate,
     #                                          response_window_duration_seconds=response_window_duration_seconds,
