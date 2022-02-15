@@ -304,7 +304,7 @@ def plot_segmentation_mask_overlays_for_container(ophys_container_id, save_figur
         ut.save_figure(fig, figsize, loading.get_container_plots_dir(), 'segmentation_mask_overlays', get_file_name_for_container(ophys_container_id))
 
 
-def plot_roi_filtering_metrics_for_all_rois_for_container(ophys_container_id, save_figure=True)
+def plot_roi_filtering_metrics_for_all_rois_for_container(ophys_container_id, save_figure=True):
     experiments = loading.get_filtered_ophys_experiment_table()
     ophys_experiment_ids = loading.get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id, experiments)
 
