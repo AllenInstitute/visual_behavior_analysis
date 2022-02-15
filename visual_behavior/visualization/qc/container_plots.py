@@ -908,7 +908,7 @@ def get_metadata_string(ophys_container_id):
     ophys_experiment_ids = loading.get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id)
     dataset = loading.get_ophys_dataset(ophys_experiment_ids[0])
     m = dataset.metadata.copy()
-    metadata_string = str(m['mouse_id']) + '_' + str(m['ophys_experiment_id']) + '_' + m['cre_line'].split('-')[0] + '_' + m['targeted_structure'] + '_' + str(m['imaging_depth']) + '_' + m['session_type']
+    metadata_string = str(m['mouse_id']) + '_' + str(m['ophys_container_id']) + '_' + m['cre_line'].split('-')[0] + '_' + m['targeted_structure'] + '_' + str(m['imaging_depth']) + '_' + m['session_type']
     return metadata_string
 
 
