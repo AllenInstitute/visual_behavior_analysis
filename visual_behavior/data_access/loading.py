@@ -987,7 +987,7 @@ def get_ophys_container_ids(platform_paper_only=False, add_extra_columns=True):
     return container_ids
 
 
-def get_ophys_session_ids_for_ophys_container_id(ophys_container_id):
+def get_ophys_session_ids_for_ophys_container_id(ophys_container_id, experiments=None):
     """Get ophys_session_ids belonging to a given ophys_container_id. Ophys session must pass QC.
 
             Arguments:
@@ -996,12 +996,13 @@ def get_ophys_session_ids_for_ophys_container_id(ophys_container_id):
             Returns:
                 ophys_session_ids -- list of ophys_session_ids that meet filtering criteria
             """
-    experiments = get_filtered_ophys_experiment_table()
+    if experiments is None:
+        experiments = get_filtered_ophys_experiment_table()
     ophys_session_ids = np.sort(experiments[(experiments.ophys_container_id == ophys_container_id)].ophys_session_id.unique())
     return ophys_session_ids
 
 
-def get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id):
+def get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id, experiments=None):
     """Get ophys_experiment_ids belonging to a given ophys_container_id. ophys container must meet the criteria in
         sdk_utils.get_filtered_session_table()
 
@@ -1011,38 +1012,45 @@ def get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id):
                 Returns:
                     ophys_experiment_ids -- list of ophys_experiment_ids that meet filtering criteria
                 """
-    experiments = get_filtered_ophys_experiment_table()
+    if experiments is None:
+        experiments = get_filtered_ophys_experiment_table()
     experiments = experiments.sort_values(by='date_of_acquisition')
     ophys_experiment_ids = experiments[(experiments.ophys_container_id == ophys_container_id)].index.values
     return ophys_experiment_ids
 
 
-def get_session_type_for_ophys_experiment_id(ophys_experiment_id):
-    experiments = get_filtered_ophys_experiment_table()
+def get_session_type_for_ophys_experiment_id(ophys_experiment_id, experiments=None):
+    if experiments == None:
+        print('getting table! ')
+        experiments = get_filtered_ophys_experiment_table()
     session_type = experiments.loc[ophys_experiment_id].session_type
     return session_type
 
 
-def get_session_type_for_ophys_session_id(ophys_session_id):
-    sessions = get_filtered_ophys_session_table()
-    session_type = sessions.loc[ophys_session_id].session_type
+def get_session_type_for_ophys_session_id(ophys_session_id, experiments=None):
+    if experiments == None:
+        experiments = get_filtered_ophys_experiment_table()
+    session_type = experiments[experiments.ophys_session_id==ophys_session_id].session_type
     return session_type
 
 
-def get_ophys_experiment_id_for_ophys_session_id(ophys_session_id):
-    experiments = get_filtered_ophys_experiment_table()
+def get_ophys_experiment_id_for_ophys_session_id(ophys_session_id, experiments=None):
+    if experiments == None:
+        experiments = get_filtered_ophys_experiment_table()
     ophys_experiment_id = experiments[(experiments.ophys_session_id == ophys_session_id)].index.values[0]
     return ophys_experiment_id
 
 
-def get_ophys_session_id_for_ophys_experiment_id(ophys_experiment_id):
-    experiments = get_filtered_ophys_experiment_table()
+def get_ophys_session_id_for_ophys_experiment_id(ophys_experiment_id, experiments=None):
+    if experiments == None:
+        experiments = get_filtered_ophys_experiment_table()
     ophys_session_id = experiments.loc[ophys_experiment_id].ophys_session_id
     return ophys_session_id
 
 
-def get_behavior_session_id_for_ophys_experiment_id(ophys_experiment_id):
-    experiments = get_filtered_ophys_experiment_table(include_failed_data=True)
+def get_behavior_session_id_for_ophys_experiment_id(ophys_experiment_id, experiments=None):
+    if experiments == None:
+        experiments = get_filtered_ophys_experiment_table(include_failed_data=True)
     behavior_session_id = experiments.loc[ophys_experiment_id].behavior_session_id
     return behavior_session_id
 

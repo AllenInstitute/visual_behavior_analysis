@@ -95,7 +95,8 @@ def plot_sdk_max_projection_images_for_container(ophys_container_id, save_figure
     """
     # exp_order_and_stage = processing.experiment_order_and_stage_for_container(ophys_container_id)
     # ophys_experiment_ids = list(exp_order_and_stage["ophys_experiment_id"])
-    ophys_experiment_ids = loading.get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id)
+    experiments = loading.get_filtered_ophys_experiment_table()
+    ophys_experiment_ids = loading.get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id, experiments)
 
     figsize = (25, 5)
     fig, ax = plt.subplots(1, len(ophys_experiment_ids), figsize=figsize)
@@ -104,9 +105,10 @@ def plot_sdk_max_projection_images_for_container(ophys_container_id, save_figure
         try:
             ax[i] = ep.plot_max_intensity_projection_for_experiment(ophys_experiment_id, ax=ax[i])
         except:
-            session_type = loading.get_session_type_for_ophys_experiment_id(ophys_experiment_id)
-            # exp_stage_name = exp_order_and_stage.loc[exp_order_and_stage["ophys_experiment_id"]== ophys_experiment_id, "stage_name_lims"].reset_index(drop=True)[0]
-            ax[i].set_title(str(ophys_experiment_id) + '\n' + session_type)
+            pass
+        session_type = loading.get_session_type_for_ophys_experiment_id(ophys_experiment_id, experiments=experiments)
+        # exp_stage_name = exp_order_and_stage.loc[exp_order_and_stage["ophys_experiment_id"]== ophys_experiment_id, "stage_name_lims"].reset_index(drop=True)[0]
+        ax[i].set_title(str(ophys_experiment_id) + '\n' + session_type)
 
     if save_figure:
         ut.save_figure(fig, figsize, loading.get_container_plots_dir(), 'max_intensity_projection',
@@ -126,7 +128,8 @@ def plot_movie_max_projection_images_for_container(ophys_container_id, save_figu
     """
     # exp_order_and_stage = processing.experiment_order_and_stage_for_container(ophys_container_id)
     # ophys_experiment_ids = list(exp_order_and_stage["ophys_experiment_id"])
-    ophys_experiment_ids = loading.get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id)
+    experiments = loading.get_filtered_ophys_experiment_table()
+    ophys_experiment_ids = loading.get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id, experiments)
 
     figsize = (25, 5)
     fig, ax = plt.subplots(1, len(ophys_experiment_ids), figsize=figsize)
@@ -136,7 +139,7 @@ def plot_movie_max_projection_images_for_container(ophys_container_id, save_figu
             ax[i] = ep.plot_motion_correction_max_image_for_experiment(ophys_experiment_id, ax=ax[i])
         except:
             pass
-        session_type = loading.get_session_type_for_ophys_experiment_id(ophys_experiment_id)
+        session_type = loading.get_session_type_for_ophys_experiment_id(ophys_experiment_id, experiments)
         # exp_stage_name = exp_order_and_stage.loc[exp_order_and_stage["ophys_experiment_id"]== ophys_experiment_id, "stage_name_lims"].reset_index(drop=True)[0]
         ax[i].set_title(str(ophys_experiment_id) + '\n' + session_type)
 
@@ -158,7 +161,8 @@ def plot_sdk_average_images_for_container(ophys_container_id, save_figure=True):
     """
     # exp_order_and_stage = processing.experiment_order_and_stage_for_container(ophys_container_id)
     # ophys_experiment_ids = list(exp_order_and_stage["ophys_experiment_id"])
-    ophys_experiment_ids = loading.get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id)
+    experiments = loading.get_filtered_ophys_experiment_table()
+    ophys_experiment_ids = loading.get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id, experiments)
 
     figsize = (25, 5)
     fig, ax = plt.subplots(1, len(ophys_experiment_ids), figsize=figsize)
@@ -168,7 +172,7 @@ def plot_sdk_average_images_for_container(ophys_container_id, save_figure=True):
             ax[i] = ep.plot_average_image_for_experiment(ophys_experiment_id, ax=ax[i])
         except:
             pass
-        session_type = loading.get_session_type_for_ophys_experiment_id(ophys_experiment_id)
+        session_type = loading.get_session_type_for_ophys_experiment_id(ophys_experiment_id, experiments)
         # exp_stage_name = exp_order_and_stage.loc[exp_order_and_stage["ophys_experiment_id"]== ophys_experiment_id, "stage_name_lims"].reset_index(drop=True)[0]
         ax[i].set_title(str(ophys_experiment_id) + '\n' + session_type)
 
@@ -190,7 +194,8 @@ def plot_movie_average_images_for_container(ophys_container_id, save_figure=True
     """
     # exp_order_and_stage = processing.experiment_order_and_stage_for_container(ophys_container_id)
     # ophys_experiment_ids = list(exp_order_and_stage["ophys_experiment_id"])
-    ophys_experiment_ids = loading.get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id)
+    experiments = loading.get_filtered_ophys_experiment_table()
+    ophys_experiment_ids = loading.get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id, experiments)
 
     figsize = (25, 5)
     fig, ax = plt.subplots(1, len(ophys_experiment_ids), figsize=figsize)
@@ -200,7 +205,7 @@ def plot_movie_average_images_for_container(ophys_container_id, save_figure=True
             ax[i] = ep.plot_motion_correction_average_image_for_experiment(ophys_experiment_id, ax=ax[i])
         except:
             pass
-        session_type = loading.get_session_type_for_ophys_experiment_id(ophys_experiment_id)
+        session_type = loading.get_session_type_for_ophys_experiment_id(ophys_experiment_id, experiments)
         # exp_stage_name = exp_order_and_stage.loc[exp_order_and_stage["ophys_experiment_id"]== ophys_experiment_id, "stage_name_lims"].reset_index(drop=True)[0]
         ax[i].set_title(str(ophys_experiment_id) + '\n' + session_type)
 
@@ -235,7 +240,8 @@ def plot_eye_tracking_sample_frames(ophys_container_id, save_figure=True):
 
 
 def plot_segmentation_masks_for_container(ophys_container_id, save_figure=True):
-    ophys_experiment_ids = loading.get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id)
+    experiments = loading.get_filtered_ophys_experiment_table()
+    ophys_experiment_ids = loading.get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id, experiments)
 
     figsize = (25, 5)
     fig, ax = plt.subplots(1, len(ophys_experiment_ids), figsize=figsize)
@@ -245,7 +251,7 @@ def plot_segmentation_masks_for_container(ophys_container_id, save_figure=True):
             ax[i] = ep.plot_valid_segmentation_mask_outlines_per_cell_for_experiment(ophys_experiment_id, ax=ax[i])
         except:
             pass
-        session_type = loading.get_session_type_for_ophys_experiment_id(ophys_experiment_id)
+        session_type = loading.get_session_type_for_ophys_experiment_id(ophys_experiment_id, experiments)
         ax[i].set_title(str(ophys_experiment_id) + '\n' + session_type)
 
     if save_figure:
@@ -254,7 +260,8 @@ def plot_segmentation_masks_for_container(ophys_container_id, save_figure=True):
 
 
 def plot_segmentation_mask_overlays_for_container(ophys_container_id, save_figure=True):
-    ophys_experiment_ids = loading.get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id)
+    experiments = loading.get_filtered_ophys_experiment_table()
+    ophys_experiment_ids = loading.get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id, experiments)
 
     figsize = (25, 18)
     n = len(ophys_experiment_ids)
@@ -266,7 +273,7 @@ def plot_segmentation_mask_overlays_for_container(ophys_container_id, save_figur
             ax[i] = ep.plot_max_intensity_projection_for_experiment(ophys_experiment_id, ax=ax[i])
         except:
             pass
-        session_type = loading.get_session_type_for_ophys_experiment_id(ophys_experiment_id)
+        session_type = loading.get_session_type_for_ophys_experiment_id(ophys_experiment_id, experiments)
         ax[i].set_title(str(ophys_experiment_id) + '\n' + session_type)
 
         try:
@@ -297,8 +304,9 @@ def plot_segmentation_mask_overlays_for_container(ophys_container_id, save_figur
         ut.save_figure(fig, figsize, loading.get_container_plots_dir(), 'segmentation_mask_overlays', get_file_name_for_container(ophys_container_id))
 
 
-def plot_roi_filtering_metrics_for_all_rois_for_container(ophys_container_id, save_figure=True):
-    ophys_experiment_ids = loading.get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id)
+def plot_roi_filtering_metrics_for_all_rois_for_container(ophys_container_id, save_figure=True)
+    experiments = loading.get_filtered_ophys_experiment_table()
+    ophys_experiment_ids = loading.get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id, experiments)
 
     figsize = (25, 22)
     n = len(ophys_experiment_ids)
@@ -307,7 +315,7 @@ def plot_roi_filtering_metrics_for_all_rois_for_container(ophys_container_id, sa
     for i, ophys_experiment_id in enumerate(ophys_experiment_ids):
 
         ax[i] = ep.plot_valid_and_invalid_segmentation_mask_overlay_per_cell_for_experiment(ophys_experiment_id, ax=ax[i])
-        session_type = loading.get_session_type_for_ophys_experiment_id(ophys_experiment_id)
+        session_type = loading.get_session_type_for_ophys_experiment_id(ophys_experiment_id, experiments)
         ax[i].set_title(str(ophys_experiment_id) + '\n' + session_type + '\nred = valid, blue = invalid')
 
         metric = 'area'
@@ -328,7 +336,8 @@ def plot_roi_filtering_metrics_for_all_rois_for_container(ophys_container_id, sa
 
 
 def plot_roi_filtering_metrics_for_valid_rois_for_container(ophys_container_id, save_figure=True):
-    ophys_experiment_ids = loading.get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id)
+    experiments = loading.get_filtered_ophys_experiment_table()
+    ophys_experiment_ids = loading.get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id, experiments)
 
     figsize = (25, 22)
     n = len(ophys_experiment_ids)
@@ -337,7 +346,7 @@ def plot_roi_filtering_metrics_for_valid_rois_for_container(ophys_container_id, 
     for i, ophys_experiment_id in enumerate(ophys_experiment_ids):
 
         ax[i] = ep.plot_valid_segmentation_mask_overlay_for_experiment(ophys_experiment_id, ax=ax[i])
-        session_type = loading.get_session_type_for_ophys_experiment_id(ophys_experiment_id)
+        session_type = loading.get_session_type_for_ophys_experiment_id(ophys_experiment_id, experiments)
         ax[i].set_title(str(ophys_experiment_id) + '\n' + session_type)
 
         metric = 'area'
@@ -358,7 +367,8 @@ def plot_roi_filtering_metrics_for_valid_rois_for_container(ophys_container_id, 
 
 
 def plot_filtered_roi_masks_for_container(ophys_container_id, save_figure=True):
-    ophys_experiment_ids = loading.get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id)
+    experiments = loading.get_filtered_ophys_experiment_table()
+    ophys_experiment_ids = loading.get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id, experiments)
 
     figsize = (25, 20)
     n = len(ophys_experiment_ids)
@@ -366,7 +376,7 @@ def plot_filtered_roi_masks_for_container(ophys_container_id, save_figure=True):
     ax = ax.ravel()
     for i, ophys_experiment_id in enumerate(ophys_experiment_ids):
         ax[i] = ep.plot_valid_and_invalid_segmentation_mask_overlay_per_cell_for_experiment(ophys_experiment_id, ax=ax[i])
-        session_type = loading.get_session_type_for_ophys_experiment_id(ophys_experiment_id)
+        session_type = loading.get_session_type_for_ophys_experiment_id(ophys_experiment_id, experiments)
         ax[i].set_title(str(ophys_experiment_id) + '\n' + session_type + '\nred = valid, blue = invalid')
 
         ax[i + n] = ep.plot_filtered_masks_for_experiment(ophys_experiment_id, include_invalid_rois=True, ax=ax[i + n])
@@ -386,7 +396,8 @@ def plot_filtered_roi_masks_for_container(ophys_container_id, save_figure=True):
 
 
 def plot_dff_traces_heatmaps_for_container(ophys_container_id, save_figure=True):
-    ophys_experiment_ids = loading.get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id)
+    experiments = loading.get_filtered_ophys_experiment_table()
+    ophys_experiment_ids = loading.get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id, experiments)
 
     figsize = (25, 20)
     fig, ax = plt.subplots(len(ophys_experiment_ids), 1, figsize=figsize)
@@ -396,7 +407,7 @@ def plot_dff_traces_heatmaps_for_container(ophys_container_id, save_figure=True)
             ax[i] = ep.plot_traces_heatmap_for_experiment(ophys_experiment_id, ax=ax[i])
         except:
             pass
-        session_type = loading.get_session_type_for_ophys_experiment_id(ophys_experiment_id)
+        session_type = loading.get_session_type_for_ophys_experiment_id(ophys_experiment_id, experiments)
         ax[i].set_title(str(ophys_experiment_id) + ' - ' + session_type)
 
     fig.tight_layout()
@@ -849,7 +860,8 @@ def plot_cell_matching_registration_output(ophys_container_id, save_figure=True)
 
 
 def plot_motion_correction_xy_shift_for_container(ophys_container_id, save_figure=True):
-    ophys_experiment_ids = loading.get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id)
+    experiments = loading.get_filtered_ophys_experiment_table()
+    ophys_experiment_ids = loading.get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id, experiments)
 
     figsize = (25, 20)
     fig, ax = plt.subplots(len(ophys_experiment_ids), 1, figsize=figsize)
@@ -857,7 +869,7 @@ def plot_motion_correction_xy_shift_for_container(ophys_container_id, save_figur
     for i, ophys_experiment_id in enumerate(ophys_experiment_ids):
         ax[i] = ep.plot_motion_correction_xy_shift_for_experiment(ophys_experiment_id, ax=ax[i])
 
-        session_type = loading.get_session_type_for_ophys_experiment_id(ophys_experiment_id)
+        session_type = loading.get_session_type_for_ophys_experiment_id(ophys_experiment_id, experiments)
         ax[i].set_title(str(ophys_experiment_id) + '\n' + session_type)
     fig.tight_layout()
     if save_figure:
@@ -905,7 +917,8 @@ def get_metadata_string(ophys_container_id):
     :param ophys_container_id:
     :return:
     """
-    ophys_experiment_ids = loading.get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id)
+    experiments = loading.get_filtered_ophys_experiment_table()
+    ophys_experiment_ids = loading.get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id, experiments)
     dataset = loading.get_ophys_dataset(ophys_experiment_ids[0])
     m = dataset.metadata.copy()
     metadata_string = str(m['mouse_id']) + '_' + str(m['ophys_container_id']) + '_' + m['cre_line'].split('-')[0] + '_' + m['targeted_structure'] + '_' + str(m['imaging_depth']) + '_' + m['session_type']
@@ -1063,14 +1076,15 @@ def plot_stimulus_population_average_across_sessions(ophys_container_id, save_fi
 # BEHAVIOR
 
 def plot_running_speed_for_container(ophys_container_id, save_figure=True):
-    ophys_session_ids = loading.get_ophys_session_ids_for_ophys_container_id(ophys_container_id)
+    experiments = loading.get_filtered_ophys_experiment_table()
+    ophys_session_ids = loading.get_ophys_session_ids_for_ophys_container_id(ophys_container_id, experiments)
 
     figsize = (25, 15)
     fig, ax = plt.subplots(len(ophys_session_ids), 1, figsize=figsize)
     ax = ax_to_array(ax)
     for i, ophys_session_id in enumerate(ophys_session_ids):
         ax[i] = sp.plot_running_speed(ophys_session_id, ax=ax[i])
-        session_type = loading.get_session_type_for_ophys_session_id(ophys_session_id)
+        session_type = loading.get_session_type_for_ophys_session_id(ophys_session_id, experiments)
         ax[i].set_title(str(ophys_session_id) + '\n' + session_type)
     fig.tight_layout()
     if save_figure:
@@ -1079,7 +1093,8 @@ def plot_running_speed_for_container(ophys_container_id, save_figure=True):
 
 
 def plot_lick_rasters_for_container(ophys_container_id, save_figure=True):
-    ophys_session_ids = loading.get_ophys_session_ids_for_ophys_container_id(ophys_container_id)
+    experiments = loading.get_filtered_ophys_experiment_table()
+    ophys_session_ids = loading.get_ophys_session_ids_for_ophys_container_id(ophys_container_id, experiments)
 
     figsize = (25, 7)
     fig, ax = plt.subplots(1, len(ophys_session_ids), figsize=figsize)
@@ -1087,7 +1102,7 @@ def plot_lick_rasters_for_container(ophys_container_id, save_figure=True):
     for i, ophys_session_id in enumerate(ophys_session_ids):
         ax[i] = sp.plot_lick_raster(ophys_session_id, ax=ax[i])
         ax[i].invert_yaxis()
-        session_type = loading.get_session_type_for_ophys_session_id(ophys_session_id)
+        session_type = loading.get_session_type_for_ophys_session_id(ophys_session_id, experiments)
         ax[i].set_title(str(ophys_session_id) + '\n' + session_type)
     # plt.gca().invert_yaxis()
 
@@ -1107,13 +1122,16 @@ def plot_pupil_area_sdk(ophys_container_id, save_figure=True):
     nplots = len(ophys_experiment_ids)
     buffer = 0.075
     for ii, ophys_experiment_id in enumerate(ophys_experiment_ids):
-        print('on ophys_experiment_id {}, #{} of {}'.format(ophys_experiment_id, ii + 1, nplots))
-        axes.append(vbp.placeAxesOnGrid(fig, xspan=(0, 1), yspan=(ii / nplots + buffer, (ii + 1) / nplots)))
-        if ii + 1 == len(ophys_experiment_ids):
-            label_x = True
-        else:
-            label_x = False
-        axes[-1] = ep.make_pupil_area_plot_sdk(ophys_experiment_id, axes[-1], label_x=label_x)
+        try:
+            print('on ophys_experiment_id {}, #{} of {}'.format(ophys_experiment_id, ii + 1, nplots))
+            axes.append(vbp.placeAxesOnGrid(fig, xspan=(0, 1), yspan=(ii / nplots + buffer, (ii + 1) / nplots)))
+            if ii + 1 == len(ophys_experiment_ids):
+                label_x = True
+            else:
+                label_x = False
+            axes[-1] = ep.make_pupil_area_plot_sdk(ophys_experiment_id, axes[-1], label_x=label_x)
+        except:
+            pass
 
     if save_figure:
         print('saving')
@@ -1134,13 +1152,16 @@ def plot_pupil_area(ophys_container_id, save_figure=True):
     nplots = len(ophys_experiment_ids)
     buffer = 0.075
     for ii, ophys_experiment_id in enumerate(ophys_experiment_ids):
-        print('on ophys_experiment_id {}, #{} of {}'.format(ophys_experiment_id, ii + 1, nplots))
-        axes.append(vbp.placeAxesOnGrid(fig, xspan=(0, 1), yspan=(ii / nplots + buffer, (ii + 1) / nplots)))
-        if ii + 1 == len(ophys_experiment_ids):
-            label_x = True
-        else:
-            label_x = False
-        axes[-1] = ep.make_pupil_area_plot(ophys_experiment_id, axes[-1], label_x=label_x)
+        try:
+            print('on ophys_experiment_id {}, #{} of {}'.format(ophys_experiment_id, ii + 1, nplots))
+            axes.append(vbp.placeAxesOnGrid(fig, xspan=(0, 1), yspan=(ii / nplots + buffer, (ii + 1) / nplots)))
+            if ii + 1 == len(ophys_experiment_ids):
+                label_x = True
+            else:
+                label_x = False
+            axes[-1] = ep.make_pupil_area_plot(ophys_experiment_id, axes[-1], label_x=label_x)
+        except:
+            pass
 
     if save_figure:
         print('saving')
@@ -1161,13 +1182,16 @@ def plot_pupil_position(ophys_container_id, save_figure=True):
     nplots = len(ophys_experiment_ids)
     buffer = 0.075
     for ii, ophys_experiment_id in enumerate(ophys_experiment_ids):
-        print('on ophys_experiment_id {}, #{} of {}'.format(ophys_experiment_id, ii + 1, nplots))
-        axes.append(vbp.placeAxesOnGrid(fig, xspan=(0, 1), yspan=(ii / nplots + buffer, (ii + 1) / nplots)))
-        if ii + 1 == len(ophys_experiment_ids):
-            label_x = True
-        else:
-            label_x = False
-        axes[-1] = ep.make_pupil_position_plot(ophys_experiment_id, axes[-1], label_x=label_x)
+        try:
+            print('on ophys_experiment_id {}, #{} of {}'.format(ophys_experiment_id, ii + 1, nplots))
+            axes.append(vbp.placeAxesOnGrid(fig, xspan=(0, 1), yspan=(ii / nplots + buffer, (ii + 1) / nplots)))
+            if ii + 1 == len(ophys_experiment_ids):
+                label_x = True
+            else:
+                label_x = False
+            axes[-1] = ep.make_pupil_position_plot(ophys_experiment_id, axes[-1], label_x=label_x)
+        except:
+            pass
 
     if save_figure:
         if save_figure:
@@ -1319,8 +1343,11 @@ def plot_dff_trace_and_behavior_for_container(ophys_container_id, save_figure=Tr
     ophys_experiment_ids = ophys_experiments.index.values
 
     for ophys_experiment_id in ophys_experiment_ids:
-        ep.plot_population_activity_and_behavior_for_experiment(ophys_experiment_id, save_figure=save_figure)
-        ep.plot_dff_trace_and_behavior_for_experiment(ophys_experiment_id, save_figure=save_figure)
+        try:
+            ep.plot_population_activity_and_behavior_for_experiment(ophys_experiment_id, save_figure=save_figure)
+            ep.plot_dff_trace_and_behavior_for_experiment(ophys_experiment_id, save_figure=save_figure)
+        except:
+            pass
 
 
 def plot_classifier_validation_for_container(ophys_container_id, save_figure=True):
