@@ -986,7 +986,7 @@ def get_ophys_container_ids(platform_paper_only=False, add_extra_columns=True):
     return container_ids
 
 
-def get_ophys_session_ids_for_ophys_container_id(ophys_container_id, experiments_table):
+def get_ophys_session_ids_for_ophys_container_id(ophys_container_id, experiments_table=pd.DataFrame()):
     """Get ophys_session_ids belonging to a given ophys_container_id. Ophys session must pass QC.
 
             Arguments:
@@ -996,11 +996,13 @@ def get_ophys_session_ids_for_ophys_container_id(ophys_container_id, experiments
             Returns:
                 ophys_session_ids -- list of ophys_session_ids that meet filtering criteria
             """
+    if len(experiments_table)==0:
+        experiments_table = loading.get_filtered_ophys_experiment_table()
     ophys_session_ids = np.sort(experiments_table[(experiments_table.ophys_container_id == ophys_container_id)].ophys_session_id.unique())
     return ophys_session_ids
 
 
-def get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id, experiments_table):
+def get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id, experiments_table=pd.DataFrame()):
     """Get ophys_experiment_ids belonging to a given ophys_container_id. o
 
                 Arguments:
@@ -1018,32 +1020,44 @@ def get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id, experime
         experiments_table = cache.get_ophys_experiment_table(passed_only=False)
 
         """
+    if len(experiments_table)==0:
+        experiments_table = loading.get_filtered_ophys_experiment_table()
     experiments_table = experiments_table.sort_values(by='date_of_acquisition')
     ophys_experiment_ids = experiments_table[(experiments_table.ophys_container_id == ophys_container_id)].index.values
     return ophys_experiment_ids
 
 
-def get_session_type_for_ophys_experiment_id(ophys_experiment_id, experiments_table):
+def get_session_type_for_ophys_experiment_id(ophys_experiment_id, experiments_table=pd.DataFrame()):
+    if len(experiments_table)==0:
+        experiments_table = loading.get_filtered_ophys_experiment_table()
     session_type = experiments_table.loc[ophys_experiment_id].session_type
     return session_type
 
 
-def get_session_type_for_ophys_session_id(ophys_session_id, experiments_table):
+def get_session_type_for_ophys_session_id(ophys_session_id, experiments_table=pd.DataFrame()):
+    if len(experiments_table)==0:
+        experiments_table = loading.get_filtered_ophys_experiment_table()
     session_type = experiments_table[experiments_table.ophys_session_id==ophys_session_id].session_type
     return session_type
 
 
-def get_ophys_experiment_id_for_ophys_session_id(ophys_session_id, experiments_table):
+def get_ophys_experiment_id_for_ophys_session_id(ophys_session_id, experiments_table=pd.DataFrame()):
+    if len(experiments_table)==0:
+        experiments_table = loading.get_filtered_ophys_experiment_table()
     ophys_experiment_id = experiments_table[(experiments_table.ophys_session_id == ophys_session_id)].index.values[0]
     return ophys_experiment_id
 
 
-def get_ophys_session_id_for_ophys_experiment_id(ophys_experiment_id, experiments_table):
+def get_ophys_session_id_for_ophys_experiment_id(ophys_experiment_id, experiments_table=pd.DataFrame()):
+    if len(experiments_table)==0:
+        experiments_table = loading.get_filtered_ophys_experiment_table()
     ophys_session_id = experiments_table.loc[ophys_experiment_id].ophys_session_id
     return ophys_session_id
 
 
-def get_behavior_session_id_for_ophys_experiment_id(ophys_experiment_id, experiments_table):
+def get_behavior_session_id_for_ophys_experiment_id(ophys_experiment_id, experiments_table=pd.DataFrame()):
+    if len(experiments_table)==0:
+        experiments_table = loading.get_filtered_ophys_experiment_table()
     behavior_session_id = experiments_table.loc[ophys_experiment_id].behavior_session_id
     return behavior_session_id
 
@@ -1087,7 +1101,7 @@ def get_extended_stimulus_presentations_for_session(session):
         licks=session.licks,
         rewards=session.rewards,
         change_times=change_times,
-        running_speed_df=session.running_data_df,
+        running_speed_df=session.running_speed,
         pupil_area=session.pupil_area
     )
     return extended_stimulus_presentations
@@ -1364,13 +1378,15 @@ def get_sdk_dff_traces_array(ophys_experiment_id):
 
 
 def get_sdk_running_speed(ophys_session_id):
-    session = get_ophys_dataset(get_ophys_experiment_id_for_ophys_session_id(ophys_session_id))
-    running_speed = session.running_data_df['speed']
+    experiments_table = get_filtered_ophys_experiment_table()
+    session = get_ophys_dataset(get_ophys_experiment_id_for_ophys_session_id(ophys_session_id, experiments_table))
+    running_speed = session.running_speed['speed']
     return running_speed
 
 
 def get_sdk_trials(ophys_session_id):
-    session = get_ophys_dataset(get_ophys_experiment_id_for_ophys_session_id(ophys_session_id))
+    experiments_table = get_filtered_ophys_experiment_table()
+    session = get_ophys_dataset(get_ophys_experiment_id_for_ophys_session_id(ophys_session_id, experiments_table))
     trials = session.trials.reset_index()
     return trials
 
