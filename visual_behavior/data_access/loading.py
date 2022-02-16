@@ -986,71 +986,65 @@ def get_ophys_container_ids(platform_paper_only=False, add_extra_columns=True):
     return container_ids
 
 
-def get_ophys_session_ids_for_ophys_container_id(ophys_container_id, experiments):
+def get_ophys_session_ids_for_ophys_container_id(ophys_container_id, experiments_table):
     """Get ophys_session_ids belonging to a given ophys_container_id. Ophys session must pass QC.
 
             Arguments:
                 ophys_container_id -- must be in get_ophys_container_ids()
+                experiments_table -- table of experimental metadata
 
             Returns:
                 ophys_session_ids -- list of ophys_session_ids that meet filtering criteria
             """
-    # if experiments is None:
-    #     experiments = get_filtered_ophys_experiment_table()
-    ophys_session_ids = np.sort(experiments[(experiments.ophys_container_id == ophys_container_id)].ophys_session_id.unique())
+    ophys_session_ids = np.sort(experiments_table[(experiments_table.ophys_container_id == ophys_container_id)].ophys_session_id.unique())
     return ophys_session_ids
 
 
-def get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id, experiments):
-    """Get ophys_experiment_ids belonging to a given ophys_container_id. ophys container must meet the criteria in
-        sdk_utils.get_filtered_session_table()
+def get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id, experiments_table):
+    """Get ophys_experiment_ids belonging to a given ophys_container_id. o
 
                 Arguments:
-                    ophys_container_id -- must be in get_filtered_ophys_container_ids()
+                    ophys_container_id -- must be in experiments_table
+                    experiments_table -- table of experimental metadata
 
                 Returns:
                     ophys_experiment_ids -- list of ophys_experiment_ids that meet filtering criteria
-                """
-    # if experiments is None:
-    #     experiments = get_filtered_ophys_experiment_table()
-    experiments = experiments.sort_values(by='date_of_acquisition')
-    ophys_experiment_ids = experiments[(experiments.ophys_container_id == ophys_container_id)].index.values
+
+
+        example of how to create experiments_table using allenSDK:
+
+        from allensdk.brain_observatory.behavior.behavior_project_cache import VisualBehaviorOphysProjectCache
+        cache = VisualBehaviorOphysProjectCache.from_lims()
+        experiments_table = cache.get_ophys_experiment_table(passed_only=False)
+
+        """
+    experiments_table = experiments_table.sort_values(by='date_of_acquisition')
+    ophys_experiment_ids = experiments_table[(experiments_table.ophys_container_id == ophys_container_id)].index.values
     return ophys_experiment_ids
 
 
-def get_session_type_for_ophys_experiment_id(ophys_experiment_id, experiments):
-    # if experiments == None:
-    #     print('getting table! ')
-    #     experiments = get_filtered_ophys_experiment_table()
-    session_type = experiments.loc[ophys_experiment_id].session_type
+def get_session_type_for_ophys_experiment_id(ophys_experiment_id, experiments_table):
+    session_type = experiments_table.loc[ophys_experiment_id].session_type
     return session_type
 
 
-def get_session_type_for_ophys_session_id(ophys_session_id, experiments):
-    # if experiments == None:
-    #     experiments = get_filtered_ophys_experiment_table()
-    session_type = experiments[experiments.ophys_session_id==ophys_session_id].session_type
+def get_session_type_for_ophys_session_id(ophys_session_id, experiments_table):
+    session_type = experiments_table[experiments_table.ophys_session_id==ophys_session_id].session_type
     return session_type
 
 
-def get_ophys_experiment_id_for_ophys_session_id(ophys_session_id, experiments):
-    # if experiments == None:
-    #     experiments = get_filtered_ophys_experiment_table()
-    ophys_experiment_id = experiments[(experiments.ophys_session_id == ophys_session_id)].index.values[0]
+def get_ophys_experiment_id_for_ophys_session_id(ophys_session_id, experiments_table):
+    ophys_experiment_id = experiments_table[(experiments_table.ophys_session_id == ophys_session_id)].index.values[0]
     return ophys_experiment_id
 
 
-def get_ophys_session_id_for_ophys_experiment_id(ophys_experiment_id, experiments):
-    # if experiments == None:
-    #     experiments = get_filtered_ophys_experiment_table()
-    ophys_session_id = experiments.loc[ophys_experiment_id].ophys_session_id
+def get_ophys_session_id_for_ophys_experiment_id(ophys_experiment_id, experiments_table):
+    ophys_session_id = experiments_table.loc[ophys_experiment_id].ophys_session_id
     return ophys_session_id
 
 
-def get_behavior_session_id_for_ophys_experiment_id(ophys_experiment_id, experiments):
-    # if experiments == None:
-    #     experiments = get_filtered_ophys_experiment_table(include_failed_data=True)
-    behavior_session_id = experiments.loc[ophys_experiment_id].behavior_session_id
+def get_behavior_session_id_for_ophys_experiment_id(ophys_experiment_id, experiments_table):
+    behavior_session_id = experiments_table.loc[ophys_experiment_id].behavior_session_id
     return behavior_session_id
 
 
