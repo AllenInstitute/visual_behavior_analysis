@@ -921,7 +921,7 @@ def get_metadata_string(ophys_container_id):
     ophys_experiment_ids = loading.get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id, experiments_table)
     dataset = loading.get_ophys_dataset(ophys_experiment_ids[0])
     m = dataset.metadata.copy()
-    metadata_string = str(m['mouse_id']) + '_' + str(m['ophys_container_id']) + '_' + m['cre_line'].split('-')[0] + '_' + m['targeted_structure'] + '_' + str(m['imaging_depth']) + '_' + m['session_type']
+    metadata_string = str(m['mouse_id']) + '_' + str(m['experiment_container_id']) + '_' + m['cre_line'].split('-')[0] + '_' + m['targeted_structure'] + '_' + str(m['imaging_depth']) + '_' + m['session_type']
     return metadata_string
 
 
@@ -967,34 +967,32 @@ def plot_population_average_across_sessions(container_df, ophys_container_id, da
         container_df = container_df[container_df.image_name != 'omitted']
         title = str(ophys_container_id)
     fig, ax = plt.subplots(figsize=figsize)
-    colors = ut.get_colors_for_session_numbers()
+    # colors = ut.get_colors_for_session_numbers()
+    colors = ut.get_session_type_color_map()
 
     for i, ophys_experiment_id in enumerate(container_df.ophys_experiment_id.unique()):
         df = container_df[container_df.ophys_experiment_id == ophys_experiment_id].copy()
-        session_number = df.session_number.unique()[0]
+        session_type = df.session_type.unique()[0]
         traces = df.trace.values
         mean_trace = df.trace.mean()
         timestamps = df.trace_timestamps.mean()
-        ax.plot(timestamps, mean_trace, color=colors[int(session_number - 1)], label=session_number)
+        ax.plot(timestamps, mean_trace, color=colors[session_type], label=session_type)
         sem = (traces.std()) / np.sqrt(float(len(traces)))
-        ax.fill_between(timestamps, mean_trace + sem, mean_trace - sem, alpha=0.5, color=colors[int(session_number - 1)])
+        ax.fill_between(timestamps, mean_trace + sem, mean_trace - sem, alpha=0.5, color=colors[session_type])
     if event_type == 'omissions':
-        ax = plot_flashes_on_trace(ax, timestamps, trial_type=None, omitted=True, alpha=0.2,
-                                   facecolor='gray')
+        ax = plot_flashes_on_trace(ax, timestamps, trial_type=None, omitted=True, alpha=0.2, facecolor='gray')
         ax.axvline(x=0, ymin=0, ymax=1, linestyle='--', color='gray')
         ax.set_xlabel('time relative to omission (sec)')
     elif event_type == 'changes':
-        ax = plot_flashes_on_trace(ax, timestamps, trial_type='go', omitted=False, alpha=0.2,
-                                   facecolor='gray')
+        ax = plot_flashes_on_trace(ax, timestamps, trial_type='go', omitted=False, alpha=0.2, facecolor='gray')
         ax.set_xlabel('time relative to change (sec)')
     else:
-        ax = plot_flashes_on_trace(ax, timestamps, trial_type=None, omitted=False, alpha=0.2,
-                                   facecolor='gray')
+        ax = plot_flashes_on_trace(ax, timestamps, trial_type=None, omitted=False, alpha=0.2, facecolor='gray')
         ax.set_xlabel('time (sec)')
     ax.set_ylabel('dF/F')
     ax.set_xlim(timestamps[0], timestamps[-1])
     ax.set_title(title)
-    ax.legend(bbox_to_anchor=(1, 1), title='session_number', fontsize='small', title_fontsize='x-small')
+    ax.legend(bbox_to_anchor=(1, 1), title='session_type', fontsize='small', title_fontsize='x-small')
     fig.tight_layout()
     if save_figure:
         ut.save_figure(fig, figsize, loading.get_container_plots_dir(),

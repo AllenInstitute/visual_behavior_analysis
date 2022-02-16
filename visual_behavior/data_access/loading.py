@@ -74,12 +74,12 @@ def get_platform_analysis_cache_dir():
 def get_production_cache_dir():
     """Get directory containing a manifest file that includes all VB production data, including failed experiments"""
     # cache_dir = r'/allen/programs/braintv/workgroups/nc-ophys/learning_mFISH/learning_project_cache'
-    cache_dir = r'/allen/programs/mindscope/workgroups/learning/ophys/learning_project_cache'
+    cache_dir = r'//allen/programs/mindscope/workgroups/learning/ophys/learning_project_cache'
     return cache_dir
 
 
 def get_qc_plots_dir():
-    return r'/allen/programs/mindscope/workgroups/learning/ophys/qc_plots'
+    return r'//allen/programs/mindscope/workgroups/learning/ophys/qc_plots'
     # return r'//allen/programs/braintv/workgroups/nc-ophys/learning_mFISH/qc_plots'
 
 
@@ -1030,14 +1030,14 @@ def get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id, experime
 def get_session_type_for_ophys_experiment_id(ophys_experiment_id, experiments_table=pd.DataFrame()):
     if len(experiments_table)==0:
         experiments_table = loading.get_filtered_ophys_experiment_table()
-    session_type = experiments_table.loc[ophys_experiment_id].session_type
+    session_type = experiments_table.loc[ophys_experiment_id].session_type.values[0]
     return session_type
 
 
 def get_session_type_for_ophys_session_id(ophys_session_id, experiments_table=pd.DataFrame()):
     if len(experiments_table)==0:
         experiments_table = loading.get_filtered_ophys_experiment_table()
-    session_type = experiments_table[experiments_table.ophys_session_id==ophys_session_id].session_type
+    session_type = experiments_table[experiments_table.ophys_session_id==ophys_session_id].session_type.values[0]
     return session_type
 
 
@@ -3023,14 +3023,16 @@ def get_container_response_df(ophys_container_id, data_type='dff', event_type='a
     for ophys_experiment_id in container_expts.index.values:
         print(ophys_experiment_id)
         try:
+            print('getting stimulus response df for', ophys_experiment_id)
             dataset = get_ophys_dataset(ophys_experiment_id)
             sdf = get_stimulus_response_df(dataset, time_window=[-3, 3.1], interpolate=True, output_sampling_rate=30,
                                      data_type=data_type, event_type=event_type, load_from_file=False)
             sdf['ophys_experiment_id'] = ophys_experiment_id
-            sdf['session_number'] = experiments_table.loc[ophys_experiment_id].session_number
+            sdf['session_type'] = experiments_table.loc[ophys_experiment_id].session_type
             container_df = pd.concat([container_df, sdf])
-        except:
+        except Exception as e:
             print('problem for', ophys_experiment_id)
+            print(e)
     return container_df
 
 
