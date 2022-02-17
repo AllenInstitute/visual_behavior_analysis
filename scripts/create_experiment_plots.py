@@ -16,18 +16,18 @@ if __name__ == '__main__':
     ophys_experiment_id = args.ophys_experiment_id
 
 
-    save_dir = r'/allen/aibs/informatics/danielsf/mfish_learning/segmentation_220216'
+    save_dir = r'/allen/programs/mindscope/workgroups/learning/ophys/qc_plots/experiment_plots'
 
     try:
         figsize=(5,5)
         fig, ax = plt.subplots(figsize=figsize)
         ax = ep.plot_valid_segmentation_mask_outlines_for_experiment(ophys_experiment_id, ax=ax)
-        ut.save_figure(fig, figsize, save_dir, 'plots', str(ophys_experiment_id) + '_legacy_segmentation')
+        ut.save_figure(fig, figsize, save_dir, 'legacy_segmentation', str(ophys_experiment_id) + '_legacy_segmentation')
     except:
         figsize = (5, 5)
         fig, ax = plt.subplots(figsize=figsize)
         ax = ep.plot_motion_correction_max_image_for_experiment(ophys_experiment_id, ax=ax)
-        ut.save_figure(fig, figsize, save_dir, 'plots', str(ophys_experiment_id) + '_legacy_segmentation_failed')
+        ut.save_figure(fig, figsize, save_dir, 'legacy_segmentation', str(ophys_experiment_id) + '_legacy_segmentation_failed')
 
 
 
