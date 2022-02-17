@@ -241,7 +241,7 @@ def plot_eye_tracking_sample_frames(ophys_container_id, save_figure=True):
 
 def plot_segmentation_masks_for_container(ophys_container_id, save_figure=True):
     experiments_table = loading.get_filtered_ophys_experiment_table()
-    ophys_experiment_ids = loading.get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id, experiments)
+    ophys_experiment_ids = loading.get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id, experiments_table)
 
     figsize = (25, 5)
     fig, ax = plt.subplots(1, len(ophys_experiment_ids), figsize=figsize)
@@ -1091,8 +1091,8 @@ def plot_running_speed_for_container(ophys_container_id, save_figure=True):
 
 
 def plot_lick_rasters_for_container(ophys_container_id, save_figure=True):
-    experiments = loading.get_filtered_ophys_experiment_table()
-    ophys_session_ids = loading.get_ophys_session_ids_for_ophys_container_id(ophys_container_id, experiments)
+    experiments_table = loading.get_filtered_ophys_experiment_table()
+    ophys_session_ids = loading.get_ophys_session_ids_for_ophys_container_id(ophys_container_id, experiments_table)
 
     figsize = (25, 7)
     fig, ax = plt.subplots(1, len(ophys_session_ids), figsize=figsize)
@@ -1100,7 +1100,7 @@ def plot_lick_rasters_for_container(ophys_container_id, save_figure=True):
     for i, ophys_session_id in enumerate(ophys_session_ids):
         ax[i] = sp.plot_lick_raster(ophys_session_id, ax=ax[i])
         ax[i].invert_yaxis()
-        session_type = loading.get_session_type_for_ophys_session_id(ophys_session_id, experiments)
+        session_type = loading.get_session_type_for_ophys_session_id(ophys_session_id, experiments_table)
         ax[i].set_title(str(ophys_session_id) + '\n' + session_type)
     # plt.gca().invert_yaxis()
 

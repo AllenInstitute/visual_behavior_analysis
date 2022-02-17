@@ -74,13 +74,13 @@ def get_platform_analysis_cache_dir():
 def get_production_cache_dir():
     """Get directory containing a manifest file that includes all VB production data, including failed experiments"""
     # cache_dir = r'/allen/programs/braintv/workgroups/nc-ophys/learning_mFISH/learning_project_cache'
-    cache_dir = r'//allen/programs/mindscope/workgroups/learning/ophys/learning_project_cache'
+    cache_dir = r'/allen/programs/mindscope/workgroups/learning/ophys/learning_project_cache'
     return cache_dir
 
 
 def get_qc_plots_dir():
-    return r'//allen/programs/mindscope/workgroups/learning/ophys/qc_plots'
-    # return r'//allen/programs/braintv/workgroups/nc-ophys/learning_mFISH/qc_plots'
+    return r'/allen/programs/mindscope/workgroups/learning/ophys/qc_plots'
+    # return r'\\allen\programs\mindscope\workgroups\learning\ophys\qc_plots'
 
 
 def get_super_container_plots_dir():
@@ -124,7 +124,7 @@ def get_ophys_glm_dir():
 
 
 def get_stimulus_response_df_dir(interpolate=True, output_sampling_rate=30, event_type='all'):
-    base_dir = os.path.join(get_production_cache_dir, 'stimulus_response_dfs')
+    base_dir = os.path.join(get_production_cache_dir(), 'stimulus_response_dfs')
     if interpolate:
         save_dir = os.path.join(base_dir, event_type, 'interpolate_' + str(output_sampling_rate) + 'Hz')
     else:
@@ -133,16 +133,6 @@ def get_stimulus_response_df_dir(interpolate=True, output_sampling_rate=30, even
         os.mkdir(save_dir)
     return save_dir
 
-
-# def get_multi_session_df_dir(interpolate=True, output_sampling_rate=30, event_type='all'):
-#     base_dir = get_platform_analysis_cache_dir()
-#     if interpolate:
-#         save_dir = os.path.join(base_dir, 'multi_session_mean_response_dfs', 'interpolate_' + str(output_sampling_rate) + 'Hz')
-#     else:
-#         save_dir = os.path.join(base_dir, 'multi_session_mean_response_dfs', 'original_frame_rate')
-#     if not os.path.exists(save_dir):
-#         os.mkdir(save_dir)
-#     return save_dir
 
 def get_multi_session_df_dir(interpolate=True, output_sampling_rate=30, event_type='all'):
     base_dir = get_platform_analysis_cache_dir()
@@ -197,9 +187,7 @@ def get_released_ophys_experiment_table(exclude_ai94=True):
         experiment_table -- returns a dataframe with ophys_experiment_id as the index and metadata as columns.
     '''
     print('getting experiment table from lims, NOT AWS')
-
     cache = bpc.from_lims(data_release_date=['2021-03-25', '2021-08-12'])
-
     experiment_table = cache.get_ophys_experiment_table()
 
     if exclude_ai94:
@@ -758,8 +746,7 @@ class BehaviorOphysDataset(BehaviorOphysExperiment):
         ophys_session_id = from_lims.get_ophys_session_id_for_ophys_experiment_id(self.ophys_experiment_id)
         movie_predictions = get_behavior_movie_predictions_for_session(ophys_session_id)
         movie_predictions.index.name = 'frame_index'
-        movie_predictions['timestamps'] = self.behavior_movie_timestamps[:len(
-            movie_predictions)]  # length check will trim off spurious timestamps at the end
+        movie_predictions['timestamps'] = self.behavior_movie_timestamps[:len(movie_predictions)]  # length check will trim off spurious timestamps at the end
         self._behavior_movie_predictions = movie_predictions
         return self._behavior_movie_predictions
 
@@ -806,7 +793,9 @@ def get_ophys_dataset(ophys_experiment_id, include_invalid_rois=False, load_from
     assert id_type == 'ophys_experiment_id', "The passed ID type is {}. It must be an ophys_experiment_id".format(id_type)
 
     if load_from_lims:
-        dataset = BehaviorOphysExperiment.from_lims(int(ophys_experiment_id))
+        cache = bpc.from_lims()
+        dataset = cache.get_behavior_ophys_experiment(int(ophys_experiment_id))
+        # dataset = BehaviorOphysExperiment.from_lims(int(ophys_experiment_id))
     elif load_from_nwb:
         cache_dir = get_platform_analysis_cache_dir()
         cache = bpc.from_s3_cache(cache_dir=cache_dir)
@@ -1030,7 +1019,7 @@ def get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id, experime
 def get_session_type_for_ophys_experiment_id(ophys_experiment_id, experiments_table=pd.DataFrame()):
     if len(experiments_table)==0:
         experiments_table = loading.get_filtered_ophys_experiment_table()
-    session_type = experiments_table.loc[ophys_experiment_id].session_type.values[0]
+    session_type = experiments_table.loc[ophys_experiment_id].session_type
     return session_type
 
 
