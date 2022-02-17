@@ -15,14 +15,32 @@ import seaborn as sns
 sns.set_context('notebook', font_scale=1.5, rc={'lines.markeredgewidth': 2})
 
 
-def plot_clustered_dropout_scores(df, labels=None, cmap='RdBu_r', model_output_type='', ax=None,):
+def plot_clustered_dropout_scores(df, labels=None, cmap='Blues', plot_difference=False, ax=None,):
+    '''
+    params:
+    df: pd.DataFrame, pivoted glm output
+    labels: array, clustering labels
+    cmap: str, matplotlib color map to use, default= "Blues"
+    plot_difference: Boolean, default=False, whether to plot dropout scores or difference
+        (cluster - population) in dropout scores.
+    ax: figure ax
+
+    '''
     sort_order = np.argsort(labels)
     sorted_labels = labels[sort_order]
     if ax is None:
         fig, ax = plt.subplots(figsize=(8, 12))
-    ax = sns.heatmap(df.abs().values[sort_order], cmap='Blues', ax=ax, vmin=0, vmax=1,
-                     robust=True,
-                     cbar_kws={"drawedges": False, "shrink": 0.8, "label": 'fraction change in explained variance'})
+    if plot_difference is True:
+        df_diff = df.abs() - df.abs().mean()
+        ax = sns.heatmap(df_diff.values[sort_order], cmap=cmap, ax=ax, vmin=0, vmax=1,
+                         robust=True,
+                         cbar_kws={"drawedges": False, "shrink": 0.8,
+                                   "label": 'difference in fraction change in explained variance'})
+    elif plot_difference is False:
+        ax = sns.heatmap(df.abs().values[sort_order], cmap=cmap, ax=ax, vmin=0, vmax=1,
+                         robust=True,
+                         cbar_kws={"drawedges": False, "shrink": 0.8,
+                                   "label": 'fraction change in explained variance'})
     ax.set_ylabel('cells')
     ax.set_xlabel('features')
     ax.set_title('sorted dropout scores')
@@ -86,7 +104,7 @@ def get_elbow_plots(X, n_clusters=range(2, 20), ax=None):
     bss = tss - wcss
 
     if ax is None:
-        fig, ax = plt.figure(2, 1, figsize=(8, 12))
+        fig, ax = plt.subplots(2, 1, figsize=(8, 12))
 
     # elbow curve
 
@@ -102,6 +120,8 @@ def get_elbow_plots(X, n_clusters=range(2, 20), ax=None):
     ax[1].set_ylabel('Percentage of variance explained')
     ax[1].set_title('Elbow for KMeans clustering')
 
+    return ax
+
 
 def plot_silhouette_scores(X=None, model=KMeans, silhouette_scores=None, silhouette_std=None,
                            n_clusters=np.arange(2, 10), metric=None, n_boots=20, ax=None,
@@ -116,7 +136,7 @@ def plot_silhouette_scores(X=None, model=KMeans, silhouette_scores=None, silhoue
         silhouette_scores, silhouette_std = get_silhouette_scores(X=X, model=model, n_clusters=n_clusters, metric=metric, n_boots=n_boots)
     elif silhouette_scores is not None:
         if len(silhouette_scores) != len(n_clusters):
-            n_clusters = np.arange(1, len(silhouette_scores)+1)
+            n_clusters = np.arange(1, len(silhouette_scores) + 1)
 
         if metric is None:
             metric = ''
@@ -185,11 +205,11 @@ def plot_clusters(dropout_df, cluster_df=None, plot_difference=False, mean_respo
         mean_dropout_df = dropout_df.loc[this_cluster_ids].mean().unstack()
         if plot_difference is False:
             ax[i] = sns.heatmap(mean_dropout_df,
-                            cmap='RdBu',
-                            vmin=-1,
-                            vmax=1,
-                            ax=ax[i],
-                            cbar=False, )
+                                cmap='RdBu',
+                                vmin=-1,
+                                vmax=1,
+                                ax=ax[i],
+                                cbar=False, )
         elif plot_difference is True:
             mean_dropout_df_diff = mean_dropout_df.abs() - dropout_df.mean().unstack().abs()
             ax[i] = sns.heatmap(mean_dropout_df_diff,
@@ -309,7 +329,6 @@ def plot_clusters(dropout_df, cluster_df=None, plot_difference=False, mean_respo
             ax[i + (len(cluster_ids) * 4)].set_ylabel('')
     return fig
     plt.tight_layout()
-
 
 
 def plot_clusters_columns_all_cre_lines(df, df_meta, labels_cre, multi_session_df, save_dir=None):
