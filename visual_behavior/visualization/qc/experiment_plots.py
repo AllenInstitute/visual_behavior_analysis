@@ -27,6 +27,7 @@ def plot_max_intensity_projection_for_experiment(ophys_experiment_id, ax=None):
     dataset = loading.get_ophys_dataset(ophys_experiment_id)
     max_projection = dataset.max_projection.data
     ax.imshow(max_projection, cmap='gray', vmax=np.percentile(max_projection, 99))
+    ax.set_title(str(ophys_experiment_id))
     ax.axis('off')
     return ax
 
@@ -55,6 +56,7 @@ def plot_motion_correction_max_image_for_experiment(ophys_experiment_id, ax=None
         fig, ax = plt.subplots()
     max_image = processing.experiment_max_FOV_from_motion_corrected_movie(ophys_experiment_id)
     ax.imshow(max_image, cmap='gray', vmin=0, vmax=8000)
+    ax.set_title(str(ophys_experiment_id))
     ax.axis('off')
     return ax
 
@@ -109,6 +111,7 @@ def plot_valid_segmentation_mask_outlines_for_experiment(ophys_experiment_id, ax
     mask = np.zeros(segmentation_mask[0].shape)
     mask[segmentation_mask[0] == 1] = 1
     ax.contour(mask, levels=0, colors=['red'], linewidths=[0.6])
+    ax.set_title(str(ophys_experiment_id))
     ax.axis('off')
     return ax
 
@@ -123,7 +126,7 @@ def plot_valid_segmentation_mask_outlines_per_cell_for_experiment(ophys_experime
         for cell_roi_id in cell_specimen_table.cell_roi_id.values:
             mask = cell_specimen_table[cell_specimen_table.cell_roi_id == cell_roi_id].roi_mask.values[0]
             ax.contour(mask, levels=0, colors=['red'], linewidths=[0.6])
-    ax.set_title('valid ROI outlines\n n = ' + str(len(cell_specimen_table.cell_roi_id.values)))
+    ax.set_title(str(ophys_experiment_id)+'\nn valid ROIs = ' + str(len(cell_specimen_table.cell_roi_id.values)))
     ax.axis('off')
     return ax
 
