@@ -33,7 +33,7 @@ if __name__ == "__main__":
     python_file = os.path.join(os.getcwd(), args.scriptname)
 
     # define the job record output folder
-    stdout_location = r"/allen/programs/mindscope/workgroups/learning\ophys/cluster_jobs/qc_plots"
+    stdout_location = r"/allen/programs/mindscope/workgroups/learning/ophys/cluster_jobs/qc_plots"
 
     # instantiate a Slurm object
     slurm = Slurm(
