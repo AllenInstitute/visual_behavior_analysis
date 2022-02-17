@@ -3,6 +3,7 @@ import argparse
 # import visual_behavior.data_access.loading as loading
 # import visual_behavior.visualization.ophys.platform_paper_figures as ppf
 
+import matplotlib.pyplot as plt
 import visual_behavior.visualization.utils as ut
 import visual_behavior.visualization.qc.experiment_plots as ep
 
