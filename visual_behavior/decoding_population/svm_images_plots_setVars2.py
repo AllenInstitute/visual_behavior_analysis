@@ -183,6 +183,7 @@ for iblock in br: # iblock=0 ; iblock=np.nan
 #     all_sess
 #     all_sess.keys()    
 #     print(len(all_sess))
+#     print(len(all_sess)/8)
 
     all_sess0 = copy.deepcopy(all_sess)
     
@@ -190,12 +191,21 @@ for iblock in br: # iblock=0 ; iblock=np.nan
     #######################################################################################
     #%% Remove mesoscope sessions with unusual frame duration; note this is a temporary solution. We will later interpolated their traces.
     #######################################################################################
-    print(all_sess0.shape)
-    a0 = all_sess0['session_id'].isin([1050231786, 1050597678, 1051107431])
-    if sum(a0)>0:
-        print(f'\n\n\n Removing {sum(a0)} mesoscope experiments with unusual frame duration; note this is a temporary solution\n\n\n')
-        all_sess0 = all_sess0[~a0]    
-    print(all_sess0.shape)
+    
+    if project_codes == ['VisualBehaviorMultiscope']:
+        s = sum(all_sess0['frame_dur']>.1)
+        ss = all_sess0[all_sess0['frame_dur']>.1]['session_id'].unique()
+        if s>0:
+            print(all_sess0[all_sess0['frame_dur']>.1][['session_id','experiment_id', 'date', 'frame_dur']])
+            print(f'\n\n{s} mesoscope experiments, {ss.shape[0]} sessions, have unusual frame duration; excluding them!!')        
+                                              
+        print(all_sess0.shape)
+        a0 = all_sess0['session_id'].isin(ss) #[1050231786, 1050597678, 1051107431])
+        if sum(a0)>0:
+            print(f'\n\n\n Removing {sum(a0)} mesoscope experiments with unusual frame duration; note this is a temporary solution\n\n\n')
+            all_sess0 = all_sess0[~a0]    
+        print(all_sess0.shape)
+    
     
     #######################################################################################
     session_ids = all_sess0['session_id'].unique()

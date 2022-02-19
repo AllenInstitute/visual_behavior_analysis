@@ -19,7 +19,7 @@ from statsmodels.formula.api import ols
 from statsmodels.stats.multicomp import (pairwise_tukeyhsd, MultiComparison)
 from anova_tukey_fn import *
 
-sigval = .05 # value for ttest significance
+# sigval = .05 # value for ttest significance
 fmt_all = ['o', 'x']
 fmt_now = fmt_all[0]
 if baseline_subtract: # subtract the baseline (CA average during baseline, ie before time 0) from the evoked CA (classification accuracy)
@@ -204,7 +204,7 @@ xgapg = .15*len(exp_level_all)/1.1  # gap between sessions within a depth
 if np.isnan(svm_blocks) or svm_blocks==-101: # svm was run on the whole session (no block by block analysis)    
 
     icre = -1
-    for crenow in cres: # crenow = cres[0]        
+    for crenow in cres: # crenow = cres[0]
         icre = icre+1
         
         ####### set axes
@@ -240,7 +240,8 @@ if np.isnan(svm_blocks) or svm_blocks==-101: # svm was run on the whole session 
 #             mx = np.nanmax(df['test_av']+df['test_sd'])            
 #             mn_mx_allstage.append([mn, mx])            
             
-
+        xnowall0 = copy.deepcopy(xnowall)
+        
         
         ####### plot the errorbars, showing for each cre line, the svm decoding accuracy for the 3 experience levels
         # ax1: plot test and shuffled
@@ -268,9 +269,9 @@ if np.isnan(svm_blocks) or svm_blocks==-101: # svm was run on the whole session 
                 ax.set_xticklabels(xticklabs, rotation=45)
                 ax.set_xlim([-1, xnowall[-1][-1]+1]) # x[-1]+xgap+.5 # -.5-xgapg
             else:
-                ax.set_xticks(np.array(xnowall).flatten())
+                ax.set_xticks(np.array(xnowall0).flatten())
                 ax.set_xticklabels(exp_level_all, rotation=45)
-                ax.set_xlim([-.5, xnowall[-1][-1]+.5]) # x[-1]+xgap+.5
+                ax.set_xlim([-.5, xnowall0[-1][-1]+.5]) # x[-1]+xgap+.5
 
             ax.tick_params(labelsize=10)            
 #             ax.set_xlabel(xlabs, fontsize=12)
@@ -283,6 +284,7 @@ if np.isnan(svm_blocks) or svm_blocks==-101: # svm was run on the whole session 
             if ax==ax3: # print number of experiments per experience level
                 ax.set_title(f"n experiments\n{df['n_experiments'].values.astype(int)}", y=1.1)
 
+                
         
         ####### add legend
         bb = (.97,.8)

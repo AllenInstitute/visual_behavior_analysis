@@ -96,21 +96,23 @@ project_codes = ['VisualBehavior'], ['VisualBehaviorTask1B'], ['VisualBehaviorMu
 
 dosavefig = 1 # 0
 
-to_decode = 'current' # 'current': decode current image. # 'previous': decode previous image. # 'next': decode next image.
-trial_type = 'changes_vs_nochanges' # 'baseline_vs_nobaseline' # 'omissions' # 'changes' # 'changes_vs_nochanges' # 'hits_vs_misses' # 'images'# what trials to use for SVM analysis # the population activity of these trials at time time_win will be used to decode the image identity of flashes that occurred at their time 0 (if to_decode='current') or 750ms before (if to_decode='previous'). # eg 'omissions' means to use omission-aligned traces # 'baseline_vs_nobaseline' # decode activity at each frame vs. baseline (ie the frame before omission unless use_spont_omitFrMinus1 = 1 (see below))
+to_decode = 'next' # 'current': decode current image. # 'previous': decode previous image. # 'next': decode next image.
+trial_type = 'omissions' # 'baseline_vs_nobaseline' # 'omissions' # 'changes' # 'changes_vs_nochanges' # 'hits_vs_misses' # 'images'# what trials to use for SVM analysis # the population activity of these trials at time time_win will be used to decode the image identity of flashes that occurred at their time 0 (if to_decode='current') or 750ms before (if to_decode='previous'). # eg 'omissions' means to use omission-aligned traces # 'baseline_vs_nobaseline' # decode activity at each frame vs. baseline (ie the frame before omission unless use_spont_omitFrMinus1 = 1 (see below))
 # Note: when trial_type is 'hits_vs_misses' or 'changes_vs_nochanges', to_decode will be 'current' and wont really make sense.
 # in all other cases, we decode "to_decode" image from "trial_type", e.g. we decode 'current' image from 'changes' (ie change-aligned traces)
 
+use_matched_cells = 0 # set to either 0 or 123 : analyze all cells of an experiment. 123: analyze cells matched in all experience levels (familiar, novel 1 , novel >1); 12: cells matched in familiar and novel 1.  23: cells matched in novel 1 and novel >1.  13: cells matched in familiar and novel >1
+
 use_events = True # True # False #whether to run the analysis on detected events (inferred spikes) or dff traces.
 svm_blocks = np.nan #-101 #-1: divide trials based on engagement # -101: use only engaged epochs for svm analysis # number of trial blocks to divide the session to, and run svm on. # set to np.nan to run svm analysis on the whole session
-
-use_matched_cells = 123 # 0: analyze all cells of an experiment. 123: analyze cells matched in all experience levels (familiar, novel 1 , novel >1); 12: cells matched in familiar and novel 1.  23: cells matched in novel 1 and novel >1.  13: cells matched in familiar and novel >1
 
 engagement_pupil_running = 0 # applicable when svm_blocks=-1 # np.nan or 0,1,2 for engagement, pupil, running: which metric to use to define engagement? 
 baseline_subtract = 0 #1 # subtract the baseline (CA average during baseline, ie before time 0) from the evoked CA (classification accuracy)
 
 summary_which_comparison = [3, 4, 6] #'all' # an array of session numbers: [3, 4, 6] or the following strings: # 'novelty' # 'engagement' # 'all' # determins sessions to use for plotting summary of ophys stages in svm_images_plots_compare_ophys_stages.py # 'novelty' will use [1,3,4,6] # 'engagement' will use [1,2,3] # 'all' will use [1,2,3,4,5,6]
 fmt = '.pdf' # '.png' # '.svg'
+
+sigval = .05 # value for ttest significance
 
 
 
@@ -478,6 +480,7 @@ else: # pooling data across multiple project codes
     
     for project_codes in project_codes_all:
         
+        print(f'==============================\n==============================\n==============================')
         print(f'\nRunning project {project_codes}\n')
         
         #%% Set frames_svm, samps_bef and samps_aft
@@ -566,7 +569,9 @@ else: # pooling data across multiple project codes
     ####################################################
     #%% make svm_df which is a proper pandas table including svm response amplitude results for each experiment ##################
     # these dfs will be used to make summary plots across experience levels, and also for doing stats.
-
+    
+    # note svm_df is redefined in: svm_images_plots_compare_experience_levels.py; there it pools all project codes and changes some column names.
+    
     svm_df_allpr = []
     resp_amp_sum_df_allpr = [] # we dont really use this; instead we set it in "svm_images_plots_setVars_sumMice3_resp_sum" for all projects codes pooled (ie ave and sd of resp amp across all project codes)
     for ipc in range(len(project_codes_all)):
@@ -585,11 +590,20 @@ else: # pooling data across multiple project codes
     
     exec(open('svm_images_plots_setVars_sumMice3_resp_sum.py').read())
 
+    # use below if you want to make area, depth summary plots for all pojects pooled.
+    # note we are doing it only for 'VisualBehaviorMultiscope' data
+    # set set resp_amp_sum_df_area & set resp_amp_sum_df_depth; they include summary CA values for each area, and each binned depth respectively
+    exec(open('svm_images_plots_setVars_sumMice3_resp_sum_area_depth.py').read())
+    
               
     ################## compare quantifications across experience levels ##################
     
     exec(open('svm_images_plots_compare_experience_levels.py').read())
 
+    # make summary plots for area, depth comparison
+    # note we are doing it only for 'VisualBehaviorMultiscope' data
+    exec(open('svm_images_plots_compare_experience_levels_area_depth.py').read())
+    
     
     ################## plot decoding traces for each experience level ##################
     exec(open('svm_images_plots_compare_traces_experience_levels.py').read())
