@@ -1754,3 +1754,42 @@ def count_mice_expts_containers_cells(df):
     counts = counts.merge(containers, on=['cell_type', 'experience_level'])
     counts = counts.merge(cells, on=['cell_type', 'experience_level'])
     return counts
+
+
+def count_mice_expts_containers(df):
+    """
+    count the number of mice, experiments, containers in input dataframe
+    input dataframe is typically experiments_table
+    """
+    mice = value_counts(df, conditions=['cell_type', 'experience_level', 'mouse_id'])
+    experiments = value_counts(df, conditions=['cell_type', 'experience_level', 'ophys_experiment_id'])
+    containers = value_counts(df, conditions=['cell_type', 'experience_level', 'ophys_container_id'])
+
+    counts = mice.merge(experiments, on=['cell_type', 'experience_level'])
+    counts = counts.merge(containers, on=['cell_type', 'experience_level'])
+    return counts
+
+
+def get_behavior_session_ids_to_analyze():
+    """
+    Gets a list of behavior_session_ids by combining the behavior_session_ids present in the platform paper experiments table
+    with the behavior_session_ids for non-ophys sessions from the behavior session table,
+    for mice present in the platform paper experiments table
+    """
+    # ophys data
+    experiments_table = loading.get_platform_paper_experiment_table()
+    # skip passive sessions
+    experiments_table = experiments_table[experiments_table.passive == False]
+    ophys_behavior_session_ids = list(experiments_table.behavior_session_id.unique())
+
+    # behavior only data
+    behavior_sessions = loading.get_platform_paper_behavior_session_table()
+    # limit to mice with ophys data going in to the paper
+    behavior_sessions = behavior_sessions[behavior_sessions.mouse_id.isin(experiments_table.mouse_id.unique())]
+    # remove all ophys sessions, use experiments_table to get ophys info
+    behavior_sessions = behavior_sessions[behavior_sessions.session_type.str.contains('OPHYS') == False]
+    behavior_session_session_ids = list(behavior_sessions.index.values)
+
+    behavior_session_ids_to_analyze = ophys_behavior_session_ids + behavior_session_session_ids
+
+    return behavior_session_ids_to_analyze

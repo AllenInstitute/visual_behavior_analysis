@@ -159,7 +159,7 @@ def plot_valid_and_invalid_segmentation_mask_overlay_per_cell_for_experiment(oph
 
 
 def plot_traces_heatmap_for_experiment(ophys_experiment_id, ax=None):
-    dataset = loading.get_ophys_dataset(ophys_experiment_id)  # this means it will have invalid traces
+    dataset = loading.get_ophys_dataset(ophys_experiment_id, load_from_lims=True)  # this means it will have invalid traces
     dff_traces = dataset.dff_traces.dff.values
     dff_traces = np.vstack(dff_traces)
     if ax is None:
@@ -378,7 +378,7 @@ def plot_behavior_timeseries_for_experiment(ophys_experiment_id, xlim_seconds=No
     """
     import visual_behavior.visualization.ophys.summary_figures as sf
 
-    dataset = loading.get_ophys_dataset(ophys_experiment_id)
+    dataset = loading.get_ophys_dataset(ophys_experiment_id, load_from_lims=True)
 
     if xlim_seconds is None:
         xlim_seconds = [dataset.stimulus_timestamps[0], dataset.stimulus_timestamps[-1]]
