@@ -94,7 +94,7 @@ dir0 = '/home/farzaneh/OneDrive/Analysis'
 
 project_codes = ['VisualBehavior'], ['VisualBehaviorTask1B'], ['VisualBehaviorMultiscope'] # pooled project codes for the paper: ['VisualBehavior'], ['VisualBehaviorTask1B'], ['VisualBehaviorMultiscope'] # if making plots for multiple project codes: ['VisualBehavior'], ['VisualBehaviorMultiscope'] # if making plots for a single project code: ['VisualBehaviorTask1B']       # all project codes: 'VisualBehaviorMultiscope', 'VisualBehaviorTask1B', 'VisualBehavior', 'VisualBehaviorMultiscope4areasx2d'
 
-dosavefig = 1 # 0
+dosavefig = 0 # 0
 
 to_decode = 'next' # 'current': decode current image. # 'previous': decode previous image. # 'next': decode next image.
 trial_type = 'omissions' # 'baseline_vs_nobaseline' # 'omissions' # 'changes' # 'changes_vs_nochanges' # 'hits_vs_misses' # 'images'# what trials to use for SVM analysis # the population activity of these trials at time time_win will be used to decode the image identity of flashes that occurred at their time 0 (if to_decode='current') or 750ms before (if to_decode='previous'). # eg 'omissions' means to use omission-aligned traces # 'baseline_vs_nobaseline' # decode activity at each frame vs. baseline (ie the frame before omission unless use_spont_omitFrMinus1 = 1 (see below))

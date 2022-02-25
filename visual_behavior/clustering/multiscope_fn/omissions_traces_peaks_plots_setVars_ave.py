@@ -44,7 +44,7 @@ for im in range(len(all_mice_id)): # im=1
     all_sess_2an_this_mouse = all_sess_2an[all_sess_2an['mouse_id']==mouse_id]
     
     # NOTE: 08/06/2020: I decided to go with mean (across trials, neurons) instead of median: it actually revealed that in the 3rd plane of LM (especially in LM) the mean response of Slc is slightly going up after omissions (we know some neurons are like this among slc).
-    # Also, when we plot summary mice data, we take average across sessions of mice, so it makes sense that we also take average across trials and neurons (and not mean).        
+    # Also, when we plot summary mice data, we take average across sessions of mice, so it makes sense that we also take average across trials and neurons (and not median).        
 
     #################### #################### #################### #################### 
     #### Traces: take med and iqr across neurons; traces are already trial-median ####   
@@ -54,7 +54,7 @@ for im in range(len(all_mice_id)): # im=1
     iqr_trace = []
     for ipl in range(len(a)):
         if np.sum(~np.isnan(a[ipl])) > 0: # experiment is valid
-            m = np.mean(a[ipl], axis=1)
+            m = np.mean(a[ipl], axis=1) # average across neurons
             iq = st.iqr(a[ipl], axis=1)
         else:
             m = np.full((len_trace), np.nan)

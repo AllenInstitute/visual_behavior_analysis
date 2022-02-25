@@ -263,6 +263,11 @@ if plot_cc_peaks:
 
 if plot_cc_peaks_heatmaps:
 
+    # use the same y axis range for V1-LM, V1-V1 and LM-LM plots (for each cre line)
+    lims0_fo = np.squeeze([np.nanmin([cc12_peak_avMice_flash, cc12_peak_avMice_omit, cc11_peak_avMice_flash, cc11_peak_avMice_omit, cc22_peak_avMice_flash, cc22_peak_avMice_omit]) , np.nanmax([cc12_peak_avMice_flash, cc12_peak_avMice_omit, cc11_peak_avMice_flash, cc11_peak_avMice_omit, cc22_peak_avMice_flash, cc22_peak_avMice_omit])])
+    
+#     lims0_fo = [0, 0] # use this if you want to use a separete y scale for V1-LM, V1-V1, and LM-LM heatmaps.
+    
     ###################################
     ########## area1 - area2 ##########
     ###################################
@@ -287,7 +292,7 @@ if plot_cc_peaks_heatmaps:
         o_top2 = p12_peak_avMice_omit_shfl
 
 
-    plot_heatmap_peak_cc_ccShfl_p(f_top0, o_top0, f_top1, o_top1, f_top2, o_top2, fgn, areas, depth_sessAv_avMice, title, mouseid=np.nan, dosavefig=dosavefig)
+    plot_heatmap_peak_cc_ccShfl_p(f_top0, o_top0, f_top1, o_top1, f_top2, o_top2, fgn, areas, depth_sessAv_avMice, title, mouseid=np.nan, dosavefig=dosavefig, lims0_fo=lims0_fo)
 
 
 
@@ -325,7 +330,7 @@ if plot_cc_peaks_heatmaps:
             o_top2[i1,i2] = o_top2[i2,i1]
 
 
-    plot_heatmap_peak_cc_ccShfl_p(f_top0, o_top0, f_top1, o_top1, f_top2, o_top2, fgn, areas, depth_sessAv_avMice, title, mouseid=np.nan, dosavefig=dosavefig)
+    plot_heatmap_peak_cc_ccShfl_p(f_top0, o_top0, f_top1, o_top1, f_top2, o_top2, fgn, areas, depth_sessAv_avMice, title, mouseid=np.nan, dosavefig=dosavefig, lims0_fo=lims0_fo)
 
 
 
@@ -363,7 +368,7 @@ if plot_cc_peaks_heatmaps:
             o_top2[i1,i2] = o_top2[i2,i1]
 
 
-    plot_heatmap_peak_cc_ccShfl_p(f_top0, o_top0, f_top1, o_top1, f_top2, o_top2, fgn, areas, depth_sessAv_avMice, title, mouseid=np.nan, dosavefig=dosavefig)
+    plot_heatmap_peak_cc_ccShfl_p(f_top0, o_top0, f_top1, o_top1, f_top2, o_top2, fgn, areas, depth_sessAv_avMice, title, mouseid=np.nan, dosavefig=dosavefig, lims0_fo=lims0_fo)
 
 
         
