@@ -152,11 +152,15 @@ def plot_cell_rois_and_GLM_weights(cell_specimen_id, cells_table, experiments_ta
     cell_weights = weights_df[weights_df.cell_specimen_id == cell_specimen_id]
 
     folder = 'matched_cell_examples'
+    save_dir = os.path.join(save_dir, folder)
+    if not os.path.exists(save_dir):
+        os.mkdir(save_dir)
     if subfolder: # if an additional subfolder is provided, make the above folder the top level and create a subfolder within it for plots
-        save_dir = os.path.join(save_dir, folder)
-        if not os.path.exists(save_dir):
-            os.mkdir(save_dir)
-        folder = subfolder
+        subfolder_dir = os.path.join(save_dir, subfolder)
+        if not os.path.exists(subfolder_dir):
+            os.mkdir(subfolder_dir)
+    else:
+        subfolder = folder
     # get metadata for this cell
     cell_metadata = cells_table[cells_table.cell_specimen_id == cell_specimen_id]
     # get weights for example cell
@@ -175,7 +179,7 @@ def plot_cell_rois_and_GLM_weights(cell_specimen_id, cells_table, experiments_ta
     cell_dropouts = dropouts[dropouts.cell_specimen_id == cell_specimen_id]
 
     plot_matched_roi_and_traces_example_GLM(cell_metadata, cell_dropouts, dropout_features, cell_weights, weights_features, kernels,
-                                            experiments_table, data_type, save_dir, folder)
+                                            experiments_table, data_type, save_dir, subfolder)
 
 
 def plot_matched_roi_and_traces_example_GLM(cell_metadata, cell_dropouts, dropout_features, cell_weights, weights_features, kernels,
@@ -310,7 +314,7 @@ def plot_matched_roi_and_traces_example_GLM(cell_metadata, cell_dropouts, dropou
 
             # GLM plots start after n_expts for each ROI mask, plus n_extra_cols more axes for omission and change responses (and running and pupil if added)
             # plus one more axes for dropout heatmaps
-            i = n_expts + n_extra_cols + 1
+            i = n_expts + extra_cols + 1
 
             # weights
             exp_weights = cell_weights[cell_weights.experience_level == experience_level]
