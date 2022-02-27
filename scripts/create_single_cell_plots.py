@@ -1,3 +1,5 @@
+import os
+import pandas as pd
 import argparse
 
 import visual_behavior.data_access.loading as loading
