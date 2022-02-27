@@ -275,15 +275,20 @@ def build_stats_table(metrics_df, metrics_columns=None, dropna=True, pivot=False
     return stats_table
 
 
-def get_cluster_density(df_dropouts, labels_list, use_spearmanr=False):
+def get_cluster_density(df_dropouts, labels_df, label_col='cluster_id', use_spearmanr=False):
     '''
     Computes correlation coefficients for clusters computed on glm dropouts
+    df_dropouts: dataframe where rows are unique cell_specimen_ids and columns are dropout scores across experience levels
+    labels_df: dataframe with cell_specimen_ids as index and a cluster label as a column
+    labels_col: column name for cluster labels to use (ex: 'labels', 'cluster_id')
     '''
-    labels = np.unique(labels_list)
+    labels = labels_df[label_col].unique()
     cluster_corrs = {}
     for label in labels:
-        cluster_means = df_dropouts[labels_list == label].mean().abs().values
-        within_cluster = df_dropouts[labels_list == label].abs()
+        cluster_csids = labels_df[labels_df[label_col]==label].index.values
+        cluster_dropouts = df_dropouts.loc[cluster_csids]
+        cluster_means = cluster_dropouts.mean().abs().values
+        within_cluster = cluster_dropouts.abs()
         corr_coeffs = []
         for cid in within_cluster.index.values:
             if use_spearmanr is False:

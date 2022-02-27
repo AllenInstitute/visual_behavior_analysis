@@ -133,6 +133,7 @@ def plot_silhouette_scores(X=None, model=KMeans, silhouette_scores=None, silhoue
     if silhouette_scores is None:
         if metric is None:
             metric = 'euclidean'
+        print('no silhouette scores provided, generating silhouette scores')
         silhouette_scores, silhouette_std = get_silhouette_scores(X=X, model=model, n_clusters=n_clusters, metric=metric, n_boots=n_boots)
     elif silhouette_scores is not None:
         if len(silhouette_scores) != len(n_clusters):
