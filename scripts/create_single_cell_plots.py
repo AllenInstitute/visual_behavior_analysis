@@ -64,9 +64,9 @@ if __name__ == '__main__':
     experiments_table = loading.get_platform_paper_experiment_table(add_extra_columns=True, limit_to_closest_active=True)
     print(len(experiments_table), 'expts in expts table')
     cells_table = loading.get_cell_table(platform_paper_only=True, limit_to_closest_active=True, limit_to_matched_cells=True, add_extra_columns=True)
-    print(len(cells_table.ophys_experiment_id.unique(), 'expts in cells table')
+    print(len(cells_table.ophys_experiment_id.unique()), 'expts in cells table')
     print('should only be 402 experiments if limited to matched platform dataset')
-    print(len(cells_table.cell_specimen_id.unique(), 'unique cell_specimen_ids in cells table')
+    print(len(cells_table.cell_specimen_id.unique()), 'unique cell_specimen_ids in cells table')
 
     results_pivoted, weights_df, kernels = psc.get_GLM_outputs(glm_version, base_dir, folder, experiments_table, cells_table)
 
