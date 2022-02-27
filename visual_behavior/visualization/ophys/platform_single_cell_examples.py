@@ -301,7 +301,9 @@ def plot_matched_roi_and_traces_example_GLM(cell_metadata, cell_dropouts, dropou
             image_weights.append(exp_weights[feature + '_weights'].values[0])
         mean_image_weights = np.mean(image_weights, axis=0)
 
-        frame_rate = get_frame_rate_for_example_cell(cell_weights, identifier=cell_weights.index.values[0])
+        # frame_rate = get_frame_rate_for_example_cell(cell_weights, identifier=cell_weights.index.values[0])
+        # GLM output is all resampled to 30Hz now
+        frame_rate = 31
         t_array = get_t_array_for_kernel(kernels, feature, frame_rate)
         ax[i].plot(t_array, mean_image_weights, color=color)
         ax[i].set_ylabel('weight')
