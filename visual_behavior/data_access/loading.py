@@ -206,12 +206,14 @@ def get_released_ophys_experiment_table(exclude_ai94=True):
     return experiment_table
 
 
-def get_platform_paper_experiment_table(add_extra_columns=True):
+def get_platform_paper_experiment_table(add_extra_columns=True, limit_to_closest_active=False):
     """
     loads the experiment table that was downloaded from AWS and saved to the the platform paper cache dir.
     Then filter out VisualBehaviorMultiscope4areasx2d and Ai94 data.
     And add cell_type column (values = ['Excitatory', 'Sst Inhibitory', 'Vip Inhibitory']
     Set add_extra_columns to False if you dont need things like 'cell_type', 'binned_depth', or 'add_last_familiar'
+    Set limit_to_closest_active to True if you want to limit to experiments that are matched in all experience levels,
+        with only the closest familiar and novel active sessions to the first novel session to be included (i.e. only one session of each type per container)
     """
     cache_dir = get_platform_analysis_cache_dir()
     cache = bpc.from_s3_cache(cache_dir=cache_dir)
@@ -245,6 +247,10 @@ def get_platform_paper_experiment_table(add_extra_columns=True):
         # add column that has a combination of experience level and exposure to omissions for familiar sessions,
         # or exposure to image set for novel sessions
         experiment_table = utilities.add_experience_exposure_column(experiment_table)
+
+    if limit_to_closest_active:
+        experiment_table = utilities.limit_to_last_familiar_second_novel_active(experiment_table)
+        experiment_table = utilities.limit_to_containers_with_all_experience_levels(experiment_table)
 
     return experiment_table
 
@@ -3145,10 +3151,13 @@ def get_cell_table_from_lims(ophys_experiment_ids=None, columns_to_return='*', v
     return lims_rois
 
 
-def get_cell_table(platform_paper_only=True, add_extra_columns=True):
+def get_cell_table(platform_paper_only=True, add_extra_columns=True, limit_to_closest_active=False, limit_to_matched_cells=False):
     """
     loads ophys_cells_table from the SDK using platform paper analysis cache and merges with experiment_table to get metadata
     if 'platform_paper_only' is True, will filter out Ai94 and VisuaBehaviorMultiscope4areasx2d and add extra columns
+    if 'limit_to_closest_active' is True, will limit to containers with all 3 experience levels, only including the closest (in time)
+        familiar and novel active sessions to the first novel session
+    if 'limit_to_matched_cells' is True, will only return cells that are matched in all 3 experience levels
     :return:
     """
     cache_dir = get_platform_analysis_cache_dir()
@@ -3167,6 +3176,11 @@ def get_cell_table(platform_paper_only=True, add_extra_columns=True):
         experiment_table = cache.get_ophys_experiment_table()
         cell_table = cell_table.reset_index().merge(experiment_table, on='ophys_experiment_id')
         cell_table = cell_table.set_index('cell_roi_id')
+    if limit_to_closest_active:
+        cell_table = utilities.limit_to_last_familiar_second_novel_active(cell_table)
+        cell_table = utilities.limit_to_containers_with_all_experience_levels(cell_table)
+    if limit_to_matched_cells:
+        cell_table = utilities.limit_to_cell_specimen_ids_matched_in_all_experience_levels(cell_table)
     return cell_table
 
 
