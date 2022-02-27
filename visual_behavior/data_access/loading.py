@@ -132,25 +132,26 @@ def get_stimulus_response_df_dir(interpolate=True, output_sampling_rate=30, even
     return save_dir
 
 
-# def get_multi_session_df_dir(interpolate=True, output_sampling_rate=30, event_type='all'):
-#     base_dir = get_platform_analysis_cache_dir()
-#     if interpolate:
-#         save_dir = os.path.join(base_dir, 'multi_session_mean_response_dfs', 'interpolate_' + str(output_sampling_rate) + 'Hz')
-#     else:
-#         save_dir = os.path.join(base_dir, 'multi_session_mean_response_dfs', 'original_frame_rate')
-#     if not os.path.exists(save_dir):
-#         os.mkdir(save_dir)
-#     return save_dir
-
 def get_multi_session_df_dir(interpolate=True, output_sampling_rate=30, event_type='all'):
     base_dir = get_platform_analysis_cache_dir()
     if interpolate:
-        save_dir = os.path.join(base_dir, 'multi_session_mean_response_dfs', event_type, 'interpolate_' + str(output_sampling_rate) + 'Hz')
+        save_dir = os.path.join(base_dir, 'multi_session_mean_response_dfs', 'interpolate_' + str(output_sampling_rate) + 'Hz')
     else:
-        save_dir = os.path.join(base_dir, 'multi_session_mean_response_dfs', event_type, 'original_frame_rate')
+        save_dir = os.path.join(base_dir, 'multi_session_mean_response_dfs', 'original_frame_rate')
     if not os.path.exists(save_dir):
         os.mkdir(save_dir)
     return save_dir
+
+
+# def get_multi_session_df_dir(interpolate=True, output_sampling_rate=30, event_type='all'):
+#     base_dir = get_platform_analysis_cache_dir()
+#     if interpolate:
+#         save_dir = os.path.join(base_dir, 'multi_session_mean_response_dfs', event_type, 'interpolate_' + str(output_sampling_rate) + 'Hz')
+#     else:
+#         save_dir = os.path.join(base_dir, 'multi_session_mean_response_dfs', event_type, 'original_frame_rate')
+#     if not os.path.exists(save_dir):
+#         os.mkdir(save_dir)
+#     return save_dir
 
 
 def get_manifest_path():
