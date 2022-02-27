@@ -1498,10 +1498,10 @@ def add_layer_column(df):
     """
     df.loc[:, 'layer'] = None
 
-    indices = df[(df.depth < 200)].index.values
+    indices = df[(df.depth < 250)].index.values
     df.loc[indices, 'layer'] = 'upper'
 
-    indices = df[(df.depth > 200)].index.values
+    indices = df[(df.depth > 250)].index.values
     df.loc[indices, 'layer'] = 'lower'
 
     return df
