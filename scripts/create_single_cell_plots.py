@@ -59,9 +59,9 @@ if __name__ == '__main__':
     # set base_dir to load and save results
     base_dir = os.path.join(base_dir, glm_version)
     # folder in save_dir where you want to load GLM results from
-    glm_output_folder = '220226_across_session_norm'
-    glm_output_dir = os.path.join(base_dir, glm_output_folder)
-    # glm_output_dir = None
+    # glm_output_folder = '220226_across_session_norm'
+    # glm_output_dir = os.path.join(base_dir, glm_output_folder)
+    glm_output_dir = None
     # if glm_output_dir is None, GLM results will be generated for the full dataset and nothing will be saved
 
     # if glm_output_dir is provided, plots will go into a folder within glm_output_dir called 'matched_cell_examples'
@@ -78,7 +78,7 @@ if __name__ == '__main__':
     experiments_table = loading.get_platform_paper_experiment_table(add_extra_columns=True, limit_to_closest_active=True)
     print(len(experiments_table), 'expts in expts table')
     cells_table = loading.get_cell_table(platform_paper_only=True, limit_to_closest_active=True,
-                                         limit_to_matched_cells=True, add_extra_columns=True)
+                                         limit_to_matched_cells=False, add_extra_columns=True)
     print(len(cells_table.ophys_experiment_id.unique()), 'expts in cells table')
     print('should only be 402 experiments if limited to matched platform dataset')
     print(len(cells_table.cell_specimen_id.unique()), 'unique cell_specimen_ids in cells table')
