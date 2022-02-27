@@ -20,7 +20,7 @@ if __name__ == "__main__":
     python_file = os.path.join(os.getcwd(), args.scriptname)
 
     # define the job record output folder
-    stdout_location = r"/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/cluster_jobs/paper_figures"
+    stdout_location = r"/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/cluster_jobs/clustering"
 
     # instantiate a Slurm object
     slurm = Slurm(
