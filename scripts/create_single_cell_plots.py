@@ -63,12 +63,16 @@ if __name__ == '__main__':
     # whatever filtering is applied here will be applied to GLM results
     experiments_table = loading.get_platform_paper_experiment_table(add_extra_columns=True, limit_to_closest_active=True)
     print(len(experiments_table), 'expts in expts table')
-    cells_table = loading.get_cell_table(platform_paper_only=True, limit_to_closest_active=True, limit_to_matched_cells=True, add_extra_columns=True)
+    cells_table = loading.get_cell_table(platform_paper_only=True, limit_to_closest_active=True,
+                                         limit_to_matched_cells=False, add_extra_columns=True)
     print(len(cells_table.ophys_experiment_id.unique()), 'expts in cells table')
     print('should only be 402 experiments if limited to matched platform dataset')
     print(len(cells_table.cell_specimen_id.unique()), 'unique cell_specimen_ids in cells table')
 
     results_pivoted, weights_df, kernels = psc.get_GLM_outputs(glm_version, base_dir, folder, experiments_table, cells_table)
+    print(len(results_pivoted.cell_specimen_id.unique()), 'unique cell_specimen_ids in results_pivoted')
+    print(len(weights_df.cell_specimen_id.unique()), 'unique cell_specimen_ids in weights_df')
+
 
     # set features to use in plots
     dropout_features = ['all-images', 'omissions', 'behavioral', 'task']
@@ -79,9 +83,10 @@ if __name__ == '__main__':
 
     for cell_specimen_id in cells_table[cells_table.ophys_container_id == ophys_container_id].cell_specimen_id.unique():
         try:
+            print('generating plot for', cell_specimen_id)
             psc.plot_cell_rois_and_GLM_weights(cell_specimen_id, cells_table, experiments_table, results_pivoted, weights_df, dropout_features,
                                       weights_features, kernels, save_dir, sub_folder, data_type)
-    except Exception as e:
-        print('problem for', cell_specimen_id)
-        print(e)
+        except Exception as e:
+            print('problem for', cell_specimen_id)
+            print(e)
 

@@ -65,11 +65,12 @@ def get_GLM_outputs(glm_version, base_dir, folder, experiments_table, cells_tabl
         # save for next time
         results_pivoted.to_hdf(glm_results_path, key='df')
     print(len(results_pivoted.ophys_experiment_id.unique()), 'ophys_experiment_ids in results_pivoted after loading')
+    print(len(results_pivoted.cell_specimen_id.unique()), 'cell_specimen_ids in results_pivoted after loading')
     # limit dropouts to experiments & cells in provided tables (limit input to last familiar and second novel to ensure results are also filtered)
     results_pivoted = results_pivoted[results_pivoted.ophys_experiment_id.isin(experiments_table.index.values)]
     results_pivoted = results_pivoted[results_pivoted.cell_specimen_id.isin(cells_table.cell_specimen_id.values)]
-    print(len(results_pivoted.cell_specimen_id.unique()), 'cell_specimen_ids in results_pivoted after filtering')
     print(len(results_pivoted.ophys_experiment_id.unique()), 'ophys_experiment_ids in results_pivoted after filtering')
+    print(len(results_pivoted.cell_specimen_id.unique()), 'cell_specimen_ids in results_pivoted after filtering')
     # clean up
     results_pivoted = results_pivoted.drop_duplicates(subset=['cell_specimen_id', 'ophys_experiment_id'])
     results_pivoted = results_pivoted.reset_index()
@@ -236,8 +237,6 @@ def plot_matched_roi_and_traces_example_GLM(cell_metadata, cell_dropouts, dropou
     for e, experience_level in enumerate(experience_levels):
         print('experience_level:', experience_level)
 
-        # try:  # attempt to generate plots for this cell in this this experience level. if cell does not have this exp level, skip
-        # get info for this experience level
         # ophys_experiment_id = cell_metadata[cell_metadata.experience_level == experience_level].ophys_experiment_id.values[0]
         # get ophys_experiment_id for this experience level
         # experiments_table must only include one experiment per experience level for a given container
@@ -250,107 +249,123 @@ def plot_matched_roi_and_traces_example_GLM(cell_metadata, cell_dropouts, dropou
         # load dataset for this experiment
         dataset = loading.get_ophys_dataset(ophys_experiment_id, get_extended_stimulus_presentations=False)
 
-        # plot ROI mask for this experiment
-        ct = dataset.cell_specimen_table.copy()
-        cell_roi_id = ct.loc[cell_specimen_id].cell_roi_id  # typically will fail here if the cell_specimen_id isnt in the session
-        roi_masks = dataset.roi_masks.copy()  # save this to get approx ROI position if subsequent session is missing the ROI (fails if the first session is the one missing the ROI)
-        ax[e] = sf.plot_cell_zoom(dataset.roi_masks, dataset.max_projection, cell_roi_id,
-                                  spacex=50, spacey=50, show_mask=True, ax=ax[e])
-        ax[e].set_title(experience_level, color=color)
+        try:  # attempt to generate plots for this cell in this this experience level. if cell does not have this exp level, skip
+            # get info for this experience level
 
-        # get change responses and plot on second to next axis after ROIs (there are n_expts # of ROIs)
-        window = [-1, 1.5]  # window around event
-        sdf = loading.get_stimulus_response_df(dataset, time_window=window, interpolate=True, output_sampling_rate=30,
-                                               data_type=data_type, event_type='changes', load_from_file=True)
-        cell_data = sdf[(sdf.cell_specimen_id == cell_specimen_id) & (sdf.is_change == True)]
+            # plot ROI mask for this experiment
+            ct = dataset.cell_specimen_table.copy()
+            cell_roi_id = ct.loc[cell_specimen_id].cell_roi_id  # typically will fail here if the cell_specimen_id isnt in the session
+            roi_masks = dataset.roi_masks.copy()  # save this to get approx ROI position if subsequent session is missing the ROI (fails if the first session is the one missing the ROI)
+            ax[e] = sf.plot_cell_zoom(dataset.roi_masks, dataset.max_projection, cell_roi_id,
+                                      spacex=50, spacey=50, show_mask=True, ax=ax[e])
+            ax[e].set_title(experience_level, color=color)
 
-        ax[n_expts] = utils.plot_mean_trace(cell_data.trace.values, cell_data.trace_timestamps.values[0],
-                                            ylabel=ylabel, legend_label=None, color=color, interval_sec=1,
-                                            xlim_seconds=window, plot_sem=True, ax=ax[n_expts])
-        ax[n_expts] = utils.plot_flashes_on_trace(ax[n_expts], cell_data.trace_timestamps.values[0],
-                                                  change=True, omitted=False)
-        ax[n_expts].set_title('changes')
+            # get change responses and plot on second to next axis after ROIs (there are n_expts # of ROIs)
+            window = [-1, 1.5]  # window around event
+            sdf = loading.get_stimulus_response_df(dataset, time_window=window, interpolate=True, output_sampling_rate=30,
+                                                   data_type=data_type, event_type='changes', load_from_file=True)
+            cell_data = sdf[(sdf.cell_specimen_id == cell_specimen_id) & (sdf.is_change == True)]
 
-        # get omission responses and plot on last axis
-        sdf = loading.get_stimulus_response_df(dataset, time_window=window, interpolate=True, output_sampling_rate=30,
-                                               data_type=data_type, event_type='omissions', load_from_file=True)
-        cell_data = sdf[(sdf.cell_specimen_id == cell_specimen_id) & (sdf.omitted == True)]
-
-        ax[n_expts + 1] = utils.plot_mean_trace(cell_data.trace.values, cell_data.trace_timestamps.values[0],
+            ax[n_expts] = utils.plot_mean_trace(cell_data.trace.values, cell_data.trace_timestamps.values[0],
                                                 ylabel=ylabel, legend_label=None, color=color, interval_sec=1,
-                                                xlim_seconds=window, plot_sem=True, ax=ax[n_expts + 1])
-        ax[n_expts + 1] = utils.plot_flashes_on_trace(ax[n_expts + 1], cell_data.trace_timestamps.values[0],
-                                                      change=False, omitted=True)
-        ax[n_expts + 1].set_title('omissions')
+                                                xlim_seconds=window, plot_sem=True, ax=ax[n_expts])
+            ax[n_expts] = utils.plot_flashes_on_trace(ax[n_expts], cell_data.trace_timestamps.values[0],
+                                                      change=True, omitted=False)
+            ax[n_expts].set_title('changes')
+
+            # get omission responses and plot on last axis
+            sdf = loading.get_stimulus_response_df(dataset, time_window=window, interpolate=True, output_sampling_rate=30,
+                                                   data_type=data_type, event_type='omissions', load_from_file=True)
+            cell_data = sdf[(sdf.cell_specimen_id == cell_specimen_id) & (sdf.omitted == True)]
+
+            ax[n_expts + 1] = utils.plot_mean_trace(cell_data.trace.values, cell_data.trace_timestamps.values[0],
+                                                    ylabel=ylabel, legend_label=None, color=color, interval_sec=1,
+                                                    xlim_seconds=window, plot_sem=True, ax=ax[n_expts + 1])
+            ax[n_expts + 1] = utils.plot_flashes_on_trace(ax[n_expts + 1], cell_data.trace_timestamps.values[0],
+                                                          change=False, omitted=True)
+            ax[n_expts + 1].set_title('omissions')
+
+            if 'running' in weights_features:
+                pass
+            if 'pupil' in weights_features:
+                pass
+
+        except:  # plot area of max projection where ROI would have been if it was in this session
+            # plot the max projection image with the xy location of the previous ROI
+            # this will fail if the familiar session is the one without the cell matched
+            print('no cell ROI for', experience_level)
+            ax[e] = sf.plot_cell_zoom(roi_masks, dataset.max_projection, cell_roi_id,
+                                      spacex=50, spacey=50, show_mask=False, ax=ax[e])
+            ax[e].set_title(experience_level)
 
 
-        if 'running' in weights_features:
-            pass
-        if 'pupil' in weights_features:
-            pass
+        try: # try plotting GLM outputs for this experience level
+            if 'running' in weights_features:
+                pass
+            if 'pupil' in weights_features:
+                pass
 
-        # skip next axis and leave for dropouts
-        i = n_expts + 3
+            # GLM plots start after n_expts for each ROI mask, plus n_extra_cols more axes for omission and change responses (and running and pupil if added)
+            # plus one more axes for dropout heatmaps
+            i = n_expts + n_extra_cols + 1
 
-        # weights
-        exp_weights = cell_weights[cell_weights.experience_level == experience_level]
+            # weights
+            exp_weights = cell_weights[cell_weights.experience_level == experience_level]
 
-        # image kernels
-        image_weights = []
-        for f, feature in enumerate(weights_features[:8]): # first 8 are images
-            image_weights.append(exp_weights[feature + '_weights'].values[0])
-        mean_image_weights = np.mean(image_weights, axis=0)
+            # image kernels
+            image_weights = []
+            for f, feature in enumerate(weights_features[:8]): # first 8 are images
+                image_weights.append(exp_weights[feature + '_weights'].values[0])
+            mean_image_weights = np.mean(image_weights, axis=0)
 
-        # frame_rate = get_frame_rate_for_example_cell(cell_weights, identifier=cell_weights.index.values[0])
-        # GLM output is all resampled to 30Hz now
-        frame_rate = 31
-        t_array = get_t_array_for_kernel(kernels, feature, frame_rate)
-        ax[i].plot(t_array, mean_image_weights, color=color)
-        ax[i].set_ylabel('weight')
-        ax[i].set_title('images')
-        ax[i].set_xlabel('time (s)')
-        ax_to_share = i
-
-        i += 1
-        # all other kernels
-        for f, feature in enumerate(weights_features[8:]):
-            if f == 0:
-                first_ax = f
-            kernel_weights = exp_weights[feature + '_weights'].values[0]
-            if feature == 'omissions':
-                n_frames_to_clip = int(kernels['omissions']['length'] * frame_rate) + 1
-                kernel_weights = kernel_weights[:n_frames_to_clip]
+            # frame_rate = get_frame_rate_for_example_cell(cell_weights, identifier=cell_weights.index.values[0])
+            # GLM output is all resampled to 30Hz now
+            frame_rate = 31
             t_array = get_t_array_for_kernel(kernels, feature, frame_rate)
-            ax[i + f].plot(t_array, kernel_weights, color=color)
-            ax[i + f].set_ylabel('')
-            ax[i + f].set_title(feature)
-            ax[i + f].set_xlabel('time (s)')
-            #             ax[i+f].sharey(ax[i+first_ax])
-            ax[i + f].get_shared_y_axes().join(ax[i + f], ax[ax_to_share])
+            ax[i].plot(t_array, mean_image_weights, color=color)
+            ax[i].set_ylabel('weight')
+            ax[i].set_title('images')
+            ax[i].set_xlabel('time (s)')
+            ax_to_share = i
 
-        # except:  # plot area of max projection where ROI would have been if it was in this session
-        #     # plot the max projection image with the xy location of the previous ROI
-        #     # this will fail if the familiar session is the one without the cell matched
-        #     ax[e] = sf.plot_cell_zoom(roi_masks, dataset.max_projection, cell_roi_id,
-        #                               spacex=50, spacey=50, show_mask=True, ax=ax[e])
-        #     ax[e].set_title(experience_level)
+            i += 1
+            # all other kernels
+            for f, feature in enumerate(weights_features[8:]):
+                if f == 0:
+                    first_ax = f
+                kernel_weights = exp_weights[feature + '_weights'].values[0]
+                if feature == 'omissions':
+                    n_frames_to_clip = int(kernels['omissions']['length'] * frame_rate) + 1
+                    kernel_weights = kernel_weights[:n_frames_to_clip]
+                t_array = get_t_array_for_kernel(kernels, feature, frame_rate)
+                ax[i + f].plot(t_array, kernel_weights, color=color)
+                ax[i + f].set_ylabel('')
+                ax[i + f].set_title(feature)
+                ax[i + f].set_xlabel('time (s)')
+                #             ax[i+f].sharey(ax[i+first_ax])
+                ax[i + f].get_shared_y_axes().join(ax[i + f], ax[ax_to_share])
 
+        except:
+            print('could not plot GLM results for', experience_level)
 
-        # dropouts
-        i = n_expts + extra_cols  # change to 4 if running and pupil are added
+    try:
+        # plot dropout score heatmaps
+        i = n_expts + extra_cols  # change to extra_cols = 4 if running and pupil are added
         mean_dropouts = cell_dropouts.groupby('experience_level').mean()[dropout_features]
         ax[i] = sns.heatmap(mean_dropouts.T, cmap='Blues', vmin=0, vmax=1, ax=ax[i],
                             cbar=False, cbar_kws={'shrink':0.7, 'label':'coding score'})
         ax[i].set_title(cell_type, fontsize=14)
         ax[i].set_ylim(-0.5, 4.5)
         ax[i].set_xlabel('')
+    except:
+        print('could not plot dropout heatmap for', cell_specimen_id)
 
-        metadata_string = utils.get_container_metadata_string(dataset.metadata)
+    metadata_string = utils.get_container_metadata_string(dataset.metadata)
 
-        # fig.tight_layout()
-        fig.subplots_adjust(hspace=0.6, wspace=0.7)
-        fig.suptitle(str(cell_specimen_id) + '_' + metadata_string, x=0.53, y=1.02,
-                     horizontalalignment='center', fontsize=16)
+    # fig.tight_layout()
+    fig.subplots_adjust(hspace=0.6, wspace=0.7)
+    fig.suptitle(str(cell_specimen_id) + '_' + metadata_string, x=0.53, y=1.02,
+                 horizontalalignment='center', fontsize=16)
 
-        if save_dir:
-            utils.save_figure(fig, figsize, save_dir, folder, str(cell_specimen_id) + '_' + metadata_string + '_' + data_type)
+    if save_dir:
+        utils.save_figure(fig, figsize, save_dir, folder, str(cell_specimen_id) + '_' + metadata_string + '_' + data_type)
