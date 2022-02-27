@@ -28,14 +28,14 @@ sns.set_palette('deep')
 
 
 
-def get_GLM_outputs(glm_version, base_dir, folder, experiments_table, cells_table):
+def get_GLM_outputs(glm_version, experiments_table, cells_table, glm_output_dir=None):
     """
     loads results_pivoted and weights_df from files in base_dir, or generates them from mongo and save to base_dir
     results_pivoted and weights_df will be limited to the ophys_experiment_ids and cell_specimen_ids present in experiments_table and cells_table
 
     :param glm_version: example = '24_events_all_L2_optimize_by_session'
-    :param base_dir: top level directory where analyses of this type go
-    :param folder: folder within main to load and save processed data files to for this iteration of the analysis
+    :param glm_output_dir: directory containing GLM output files to load and save processed data files to for this iteration of the analysis
+                            if None, GLM results will be obtained from mongo and will not be saved out
     :param experiments_table: SDK ophys_experiment table limited to experiments intended for analysis
     :param cells_table: SDK ophys_cell_table limited to cell_specimen_ids intended for analysis
     :return:
@@ -46,24 +46,21 @@ def get_GLM_outputs(glm_version, base_dir, folder, experiments_table, cells_tabl
     model_output_type = 'adj_fraction_change_from_full'
     run_params = glm_params.load_run_json(glm_version)
     kernels = run_params['kernels']
-    # get directories to load and save files from
-    # top level folder for specific glm version
-    base_dir = os.path.join(base_dir, glm_version)
-    if not os.path.exists(base_dir):
-        os.mkdir(base_dir)
-    # sub folder for this iteration of results (usually folder is today's date in YYMMDD format)
-    save_dir = os.path.join(base_dir, folder)
-    if not os.path.exists(save_dir):
-        os.mkdir(save_dir)
-    # load GLM results for all cells and sessions from file if it exists otherwise load from mongo
-    glm_results_path = os.path.join(save_dir, glm_version + '_results_pivoted.h5')
-    if os.path.exists(glm_results_path):
-        results_pivoted = pd.read_hdf(glm_results_path, key='df')
-    else:
+    if glm_output_dir is not None:
+        # load GLM results for all cells and sessions from file if it exists otherwise load from mongo
+        glm_results_path = os.path.join(glm_output_dir, glm_version + '_results_pivoted.h5')
+        if os.path.exists(glm_results_path):
+            results_pivoted = pd.read_hdf(glm_results_path, key='df')
+        else:
+            results_pivoted = gat.build_pivoted_results_summary(value_to_use=model_output_type, results_summary=None,
+                                                                glm_version=glm_version, cutoff=None)
+            # save for next time
+            results_pivoted.to_hdf(glm_results_path, key='df')
+    else: # if no directory is provided, get results from mongo
         results_pivoted = gat.build_pivoted_results_summary(value_to_use=model_output_type, results_summary=None,
                                                             glm_version=glm_version, cutoff=None)
-        # save for next time
-        results_pivoted.to_hdf(glm_results_path, key='df')
+
+    # clean results
     print(len(results_pivoted.ophys_experiment_id.unique()), 'ophys_experiment_ids in results_pivoted after loading')
     print(len(results_pivoted.cell_specimen_id.unique()), 'cell_specimen_ids in results_pivoted after loading')
     # limit dropouts to experiments & cells in provided tables (limit input to last familiar and second novel to ensure results are also filtered)
@@ -74,19 +71,25 @@ def get_GLM_outputs(glm_version, base_dir, folder, experiments_table, cells_tabl
     # clean up
     results_pivoted = results_pivoted.drop_duplicates(subset=['cell_specimen_id', 'ophys_experiment_id'])
     results_pivoted = results_pivoted.reset_index()
-    # get weights df and clean
-    weights_path = os.path.join(save_dir, glm_version + '_weights_df.h5')
-    if os.path.exists(weights_path):
-        weights_df = pd.read_hdf(weights_path, key='df')
-    else:
+
+    if glm_output_dir is not None: # if a directory is provided, attempt to load files
+        # get weights df and clean
+        weights_path = os.path.join(glm_output_dir, glm_version + '_weights_df.h5')
+        if os.path.exists(weights_path): # if it exists, load it
+            weights_df = pd.read_hdf(weights_path, key='df')
+        else: # if it doesnt exist, generate it and save it
+            weights_df = gat.build_weights_df(run_params, results_pivoted)
+            weights_df = weights_df.drop_duplicates(subset=['cell_specimen_id', 'ophys_experiment_id'])
+            weights_df = weights_df.reset_index()
+            weights_df['identifier'] = [
+                str(weights_df.iloc[row]['ophys_experiment_id']) + '_' + str(weights_df.iloc[row]['cell_specimen_id']) for row
+                in range(len(weights_df))]
+            weights_df = weights_df.set_index('identifier')
+            weights_df.to_hdf(weights_path, key='df')
+    else: # if no directory provided, build weights df
         weights_df = gat.build_weights_df(run_params, results_pivoted)
-        weights_df = weights_df.drop_duplicates(subset=['cell_specimen_id', 'ophys_experiment_id'])
-        weights_df = weights_df.reset_index()
-        weights_df['identifier'] = [
-            str(weights_df.iloc[row]['ophys_experiment_id']) + '_' + str(weights_df.iloc[row]['cell_specimen_id']) for row
-            in range(len(weights_df))]
-        weights_df = weights_df.set_index('identifier')
-        weights_df.to_hdf(weights_path, key='df')
+
+    # filter and confirm cell #s
     print(len(weights_df.cell_specimen_id.unique()), 'cell_specimen_ids in weights_df after loading')
     # limit weights to experiments & cells in provided tables (limit input to last familiar and second novel to ensure results are also filtered)
     weights_df = weights_df[weights_df.ophys_experiment_id.isin(experiments_table.index.values)]
@@ -139,6 +142,7 @@ def plot_cell_rois_and_GLM_weights(cell_specimen_id, cells_table, experiments_ta
     :param save_dir: top level directory where files exist for this run of analysis
                         code will create a folder within save_dir called 'matched_cell_examples'
     :param subfolder: name of subfolder to create within os.path.join(save_dir, 'matched_cell_examples') to save plots, ex: 'cluster_0' or 'without_exp_var_full_model' or 'with_running_and_pupil'
+    :param data_type: can be 'dff', 'events', or 'filtered_events' - to be used for cell response plots
     :return:
     """
     cell_metadata = cells_table[cells_table.cell_specimen_id == cell_specimen_id]
@@ -147,7 +151,6 @@ def plot_cell_rois_and_GLM_weights(cell_specimen_id, cells_table, experiments_ta
 
     cell_weights = weights_df[weights_df.cell_specimen_id == cell_specimen_id]
 
-    data_type = 'filtered_events'
     folder = 'matched_cell_examples'
     if subfolder: # if an additional subfolder is provided, make the above folder the top level and create a subfolder within it for plots
         save_dir = os.path.join(save_dir, folder)
