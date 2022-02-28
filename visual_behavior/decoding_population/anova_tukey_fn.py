@@ -6,7 +6,7 @@ import statsmodels.api as sm
 from statsmodels.formula.api import ols
 from statsmodels.stats.multicomp import (pairwise_tukeyhsd, MultiComparison)
 
-def anova_tukey(svm_df, values_stat, label_stat='experience_levels', exp_level_all=['Familiar', 'Novel 1', 'Novel >1']):
+def anova_tukey(svm_df, values_stat, label_stat='experience_levels', cres=['Slc17a7', 'Sst', 'Vip'], exp_level_all=['Familiar', 'Novel 1', 'Novel >1']):
     
 #     svm_df is a df which contains the following columns: 
 #     'cre': identifies mouse cre line
@@ -22,7 +22,7 @@ def anova_tukey(svm_df, values_stat, label_stat='experience_levels', exp_level_a
     anova_all = [] # each index is for 1 cre line, and shows the results of Anova (1 way) across experience levels.
     tukey_all = [] # each index is for 1 cre line, and shows the results of pairwise tukey test for experience levels.
 
-    cres = svm_df['cre'].unique() 
+#     cres = svm_df['cre'].unique() 
     
     for cre in cres: 
 

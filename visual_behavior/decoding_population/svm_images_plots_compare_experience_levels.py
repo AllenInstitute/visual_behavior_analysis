@@ -92,7 +92,7 @@ if np.isnan(svm_blocks) or svm_blocks==-101: # svm was run on the whole session 
     ### call the anova/tukey function
     label_stat='experience_levels'
     values_stat = 'decoding_magnitude'
-    anova_all, tukey_all_ts = anova_tukey(svm_df, values_stat, label_stat)
+    anova_all, tukey_all_ts = anova_tukey(svm_df, values_stat, label_stat, cres=cres)
     
 
     ########## take testing minus shuffled dataset decoding accuracy
@@ -102,7 +102,7 @@ if np.isnan(svm_blocks) or svm_blocks==-101: # svm was run on the whole session 
     ### call the anova/tukey function
     label_stat='experience_levels'
     values_stat = 'decoding_magnitude'
-    anova_all, tukey_all_tsSh = anova_tukey(svm_df, values_stat, label_stat)
+    anova_all, tukey_all_tsSh = anova_tukey(svm_df, values_stat, label_stat, cres=cres)
 
     
     ########### keep tukey results for both test and test minus shuffled cases
@@ -302,7 +302,7 @@ if np.isnan(svm_blocks) or svm_blocks==-101: # svm was run on the whole session 
 
         ############### add_tukey_lines: if a pariwaise tukey comparison is significant add a line and an asterisk symbol
         iax = -1
-        for ax in [ax1, ax2]: # test, test-shfl
+        for ax in [ax1, ax2]: # test, test-shfl # ax = ax1
             iax = iax+1
             
             x_new = xnowall
