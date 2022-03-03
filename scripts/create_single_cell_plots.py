@@ -112,7 +112,7 @@ if __name__ == '__main__':
     file = [file for file in os.listdir(glm_output_dir) if 'cluster_ids' in file]
     cluster_ids = pd.read_hdf(os.path.join(glm_output_dir, file[0]), key='df')
     # add ophys_container from metadata
-    cells_table = loading.get_cells_table()
+    cells_table = loading.get_cell_table()
     tmp = cluster_ids.merge(cells_table, on=['cre_line', 'cell_specimen_id'], how='right').drop_duplicates(subset='cell_specimen_id')
     ophys_container_id = tmp.ophys_container_id.unique()[0]
     container_data = tmp[tmp.ophys_container_id == ophys_container_id]
