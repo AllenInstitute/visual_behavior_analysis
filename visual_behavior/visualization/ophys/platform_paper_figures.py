@@ -178,7 +178,7 @@ def get_fraction_responsive_cells(multi_session_df, conditions=['cell_type', 'ex
 
 
 def plot_fraction_responsive_cells(multi_session_df, responsiveness_threshold=0.1, horizontal=True, ylim=(0,1),
-                                   save_dir=None, folder=None, suffix='', ax=None):
+                                   save_dir=None, folder=None, suffix='', format_fig=False, ax=None):
     """
     Plots the fraction of responsive cells across cre lines
     :param multi_session_df: dataframe of trial averaged responses for each cell for some set of conditions
@@ -200,15 +200,17 @@ def plot_fraction_responsive_cells(multi_session_df, responsiveness_threshold=0.
 
     palette = utils.get_experience_level_colors()
     if ax is None:
-        format_fig = True
         if horizontal:
             figsize = (9, 3.5)
             fig, ax = plt.subplots(1, 3, figsize=figsize, sharex=False)
         else:
-            figsize = (3, 8)
-            fig, ax = plt.subplots(3, 1, figsize=figsize, sharex=True)
-    else:
-        format_fig = False
+            if format_fig:
+                figsize = (3, 8)
+                fig, ax = plt.subplots(3, 1, figsize=figsize, sharex=True)
+            else:
+                figsize = (2, 10)
+                fig, ax = plt.subplots(3, 1, figsize=figsize, sharex=True)
+
     for i, cell_type in enumerate(cell_types):
         data = fraction_responsive[fraction_responsive.cell_type==cell_type]
         for ophys_container_id in data.ophys_container_id.unique():
@@ -218,7 +220,7 @@ def plot_fraction_responsive_cells(multi_session_df, responsiveness_threshold=0.
         plt.setp(ax[i].lines, alpha=.3)
         ax[i] = sns.pointplot(data=data, x='experience_level', y='fraction_responsive', hue='experience_level',
                      hue_order=experience_levels, palette=palette, dodge=0, join=False, ax=ax[i])
-        ax[i].set_xticklabels(experience_levels, rotation=45)
+        ax[i].set_xticklabels(experience_levels, rotation=45, ha='right')
         ax[i].set_ylabel('fraction\nresponsive')
     #     ax[i].legend(fontsize='xx-small', title='')
         ax[i].get_legend().remove()
@@ -227,15 +229,17 @@ def plot_fraction_responsive_cells(multi_session_df, responsiveness_threshold=0.
         if ylim is not None:
             ax[i].set_ylim(0,1)
 
-    if format_fig:
+    if format_fig and not save_dir:
         fig.tight_layout()
         fig_title ='fraction_responsive_cells' + suffix
-        plt.suptitle(fig_title, x=0.52, y=1.02, fontsize=16)
-
-    if save_dir and format_fig:
+        # plt.suptitle(fig_title, x=0.52, y=1.02, fontsize=16)
+    elif save_dir and format_fig:
         fig_title = 'fraction_responsive_cells' + suffix
         utils.save_figure(fig, figsize, save_dir, folder, fig_title)
-
+    else:
+        fig.subplots_adjust(hspace=0.5)
+        fig_title = 'fraction_responsive_cells_' + suffix
+        utils.save_figure(fig, figsize, save_dir, folder, fig_title)
     return ax
 
 
