@@ -121,7 +121,7 @@ if __name__ == '__main__':
     plot_save_dir = os.path.join(glm_output_dir, 'matched_cell_examples', cre_line)
     if not os.path.exists(plot_save_dir):
         os.mkdir(plot_save_dir)
-    for cluster_id in np.sort(cre_data.cluster_id.unique()):
+    for cluster_id in np.sort(cluster_ids[cluster_ids.cre_line==cre_line].cluster_id.unique()):
         plot_sub_folder = 'cluster_' + str(cluster_id)
         if not os.path.exists(os.path.join(plot_save_dir, plot_sub_folder)):
             os.mkdir(os.path.join(plot_save_dir, plot_sub_folder))
