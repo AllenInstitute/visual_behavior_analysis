@@ -118,23 +118,23 @@ if __name__ == '__main__':
     container_data = tmp[tmp.ophys_container_id == ophys_container_id]
     # make cre and cluster ID specific folders if they dont already exist
     cre_line = container_data.cre_line.unique()[0]
-    plot_save_dir = os.path.join(glm_output_dir, 'matched_cell_examples', cre_line)
-    if not os.path.exists(plot_save_dir):
-        os.mkdir(plot_save_dir)
-    for cluster_id in np.sort(cluster_ids[cluster_ids.cre_line==cre_line].cluster_id.unique()):
-        plot_sub_folder = 'cluster_' + str(cluster_id)
-        if not os.path.exists(os.path.join(plot_save_dir, plot_sub_folder)):
-            os.mkdir(os.path.join(plot_save_dir, plot_sub_folder))
+    save_dir = os.path.join(glm_output_dir, 'matched_cell_examples', cre_line)
+    if not os.path.exists(save_dir):
+        os.mkdir(save_dir)
+    # for cluster_id in np.sort(cluster_ids[cluster_ids.cre_line==cre_line].cluster_id.unique()):
+    #     plot_sub_folder = 'cluster_' + str(cluster_id)
+    #     if not os.path.exists(os.path.join(plot_save_dir, plot_sub_folder)):
+    #         os.mkdir(os.path.join(plot_save_dir, plot_sub_folder))
     # loop through cells for this container and add to cre line and cluster ID specific folders
     container_csids = container_data.cell_specimen_id.unique()
     for cell_specimen_id in container_csids:
         cluster_id = container_data[container_data.cell_specimen_id==cell_specimen_id].cluster_id.unique()[0]
-        plot_sub_folder = 'cluster_' + str(cluster_id)
+        folder = 'cluster_' + str(cluster_id)
         try:
             print('generating plot for', cell_specimen_id)
             psc.plot_cell_rois_and_GLM_weights(cell_specimen_id, cells_table, experiments_table,
                                                results_pivoted, weights_df, dropout_features,
-                                               weights_features, kernels, plot_save_dir, plot_sub_folder,
+                                               weights_features, kernels, save_dir, folder,
                                                data_type)
         except Exception as e:
             print('problem for', cell_specimen_id)

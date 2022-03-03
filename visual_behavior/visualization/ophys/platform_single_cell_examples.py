@@ -123,7 +123,7 @@ def get_t_array_for_kernel(kernels, feature, frame_rate):
 
 
 def plot_cell_rois_and_GLM_weights(cell_specimen_id, cells_table, experiments_table, results_pivoted, weights_df, dropout_features,
-                                  weights_features, kernels, save_dir, subfolder=None, data_type='dff'):
+                                  weights_features, kernels, save_dir=None, folder=None, data_type='dff'):
     """
     This function limits inputs just to the provided cell_specimen_id to hand off to the function plot_matched_roi_and_traces_example_GLM
     That function will plot the following panels:
@@ -151,16 +151,16 @@ def plot_cell_rois_and_GLM_weights(cell_specimen_id, cells_table, experiments_ta
 
     cell_weights = weights_df[weights_df.cell_specimen_id == cell_specimen_id]
 
-    folder = 'matched_cell_examples'
-    save_dir = os.path.join(save_dir, folder)
-    if not os.path.exists(save_dir):
-        os.mkdir(save_dir)
-    if subfolder: # if an additional subfolder is provided, make the above folder the top level and create a subfolder within it for plots
-        subfolder_dir = os.path.join(save_dir, subfolder)
-        if not os.path.exists(subfolder_dir):
-            os.mkdir(subfolder_dir)
-    else:
-        subfolder = folder
+    # folder = 'matched_cell_examples'
+    # save_dir = os.path.join(save_dir, folder)
+    # if not os.path.exists(save_dir):
+    #     os.mkdir(save_dir)
+    # if subfolder: # if an additional subfolder is provided, make the above folder the top level and create a subfolder within it for plots
+    #     subfolder_dir = os.path.join(save_dir, subfolder)
+    #     if not os.path.exists(subfolder_dir):
+    #         os.mkdir(subfolder_dir)
+    # else:
+    #     subfolder = folder
     # get metadata for this cell
     cell_metadata = cells_table[cells_table.cell_specimen_id == cell_specimen_id]
     # get weights for example cell
@@ -179,7 +179,7 @@ def plot_cell_rois_and_GLM_weights(cell_specimen_id, cells_table, experiments_ta
     cell_dropouts = dropouts[dropouts.cell_specimen_id == cell_specimen_id]
 
     plot_matched_roi_and_traces_example_GLM(cell_metadata, cell_dropouts, dropout_features, cell_weights, weights_features, kernels,
-                                            experiments_table, data_type, save_dir, subfolder)
+                                            experiments_table, data_type, save_dir, folder)
 
 
 def plot_matched_roi_and_traces_example_GLM(cell_metadata, cell_dropouts, dropout_features, cell_weights, weights_features, kernels,
