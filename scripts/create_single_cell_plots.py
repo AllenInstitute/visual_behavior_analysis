@@ -1,5 +1,5 @@
 import os
-import numpy as np 
+import numpy as np
 import pandas as pd
 import argparse
 
@@ -111,24 +111,31 @@ if __name__ == '__main__':
     # load cluster IDs per cell
     file = [file for file in os.listdir(glm_output_dir) if 'cluster_ids' in file]
     cluster_ids = pd.read_hdf(os.path.join(glm_output_dir, file[0]), key='df')
-    # loop through cre lines and make special folder
-    for cre_line in np.sort(cluster_ids.cre_line.unique()):
-        plot_save_dir = os.path.join(glm_output_dir, 'matched_cell_examples', cre_line)
-        if not os.path.exists(plot_save_dir):
-            os.mkdir(plot_save_dir)
-        cre_data = cluster_ids[cluster_ids.cre_line==cre_line]
-        for cluster_id in np.sort(cre_data.cluster_id.unique()):
-            plot_sub_folder = 'cluster_'+str(cluster_id)
-            if not os.path.exists(os.path.join(plot_save_dir, plot_sub_folder)):
-                os.mkdir(os.path.join(plot_save_dir, plot_sub_folder))
-            cluster_csids = cre_data[cre_data.cluster_id==cluster_id].cell_specimen_id.unique()
-            for cell_specimen_id in cluster_csids:
-                try:
-                    print('generating plot for', cell_specimen_id)
-                    psc.plot_cell_rois_and_GLM_weights(cell_specimen_id, cells_table, experiments_table,
-                                                       results_pivoted, weights_df, dropout_features,
-                                                       weights_features, kernels, plot_save_dir, plot_sub_folder,
-                                                       data_type)
-                except Exception as e:
-                    print('problem for', cell_specimen_id)
-                    print(e)
+    # add ophys_container from metadata
+    cells_table = loading.get_cells_table()
+    tmp = cluster_ids.merge(cells_table, on=['cre_line', 'cell_specimen_id'], how='right').drop_duplicates(subset='cell_specimen_id')
+    ophys_container_id = tmp.ophys_container_id.unique()[0]
+    container_data = tmp[tmp.ophys_container_id == ophys_container_id]
+    # make cre and cluster ID specific folders if they dont already exist
+    cre_line = container_data.cre_line.unique()[0]
+    plot_save_dir = os.path.join(glm_output_dir, 'matched_cell_examples', cre_line)
+    if not os.path.exists(plot_save_dir):
+        os.mkdir(plot_save_dir)
+    for cluster_id in np.sort(cre_data.cluster_id.unique()):
+        plot_sub_folder = 'cluster_' + str(cluster_id)
+        if not os.path.exists(os.path.join(plot_save_dir, plot_sub_folder)):
+            os.mkdir(os.path.join(plot_save_dir, plot_sub_folder))
+    # loop through cells for this container and add to cre line and cluster ID specific folders
+    container_csids = container_data.cell_specimen_id.unique()
+    for cell_specimen_id in container_csids:
+        cluster_id = container_data[container_data.cell_specimen_id==cell_specimen_id].cluster_id.unique()[0]
+        plot_sub_folder = 'cluster_' + str(cluster_id)
+        try:
+            print('generating plot for', cell_specimen_id)
+            psc.plot_cell_rois_and_GLM_weights(cell_specimen_id, cells_table, experiments_table,
+                                               results_pivoted, weights_df, dropout_features,
+                                               weights_features, kernels, plot_save_dir, plot_sub_folder,
+                                               data_type)
+        except Exception as e:
+            print('problem for', cell_specimen_id)
+            print(e)
