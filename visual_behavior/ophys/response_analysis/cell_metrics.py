@@ -1121,6 +1121,8 @@ def get_cell_metrics_for_conditions(data_type, condition, stimuli, session_subse
 
     #     missing_expts = loading.check_whether_multi_session_df_has_all_platform_experiments(multi_session_df)
 
+    if 'level_0' in metrics_table.columns:
+        metrics_table = metrics_table.drop(columns=['level_0', 'index'])
 
     return metrics_table
 
