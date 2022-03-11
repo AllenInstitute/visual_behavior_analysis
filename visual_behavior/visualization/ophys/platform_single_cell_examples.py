@@ -61,6 +61,7 @@ def get_GLM_outputs(glm_version, experiments_table, cells_table, glm_output_dir=
                                                             glm_version=glm_version, cutoff=None)
 
     # clean results
+    results_pivoted = results_pivoted.reset_index()
     print(len(results_pivoted.ophys_experiment_id.unique()), 'ophys_experiment_ids in results_pivoted after loading')
     print(len(results_pivoted.cell_specimen_id.unique()), 'cell_specimen_ids in results_pivoted after loading')
     # limit dropouts to experiments & cells in provided tables (limit input to last familiar and second novel to ensure results are also filtered)
