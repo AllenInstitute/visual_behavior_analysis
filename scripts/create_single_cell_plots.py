@@ -88,8 +88,16 @@ if __name__ == '__main__':
     print(len(results_pivoted.cell_specimen_id.unique()), 'unique cell_specimen_ids in results_pivoted')
     print(len(weights_df.cell_specimen_id.unique()), 'unique cell_specimen_ids in weights_df')
 
+    # replace results_pivoted with across session norm version
+    import visual_behavior_glm.GLM_across_session as gas
+    df = gas.load_cells(cells='all')
+    df = df.rename(columns={'ophys_experiment_id_x': 'ophys_experiment_id', 'cell_specimen_id_x': 'cell_specimen_id'})
+    df = df.set_index('cell_specimen_id')
+    results_pivoted = df.copy()
+
     # set features to use in plots
     dropout_features = ['all-images', 'omissions', 'behavioral', 'task']
+    dropout_features = ['all-images_across', 'omissions_across', 'behavioral_across', 'task_across']
     # dropout_features = ['variance_explained_full', 'all-images', 'omissions', 'behavioral', 'task']
     # features to use for weights_df
     weights_features = ['image0', 'image1', 'image2', 'image3', 'image4', 'image5', 'image6', 'image7', 'hits', 'misses', 'omissions']
