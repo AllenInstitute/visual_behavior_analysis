@@ -60,7 +60,7 @@ if __name__ == '__main__':
     # set base_dir to load and save results
     base_dir = os.path.join(base_dir, glm_version)
     # folder in save_dir where you want to load GLM results from
-    glm_output_folder = '220226_across_session_norm'
+    glm_output_folder = '220308'
     glm_output_dir = os.path.join(base_dir, glm_output_folder)
     # glm_output_dir = None
     # if glm_output_dir is None, GLM results will be generated for the full dataset and nothing will be saved
@@ -109,21 +109,21 @@ if __name__ == '__main__':
     ### for putting cells in cluster specific folders  ###
 
     # load cluster IDs per cell
-    file = [file for file in os.listdir(glm_output_dir) if 'cluster_ids' in file]
+    file = [file for file in os.listdir(glm_output_dir) if 'cluster_labels' in file]
     cluster_ids = pd.read_hdf(os.path.join(glm_output_dir, file[0]), key='df')
     # add ophys_container from metadata
     cells_table = loading.get_cell_table()
+    # get metadata for this container
     tmp = cluster_ids.merge(cells_table, on=['cre_line', 'cell_specimen_id'], how='right').drop_duplicates(subset='cell_specimen_id')
     container_data = tmp[tmp.ophys_container_id == ophys_container_id]
+
+
+    ### ROIs, dropouts and weights
     # make cre and cluster ID specific folders if they dont already exist
     cre_line = container_data.cre_line.unique()[0]
     save_dir = os.path.join(glm_output_dir, 'matched_cell_examples', cre_line)
     if not os.path.exists(save_dir):
         os.mkdir(save_dir)
-    # for cluster_id in np.sort(cluster_ids[cluster_ids.cre_line==cre_line].cluster_id.unique()):
-    #     plot_sub_folder = 'cluster_' + str(cluster_id)
-    #     if not os.path.exists(os.path.join(plot_save_dir, plot_sub_folder)):
-    #         os.mkdir(os.path.join(plot_save_dir, plot_sub_folder))
     # loop through cells for this container and add to cre line and cluster ID specific folders
     container_csids = container_data.cell_specimen_id.unique()
     for cell_specimen_id in container_csids:
@@ -138,3 +138,5 @@ if __name__ == '__main__':
         except Exception as e:
             print('problem for', cell_specimen_id)
             print(e)
+
+
