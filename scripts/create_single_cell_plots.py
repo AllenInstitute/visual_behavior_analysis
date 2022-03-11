@@ -61,6 +61,7 @@ if __name__ == '__main__':
     base_dir = os.path.join(base_dir, glm_version)
     # folder in save_dir where you want to load GLM results from
     glm_output_folder = '220308'
+    glm_output_folder = '220310_across_session_norm'
     glm_output_dir = os.path.join(base_dir, glm_output_folder)
     # glm_output_dir = None
     # if glm_output_dir is None, GLM results will be generated for the full dataset and nothing will be saved
