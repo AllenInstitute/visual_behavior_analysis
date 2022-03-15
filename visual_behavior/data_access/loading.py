@@ -3185,6 +3185,19 @@ def get_cell_table(platform_paper_only=True, add_extra_columns=True, limit_to_cl
     return cell_table
 
 
+def get_matched_cells_table(cells_table):
+    """
+    takes cells_table from sdk and limits to last familiar and second novel active sessions,
+    container and cells matched in all experience levels
+    """
+    # limit to cells matched in closest familiar and novel active
+    cells_table = utilities.limit_to_last_familiar_second_novel_active(cells_table)
+    cells_table = utilities.limit_to_containers_with_all_experience_levels(cells_table)
+    cells_table = utilities.limit_to_cell_specimen_ids_matched_in_all_experience_levels(cells_table)
+    print(len(cells_table.cell_specimen_id.unique()), 'cells in matched cells table')
+    return cells_table
+
+
 def get_data_dict(ophys_experiment_ids, data_types=None):
     """
     create dictionary of stimulus_response_dfs for all data types for a set of ophys_experiment_ids
