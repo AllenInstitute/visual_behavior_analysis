@@ -392,10 +392,10 @@ def plot_mean_response_by_epoch(df, metric='mean_response', horizontal=True, ymi
         format_fig = True
         if horizontal:
             figsize = (13, 3.5)
-            fig, ax = plt.subplots(1, 3, figsize=figsize, sharex=False, sharey=True)
+            fig, ax = plt.subplots(1, 3, figsize=figsize, sharex=False, sharey=False)
         else:
             figsize = (4.5, 10.5)
-            fig, ax = plt.subplots(3, 1, figsize=figsize, sharex=True)
+            fig, ax = plt.subplots(3, 1, figsize=figsize, sharex=False)
     else:
         format_fig = False
 
@@ -409,10 +409,10 @@ def plot_mean_response_by_epoch(df, metric='mean_response', horizontal=True, ymi
         ax[i].set_ylabel(ylabel)
         ax[i].set_xlabel('')
         ax[i].get_legend().remove()
-        ax[i].set_xticklabels(xticks, fontsize=14)
+        ax[i].set_xticklabels(xticks, fontsize=12)
         ax[i].vlines(x=5.5, ymin=0, ymax=1, color='gray', linestyle='--')
         ax[i].vlines(x=11.5, ymin=0, ymax=1, color='gray', linestyle='--')
-    ax[i].set_xlabel('10 min epoch within session', fontsize=14)
+        ax[i].set_xlabel('10 min epoch within session', fontsize=14)
     if format_fig:
         plt.suptitle(metric+' over time', x=0.52, y=1.03, fontsize=18)
         fig.tight_layout()

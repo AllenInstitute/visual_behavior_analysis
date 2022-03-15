@@ -167,11 +167,13 @@ def plot_cell_rois_and_GLM_weights(cell_specimen_id, cells_table, experiments_ta
     # get weights for example cell
     cell_weights = weights_df[weights_df.cell_specimen_id == cell_specimen_id]
     # limit results_pivoted to features of interest
-    rspm = results_pivoted[['cell_specimen_id', 'experience_level'] + dropout_features]
-    # make dropouts positive for plotting
-    for feature in dropout_features:
-        rspm[feature] = np.abs(rspm[feature])
-    # if exp var full model is in features (must be first feature), scale it by 10x so its on similar scale as dropouts
+    rspm = limit_results_pivoted_to_features_for_clustering(results_pivoted, take_absolute_value=False,
+                                                     use_signed_features=True)
+    # rspm = results_pivoted[['cell_specimen_id', 'experience_level'] + dropout_features]
+    # # make dropouts positive for plotting
+    # for feature in dropout_features:
+    #     rspm[feature] = np.abs(rspm[feature])
+    # # if exp var full model is in features (must be first feature), scale it by 10x so its on similar scale as dropouts
     if dropout_features[0] == 'variance_explained_full':
         rspm[features[0]] = rspm[features[0]] * 10
     # merge with metadata
@@ -213,6 +215,7 @@ def plot_matched_roi_and_traces_example_GLM(cell_metadata, cell_dropouts, dropou
     cell_type = cell_metadata.cell_type.unique()[0]
     cell_specimen_id = cell_metadata.cell_specimen_id.unique()[0]
     ophys_container_id = cell_metadata.ophys_container_id.unique()[0]
+    cre_line = cell_metadata.cre_line.unique()[0]
     # need to get all experiments for this container, not just for this cell
     ophys_experiment_ids = experiments_table[experiments_table.ophys_container_id==ophys_container_id].index.values
     n_expts = len(ophys_experiment_ids)
@@ -359,11 +362,14 @@ def plot_matched_roi_and_traces_example_GLM(cell_metadata, cell_dropouts, dropou
     try:
         # plot dropout score heatmaps
         i = n_expts + extra_cols  # change to extra_cols = 4 if running and pupil are added
-        mean_dropouts = cell_dropouts.groupby('experience_level').mean()[dropout_features]
-        ax[i] = sns.heatmap(mean_dropouts.T, cmap='Blues', vmin=0, vmax=1, ax=ax[i],
-                            cbar=False, cbar_kws={'shrink':0.7, 'label':'coding score'})
+        cell_dropouts['cluster_id'] = 0
+        cell_droputs['cre_line'] = cre_line
+        ax[i] = plot_dropout_heatmap(cell_metadata, cell_dropouts, cre_line, cluster_id, small_fontsize=False, ax=ax[i])
+        # mean_dropouts = cell_dropouts.groupby('experience_level').mean()[dropout_features]
+        # ax[i] = sns.heatmap(mean_dropouts.T, cmap='Blues', vmin=0, vmax=1, ax=ax[i],
+        #                     cbar=False, cbar_kws={'shrink':0.7, 'label':'coding score'})
         ax[i].set_title(cell_type, fontsize=14)
-        ax[i].set_ylim(-0.5, 4.5)
+        # ax[i].set_ylim(-0.5, 4.5)
         ax[i].set_xlabel('')
     except:
         print('could not plot dropout heatmap for', cell_specimen_id)
