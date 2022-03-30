@@ -378,7 +378,7 @@ def get_window(analysis=None, flashes=False, omitted=False):
 
 
 def get_mean_df(response_df, conditions=['cell', 'change_image_name'], frame_rate=30.,
-                window_around_timepoint_seconds=[-3, 3], response_window_duration_seconds=0.5,
+                window_around_timepoint_seconds=[-3, 3.1], response_window_duration_seconds=0.5,
                 get_pref_stim=True, exclude_omitted_from_pref_stim=True):
 
     import visual_behavior.ophys.response_analysis.response_processing as rp
