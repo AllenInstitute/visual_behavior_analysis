@@ -6,13 +6,13 @@ import visual_behavior.ophys.response_analysis.utilities as ut
 from visual_behavior.data_access import loading
 
 
-def get_multi_session_df(project_code, session_type, conditions, data_type, event_type,
+def get_multi_session_df(project_code, mouse_id, conditions, data_type, event_type,
                          time_window=[-3, 3.1], interpolate=True, output_sampling_rate=30,
                          response_window_duration=0.5, use_extended_stimulus_presentations=False, overwrite=False):
     """
 
     :param project_code:
-    :param session_number:
+    :param mouse_id:
     :param conditions:
     :param data_type:
     :param event_type:
@@ -42,12 +42,11 @@ def get_multi_session_df(project_code, session_type, conditions, data_type, even
 
     # session_type = float(session_type)
     experiments = experiments_table[(experiments_table.project_code == project_code) &
-                                    (experiments_table.session_type == session_type)].copy()
-    print('session_types:', experiments.session_type.unique(),
-          ' - there should only be one session_type per session_number')
-    session_type = experiments.session_type.unique()[0]
+                                    (experiments_table.mouse_id == mouse_id)].copy()
 
-    filename = loading.get_file_name_for_multi_session_df(data_type, event_type, project_code, session_type, conditions)
+    mouse_id = experiments.mouse_id.unique()[0]
+
+    filename = loading.get_file_name_for_multi_session_df(data_type, event_type, project_code, mouse_id, conditions)
     mega_mdf_write_dir = loading.get_multi_session_df_dir(interpolate=interpolate, output_sampling_rate=output_sampling_rate,
                                                           event_type=event_type)
     filepath = os.path.join(mega_mdf_write_dir, filename)

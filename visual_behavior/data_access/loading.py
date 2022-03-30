@@ -74,8 +74,8 @@ def get_platform_analysis_cache_dir():
 def get_production_cache_dir():
     """Get directory containing a manifest file that includes all VB production data, including failed experiments"""
     # cache_dir = r'/allen/programs/braintv/workgroups/nc-ophys/learning_mFISH/learning_project_cache'
-    # cache_dir = r'/allen/programs/mindscope/workgroups/learning/ophys/learning_project_cache'
-    cache_dir = r'\\allen\programs\mindscope\workgroups\learning\ophys\learning_project_cache'
+    cache_dir = r'//allen/programs/mindscope/workgroups/learning/ophys/learning_project_cache'
+    # cache_dir = r'\\allen\programs\mindscope\workgroups\learning\ophys\learning_project_cache'
     return cache_dir
 
 
@@ -105,7 +105,7 @@ def get_single_cell_plots_dir():
 
 
 def get_analysis_cache_dir():
-    return r'\\allen\programs\braintv\workgroups\nc-ophys\learning_mFISH\learning_project_cache'
+    return r'//allen/programs/braintv/workgroups/nc-ophys/learning_mFISH/learning_project_cache'
 
 
 def get_events_dir():
@@ -2731,20 +2731,21 @@ def add_superficial_deep_to_experiments_table(experiments_table):
     return experiments_table
 
 
-def get_file_name_for_multi_session_df(data_type, event_type, project_code, session_type, conditions):
+def get_file_name_for_multi_session_df(data_type, event_type, project_code, mouse_id, conditions):
 
+    mouse_id = str(mouse_id)
     if len(conditions) == 6:
-        filename = 'mean_response_df_' + data_type + '_' + event_type + '_' + project_code + '_' + session_type + '_' + conditions[1] + '_' + conditions[2] + '_' + conditions[3] + '_' + conditions[4] + '_' + conditions[5] + '.h5'
+        filename = 'mean_response_df_' + data_type + '_' + event_type + '_' + project_code + '_' + mouse_id + '_' + conditions[1] + '_' + conditions[2] + '_' + conditions[3] + '_' + conditions[4] + '_' + conditions[5] + '.h5'
     elif len(conditions) == 5:
-        filename = 'mean_response_df_' + data_type + '_' + event_type + '_' + project_code + '_' + session_type + '_' + conditions[1] + '_' + conditions[2] + '_' + conditions[3] + '_' + conditions[4] + '.h5'
+        filename = 'mean_response_df_' + data_type + '_' + event_type + '_' + project_code + '_' + mouse_id + '_' + conditions[1] + '_' + conditions[2] + '_' + conditions[3] + '_' + conditions[4] + '.h5'
     elif len(conditions) == 4:
-        filename = 'mean_response_df_' + data_type + '_' + event_type + '_' + project_code + '_' + session_type + '_' + conditions[1] + '_' + conditions[2] + '_' + conditions[3] + '.h5'
+        filename = 'mean_response_df_' + data_type + '_' + event_type + '_' + project_code + '_' + mouse_id + '_' + conditions[1] + '_' + conditions[2] + '_' + conditions[3] + '.h5'
     elif len(conditions) == 3:
-        filename = 'mean_response_df_' + data_type + '_' + event_type + '_' + project_code + '_' + session_type + '_' + conditions[1] + '_' + conditions[2] + '.h5'
+        filename = 'mean_response_df_' + data_type + '_' + event_type + '_' + project_code + '_' + mouse_id + '_' + conditions[1] + '_' + conditions[2] + '.h5'
     elif len(conditions) == 2:
-        filename = 'mean_response_df_' + data_type + '_' + event_type + '_' + project_code + '_' + session_type + '_' + conditions[1] + '.h5'
+        filename = 'mean_response_df_' + data_type + '_' + event_type + '_' + project_code + '_' + mouse_id + '_' + conditions[1] + '.h5'
     elif len(conditions) == 1:
-        filename = 'mean_response_df_' + data_type + '_' + event_type + '_' + project_code + '_' + session_type + '_' + conditions[0] + '.h5'
+        filename = 'mean_response_df_' + data_type + '_' + event_type + '_' + project_code + '_' + mouse_id + '_' + conditions[0] + '.h5'
 
     return filename
 
@@ -2772,9 +2773,9 @@ def load_multi_session_df(data_type, event_type, conditions, interpolate=True, o
         experiments = experiments_table[(experiments_table.project_code == project_code)]
         if project_code == 'VisualBehaviorMultiscope':
             experiments = experiments[experiments.session_type != 'OPHYS_2_images_B_passive']
-        for session_type in np.sort(experiments.session_type.unique()):
+        for mouse_id in np.sort(experiments.mouse_id.unique()):
             try:
-                filename = get_file_name_for_multi_session_df(data_type, event_type, project_code, session_type, conditions)
+                filename = get_file_name_for_multi_session_df(data_type, event_type, project_code, mouse_id, conditions)
                 multi_session_df_dir = get_multi_session_df_dir(interpolate=interpolate,
                                                                    output_sampling_rate=output_sampling_rate, event_type=event_type)
                 df = pd.read_hdf(os.path.join(multi_session_df_dir, filename), key='df')

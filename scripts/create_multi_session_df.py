@@ -12,12 +12,12 @@ if __name__ == '__main__':
     # define args
     parser = argparse.ArgumentParser()
     parser.add_argument('--project_code', type=str, help='project code to use')
-    parser.add_argument('--session_type', type=str, help='session type to use')
+    parser.add_argument('--mouse_id', type=str, help='mouse_id to use')
     args = parser.parse_args()
     project_code = args.project_code
-    session_type = args.session_type
+    mouse_id = args.mouse_id
 
-    print(project_code, session_type)
+    print(project_code, mouse_id)
 
     # params for stim response df creation
     time_window = [-3, 3.1]
@@ -76,7 +76,7 @@ if __name__ == '__main__':
                 response_window_duration = 0.5
             print('creating multi_session_df for', data_type, event_type, conditions)
             try: # use try except so that it skips over any conditions that fail to generate for some reason
-                df = io.get_multi_session_df(project_code, session_type, conditions, data_type, event_type,
+                df = io.get_multi_session_df(project_code, mouse_id, conditions, data_type, event_type,
                                              time_window=time_window, interpolate=interpolate, output_sampling_rate=output_sampling_rate,
                                              response_window_duration=response_window_duration,
                                              use_extended_stimulus_presentations=use_extended_stimulus_presentations,
@@ -96,7 +96,7 @@ if __name__ == '__main__':
     #             response_window_duration_seconds = 0.5
     #         print('creating multi_session_df for', data_type, event_type, conditions)
     #         try: # use try except so that it skips over any conditions that fail to generate for some reason
-    #             df = io.get_multi_session_df(project_code, session_type, conditions, data_type, event_type,
+    #             df = io.get_multi_session_df(project_code, mouse_id, conditions, data_type, event_type,
     #                                          time_window=time_window, interpolate=interpolate,
     #                                          output_sampling_rate=output_sampling_rate,
     #                                          response_window_duration_seconds=response_window_duration_seconds,

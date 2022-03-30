@@ -36,7 +36,7 @@ experiments_table = experiments_table[experiments_table.project_code=='Learningm
 # call the `sbatch` command to run the jobs.
 for project_code in experiments_table.project_code.unique():
     print(project_code)
-    for session_type in experiments_table.session_type.unique():
+    for mouse_id in experiments_table.mouse_id.unique():
 
         # instantiate a Slurm object
         slurm = Slurm(
@@ -44,10 +44,10 @@ for project_code in experiments_table.project_code.unique():
             cpus_per_task=1,
             time='20:00:00',
             partition='braintv',
-            job_name='multi_session_df_'+project_code+'_'+session_type,
+            job_name='multi_session_df_'+project_code+'_'+mouse_id,
             output=f'{stdout_location}/{Slurm.JOB_ARRAY_MASTER_ID}_{Slurm.JOB_ARRAY_ID}.out',
         )
 
-        slurm.sbatch(python_path+' '+python_file+' --project_code '+str(project_code)+' --session_type'+' '+str(session_type))
+        slurm.sbatch(python_path+' '+python_file+' --project_code '+str(project_code)+' --mouse_id'+' '+str(mouse_id))
 
 
