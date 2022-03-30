@@ -65,8 +65,8 @@ if __name__ == '__main__':
     #     behavior_conditions[i].insert(1, 'engagement_state')
 
     # create dfs for all data types and conditions for physio data
-    for data_type in physio_data_types:
-    # data_type = 'events'
+    # for data_type in physio_data_types:
+    data_type = 'dff'
         for i, conditions in enumerate(physio_conditions):
             print(conditions)
             event_type = event_types_for_conditions[i]
