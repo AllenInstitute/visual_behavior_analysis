@@ -593,12 +593,17 @@ def get_stimulus_response_df(dataset, time_window=[-3, 3.1], interpolate=True, o
                     print('saved response df to', filepath)
                 except:
                     print('could not save', filepath)
-        else: # if file does not exist, generate response df
-            print('generating response df')
+        else: # if file does not exist, generate response df and save it
+            print('could not load file, generating response df')
             sdf = vb_ophys.get_stimulus_response_df(dataset, data_type=data_type, event_type=event_type,
                                                     time_window=time_window, interpolate=interpolate,
                                                     output_sampling_rate=output_sampling_rate,
                                                     response_window_duration=response_window_duration)
+            try:  # some experiments with lots of neurons cant save
+                sdf.to_hdf(filepath, key='df')
+                print('saved response df to', filepath)
+            except:
+                print('could not save', filepath)
     else: # if load_from_file is False, generate response df
         print('generating response df')
         sdf = vb_ophys.get_stimulus_response_df(dataset, data_type=data_type, event_type=event_type,
