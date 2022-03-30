@@ -1,4 +1,5 @@
 import os
+import argparse
 from simple_slurm import Slurm
 
 import visual_behavior.data_access.loading as loading
@@ -12,17 +13,19 @@ conda_environment = 'visual_behavior_sdk'
 
 # build the python path
 # this assumes that the environments are saved in the user's home directory in a folder called 'anaconda2'
-python_path = os.path.join(
-    os.path.expanduser("~"),
-    'anaconda2',
-    'envs',
-    conda_environment,
-    'bin',
-    'python'
-)
+# python_path = os.path.join(
+#     os.path.expanduser("~"),
+#     'anaconda2',
+#     'envs',
+#     conda_environment,
+#     'bin',
+#     'python'
+# )
+
+python_executable = "{}/anaconda2/envs/{}/bin/python".format(os.path.expanduser('~'), conda_environment)
 
 # define the job record output folder
-stdout_location = r"/allen/programs/mindscope/workgroups/learning/cluster_jobs/multi_session_dfs"
+stdout_location = r"/allen/programs/mindscope/workgroups/learning/ophys/cluster_jobs/multi_session_dfs"
 
 
 # cache = VisualBehaviorOphysProjectCache.from_lims()
@@ -37,7 +40,7 @@ experiments_table = experiments_table[experiments_table.project_code=='Learningm
 for project_code in experiments_table.project_code.unique():
     print(project_code)
     for mouse_id in experiments_table.mouse_id.unique():
-
+        print(mouse_id)
         # instantiate a Slurm object
         slurm = Slurm(
             mem='120g',  # '24g'
@@ -48,6 +51,6 @@ for project_code in experiments_table.project_code.unique():
             output=f'{stdout_location}/{Slurm.JOB_ARRAY_MASTER_ID}_{Slurm.JOB_ARRAY_ID}.out',
         )
 
-        slurm.sbatch(python_path+' '+python_file+' --project_code '+str(project_code)+' --mouse_id'+' '+str(mouse_id))
+        slurm.sbatch(python_executable+' '+python_file+' --project_code '+str(project_code)+' --mouse_id'+' '+str(mouse_id))
 
 
