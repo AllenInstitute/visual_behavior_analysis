@@ -9,6 +9,53 @@ from visual_behavior.ophys.response_analysis.response_analysis import ResponseAn
 
 output_dir = '/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/sparsity/'
 
+# TODO
+# list of observations
+# Using df.groupby()['all_sparse_avg'].mean(), there doesn't seem to be any effect by novelty
+# limitiing to last familiar_active, and second_novel_Active, doesn't change anything
+# splitting by area_binned_depth doesn't change anythinga
+
+# Sparseness depends highly on number of cells
+# but avg. num-cells per experience is constant, so just normalize by container
+# Are there some containers that increase sparsity, and others decrease?
+# Do we have enough neurons to even estimate this, if we randomly have a cell that response or not
+# is averaging across images the correct way to compute this?
+# could recompute only on cells tracked across all daysa
+
+def container_plot(df,cre,metric):
+    cdf = df.query('cre_line==@cre').query('(first_novel) or (last_familiar_active)').pivot(index='ophys_container_id',columns='experience_level',values=metric)
+    cdf = cdf.dropna()
+    plt.figure()
+    plt.plot(cdf['Familiar'],cdf['Novel 1'],'ko')
+    mv = cdf.max().max()*1.1
+    plt.plot([0,mv],[0,mv],'k--')
+    plt.ylabel('Novel Sparsity')
+    plt.xlabel('Familiar Sparsity')
+    plt.title(cre+', '+metric)
+
+def load_sparse_metrics():
+    # Get Experiment Table for ophys_experiment_ids, and meta data
+    experiment_table = loading.get_platform_paper_experiment_table()
+
+    # load each experiment's metrics
+    dicts = []
+    for oeid in experiment_table.index.values:
+        dicts.append(load_experiment_metrics(oeid))
+
+    # Combine into one dataframe
+    df= pd.DataFrame.from_records(dicts)
+
+    # average together image index values
+    sets_to_average = ['post_omission','pre_omission','change_sparse','post_change_sparse','pre_change_sparse', 'all_sparse']
+    for s in sets_to_average:
+        columns = [x for x in df.columns.values if s in x]
+        df[s+'_avg'] = df[columns].mean(axis=1) 
+ 
+    # merge with experiment table
+    df = pd.merge(df,experiment_table, on='ophys_experiment_id', validate='one_to_one')
+
+    return df 
+
 def load_experiment_metrics(oeid):
     '''
         Loads a dictionary of pre-computed metrics
