@@ -22,16 +22,18 @@ output_dir = '/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/sparsi
 # is averaging across images the correct way to compute this?
 # could recompute only on cells tracked across all daysa
 
+
 def container_plot(df, cre, metric):
-    cdf = df.query('cre_line==@cre').query('(first_novel) or (last_familiar_active)').pivot(index='ophys_container_id',columns='experience_level',values=metric)
+    cdf = df.query('cre_line==@cre').query('(first_novel) or (last_familiar_active)').pivot(index='ophys_container_id', columns='experience_level', values=metric)
     cdf = cdf.dropna()
     plt.figure()
-    plt.plot(cdf['Familiar'],cdf['Novel 1'],'ko')
-    mv = cdf.max().max()*1.1
-    plt.plot([0,mv],[0,mv],'k--')
+    plt.plot(cdf['Familiar'], cdf['Novel 1'], 'ko')
+    mv = cdf.max().max() * 1.1
+    plt.plot([0, mv], [0, mv], 'k--')
     plt.ylabel('Novel Sparsity')
     plt.xlabel('Familiar Sparsity')
     plt.title(cre + ', ' + metric)
+
 
 def load_sparse_metrics():
     # Get Experiment Table for ophys_experiment_ids, and meta data
@@ -43,13 +45,13 @@ def load_sparse_metrics():
         dicts.append(load_experiment_metrics(oeid))
 
     # Combine into one dataframe
-    df= pd.DataFrame.from_records(dicts)
+    df = pd.DataFrame.from_records(dicts)
 
     # average together image index values
     sets_to_average = ['post_omission', 'pre_omission', 'change_sparse', 'post_change_sparse', 'pre_change_sparse', 'all_sparse']
     for s in sets_to_average:
         columns = [x for x in df.columns.values if s in x]
-        df[s+'_avg'] = df[columns].mean(axis=1) 
+        df[s + '_avg'] = df[columns].mean(axis=1)
     # merge with experiment table
     df = pd.merge(df, experiment_table, on='ophys_experiment_id', validate='one_to_one')
 
@@ -94,7 +96,7 @@ def compute_experiment(oeid):
     # Save out a dictionary
     filename = output_dir + 'experiment_files/' + str(oeid) + '.pbz2'
     with bz2.BZ2File(filename, 'w') as f:
-        cPickle.dump(out_dict,f)
+        cPickle.dump(out_dict, f)
 
 
 def get_response_df(oeid):
@@ -110,7 +112,7 @@ def add_post_event(dataset, sdf):
     dataset.stimulus_presentations['post_change'] = dataset.stimulus_presentations['is_change'].shift(1, fill_value=False)
 
     # many to one merge onto sdf
-    sdf = pd.merge(sdf, dataset.stimulus_presentations.reset_index()[['stimulus_presentations_id', 'post_omission', 'post_change']], on='stimulus_presentations_id',validate='many_to_one') 
+    sdf = pd.merge(sdf, dataset.stimulus_presentations.reset_index()[['stimulus_presentations_id', 'post_omission', 'post_change']], on='stimulus_presentations_id', validate='many_to_one')
     return sdf
 
 
