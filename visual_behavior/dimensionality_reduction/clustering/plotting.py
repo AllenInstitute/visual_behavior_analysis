@@ -368,17 +368,19 @@ def plot_coclustering_matrix_sorted_by_cluster_size(coclustering_matrices, clust
     sorted_coclustering_matrix = sorted_coclustering_matrix[sorted_cell_specimen_ids]
 
     if ax is None:
-        figsize =(6,6)
+        figsize =(5,5)
         fig, ax = plt.subplots(figsize=figsize)
     ax = sns.heatmap(sorted_coclustering_matrix, cmap="Greys", ax=ax, square=True,
-                       cbar=True, cbar_kws={"drawedges": False, "label": 'probability of co-clustering', 'shrink':0.7},)
+                       cbar=True, cbar_kws={"drawedges": False, "label": 'probability of\nco-clustering', 'shrink':0.7,},)
     ax.set_title(get_cell_type_for_cre_line(cluster_meta, cre_line))
+    ax.set_title('')
     ax.set_yticks((0, sorted_coclustering_matrix.shape[0]));
-    ax.set_yticklabels((0, sorted_coclustering_matrix.shape[0]));
-    ax.set_ylabel('cells')
+    ax.set_yticklabels((0, sorted_coclustering_matrix.shape[0]), fontsize=25);
+    ax.set_ylabel('cells', fontsize=25)
     ax.set_xticks((0, sorted_coclustering_matrix.shape[0]));
     ax.set_xticklabels('')
     ax.set_xlabel('')
+    sns.despine(ax=ax, bottom=False, top=False, left=False, right=False)
     if save_dir:
         filename = 'coclustering_matrix_sorted_by_cluster_size_'+cre_line.split('-')[0]
         utils.save_figure(fig, figsize, save_dir, folder, filename, formats=['.png']) # saving to PDF is super slow)
