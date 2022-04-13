@@ -27,7 +27,6 @@ folder = '220412_across_session_norm'
 across_session_norm = True
 use_signed_weights = False
 
-
 # ### number of clusters for within session norm
 # n_clusters_cre = {'Slc17a7-IRES2-Cre': 10,
 #                   'Sst-IRES-Cre': 6,
@@ -103,7 +102,12 @@ if across_session_norm:
         import visual_behavior_glm.GLM_params as glm_params
 
         run_params = glm_params.load_run_json(glm_version)
-        weights_df = gat.build_weights_df(run_params, results_pivoted)
+
+        # get full results_pivoted for weights_df
+        full_results_pivoted = gat.build_pivoted_results_summary(value_to_use=model_output_type, results_summary=None,
+                                                            glm_version=glm_version, cutoff=None)
+
+        weights_df = gat.build_weights_df(run_params, full_results_pivoted)
 
         results_pivoted = gat.append_kernel_excitation(weights_df, results_pivoted)
         # add behavioral results signed by duplicating behavioral dropouts
@@ -125,7 +129,6 @@ if across_session_norm:
         results_pivoted = results_pivoted.reset_index().drop_duplicates(
             subset=['cell_specimen_id', 'experience_level']).set_index('cell_specimen_id')
 
-
     # save results_pivoted
     results_pivoted.to_hdf(os.path.join(save_dir, glm_version + '_results_pivoted.h5'), key='df')
 
@@ -144,7 +147,9 @@ else:
 
     # get GLM results from saved file in save_dir or from mongo if file doesnt exist
     results_pivoted = processing.get_glm_results_pivoted_for_clustering(glm_version, model_output_type, save_dir)
-    results_pivoted.head()
+
+    # save results_pivoted
+    results_pivoted.to_hdf(os.path.join(save_dir, glm_version + '_results_pivoted.h5'), key='df')
 
     # get dropout scores just for the features we want to cluster on
     dropouts = processing.limit_results_pivoted_to_features_for_clustering(results_pivoted)
@@ -209,7 +214,6 @@ if not os.path.exists(cell_examples_dir):
 
 # plotting.plot_dropout_heatmaps_and_save_to_cell_examples_folders(cluster_meta, feature_matrix, save_dir)
 
-
 ### plot average dropouts for each cre line in cluster size order
 sort_col = 'cluster_id'
 plotting.plot_dropout_heatmaps_for_clusters(cluster_meta, feature_matrix, sort_col=sort_col, save_dir=base_dir,
@@ -240,7 +244,7 @@ plotting.plot_within_cluster_correlations_all_cre(cluster_meta, n_clusters_cre, 
 plotting.plot_average_dropout_heatmap_for_cre_lines(dropouts, cluster_meta, save_dir=base_dir, folder=folder)
 
 ### plot 100 cells per cluster to examine within cluster variability
-plotting.plot_random_subset_of_cells_per_cluster(cluster_meta, dropouts, save_dir)
+# plotting.plot_random_subset_of_cells_per_cluster(cluster_meta, dropouts, save_dir)
 
 
 ### breakdown by area and depth

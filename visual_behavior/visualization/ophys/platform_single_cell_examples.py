@@ -79,7 +79,10 @@ def get_GLM_outputs(glm_version, experiments_table, cells_table, glm_output_dir=
         if os.path.exists(weights_path): # if it exists, load it
             weights_df = pd.read_hdf(weights_path, key='df')
         else: # if it doesnt exist, generate it and save it
-            weights_df = gat.build_weights_df(run_params, results_pivoted)
+            # need to create results pivoted from scratch for weights_df
+            full_results_pivoted = gat.build_pivoted_results_summary(value_to_use=model_output_type, results_summary=None,
+                                                                glm_version=glm_version, cutoff=None)
+            weights_df = gat.build_weights_df(run_params, full_results_pivoted)
             weights_df = weights_df.drop_duplicates(subset=['cell_specimen_id', 'ophys_experiment_id'])
             weights_df = weights_df.reset_index()
             weights_df['identifier'] = [
