@@ -375,8 +375,8 @@ def plot_coclustering_matrix_sorted_by_cluster_size(coclustering_matrices, clust
     ax.set_title(get_cell_type_for_cre_line(cluster_meta, cre_line))
     ax.set_title('')
     ax.set_yticks((0, sorted_coclustering_matrix.shape[0]));
-    ax.set_yticklabels((0, sorted_coclustering_matrix.shape[0]), fontsize=25);
-    ax.set_ylabel('cells', fontsize=25)
+    ax.set_yticklabels((0, sorted_coclustering_matrix.shape[0]), fontsize=20);
+    ax.set_ylabel('cells', fontsize=20)
     ax.set_xticks((0, sorted_coclustering_matrix.shape[0]));
     ax.set_xticklabels('')
     ax.set_xlabel('')
@@ -1155,7 +1155,7 @@ def plot_random_subset_of_cells_per_cluster(cluster_meta, dropouts, save_dir=Non
 
 def plot_fraction_cells_by_area_depth(cluster_meta, n_clusters_cre, normalize=True, label='fraction of cells', save_dir=None, folder=None):
     """
-    plots either the number or fraction of cells per area and depth for each cluster
+    plots either the number (normalize=False) or fraction (normalize=True) of cells per area and depth for each cluster
     fraction of cells is computed by taking the total number of cells for each area and depth
     and computing what fraction of that total belongs in each cluster
     does not explicitly account for sampling bias
@@ -1169,9 +1169,9 @@ def plot_fraction_cells_by_area_depth(cluster_meta, n_clusters_cre, normalize=Tr
     for i, cre_line in enumerate(cre_lines):
         cre_meta = cluster_meta[cluster_meta.cre_line==cre_line]
         frequency = processing.make_frequency_table(cre_meta, groupby_columns = ['targeted_structure', 'layer'], normalize=normalize)
-
+        frequency = frequency.T # transpose so that rows are locations and cols are cluster IDs
         ax[i] = sns.heatmap(frequency, vmin=0, cmap='Purples', ax=ax[i], cbar_kws={'shrink':0.8, 'label':label})
-        ax[i].set_ylim((0, 4))
+        ax[i].set_ylim((0, len(frequency.index)))
         ax[i].set_xlim(-0.5, len(frequency.columns)+0.5)
         ax[i].set_ylabel('')
         ax[i].set_title(get_cell_type_for_cre_line(cluster_meta, cre_line))
@@ -1425,36 +1425,36 @@ def plot_clusters_stats_pop_avg_rows(cluster_meta, feature_matrix, multi_session
     cre_counts = cell_count_stats[cell_count_stats.cre_line == cre_line]
     cre_fraction = fraction_cells[fraction_cells.cre_line == cre_line]
 
-    n_rows = 4
+    n_rows = 2 # 4 if including proportion plots
     figsize = (n_clusters * 2.5, n_rows * 2.5)
     fig, ax = plt.subplots(n_rows, n_clusters, figsize=figsize, sharex='row', sharey='row',
-                           gridspec_kw={'height_ratios': [1, 0.75, 1, 0.75]})
+                           gridspec_kw={'height_ratios': [1, 0.75]})
     ax = ax.ravel()
     for i, cluster_id in enumerate(cluster_ids):
         # plot mean dropout heatmap for this cluster
         ax[i] = plot_dropout_heatmap(cluster_meta, feature_matrix, cre_line, cluster_id, ax=ax[i])
-
-        ax[i + (n_clusters * 2)] = plot_pct_rel_to_chance_for_cluster(cre_counts, cluster_id, ax=ax[i + (n_clusters * 2)])
-        ax[i + (n_clusters * 2)].get_legend().remove()
-        ax[i + (n_clusters * 2)].set_xlabel('fraction cells')
-        ax[i + (n_clusters * 2)].set_xlim(-1, 1)
+        #
+        # ax[i + (n_clusters * 2)] = plot_pct_rel_to_chance_for_cluster(cre_counts, cluster_id, ax=ax[i + (n_clusters * 2)])
+        # ax[i + (n_clusters * 2)].get_legend().remove()
+        # ax[i + (n_clusters * 2)].set_xlabel('fraction cells')
+        # ax[i + (n_clusters * 2)].set_xlim(-1, 1)
 
         ax[i + (n_clusters * 1)] = plot_population_average_response_for_cluster(cluster_mdf, cre_line, cluster_id,
                                                                                 ax=ax[i + (n_clusters * 1)])
         ax[i + (n_clusters * 1)].set_xlabel('time (s)')
         if i > 0:
             ax[i + (n_clusters * 1)].set_ylabel('')
-
-        ax[i + (n_clusters * 3)] = plot_fraction_cells_per_area_depth(cre_fraction, cluster_id,
-                                                                      ax=ax[i + (n_clusters * 3)])
-        ax[i + (n_clusters * 3)].get_legend().remove()
-        ax[i + (n_clusters * 3)].set_xlim(0, 0.45)
+        #
+        # ax[i + (n_clusters * 3)] = plot_fraction_cells_per_area_depth(cre_fraction, cluster_id,
+        #                                                               ax=ax[i + (n_clusters * 3)])
+        # ax[i + (n_clusters * 3)].get_legend().remove()
+        # ax[i + (n_clusters * 3)].set_xlim(0, 0.45)
 
     # legend for leftmost plot for pct chance
-    ax[(0 + n_clusters *2)].legend(loc='lower right', fontsize='x-small')
+    # ax[(0 + n_clusters *2)].legend(loc='lower right', fontsize='x-small')
 
     fig.subplots_adjust(hspace=1.2, wspace=0.6)
-    fig.suptitle(get_cell_type_for_cre_line(cluster_meta, cre_line), x=0.52, y=0.95, fontsize=16)
+    fig.suptitle(get_cell_type_for_cre_line(cluster_meta, cre_line), x=0.52, y=0.98, fontsize=16)
     # fig.tight_layout()
     if save_dir:
         utils.save_figure(fig, figsize, save_dir, folder, 'clusters_rows_' + cre_line.split('-')[0] + suffix)

@@ -693,7 +693,7 @@ def get_cluster_meta(cluster_labels, cell_metadata, feature_matrix, n_clusters_c
                                                                                           on='cell_specimen_id')
         cluster_meta = cluster_meta.set_index('cell_specimen_id')
         # annotate & clean cluster metadata
-        cluster_meta = clean_cluster_meta(cluster_meta)
+        cluster_meta = clean_cluster_meta(cluster_meta) # drop cluster IDs with fewer than 5 cells in them
         cluster_meta['original_cluster_id'] = cluster_meta.cluster_id
         cluster_meta = add_manual_sort_order_to_cluster_meta(cluster_meta)
         cluster_meta = add_within_cluster_corr_to_cluster_meta(feature_matrix, cluster_meta, use_spearmanr=False)
@@ -705,20 +705,37 @@ def get_cluster_meta(cluster_labels, cell_metadata, feature_matrix, n_clusters_c
 
 def make_frequency_table(cluster_meta, groupby_columns=['binned_depth'], normalize=True):
     '''
-    Computes normalized frequency for depth and area analysis in clustering
+    Computes normalized frequency for depth and area (or whatever groupby columns are provided) per cluster
+    Converts groupby columns into a single column label (instead of a multi-index) in output table
+    (ex: 'VISp_upper' instead of ('VISp', 'upper')
     Input:
     cluster_meta: pd.DataFrame should include columns ['cluster_id', 'cell_specimen_id', *groupby_columns*]
     groupby_columns: array, includes one or more columns to be used in groupby method
 
     Returns:
-    frequency_table: pd.Dataframe,
+    frequency_table: pd.Dataframe, rows are cluster IDs, columns are locations (ex: area / depths) over which frequencies are computed
 
     '''
 
     stats_df = cluster_meta[['cluster_id', *groupby_columns]]
     frequency_table = stats_df.groupby(groupby_columns)['cluster_id'].value_counts(normalize=normalize).unstack()
     frequency_table = frequency_table.fillna(0)
-
+    # transpose to make rows cluster IDs
+    frequency_table = frequency_table.T
+    # convert multi-index columns to single string, if there are multiple groupby columns
+    if len(groupby_columns) == 1:
+        pass
+    elif len(groupby_columns) == 2:
+        columns = [frequency_table.columns[i][0] + '_' + frequency_table.columns[i][1] for i in range(len(frequency_table.columns))]
+        frequency_table.columns = columns
+    elif len(groupby_columns) == 3:
+        columns = [frequency_table.columns[i][0] + '_' + frequency_table.columns[i][1] + '_' + frequency_table.columns[i][1] for i in range(len(frequency_table.columns))]
+        frequency_table.columns = columns
+    else:
+        print('this function only hands 1-3 groupby columns, modify function if grouping by more than 3 things')
+    # invert column sort order when using area/depth as groupby_columns - this puts VISp_upper first
+    if 'VISp_upper' in frequency_table.columns:
+        frequency_table = frequency_table[np.sort(frequency_table.columns)[::-1]]
     return frequency_table
 
 
@@ -856,6 +873,135 @@ def get_cell_count_stats(cluster_meta, conditions_to_groupby = ['targeted_struct
     elif len(conditions_to_groupby) == 1:
         cell_count_stats['location'] = cell_count_stats[conditions_to_groupby[0]]
     return cell_count_stats
+
+
+
+def get_cluster_proportions(df, cre):
+    '''
+        Returns two tables
+        proportion_table contains the proportion of cells in each depth/area found in each cluster, relative to the average proportion across depth/areas for that cluster
+        stats_table returns statistical tests on the proportion of cells in each depth/area
+        Use 'bh_significant' unless you have a good reason to use the uncorrected tests
+    '''
+    proportion_table = compute_cluster_proportion_cre(df, cre)
+    stats_table = stats(df, cre)
+    return proportion_table, stats_table
+
+
+def compute_cluster_proportion_cre(cluster_meta, cre_line, groupby_columns=['targeted_structure', 'layer']):
+    """
+    gets proportion of cells per cluster for each area and depth,
+    then subtracts the average proportion for each cluster
+    """
+    frequency = make_frequency_table(cluster_meta[cluster_meta.cre_line == cre_line],
+                                                groupby_columns=groupby_columns, normalize=True)
+
+    table = frequency.copy()
+    # get average proportion in each cluster
+    table['mean'] = table.mean(axis=1)
+
+    # compute proportion in each area relative to cluster average
+    depth_areas = table.columns.values[:-1]  # exclude mean column from calculation
+    for da in depth_areas:
+        table[da] = table[da] - table['mean']
+        # drop the mean column
+    table = table.drop(columns='mean')
+
+    return table
+
+def get_proportion_cells_rel_cluster_average(cluster_meta, cre_lines, groupby_columns=['targeted_structure', 'layer']):
+    cluster_proportions = pd.DataFrame()
+    for cre_line in cre_lines:
+        table = compute_cluster_proportion_cre(cluster_meta, cre_line, groupby_columns=groupby_columns)
+        df = pd.DataFrame(table.unstack(), columns=['proportion_cells'])
+        df = df.reset_index()
+        df = df.rename(columns={'level_0':'location'})
+        df['cre_line'] = cre_line
+        cluster_proportions = pd.concat([cluster_proportions, df])
+    return cluster_proportions
+
+
+def stats(df,cre):
+    '''
+        Performs chi-squared tests to asses whether the observed cell counts in each area/depth differ
+        significantly from the average for that cluster.
+    '''
+
+    from scipy.stats import chisquare
+
+    # compute cell counts in each area/cluster
+    table = df.query('cre_line == @cre').groupby(['cluster_id','coarse_binned_depth_area'])['cell_specimen_id'].count().unstack()
+    table = table[['VISp_upper','VISp_lower','VISl_upper','VISl_lower']]
+    table = table.fillna(value=0)
+
+    # compute proportion
+    depth_areas = table.columns.values
+    for da in depth_areas:
+        table[da] = table[da]/table[da].sum()
+
+    # get average for each cluster
+    table['mean'] = table.mean(axis=1)
+
+    # second table of cell counts in each area/cluster
+    table2 = df.query('cre_line == @cre').groupby(['cluster_id','coarse_binned_depth_area'])['cell_specimen_id'].count().unstack()
+    table2 = table2[['VISp_upper','VISp_lower','VISl_upper','VISl_lower']]
+    table2 = table2.fillna(value=0)
+
+    # compute estimated frequency of cells based on average fraction for each cluster
+    for da in depth_areas:
+        table2[da+'_chance_count'] = table2[da].sum()*table['mean']
+
+    # perform chi-squared test
+    for index in table2.index.values:
+        f = table2.loc[index][['VISp_upper','VISp_lower','VISl_upper','VISl_lower']].values
+        f_expected = table2.loc[index][['VISp_upper_chance_count','VISp_lower_chance_count','VISl_upper_chance_count','VISl_lower_chance_count']].values
+        out = chisquare(f,f_expected)
+        table2.at[index, 'pvalue'] = out.pvalue
+        table2.at[index, 'significant'] = out.pvalue < 0.05
+
+    # Use Benjamini Hochberg Correction for multiple comparisons
+    table2 = add_hochberg_correction(table2)
+    return table2
+
+
+def add_hochberg_correction(table):
+    '''
+        Performs the Benjamini Hochberg correction
+    '''
+    # Sort table by pvalues
+    table = table.sort_values(by='pvalue').reset_index()
+
+    # compute the corrected pvalue based on the rank of each test
+    table['imq'] = table.index.values / len(table) * 0.05
+
+    # Find the largest pvalue less than its corrected pvalue
+    # all tests above that are significant
+    table['bh_significant'] = False
+    passing_tests = table[table['pvalue'] < table['imq']]
+    if len(passing_tests) > 0:
+        last_index = table[table['pvalue'] < table['imq']].tail(1).index.values[0]
+        table.at[last_index, 'bh_significant'] = True
+        table.at[0:last_index, 'bh_significant'] = True
+
+    # reset order of table and return
+    return table.sort_values(by='cluster_id').set_index('cluster_id')
+
+
+def compute_proportion_cre(df, cre):
+    '''
+        Computes the proportion of cells in each cluster within each location
+    '''
+    # Count cells in each area/cluster
+    table = df.query('cre_line == @cre').groupby(['cluster_id','coarse_binned_depth_area'])['cell_specimen_id'].count().unstack()
+    table = table[['VISp_upper','VISp_lower','VISl_upper','VISl_lower']]
+    table = table.fillna(value=0)
+
+    # compute fraction in each area/cluster
+    depth_areas = table.columns.values
+    for da in depth_areas:
+        table[da] = table[da]/table[da].sum()
+    return table
+
 
 
 def get_cluster_order_for_metric_location(cell_count_stats, cluster_meta, location='VISp_upper',
