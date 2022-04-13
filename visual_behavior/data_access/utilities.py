@@ -1502,7 +1502,7 @@ def add_binned_depth_column(df):
 def add_layer_column(df):
     """
     Adds a column called 'layer' that is based on the 'imaging_depth' for each experiment.
-    if imaging_depth is <200um, layer is 'upper, if >200um, layer is 'lower'
+    if imaging_depth is <250um, layer is 'upper, if >250um, layer is 'lower'
     :param df:
     :return:
     """
