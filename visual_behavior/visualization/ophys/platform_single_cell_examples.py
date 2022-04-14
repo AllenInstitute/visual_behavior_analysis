@@ -161,6 +161,7 @@ def plot_cell_rois_and_GLM_weights(cell_specimen_id, cells_table, experiments_ta
     """
 
     # make sure weights and dropouts are limited to matched experiments / cells
+    print('getting cells table and weights etc')
     cells_table = loading.get_cell_table(platform_paper_only=True, limit_to_closest_active=True,
                                          limit_to_matched_cells=True, add_extra_columns=True)
     experiments_table = loading.get_platform_paper_experiment_table(add_extra_columns=True, limit_to_closest_active=True)
@@ -171,11 +172,13 @@ def plot_cell_rois_and_GLM_weights(cell_specimen_id, cells_table, experiments_ta
     results_pivoted = results_pivoted.reset_index()  # reset just in case
     results_pivoted = results_pivoted[results_pivoted.ophys_experiment_id.isin(matched_experiments)]
     results_pivoted = results_pivoted[results_pivoted.cell_specimen_id.isin(matched_cells)]
+    print('got weights results etc no problem')
 
     # get cell info
     cell_metadata = cells_table[cells_table.cell_specimen_id == cell_specimen_id]
     ophys_container_id = cell_metadata.ophys_container_id.unique()[0]
     ophys_experiment_ids = cell_metadata.ophys_experiment_id.unique()
+    print('get cell info')
 
     # folder = 'matched_cell_examples'
     # save_dir = os.path.join(save_dir, folder)
