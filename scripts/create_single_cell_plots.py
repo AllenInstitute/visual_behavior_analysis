@@ -96,8 +96,10 @@ if __name__ == '__main__':
     # results_pivoted = results_pivoted[results_pivoted.cell_specimen_id.isin(matched_cells)]
 
     # set features to use in plots
-    # dropout_features = ['all-images', 'omissions', 'behavioral', 'task']
-    # dropout_features = ['variance_explained_full', 'all-images', 'omissions', 'behavioral', 'task']
+    if 'variance_explained_full' in results_pivoted.keys():
+        dropout_features = ['variance_explained_full', 'all-images', 'omissions', 'behavioral', 'task']
+    else:
+        dropout_features = ['all-images', 'omissions', 'behavioral', 'task']
 
     # features to use for weights_df
     weights_features = ['image0', 'image1', 'image2', 'image3', 'image4', 'image5', 'image6', 'image7', 'hits', 'misses', 'omissions']
@@ -124,7 +126,7 @@ if __name__ == '__main__':
         folder = 'cluster_' + str(int(cluster_id))
         try:
             print('generating plot for', cell_specimen_id)
-            psc.plot_cell_rois_and_GLM_weights(cell_specimen_id, cells_table, experiments_table,
+            psc.plot_cell_rois_and_GLM_weights(cell_specimen_id, cells_table, experiments_table, dropout_features,
                                                results_pivoted, weights_df, weights_features, kernels,
                                                save_dir, folder, data_type)
         except Exception as e:

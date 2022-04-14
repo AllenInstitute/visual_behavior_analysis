@@ -136,7 +136,7 @@ def get_t_array_for_kernel(kernels, feature, frame_rate):
     return t_array
 
 
-def plot_cell_rois_and_GLM_weights(cell_specimen_id, cells_table, experiments_table, results_pivoted, weights_df,
+def plot_cell_rois_and_GLM_weights(cell_specimen_id, cells_table, experiments_table, dropout_features, results_pivoted, weights_df,
                                   weights_features, kernels, save_dir=None, folder=None, data_type='dff'):
     """
     This function limits inputs just to the provided cell_specimen_id to hand off to the function plot_matched_roi_and_traces_example_GLM
@@ -205,11 +205,11 @@ def plot_cell_rois_and_GLM_weights(cell_specimen_id, cells_table, experiments_ta
     cell_dropouts = results_pivoted[results_pivoted.cell_specimen_id == cell_specimen_id]
 
     plot_matched_roi_and_traces_example_GLM(cell_metadata, cell_dropouts, cell_weights, weights_features, kernels,
-                                            experiments_table, data_type, save_dir, folder)
+                                            dropout_features, experiments_table, data_type, save_dir, folder)
 
 
 def plot_matched_roi_and_traces_example_GLM(cell_metadata, cell_dropouts, cell_weights, weights_features, kernels,
-                                            experiments_table, data_type, save_dir=None, folder=None):
+                                            dropout_features, experiments_table, data_type, save_dir=None, folder=None):
     """
     This function will plot the following panels:
         cell ROI masks matched across sessions for a given cell_specimen_id,
@@ -388,6 +388,7 @@ def plot_matched_roi_and_traces_example_GLM(cell_metadata, cell_dropouts, cell_w
         cell_dropouts = cell_dropouts.drop(columns='ophys_experiment_id')
     if 'cell_specimen_id' in cell_dropouts.keys():
         cell_dropouts = cell_dropouts.drop(columns='cell_specimen_id')
+    cell_dropouts = cell_dropouts[dropout_features] # order dropouts properly
     dropouts = cell_dropouts.T
     if len(np.where(dropouts < 0)[0]) > 0:
         vmin = -1
