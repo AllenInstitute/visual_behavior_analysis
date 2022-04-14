@@ -127,7 +127,7 @@ if use_signed_weights:
     for column in results_pivoted.columns:
         if 'signed' in column:
             # invert the sign so that "increased coding" is positive
-            results_pivoted[column] = results_pivoted[column]-1
+            results_pivoted[column] = results_pivoted[column]*-1
             # get new column name without the '_signed'
             columns[column] = column.split('_')[0]
     results_pivoted = results_pivoted.rename(columns=columns)
