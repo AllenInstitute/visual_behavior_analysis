@@ -30,10 +30,12 @@ sns.set_palette('deep')
 
 
 
-def get_GLM_outputs(glm_version, experiments_table, cells_table, glm_output_dir=None):
+
+def load_GLM_outputs(glm_version, experiments_table, cells_table, glm_output_dir=None):
     """
     loads results_pivoted and weights_df from files in base_dir, or generates them from mongo and save to base_dir
     results_pivoted and weights_df will be limited to the ophys_experiment_ids and cell_specimen_ids present in experiments_table and cells_table
+    because this function simply loads the results, any pre-processing applied to results_pivoted (such as across session normalization or signed weights) will be used here
 
     :param glm_version: example = '24_events_all_L2_optimize_by_session'
     :param glm_output_dir: directory containing GLM output files to load and save processed data files to for this iteration of the analysis
@@ -48,59 +50,65 @@ def get_GLM_outputs(glm_version, experiments_table, cells_table, glm_output_dir=
     model_output_type = 'adj_fraction_change_from_full'
     run_params = glm_params.load_run_json(glm_version)
     kernels = run_params['kernels']
-    if glm_output_dir is not None:
-        # load GLM results for all cells and sessions from file if it exists otherwise load from mongo
-        glm_results_path = os.path.join(glm_output_dir, glm_version + '_results_pivoted.h5')
-        if os.path.exists(glm_results_path):
-            results_pivoted = pd.read_hdf(glm_results_path, key='df')
-        else:
-            results_pivoted = gat.build_pivoted_results_summary(value_to_use=model_output_type, results_summary=None,
-                                                                glm_version=glm_version, cutoff=None)
-            # save for next time
-            results_pivoted.to_hdf(glm_results_path, key='df')
-    else: # if no directory is provided, get results from mongo
-        results_pivoted = gat.build_pivoted_results_summary(value_to_use=model_output_type, results_summary=None,
-                                                            glm_version=glm_version, cutoff=None)
+    # if glm_output_dir is not None:
+    # load GLM results for all cells and sessions from file if it exists otherwise load from mongo
+    glm_results_path = os.path.join(glm_output_dir, glm_version + '_results_pivoted.h5')
+    if os.path.exists(glm_results_path):
+        results_pivoted = pd.read_hdf(glm_results_path, key='df')
+    else:
+        print('no results_pivoted at', glm_results_path)
+        print('please generate before running single cell plots')
+    #     else:
+    #         results_pivoted = gat.build_pivoted_results_summary(value_to_use=model_output_type, results_summary=None,
+    #                                                             glm_version=glm_version, cutoff=None)
+    #         # save for next time
+    #         results_pivoted.to_hdf(glm_results_path, key='df')
+    # else: # if no directory is provided, get results from mongo
+    #     results_pivoted = gat.build_pivoted_results_summary(value_to_use=model_output_type, results_summary=None,
+    #                                                         glm_version=glm_version, cutoff=None)
 
-    # clean results
-    results_pivoted = results_pivoted.reset_index()
-    print(len(results_pivoted.ophys_experiment_id.unique()), 'ophys_experiment_ids in results_pivoted after loading')
-    print(len(results_pivoted.cell_specimen_id.unique()), 'cell_specimen_ids in results_pivoted after loading')
-    # limit dropouts to experiments & cells in provided tables (limit input to last familiar and second novel to ensure results are also filtered)
-    results_pivoted = results_pivoted[results_pivoted.ophys_experiment_id.isin(experiments_table.index.values)]
-    results_pivoted = results_pivoted[results_pivoted.cell_specimen_id.isin(cells_table.cell_specimen_id.values)]
-    print(len(results_pivoted.ophys_experiment_id.unique()), 'ophys_experiment_ids in results_pivoted after filtering')
-    print(len(results_pivoted.cell_specimen_id.unique()), 'cell_specimen_ids in results_pivoted after filtering')
-    # clean up
-    results_pivoted = results_pivoted.drop_duplicates(subset=['cell_specimen_id', 'ophys_experiment_id'])
-    results_pivoted = results_pivoted.reset_index()
+    # # clean results
+    # results_pivoted = results_pivoted.reset_index()
+    # print(len(results_pivoted.ophys_experiment_id.unique()), 'ophys_experiment_ids in results_pivoted after loading')
+    # print(len(results_pivoted.cell_specimen_id.unique()), 'cell_specimen_ids in results_pivoted after loading')
+    # # limit dropouts to experiments & cells in provided tables (limit input to last familiar and second novel to ensure results are also filtered)
+    # results_pivoted = results_pivoted[results_pivoted.ophys_experiment_id.isin(experiments_table.index.values)]
+    # results_pivoted = results_pivoted[results_pivoted.cell_specimen_id.isin(cells_table.cell_specimen_id.values)]
+    # print(len(results_pivoted.ophys_experiment_id.unique()), 'ophys_experiment_ids in results_pivoted after filtering')
+    # print(len(results_pivoted.cell_specimen_id.unique()), 'cell_specimen_ids in results_pivoted after filtering')
+    # # clean up
+    # results_pivoted = results_pivoted.drop_duplicates(subset=['cell_specimen_id', 'ophys_experiment_id'])
+    # results_pivoted = results_pivoted.reset_index()
 
-    if glm_output_dir is not None: # if a directory is provided, attempt to load files
+    # if glm_output_dir is not None: # if a directory is provided, attempt to load files
         # get weights df and clean
-        weights_path = os.path.join(glm_output_dir, glm_version + '_weights_df.h5')
-        if os.path.exists(weights_path): # if it exists, load it
-            weights_df = pd.read_hdf(weights_path, key='df')
-        else: # if it doesnt exist, generate it and save it
-            # need to create results pivoted from scratch for weights_df
-            full_results_pivoted = gat.build_pivoted_results_summary(value_to_use=model_output_type, results_summary=None,
-                                                                glm_version=glm_version, cutoff=None)
-            weights_df = gat.build_weights_df(run_params, full_results_pivoted)
-            weights_df = weights_df.drop_duplicates(subset=['cell_specimen_id', 'ophys_experiment_id'])
-            weights_df = weights_df.reset_index()
-            weights_df['identifier'] = [
-                str(weights_df.iloc[row]['ophys_experiment_id']) + '_' + str(weights_df.iloc[row]['cell_specimen_id']) for row
-                in range(len(weights_df))]
-            weights_df = weights_df.set_index('identifier')
-            weights_df.to_hdf(weights_path, key='df')
-    else: # if no directory provided, build weights df
-        weights_df = gat.build_weights_df(run_params, results_pivoted)
+    weights_path = os.path.join(glm_output_dir, glm_version + '_weights_df.h5')
+    if os.path.exists(weights_path): # if it exists, load it
+        weights_df = pd.read_hdf(weights_path, key='df')
+    else:
+        print('no weights at', weights_path)
+        print('please generate before running single cell plots')
+        # else: # if it doesnt exist, generate it and save it
+        #     # need to create results pivoted from scratch for weights_df
+        #     full_results_pivoted = gat.build_pivoted_results_summary(value_to_use=model_output_type, results_summary=None,
+        #                                                         glm_version=glm_version, cutoff=None)
+        #     weights_df = gat.build_weights_df(run_params, full_results_pivoted)
+        #     weights_df = weights_df.drop_duplicates(subset=['cell_specimen_id', 'ophys_experiment_id'])
+        #     weights_df = weights_df.reset_index()
+        #     weights_df['identifier'] = [
+        #         str(weights_df.iloc[row]['ophys_experiment_id']) + '_' + str(weights_df.iloc[row]['cell_specimen_id']) for row
+        #         in range(len(weights_df))]
+        #     weights_df = weights_df.set_index('identifier')
+        #     weights_df.to_hdf(weights_path, key='df')
+    # else: # if no directory provided, build weights df
+    #     weights_df = gat.build_weights_df(run_params, results_pivoted)
 
-    # filter and confirm cell #s
-    print(len(weights_df.cell_specimen_id.unique()), 'cell_specimen_ids in weights_df after loading')
-    # limit weights to experiments & cells in provided tables (limit input to last familiar and second novel to ensure results are also filtered)
-    weights_df = weights_df[weights_df.ophys_experiment_id.isin(experiments_table.index.values)]
-    weights_df = weights_df[weights_df.cell_specimen_id.isin(cells_table.cell_specimen_id.values)]
-    print(len(weights_df.cell_specimen_id.unique()), 'cell_specimen_ids in weights_df after filtering')
+    # # filter and confirm cell #s
+    # print(len(weights_df.cell_specimen_id.unique()), 'cell_specimen_ids in weights_df after loading')
+    # # limit weights to experiments & cells in provided tables (limit input to last familiar and second novel to ensure results are also filtered)
+    # weights_df = weights_df[weights_df.ophys_experiment_id.isin(experiments_table.index.values)]
+    # weights_df = weights_df[weights_df.cell_specimen_id.isin(cells_table.cell_specimen_id.values)]
+    # print(len(weights_df.cell_specimen_id.unique()), 'cell_specimen_ids in weights_df after filtering')
 
     return results_pivoted, weights_df, kernels
 
@@ -128,7 +136,7 @@ def get_t_array_for_kernel(kernels, feature, frame_rate):
     return t_array
 
 
-def plot_cell_rois_and_GLM_weights(cell_specimen_id, cells_table, experiments_table, results_pivoted, weights_df, dropout_features,
+def plot_cell_rois_and_GLM_weights(cell_specimen_id, cells_table, experiments_table, results_pivoted, weights_df,
                                   weights_features, kernels, save_dir=None, folder=None, data_type='dff'):
     """
     This function limits inputs just to the provided cell_specimen_id to hand off to the function plot_matched_roi_and_traces_example_GLM
@@ -142,8 +150,8 @@ def plot_cell_rois_and_GLM_weights(cell_specimen_id, cells_table, experiments_ta
     :param cells_table: must only include a max of one one experiment per experience level for a given container. ok if less than 1.
     :param experiments_table: must only include one experiment per experience level for a given container
     :param results_pivoted: must only include one experiment per experience level for a given container
+                            must be limited to features for plotting, plus cell_specimen_id + experiment_id
     :param weights_df: must only include one experiment per experience level for a given container
-    :param dropout_features: columns in results_pivoted to use for plotting
     :param weights_features: columns in weights_df to use for plotting
     :param save_dir: top level directory where files exist for this run of analysis
                         code will create a folder within save_dir called 'matched_cell_examples'
@@ -151,11 +159,23 @@ def plot_cell_rois_and_GLM_weights(cell_specimen_id, cells_table, experiments_ta
     :param data_type: can be 'dff', 'events', or 'filtered_events' - to be used for cell response plots
     :return:
     """
+
+    # make sure weights and dropouts are limited to matched experiments / cells
+    cells_table = loading.get_cell_table(platform_paper_only=True, limit_to_closest_active=True,
+                                         limit_to_matched_cells=True, add_extra_columns=True)
+    experiments_table = loading.get_platform_paper_experiment_table(add_extra_columns=True, limit_to_closest_active=True)
+    matched_cells = cells_table.cell_specimen_id.unique()
+    matched_experiments = cells_table.ophys_experiment_id.unique()
+    weights_df = weights_df[weights_df.ophys_experiment_id.isin(matched_experiments)]
+    weights_df = weights_df[weights_df.cell_specimen_id.isin(matched_cells)]
+    results_pivoted = results_pivoted.reset_index()  # reset just in case
+    results_pivoted = results_pivoted[results_pivoted.ophys_experiment_id.isin(matched_experiments)]
+    results_pivoted = results_pivoted[results_pivoted.cell_specimen_id.isin(matched_cells)]
+
+    # get cell info
     cell_metadata = cells_table[cells_table.cell_specimen_id == cell_specimen_id]
     ophys_container_id = cell_metadata.ophys_container_id.unique()[0]
     ophys_experiment_ids = cell_metadata.ophys_experiment_id.unique()
-
-    cell_weights = weights_df[weights_df.cell_specimen_id == cell_specimen_id]
 
     # folder = 'matched_cell_examples'
     # save_dir = os.path.join(save_dir, folder)
@@ -171,33 +191,31 @@ def plot_cell_rois_and_GLM_weights(cell_specimen_id, cells_table, experiments_ta
     cell_metadata = cells_table[cells_table.cell_specimen_id == cell_specimen_id]
     # get weights for example cell
     cell_weights = weights_df[weights_df.cell_specimen_id == cell_specimen_id]
-    # limit results_pivoted to features of interest
-    rspm = processing.limit_results_pivoted_to_features_for_clustering(results_pivoted, take_absolute_value=False,
-                                                     use_signed_features=True)
-    # rspm = results_pivoted[['cell_specimen_id', 'experience_level'] + dropout_features]
+    # # limit results_pivoted to features of interest
+    # rspm = processing.limit_results_pivoted_to_features_for_clustering(results_pivoted, features=dropout_features)
     # # make dropouts positive for plotting
     # for feature in dropout_features:
     #     rspm[feature] = np.abs(rspm[feature])
     # # if exp var full model is in features (must be first feature), scale it by 10x so its on similar scale as dropouts
-    if dropout_features[0] == 'variance_explained_full':
-        rspm[features[0]] = rspm[features[0]] * 10
+    if 'variance_explained_full' in results_pivoted.keys():
+        results_pivoted['variance_explained_full'] = results_pivoted['variance_explained_full']*10
     # merge with metadata
-    dropouts = rspm.merge(cells_table[['cell_specimen_id', 'cell_type', 'binned_depth', 'targeted_structure']], on='cell_specimen_id')
+    # dropouts = rspm.merge(cells_table[['cell_specimen_id', 'cell_type', 'binned_depth', 'targeted_structure']], on='cell_specimen_id')
     # get dropouts just for one cell
-    cell_dropouts = dropouts[dropouts.cell_specimen_id == cell_specimen_id]
+    cell_dropouts = results_pivoted[results_pivoted.cell_specimen_id == cell_specimen_id]
 
-    plot_matched_roi_and_traces_example_GLM(cell_metadata, cell_dropouts, dropout_features, cell_weights, weights_features, kernels,
+    plot_matched_roi_and_traces_example_GLM(cell_metadata, cell_dropouts, cell_weights, weights_features, kernels,
                                             experiments_table, data_type, save_dir, folder)
 
 
-def plot_matched_roi_and_traces_example_GLM(cell_metadata, cell_dropouts, dropout_features, cell_weights, weights_features, kernels,
+def plot_matched_roi_and_traces_example_GLM(cell_metadata, cell_dropouts, cell_weights, weights_features, kernels,
                                             experiments_table, data_type, save_dir=None, folder=None):
     """
     This function will plot the following panels:
         cell ROI masks matched across sessions for a given cell_specimen_id,
         change and omission triggered average respones across sessions,
         image locked running and pupil if included 'running' and 'pupil' in included weights_features,
-        dropout scores across dropout_features and sessions as a heatmap,
+        dropout scores across features and sessions as a heatmap,
         kernels weights across sessions for the kernels in weights_features.
     Plots the ROI masks and cell traces for a cell matched across sessions, along with dropout scores and weights for images, hits, misses and omissions
     Cell_metadata is a subset of the ophys_cells_table limited to the cell_specimen_id of interest
@@ -266,8 +284,6 @@ def plot_matched_roi_and_traces_example_GLM(cell_metadata, cell_dropouts, dropou
         dataset = loading.get_ophys_dataset(ophys_experiment_id, get_extended_stimulus_presentations=False)
 
         try:  # attempt to generate plots for this cell in this this experience level. if cell does not have this exp level, skip
-            # get info for this experience level
-
             # plot ROI mask for this experiment
             ct = dataset.cell_specimen_table.copy()
             cell_roi_id = ct.loc[cell_specimen_id].cell_roi_id  # typically will fail here if the cell_specimen_id isnt in the session
@@ -315,71 +331,86 @@ def plot_matched_roi_and_traces_example_GLM(cell_metadata, cell_dropouts, dropou
             ax[e].set_title(experience_level)
 
 
-        try: # try plotting GLM outputs for this experience level
-            if 'running' in weights_features:
-                pass
-            if 'pupil' in weights_features:
-                pass
+        # try: # try plotting GLM outputs for this experience level
+        if 'running' in weights_features:
+            pass
+        if 'pupil' in weights_features:
+            pass
 
-            # GLM plots start after n_expts for each ROI mask, plus n_extra_cols more axes for omission and change responses (and running and pupil if added)
-            # plus one more axes for dropout heatmaps
-            i = n_expts + extra_cols + 1
+        # GLM plots start after n_expts for each ROI mask, plus n_extra_cols more axes for omission and change responses (and running and pupil if added)
+        # plus one more axes for dropout heatmaps
+        i = n_expts + extra_cols + 1
 
-            # weights
-            exp_weights = cell_weights[cell_weights.experience_level == experience_level]
+        # weights
+        exp_weights = cell_weights[cell_weights.experience_level == experience_level]
 
-            # image kernels
-            image_weights = []
-            for f, feature in enumerate(weights_features[:8]): # first 8 are images
-                image_weights.append(exp_weights[feature + '_weights'].values[0])
-            mean_image_weights = np.mean(image_weights, axis=0)
+        # image kernels
+        image_weights = []
+        for f, feature in enumerate(weights_features[:8]): # first 8 are images
+            image_weights.append(exp_weights[feature + '_weights'].values[0])
+        mean_image_weights = np.mean(image_weights, axis=0)
 
-            # frame_rate = get_frame_rate_for_example_cell(cell_weights, identifier=cell_weights.index.values[0])
-            # GLM output is all resampled to 30Hz now
-            frame_rate = 31
+        # frame_rate = get_frame_rate_for_example_cell(cell_weights, identifier=cell_weights.index.values[0])
+        # GLM output is all resampled to 30Hz now
+        frame_rate = 31
+        t_array = get_t_array_for_kernel(kernels, feature, frame_rate)
+        ax[i].plot(t_array, mean_image_weights, color=color)
+        ax[i].set_ylabel('weight')
+        ax[i].set_title('images')
+        ax[i].set_xlabel('time (s)')
+        ax_to_share = i
+
+        i += 1
+        # all other kernels
+        for f, feature in enumerate(weights_features[8:]):
+            if f == 0:
+                first_ax = f
+            kernel_weights = exp_weights[feature + '_weights'].values[0]
+            if feature == 'omissions':
+                n_frames_to_clip = int(kernels['omissions']['length'] * frame_rate) + 1
+                kernel_weights = kernel_weights[:n_frames_to_clip]
             t_array = get_t_array_for_kernel(kernels, feature, frame_rate)
-            ax[i].plot(t_array, mean_image_weights, color=color)
-            ax[i].set_ylabel('weight')
-            ax[i].set_title('images')
-            ax[i].set_xlabel('time (s)')
-            ax_to_share = i
+            ax[i + f].plot(t_array, kernel_weights, color=color)
+            ax[i + f].set_ylabel('')
+            ax[i + f].set_title(feature)
+            ax[i + f].set_xlabel('time (s)')
+            ax[i + f].get_shared_y_axes().join(ax[i + f], ax[ax_to_share])
 
-            i += 1
-            # all other kernels
-            for f, feature in enumerate(weights_features[8:]):
-                if f == 0:
-                    first_ax = f
-                kernel_weights = exp_weights[feature + '_weights'].values[0]
-                if feature == 'omissions':
-                    n_frames_to_clip = int(kernels['omissions']['length'] * frame_rate) + 1
-                    kernel_weights = kernel_weights[:n_frames_to_clip]
-                t_array = get_t_array_for_kernel(kernels, feature, frame_rate)
-                ax[i + f].plot(t_array, kernel_weights, color=color)
-                ax[i + f].set_ylabel('')
-                ax[i + f].set_title(feature)
-                ax[i + f].set_xlabel('time (s)')
-                ax[i + f].get_shared_y_axes().join(ax[i + f], ax[ax_to_share])
+        # except:
+        #     print('could not plot GLM results for', experience_level)
 
-        except:
-            print('could not plot GLM results for', experience_level)
+    # try:
+    # plot dropout score heatmaps
+    i = n_expts + extra_cols  # change to extra_cols = 4 if running and pupil are added
+    # cell_dropouts['cre_line'] = cre_line
+    cell_dropouts = cell_dropouts.groupby(['experience_level']).mean()
+    if 'ophys_experiment_id' in cell_dropouts.keys():
+        cell_dropouts = cell_dropouts.drop(columns='ophys_experiment_id')
+    if 'cell_specimen_id' in cell_dropouts.keys():
+        cell_dropouts = cell_dropouts.drop(columns='cell_specimen_id')
+    dropouts = cell_dropouts.T
+    if len(np.where(dropouts < 0)[0]) > 0:
+        vmin = -1
+        cmap = 'RdBu'
+    else:
+        vmin = 0
+        cmap = 'Blues'
+    ax[i] = sns.heatmap(dropouts, cmap=cmap, vmin=vmin, vmax=1, ax=ax[i], cbar=False)
+    # ax[i].set_title('coding scores')
+    ax[i].set_yticklabels(dropouts.index.values, rotation=0, fontsize=14)
+    ax[i].set_xticklabels(dropouts.columns.values, rotation=90, fontsize=14)
+    ax[i].set_ylim(0, dropouts.shape[0])
+    ax[i].set_xlabel('')
+    # ax[i] = plotting.plot_dropout_heatmap(cell_metadata, feature_matrix, cre_line, cluster_id, small_fontsize=False, ax=ax[i])
+    # except:
+    #     print('could not plot dropout heatmap for', cell_specimen_id)
 
-    try:
-        # plot dropout score heatmaps
-        i = n_expts + extra_cols  # change to extra_cols = 4 if running and pupil are added
-        cell_dropouts['cluster_id'] = 0
-        cell_droputs['cre_line'] = cre_line
-        ax[i] = processing.plot_dropout_heatmap(cell_metadata, cell_dropouts, cre_line, cluster_id, small_fontsize=False, ax=ax[i])
-        ax[i].set_title(cell_type, fontsize=14)
-        ax[i].set_xlabel('')
-    except:
-        print('could not plot dropout heatmap for', cell_specimen_id)
-
-    metadata_string = utils.get_container_metadata_string(dataset.metadata)
+    # metadata_string = utils.get_container_metadata_string(dataset.metadata)
 
     # fig.tight_layout()
-    fig.subplots_adjust(hspace=0.6, wspace=0.7)
-    fig.suptitle(str(cell_specimen_id) + '_' + metadata_string, x=0.53, y=1.02,
-                 horizontalalignment='center', fontsize=16)
+    # fig.subplots_adjust(hspace=0.6, wspace=0.7)
+    # fig.suptitle(str(cell_specimen_id) + '_' + metadata_string, x=0.53, y=1.02,
+    #              horizontalalignment='center', fontsize=16)
 
     if save_dir:
         utils.save_figure(fig, figsize, save_dir, folder, str(cell_specimen_id) + '_' + metadata_string + '_' + data_type)

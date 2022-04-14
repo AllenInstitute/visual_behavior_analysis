@@ -59,22 +59,17 @@ if __name__ == '__main__':
 
     # set base_dir to load and save results
     base_dir = os.path.join(base_dir, glm_version)
-    # folder in save_dir where you want to load GLM results from
-    glm_output_folder = '220412_across_session_norm'
-    glm_output_dir = os.path.join(base_dir, glm_output_folder)
-    # glm_output_dir = None
-    # if glm_output_dir is None, GLM results will be generated for the full dataset and nothing will be saved
 
-    # if glm_output_dir is provided, plots will go into a folder within glm_output_dir called 'matched_cell_examples'
-    # if no glm_output_dir, plots will go into a folder within base_dir called 'matched_cell_examples'
-    if glm_output_dir:
-        plot_save_dir = glm_output_dir
-    else:
-        plot_save_dir = base_dir
+    # folder in save_dir where you want to load GLM results from
+    glm_output_folder = '220414_across_session_norm'
+    glm_output_dir = os.path.join(base_dir, glm_output_folder)
+
+    # directory to save plots to, in a subfolder called 'matched_cell_examples
+    plot_save_dir = glm_output_dir
 
     # get experiments and cells tables limited to the data you want to plot
     # whatever filtering is applied here will be applied to GLM results
-    experiments_table = loading.get_platform_paper_experiment_table(add_extra_columns=True, limit_to_closest_active=True)
+        experiments_table = loading.get_platform_paper_experiment_table(add_extra_columns=True, limit_to_closest_active=True)
     print(len(experiments_table), 'expts in expts table')
     cells_table = loading.get_cell_table(platform_paper_only=True, limit_to_closest_active=True,
                                          limit_to_matched_cells=True, add_extra_columns=True)
@@ -82,39 +77,29 @@ if __name__ == '__main__':
     print('should only be 402 experiments if limited to matched platform dataset')
     print(len(cells_table.cell_specimen_id.unique()), 'unique cell_specimen_ids in cells table')
 
-    # get GLM output
-    results_pivoted, weights_df, kernels = psc.get_GLM_outputs(glm_version, experiments_table, cells_table, glm_output_dir)
+    ### get GLM output ###
+    # whatever pre-processing has been applied to results_pivoted saved to glm_output_dir will be applied here
+    # ex: across session norm, signed weights, etc.
+    results_pivoted, weights_df, kernels = processing.load_GLM_outputs(glm_version, glm_output_dir)
     print(len(results_pivoted.cell_specimen_id.unique()), 'unique cell_specimen_ids in results_pivoted')
     print(len(weights_df.cell_specimen_id.unique()), 'unique cell_specimen_ids in weights_df')
 
-    # replace results_pivoted with across session norm version
-    import visual_behavior_glm.GLM_across_session as gas
-    df, failed_cells = gas.load_cells(cells='all')
-    df = df.rename(columns={'ophys_experiment_id_x': 'ophys_experiment_id', 'cell_specimen_id_x': 'cell_specimen_id'})
-    df = df.set_index('cell_specimen_id')
-    results_pivoted = df.copy()
+    # # make sure weights and dropouts are limited to matched experiments / cells
+    # matched_cells = cells_table.cell_specimen_id.unique()
+    # matched_experiments = cells_table.ophys_experiment_id.unique()
+    # weights_df = weights_df[weights_df.ophys_experiment_id.isin(matched_experiments)]
+    # weights_df = weights_df[weights_df.cell_specimen_id.isin(matched_cells)]
+    # results_pivoted = results_pivoted.reset_index() # reset just in case
+    # results_pivoted = results_pivoted[results_pivoted.ophys_experiment_id.isin(matched_experiments)]
+    # results_pivoted = results_pivoted[results_pivoted.cell_specimen_id.isin(matched_cells)]
 
     # set features to use in plots
-    dropout_features = ['all-images', 'omissions', 'behavioral', 'task']
-    dropout_features = ['all-images_across', 'omissions_across', 'behavioral_across', 'task_across']
+    # dropout_features = ['all-images', 'omissions', 'behavioral', 'task']
     # dropout_features = ['variance_explained_full', 'all-images', 'omissions', 'behavioral', 'task']
+
     # features to use for weights_df
     weights_features = ['image0', 'image1', 'image2', 'image3', 'image4', 'image5', 'image6', 'image7', 'hits', 'misses', 'omissions']
     # weights_features = ['image0', 'image1', 'image2', 'image3', 'image4', 'image5', 'image6', 'image7', 'hits', 'misses', 'omissions', 'running', 'pupil]
-
-    ### for putting all cells in one folder  ###
-    # if you want to use an additional folder within plot_save_dir/matched_cell_examples, name a plot_sub_folder name here
-    # plot_sub_folder = 'rois_traces_dropouts_weights_matched'
-    # for cell_specimen_id in cells_table[cells_table.ophys_container_id == ophys_container_id].cell_specimen_id.unique():
-    #     try:
-    #         print('generating plot for', cell_specimen_id)
-    #         psc.plot_cell_rois_and_GLM_weights(cell_specimen_id, cells_table, experiments_table, results_pivoted, weights_df, dropout_features,
-    #                                   weights_features, kernels, plot_save_dir, plot_sub_folder, data_type)
-    #     except Exception as e:
-    #         print('problem for', cell_specimen_id)
-    #         print(e)
-
-    ### for putting cells in cluster specific folders  ###
 
     # load cluster IDs per cell
     file = [file for file in os.listdir(glm_output_dir) if 'cluster_labels' in file]
@@ -125,8 +110,6 @@ if __name__ == '__main__':
     tmp = cluster_ids.merge(cells_table, on=['cre_line', 'cell_specimen_id'], how='right').drop_duplicates(subset='cell_specimen_id')
     container_data = tmp[tmp.ophys_container_id == ophys_container_id]
 
-
-    ### ROIs, dropouts and weights
     # make cre and cluster ID specific folders if they dont already exist
     cre_line = container_data.cre_line.unique()[0]
     save_dir = os.path.join(glm_output_dir, 'matched_cell_examples', cre_line)
@@ -140,9 +123,8 @@ if __name__ == '__main__':
         try:
             print('generating plot for', cell_specimen_id)
             psc.plot_cell_rois_and_GLM_weights(cell_specimen_id, cells_table, experiments_table,
-                                               results_pivoted, weights_df, dropout_features,
-                                               weights_features, kernels, save_dir, folder,
-                                               data_type)
+                                               results_pivoted, weights_df, weights_features, kernels,
+                                               save_dir, folder, data_type)
         except Exception as e:
             print('problem for', cell_specimen_id)
             print(e)
