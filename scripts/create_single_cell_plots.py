@@ -89,7 +89,7 @@ if __name__ == '__main__':
 
     # replace results_pivoted with across session norm version
     import visual_behavior_glm.GLM_across_session as gas
-    df = gas.load_cells(cells='all')
+    df, failed_cells = gas.load_cells(cells='all')
     df = df.rename(columns={'ophys_experiment_id_x': 'ophys_experiment_id', 'cell_specimen_id_x': 'cell_specimen_id'})
     df = df.set_index('cell_specimen_id')
     results_pivoted = df.copy()
