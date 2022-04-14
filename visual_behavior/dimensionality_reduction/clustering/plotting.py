@@ -1394,6 +1394,56 @@ def plot_population_average_response_for_cluster(cluster_mdf, cre_line, cluster_
     return ax
 
 
+def plot_clusters_pop_avg_rows(cluster_meta, feature_matrix, multi_session_df, cre_line,
+                                     sort_order=None, save_dir=None, folder=None, suffix=''):
+    """
+    For each cluster in a given cre_line, plots dropout heatmaps, fraction cells per area/depth relative to chance,
+    fraction cells per cluster per area/depth, and population average omission response.
+    Will sort clusters according to sort_order dict if provided
+
+    :param cluster_meta: table of metadata for each cell_specimen_id (rows), including cluster_id for each cell_specimen_id
+    :param feature_matrix: dropout scores for matched cells with experience levels x features as cols, cells as rows
+    :param multi_session_df: table of cell responses for a set of conditions, from loading.get_multi_session_df_for_conditions()
+    :param cre_line: cre line to plot for
+    :param sort_order: dictionary with cre_lines as keys, sorted cluster_ids as values
+    :param save_dir: directory to save plot to
+    :param folder: folder within save_dir to save plot to
+    :param suffix: string to be appended to end of filename
+    :return:
+    """
+    # add cluster_id to multi_session_df
+    cluster_mdf = multi_session_df.merge(cluster_meta[['cluster_id']],
+                                         on='cell_specimen_id', how='inner')
+    cluster_ids = np.sort(cluster_meta[cluster_meta.cre_line == cre_line].cluster_id.unique())
+    # if order to sort clusters is provided, use it
+    if sort_order:
+        cluster_ids = sort_order[cre_line]
+    n_clusters = len(cluster_ids)
+
+    n_rows = 2
+    figsize = (n_clusters * 2.5, n_rows * 2.5)
+    fig, ax = plt.subplots(n_rows, n_clusters, figsize=figsize, sharex='row', sharey='row',
+                           gridspec_kw={'height_ratios': [1, 0.75]})
+    ax = ax.ravel()
+    for i, cluster_id in enumerate(cluster_ids):
+        # plot mean dropout heatmap for this cluster
+        ax[i] = plot_dropout_heatmap(cluster_meta, feature_matrix, cre_line, cluster_id, ax=ax[i])
+
+        # population average for this cluster
+        ax[i + (n_clusters * 1)] = plot_population_average_response_for_cluster(cluster_mdf, cre_line, cluster_id,
+                                                                                ax=ax[i + (n_clusters * 1)])
+        ax[i + (n_clusters * 1)].set_xlabel('time (s)')
+        if i > 0:
+            ax[i + (n_clusters * 1)].set_ylabel('')
+
+    fig.subplots_adjust(hspace=1.2, wspace=0.6)
+    fig.suptitle(get_cell_type_for_cre_line(cluster_meta, cre_line), x=0.52, y=0.98, fontsize=16)
+    # fig.tight_layout()
+    if save_dir:
+        utils.save_figure(fig, figsize, save_dir, folder, 'clusters_pop_avg_rows_' + cre_line.split('-')[0] + suffix)
+
+
+
 def plot_clusters_stats_pop_avg_rows(cluster_meta, feature_matrix, multi_session_df, cell_count_stats, fraction_cells, cre_line,
                                      sort_order=None, save_dir=None, folder=None, suffix=''):
     """
@@ -1457,7 +1507,7 @@ def plot_clusters_stats_pop_avg_rows(cluster_meta, feature_matrix, multi_session
     fig.suptitle(get_cell_type_for_cre_line(cluster_meta, cre_line), x=0.52, y=0.98, fontsize=16)
     # fig.tight_layout()
     if save_dir:
-        utils.save_figure(fig, figsize, save_dir, folder, 'clusters_rows_' + cre_line.split('-')[0] + suffix)
+        utils.save_figure(fig, figsize, save_dir, folder, 'clusters_stats_rows_' + cre_line.split('-')[0] + suffix)
 
 
 
