@@ -282,7 +282,7 @@ def limit_results_pivoted_to_features_for_clustering(results_pivoted, take_absol
     columns = [*features, 'cell_specimen_id', 'experience_level']
 
     # sort by acquisition date and limit to relevant columns
-    results_pivoted = results_pivoted.sort_values('date_of_acquisition').reset_index(drop=True)
+    # results_pivoted = results_pivoted.sort_values('date_of_acquisition').reset_index(drop=True)
     results = results_pivoted[columns]
 
     if take_absolute_value:
