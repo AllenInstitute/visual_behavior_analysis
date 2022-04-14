@@ -8,6 +8,8 @@ import visual_behavior.data_access.utilities as utilities
 import visual_behavior.visualization.ophys.platform_paper_figures as ppf
 import visual_behavior.visualization.ophys.platform_single_cell_examples as psc
 
+from visual_behavior.dimensionality_reduction.clustering import processing
+from visual_behavior.dimensionality_reduction.clustering import plotting
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
