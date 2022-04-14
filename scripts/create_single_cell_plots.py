@@ -69,7 +69,7 @@ if __name__ == '__main__':
 
     # get experiments and cells tables limited to the data you want to plot
     # whatever filtering is applied here will be applied to GLM results
-        experiments_table = loading.get_platform_paper_experiment_table(add_extra_columns=True, limit_to_closest_active=True)
+    experiments_table = loading.get_platform_paper_experiment_table(add_extra_columns=True, limit_to_closest_active=True)
     print(len(experiments_table), 'expts in expts table')
     cells_table = loading.get_cell_table(platform_paper_only=True, limit_to_closest_active=True,
                                          limit_to_matched_cells=True, add_extra_columns=True)
