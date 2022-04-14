@@ -524,7 +524,6 @@ def plot_dropout_heatmap(cluster_meta, feature_matrix, cre_line, cluster_id, sma
     else:
         vmin = 0
         cmap = 'Blues'
-
     cre_csids = cluster_meta[(cluster_meta['cre_line'] == cre_line)].index.values
     this_cluster_meta = cluster_meta[(cluster_meta['cluster_id'] == cluster_id) &
                                      (cluster_meta['cre_line'] == cre_line)]

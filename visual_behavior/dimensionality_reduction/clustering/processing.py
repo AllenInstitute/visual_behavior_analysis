@@ -20,7 +20,9 @@ from sklearn.cluster import SpectralClustering
 import visual_behavior.visualization.utils as utils
 import visual_behavior.data_access.loading as loading
 import visual_behavior.data_access.utilities as utilities
+
 import visual_behavior_glm.GLM_analysis_tools as gat
+import visual_behavior_glm.GLM_params as glm_params
 
 import seaborn as sns
 sns.set_context('notebook', font_scale=1.5, rc={'lines.markeredgewidth': 2})
@@ -268,36 +270,187 @@ def get_glm_results_pivoted_for_clustering(glm_version='24_events_all_L2_optimiz
     return results_pivoted
 
 
-def limit_results_pivoted_to_features_for_clustering(results_pivoted, take_absolute_value=True, use_signed_features=False):
+def limit_results_pivoted_to_features_for_clustering(results_pivoted, features=None, use_signed_features=False):
     """
     takes matrix of results_pivoted (dropout scores (values) for all cells in each experiment (rows)
     by GLM features (columns) and limits to features to use for clustering,
     then takes absolute value of dropout scores
+    features_for_clustering is typically ['all-images', 'omissions', 'behavioral', 'task']
     """
 
     # glm features to use for clustering
-    features = get_features_for_clustering()
+    if features is None:
+        features = get_features_for_clustering()
     if use_signed_features:
         features = [feature + '_signed' for feature in features]
     columns = [*features, 'cell_specimen_id', 'experience_level']
+    results_pivoted = results_pivoted[columns]
 
-    # sort by acquisition date and limit to relevant columns
-    # results_pivoted = results_pivoted.sort_values('date_of_acquisition').reset_index(drop=True)
-    results = results_pivoted[columns]
+    return results_pivoted
 
-    if take_absolute_value:
-        # make everything positive
-        for feature in features:
-            results[feature] = np.abs(results[feature])
-    else:
+
+def flip_sign_of_dropouts(results_pivoted, features_to_invert, use_signed_weights=False):
+    """
+    for features_to_invert, either take the absolute value of the dropout scores so that a reduction in explained variance
+    for a given feature is represented as a positive coding score, or invert the sign of the dropouts if using signed weights,
+    so features with positive kernel weights have positive coding scores and feature with negative weights have negative coding scores
+
+    :param results_pivoted: table of dropout scores for each cell and experience level
+    :param features_to_invert: regressors to apply processing to
+    :param use_signed_features: Bool, whether or not sign of weights has been applied to dropouts
+    :return:
+    """
+
+    if use_signed_weights:
         # invert the sign so that dropout sign reflects sign of weights
-        for feature in features:
-            results[feature] = results[feature]*-1
+        for feature in features_to_invert:
+            results_pivoted[feature] = results_pivoted[feature]*-1
+    else:
+        # make everything positive
+        for feature in features_to_invert:
+            results_pivoted[feature] = np.abs(results_pivoted[feature])
 
-    return results
+    return results_pivoted
 
 
-def get_feature_matrix_for_clustering(dropouts, glm_version, save_dir=None):
+def generate_GLM_outputs(glm_version, experiments_table, cells_table, glm_output_dir=None, use_signed_weights=False,
+                         across_session_norm=False, include_var_exp_full=False):
+    """
+    generates results_pivoted and weights_df and saves to glm_output_dir
+    results_pivoted and weights_df will be limited to the ophys_experiment_ids and cell_specimen_ids present in experiments_table and cells_table
+    optional inputs to use across session normalization or signed weights
+
+    :param glm_version: example = '24_events_all_L2_optimize_by_session'
+    :param glm_output_dir: directory to save processed data files to for this iteration of the analysis
+    :param experiments_table: SDK ophys_experiment table limited to experiments intended for analysis
+    :param cells_table: SDK ophys_cell_table limited to cell_specimen_ids intended for analysis
+    :param use_signed_weights: whether or not apply the sign of the kernel weights to the dropout scores in results_pivoted
+    :param across_session_norm: whether or not to normalize dropout scores by the max overall explained variance across sessions
+    :param include_var_exp_full: whether or not to include 'variance_explained_full' column in results_pivoted
+
+    :return:
+        results_pivoted: table of dropout scores for all cell_specimen_ids in cells_table, limited to the features used for clustering
+                            will output across session normalized or signed dropouts depending on input params
+        weights_df: table with model weights for all cell_specimen_ids in cells_table
+    """
+
+    if across_session_norm:
+
+        import visual_behavior_glm.GLM_across_session as gas
+
+        # get across session normalized dropout scores
+        df, failed_cells = gas.load_cells(cells='all')
+        df = df.set_index('identifier')
+
+        # only use across session values
+        within = df[[key for key in df.keys() if '_within' in key] + ['cell_specimen_id', 'ophys_experiment_id',
+                                                                      'experience_level']]
+        across = df[[key for key in df.keys() if '_across' in key] + ['cell_specimen_id', 'ophys_experiment_id',
+                                                                      'experience_level']]
+        results_pivoted = across.copy()
+        results_pivoted = results_pivoted.rename(
+            columns={'omissions_across': 'omissions', 'all-images_across': 'all-images',
+                     'behavioral_across': 'behavioral', 'task_across': 'task'})
+        print(len(results_pivoted), 'len(results_pivoted)')
+
+        # limit results pivoted to to last familiar and second novel active
+        # requires that cells_table provided as input to this function is already limited to cells of interest
+        matched_cells = cells_table.cell_specimen_id.unique()
+        matched_experiments = cells_table.ophys_experiment_id.unique()
+        results_pivoted = results_pivoted[results_pivoted.ophys_experiment_id.isin(matched_experiments)]
+        results_pivoted = results_pivoted[results_pivoted.cell_specimen_id.isin(matched_cells)]
+        print(len(results_pivoted.cell_specimen_id.unique()),
+              'cells in results_pivoted after limiting to strictly matched cells')
+
+        # drop duplicates
+        results_pivoted = results_pivoted.drop_duplicates(subset=['cell_specimen_id', 'experience_level'])
+        print(len(results_pivoted), 'len(results_pivoted) after dropping duplicates')
+
+    else:
+        # get GLM results from saved file in save_dir or from mongo if file doesnt exist
+        # this function limits results_pivoted to matched cells in last familiar second novel active
+        results_pivoted = get_glm_results_pivoted_for_clustering(glm_version, model_output_type, save_dir)
+
+    # get weights df and save
+    run_params = glm_params.load_run_json(glm_version)
+    weights_df = gat.build_weights_df(run_params, results_pivoted)
+    weights_df.to_hdf(os.path.join(glm_output_dir, glm_version + '_weights_df.h5'), key='df')
+
+    # apply sign of kernel weights to dropouts if desired
+    if use_signed_weights:
+
+        # modify regressors to include kernel weights as regressors with '_signed' appended
+        results_pivoted = gat.append_kernel_excitation(weights_df, results_pivoted)
+        # add behavioral results signed by duplicating behavioral dropouts
+        results_pivoted['behavioral_signed'] = results_pivoted.behavioral.values
+
+        # now remove 'signed' from column names in features_for_clustering
+        columns = {}
+        for column in results_pivoted.columns:
+            if 'signed' in column:
+                # invert the sign so that "increased coding" is positive
+                results_pivoted[column] = results_pivoted[column] * -1
+                # get new column name without the '_signed'
+                columns[column] = column.split('_')[0]
+        results_pivoted = results_pivoted.rename(columns=columns)
+
+    # limit dropout scores to the features we want to cluster on
+    features = get_features_for_clustering()
+    if include_var_exp_full:
+        features = [*features, 'variance_explained_full']
+    results_pivoted = limit_results_pivoted_to_features_for_clustering(results_pivoted, features)
+
+    # take absolute value or flip sign of dropouts so that reduction in explained variance is a positive coding score
+    features_to_invert = get_features_for_clustering() # only invert dropout scores, skip var_exp_full if using
+    results_pivoted = flip_sign_of_dropouts(results_pivoted, features_to_invert, use_signed_weights)
+
+    # get kernels for this version
+    run_params = glm_params.load_run_json(glm_version)
+    kernels = run_params['kernels']
+
+    # save processed results_pivoted
+    results_pivoted.to_hdf(os.path.join(glm_output_dir, glm_version + '_results_pivoted.h5'), key='df')
+
+    return results_pivoted, weights_df, kernels
+
+
+def load_GLM_outputs(glm_version, glm_output_dir):
+    """
+    loads results_pivoted and weights_df from files in base_dir, or generates them from mongo and save to base_dir
+    results_pivoted and weights_df will be limited to the ophys_experiment_ids and cell_specimen_ids present in experiments_table and cells_table
+    because this function simply loads the results, any pre-processing applied to results_pivoted (such as across session normalization or signed weights) will be used here
+
+    :param glm_version: example = '24_events_all_L2_optimize_by_session'
+    :param glm_output_dir: directory containing GLM output files to load
+    :return:
+        results_pivoted: table of dropout scores for all cell_specimen_ids in cells_table
+        weights_df: table with model weights for all cell_specimen_ids in cells_table
+        kernels: dict of kernel params for this model version
+    """
+    # get GLM kernels and params for this version of the model
+    model_output_type = 'adj_fraction_change_from_full'
+    run_params = glm_params.load_run_json(glm_version)
+    kernels = run_params['kernels']
+    # if glm_output_dir is not None:
+    # load GLM results for all cells and sessions from file if it exists otherwise load from mongo
+    glm_results_path = os.path.join(glm_output_dir, glm_version + '_results_pivoted.h5')
+    if os.path.exists(glm_results_path):
+        results_pivoted = pd.read_hdf(glm_results_path, key='df')
+    else:
+        print('no results_pivoted at', glm_results_path)
+        print('please generate before using load_glm_outputs')
+
+    weights_path = os.path.join(glm_output_dir, glm_version + '_weights_df.h5')
+    if os.path.exists(weights_path): # if it exists, load it
+        weights_df = pd.read_hdf(weights_path, key='df')
+    else:
+        print('no weights at', weights_path)
+        print('please generate before using load_glm_outputs')
+
+    return results_pivoted, weights_df, kernels
+
+
+def get_feature_matrix_for_clustering(dropouts, glm_version=None, save_dir=None):
     """
     takes matrix of dropout scores (values) for all cells in each experiment (rows)
     by GLM features (columns) and:

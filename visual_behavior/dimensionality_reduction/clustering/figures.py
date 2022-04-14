@@ -23,20 +23,19 @@ from visual_behavior.dimensionality_reduction.clustering import plotting
 
 ### set critical params for processing and saving
 # folder = '220412_across_session_norm_signed_weights'
-folder = '220413_across_session_norm_signed_weights'
+folder = '220414_across_session_norm'
 across_session_norm = True
-use_signed_weights = True
+use_signed_weights = False
 
-# ### number of clusters for within session norm
-# n_clusters_cre = {'Slc17a7-IRES2-Cre': 10,
-#                   'Sst-IRES-Cre': 6,
-#                   'Vip-IRES-Cre': 12}
-
-### number of clusters for across session norm
+### number of clusters to use
 n_clusters_cre = {'Slc17a7-IRES2-Cre': 10,
-                  'Sst-IRES-Cre': 4,
-                  'Vip-IRES-Cre': 10}
+                  'Sst-IRES-Cre': 6,
+                  'Vip-IRES-Cre': 12}
 
+# ### number of clusters for across session norm
+# n_clusters_cre = {'Slc17a7-IRES2-Cre': 10,
+#                   'Sst-IRES-Cre': 4,
+#                   'Vip-IRES-Cre': 10}
 
 # load experiments table
 experiments_table = loading.get_platform_paper_experiment_table()
@@ -68,87 +67,92 @@ save_dir = os.path.join(base_dir, folder)
 if not os.path.exists(save_dir):
     os.mkdir(save_dir)
 
-# get features
-features = processing.get_features_for_clustering()
 
-if across_session_norm:
+results_pivoted, weights_df, kernels = processing.generate_GLM_outputs(glm_version, experiments_table, cells_table,
+                                                                       save_dir, use_signed_weights, across_session_norm)
 
-    import visual_behavior_glm.GLM_across_session as gas
+# # get features
+# features = processing.get_features_for_clustering()
+#
+# if across_session_norm:
+#
+#     import visual_behavior_glm.GLM_across_session as gas
+#
+#     # get across session normalized dropout scores
+#     df, failed_cells = gas.load_cells(cells='all')
+#     df = df.set_index('identifier')
+#
+#     # only use across session values
+#     within = df[[key for key in df.keys() if '_within' in key] + ['cell_specimen_id', 'ophys_experiment_id',
+#                                                                   'experience_level']]
+#     across = df[[key for key in df.keys() if '_across' in key] + ['cell_specimen_id', 'ophys_experiment_id',
+#                                                                   'experience_level']]
+#     results_pivoted = across.copy()
+#     results_pivoted = results_pivoted.rename(
+#         columns={'omissions_across': 'omissions', 'all-images_across': 'all-images',
+#                  'behavioral_across': 'behavioral', 'task_across': 'task'})
+#     print(len(results_pivoted), 'len(results_pivoted)')
+#
+#     # limit results pivoted to to last familiar and second novel active
+#     results_pivoted = results_pivoted[results_pivoted.ophys_experiment_id.isin(matched_experiments)]
+#     results_pivoted = results_pivoted[results_pivoted.cell_specimen_id.isin(matched_cells)]
+#     print(len(results_pivoted.cell_specimen_id.unique()),
+#           'cells in results_pivoted after limiting to strictly matched cells')
+#
+#     # drop duplicates
+#     results_pivoted = results_pivoted.drop_duplicates(subset=['cell_specimen_id', 'experience_level'])
+#     print(len(results_pivoted), 'len(results_pivoted) after dropping duplicates')
+#
+# else:
+#     # get GLM results from saved file in save_dir or from mongo if file doesnt exist
+#     results_pivoted = processing.get_glm_results_pivoted_for_clustering(glm_version, model_output_type, save_dir)
+#
+# if use_signed_weights:
+#     import visual_behavior_glm.GLM_analysis_tools as gat
+#     import visual_behavior_glm.GLM_params as glm_params
+#
+#     # get weights
+#     run_params = glm_params.load_run_json(glm_version)
+#     weights_df = gat.build_weights_df(run_params, results_pivoted)
+#
+#     # modify regressors to include kernel weights as regressors with '_signed' appended
+#     results_pivoted = gat.append_kernel_excitation(weights_df, results_pivoted)
+#     # add behavioral results signed by duplicating behavioral dropouts
+#     results_pivoted['behavioral_signed'] = results_pivoted.behavioral.values
+#
+#     # limit to features of interest, in this case limit to the 4 feature categories with '_signed' in name
+#     results_pivoted = processing.limit_results_pivoted_to_features_for_clustering(results_pivoted,
+#                                                                                   take_absolute_value=False,
+#                                                                                   use_signed_features=True)
+#
+#     # now remove 'signed' from column names
+#     columns = {}
+#     for column in results_pivoted.columns:
+#         if 'signed' in column:
+#             # invert the sign so that "increased coding" is positive
+#             results_pivoted[column] = results_pivoted[column]*-1
+#             # get new column name without the '_signed'
+#             columns[column] = column.split('_')[0]
+#     results_pivoted = results_pivoted.rename(columns=columns)
+#
+#
+#     # drop duplicates again just in case
+#     results_pivoted = results_pivoted.reset_index().drop_duplicates(subset=['cell_specimen_id', 'experience_level'])
+#
+# # save results_pivoted
+# results_pivoted.to_hdf(os.path.join(save_dir, glm_version + '_results_pivoted.h5'), key='df')
+#
+# # get dropout scores just for the features we want to cluster on and take absolute value if not using signed weights
+# if use_signed_weights:
+#     take_absolute_value = False
+# else:
+#     take_absolute_value = True
+# dropouts = processing.limit_results_pivoted_to_features_for_clustering(results_pivoted, take_absolute_value)
+# dropouts.head()
 
-    # get across session normalized dropout scores
-    df, failed_cells = gas.load_cells(cells='all')
-    df = df.set_index('identifier')
-
-    # only use across session values
-    within = df[[key for key in df.keys() if '_within' in key] + ['cell_specimen_id', 'ophys_experiment_id',
-                                                                  'experience_level']]
-    across = df[[key for key in df.keys() if '_across' in key] + ['cell_specimen_id', 'ophys_experiment_id',
-                                                                  'experience_level']]
-    results_pivoted = across.copy()
-    results_pivoted = results_pivoted.rename(
-        columns={'omissions_across': 'omissions', 'all-images_across': 'all-images',
-                 'behavioral_across': 'behavioral', 'task_across': 'task'})
-    print(len(results_pivoted), 'len(results_pivoted)')
-
-    # limit results pivoted to to last familiar and second novel active
-    results_pivoted = results_pivoted[results_pivoted.ophys_experiment_id.isin(matched_experiments)]
-    results_pivoted = results_pivoted[results_pivoted.cell_specimen_id.isin(matched_cells)]
-    print(len(results_pivoted.cell_specimen_id.unique()),
-          'cells in results_pivoted after limiting to strictly matched cells')
-
-    # drop duplicates
-    results_pivoted = results_pivoted.drop_duplicates(subset=['cell_specimen_id', 'experience_level'])
-    print(len(results_pivoted), 'len(results_pivoted) after dropping duplicates')
-
-else:
-    # get GLM results from saved file in save_dir or from mongo if file doesnt exist
-    results_pivoted = processing.get_glm_results_pivoted_for_clustering(glm_version, model_output_type, save_dir)
-
-if use_signed_weights:
-    import visual_behavior_glm.GLM_analysis_tools as gat
-    import visual_behavior_glm.GLM_params as glm_params
-
-    # get weights
-    run_params = glm_params.load_run_json(glm_version)
-    weights_df = gat.build_weights_df(run_params, results_pivoted)
-
-    # modify regressors to include kernel weights as regressors with '_signed' appended
-    results_pivoted = gat.append_kernel_excitation(weights_df, results_pivoted)
-    # add behavioral results signed by duplicating behavioral dropouts
-    results_pivoted['behavioral_signed'] = results_pivoted.behavioral.values
-
-    # limit to features of interest, in this case limit to the 4 feature categories with '_signed' in name
-    results_pivoted = processing.limit_results_pivoted_to_features_for_clustering(results_pivoted,
-                                                                                  take_absolute_value=False,
-                                                                                  use_signed_features=True)
-
-    # now remove 'signed' from column names
-    columns = {}
-    for column in results_pivoted.columns:
-        if 'signed' in column:
-            # invert the sign so that "increased coding" is positive
-            results_pivoted[column] = results_pivoted[column]*-1
-            # get new column name without the '_signed'
-            columns[column] = column.split('_')[0]
-    results_pivoted = results_pivoted.rename(columns=columns)
-
-
-    # drop duplicates again just in case
-    results_pivoted = results_pivoted.reset_index().drop_duplicates(subset=['cell_specimen_id', 'experience_level'])
-
-# save results_pivoted
-results_pivoted.to_hdf(os.path.join(save_dir, glm_version + '_results_pivoted.h5'), key='df')
-
-# get dropout scores just for the features we want to cluster on and take absolute value if not using signed weights
-if use_signed_weights:
-    take_absolute_value = False
-else:
-    take_absolute_value = True
-dropouts = processing.limit_results_pivoted_to_features_for_clustering(results_pivoted, take_absolute_value)
-dropouts.head()
 
 # unstack dropout scores to get a vector of features x experience levels for each cell
-feature_matrix = processing.get_feature_matrix_for_clustering(dropouts, glm_version, save_dir=save_dir)
+feature_matrix = processing.get_feature_matrix_for_clustering(results_pivoted, glm_version, save_dir=save_dir)
 feature_matrix.head()
 
 # get cell metadata for all cells in feature_matrix
@@ -233,7 +237,7 @@ plotting.plot_within_cluster_correlations_all_cre(cluster_meta, n_clusters_cre, 
                                                   folder=folder)
 
 ### average dropouts per cre line
-plotting.plot_average_dropout_heatmap_for_cre_lines(dropouts, cluster_meta, save_dir=base_dir, folder=folder)
+plotting.plot_average_dropout_heatmap_for_cre_lines(results_pivoted, cluster_meta, save_dir=base_dir, folder=folder)
 
 ### plot 100 cells per cluster to examine within cluster variability
 # plotting.plot_random_subset_of_cells_per_cluster(cluster_meta, dropouts, save_dir)
