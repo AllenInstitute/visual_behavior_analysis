@@ -170,7 +170,7 @@ def plot_cell_rois_and_GLM_weights(cell_specimen_id, cells_table, experiments_ta
     # get weights for example cell
     cell_weights = weights_df[weights_df.cell_specimen_id == cell_specimen_id]
     # limit results_pivoted to features of interest
-    rspm = limit_results_pivoted_to_features_for_clustering(results_pivoted, take_absolute_value=False,
+    rspm = processing.limit_results_pivoted_to_features_for_clustering(results_pivoted, take_absolute_value=False,
                                                      use_signed_features=True)
     # rspm = results_pivoted[['cell_specimen_id', 'experience_level'] + dropout_features]
     # # make dropouts positive for plotting
@@ -356,7 +356,6 @@ def plot_matched_roi_and_traces_example_GLM(cell_metadata, cell_dropouts, dropou
                 ax[i + f].set_ylabel('')
                 ax[i + f].set_title(feature)
                 ax[i + f].set_xlabel('time (s)')
-                #             ax[i+f].sharey(ax[i+first_ax])
                 ax[i + f].get_shared_y_axes().join(ax[i + f], ax[ax_to_share])
 
         except:
@@ -367,12 +366,8 @@ def plot_matched_roi_and_traces_example_GLM(cell_metadata, cell_dropouts, dropou
         i = n_expts + extra_cols  # change to extra_cols = 4 if running and pupil are added
         cell_dropouts['cluster_id'] = 0
         cell_droputs['cre_line'] = cre_line
-        ax[i] = plot_dropout_heatmap(cell_metadata, cell_dropouts, cre_line, cluster_id, small_fontsize=False, ax=ax[i])
-        # mean_dropouts = cell_dropouts.groupby('experience_level').mean()[dropout_features]
-        # ax[i] = sns.heatmap(mean_dropouts.T, cmap='Blues', vmin=0, vmax=1, ax=ax[i],
-        #                     cbar=False, cbar_kws={'shrink':0.7, 'label':'coding score'})
+        ax[i] = processing.plot_dropout_heatmap(cell_metadata, cell_dropouts, cre_line, cluster_id, small_fontsize=False, ax=ax[i])
         ax[i].set_title(cell_type, fontsize=14)
-        # ax[i].set_ylim(-0.5, 4.5)
         ax[i].set_xlabel('')
     except:
         print('could not plot dropout heatmap for', cell_specimen_id)
