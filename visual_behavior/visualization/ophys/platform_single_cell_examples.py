@@ -13,13 +13,15 @@ import visual_behavior.data_access.loading as loading
 import visual_behavior.data_access.utilities as utilities
 import visual_behavior.visualization.ophys.summary_figures as sf
 
-
 import mindscope_utilities.general_utilities as ms_utils
 import mindscope_utilities.visual_behavior_ophys.data_formatting as vb_ophys
 
 import visual_behavior_glm.GLM_params as glm_params
 import visual_behavior_glm.GLM_analysis_tools as gat
 import visual_behavior_glm.GLM_visualization_tools as gvt
+
+from visual_behavior.dimensionality_reduction.clustering import processing
+from visual_behavior.dimensionality_reduction.clustering import plotting
 
 # formatting
 sns.set_context('notebook', font_scale=1.5, rc={'lines.markeredgewidth': 2})
