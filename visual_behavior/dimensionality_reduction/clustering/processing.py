@@ -369,7 +369,8 @@ def generate_GLM_outputs(glm_version, experiments_table, cells_table, glm_output
     else:
         # get GLM results from saved file in save_dir or from mongo if file doesnt exist
         # this function limits results_pivoted to matched cells in last familiar second novel active
-        results_pivoted = get_glm_results_pivoted_for_clustering(glm_version, model_output_type, save_dir)
+        model_output_type = 'adj_fraction_change_from_full'
+        results_pivoted = get_glm_results_pivoted_for_clustering(glm_version, model_output_type, glm_output_dir)
 
     # get weights df and save
     run_params = glm_params.load_run_json(glm_version)

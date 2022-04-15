@@ -23,9 +23,10 @@ from visual_behavior.dimensionality_reduction.clustering import plotting
 
 ### set critical params for processing and saving
 # folder = '220412_across_session_norm_signed_weights'
-folder = '220414_across_session_norm'
-across_session_norm = True
+folder = '220414_var_exp_full'
+across_session_norm = False
 use_signed_weights = False
+include_var_exp_full = True
 
 ### number of clusters to use
 n_clusters_cre = {'Slc17a7-IRES2-Cre': 10,
@@ -68,8 +69,8 @@ if not os.path.exists(save_dir):
     os.mkdir(save_dir)
 
 
-results_pivoted, weights_df, kernels = processing.generate_GLM_outputs(glm_version, experiments_table, cells_table,
-                                                                       save_dir, use_signed_weights, across_session_norm)
+results_pivoted, weights_df, kernels = processing.generate_GLM_outputs(glm_version, experiments_table, cells_table, save_dir,
+                                                                       use_signed_weights, across_session_norm, include_var_exp_full)
 
 # # get features
 # features = processing.get_features_for_clustering()
