@@ -63,8 +63,9 @@ if __name__ == '__main__':
     base_dir = os.path.join(base_dir, glm_version)
 
     # folder in save_dir where you want to load GLM results from
-    glm_output_folder = '220414_across_session_norm'
+    glm_output_folder = '220414_across_session_norm_signed_weights'
     glm_output_dir = os.path.join(base_dir, glm_output_folder)
+    print(glm_output_dir)
 
     # directory to save plots to, in a subfolder called 'matched_cell_examples
     plot_save_dir = glm_output_dir
@@ -82,9 +83,11 @@ if __name__ == '__main__':
     ### get GLM output ###
     # whatever pre-processing has been applied to results_pivoted saved to glm_output_dir will be applied here
     # ex: across session norm, signed weights, etc.
+    print('loading GLM results')
     results_pivoted, weights_df, kernels = processing.load_GLM_outputs(glm_version, glm_output_dir)
     print(len(results_pivoted.cell_specimen_id.unique()), 'unique cell_specimen_ids in results_pivoted')
     print(len(weights_df.cell_specimen_id.unique()), 'unique cell_specimen_ids in weights_df')
+    print('GLM results loaded')
 
     # # make sure weights and dropouts are limited to matched experiments / cells
     # matched_cells = cells_table.cell_specimen_id.unique()

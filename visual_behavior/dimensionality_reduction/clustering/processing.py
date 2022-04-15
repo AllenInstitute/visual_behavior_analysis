@@ -384,7 +384,11 @@ def generate_GLM_outputs(glm_version, experiments_table, cells_table, glm_output
         # add behavioral results signed by duplicating behavioral dropouts
         results_pivoted['behavioral_signed'] = results_pivoted.behavioral.values
 
-        # now remove 'signed' from column names in features_for_clustering
+        # remove redundant unsigned columns
+        features = get_features_for_clustering()
+        results_pivoted = results_pivoted.drop(columns=features)
+
+        # now remove 'signed' from column names so that the remaining features in are signed but with the regular column name
         columns = {}
         for column in results_pivoted.columns:
             if 'signed' in column:
@@ -407,6 +411,8 @@ def generate_GLM_outputs(glm_version, experiments_table, cells_table, glm_output
     # get kernels for this version
     run_params = glm_params.load_run_json(glm_version)
     kernels = run_params['kernels']
+
+    print(results_pivoted.keys())
 
     # save processed results_pivoted
     results_pivoted.to_hdf(os.path.join(glm_output_dir, glm_version + '_results_pivoted.h5'), key='df')
