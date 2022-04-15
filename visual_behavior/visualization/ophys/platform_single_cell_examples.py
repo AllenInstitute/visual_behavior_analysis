@@ -172,7 +172,7 @@ def plot_cell_rois_and_GLM_weights(cell_specimen_id, cells_table, experiments_ta
     weights_df = weights_df[weights_df.cell_specimen_id.isin(matched_cells)]
     print('got weights df')
     results_pivoted = results_pivoted.reset_index()  # reset just in case
-    results_pivoted = results_pivoted[results_pivoted.ophys_experiment_id.isin(matched_experiments)]
+    # results_pivoted = results_pivoted[results_pivoted.ophys_experiment_id.isin(matched_experiments)]
     results_pivoted = results_pivoted[results_pivoted.cell_specimen_id.isin(matched_cells)]
     print('got results_pivoted')
 
