@@ -588,7 +588,7 @@ def generate_cell_metrics_table(dataset, stimulus_response_df, data_type='events
         frame_rate = output_sampling_rate
     else:
         frame_rate = dataset.metadata['ophys_frame_rate']
-    reliability = get_reliability_for_cell_specimen_ids(df, frame_rate=output_sampling_rate, time_window=time_window,
+    reliability = get_reliability_for_cell_specimen_ids(df, frame_rate=frame_rate, time_window=time_window,
                                                         response_window_duration=response_window_duration)
 
     # get running modulation - diff over sum of mean image response for running vs. not running trials
@@ -703,8 +703,6 @@ def get_metrics_df_filepath(ophys_experiment_id, condition, stimuli, session_sub
     :param output_sampling_rate: sampling rate used to create interpolated traces; if interpolate is False, output_sampling_rate is None
     :return:
     """
-    cache_dir = loading.get_platform_analysis_cache_dir()
-
     save_dir = get_cell_metrics_dir(interpolate=interpolate, output_sampling_rate=output_sampling_rate)
     filename = get_metrics_df_filename(ophys_experiment_id, condition, stimuli, session_subset, data_type)
     filepath = os.path.join(save_dir, filename + '.h5')
@@ -1081,8 +1079,6 @@ def get_cell_metrics_for_conditions(data_type, condition, stimuli, session_subse
     # params for stim_response_df to use
     interpolate = True
     output_sampling_rate = 30
-    response_window_duration_seconds = 0.5
-    use_extended_stimulus_presentations = False
 
     platform_experiments = loading.get_platform_paper_experiment_table()
     selected_experiments = platform_experiments.copy()

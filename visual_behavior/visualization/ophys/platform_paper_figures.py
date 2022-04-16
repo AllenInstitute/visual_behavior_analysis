@@ -3,15 +3,12 @@ Created on Thursday September 23 2021
 
 @author: marinag
 """
-import os
 import numpy as np
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 import visual_behavior.visualization.utils as utils
 import visual_behavior.data_access.loading as loading
-import visual_behavior.data_access.reformat as reformat
-import visual_behavior.data_access.utilities as utilities
 import visual_behavior.ophys.response_analysis.utilities as ut
 import visual_behavior.visualization.ophys.summary_figures as sf
 import visual_behavior.ophys.response_analysis.response_processing as rp
@@ -454,13 +451,10 @@ def plot_response_heatmaps_for_conditions(multi_session_df, timestamps, data_typ
 
     if 'omission' in event_type:
         xlabel = 'time after omission (s)'
-        trace_type = 'omitted'
     elif 'change' in event_type:
         xlabel = 'time after change (s)'
-        trace_type = 'change'
     else:
         xlabel = 'time (s)'
-        trace_type = 'unknown'
 
     if xlim_seconds is None:
         xlim_seconds = (timestamps[0], timestamps[-1])
@@ -908,7 +902,6 @@ def plot_matched_roi_and_traces_example(cell_metadata, include_omissions=True,
 
                 ct = dataset.cell_specimen_table.copy()
                 cell_roi_id = ct.loc[cell_specimen_id].cell_roi_id
-                roi_masks = dataset.roi_masks.copy()  # save this to get approx ROI position if subsequent session is missing the ROI (fails if the first session is the one missing the ROI)
                 ax[i] = sf.plot_cell_zoom(dataset.roi_masks, dataset.max_projection, cell_roi_id,
                                           spacex=50, spacey=50, show_mask=True, ax=ax[i])
                 ax[i].set_title(experience_level)
@@ -963,7 +956,6 @@ def plot_matched_roi_and_traces_example(cell_metadata, include_omissions=True,
 # examples
 if __name__ == '__main__':
 
-    import visual_behavior.data_access.loading as loading
     from allensdk.brain_observatory.behavior.behavior_project_cache import VisualBehaviorOphysProjectCache
 
     # load cache

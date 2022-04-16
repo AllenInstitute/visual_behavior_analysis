@@ -1440,8 +1440,6 @@ def plot_event_triggered_averages_for_container(ophys_container_id, save_figure=
     :param save_dir:
     :return:
     """
-    interpolate = True
-    sampling_rate = 30
     time_window = [-3, 3.1]
     experiments_table = loading.get_platform_paper_experiment_table()
     # limit to containers with all experience levels, active only
@@ -1565,7 +1563,6 @@ def plot_pupil_timeseries_for_container(ophys_container_id, save_figure=True):
                                                    interpolate_to_ophys=False, ophys_timestamps=dataset.ophys_timestamps, stimulus_presentations=dataset.stimulus_presentations)
             # eye_tracking = processing.zscore_pupil_data(dataset.eye_tracking.copy())
             timestamps = eye_tracking['timestamps'].values
-            experience_level = expts.loc[experiment_id].experience_level
 
             ax[i].plot(timestamps, eye_tracking.pupil_width.values, color=colors[c])
             ax[i].set_ylabel('pupil radius\n(pixels)')
