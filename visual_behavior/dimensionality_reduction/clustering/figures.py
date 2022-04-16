@@ -1,16 +1,11 @@
-from sklearn.cluster import AgglomerativeClustering
-from scipy.cluster.hierarchy import dendrogram, linkage
+import os
+import numpy as np
+
+import visual_behavior.data_access.loading as loading
+import visual_behavior.data_access.utilities as utilities
+
 from visual_behavior.dimensionality_reduction.clustering import plotting
 from visual_behavior.dimensionality_reduction.clustering import processing
-import visual_behavior.data_access.utilities as utilities
-import visual_behavior.data_access.loading as loading
-import visual_behavior.visualization.utils as utils
-import visual_behavior_glm.GLM_analysis_tools as gat
-from sklearn.cluster import SpectralClustering
-import os
-import time
-import numpy as np
-import pandas as pd
 
 import seaborn as sns
 sns.set_context('notebook', font_scale=1.5, rc={'lines.markeredgewidth': 2})

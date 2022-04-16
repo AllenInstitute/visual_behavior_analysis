@@ -3280,11 +3280,8 @@ def check_whether_multi_session_df_has_all_platform_experiments(multi_session_df
 
 def get_multi_session_df_for_conditions(data_type, event_type, conditions, inclusion_criteria='full_dataset'):
     # params for stim_response_df to use
-    time_window = [-3, 3.1]
     interpolate = True
     output_sampling_rate = 30
-    response_window_duration_seconds = 0.5
-    use_extended_stimulus_presentations = False
 
     multi_session_df = load_multi_session_df(data_type=data_type, event_type=event_type, conditions=conditions,
                                              interpolate=interpolate, output_sampling_rate=output_sampling_rate)

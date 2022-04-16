@@ -264,8 +264,6 @@ def get_reliability_for_cell_specimen_ids(stimulus_response_df, frame_rate, time
     returns a dataframe with index cell_specimen_id and columns for the reliability value,
     and the individual pairwise correlation values
     """
-    import visual_behavior.ophys.response_analysis.response_processing as rp
-    # params = rp.get_default_stimulus_response_params()
 
     reliability = stimulus_response_df.groupby(['cell_specimen_id']).apply(compute_reliability, frame_rate, time_window, response_window_duration)
     # reliability = reliability.drop(columns=['correlation_values'])

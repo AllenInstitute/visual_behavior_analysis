@@ -109,7 +109,7 @@ def plot_feature_matrix_sorted(feature_matrix, cluster_meta, sort_col='cluster_i
         utils.save_figure(fig, figsize, save_dir, folder, 'feature_matrix_sorted_by_' + sort_col)
 
 
-#### NOTE: the function above and below are doing the same thing and need to be integrated ####
+# NOTE: the function above and below are doing the same thing and need to be integrated ####
 
 
 def plot_clustered_dropout_scores(df, labels=None, cmap='Blues', plot_difference=False, ax=None,):
