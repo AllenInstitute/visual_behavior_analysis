@@ -124,10 +124,10 @@ def plot_cell_rois_and_GLM_weights(cell_specimen_id, cells_table, experiments_ta
     cell_metadata = cells_table[cells_table.cell_specimen_id == cell_specimen_id]
     # get weights for example cell
     cell_weights = weights_df[weights_df.cell_specimen_id == cell_specimen_id]
-       # # if exp var full model is in features (must be first feature), scale it by 10x so its on similar scale as dropouts
+    # if exp var full model is in features (must be first feature), scale it by 10x so its on similar scale as dropouts
     if 'variance_explained_full' in results_pivoted.keys():
         results_pivoted['variance_explained_full'] = results_pivoted['variance_explained_full'] * 10
-      # get dropouts just for one cell
+    # get dropouts just for one cell
     cell_dropouts = results_pivoted[results_pivoted.cell_specimen_id == cell_specimen_id]
 
     plot_matched_roi_and_traces_example_GLM(cell_metadata, cell_dropouts, cell_weights, weights_features, kernels,

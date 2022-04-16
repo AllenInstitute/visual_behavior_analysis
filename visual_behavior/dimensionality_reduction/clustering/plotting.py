@@ -1,4 +1,3 @@
-
 import os
 import umap
 import random
@@ -7,20 +6,12 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 from scipy import signal
-# from scipy.stats import spearmanr
-# from scipy.stats import kruskal
-# from scipy.stats import ttest_ind
 from scipy.spatial.distance import cdist, pdist
 
 from sklearn.cluster import KMeans
-# from sklearn.metrics import silhouette_score
-# from sklearn.metrics import pairwise_distances
-# from sklearn.cluster import SpectralClustering
 
 import visual_behavior.visualization.utils as utils
 import visual_behavior.data_access.loading as loading
-import visual_behavior.data_access.utilities as utilities
-# import visual_behavior_glm.GLM_analysis_tools as gat
 
 from visual_behavior.dimensionality_reduction.clustering import processing
 from visual_behavior.dimensionality_reduction.clustering.processing import get_silhouette_scores, get_cluster_density, get_cre_lines, get_cell_type_for_cre_line
@@ -293,7 +284,6 @@ def plot_coclustering_matrix_and_dendrograms(coclustering_matrices, cre_line, cl
     n_clusters_cre: dictionary with cre_lines as keys and n_clusters to use as values
     """
     from scipy.cluster.hierarchy import dendrogram, linkage
-    from sklearn.cluster import AgglomerativeClustering
     figsize = (6, 8)
     fig, ax = plt.subplots(3, 1, figsize=figsize, gridspec_kw={'height_ratios': [1, 1, 5]})
     # get coclustering matrix and cell ID labels for this cre line
@@ -307,7 +297,6 @@ def plot_coclustering_matrix_and_dendrograms(coclustering_matrices, cre_line, cl
     R = dendrogram(Z, no_plot=True,)  # truncate_mode='level', p=p)
     # the leaves are the original matrix indices reordered according to dendrogram
     leaves = R['leaves']
-    nodes = R['ivl']
     print('n_leaves:', len(leaves))
 
     # reorder the labels corresponding to rows (cell_specimen_id) of coclustering matrix by the leaf order
@@ -556,7 +545,6 @@ def plot_dropout_heatmaps_and_save_to_cell_examples_folders(cluster_meta, featur
     cre_lines = get_cre_lines(cluster_meta)
     for cre_line in cre_lines:
         clusters = np.sort(cluster_meta[cluster_meta.cre_line == cre_line].cluster_id.unique())
-        n_clusters = len(clusters)
         for i, cluster_id in enumerate(clusters):
             # plot each cluster separately
             figsize = (3, 2.5)
@@ -1123,7 +1111,6 @@ def plot_random_subset_of_cells_per_cluster(cluster_meta, dropouts, save_dir=Non
             else:
                 n_cells = 100
 
-            import random
             print('selecting a random subset of', n_cells)
             cluster_csids = random.sample(list(cluster_csids), n_cells)
 
@@ -1132,8 +1119,6 @@ def plot_random_subset_of_cells_per_cluster(cluster_meta, dropouts, save_dir=Non
             ax = ax.ravel()
             for i, cell_specimen_id in enumerate(cluster_csids[:n_cells]):
 
-                cell_data = cluster_data[(cluster_data.cluster_id == cluster_id) &
-                                         (cluster_data.cell_specimen_id == cell_specimen_id)]
                 cell_info = cluster_meta.loc[cell_specimen_id]['targeted_structure'] + '_' + str(cluster_meta.loc[cell_specimen_id]['imaging_depth'])
                 mean_dropouts = dropouts.loc[cell_specimen_id].groupby('experience_level').mean()[features]
                 ax[i] = sns.heatmap(mean_dropouts.T, cmap='Blues', vmin=0, vmax=1, ax=ax[i], cbar=False)  # cbar_kws={'shrink':0.7, 'label':model_output_type})
@@ -1203,7 +1188,6 @@ def plot_cell_stats_per_cluster_for_areas_depths(cluster_meta, cell_count_stats,
     fig, ax = plt.subplots(1, 3, figsize=figsize, gridspec_kw={'width_ratios': n_clusters}, sharey=True)
 
     for i, cre_line in enumerate(cre_lines):
-        cre_meta = cluster_meta[cluster_meta.cre_line == cre_line]
         # pivot stats to get number of cells per area and depth by cluster ID
         data = cell_count_stats[(cell_count_stats.cre_line == cre_line)]
         data = data.pivot(index='cluster_id', columns='location', values=value_to_plot)
@@ -1470,8 +1454,8 @@ def plot_clusters_stats_pop_avg_rows(cluster_meta, feature_matrix, multi_session
         cluster_ids = sort_order[cre_line]
     n_clusters = len(cluster_ids)
     # cell counts and fraction for this cre line
-    cre_counts = cell_count_stats[cell_count_stats.cre_line == cre_line]
-    cre_fraction = fraction_cells[fraction_cells.cre_line == cre_line]
+    # cre_counts = cell_count_stats[cell_count_stats.cre_line == cre_line]
+    # cre_fraction = fraction_cells[fraction_cells.cre_line == cre_line]
 
     n_rows = 2  # 4 if including proportion plots
     figsize = (n_clusters * 2.5, n_rows * 2.5)

@@ -9,7 +9,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import visual_behavior.visualization.utils as utils
 import visual_behavior.data_access.loading as loading
-import visual_behavior.ophys.response_analysis.utilities as ut
+import visual_behavior.data_access.utilities as utilities
 import visual_behavior.visualization.ophys.summary_figures as sf
 import visual_behavior.ophys.response_analysis.response_processing as rp
 from visual_behavior.ophys.response_analysis.response_analysis import ResponseAnalysis

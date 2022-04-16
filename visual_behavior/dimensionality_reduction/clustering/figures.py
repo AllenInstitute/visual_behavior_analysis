@@ -11,8 +11,6 @@ import os
 import time
 import numpy as np
 import pandas as pd
-import pickle as pkl
-import matplotlib.pyplot as plt
 
 import seaborn as sns
 sns.set_context('notebook', font_scale=1.5, rc={'lines.markeredgewidth': 2})

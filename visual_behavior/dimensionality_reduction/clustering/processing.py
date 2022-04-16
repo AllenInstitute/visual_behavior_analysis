@@ -4,7 +4,6 @@ import pickle
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
-import matplotlib.pyplot as plt
 from numpy import linalg as linalg
 
 from scipy.stats import spearmanr
@@ -12,12 +11,10 @@ from scipy.stats import kruskal
 from scipy.stats import ttest_ind
 from scipy.sparse import csgraph
 
-from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_score
 from sklearn.metrics import pairwise_distances
 from sklearn.cluster import SpectralClustering
 
-import visual_behavior.visualization.utils as utils
 import visual_behavior.data_access.loading as loading
 import visual_behavior.data_access.utilities as utilities
 
@@ -38,7 +35,7 @@ sns.set_context('notebook', font_scale=1.5, rc={'lines.markeredgewidth': 2})
 # import visual_behavior_glm.GLM_params as glm_params
 
 
-### utilities ###
+# utilities ###
 
 
 def save_clustering_results(data, filename_string='', path=None):
@@ -223,7 +220,7 @@ def pivot_df(df, dropna=True, drop_duplicated_cells=True):
     return df_pivoted
 
 
-### loading & processing ###
+# loading & processing ###
 
 def get_glm_results_pivoted_for_clustering(glm_version='24_events_all_L2_optimize_by_session',
                                            model_output_type='adj_fraction_change_from_full', save_dir=None):
@@ -343,8 +340,8 @@ def generate_GLM_outputs(glm_version, experiments_table, cells_table, glm_output
         df = df.set_index('identifier')
 
         # only use across session values
-        within = df[[key for key in df.keys() if '_within' in key] + ['cell_specimen_id', 'ophys_experiment_id',
-                                                                      'experience_level']]
+        # within = df[[key for key in df.keys() if '_within' in key] + ['cell_specimen_id', 'ophys_experiment_id',
+        #                                                               'experience_level']]
         across = df[[key for key in df.keys() if '_across' in key] + ['cell_specimen_id', 'ophys_experiment_id',
                                                                       'experience_level']]
         results_pivoted = across.copy()
@@ -435,7 +432,7 @@ def load_GLM_outputs(glm_version, glm_output_dir):
         kernels: dict of kernel params for this model version
     """
     # get GLM kernels and params for this version of the model
-    model_output_type = 'adj_fraction_change_from_full'
+    # model_output_type = 'adj_fraction_change_from_full'
     run_params = glm_params.load_run_json(glm_version)
     kernels = run_params['kernels']
     # if glm_output_dir is not None:
@@ -975,7 +972,6 @@ def get_cell_count_stats(cluster_meta, conditions_to_groupby=['targeted_structur
     quantify cells per area and depth per cluster as a fraction of the average of random distribution and
     value relative to random distribution (fraction-1) so that + is more than and - is less than random average
     """
-    import random
     try:
         cluster_meta = cluster_meta.set_index('cell_specimen_id')
     except BaseException:

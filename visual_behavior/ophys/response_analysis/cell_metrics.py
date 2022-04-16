@@ -6,7 +6,7 @@ from tqdm import tqdm
 import visual_behavior.data_access.loading as loading
 import visual_behavior.data_access.utilities as utilities
 
-from visual_behavior.ophys.response_analysis.response_analysis import ResponseAnalysis
+# from visual_behavior.ophys.response_analysis.response_analysis import ResponseAnalysis
 # from allensdk.brain_observatory.behavior.behavior_project_cache import VisualBehaviorOphysProjectCache
 
 
@@ -265,7 +265,7 @@ def get_reliability_for_cell_specimen_ids(stimulus_response_df, frame_rate, time
     and the individual pairwise correlation values
     """
     import visual_behavior.ophys.response_analysis.response_processing as rp
-    params = rp.get_default_stimulus_response_params()
+    # params = rp.get_default_stimulus_response_params()
 
     reliability = stimulus_response_df.groupby(['cell_specimen_id']).apply(compute_reliability, frame_rate, time_window, response_window_duration)
     # reliability = reliability.drop(columns=['correlation_values'])
