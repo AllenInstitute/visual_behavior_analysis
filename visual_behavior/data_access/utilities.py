@@ -49,9 +49,9 @@ def get_cell_types_dict(cre_lines, experiments_table):
     """
     gets dictionary where keys are cre lines and values are cell types
     """
-    cell_types={}
+    cell_types = {}
     for cre_line in cre_lines:
-        cell_types[cre_line] = experiments_table[experiments_table.cre_line==cre_line].cell_type.unique()[0]
+        cell_types[cre_line] = experiments_table[experiments_table.cre_line == cre_line].cell_type.unique()[0]
     return cell_types
 
 
@@ -1785,7 +1785,7 @@ def count_mice_expts_containers_cells(df, conditions_to_group=['cell_type', 'exp
     matched_cells = limit_to_last_familiar_second_novel_active(df)
     matched_cells = limit_to_cell_specimen_ids_matched_in_all_experience_levels(matched_cells)
     matched_cells = value_counts(matched_cells, conditions=conditions_to_group + ['cell_specimen_id'])
-    matched_cells = matched_cells.rename(columns={'n_cell_specimen_id':'n_matched_cells'})
+    matched_cells = matched_cells.rename(columns={'n_cell_specimen_id': 'n_matched_cells'})
 
     counts = mice.merge(sessions, on=conditions_to_group)
     counts = counts.merge(experiments, on=conditions_to_group)

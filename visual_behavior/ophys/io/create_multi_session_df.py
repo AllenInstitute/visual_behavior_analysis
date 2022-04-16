@@ -49,16 +49,16 @@ def get_multi_session_df(project_code, session_number, conditions, data_type, ev
                                                           event_type=event_type)
     filepath = os.path.join(mega_mdf_write_dir, filename)
 
-    if not overwrite: # if we dont want to overwrite
-        if os.path.exists(filepath): # and file exists, dont regenerate
+    if not overwrite:  # if we dont want to overwrite
+        if os.path.exists(filepath):  # and file exists, dont regenerate
             print('multi_session_df exists for', filepath)
             print('not regenerating')
             process_data = False
-        else: # if file doesnt exist, create it
+        else:  # if file doesnt exist, create it
             print('creating multi session mean df for', filename)
             process_data = True
-    else: # if we do want to overwrite
-        process_data = True # regenerate and save
+    else:  # if we do want to overwrite
+        process_data = True  # regenerate and save
         print('creating multi session mean df for', filename)
 
     if process_data:
@@ -79,7 +79,7 @@ def get_multi_session_df(project_code, session_number, conditions, data_type, ev
                 df['ophys_experiment_id'] = experiment_id
                 # if using omissions, only include omissions where time from last change is more than 3 seconds
                 if event_type == 'omissions':
-                    df = df[df.time_from_last_change>3]
+                    df = df[df.time_from_last_change > 3]
                 # modify columns for specific conditions
                 if 'passive' in dataset.metadata['session_type']:
                     df['lick_on_next_flash'] = False
@@ -120,7 +120,6 @@ def get_multi_session_df(project_code, session_number, conditions, data_type, ev
         if 'index' in mega_mdf.keys():
             mega_mdf = mega_mdf.drop(columns='index')
 
-
         # if file of the same name exists, delete & overwrite to prevent files from getting huge
         if os.path.exists(filepath):
             os.remove(filepath)
@@ -132,6 +131,3 @@ def get_multi_session_df(project_code, session_number, conditions, data_type, ev
 
     else:
         print('multi_session_df not created')
-
-
-

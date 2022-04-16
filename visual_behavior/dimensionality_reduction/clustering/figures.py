@@ -1,3 +1,12 @@
+from sklearn.cluster import AgglomerativeClustering
+from scipy.cluster.hierarchy import dendrogram, linkage
+from visual_behavior.dimensionality_reduction.clustering import plotting
+from visual_behavior.dimensionality_reduction.clustering import processing
+import visual_behavior.data_access.utilities as utilities
+import visual_behavior.data_access.loading as loading
+import visual_behavior.visualization.utils as utils
+import visual_behavior_glm.GLM_analysis_tools as gat
+from sklearn.cluster import SpectralClustering
 import os
 import time
 import numpy as np
@@ -9,26 +18,14 @@ import seaborn as sns
 sns.set_context('notebook', font_scale=1.5, rc={'lines.markeredgewidth': 2})
 
 
-from sklearn.cluster import SpectralClustering
-
-import visual_behavior_glm.GLM_analysis_tools as gat
-
-import visual_behavior.visualization.utils as utils
-import visual_behavior.data_access.loading as loading
-import visual_behavior.data_access.utilities as utilities
-
-from visual_behavior.dimensionality_reduction.clustering import processing
-from visual_behavior.dimensionality_reduction.clustering import plotting
-
-
-### set critical params for processing and saving
+# set critical params for processing and saving
 # folder = '220412_across_session_norm_signed_weights'
 folder = '220414_var_exp_full'
 across_session_norm = False
 use_signed_weights = False
 include_var_exp_full = True
 
-### number of clusters to use
+# number of clusters to use
 n_clusters_cre = {'Slc17a7-IRES2-Cre': 10,
                   'Sst-IRES-Cre': 6,
                   'Vip-IRES-Cre': 12}
@@ -54,7 +51,7 @@ matched_experiments = cells_table.ophys_experiment_id.unique()
 cre_lines = np.sort(cells_table.cre_line.unique())
 cell_types = utilities.get_cell_types_dict(cre_lines, experiments_table)
 
-### get GLM output, filter and reshape
+# get GLM output, filter and reshape
 glm_version = '24_events_all_L2_optimize_by_session'
 model_output_type = 'adj_fraction_change_from_full'
 
@@ -63,7 +60,7 @@ base_dir = os.path.join(base_dir, glm_version)
 if not os.path.exists(base_dir):
     os.mkdir(base_dir)
 
-### create folder to load and save to
+# create folder to load and save to
 save_dir = os.path.join(base_dir, folder)
 if not os.path.exists(save_dir):
     os.mkdir(save_dir)
@@ -160,33 +157,31 @@ feature_matrix.head()
 cell_metadata = processing.get_cell_metadata_for_feature_matrix(feature_matrix, cells_table)
 cell_metadata.head()
 
-### plot feature matrix for each cre line
+# plot feature matrix for each cre line
 plotting.plot_feature_matrix_for_cre_lines(feature_matrix, cell_metadata, save_dir=base_dir, folder=folder)
 
-### get Silhouette scores
+# get Silhouette scores
 silhouette_scores = processing.load_silhouette_scores(glm_version, feature_matrix, cell_metadata, save_dir)
 
 
-### plot silhouettes with selected # clusters
+# plot silhouettes with selected # clusters
 plotting.plot_silhouette_scores_n_clusters(silhouette_scores, cell_metadata, n_clusters_cre=n_clusters_cre,
                                            save_dir=base_dir, folder=folder)
 
-### get coclustering matrices per cre line
+# get coclustering matrices per cre line
 coclustering_matrices = processing.get_coclustering_matrix(glm_version, feature_matrix, cell_metadata, n_clusters_cre,
                                                            save_dir, nboot=100)
 
-### get cluster labels per cre line from Agglomerative clustering on co-clustering matrix
+# get cluster labels per cre line from Agglomerative clustering on co-clustering matrix
 cluster_labels = processing.get_cluster_labels(coclustering_matrices, cell_metadata, n_clusters_cre, save_dir,
                                                load=False)
 
-#### merge cluster labels with cell metadata, remove small clusters, and add manual sort order
+# merge cluster labels with cell metadata, remove small clusters, and add manual sort order
 cluster_meta = processing.get_cluster_meta(cluster_labels, cell_metadata, feature_matrix, n_clusters_cre, save_dir,
                                            load=False)
 
 
-### plot co-clustering matrix and dendrograms sorted by linkage matrix
-from scipy.cluster.hierarchy import dendrogram, linkage
-from sklearn.cluster import AgglomerativeClustering
+# plot co-clustering matrix and dendrograms sorted by linkage matrix
 # for i, cre_line in enumerate(processing.get_cre_lines(cluster_meta)):
 #     plotting.plot_coclustering_matrix_and_dendrograms(coclustering_matrices, cre_line, cluster_meta, n_clusters_cre,
 #                                                      save_dir=base_dir, folder=folder)
@@ -196,59 +191,59 @@ from sklearn.cluster import AgglomerativeClustering
 # ax = sns.clustermap(data=data, cmap='Greys', cbar_kws={'label':'co-clustering probability'})
 
 
-### sort coclustering matrix by cluster ID / cluster size
+# sort coclustering matrix by cluster ID / cluster size
 cre_lines = processing.get_cre_lines(cell_metadata)
 for cre_line in cre_lines:
     plotting.plot_coclustering_matrix_sorted_by_cluster_size(coclustering_matrices, cluster_meta, cre_line,
                                                              save_dir=None, folder=folder, ax=None)
 
-### plot average dropout scores for each cluster
+# plot average dropout scores for each cluster
 
-### plot each cluster separately and save to single cell examples dir
+# plot each cluster separately and save to single cell examples dir
 cell_examples_dir = os.path.join(save_dir, 'matched_cell_examples')
 if not os.path.exists(cell_examples_dir):
     os.mkdir(cell_examples_dir)
 
 # plotting.plot_dropout_heatmaps_and_save_to_cell_examples_folders(cluster_meta, feature_matrix, save_dir)
 
-### plot average dropouts for each cre line in cluster size order
+# plot average dropouts for each cre line in cluster size order
 sort_col = 'cluster_id'
 plotting.plot_dropout_heatmaps_for_clusters(cluster_meta, feature_matrix, sort_col=sort_col, save_dir=base_dir,
                                             folder=folder)
 
-### plot dropout heatmaps in manually sorted order
+# plot dropout heatmaps in manually sorted order
 sort_col = 'manual_sort_order'
 plotting.plot_dropout_heatmaps_for_clusters(cluster_meta, feature_matrix, sort_col=sort_col, save_dir=base_dir,
                                             folder=folder)
 
-### plot feature matrix sorted by cluster ID
+# plot feature matrix sorted by cluster ID
 plotting.plot_feature_matrix_sorted(feature_matrix, cluster_meta, sort_col='cluster_id', save_dir=base_dir,
                                     folder=folder)
 
 plotting.plot_feature_matrix_sorted(feature_matrix, cluster_meta, sort_col='manual_sort_order', save_dir=base_dir,
                                     folder=folder)
 
-### umap with cluster labels
+# umap with cluster labels
 label_col = 'cluster_id'
 
 plotting.plot_umap_for_clusters(cluster_meta, feature_matrix, label_col=label_col, save_dir=base_dir, folder=folder)
 
-### Correlations within clusters
+# Correlations within clusters
 plotting.plot_within_cluster_correlations_all_cre(cluster_meta, n_clusters_cre, sort_order=None, save_dir=base_dir,
                                                   folder=folder)
 
-### average dropouts per cre line
+# average dropouts per cre line
 plotting.plot_average_dropout_heatmap_for_cre_lines(results_pivoted, cluster_meta, save_dir=base_dir, folder=folder)
 
-### plot 100 cells per cluster to examine within cluster variability
+# plot 100 cells per cluster to examine within cluster variability
 # plotting.plot_random_subset_of_cells_per_cluster(cluster_meta, dropouts, save_dir)
 
 
-### breakdown by area and depth
+# breakdown by area and depth
 
 # We are going to normalize within each area or depth to account for the large imbalance in N due to Scientifica datasets only being performed in V1 at certain depths, as well as biological variation in cell type specific expression by depth
 
-### plot fraction and number of cells by area and depth
+# plot fraction and number of cells by area and depth
 label = 'fraction of cells'
 plotting.plot_fraction_cells_by_area_depth(cluster_meta, n_clusters_cre, normalize=True, label=label,
                                            save_dir=base_dir, folder=folder)
@@ -257,7 +252,7 @@ label = '# of cells'
 plotting.plot_fraction_cells_by_area_depth(cluster_meta, n_clusters_cre, normalize=False, label=label,
                                            save_dir=base_dir, folder=folder)
 
-### compute proportion of cells per area / depth relative to cluster average
+# compute proportion of cells per area / depth relative to cluster average
 
 # frequency = processing.make_frequency_table(cluster_meta[cluster_meta.cre_line==cre_lines[0]],
 #                                             groupby_columns = ['targeted_structure', 'layer'], normalize=True)
@@ -265,14 +260,14 @@ plotting.plot_fraction_cells_by_area_depth(cluster_meta, n_clusters_cre, normali
 # fraction_cells_per_cluster = processing.make_frequency_table(cluster_meta[cluster_meta.cre_line==cre_lines[0]],
 #                                             groupby_columns = ['cre_line'], normalize=True)
 
-### cluster proportions for one cre line
+# cluster proportions for one cre line
 # cluster_proportions_cre = processing.compute_cluster_proportion_cre(cluster_meta, cre_line)
 # cluster_proportions_cre
 
-### cluster proportions for all cre lines
+# cluster proportions for all cre lines
 proportions = processing.get_proportion_cells_rel_cluster_average(cluster_meta, cre_lines)
 
-### plot fraction cells per area depth
+# plot fraction cells per area depth
 value_to_plot = 'proportion_cells'
 cbar_label = 'proportion relative\n to cluster avg'
 suffix = '_full_range'
@@ -284,7 +279,7 @@ plotting.plot_cell_stats_per_cluster_for_areas_depths(cluster_meta, proportions,
                                                       cluster_order=None, save_dir=base_dir, folder=folder,
                                                       suffix=suffix)
 
-### sort clusters by the fraction of cells in VISp upper
+# sort clusters by the fraction of cells in VISp upper
 value_to_plot = 'proportion_cells'
 cbar_label = 'proportion cells\n rel. to cluster avg'
 suffix = '_full_range'
@@ -298,7 +293,7 @@ plotting.plot_cell_stats_per_cluster_for_areas_depths(cluster_meta, proportions,
                                                       cluster_order=cluster_order, save_dir=base_dir, folder=folder,
                                                       suffix=suffix)
 
-### plot dropouts and pop avgs in this order
+# plot dropouts and pop avgs in this order
 
 # load multi session dataframe with response traces
 df_name = 'omission_response_df'
@@ -327,7 +322,7 @@ for cre_line in cre_lines:
                                               save_dir=base_dir, folder=folder, )
 
 
-### try for just V1 vs LM or upper vs lower
+# try for just V1 vs LM or upper vs lower
 
 # areas
 area_proportions = processing.get_proportion_cells_rel_cluster_average(cluster_meta, cre_lines,
@@ -373,8 +368,5 @@ plotting.plot_cell_stats_per_cluster_for_areas_depths(cluster_meta, layer_propor
 
 for cre_line in cre_lines:
     plotting.plot_clusters_pop_avg_rows(cluster_meta, feature_matrix, multi_session_df, cre_line,
-                                              sort_order=cluster_order, suffix='_upper_proportion_rel_avg',
-                                              save_dir=base_dir, folder=folder, )
-
-
-
+                                        sort_order=cluster_order, suffix='_upper_proportion_rel_avg',
+                                        save_dir=base_dir, folder=folder, )

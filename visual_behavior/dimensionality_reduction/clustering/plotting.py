@@ -47,22 +47,22 @@ def plot_feature_matrix_for_cre_lines(feature_matrix, cell_metadata, save_dir=No
         vmin = 0
         cmap = 'Blues'
 
-    figsize = (15,5)
-    fig, ax = plt.subplots(1,3, figsize=figsize)
+    figsize = (15, 5)
+    fig, ax = plt.subplots(1, 3, figsize=figsize)
     for i, cre_line in enumerate(get_cre_lines(cell_metadata)):
         data = processing.get_feature_matrix_for_cre_line(feature_matrix, cell_metadata, cre_line)
         ax[i] = sns.heatmap(data.values, cmap=cmap, ax=ax[i], vmin=vmin, vmax=1,
-                         robust=True, cbar_kws={"drawedges": False, "shrink": 0.7, "label": 'coding score'})
+                            robust=True, cbar_kws={"drawedges": False, "shrink": 0.7, "label": 'coding score'})
         ax[i].set_title(get_cell_type_for_cre_line(cell_metadata, cre_line))
         ax[i].set_ylabel('cells')
         ax[i].set_ylim(0, data.shape[0])
-        ax[i].set_yticks([0, data.shape[0]]);
-        ax[i].set_yticklabels((0, data.shape[0]), fontsize=14);
-        ax[i].set_ylim(ax[i].get_ylim()[::-1]) #flip y axes so larger clusters are on top
+        ax[i].set_yticks([0, data.shape[0]])
+        ax[i].set_yticklabels((0, data.shape[0]), fontsize=14)
+        ax[i].set_ylim(ax[i].get_ylim()[::-1])  # flip y axes so larger clusters are on top
         ax[i].set_xlabel('')
         ax[i].set_xlim(0, data.shape[1])
-        ax[i].set_xticks(np.arange(0, data.shape[1])+0.5)
-        ax[i].set_xticklabels([key[1]+' -  '+key[0] for key in list(data.keys())], rotation=90, fontsize=14);
+        ax[i].set_xticks(np.arange(0, data.shape[1]) + 0.5)
+        ax[i].set_xticklabels([key[1] + ' -  ' + key[0] for key in list(data.keys())], rotation=90, fontsize=14)
 
     fig.subplots_adjust(wspace=0.7)
 
@@ -100,13 +100,13 @@ def plot_feature_matrix_sorted(feature_matrix, cluster_meta, sort_col='cluster_i
         ax[i].set_title(get_cell_type_for_cre_line(cluster_meta, cre_line))
         ax[i].set_ylabel('cells')
         ax[i].set_ylim(0, data.shape[0])
-        ax[i].set_yticks([0, data.shape[0]]);
-        ax[i].set_yticklabels((0, data.shape[0]), fontsize=14);
+        ax[i].set_yticks([0, data.shape[0]])
+        ax[i].set_yticklabels((0, data.shape[0]), fontsize=14)
         ax[i].set_ylim(ax[i].get_ylim()[::-1])  # flip y axes so larger clusters are on top
         ax[i].set_xlabel('')
         ax[i].set_xlim(0, data.shape[1])
         ax[i].set_xticks(np.arange(0, data.shape[1]) + 0.5)
-        ax[i].set_xticklabels([key[1] + ' -  ' + key[0] for key in list(data.keys())], rotation=90, fontsize=14);
+        ax[i].set_xticklabels([key[1] + ' -  ' + key[0] for key in list(data.keys())], rotation=90, fontsize=14)
 
         # plot a line at the division point between clusters
         cluster_divisions = np.where(np.diff(label_values) == 1)[0]
@@ -249,7 +249,7 @@ def plot_silhouette_scores(X=None, model=KMeans, silhouette_scores=None, silhoue
             metric = ''
 
     if ax is None:
-        fig, ax = plt.subplots(1, 1, figsize=(5,5))
+        fig, ax = plt.subplots(1, 1, figsize=(5, 5))
 
     ax.plot(n_clusters, silhouette_scores, 'ko-')
     if silhouette_std is not None:
@@ -268,13 +268,13 @@ def plot_silhouette_scores_n_clusters(silhouette_scores, cell_metadata, n_cluste
     n_clusters_cre is a dictionary with cre lines as keys and the selected number of clusters for that cre line as values
     silhouette scores are plotted with dashed line at the x value for n_clusters_cre
     """
-    suffix = '' # suffix to attach to file name - blank if n_clusters_cre is None, otherwise will add label below
-    figsize = (15,5)
-    fig, ax = plt.subplots(1,3, figsize=figsize)
+    suffix = ''  # suffix to attach to file name - blank if n_clusters_cre is None, otherwise will add label below
+    figsize = (15, 5)
+    fig, ax = plt.subplots(1, 3, figsize=figsize)
     for i, cre_line in enumerate(get_cre_lines(cell_metadata)):
         silhouette_scores_cre = silhouette_scores[cre_line]
         ax[i] = plot_silhouette_scores(silhouette_scores=silhouette_scores_cre[0],
-                                                 silhouette_std=silhouette_scores_cre[1], ax=ax[i])
+                                       silhouette_std=silhouette_scores_cre[1], ax=ax[i])
         ax[i].set_title(get_cell_type_for_cre_line(cell_metadata, cre_line))
         if n_clusters_cre:
             n_clusters = n_clusters_cre[cre_line]
@@ -282,7 +282,7 @@ def plot_silhouette_scores_n_clusters(silhouette_scores, cell_metadata, n_cluste
             suffix = '_n_clusters'
     plt.grid()
     if save_dir:
-        utils.save_figure(fig, figsize, save_dir, folder, 'silhouette_scores'+suffix)
+        utils.save_figure(fig, figsize, save_dir, folder, 'silhouette_scores' + suffix)
 
 
 def plot_coclustering_matrix_and_dendrograms(coclustering_matrices, cre_line, cluster_meta, n_clusters_cre, save_dir=None, folder=None):
@@ -294,7 +294,7 @@ def plot_coclustering_matrix_and_dendrograms(coclustering_matrices, cre_line, cl
     """
     from scipy.cluster.hierarchy import dendrogram, linkage
     from sklearn.cluster import AgglomerativeClustering
-    figsize = (6,8)
+    figsize = (6, 8)
     fig, ax = plt.subplots(3, 1, figsize=figsize, gridspec_kw={'height_ratios': [1, 1, 5]})
     # get coclustering matrix and cell ID labels for this cre line
     coclustering_matrix = coclustering_matrices[cre_line]
@@ -304,32 +304,33 @@ def plot_coclustering_matrix_and_dendrograms(coclustering_matrices, cre_line, cl
     # get linkage matrix using same parameters as were used for clustering
     Z = linkage(X, method='average', metric='euclidean')
     # create dendrogram from linkage matrix and get dict R to get the leaves
-    R = dendrogram(Z, no_plot=True,); #truncate_mode='level', p=p)
+    R = dendrogram(Z, no_plot=True,)  # truncate_mode='level', p=p)
     # the leaves are the original matrix indices reordered according to dendrogram
     leaves = R['leaves']
     nodes = R['ivl']
     print('n_leaves:', len(leaves))
 
     # reorder the labels corresponding to rows (cell_specimen_id) of coclustering matrix by the leaf order
-    leaf_cluster_ids = labels[leaves] # labels=leaf_cluster_ids,
+    leaf_cluster_ids = labels[leaves]  # labels=leaf_cluster_ids,
     # get the unique cluster IDs in the same order as they occur in the leaves of dendrogram
     cluster_order = list(dict.fromkeys(leaf_cluster_ids))
     cluster_order = [int(c) for c in cluster_order]
     # define a leaf label function for what to do when labeling non-singleton clusters
+
     def llf(xx):
         print(xx)
         return str(cluster_order[xx])
     # now plot the same dendrogram with labels
-    dendrogram(Z, labels=leaf_cluster_ids, ax=ax[1]); #truncate_mode='level', p=p,
+    dendrogram(Z, labels=leaf_cluster_ids, ax=ax[1])  # truncate_mode='level', p=p,
     ax[1].grid(False)
     ax[1].set_title(get_cell_type_for_cre_line(cluster_meta, cre_line))
 
     # plot dendrogram with leaves truncated to highest level nodes (p=n_clusters)
-    dendrogram(Z, truncate_mode='lastp', p=n_clusters_cre[cre_line], color_threshold=0, ax=ax[0]); # leaf_label_func=llf,truncate_mode='level', p=p,
+    dendrogram(Z, truncate_mode='lastp', p=n_clusters_cre[cre_line], color_threshold=0, ax=ax[0])  # leaf_label_func=llf,truncate_mode='level', p=p,
     # put the order of cluster_ids in the dendrogram in the title
     title = 'cluster order: '
     for c in cluster_order:
-        title = title+str(int(c))+','
+        title = title + str(int(c)) + ','
     ax[0].set_title(title)
     print(cluster_order)
     ax[0].grid(False)
@@ -341,15 +342,15 @@ def plot_coclustering_matrix_and_dendrograms(coclustering_matrices, cre_line, cl
     sorted_coclustering_matrix = coclustering_matrix.loc[sorted_cell_specimen_ids]
     sorted_coclustering_matrix = sorted_coclustering_matrix[sorted_cell_specimen_ids]
     ax[2] = sns.heatmap(sorted_coclustering_matrix, cmap="Greys", ax=ax[2], square=True,
-                       cbar=True, cbar_kws={"drawedges": False, "label": 'probability of co-clustering'},)
+                        cbar=True, cbar_kws={"drawedges": False, "label": 'probability of co-clustering'},)
     ax[2].set_xticklabels('')
-    ax[2].set_yticks((0,sorted_coclustering_matrix.shape[0]));
-    ax[2].set_yticklabels((0,sorted_coclustering_matrix.shape[0]));
+    ax[2].set_yticks((0, sorted_coclustering_matrix.shape[0]))
+    ax[2].set_yticklabels((0, sorted_coclustering_matrix.shape[0]))
     ax[2].set_ylabel('cells')
     plt.subplots_adjust(hspace=0.5)
     if save_dir:
-        filename = 'coclustering_matrix_sorted_by_dendrogram_'+cre_line.split('-')[0]
-        utils.save_figure(fig, figsize, save_dir, folder, filename, formats=['.png']) # saving to PDF is super slow
+        filename = 'coclustering_matrix_sorted_by_dendrogram_' + cre_line.split('-')[0]
+        utils.save_figure(fig, figsize, save_dir, folder, filename, formats=['.png'])  # saving to PDF is super slow
 
 
 def plot_coclustering_matrix_sorted_by_cluster_size(coclustering_matrices, cluster_meta, cre_line,
@@ -360,7 +361,7 @@ def plot_coclustering_matrix_sorted_by_cluster_size(coclustering_matrices, clust
     if ax is provided, will plot on provided ax
     """
     coclustering_matrix = coclustering_matrices[cre_line]
-    cre_meta = cluster_meta[cluster_meta.cre_line==cre_line]
+    cre_meta = cluster_meta[cluster_meta.cre_line == cre_line]
     cre_meta = cre_meta.sort_values(by='cluster_id')
     sorted_cell_specimen_ids = cre_meta.index.values
     # sort rows and cols of coclustering matrix by sorted cell_specimen_ids
@@ -368,22 +369,22 @@ def plot_coclustering_matrix_sorted_by_cluster_size(coclustering_matrices, clust
     sorted_coclustering_matrix = sorted_coclustering_matrix[sorted_cell_specimen_ids]
 
     if ax is None:
-        figsize =(5,5)
+        figsize = (5, 5)
         fig, ax = plt.subplots(figsize=figsize)
     ax = sns.heatmap(sorted_coclustering_matrix, cmap="Greys", ax=ax, square=True,
-                       cbar=True, cbar_kws={"drawedges": False, "label": 'probability of\nco-clustering', 'shrink':0.7,},)
+                     cbar=True, cbar_kws={"drawedges": False, "label": 'probability of\nco-clustering', 'shrink': 0.7, },)
     ax.set_title(get_cell_type_for_cre_line(cluster_meta, cre_line))
     ax.set_title('')
-    ax.set_yticks((0, sorted_coclustering_matrix.shape[0]));
-    ax.set_yticklabels((0, sorted_coclustering_matrix.shape[0]), fontsize=20);
+    ax.set_yticks((0, sorted_coclustering_matrix.shape[0]))
+    ax.set_yticklabels((0, sorted_coclustering_matrix.shape[0]), fontsize=20)
     ax.set_ylabel('cells', fontsize=20)
-    ax.set_xticks((0, sorted_coclustering_matrix.shape[0]));
+    ax.set_xticks((0, sorted_coclustering_matrix.shape[0]))
     ax.set_xticklabels('')
     ax.set_xlabel('')
     sns.despine(ax=ax, bottom=False, top=False, left=False, right=False)
     if save_dir:
-        filename = 'coclustering_matrix_sorted_by_cluster_size_'+cre_line.split('-')[0]
-        utils.save_figure(fig, figsize, save_dir, folder, filename, formats=['.png']) # saving to PDF is super slow)
+        filename = 'coclustering_matrix_sorted_by_cluster_size_' + cre_line.split('-')[0]
+        utils.save_figure(fig, figsize, save_dir, folder, filename, formats=['.png'])  # saving to PDF is super slow)
     return ax
 
 
@@ -434,7 +435,6 @@ def plot_umap_with_labels(X, labels, ax=None, filename_string=''):
     return ax
 
 
-
 def plot_cluster_density(df_dropouts=None, labels_list=None, cluster_corrs=None, ax=None):
     if cluster_corrs is None:
         cluster_corrs = get_cluster_density(df_dropouts, labels_list)
@@ -468,7 +468,7 @@ def plot_within_cluster_correlations_for_cre_line(cluster_meta, cre_line, sort_o
         figsize = (0.5 * n_clusters, 3)
         fig, ax = plt.subplots(figsize=figsize)
     # get xaxis orrder based on provided sort_order
-    if sort_order == None:
+    if sort_order is None:
         order = cluster_ids
     else:
         order = sort_order[cre_line]
@@ -555,11 +555,11 @@ def plot_dropout_heatmaps_and_save_to_cell_examples_folders(cluster_meta, featur
     """
     cre_lines = get_cre_lines(cluster_meta)
     for cre_line in cre_lines:
-        clusters = np.sort(cluster_meta[cluster_meta.cre_line==cre_line].cluster_id.unique())
+        clusters = np.sort(cluster_meta[cluster_meta.cre_line == cre_line].cluster_id.unique())
         n_clusters = len(clusters)
         for i, cluster_id in enumerate(clusters):
             # plot each cluster separately
-            figsize = (3,2.5)
+            figsize = (3, 2.5)
             fig, ax = plt.subplots(figsize=figsize)
             ax = plot_dropout_heatmap(cluster_meta, feature_matrix, cre_line, cluster_id, ax=ax)
             # save in same folder as matched cell examples for this cre line and cluster ID
@@ -567,7 +567,7 @@ def plot_dropout_heatmaps_and_save_to_cell_examples_folders(cluster_meta, featur
             if not os.path.exists(plot_save_dir):
                 os.mkdir(plot_save_dir)
             folder = 'cluster_' + str(int(cluster_id))
-            filename = 'average_cluster_heatmap_'+cre_line.split('-')[0]+'_cluster_'+str(cluster_id)
+            filename = 'average_cluster_heatmap_' + cre_line.split('-')[0] + '_cluster_' + str(cluster_id)
             utils.save_figure(fig, figsize, plot_save_dir, folder, filename)
 
 
@@ -603,7 +603,7 @@ def plot_dropout_heatmaps_for_clusters(cluster_meta, feature_matrix, sort_col='c
         for i, cluster_id in enumerate(clusters):
             # generate and label plot for original cluster_id
             original_cluster_id = cluster_meta[(cluster_meta.cre_line == cre_line) & (
-            cluster_meta[sort_col] == cluster_id)].original_cluster_id.unique()[0]
+                cluster_meta[sort_col] == cluster_id)].original_cluster_id.unique()[0]
             ax[i] = plot_dropout_heatmap(cluster_meta, feature_matrix, cre_line, original_cluster_id, ax=ax[i])
 
         plt.suptitle(get_cell_type_for_cre_line(cluster_meta, cre_line), x=0.51, y=.95, fontsize=16)
@@ -619,12 +619,12 @@ def plot_average_dropout_heatmap_for_cre_lines(dropouts, cluster_meta, save_dir=
     """
     dropouts_meta = dropouts.merge(cluster_meta[['cre_line', 'binned_depth', 'targeted_structure']], on='cell_specimen_id')
 
-    figsize = (12,2)
-    fig, ax = plt.subplots(1,3, figsize=figsize, sharex=True, sharey=True)
+    figsize = (12, 2)
+    fig, ax = plt.subplots(1, 3, figsize=figsize, sharex=True, sharey=True)
     ax = ax.ravel()
     for i, cre_line in enumerate(get_cre_lines(cluster_meta)):
-        mean_dropouts = dropouts_meta[dropouts_meta.cre_line==cre_line].groupby('experience_level').mean()[processing.get_features_for_clustering()]
-        ax[i] = sns.heatmap(mean_dropouts.T, cmap='Blues', vmin=0, vmax=0.75, ax=ax[i], cbar_kws={'shrink':0.7, 'label':'coding score'})
+        mean_dropouts = dropouts_meta[dropouts_meta.cre_line == cre_line].groupby('experience_level').mean()[processing.get_features_for_clustering()]
+        ax[i] = sns.heatmap(mean_dropouts.T, cmap='Blues', vmin=0, vmax=0.75, ax=ax[i], cbar_kws={'shrink': 0.7, 'label': 'coding score'})
         ax[i].set_title(get_cell_type_for_cre_line(cluster_meta, cre_line))
         ax[i].set_ylim(0, 4)
         ax[i].set_xlabel('')
@@ -1110,15 +1110,15 @@ def plot_random_subset_of_cells_per_cluster(cluster_meta, dropouts, save_dir=Non
     dropouts = dropouts.set_index('cell_specimen_id')
 
     for cre_line in get_cre_lines(cluster_meta):
-        cluster_data = cluster_meta[cluster_meta.cre_line==cre_line].copy()
+        cluster_data = cluster_meta[cluster_meta.cre_line == cre_line].copy()
         cluster_data = cluster_data.reset_index()
         cluster_data = cluster_data.sort_values(by=['targeted_structure', 'binned_depth'])
-        cluster_labels = cluster_data[cluster_data.cre_line==cre_line].cluster_id.unique()
+        cluster_labels = cluster_data[cluster_data.cre_line == cre_line].cluster_id.unique()
 
         for cluster_id in cluster_labels:
-            cluster_csids = cluster_data[cluster_data.cluster_id==cluster_id].cell_specimen_id.values
+            cluster_csids = cluster_data[cluster_data.cluster_id == cluster_id].cell_specimen_id.values
             print(len(cluster_csids), 'cells in cluster', cluster_id)
-            if len(cluster_csids)<100:
+            if len(cluster_csids) < 100:
                 n_cells = len(cluster_csids)
             else:
                 n_cells = 100
@@ -1127,27 +1127,27 @@ def plot_random_subset_of_cells_per_cluster(cluster_meta, dropouts, save_dir=Non
             print('selecting a random subset of', n_cells)
             cluster_csids = random.sample(list(cluster_csids), n_cells)
 
-            figsize = (20,20)
-            fig, ax = plt.subplots(10,10, figsize=figsize, sharex=True, sharey=True)
+            figsize = (20, 20)
+            fig, ax = plt.subplots(10, 10, figsize=figsize, sharex=True, sharey=True)
             ax = ax.ravel()
             for i, cell_specimen_id in enumerate(cluster_csids[:n_cells]):
 
-                cell_data = cluster_data[(cluster_data.cluster_id==cluster_id)&
-                                    (cluster_data.cell_specimen_id==cell_specimen_id)]
+                cell_data = cluster_data[(cluster_data.cluster_id == cluster_id) &
+                                         (cluster_data.cell_specimen_id == cell_specimen_id)]
                 cell_info = cluster_meta.loc[cell_specimen_id]['targeted_structure'] + '_' + str(cluster_meta.loc[cell_specimen_id]['imaging_depth'])
                 mean_dropouts = dropouts.loc[cell_specimen_id].groupby('experience_level').mean()[features]
-                ax[i] = sns.heatmap(mean_dropouts.T, cmap='Blues', vmin=0, vmax=1, ax=ax[i], cbar=False)#cbar_kws={'shrink':0.7, 'label':model_output_type})
-                ax[i].set_title(str(cell_specimen_id)+'_'+cell_info, fontsize=10)
-                ax[i].set_ylim(0,4)
-                ax[i].set_yticks(np.arange(0.5, len(features)+0.5))
+                ax[i] = sns.heatmap(mean_dropouts.T, cmap='Blues', vmin=0, vmax=1, ax=ax[i], cbar=False)  # cbar_kws={'shrink':0.7, 'label':model_output_type})
+                ax[i].set_title(str(cell_specimen_id) + '_' + cell_info, fontsize=10)
+                ax[i].set_ylim(0, 4)
+                ax[i].set_yticks(np.arange(0.5, len(features) + 0.5))
                 ax[i].set_yticklabels(features, fontsize=14)
                 ax[i].set_xlabel('')
-            for i in range(90,100):
+            for i in range(90, 100):
                 ax[i].set_xticklabels(experience_levels, rotation=90, fontsize=14)
             fig.tight_layout()
             fig.subplots_adjust(wspace=0.3)
-            fig.suptitle(get_cell_type_for_cre_line(cluster_meta, cre_line)+' cluster '+str(cluster_id), x=0.5, y=1.01)
-            filename = cre_line+'_cluster_'+str(cluster_id)
+            fig.suptitle(get_cell_type_for_cre_line(cluster_meta, cre_line) + ' cluster ' + str(cluster_id), x=0.5, y=1.01)
+            filename = cre_line + '_cluster_' + str(cluster_id)
             if save_dir:
                 utils.save_figure(fig, figsize, save_dir, 'dropout_heatmaps_per_cluster', filename)
 
@@ -1162,16 +1162,16 @@ def plot_fraction_cells_by_area_depth(cluster_meta, n_clusters_cre, normalize=Tr
     cre_lines = get_cre_lines(cluster_meta)
     n_clusters = [n_clusters_cre[cre] for cre in cre_lines]
 
-    figsize = (24,2)
-    fig, ax = plt.subplots(1,3, figsize=figsize, gridspec_kw={'width_ratios':n_clusters})
+    figsize = (24, 2)
+    fig, ax = plt.subplots(1, 3, figsize=figsize, gridspec_kw={'width_ratios': n_clusters})
 
     for i, cre_line in enumerate(cre_lines):
-        cre_meta = cluster_meta[cluster_meta.cre_line==cre_line]
-        frequency = processing.make_frequency_table(cre_meta, groupby_columns = ['targeted_structure', 'layer'], normalize=normalize)
-        frequency = frequency.T # transpose so that rows are locations and cols are cluster IDs
-        ax[i] = sns.heatmap(frequency, vmin=0, cmap='Purples', ax=ax[i], cbar_kws={'shrink':0.8, 'label':label})
+        cre_meta = cluster_meta[cluster_meta.cre_line == cre_line]
+        frequency = processing.make_frequency_table(cre_meta, groupby_columns=['targeted_structure', 'layer'], normalize=normalize)
+        frequency = frequency.T  # transpose so that rows are locations and cols are cluster IDs
+        ax[i] = sns.heatmap(frequency, vmin=0, cmap='Purples', ax=ax[i], cbar_kws={'shrink': 0.8, 'label': label})
         ax[i].set_ylim((0, len(frequency.index)))
-        ax[i].set_xlim(-0.5, len(frequency.columns)+0.5)
+        ax[i].set_xlim(-0.5, len(frequency.columns) + 0.5)
         ax[i].set_ylabel('')
         ax[i].set_title(get_cell_type_for_cre_line(cluster_meta, cre_line))
     plt.subplots_adjust(wspace=0.5)
@@ -1347,10 +1347,10 @@ def plot_fraction_cells_per_area_depth(cre_fraction, cluster_id, ax=None):
     if ax is None:
         fig, ax = plt.subplots()
 
-    data = cre_fraction[cre_fraction.cluster_id==cluster_id]
+    data = cre_fraction[cre_fraction.cluster_id == cluster_id]
     ax = sns.barplot(data=data, y='layer', x='fraction_cells_per_area_depth', order=order, orient='h',
                      hue='targeted_structure', hue_order=hue_order, palette='Greys', ax=ax)
-    ax.set_ylim(-0.5,1.5)
+    ax.set_ylim(-0.5, 1.5)
 
     ax.legend(fontsize='small', title_fontsize='small')
     ax.set_xlabel('fraction cells', fontsize=14)
@@ -1384,7 +1384,7 @@ def plot_population_average_response_for_cluster(cluster_mdf, cre_line, cluster_
         fig, ax = plt.subplots()
     for c, hue in enumerate(hue_conditions):
         traces = cluster_mdf[(cluster_mdf.cre_line == cre_line) & (cluster_mdf.cluster_id == cluster_id) & (
-        cluster_mdf[hue_column] == hue)].mean_trace.values
+            cluster_mdf[hue_column] == hue)].mean_trace.values
         ax = utils.plot_mean_trace(np.asarray(traces), timestamps, ylabel='response',
                                    legend_label=hue, color=colors[c], interval_sec=1,
                                    plot_sem=False, xlim_seconds=xlim_seconds, ax=ax)
@@ -1394,7 +1394,7 @@ def plot_population_average_response_for_cluster(cluster_mdf, cre_line, cluster_
 
 
 def plot_clusters_pop_avg_rows(cluster_meta, feature_matrix, multi_session_df, cre_line,
-                                     sort_order=None, save_dir=None, folder=None, suffix=''):
+                               sort_order=None, save_dir=None, folder=None, suffix=''):
     """
     For each cluster in a given cre_line, plots dropout heatmaps, fraction cells per area/depth relative to chance,
     fraction cells per cluster per area/depth, and population average omission response.
@@ -1442,7 +1442,6 @@ def plot_clusters_pop_avg_rows(cluster_meta, feature_matrix, multi_session_df, c
         utils.save_figure(fig, figsize, save_dir, folder, 'clusters_pop_avg_rows_' + cre_line.split('-')[0] + suffix)
 
 
-
 def plot_clusters_stats_pop_avg_rows(cluster_meta, feature_matrix, multi_session_df, cell_count_stats, fraction_cells, cre_line,
                                      sort_order=None, save_dir=None, folder=None, suffix=''):
     """
@@ -1474,7 +1473,7 @@ def plot_clusters_stats_pop_avg_rows(cluster_meta, feature_matrix, multi_session
     cre_counts = cell_count_stats[cell_count_stats.cre_line == cre_line]
     cre_fraction = fraction_cells[fraction_cells.cre_line == cre_line]
 
-    n_rows = 2 # 4 if including proportion plots
+    n_rows = 2  # 4 if including proportion plots
     figsize = (n_clusters * 2.5, n_rows * 2.5)
     fig, ax = plt.subplots(n_rows, n_clusters, figsize=figsize, sharex='row', sharey='row',
                            gridspec_kw={'height_ratios': [1, 0.75]})
@@ -1507,7 +1506,6 @@ def plot_clusters_stats_pop_avg_rows(cluster_meta, feature_matrix, multi_session
     # fig.tight_layout()
     if save_dir:
         utils.save_figure(fig, figsize, save_dir, folder, 'clusters_stats_rows_' + cre_line.split('-')[0] + suffix)
-
 
 
 def plot_clusters_stats_pop_avg_cols(cluster_meta, feature_matrix, multi_session_df, cell_count_stats, fraction_cells, cre_line,
@@ -1554,7 +1552,6 @@ def plot_clusters_stats_pop_avg_cols(cluster_meta, feature_matrix, multi_session
         ax[i] = plot_population_average_response_for_cluster(cluster_mdf, cre_line, cluster_id, ax=ax[i])
         ax[i].set_xlabel('')
         i += 1
-
 
         ax[i] = plot_pct_rel_to_chance_for_cluster(cre_counts, cluster_id, ax=ax[i])
         ax[i].get_legend().remove()

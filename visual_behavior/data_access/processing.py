@@ -1328,10 +1328,10 @@ def zscore_pupil_data(eye_tracking):
     eye = eye_tracking.copy()
 
     # Compute pupil radius
-    eye['pupil_radius'] = np.sqrt(eye['pupil_area']*(1/np.pi))
+    eye['pupil_radius'] = np.sqrt(eye['pupil_area'] * (1 / np.pi))
 
     # Remove likely blinks and interpolate
-    eye.loc[eye['likely_blink'],:] = np.nan
+    eye.loc[eye['likely_blink'], :] = np.nan
     eye = eye.interpolate()
 
     eye['pupil_radius_zscored'] = scipy.stats.zscore(eye['pupil_radius'], nan_policy='omit')

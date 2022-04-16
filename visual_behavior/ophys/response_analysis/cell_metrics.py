@@ -242,7 +242,7 @@ def compute_reliability_vectorized(traces):
     return reliability, correlation_values
 
 
-def compute_reliability(group, frame_rate, time_window=[-3,3.1], response_window_duration=0.5):
+def compute_reliability(group, frame_rate, time_window=[-3, 3.1], response_window_duration=0.5):
     # computes trial to trial correlation across input traces in group,
     # only for portion of the trace after the change time or flash onset time
 
@@ -344,7 +344,7 @@ def get_change_modulation_index(stimulus_response_df):
 
     change = change.merge(pre_change, on='cell_specimen_id')
     change['change_modulation_index'] = (change.change_response - change.pre_change_response) / (
-    change.change_response + change.pre_change_response)
+        change.change_response + change.pre_change_response)
 
     return change
 
@@ -537,7 +537,7 @@ def generate_cell_metrics_table(dataset, stimulus_response_df, data_type='events
         df = sdf[sdf.is_change]
     elif condition == 'omissions':
         df = sdf[sdf.omitted]
-        pre_omitted = sdf[sdf.pre_omitted==True]
+        pre_omitted = sdf[sdf.pre_omitted == True]
         # use next image name for computing pref image, selectivity, etc.
         # df['image_name'] = [df.iloc[row].image_name_next_flash for row in range(len(df))]
     elif condition == 'images':
@@ -555,7 +555,7 @@ def generate_cell_metrics_table(dataset, stimulus_response_df, data_type='events
 
     df = df.reset_index(drop=True)
 
-    if condition != 'omissions': # cant compute image related metrics for omissions
+    if condition != 'omissions':  # cant compute image related metrics for omissions
         # get pref and non-pref images for each cell
         pref_image = get_pref_image_for_cell_specimen_ids(df)
         non_pref_image = get_non_pref_image_for_cell_specimen_ids(df)
@@ -594,14 +594,14 @@ def generate_cell_metrics_table(dataset, stimulus_response_df, data_type='events
     # get running modulation - diff over sum of mean image response for running vs. not running trials
     try:
         running_modulation_index = get_running_modulation_index_for_cell_specimen_ids(df)
-    except:
+    except BaseException:
         print('could not generate running_modulation_index for', condition, session_subset)
 
     if condition == 'changes':
         # get choice modulation - diff over sum of mean image response for hit vs. miss trials
-        try: #disenegaged conditions dont have hits usually
+        try:  # disenegaged conditions dont have hits usually
             hit_miss_modulation_index = get_hit_miss_modulation_index(df)
-        except:
+        except BaseException:
             print('hit_miss_index could not be computed for', condition, session_subset)
         change_modulation_index = get_change_modulation_index(sdf)
 
@@ -621,12 +621,12 @@ def generate_cell_metrics_table(dataset, stimulus_response_df, data_type='events
     metrics_table = metrics_table.merge(reliability, on='cell_specimen_id')
     try:
         metrics_table = metrics_table.merge(running_modulation_index, on='cell_specimen_id')
-    except:
+    except BaseException:
         print('running modulation could not be computed for this experiment')
     if condition == 'changes':
         try:
             metrics_table = metrics_table.merge(hit_miss_modulation_index, on='cell_specimen_id')
-        except:
+        except BaseException:
             print('hit_miss_index could not be computed for', condition, session_subset)
         metrics_table = metrics_table.merge(change_modulation_index, on='cell_specimen_id')
     if condition == 'omissions':
@@ -775,7 +775,6 @@ def generate_and_save_all_metrics_tables_for_experiment(ophys_experiment_id, dat
     #     problem_expts.loc[i, 'exception'] = e
     #     i += 1
 
-
     # event locked response metrics ###
 
     # get data to compute metrics
@@ -786,8 +785,8 @@ def generate_and_save_all_metrics_tables_for_experiment(ophys_experiment_id, dat
     # load stimulus_response_df from saved file or generate it if file doesnt exist
     # event_type must be all so that we can filter as needed
     stimulus_response_df = loading.get_stimulus_response_df(dataset, data_type=data_type, event_type='all', time_window=time_window,
-                                           interpolate=interpolate, output_sampling_rate=output_sampling_rate,
-                                           load_from_file=True)
+                                                            interpolate=interpolate, output_sampling_rate=output_sampling_rate,
+                                                            load_from_file=True)
 
     # conditions to loop through
     # conditions = ['changes', 'omissions', 'images']
@@ -1022,7 +1021,7 @@ def load_and_save_all_metrics_tables_for_all_experiments(ophys_experiment_table,
                                                            output_sampling_rate=None)
         # save
         filepath = get_metrics_df_filepath('all_experiments', condition, stimuli,
-                               session_subset, data_type=data_type, interpolate=False,
+                                           session_subset, data_type=data_type, interpolate=False,
                                            output_sampling_rate=None)
         if os.path.exists(filepath):
             os.remove(filepath)
@@ -1054,7 +1053,7 @@ def load_and_save_all_metrics_tables_for_all_experiments(ophys_experiment_table,
 
                     # save
                     filepath = get_metrics_df_filepath('all_experiments', condition, stimuli,
-                               session_subset, data_type=data_type, interpolate=interpolate, output_sampling_rate=output_sampling_rate)
+                                                       session_subset, data_type=data_type, interpolate=interpolate, output_sampling_rate=output_sampling_rate)
                     if os.path.exists(filepath):
                         os.remove(filepath)
                         print('h5 file exists for all experiments  - overwriting')
@@ -1105,8 +1104,8 @@ def get_cell_metrics_for_conditions(data_type, condition, stimuli, session_subse
     ophys_experiment_ids = selected_experiments.index.values
 
     metrics_table = load_metrics_table_for_experiments(ophys_experiment_ids, condition, stimuli, session_subset,
-                                                          data_type=data_type, interpolate=interpolate,
-                                                          output_sampling_rate=output_sampling_rate)
+                                                       data_type=data_type, interpolate=interpolate,
+                                                       output_sampling_rate=output_sampling_rate)
 
     print('there are', len(metrics_table.ophys_experiment_id.unique()),
           'experiments in the returned cell_metrics table')
@@ -1127,9 +1126,7 @@ def get_cell_metrics_for_conditions(data_type, condition, stimuli, session_subse
     return metrics_table
 
 
-
 if __name__ == '__main__':
-
 
     # set params
     data_type = 'events'

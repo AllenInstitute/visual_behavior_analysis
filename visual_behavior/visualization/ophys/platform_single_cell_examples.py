@@ -29,8 +29,6 @@ sns.set_style('white', {'axes.spines.right': False, 'axes.spines.top': False})
 sns.set_palette('deep')
 
 
-
-
 def load_GLM_outputs(glm_version, experiments_table, cells_table, glm_output_dir=None):
     """
     loads results_pivoted and weights_df from files in base_dir, or generates them from mongo and save to base_dir
@@ -83,7 +81,7 @@ def load_GLM_outputs(glm_version, experiments_table, cells_table, glm_output_dir
     # if glm_output_dir is not None: # if a directory is provided, attempt to load files
         # get weights df and clean
     weights_path = os.path.join(glm_output_dir, glm_version + '_weights_df.h5')
-    if os.path.exists(weights_path): # if it exists, load it
+    if os.path.exists(weights_path):  # if it exists, load it
         weights_df = pd.read_hdf(weights_path, key='df')
     else:
         print('no weights at', weights_path)
@@ -137,7 +135,7 @@ def get_t_array_for_kernel(kernels, feature, frame_rate):
 
 
 def plot_cell_rois_and_GLM_weights(cell_specimen_id, cells_table, experiments_table, dropout_features, results_pivoted, weights_df,
-                                  weights_features, kernels, save_dir=None, folder=None, data_type='dff'):
+                                   weights_features, kernels, save_dir=None, folder=None, data_type='dff'):
     """
     This function limits inputs just to the provided cell_specimen_id to hand off to the function plot_matched_roi_and_traces_example_GLM
     That function will plot the following panels:
@@ -197,7 +195,7 @@ def plot_cell_rois_and_GLM_weights(cell_specimen_id, cells_table, experiments_ta
     #     rspm[feature] = np.abs(rspm[feature])
     # # if exp var full model is in features (must be first feature), scale it by 10x so its on similar scale as dropouts
     if 'variance_explained_full' in results_pivoted.keys():
-        results_pivoted['variance_explained_full'] = results_pivoted['variance_explained_full']*10
+        results_pivoted['variance_explained_full'] = results_pivoted['variance_explained_full'] * 10
     # merge with metadata
     # dropouts = rspm.merge(cells_table[['cell_specimen_id', 'cell_type', 'binned_depth', 'targeted_structure']], on='cell_specimen_id')
     # get dropouts just for one cell
@@ -239,7 +237,7 @@ def plot_matched_roi_and_traces_example_GLM(cell_metadata, cell_dropouts, cell_w
     ophys_container_id = cell_metadata.ophys_container_id.unique()[0]
     cre_line = cell_metadata.cre_line.unique()[0]
     # need to get all experiments for this container, not just for this cell
-    ophys_experiment_ids = experiments_table[experiments_table.ophys_container_id==ophys_container_id].index.values
+    ophys_experiment_ids = experiments_table[experiments_table.ophys_container_id == ophys_container_id].index.values
     n_expts = len(ophys_experiment_ids)
     if n_expts > 3:
         print('There are more than 3 experiments for this cell. There should be a max of 1 experiment per experience level')
@@ -255,7 +253,7 @@ def plot_matched_roi_and_traces_example_GLM(cell_metadata, cell_dropouts, cell_w
     # plus additional columns for stimulus and omission traces, and running and pupil averages (TBD)
     extra_cols = 2
     if 'running' in weights_features:
-        extra_cols +=1
+        extra_cols += 1
     if 'running' in weights_features:
         extra_cols += 1
     n_cols = n_exp_levels + extra_cols
@@ -273,8 +271,8 @@ def plot_matched_roi_and_traces_example_GLM(cell_metadata, cell_dropouts, cell_w
         # ophys_experiment_id = cell_metadata[cell_metadata.experience_level == experience_level].ophys_experiment_id.values[0]
         # get ophys_experiment_id for this experience level
         # experiments_table must only include one experiment per experience level for a given container
-        ophys_experiment_id = experiments_table[(experiments_table.ophys_container_id == ophys_container_id)&
-                                                (experiments_table.experience_level==experience_level)].index.values[0]
+        ophys_experiment_id = experiments_table[(experiments_table.ophys_container_id == ophys_container_id) &
+                                                (experiments_table.experience_level == experience_level)].index.values[0]
         print('ophys_experiment_id:', ophys_experiment_id)
         ind = experience_levels.index(experience_level)
         color = colors[ind]
@@ -321,14 +319,13 @@ def plot_matched_roi_and_traces_example_GLM(cell_metadata, cell_dropouts, cell_w
             if 'pupil' in weights_features:
                 pass
 
-        except:  # plot area of max projection where ROI would have been if it was in this session
+        except BaseException:  # plot area of max projection where ROI would have been if it was in this session
             # plot the max projection image with the xy location of the previous ROI
             # this will fail if the familiar session is the one without the cell matched
             print('no cell ROI for', experience_level)
             ax[e] = sf.plot_cell_zoom(roi_masks, dataset.max_projection, cell_roi_id,
                                       spacex=50, spacey=50, show_mask=False, ax=ax[e])
             ax[e].set_title(experience_level)
-
 
         # try: # try plotting GLM outputs for this experience level
         if 'running' in weights_features:
@@ -345,7 +342,7 @@ def plot_matched_roi_and_traces_example_GLM(cell_metadata, cell_dropouts, cell_w
 
         # image kernels
         image_weights = []
-        for f, feature in enumerate(weights_features[:8]): # first 8 are images
+        for f, feature in enumerate(weights_features[:8]):  # first 8 are images
             image_weights.append(exp_weights[feature + '_weights'].values[0])
         mean_image_weights = np.mean(image_weights, axis=0)
 
@@ -387,7 +384,7 @@ def plot_matched_roi_and_traces_example_GLM(cell_metadata, cell_dropouts, cell_w
         cell_dropouts = cell_dropouts.drop(columns='ophys_experiment_id')
     if 'cell_specimen_id' in cell_dropouts.keys():
         cell_dropouts = cell_dropouts.drop(columns='cell_specimen_id')
-    cell_dropouts = cell_dropouts[dropout_features] # order dropouts properly
+    cell_dropouts = cell_dropouts[dropout_features]  # order dropouts properly
     dropouts = cell_dropouts.T
     if len(np.where(dropouts < 0)[0]) > 0:
         vmin = -1

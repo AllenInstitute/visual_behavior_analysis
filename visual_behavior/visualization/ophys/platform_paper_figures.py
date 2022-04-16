@@ -50,7 +50,7 @@ def plot_population_averages_for_conditions(multi_session_df, data_type, event_t
     elif 'events' in data_type:
         ylabel = 'population response'
     elif 'pupil' in data_type:
-        ylabel = data_type+'\n normalized'
+        ylabel = data_type + '\n normalized'
     elif 'running' in data_type:
         ylabel = 'running speed (cm/s)'
     else:
@@ -167,17 +167,17 @@ def get_fraction_responsive_cells(multi_session_df, conditions=['cell_type', 'ex
     :return:
     """
     df = multi_session_df.copy()
-    total_cells = df.groupby(conditions).count()[['cell_specimen_id']].rename(columns={'cell_specimen_id':'total_cells'})
-    responsive = df[df.fraction_significant_p_value_gray_screen>responsiveness_threshold].copy()
-    responsive_cells = responsive.groupby(conditions).count()[['cell_specimen_id']].rename(columns={'cell_specimen_id':'responsive_cells'})
+    total_cells = df.groupby(conditions).count()[['cell_specimen_id']].rename(columns={'cell_specimen_id': 'total_cells'})
+    responsive = df[df.fraction_significant_p_value_gray_screen > responsiveness_threshold].copy()
+    responsive_cells = responsive.groupby(conditions).count()[['cell_specimen_id']].rename(columns={'cell_specimen_id': 'responsive_cells'})
     fraction = total_cells.merge(responsive_cells, on=conditions, how='left')  # need to use 'left' to prevent dropping of NaN values
     # set sessions with no responsive cells (NaN) to zero
     fraction.loc[fraction[fraction.responsive_cells.isnull()].index.values, 'responsive_cells'] = 0
-    fraction['fraction_responsive'] = fraction.responsive_cells/fraction.total_cells
+    fraction['fraction_responsive'] = fraction.responsive_cells / fraction.total_cells
     return fraction
 
 
-def plot_fraction_responsive_cells(multi_session_df, responsiveness_threshold=0.1, horizontal=True, ylim=(0,1),
+def plot_fraction_responsive_cells(multi_session_df, responsiveness_threshold=0.1, horizontal=True, ylim=(0, 1),
                                    save_dir=None, folder=None, suffix='', format_fig=False, ax=None):
     """
     Plots the fraction of responsive cells across cre lines
@@ -212,14 +212,14 @@ def plot_fraction_responsive_cells(multi_session_df, responsiveness_threshold=0.
                 fig, ax = plt.subplots(3, 1, figsize=figsize, sharex=True)
 
     for i, cell_type in enumerate(cell_types):
-        data = fraction_responsive[fraction_responsive.cell_type==cell_type]
+        data = fraction_responsive[fraction_responsive.cell_type == cell_type]
         for ophys_container_id in data.ophys_container_id.unique():
-            ax[i] = sns.pointplot(data=data[data.ophys_container_id==ophys_container_id], x='experience_level', y='fraction_responsive',
-                     color='gray', join=True, markers='.', scale=0.25, errwidth=0.25, ax=ax[i], zorder=500)
-        plt.setp(ax[i].collections, alpha=.3) #for the markers
+            ax[i] = sns.pointplot(data=data[data.ophys_container_id == ophys_container_id], x='experience_level', y='fraction_responsive',
+                                  color='gray', join=True, markers='.', scale=0.25, errwidth=0.25, ax=ax[i], zorder=500)
+        plt.setp(ax[i].collections, alpha=.3)  # for the markers
         plt.setp(ax[i].lines, alpha=.3)
         ax[i] = sns.pointplot(data=data, x='experience_level', y='fraction_responsive', hue='experience_level',
-                     hue_order=experience_levels, palette=palette, dodge=0, join=False, ax=ax[i])
+                              hue_order=experience_levels, palette=palette, dodge=0, join=False, ax=ax[i])
         ax[i].set_xticklabels(experience_levels, rotation=45, ha='right')
         ax[i].set_ylabel('fraction\nresponsive')
     #     ax[i].legend(fontsize='xx-small', title='')
@@ -227,11 +227,11 @@ def plot_fraction_responsive_cells(multi_session_df, responsiveness_threshold=0.
         ax[i].set_title(cell_type)
         ax[i].set_xlabel('')
         if ylim is not None:
-            ax[i].set_ylim(0,1)
+            ax[i].set_ylim(0, 1)
 
     if format_fig and not save_dir:
         fig.tight_layout()
-        fig_title ='fraction_responsive_cells' + suffix
+        fig_title = 'fraction_responsive_cells' + suffix
         # plt.suptitle(fig_title, x=0.52, y=1.02, fontsize=16)
     elif save_dir and format_fig:
         fig_title = 'fraction_responsive_cells' + suffix
@@ -336,14 +336,14 @@ def plot_n_segmented_cells(multi_session_df, df_name, horizontal=True, save_dir=
         format_fig = False
 
     for i, cell_type in enumerate(cell_types):
-        data = fraction_responsive[fraction_responsive.cell_type==cell_type]
+        data = fraction_responsive[fraction_responsive.cell_type == cell_type]
         for ophys_container_id in data.ophys_container_id.unique():
-            ax[i] = sns.pointplot(data=data[data.ophys_container_id==ophys_container_id], x='experience_level', y='total_cells',
-                     color='gray', join=True, markers='.', scale=0.25, errwidth=0.25, ax=ax[i], zorder=500)
-        plt.setp(ax[i].collections, alpha=.3) #for the markers
+            ax[i] = sns.pointplot(data=data[data.ophys_container_id == ophys_container_id], x='experience_level', y='total_cells',
+                                  color='gray', join=True, markers='.', scale=0.25, errwidth=0.25, ax=ax[i], zorder=500)
+        plt.setp(ax[i].collections, alpha=.3)  # for the markers
         plt.setp(ax[i].lines, alpha=.3)
         ax[i] = sns.pointplot(data=data, x='experience_level', y='total_cells', hue='experience_level',
-                     hue_order=experience_levels, palette=palette, dodge=0, join=False, ax=ax[i])
+                              hue_order=experience_levels, palette=palette, dodge=0, join=False, ax=ax[i])
         ax[i].set_xticklabels(experience_levels, rotation=45)
     #     ax[i].legend(fontsize='xx-small', title='')
         ax[i].get_legend().remove()
@@ -386,7 +386,6 @@ def plot_mean_response_by_epoch(df, metric='mean_response', horizontal=True, ymi
     experience_epoch = np.sort(df.experience_epoch.unique())
     experience_levels = np.sort(df.experience_level.unique())
 
-
     palette = utils.get_experience_level_colors()
     if ax is None:
         format_fig = True
@@ -400,9 +399,9 @@ def plot_mean_response_by_epoch(df, metric='mean_response', horizontal=True, ymi
         format_fig = False
 
     for i, cell_type in enumerate(cell_types):
-        data = df[df.cell_type==cell_type]
+        data = df[df.cell_type == cell_type]
         ax[i] = sns.pointplot(data=data, x='experience_epoch', y=metric, hue='experience_level', hue_order=experience_levels,
-                           order=experience_epoch, palette=palette, ax=ax[i], estimator=estimator)
+                              order=experience_epoch, palette=palette, ax=ax[i], estimator=estimator)
         if ymin is not None:
             ax[i].set_ylim(ymin=ymin)
         ax[i].set_title(cell_type)
@@ -414,7 +413,7 @@ def plot_mean_response_by_epoch(df, metric='mean_response', horizontal=True, ymi
         ax[i].vlines(x=11.5, ymin=0, ymax=1, color='gray', linestyle='--')
         ax[i].set_xlabel('10 min epoch within session', fontsize=14)
     if format_fig:
-        plt.suptitle(metric+' over time', x=0.52, y=1.03, fontsize=18)
+        plt.suptitle(metric + ' over time', x=0.52, y=1.03, fontsize=18)
         fig.tight_layout()
     if save_dir:
         fig_title = metric + '_epochs' + suffix
@@ -430,7 +429,7 @@ def plot_cell_response_heatmap(data, timestamps, xlabel='time after change (s)',
                      vmin=0, vmax=vmax, robust=True, cbar=cbar,
                      cbar_kws={"drawedges": False, "shrink": 1, "label": 'response'}, ax=ax)
 
-    zero_index = np.where(timestamps==0)[0][0]
+    zero_index = np.where(timestamps == 0)[0][0]
     ax.vlines(x=zero_index, ymin=0, ymax=len(data), color='gray', linestyle='--')
 
     # if microscope == 'Multiscope':
@@ -511,7 +510,7 @@ def plot_response_heatmaps_for_conditions(multi_session_df, timestamps, data_typ
             ax[i].set_yticks([0, n_cells])
             ax[i].set_yticklabels([0, n_cells], fontsize=12)
             # set xticks to every 1 second, assuming 30Hz traces
-            ax[i].set_xticks(np.arange(0, len(timestamps), 30)) # assuming 30Hz traces
+            ax[i].set_xticks(np.arange(0, len(timestamps), 30))  # assuming 30Hz traces
             ax[i].set_xticklabels([int(t) for t in timestamps[::30]])
             # set xlims according to input
             start_index = np.where(timestamps == xlim_seconds[0])[0][0]
@@ -520,13 +519,13 @@ def plot_response_heatmaps_for_conditions(multi_session_df, timestamps, data_typ
             ax[i].set_xlim(xlims)
             ax[i].set_ylabel('')
 
-            if r == len(row_conditions)-1:
+            if r == len(row_conditions) - 1:
                 ax[i].set_xlabel(xlabel)
             else:
                 ax[i].set_xlabel('')
             i += 1
 
-    for i in np.arange(0, (len(col_conditions)*len(row_conditions)), len(col_conditions)):
+    for i in np.arange(0, (len(col_conditions) * len(row_conditions)), len(col_conditions)):
         ax[i].set_ylabel('cells')
 
     if suptitle:
@@ -569,7 +568,7 @@ def add_stim_color_span(dataset, ax, xlim=None, color=None, label_changes=False,
     images = np.sort(stim_table[stim_table.omitted == False].image_name.unique())
     image_colors = sns.color_palette("hls", len(images))
     # limit to time window if provided
-    if xlim != None:
+    if xlim is not None:
         stim_table = stim_table[(stim_table.start_time >= xlim[0]) & (stim_table.stop_time <= xlim[1])]
     # loop through stimulus presentations and add a span with appropriate color
     for idx in stim_table.index:
@@ -589,13 +588,12 @@ def add_stim_color_span(dataset, ax, xlim=None, color=None, label_changes=False,
                     image_color = 'gray'
                     alpha = 0.25
             else:
-                if color == None:
+                if color is None:
                     image_color = image_colors[image_index]
                 else:
                     image_color = color
             addSpan(ax, start_time, stop_time, color=image_color, alpha=alpha)
     return ax
-
 
 
 def plot_behavior_timeseries(dataset, start_time, duration_seconds=20, xlim_seconds=None, save_dir=None, ax=None):
@@ -679,7 +677,7 @@ def plot_behavior_timeseries_stacked(dataset, start_time, duration_seconds=20,
     else:
         suffix = '_colors'
 
-    xlim_seconds = [start_time-(duration_seconds/4.), start_time+duration_seconds*2]
+    xlim_seconds = [start_time - (duration_seconds / 4.), start_time + duration_seconds * 2]
 
     lick_timestamps = dataset.licks.timestamps.values
     licks = np.ones(len(lick_timestamps))
@@ -693,22 +691,22 @@ def plot_behavior_timeseries_stacked(dataset, start_time, duration_seconds=20,
     running_speed = dataset.running_speed.speed.values
     running_timestamps = dataset.running_speed.timestamps.values
     # limit running trace to window so yaxes scale properly
-    start_ind = np.where(running_timestamps<xlim_seconds[0])[0][-1]
-    stop_ind = np.where(running_timestamps>xlim_seconds[1])[0][0]
+    start_ind = np.where(running_timestamps < xlim_seconds[0])[0][-1]
+    stop_ind = np.where(running_timestamps > xlim_seconds[1])[0][0]
     running_speed = running_speed[start_ind:stop_ind]
     running_timestamps = running_timestamps[start_ind:stop_ind]
 
     # get pupil width trace and timestamps
     eye_tracking = dataset.eye_tracking.copy()
     pupil_diameter = eye_tracking.pupil_width.values
-    pupil_diameter[eye_tracking.likely_blink==True] = np.nan
+    pupil_diameter[eye_tracking.likely_blink == True] = np.nan
     pupil_timestamps = eye_tracking.timestamps.values
     # smooth pupil diameter
     from scipy.signal import medfilt
     pupil_diameter = medfilt(pupil_diameter, kernel_size=5)
     # limit pupil trace to window so yaxes scale properly
-    start_ind = np.where(pupil_timestamps<xlim_seconds[0])[0][-1]
-    stop_ind = np.where(pupil_timestamps>xlim_seconds[1])[0][0]
+    start_ind = np.where(pupil_timestamps < xlim_seconds[0])[0][-1]
+    stop_ind = np.where(pupil_timestamps > xlim_seconds[1])[0][0]
     pupil_diameter = pupil_diameter[start_ind:stop_ind]
     pupil_timestamps = pupil_timestamps[start_ind:stop_ind]
 
@@ -742,14 +740,14 @@ def plot_behavior_timeseries_stacked(dataset, start_time, duration_seconds=20,
         ax[i] = add_stim_color_span(dataset, ax[i], xlim=xlim_seconds, label_changes=label_changes, label_omissions=label_omissions)
         ax[i].set_xlim(xlim_seconds)
         ax[i].tick_params(which='both', bottom=False, top=False, right=False, left=True,
-                    labelbottom=False, labeltop=False, labelright=False, labelleft=True)
+                          labelbottom=False, labeltop=False, labelright=False, labelleft=True)
         sns.despine(ax=ax[i], bottom=True)
     sns.despine(ax=ax[i], bottom=False)
 
     # label bottom row of plot
     ax[i].set_xlabel('time in session (seconds)')
     ax[i].tick_params(which='both', bottom=True, top=False, right=False, left=True,
-                    labelbottom=True, labeltop=False, labelright=False, labelleft=True)
+                      labelbottom=True, labeltop=False, labelright=False, labelleft=True)
     # add title to top row
     metadata_string = utils.get_metadata_string(dataset.metadata)
     ax[0].set_title(metadata_string)
@@ -757,7 +755,7 @@ def plot_behavior_timeseries_stacked(dataset, start_time, duration_seconds=20,
     plt.subplots_adjust(hspace=0)
     if save_dir:
         folder = 'behavior_timeseries_stacked'
-        utils.save_figure(fig, figsize, save_dir, folder, metadata_string + '_' + str(int(start_time))+'_'+suffix,
+        utils.save_figure(fig, figsize, save_dir, folder, metadata_string + '_' + str(int(start_time)) + '_' + suffix,
                           formats=['.png', '.pdf'])
     return ax
 
@@ -770,7 +768,7 @@ def plot_matched_roi_and_trace(ophys_container_id, cell_specimen_id, limit_to_la
     Useful to validate cell matching as well as examine changes in activity profiles over days.
     """
     experiments_table = loading.get_platform_paper_experiment_table()
-    if limit_to_last_familiar_second_novel: # this ensures only one session per experience level
+    if limit_to_last_familiar_second_novel:  # this ensures only one session per experience level
         experiments_table = utilities.limit_to_last_familiar_second_novel_active(experiments_table)
         experiments_table = utilities.limit_to_containers_with_all_experience_levels(experiments_table)
 
@@ -847,7 +845,6 @@ def plot_matched_roi_and_trace(ophys_container_id, cell_specimen_id, limit_to_la
         plt.close()
 
 
-
 def plot_matched_roi_and_traces_example(cell_metadata, include_omissions=True,
                                         use_events=False, filter_events=False, save_dir=None, folder=None):
     """
@@ -902,7 +899,7 @@ def plot_matched_roi_and_traces_example(cell_metadata, include_omissions=True,
     for i, ophys_experiment_id in enumerate(ophys_experiment_ids):
         print('ophys_experiment_id:', ophys_experiment_id)
         experience_level = \
-        cell_metadata[cell_metadata.ophys_experiment_id == ophys_experiment_id].experience_level.values[0]
+            cell_metadata[cell_metadata.ophys_experiment_id == ophys_experiment_id].experience_level.values[0]
         ind = experience_levels.index(experience_level)
         color = colors[ind]
         try:

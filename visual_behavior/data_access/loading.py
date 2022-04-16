@@ -563,7 +563,15 @@ def get_stimulus_response_df_filepath_for_experiment(ophys_experiment_id, data_t
 def get_stimulus_response_df(dataset, time_window=[-3, 3.1], interpolate=True, output_sampling_rate=30,
                              data_type='filtered_events', event_type='all', load_from_file=True):
     """
-    load stimulus response df using mindscope_utilities and merge with stimulus_presentations that has trials metadata added
+    Load a dataframe with stimulus aligned traces for all cells (or for a given behavior timeseries) using mindscope_utilities
+    and merges with annotated stimulus_presentations table that includes behavior metadata
+    Will interpolate traces to desired output_sampling_rate if interpolate = True
+    Works for cell traces (dF/F, events, filtered_events) or behavioral timeseries (running, pupil, lick rate)
+    dataframe can include all stimulus_presentations in the session (event_type='all')
+    or it can be limited to just changes (event_type='changes') or omissions (event_type='omissions) to make loading faster
+    If the response_df has been pre-generated and saved to the default cache directory, this function will load the pre-existing file if load_from_file=True
+    otherwise, will generate dataframe and save it
+
     inputs:
         dataset: BehaviorOphysExperiment instance
         time_window: window over which to extract the event triggered response around each stimulus presentation time
@@ -571,13 +579,22 @@ def get_stimulus_response_df(dataset, time_window=[-3, 3.1], interpolate=True, o
         output_sampling_rate: sampling rate for interpolation, only used if interpolate is True
         data_type: which timeseries to get event triggered responses for
                     options: 'filtered_events', 'events', 'dff', 'running_speed', 'pupil_diameter', 'lick_rate'
-    """
+    output:
+        stimulus_response_df: pandas dataframe
+                                if data_type is 'filtered_events', 'events', or 'dff', table will be formatted such that:
+                                    each row is one cell's response to one stimulus_presentation
+                                    total length of dataframe should be n_cells x n_stimulus_presentations
+                                if data_type is 'running_speed', 'pupil_diameter', or 'lick_rate', table will be formatted such that:
+                                    each row is one the stimulus aligned timeseries for each stimulus_presentation
+                                    total length of dataframe should be n_stimulus_presentations
+                                columns include stimulus and behavior metadata
+     """
+
     import mindscope_utilities.visual_behavior_ophys.data_formatting as vb_ophys
     # load stimulus response df from file if it exists otherwise generate it
     ophys_experiment_id = dataset.ophys_experiment_id
     filepath = get_stimulus_response_df_filepath_for_experiment(ophys_experiment_id, data_type, event_type,
                                                                 interpolate=interpolate, output_sampling_rate=output_sampling_rate)
-
 
     if event_type == 'omissions':
         response_window_duration = 0.75
@@ -586,7 +603,7 @@ def get_stimulus_response_df(dataset, time_window=[-3, 3.1], interpolate=True, o
 
     if load_from_file:
         if os.path.exists(filepath):
-            try: # attempt to load from file
+            try:  # attempt to load from file
                 print('file exists:', )
                 print('loading response df from file for', ophys_experiment_id, data_type, event_type)
                 sdf = pd.read_hdf(filepath, key='df')
@@ -601,15 +618,15 @@ def get_stimulus_response_df(dataset, time_window=[-3, 3.1], interpolate=True, o
                 try:  # some experiments with lots of neurons cant save
                     sdf.to_hdf(filepath, key='df')
                     print('saved response df to', filepath)
-                except:
+                except BaseException:
                     print('could not save', filepath)
-        else: # if file does not exist, generate response df
+        else:  # if file does not exist, generate response df
             print('generating response df')
             sdf = vb_ophys.get_stimulus_response_df(dataset, data_type=data_type, event_type=event_type,
                                                     time_window=time_window, interpolate=interpolate,
                                                     output_sampling_rate=output_sampling_rate,
                                                     response_window_duration=response_window_duration)
-    else: # if load_from_file is False, generate response df
+    else:  # if load_from_file is False, generate response df
         print('generating response df')
         sdf = vb_ophys.get_stimulus_response_df(dataset, data_type=data_type, event_type=event_type,
                                                 time_window=time_window, interpolate=interpolate,
@@ -2760,7 +2777,7 @@ def load_multi_session_df(data_type, event_type, conditions, interpolate=True, o
             try:
                 filename = get_file_name_for_multi_session_df(data_type, event_type, project_code, session_type, conditions)
                 multi_session_df_dir = get_multi_session_df_dir(interpolate=interpolate,
-                                                                   output_sampling_rate=output_sampling_rate, event_type=event_type)
+                                                                output_sampling_rate=output_sampling_rate, event_type=event_type)
                 df = pd.read_hdf(os.path.join(multi_session_df_dir, filename), key='df')
                 multi_session_df = pd.concat([multi_session_df, df])
             except BaseException:
@@ -3256,7 +3273,7 @@ def check_whether_multi_session_df_has_all_platform_experiments(multi_session_df
     platform_mdf = mdf[mdf.ophys_experiment_id.isin(platform_experiment_ids)]
     platform_mdf_experiment_ids = platform_mdf.ophys_experiment_id.unique()
     print('there are', len(platform_mdf_experiment_ids), 'experiments in the multi_session_df')
-    missing_expts = platform_experiments_table[platform_experiments_table.ophys_experiment_id.isin(platform_mdf_experiment_ids)==False].ophys_experiment_id.unique()
+    missing_expts = platform_experiments_table[platform_experiments_table.ophys_experiment_id.isin(platform_mdf_experiment_ids) == False].ophys_experiment_id.unique()
     print('there are', len(missing_expts), 'missing experiments')
     return missing_expts
 
@@ -3270,7 +3287,7 @@ def get_multi_session_df_for_conditions(data_type, event_type, conditions, inclu
     use_extended_stimulus_presentations = False
 
     multi_session_df = load_multi_session_df(data_type=data_type, event_type=event_type, conditions=conditions,
-                                                     interpolate=interpolate, output_sampling_rate=output_sampling_rate)
+                                             interpolate=interpolate, output_sampling_rate=output_sampling_rate)
     print('there are', len(multi_session_df.ophys_experiment_id.unique()), 'experiments in the full multi_session_df')
 
     # limit to platform expts

@@ -1475,26 +1475,26 @@ def plot_event_triggered_averages_for_container(ophys_container_id, save_figure=
             # traces
             sdf = data_dict[ophys_experiment_id]['filtered_events'][trace_type]
             ax[0 + (t * 1)] = ut.plot_stimulus_response_df_trace(sdf, time_window=time_window, change=change,
-                                                                    omitted=omitted,
-                                                                    ylabel='population\nresponse',
-                                                                    legend_label=experience_level, title=None,
-                                                                    color=colors[c], ax=ax[0 + (t * 1)])
+                                                                 omitted=omitted,
+                                                                 ylabel='population\nresponse',
+                                                                 legend_label=experience_level, title=None,
+                                                                 color=colors[c], ax=ax[0 + (t * 1)])
 
             # running speed
             sdf = data_dict[ophys_experiment_id]['running_speed'][trace_type]
             ax[2 + (t * 1)] = ut.plot_stimulus_response_df_trace(sdf, time_window, ylabel='running speed\n(cm/s)',
-                                                                    change=change, omitted=omitted,
-                                                                    legend_label=experience_level, color=colors[c],
-                                                                    ax=ax[2 + (t * 1)])
+                                                                 change=change, omitted=omitted,
+                                                                 legend_label=experience_level, color=colors[c],
+                                                                 ax=ax[2 + (t * 1)])
 
             # pupil diameter
             try:
                 ax[4 + (t * 1)].set_xlabel('time after ' + trace_type[:-1] + ' (sec)')
                 sdf = data_dict[ophys_experiment_id]['pupil_diameter'][trace_type]
                 ax[4 + (t * 1)] = ut.plot_stimulus_response_df_trace(sdf, time_window, ylabel='pupil diameter\n(pixels)',
-                                                                        change=change, omitted=omitted,
-                                                                        legend_label=experience_level, color=colors[c],
-                                                                        ax=ax[4 + (t * 1)])
+                                                                     change=change, omitted=omitted,
+                                                                     legend_label=experience_level, color=colors[c],
+                                                                     ax=ax[4 + (t * 1)])
 
             except BaseException:
                 print('no pupil for', ophys_experiment_id)
@@ -1503,9 +1503,9 @@ def plot_event_triggered_averages_for_container(ophys_container_id, save_figure=
             try:
                 sdf = data_dict[ophys_experiment_id]['lick_rate'][trace_type]
                 ax[6 + (t * 1)] = ut.plot_stimulus_response_df_trace(sdf, time_window, ylabel='lick rate\n(licks per 100ms)',
-                                                                        change=change, omitted=omitted,
-                                                                        legend_label=experience_level, color=colors[c],
-                                                                        ax=ax[6 + (t * 1)])
+                                                                     change=change, omitted=omitted,
+                                                                     legend_label=experience_level, color=colors[c],
+                                                                     ax=ax[6 + (t * 1)])
             except BaseException:
                 print('no lick rate for', ophys_experiment_id, trace_type)
 
@@ -1523,7 +1523,7 @@ def plot_event_triggered_averages_for_container(ophys_container_id, save_figure=
     fig.tight_layout()
 
     if save_figure:
-        ut.save_figure(fig, figsize, loading.get_container_plots_dir(), 'event_triggered_average', metadata_string+'_resampled_30Hz')
+        ut.save_figure(fig, figsize, loading.get_container_plots_dir(), 'event_triggered_average', metadata_string + '_resampled_30Hz')
 
 
 def plot_pupil_timeseries_for_container(ophys_container_id, save_figure=True):
@@ -1562,7 +1562,7 @@ def plot_pupil_timeseries_for_container(ophys_container_id, save_figure=True):
             dataset = loading.get_ophys_dataset(experiment_id)
             # try:
             eye_tracking = vb_ophys.get_pupil_data(dataset.eye_tracking, interpolate_likely_blinks=False, normalize_to_gray_screen=False, zscore=False,
-                   interpolate_to_ophys=False, ophys_timestamps=dataset.ophys_timestamps, stimulus_presentations=dataset.stimulus_presentations)
+                                                   interpolate_to_ophys=False, ophys_timestamps=dataset.ophys_timestamps, stimulus_presentations=dataset.stimulus_presentations)
             # eye_tracking = processing.zscore_pupil_data(dataset.eye_tracking.copy())
             timestamps = eye_tracking['timestamps'].values
             experience_level = expts.loc[experiment_id].experience_level
@@ -1597,4 +1597,4 @@ def plot_pupil_timeseries_for_container(ophys_container_id, save_figure=True):
 
         if save_figure:
             ut.save_figure(fig, figsize, loading.get_container_plots_dir(), 'behavior_timeseries',
-                          metadata_string + '_pupil_timeseries_' + str(xlim[0]))
+                           metadata_string + '_pupil_timeseries_' + str(xlim[0]))

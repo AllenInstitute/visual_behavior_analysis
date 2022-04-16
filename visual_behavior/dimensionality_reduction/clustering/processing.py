@@ -82,7 +82,7 @@ def get_cell_type_for_cre_line(cell_metadata, cre_line):
     gets cell_type label for a given cre_line using info in cell_metadata table
     cell_metadata is a table similar to ophys_cells_table from SDK but can have additional columns based on clustering results
     """
-    cell_type = cell_metadata[cell_metadata.cre_line==cre_line].cell_type.values[0]
+    cell_type = cell_metadata[cell_metadata.cre_line == cre_line].cell_type.values[0]
     return cell_type
 
 
@@ -92,8 +92,8 @@ def get_manual_sort_order():
     based on whatever Marina thinks would be useful to sort by
     """
     manual_sort_order = {'Vip-IRES-Cre': [6, 9, 2, 7, 3, 10, 4, 5, 8, 12, 11, 1],
-                    'Sst-IRES-Cre': [1, 2, 3, 5, 4, 6],
-                    'Slc17a7-IRES2-Cre': [2, 9, 7, 4, 3, 8, 6, 5, 1, 10]}
+                         'Sst-IRES-Cre': [1, 2, 3, 5, 4, 6],
+                         'Slc17a7-IRES2-Cre': [2, 9, 7, 4, 3, 8, 6, 5, 1, 10]}
     return manual_sort_order
 
 
@@ -117,7 +117,7 @@ def add_manual_sort_order_to_cluster_meta(cluster_meta):
         manual_sort = get_manual_sort_order_for_cre_line(cre_line)
         # new ID is the position of this cluster ID in the manually sorted list
         # print(cluster_id, manual_sort)
-        manual_cluster_id = np.where(manual_sort==cluster_id)[0][0]
+        manual_cluster_id = np.where(manual_sort == cluster_id)[0][0]
         cluster_meta.at[cell_specimen_id, 'manual_sort_order'] = manual_cluster_id
     return cluster_meta
 
@@ -193,14 +193,14 @@ def clean_cluster_meta(cluster_meta):
     """
     # get clusters with <5 cells
     tmp = cluster_meta.groupby(['cre_line', 'cluster_id']).count()
-    locs_to_drop = tmp[tmp.labels<5].index
+    locs_to_drop = tmp[tmp.labels < 5].index
     # remove them from cluster_meta
     inds_to_drop = []
     for loc_to_drop in locs_to_drop:
-        inds_to_drop_this_loc = list(cluster_meta[(cluster_meta.cre_line==loc_to_drop[0])&(cluster_meta.cluster_id==loc_to_drop[1])].index.values)
+        inds_to_drop_this_loc = list(cluster_meta[(cluster_meta.cre_line == loc_to_drop[0]) & (cluster_meta.cluster_id == loc_to_drop[1])].index.values)
         inds_to_drop = inds_to_drop + inds_to_drop_this_loc
         print('dropping', len(inds_to_drop_this_loc), 'cells for', loc_to_drop)
-    cluster_meta = cluster_meta.drop(index = inds_to_drop)
+    cluster_meta = cluster_meta.drop(index=inds_to_drop)
     print(len(inds_to_drop), 'cells dropped total')
     return cluster_meta
 
@@ -304,7 +304,7 @@ def flip_sign_of_dropouts(results_pivoted, features_to_invert, use_signed_weight
     if use_signed_weights:
         # invert the sign so that dropout sign reflects sign of weights
         for feature in features_to_invert:
-            results_pivoted[feature] = results_pivoted[feature]*-1
+            results_pivoted[feature] = results_pivoted[feature] * -1
     else:
         # make everything positive
         for feature in features_to_invert:
@@ -406,7 +406,7 @@ def generate_GLM_outputs(glm_version, experiments_table, cells_table, glm_output
     results_pivoted = limit_results_pivoted_to_features_for_clustering(results_pivoted, features)
 
     # take absolute value or flip sign of dropouts so that reduction in explained variance is a positive coding score
-    features_to_invert = get_features_for_clustering() # only invert dropout scores, skip var_exp_full if using
+    features_to_invert = get_features_for_clustering()  # only invert dropout scores, skip var_exp_full if using
     results_pivoted = flip_sign_of_dropouts(results_pivoted, features_to_invert, use_signed_weights)
 
     # get kernels for this version
@@ -448,7 +448,7 @@ def load_GLM_outputs(glm_version, glm_output_dir):
         print('please generate before using load_glm_outputs')
 
     weights_path = os.path.join(glm_output_dir, glm_version + '_weights_df.h5')
-    if os.path.exists(weights_path): # if it exists, load it
+    if os.path.exists(weights_path):  # if it exists, load it
         weights_df = pd.read_hdf(weights_path, key='df')
     else:
         print('no weights at', weights_path)
@@ -495,7 +495,7 @@ def get_feature_matrix_for_cre_line(feature_matrix, cell_metadata, cre_line):
     """
     limit feature_matrix to cell_specimen_ids for this cre line
     """
-    cre_cell_specimen_ids = cell_metadata[cell_metadata['cre_line']==cre_line].index.values
+    cre_cell_specimen_ids = cell_metadata[cell_metadata['cre_line'] == cre_line].index.values
     feature_matrix_cre = feature_matrix.loc[cre_cell_specimen_ids].copy()
     return feature_matrix_cre
 
@@ -715,8 +715,8 @@ def get_cluster_label_file_name(cre_lines, n_clusters_cre, prefix='cluster_label
     cluster_file_name = ''
     # iterate cre lines & build filename
     for i, cre_line in enumerate(cre_lines):
-        cluster_file_name = cluster_file_name+'_'+cre_line.split('-')[0]+'_'+str(n_clusters_cre[cre_line])
-    cluster_file_name = prefix+cluster_file_name+'.h5'
+        cluster_file_name = cluster_file_name + '_' + cre_line.split('-')[0] + '_' + str(n_clusters_cre[cre_line])
+    cluster_file_name = prefix + cluster_file_name + '.h5'
     return cluster_file_name
 
 
@@ -784,7 +784,7 @@ def get_cluster_density(df_dropouts, labels_df, label_col='cluster_id', use_spea
     labels = labels_df[label_col].unique()
     cluster_corrs = {}
     for label in labels:
-        cluster_csids = labels_df[labels_df[label_col]==label].index.values
+        cluster_csids = labels_df[labels_df[label_col] == label].index.values
         cluster_dropouts = df_dropouts.loc[cluster_csids]
         cluster_means = cluster_dropouts.mean().abs().values
         within_cluster = cluster_dropouts.abs()
@@ -807,10 +807,10 @@ def add_within_cluster_corr_to_cluster_meta(feature_matrix, cluster_meta, use_sp
     '''
     print('adding within cluster correlation to cluster_meta')
     for cre_line in get_cre_lines(cluster_meta):
-        cluster_meta_cre = cluster_meta[cluster_meta.cre_line==cre_line]
+        cluster_meta_cre = cluster_meta[cluster_meta.cre_line == cre_line]
         clusters = cluster_meta_cre['cluster_id'].unique()
         for cluster_id in clusters:
-            cluster_csids = cluster_meta_cre[cluster_meta_cre.cluster_id==cluster_id].index.values
+            cluster_csids = cluster_meta_cre[cluster_meta_cre.cluster_id == cluster_id].index.values
             # get average dropout scores for this cluster
             cluster_dropouts = feature_matrix.loc[cluster_csids]
             cluster_mean = cluster_dropouts.mean().abs().values
@@ -853,7 +853,7 @@ def get_cluster_meta(cluster_labels, cell_metadata, feature_matrix, n_clusters_c
                                                                                           on='cell_specimen_id')
         cluster_meta = cluster_meta.set_index('cell_specimen_id')
         # annotate & clean cluster metadata
-        cluster_meta = clean_cluster_meta(cluster_meta) # drop cluster IDs with fewer than 5 cells in them
+        cluster_meta = clean_cluster_meta(cluster_meta)  # drop cluster IDs with fewer than 5 cells in them
         cluster_meta['original_cluster_id'] = cluster_meta.cluster_id
         cluster_meta = add_manual_sort_order_to_cluster_meta(cluster_meta)
         cluster_meta = add_within_cluster_corr_to_cluster_meta(feature_matrix, cluster_meta, use_spearmanr=False)
@@ -908,7 +908,7 @@ def get_cell_counts_for_conditions(cell_data, conditions_to_groupby=['targeted_s
     cell_counts = cell_data.groupby(conditions_to_groupby).count()
     # get some column in dataframe and rename as n_cells
     col_to_use = cell_counts.keys()[0]
-    cell_counts = cell_counts.rename(columns={col_to_use:'n_cells'})[['n_cells']]
+    cell_counts = cell_counts.rename(columns={col_to_use: 'n_cells'})[['n_cells']]
     return cell_counts
 
 
@@ -956,17 +956,17 @@ def t_test(group):
     from scipy import stats
     actual = group.n_cells.values[0]
     random = group.random_n_cells.values[0]
-    n_times_greater = len(random[random<actual]) # number of times the actual is greater than random
-    n_times_less_than = len(random[random>actual]) # number of times the actual is less than random
-    n_times_equal = len(random[random==actual]) # number of times the actual value is equal to random
-    t, p_val_greater = stats.ttest_1samp(random, actual, alternative='less') # actual is greater than distribution mean
-    t, p_val_less = stats.ttest_1samp(random, actual, alternative='greater') # actual is less than distribution mean
+    n_times_greater = len(random[random < actual])  # number of times the actual is greater than random
+    n_times_less_than = len(random[random > actual])  # number of times the actual is less than random
+    n_times_equal = len(random[random == actual])  # number of times the actual value is equal to random
+    t, p_val_greater = stats.ttest_1samp(random, actual, alternative='less')  # actual is greater than distribution mean
+    t, p_val_less = stats.ttest_1samp(random, actual, alternative='greater')  # actual is less than distribution mean
     return pd.Series({'n_times_actual_greater_than_random': n_times_greater, 'n_times_actual_less_than_random': n_times_less_than, 'n_times_actual_equal_to_random': n_times_equal,
-                     'p_val_actual_greater_than_random_r': np.round(p_val_greater,5), 'p_val_actual_less_than_random_r': np.round(p_val_less,5),
-                     'p_val_actual_greater_than_random': p_val_greater, 'p_val_actual_less_than_random': p_val_less,})
+                      'p_val_actual_greater_than_random_r': np.round(p_val_greater, 5), 'p_val_actual_less_than_random_r': np.round(p_val_less, 5),
+                      'p_val_actual_greater_than_random': p_val_greater, 'p_val_actual_less_than_random': p_val_less, })
 
 
-def get_cell_count_stats(cluster_meta, conditions_to_groupby = ['targeted_structure', 'layer']):
+def get_cell_count_stats(cluster_meta, conditions_to_groupby=['targeted_structure', 'layer']):
     """
     quantify how many cells are in each area and depth per cluster
     compute a random distrubtion of cells in area and depth for a given cluster number given sampling bias in dataset
@@ -978,22 +978,22 @@ def get_cell_count_stats(cluster_meta, conditions_to_groupby = ['targeted_struct
     import random
     try:
         cluster_meta = cluster_meta.set_index('cell_specimen_id')
-    except:
+    except BaseException:
         pass
     cre_lines = np.sort(cluster_meta.cre_line.unique())
 
     cell_count_stats = pd.DataFrame()
     # get data just for one cre line
     for cre_line in cre_lines:
-        cre_data = cluster_meta[cluster_meta.cre_line==cre_line]
+        cre_data = cluster_meta[cluster_meta.cre_line == cre_line]
         # get number of cells within each condition for this cre line
         cre_counts = get_cell_counts_for_conditions(cre_data, conditions_to_groupby)
-        cre_counts = cre_counts.rename(columns={'n_cells':'n_cells_cond_cre'})
+        cre_counts = cre_counts.rename(columns={'n_cells': 'n_cells_cond_cre'})
         cre_csids = cre_data.index.values
         # get data for all clusters for this cre line
         cluster_ids = np.sort(cre_data.cluster_id.unique())
         for cluster_id in cluster_ids:
-            cluster_csids = cre_data[cre_data.cluster_id==cluster_id].index.values
+            cluster_csids = cre_data[cre_data.cluster_id == cluster_id].index.values
             cluster_data = cre_data.loc[cluster_csids]
             n_cells_in_cluster = len(cluster_data)
             # count the number of cells per area and depth
@@ -1006,20 +1006,20 @@ def get_cell_count_stats(cluster_meta, conditions_to_groupby = ['targeted_struct
             # add info about overall distribution of cells within this cre line
             cell_counts.insert(loc=0, column='n_cells_total_cre', value=len(cre_csids))
             # fraction of cells per area/depth relative to total cells in cre line
-            cell_counts.insert(loc=2, column='fraction_per_cond_cre', value=cell_counts.n_cells_cond_cre/cell_counts.n_cells_total_cre)
+            cell_counts.insert(loc=2, column='fraction_per_cond_cre', value=cell_counts.n_cells_cond_cre / cell_counts.n_cells_total_cre)
             cell_counts.insert(loc=0, column='cre_line', value=cre_line)
             # add cluster and cre line metadata
             cell_counts.insert(loc=4, column='cluster_id', value=cluster_id)
             cell_counts.insert(loc=5, column='n_cells_total_cluster', value=len(cluster_csids))
             # fraction of cells in this area/depth relative to overall size of cluster
-            cell_counts.insert(loc=7, column='fraction_per_cond_cluster', value=cell_counts.n_cells_cond_cluster/cell_counts.n_cells_total_cluster)
+            cell_counts.insert(loc=7, column='fraction_per_cond_cluster', value=cell_counts.n_cells_cond_cluster / cell_counts.n_cells_total_cluster)
             # combine actual and random counts
             cell_counts = cell_counts.merge(random_cell_counts, on=conditions_to_groupby)
             # compute fraction of cells per this area/depth in this cluster
             # relative to the number of cells in this area/depth you would get if you randomly sample cells from this cre line
-            cell_counts['fraction_of_random'] = cell_counts.n_cells_cond_cluster/cell_counts.random_n_cells_mean
+            cell_counts['fraction_of_random'] = cell_counts.n_cells_cond_cluster / cell_counts.random_n_cells_mean
             # subtract 1 so that 0 means same # cells as random, +ve means more frequent than random, -ve means less frequent than random
-            cell_counts['relative_to_random'] = cell_counts.fraction_of_random-1
+            cell_counts['relative_to_random'] = cell_counts.fraction_of_random - 1
             cell_counts = cell_counts.reset_index()
             # get p-value describing significance of difference between actual and random distribution for this condition (area/depth)
             stats = cell_counts.groupby(conditions_to_groupby).apply(t_test)
@@ -1027,13 +1027,12 @@ def get_cell_count_stats(cluster_meta, conditions_to_groupby = ['targeted_struct
             # concat with big df
             cell_count_stats = pd.concat([cell_count_stats, cell_counts])
     # make binary column for significance
-    cell_count_stats['sig_greater'] = [True if p_val_actual_greater_than_random<0.05 else False for p_val_actual_greater_than_random in cell_count_stats.p_val_actual_greater_than_random.values]
-    if len(conditions_to_groupby)>1:
-        cell_count_stats['location'] = cell_count_stats[conditions_to_groupby[0]]+'_'+cell_count_stats[conditions_to_groupby[1]]
+    cell_count_stats['sig_greater'] = [True if p_val_actual_greater_than_random < 0.05 else False for p_val_actual_greater_than_random in cell_count_stats.p_val_actual_greater_than_random.values]
+    if len(conditions_to_groupby) > 1:
+        cell_count_stats['location'] = cell_count_stats[conditions_to_groupby[0]] + '_' + cell_count_stats[conditions_to_groupby[1]]
     elif len(conditions_to_groupby) == 1:
         cell_count_stats['location'] = cell_count_stats[conditions_to_groupby[0]]
     return cell_count_stats
-
 
 
 def get_cluster_proportions(df, cre):
@@ -1054,7 +1053,7 @@ def compute_cluster_proportion_cre(cluster_meta, cre_line, groupby_columns=['tar
     then subtracts the average proportion for each cluster
     """
     frequency = make_frequency_table(cluster_meta[cluster_meta.cre_line == cre_line],
-                                                groupby_columns=groupby_columns, normalize=True)
+                                     groupby_columns=groupby_columns, normalize=True)
 
     table = frequency.copy()
     # get average proportion in each cluster
@@ -1069,19 +1068,20 @@ def compute_cluster_proportion_cre(cluster_meta, cre_line, groupby_columns=['tar
 
     return table
 
+
 def get_proportion_cells_rel_cluster_average(cluster_meta, cre_lines, groupby_columns=['targeted_structure', 'layer']):
     cluster_proportions = pd.DataFrame()
     for cre_line in cre_lines:
         table = compute_cluster_proportion_cre(cluster_meta, cre_line, groupby_columns=groupby_columns)
         df = pd.DataFrame(table.unstack(), columns=['proportion_cells'])
         df = df.reset_index()
-        df = df.rename(columns={'level_0':'location'})
+        df = df.rename(columns={'level_0': 'location'})
         df['cre_line'] = cre_line
         cluster_proportions = pd.concat([cluster_proportions, df])
     return cluster_proportions
 
 
-def stats(df,cre):
+def stats(df, cre):
     '''
         Performs chi-squared tests to asses whether the observed cell counts in each area/depth differ
         significantly from the average for that cluster.
@@ -1090,32 +1090,32 @@ def stats(df,cre):
     from scipy.stats import chisquare
 
     # compute cell counts in each area/cluster
-    table = df.query('cre_line == @cre').groupby(['cluster_id','coarse_binned_depth_area'])['cell_specimen_id'].count().unstack()
-    table = table[['VISp_upper','VISp_lower','VISl_upper','VISl_lower']]
+    table = df.query('cre_line == @cre').groupby(['cluster_id', 'coarse_binned_depth_area'])['cell_specimen_id'].count().unstack()
+    table = table[['VISp_upper', 'VISp_lower', 'VISl_upper', 'VISl_lower']]
     table = table.fillna(value=0)
 
     # compute proportion
     depth_areas = table.columns.values
     for da in depth_areas:
-        table[da] = table[da]/table[da].sum()
+        table[da] = table[da] / table[da].sum()
 
     # get average for each cluster
     table['mean'] = table.mean(axis=1)
 
     # second table of cell counts in each area/cluster
-    table2 = df.query('cre_line == @cre').groupby(['cluster_id','coarse_binned_depth_area'])['cell_specimen_id'].count().unstack()
-    table2 = table2[['VISp_upper','VISp_lower','VISl_upper','VISl_lower']]
+    table2 = df.query('cre_line == @cre').groupby(['cluster_id', 'coarse_binned_depth_area'])['cell_specimen_id'].count().unstack()
+    table2 = table2[['VISp_upper', 'VISp_lower', 'VISl_upper', 'VISl_lower']]
     table2 = table2.fillna(value=0)
 
     # compute estimated frequency of cells based on average fraction for each cluster
     for da in depth_areas:
-        table2[da+'_chance_count'] = table2[da].sum()*table['mean']
+        table2[da + '_chance_count'] = table2[da].sum() * table['mean']
 
     # perform chi-squared test
     for index in table2.index.values:
-        f = table2.loc[index][['VISp_upper','VISp_lower','VISl_upper','VISl_lower']].values
-        f_expected = table2.loc[index][['VISp_upper_chance_count','VISp_lower_chance_count','VISl_upper_chance_count','VISl_lower_chance_count']].values
-        out = chisquare(f,f_expected)
+        f = table2.loc[index][['VISp_upper', 'VISp_lower', 'VISl_upper', 'VISl_lower']].values
+        f_expected = table2.loc[index][['VISp_upper_chance_count', 'VISp_lower_chance_count', 'VISl_upper_chance_count', 'VISl_lower_chance_count']].values
+        out = chisquare(f, f_expected)
         table2.at[index, 'pvalue'] = out.pvalue
         table2.at[index, 'significant'] = out.pvalue < 0.05
 
@@ -1152,16 +1152,15 @@ def compute_proportion_cre(df, cre):
         Computes the proportion of cells in each cluster within each location
     '''
     # Count cells in each area/cluster
-    table = df.query('cre_line == @cre').groupby(['cluster_id','coarse_binned_depth_area'])['cell_specimen_id'].count().unstack()
-    table = table[['VISp_upper','VISp_lower','VISl_upper','VISl_lower']]
+    table = df.query('cre_line == @cre').groupby(['cluster_id', 'coarse_binned_depth_area'])['cell_specimen_id'].count().unstack()
+    table = table[['VISp_upper', 'VISp_lower', 'VISl_upper', 'VISl_lower']]
     table = table.fillna(value=0)
 
     # compute fraction in each area/cluster
     depth_areas = table.columns.values
     for da in depth_areas:
-        table[da] = table[da]/table[da].sum()
+        table[da] = table[da] / table[da].sum()
     return table
-
 
 
 def get_cluster_order_for_metric_location(cell_count_stats, cluster_meta, location='VISp_upper',
@@ -1177,8 +1176,8 @@ def get_cluster_order_for_metric_location(cell_count_stats, cluster_meta, locati
     """
     cluster_order = {}
     for cre_line in get_cre_lines(cluster_meta):
-        cre_data = cell_count_stats[(cell_count_stats.cre_line==cre_line)&
-                                    (cell_count_stats.location==location)]
+        cre_data = cell_count_stats[(cell_count_stats.cre_line == cre_line) &
+                                    (cell_count_stats.location == location)]
         cluster_order_cre = cre_data.sort_values(by=metric, ascending=False).cluster_id.values
         cluster_order[cre_line] = cluster_order_cre
     return cluster_order
@@ -1193,10 +1192,10 @@ def get_fraction_cells_per_area_depth(cluster_meta):
     # get fraction cells per area and depth per cluster
     # frequency will be the fraction of cells in each cluster for a given area and depth
     # relative to the total number of cells in that area and depth for that cre line
-    n_cells_per_area_depth = cluster_meta.reset_index().groupby(['cre_line', 'targeted_structure', 'layer']).count().rename(columns={'cell_specimen_id':'n_cells_total'})[['n_cells_total']]
-    n_cells_per_area_depth_cluster = cluster_meta.reset_index().groupby(['cre_line', 'cluster_id', 'targeted_structure', 'layer']).count().rename(columns={'cell_specimen_id':'n_cells_cluster'})[['n_cells_cluster']]
+    n_cells_per_area_depth = cluster_meta.reset_index().groupby(['cre_line', 'targeted_structure', 'layer']).count().rename(columns={'cell_specimen_id': 'n_cells_total'})[['n_cells_total']]
+    n_cells_per_area_depth_cluster = cluster_meta.reset_index().groupby(['cre_line', 'cluster_id', 'targeted_structure', 'layer']).count().rename(columns={'cell_specimen_id': 'n_cells_cluster'})[['n_cells_cluster']]
     fraction_cells = n_cells_per_area_depth_cluster.reset_index().merge(n_cells_per_area_depth.reset_index(), on=['cre_line', 'targeted_structure', 'layer'], how='left')
-    fraction_cells['fraction_cells_per_area_depth'] = fraction_cells.n_cells_cluster/fraction_cells.n_cells_total
+    fraction_cells['fraction_cells_per_area_depth'] = fraction_cells.n_cells_cluster / fraction_cells.n_cells_total
     return fraction_cells
 
 
@@ -1222,20 +1221,20 @@ def get_coding_metrics(index_dropouts, index_value, index_name):
     # feature selectivity is ratio of largest dropout vs mean of all other dropous for the dominant experience level
     order = np.argsort(index_dropouts.loc[dominant_experience_level])
     values = index_dropouts.loc[dominant_experience_level].values[order[::-1]]
-    feature_selectivity = (values[0]-(np.mean(values[1:])))/(values[0]+(np.mean(values[1:])))
+    feature_selectivity = (values[0] - (np.mean(values[1:]))) / (values[0] + (np.mean(values[1:])))
     # experience selectivity is ratio of largest and average of all other dropouts for the dominant feature
     order = np.argsort(index_dropouts[dominant_feature])
     values = index_dropouts[dominant_feature].values[order[::-1]]
-    experience_selectivity = (values[0]-(np.mean(values[1:])))/(values[0]+(np.mean(values[1:])))
+    experience_selectivity = (values[0] - (np.mean(values[1:]))) / (values[0] + (np.mean(values[1:])))
     stats.loc[index_value, 'feature_selectivity'] = feature_selectivity
     stats.loc[index_value, 'experience_selectivity'] = experience_selectivity
     # get experience modulation indices
     row = index_dropouts[dominant_feature]
     # direction of exp mod is whether coding is stronger for familiar or novel
-    exp_mod_direction = (row['Novel 1']-row['Familiar'])/(row['Novel 1']+row['Familiar'])
+    exp_mod_direction = (row['Novel 1'] - row['Familiar']) / (row['Novel 1'] + row['Familiar'])
     # persistence of exp mod is whether coding stays similar after repetition of novel session
 #     exp_mod_persistence = (row['Novel >1']-row['Novel 1'])/(row['Novel >1']+row['Novel 1'])
-    exp_mod_persistence = row['Novel >1']/row['Novel 1']
+    exp_mod_persistence = row['Novel >1'] / row['Novel 1']
     stats.loc[index_value, 'exp_mod_direction'] = exp_mod_direction
     stats.loc[index_value, 'exp_mod_persistence'] = exp_mod_persistence
     # within session joint coding index
@@ -1245,7 +1244,7 @@ def get_coding_metrics(index_dropouts, index_value, index_name):
 #     # joint coding index is first highest feature dropout relative to mean of all other features
 #     feature_sel_within_session = (values[0]-(np.mean(values[1:])))/(values[0]+(np.mean(values[1:])))
     # joint coding index is first highest feature dropout relative to next highest
-    feature_sel_within_session = (values[0]-values[1])/(values[0]+values[1])
+    feature_sel_within_session = (values[0] - values[1]) / (values[0] + values[1])
     # get across session switching index - ratio of pref exp & feature to next max exp & feature, excluding within session or feature comparisons
     # get the max value
     pref_cond_value = index_dropouts.loc[dominant_experience_level][dominant_feature]
@@ -1258,13 +1257,10 @@ def get_coding_metrics(index_dropouts, index_value, index_name):
     next_feature = next_highest_conditions[1]
     next_highest_value = index_dropouts.loc[next_experience_level][next_feature]
     # switching index is ratio of max condition to next max (excluding within session & feature comparisons)
-    feature_sel_across_sessions = (pref_cond_value-next_highest_value)/(pref_cond_value+next_highest_value)
+    feature_sel_across_sessions = (pref_cond_value - next_highest_value) / (pref_cond_value + next_highest_value)
     stats.loc[index_value, 'feature_sel_within_session'] = feature_sel_within_session
     stats.loc[index_value, 'feature_sel_across_sessions'] = feature_sel_across_sessions
     return stats
-
-
-
 
 
 def kruskal_by_experience_level(df_pivoted, posthoc=True):
@@ -1373,4 +1369,3 @@ def shuffle_dropout_score(df_dropout, shuffle_type='all'):
                 for experience_level in experience_levels:
                     df_shuffled.iloc[i][regressor][experience_level] = df_dropout.loc[cid][regressor][experience_level]
     return df_shuffled
-
