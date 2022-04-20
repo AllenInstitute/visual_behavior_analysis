@@ -396,6 +396,9 @@ def generate_GLM_outputs(glm_version, experiments_table, cells_table, glm_output
                 columns[column] = column.split('_')[0]
         results_pivoted = results_pivoted.rename(columns=columns)
 
+    # save processed results_pivoted
+    results_pivoted.to_hdf(os.path.join(glm_output_dir, glm_version + '_results_pivoted.h5'), key='df')
+
     # limit dropout scores to the features we want to cluster on
     features = get_features_for_clustering()
     if include_var_exp_full:
@@ -412,8 +415,7 @@ def generate_GLM_outputs(glm_version, experiments_table, cells_table, glm_output
 
     print(results_pivoted.keys())
 
-    # save processed results_pivoted
-    results_pivoted.to_hdf(os.path.join(glm_output_dir, glm_version + '_results_pivoted.h5'), key='df')
+
 
     return results_pivoted, weights_df, kernels
 
