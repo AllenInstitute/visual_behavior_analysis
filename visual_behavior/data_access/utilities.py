@@ -1730,4 +1730,3 @@ def count_mice_expts_containers(df):
     counts = counts.merge(containers, on=['cell_type', 'experience_level'])
     return counts
 
-
