@@ -5,7 +5,6 @@ import numpy as np
 import pandas as pd
 from pathlib import Path
 
-#from visual_behavior.data_access import loading
 from visual_behavior.ophys.io.lims_database import LimsDatabase
 from visual_behavior.ophys.sync.sync_dataset import Dataset as SyncDataset
 from visual_behavior.ophys.sync.process_sync import filter_digital, calculate_delay
@@ -51,6 +50,7 @@ def check_for_model_outputs(behavior_session_id):
     :param behavior_session_id:
     :return:
     """
+    raise Exception('See PR #809')
     model_output_dir = loading.get_behavior_model_outputs_dir()
     model_output_file = [file for file in os.listdir(model_output_dir) if
                          (str(behavior_session_id) in file) and ('training' not in file)]
@@ -339,6 +339,7 @@ def model_outputs_available_for_behavior_session(behavior_session_id):
     :param behavior_session_id: 9-digit behavior session ID
     :return: Boolean, True if outputs are available, False if not
     """
+    raise Exception('See PR #809')
     model_output_dir = loading.get_behavior_model_outputs_dir()
     model_output_file = [file for file in os.listdir(model_output_dir) if str(behavior_session_id) in file]
     if len(model_output_file) > 0:
@@ -1776,6 +1777,7 @@ def get_behavior_session_ids_to_analyze():
     with the behavior_session_ids for non-ophys sessions from the behavior session table,
     for mice present in the platform paper experiments table
     """
+    raise Exception('See PR #809')
     # ophys data
     experiments_table = loading.get_platform_paper_experiment_table()
     # skip passive sessions
