@@ -44,19 +44,6 @@ class LazyLoadable(object):
         self.calculate = calculate
 
 
-def check_for_model_outputs(behavior_session_id):
-    """
-    Checks whether model output file with omission regressors exists (does not say '_training' at end of filename)
-    :param behavior_session_id:
-    :return:
-    """
-    raise Exception('See PR #809')
-    model_output_dir = loading.get_behavior_model_outputs_dir()
-    model_output_file = [file for file in os.listdir(model_output_dir) if
-                         (str(behavior_session_id) in file) and ('training' not in file)]
-    return len(model_output_file) > 0
-
-
 def get_all_session_ids(ophys_experiment_id=None, ophys_session_id=None, behavior_session_id=None, foraging_id=None):
     '''
     a function to get all ID types for a given experiment ID
@@ -330,33 +317,6 @@ def get_donor_id_from_specimen_id(specimen_id, cache=None):
             where specimens.id = '{}'
         '''
         return db.lims_query(lims_query_string.format(specimen_id)).astype(int)
-
-
-def model_outputs_available_for_behavior_session(behavior_session_id):
-    """
-    Check whether behavior model outputs are available in the default directory
-
-    :param behavior_session_id: 9-digit behavior session ID
-    :return: Boolean, True if outputs are available, False if not
-    """
-    raise Exception('See PR #809')
-    model_output_dir = loading.get_behavior_model_outputs_dir()
-    model_output_file = [file for file in os.listdir(model_output_dir) if str(behavior_session_id) in file]
-    if len(model_output_file) > 0:
-        return True
-    else:
-        return False
-
-
-# def get_cell_matching_output_dir_for_container(container_id, experiments_table):
-#     container_expts = experiments_table[experiments_table.container_id==container_id]
-#     ophys_experiment_id = container_expts.index[0]
-#     lims_data = get_lims_data(ophys_experiment_id)
-#     session_dir = lims_data.ophys_session_dir.values[0]
-#     cell_matching_dir = os.path.join(session_dir[:-23], 'experiment_container_'+str(container_id), 'OphysNwayCellMatchingStrategy')
-#     cell_matching_output_dir = os.path.join(cell_matching_dir, np.sort(os.listdir(cell_matching_dir))[-1])
-#     return cell_matching_output_dir
-#
 
 
 def get_cell_matching_output_dir_for_container(experiment_id):
