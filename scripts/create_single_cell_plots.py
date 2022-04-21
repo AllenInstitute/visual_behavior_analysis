@@ -19,10 +19,13 @@ if __name__ == '__main__':
     ophys_container_id = args.ophys_container_id
     print('ophys_container_id:', ophys_container_id)
 
-    use_events = True
-    filter_events = True
+    # ophys_container_id = 791352433
+
 
     ### first plot cell ROI and change and omission triggered averages across sessions
+    #
+    # use_events = True
+    # filter_events = True
     #
     # folder = 'matched_cell_roi_and_trace_examples'
     # save_dir = r'/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/platform_paper_plots/cell_matching'
@@ -53,17 +56,17 @@ if __name__ == '__main__':
     import visual_behavior_glm.GLM_visualization_tools as gvt
 
     # directory and folders to save plots to
-    base_dir = r'/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/platform_paper_plots/figure_4'
+    base_dir = r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/platform_paper_plots/figure_4'
     glm_version = '24_events_all_L2_optimize_by_session'
 
     # set data_type for cell response plots, can be 'dff', 'events', 'filtered_events'
-    data_type = 'filtered_events'
+    data_type = 'events'
 
     # set base_dir to load and save results
     base_dir = os.path.join(base_dir, glm_version)
 
     # folder in save_dir where you want to load GLM results from
-    glm_output_folder = '220412_cluster_proportions'
+    glm_output_folder = '220414_across_session_norm'
     glm_output_dir = os.path.join(base_dir, glm_output_folder)
     print(glm_output_dir)
 
@@ -99,10 +102,8 @@ if __name__ == '__main__':
     # results_pivoted = results_pivoted[results_pivoted.cell_specimen_id.isin(matched_cells)]
 
     # set features to use in plots
-    if 'variance_explained_full' in results_pivoted.keys():
-        dropout_features = ['variance_explained_full', 'all-images', 'omissions', 'behavioral', 'task']
-    else:
-        dropout_features = ['all-images', 'omissions', 'behavioral', 'task']
+    # dropout_features = ['variance_explained_full', 'all-images', 'omissions', 'behavioral', 'task']
+    dropout_features = ['all-images', 'omissions', 'behavioral', 'task']
 
     # features to use for weights_df
     weights_features = ['image0', 'image1', 'image2', 'image3', 'image4', 'image5', 'image6', 'image7', 'hits', 'misses', 'omissions']

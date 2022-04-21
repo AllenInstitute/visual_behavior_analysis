@@ -410,6 +410,9 @@ def generate_GLM_outputs(glm_version, experiments_table, cells_table, glm_output
     # save processed results_pivoted
     results_pivoted.to_hdf(os.path.join(glm_output_dir, glm_version + '_results_pivoted.h5'), key='df')
 
+    # now drop ophys_experiment_id
+    results_pivoted = results_pivoted.drop(columns=['ophys_experiment_id'])
+
     # get kernels for this version
     run_params = glm_params.load_run_json(glm_version)
     kernels = run_params['kernels']
