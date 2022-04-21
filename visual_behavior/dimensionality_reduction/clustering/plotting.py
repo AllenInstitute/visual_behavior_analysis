@@ -1184,10 +1184,11 @@ def plot_cell_stats_per_cluster_for_areas_depths(cluster_meta, cell_count_stats,
     # get area and depth combos in correct order
     locations = np.sort(cell_count_stats.location.unique())
 
-    figsize = (20, 2.25)
-    fig, ax = plt.subplots(1, 3, figsize=figsize, gridspec_kw={'width_ratios': n_clusters}, sharey=True)
+    figsize = (24, 2.25)
+    fig, ax = plt.subplots(1, 3, figsize=figsize, gridspec_kw={'width_ratios': n_clusters}, sharey=False)
 
     for i, cre_line in enumerate(cre_lines):
+
         # pivot stats to get number of cells per area and depth by cluster ID
         data = cell_count_stats[(cell_count_stats.cre_line == cre_line)]
         data = data.pivot(index='cluster_id', columns='location', values=value_to_plot)
@@ -1205,7 +1206,7 @@ def plot_cell_stats_per_cluster_for_areas_depths(cluster_meta, cell_count_stats,
         ax[i].set_xlabel('cluster #')
         ax[i].set_title(get_cell_type_for_cre_line(cluster_meta, cre_line))
     # ax[i].set_xlim(ax[i].get_xlim()[::-1])
-    plt.subplots_adjust(wspace=0.2)
+    plt.subplots_adjust(wspace=0.4)
     if save_dir:
         filename = value_to_plot + '_per_area_depth_' + suffix
         utils.save_figure(fig, figsize, save_dir, folder, filename)
@@ -1486,7 +1487,7 @@ def plot_clusters_stats_pop_avg_rows(cluster_meta, feature_matrix, multi_session
     # ax[(0 + n_clusters *2)].legend(loc='lower right', fontsize='x-small')
 
     fig.subplots_adjust(hspace=1.2, wspace=0.6)
-    fig.suptitle(get_cell_type_for_cre_line(cluster_meta, cre_line), x=0.52, y=0.98, fontsize=16)
+    fig.suptitle(get_cell_type_for_cre_line(cluster_meta, cre_line), x=0.5, y=1.2, fontsize=16)
     # fig.tight_layout()
     if save_dir:
         utils.save_figure(fig, figsize, save_dir, folder, 'clusters_stats_rows_' + cre_line.split('-')[0] + suffix)
