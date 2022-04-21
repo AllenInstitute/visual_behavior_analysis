@@ -396,11 +396,9 @@ def generate_GLM_outputs(glm_version, experiments_table, cells_table, glm_output
                 columns[column] = column.split('_')[0]
         results_pivoted = results_pivoted.rename(columns=columns)
 
-    # save processed results_pivoted
-    results_pivoted.to_hdf(os.path.join(glm_output_dir, glm_version + '_results_pivoted.h5'), key='df')
-
     # limit dropout scores to the features we want to cluster on
     features = get_features_for_clustering()
+    features = [*features, 'ophys_experiment_id']
     if include_var_exp_full:
         features = [*features, 'variance_explained_full']
     results_pivoted = limit_results_pivoted_to_features_for_clustering(results_pivoted, features)
@@ -408,6 +406,9 @@ def generate_GLM_outputs(glm_version, experiments_table, cells_table, glm_output
     # take absolute value or flip sign of dropouts so that reduction in explained variance is a positive coding score
     features_to_invert = get_features_for_clustering()  # only invert dropout scores, skip var_exp_full if using
     results_pivoted = flip_sign_of_dropouts(results_pivoted, features_to_invert, use_signed_weights)
+
+    # save processed results_pivoted
+    results_pivoted.to_hdf(os.path.join(glm_output_dir, glm_version + '_results_pivoted.h5'), key='df')
 
     # get kernels for this version
     run_params = glm_params.load_run_json(glm_version)
