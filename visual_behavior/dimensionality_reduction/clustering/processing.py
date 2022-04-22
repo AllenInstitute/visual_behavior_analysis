@@ -858,7 +858,7 @@ def get_cluster_meta(cluster_labels, cell_metadata, feature_matrix, n_clusters_c
         # annotate & clean cluster metadata
         cluster_meta = clean_cluster_meta(cluster_meta)  # drop cluster IDs with fewer than 5 cells in them
         cluster_meta['original_cluster_id'] = cluster_meta.cluster_id
-        cluster_meta = add_manual_sort_order_to_cluster_meta(cluster_meta)
+        # cluster_meta = add_manual_sort_order_to_cluster_meta(cluster_meta)
         cluster_meta = add_within_cluster_corr_to_cluster_meta(feature_matrix, cluster_meta, use_spearmanr=False)
         # save
         print('saving cluster_meta to', cluster_meta_filepath)
