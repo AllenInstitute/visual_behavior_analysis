@@ -12,14 +12,14 @@ from visual_behavior.dimensionality_reduction.clustering import processing
 from visual_behavior.dimensionality_reduction.clustering import plotting
 
 if __name__ == '__main__':
-    # parser = argparse.ArgumentParser()
-    # parser.add_argument("--ophys_container_id", type=int,
-    #                     help="Container ID to process")
-    # args = parser.parse_args()
-    # ophys_container_id = args.ophys_container_id
-    # print('ophys_container_id:', ophys_container_id)
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--ophys_container_id", type=int,
+                        help="Container ID to process")
+    args = parser.parse_args()
+    ophys_container_id = args.ophys_container_id
+    print('ophys_container_id:', ophys_container_id)
 
-    ophys_container_id = 791352433
+    # ophys_container_id = 791352433
 
 
     ### first plot cell ROI and change and omission triggered averages across sessions
@@ -66,7 +66,7 @@ if __name__ == '__main__':
     base_dir = os.path.join(base_dir, glm_version)
 
     # folder in save_dir where you want to load GLM results from
-    glm_output_folder = '220419_cluster_proportions'
+    glm_output_folder = '220420_SAC'
     glm_output_dir = os.path.join(base_dir, glm_output_folder)
     print(glm_output_dir)
 
