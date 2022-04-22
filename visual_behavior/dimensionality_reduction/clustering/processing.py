@@ -297,7 +297,7 @@ def get_cluster_density(df_dropouts, labels_list, use_spearmanr=False):
 def shuffle_dropout_score(df_dropout, shuffle_type='all'):
     '''
     Shuffles dataframe with dropout scores from GLM.
-    shuffle_type: str, default='all', other options= 'experience', 'regressors'
+    shuffle_type: str, default='all', other options= 'experience', 'regressors', 'experience_within_cell'
     '''
     df_shuffled = df_dropout.copy()
     regressors = df_dropout.columns.levels[0].values
@@ -326,6 +326,18 @@ def shuffle_dropout_score(df_dropout, shuffle_type='all'):
             for i, cid in enumerate(randomized_cids):
                 for experience_level in experience_levels:
                     df_shuffled.iloc[i][regressor][experience_level] = df_dropout.loc[cid][regressor][experience_level]
+
+    elif shuffle_type == 'experience_within_cell':
+        print('shuffling data across experience within each cell')
+        cids = df_dropout.index.values
+        experience_level_shuffled = experience_levels.copy()
+        for cid in cids:
+            np.random.shuffle(experience_level_shuffled)
+            for j, experience_level in enumerate(experience_level_shuffled):
+                for regressor in regressors:
+                    df_shuffled.loc[cid][regressor][experience_levels[j]] = df_dropout.loc[cid][regressor][
+                        experience_level]
+
     return df_shuffled
 
 
@@ -392,3 +404,40 @@ def get_eigenDecomposition(A, max_n_clusters=25):
     nb_clusters = index_largest_gap + 1
 
     return eigenvalues, eigenvectors, nb_clusters
+
+
+def get_cluster_mapping(matrix, threshold=1, ):
+    '''
+    find clusters with most similar SSE, create a dictionaty of cluster maps.
+
+    Input:
+    matrix: (np.array) SSE matrix (n clusters by n clusters), can be any other matrix (correlation, etc)
+    threshold: (int) a value, abov which the matrix will not find an optimally similar cluster
+
+    Returns:
+    cluster_mapping_comparisons: (dict) {original cluster id: matched cluster id}
+
+    '''
+    comparisons = matrix.keys()
+
+    # comparison dictionary
+    cluster_mapping_comparisons = {}
+    for i, comparison in enumerate(comparisons):
+        tmp_matrix = matrix[comparison]
+
+        # cluster
+        cluster_mapping = {}
+        for k in range(0, len(tmp_matrix)):
+
+            # if min less than threshold
+            if min(tmp_matrix[k]) < threshold:
+                cluster_id = tmp_matrix[k].index(min(tmp_matrix[k])) + 1
+                cluster_mapping[k + 1] = cluster_id
+
+            # else there is no cluster
+            else:
+                cluster_mapping[k + 1] = -1
+
+        cluster_mapping_comparisons[comparison] = cluster_mapping
+
+    return cluster_mapping_comparisons
