@@ -12,15 +12,14 @@ sns.set_context('notebook', font_scale=1.5, rc={'lines.markeredgewidth': 2})
 
 
 # set critical params for processing and saving
-# folder = '220412_across_session_norm_signed_weights'
-folder = '220414_across_session_norm'
-across_session_norm = True
+folder = '220420_SAC'
+across_session_norm = False
 use_signed_weights = False
 include_var_exp_full = False
 
 # number of clusters to use
 n_clusters_cre = {'Slc17a7-IRES2-Cre': 10,
-                  'Sst-IRES-Cre': 6,
+                  'Sst-IRES-Cre': 5,
                   'Vip-IRES-Cre': 12}
 
 # ### number of clusters for across session norm

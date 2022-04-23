@@ -61,7 +61,7 @@ def plot_feature_matrix_for_cre_lines(feature_matrix, cell_metadata, save_dir=No
         utils.save_figure(fig, figsize, save_dir, folder, 'feature_matrix_unsorted')
 
 
-def plot_feature_matrix_sorted(feature_matrix, cluster_meta, sort_col='cluster_id', save_dir=None, folder=None):
+def plot_feature_matrix_sorted(feature_matrix, cluster_meta, sort_col='cluster_id', save_dir=None, folder=None, suffix=''):
     """
     plots feature matrix used for clustering sorted by sort_col
 
@@ -106,7 +106,7 @@ def plot_feature_matrix_sorted(feature_matrix, cluster_meta, sort_col='cluster_i
 
     fig.subplots_adjust(wspace=0.7)
     if save_dir:
-        utils.save_figure(fig, figsize, save_dir, folder, 'feature_matrix_sorted_by_' + sort_col)
+        utils.save_figure(fig, figsize, save_dir, folder, 'feature_matrix_sorted_by_' + sort_col + suffix)
 
 
 # NOTE: the function above and below are doing the same thing and need to be integrated ####
@@ -1317,6 +1317,49 @@ def plot_pct_rel_to_chance_for_cluster(cre_counts, cluster_id, ax=None):
     return ax
 
 
+def plot_proportion_cells_for_cluster(cre_proportion, cluster_id, ax=None):
+    """
+    Plots the proportion of cells in each area and depth for a given cluster
+    x values are areas & depths, y values are proportion cells
+
+    proportion: proportion of cells relative to cluster average per cluster limited to a given cre line
+                must include columns: location, proportion_cells, cluster_id, sig_greater
+    cluster_id: cluster id to plot
+    """
+    locations = list(np.sort(cre_proportion.location.unique()))
+
+    if ax is None:
+        fig, ax = plt.subplots()
+
+    data = cre_proportion[cre_proportion.cluster_id == cluster_id]
+    ax = sns.barplot(data=data, x='location', y='proportion_cells', order=locations, orient='v',
+                     palette='Greys', ax=ax)
+#     ax.set_ylim(-0.5, 1.5)
+
+#     sig_data = data[data.sig_greater == True]
+#     for row in range(len(sig_data)):
+#         row_data = sig_data.iloc[row]
+#         layer_ind = order.index(row_data.layer)
+#         area_ind = hue_order.index(row_data.targeted_structure)
+#         if area_ind == 0:
+#             y_pos = layer_ind - 0.25
+#         elif area_ind == 1:
+#             y_pos = layer_ind + 0.25
+#         x_pos = row_data.relative_to_random * 1.2
+#         ax.plot(x_pos, y_pos, marker='*', color='k')
+
+    # ax.legend(fontsize='small', title_fontsize='small')
+    ax.set_ylabel('proportion cells\n rel. cluster avg.', fontsize=14)
+    ax.set_xticklabels(locations, fontsize=14, rotation=90)
+    ax.set_xlabel('')
+    # flip axes so upper layer is on top
+    ax.set_xlim(ax.get_xlim()[::-1])
+    sns.despine(ax=ax, left=True, bottom=True)
+    # make fonts small
+    ax = standardize_axes_fontsize(ax)
+    return ax
+
+
 def plot_fraction_cells_per_area_depth(cre_fraction, cluster_id, ax=None):
     """
     Plots the fraction of cells in each area and depth relative to
@@ -1427,7 +1470,7 @@ def plot_clusters_pop_avg_rows(cluster_meta, feature_matrix, multi_session_df, c
         utils.save_figure(fig, figsize, save_dir, folder, 'clusters_pop_avg_rows_' + cre_line.split('-')[0] + suffix)
 
 
-def plot_clusters_stats_pop_avg_rows(cluster_meta, feature_matrix, multi_session_df, cell_count_stats, fraction_cells, cre_line,
+def plot_clusters_stats_pop_avg_rows(cluster_meta, feature_matrix, multi_session_df, proportions, fraction_cells, cre_line,
                                      sort_order=None, save_dir=None, folder=None, suffix=''):
     """
     For each cluster in a given cre_line, plots dropout heatmaps, fraction cells per area/depth relative to chance,
@@ -1437,7 +1480,7 @@ def plot_clusters_stats_pop_avg_rows(cluster_meta, feature_matrix, multi_session
     :param cluster_meta: table of metadata for each cell_specimen_id (rows), including cluster_id for each cell
     :param feature_matrix: dropout scores for matched cells with experience levels x features as cols, cells as rows
     :param multi_session_df: table of cell responses for a set of conditions, from loading.get_multi_session_df_for_conditions()
-    :param cell_count_stats: table with fraction of cells relative to chance for each area/depth per cluster
+    :param proportions: table with proportion of cells relative to cluster average for each area/depth per cluster
     :param fraction_cells: table with fraction of cells in each cluster for each area/depth
     :param cre_line: cre line to plot for
     :param sort_order: dictionary with cre_lines as keys, sorted cluster_ids as values
@@ -1455,21 +1498,22 @@ def plot_clusters_stats_pop_avg_rows(cluster_meta, feature_matrix, multi_session
         cluster_ids = sort_order[cre_line]
     n_clusters = len(cluster_ids)
     # cell counts and fraction for this cre line
-    # cre_counts = cell_count_stats[cell_count_stats.cre_line == cre_line]
+    cre_proportions = proportions[proportions.cre_line == cre_line]
     # cre_fraction = fraction_cells[fraction_cells.cre_line == cre_line]
 
-    n_rows = 2  # 4 if including proportion plots
+    n_rows = 3  # 4 if including proportion plots
     figsize = (n_clusters * 2.5, n_rows * 2.5)
     fig, ax = plt.subplots(n_rows, n_clusters, figsize=figsize, sharex='row', sharey='row',
-                           gridspec_kw={'height_ratios': [1, 0.75]})
+                           gridspec_kw={'height_ratios': [1, 0.75, 1.5]})
     ax = ax.ravel()
     for i, cluster_id in enumerate(cluster_ids):
         # plot mean dropout heatmap for this cluster
         ax[i] = plot_dropout_heatmap(cluster_meta, feature_matrix, cre_line, cluster_id, ax=ax[i])
         #
-        # ax[i + (n_clusters * 2)] = plot_pct_rel_to_chance_for_cluster(cre_counts, cluster_id, ax=ax[i + (n_clusters * 2)])
+        ax[i + (n_clusters * 2)] = plot_proportion_cells_for_cluster(cre_proportions, cluster_id, ax=ax[i + (n_clusters * 2)])
+        if i > 0:
+            ax[i + (n_clusters * 2)].set_ylabel('')
         # ax[i + (n_clusters * 2)].get_legend().remove()
-        # ax[i + (n_clusters * 2)].set_xlabel('fraction cells')
         # ax[i + (n_clusters * 2)].set_xlim(-1, 1)
 
         ax[i + (n_clusters * 1)] = plot_population_average_response_for_cluster(cluster_mdf, cre_line, cluster_id,
@@ -1487,7 +1531,7 @@ def plot_clusters_stats_pop_avg_rows(cluster_meta, feature_matrix, multi_session
     # ax[(0 + n_clusters *2)].legend(loc='lower right', fontsize='x-small')
 
     fig.subplots_adjust(hspace=1.2, wspace=0.6)
-    fig.suptitle(get_cell_type_for_cre_line(cluster_meta, cre_line), x=0.5, y=1.2, fontsize=16)
+    fig.suptitle(get_cell_type_for_cre_line(cluster_meta, cre_line), x=0.51, y=1.01, fontsize=16)
     # fig.tight_layout()
     if save_dir:
         utils.save_figure(fig, figsize, save_dir, folder, 'clusters_stats_rows_' + cre_line.split('-')[0] + suffix)
