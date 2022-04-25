@@ -20,6 +20,7 @@ import visual_behavior.data_access.utilities as utilities
 
 import visual_behavior_glm.GLM_analysis_tools as gat
 import visual_behavior_glm.GLM_params as glm_params
+from statsmodels.stats.proportion import proportion_confint as pc
 
 import seaborn as sns
 sns.set_context('notebook', font_scale=1.5, rc={'lines.markeredgewidth': 2})
@@ -418,8 +419,6 @@ def generate_GLM_outputs(glm_version, experiments_table, cells_table, glm_output
     kernels = run_params['kernels']
 
     print(results_pivoted.keys())
-
-
 
     return results_pivoted, weights_df, kernels
 
@@ -1371,3 +1370,50 @@ def shuffle_dropout_score(df_dropout, shuffle_type='all'):
                 for experience_level in experience_levels:
                     df_shuffled.iloc[i][regressor][experience_level] = df_dropout.loc[cid][regressor][experience_level]
     return df_shuffled
+
+
+def get_CI_for_clusters(df, alpha=0.05, normalize=False,
+                        columns_to_groupby=['cre_line', 'targeted_structure', 'layer']):
+    '''
+    Computes CI for cluster sizes using statsmodels.stats.proportion.proportion_confint function
+    Input:
+        df (pd.DataFrame): len of which is number of cells, with column 'cluster_id'
+        alpha (int): p value, default = 0.01
+        columns_to_groupby, default = ['cre_line', 'targeted_structure', 'layer'], do not add cluster-id here
+
+    Returns:
+        df_groupedby_per_cluster: pd.DataFrame with multiindex with columns Low_CI and High_CI
+    '''
+
+    df_groupedby_totals = df.groupby(columns_to_groupby).count().rename(columns={
+        'cell_specimen_id': 'n_cells_cluster'})[['n_cells_cluster']]
+
+    df_groupedby_per_cluster = df.groupby([*columns_to_groupby, 'cluster_id']).count().rename(columns={
+        'cell_specimen_id': 'n_cells_cluster'})[['n_cells_cluster']]
+
+    # this needs to be changed so that column names are not hardcoded
+    cre_lines = np.sort(df['cre_line'].unique())
+    areas = np.sort(df['targeted_structure'].unique())
+    layers = np.sort(df['layer'].unique())
+
+    CI_lower = []
+    CI_upper = []
+    for cre_line in cre_lines:
+        n_clusters = df[df['cre_line'] == cre_line]['cluster_id'].unique()
+
+        for area in areas:
+            for layer in layers:
+                nobs = df_groupedby_totals.loc[(cre_line, area, layer)].values
+                for cluster in n_clusters:
+                    try:
+                        n = df_groupedby_per_cluster.loc[(cre_line, area, layer, cluster)].values
+                        CI = pc(n, nobs, alpha=alpha)
+                        CI_lower.append(CI[0])
+                        CI_upper.append(CI[1])
+                    except KeyError:
+                        print('no cells in this cluster')
+
+    df_groupedby_per_cluster['CI_lower'] = CI_lower
+    df_groupedby_per_cluster['CI_upper'] = CI_upper
+
+    return df_groupedby_per_cluster
