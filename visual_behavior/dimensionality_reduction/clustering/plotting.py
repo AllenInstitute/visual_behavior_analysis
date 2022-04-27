@@ -1325,14 +1325,19 @@ def plot_proportion_cells_for_cluster(cre_proportion, cluster_id, ci=None, ax=No
     proportion: proportion of cells relative to cluster average per cluster limited to a given cre line
                 must include columns: location, proportion_cells, cluster_id, sig_greater
     cluster_id: cluster id to plot
+    ci: confidence intervals, an array of int, len(ci) = len(locations), default is None
     """
     locations = list(np.sort(cre_proportion.location.unique()))
+
+    if ci is None:
+        ci = np.zeros(len(locations))
 
     if ax is None:
         fig, ax = plt.subplots()
 
     data = cre_proportion[cre_proportion.cluster_id == cluster_id]
-    ax = sns.barplot(data=data, x='location', y='proportion_cells', yerr=ci, order=locations, orient='v',
+    data = data.sort_values('location')
+    ax = sns.barplot(data=data, x='location', y='proportion_cells', yerr=ci, orient='v',
                      palette='Greys', ax=ax)
 #     ax.set_ylim(-0.5, 1.5)
 
@@ -1487,6 +1492,7 @@ def plot_clusters_stats_pop_avg_rows(cluster_meta, feature_matrix, multi_session
     :param save_dir: directory to save plot to
     :param folder: folder within save_dir to save plot to
     :param suffix: string to be appended to end of filename
+    :param alpha: int for confidence intervals, default = 0.05, set to None if would like to exclude errorbars
     :return:
     """
     # add cluster_id to multi_session_df
@@ -1501,6 +1507,11 @@ def plot_clusters_stats_pop_avg_rows(cluster_meta, feature_matrix, multi_session
     cre_proportions = proportions[proportions.cre_line == cre_line]
     # cre_fraction = fraction_cells[fraction_cells.cre_line == cre_line]
 
+    # compute CI for this cre line, cluster id and location
+    if alpha is not None:
+        cluster_meta_sel = cluster_meta[cluster_meta.cre_line == cre_line]
+        ci_df = processing.get_CI_for_clusters(cluster_meta_sel, alpha=alpha)
+
     n_rows = 3  # 4 if including proportion plots
     figsize = (n_clusters * 2.5, n_rows * 2.5)
     fig, ax = plt.subplots(n_rows, n_clusters, figsize=figsize, sharex='row', sharey='row',
@@ -1509,9 +1520,12 @@ def plot_clusters_stats_pop_avg_rows(cluster_meta, feature_matrix, multi_session
     for i, cluster_id in enumerate(cluster_ids):
         # plot mean dropout heatmap for this cluster
         ax[i] = plot_dropout_heatmap(cluster_meta, feature_matrix, cre_line, cluster_id, ax=ax[i])
-        ci_df = processing.get_CI_for_clusters(cluster_meta, alpha=alpha)
-        this_ci = ci_df[(ci_df['cre_line'] == cre_line) &
-                        (ci_df['cluster_id'] == cluster_id)].sort_values('location')['CI'].values
+
+        # get cis for this cluster id
+        if alpha is not None:
+            this_ci = ci_df[ci_df['cluster_id'] == cluster_id].sort_values('location')['CI'].values
+        else:
+            this_ci = None
         ax[i + (n_clusters * 2)] = plot_proportion_cells_for_cluster(cre_proportions, cluster_id, ci=this_ci, ax=ax[i + (n_clusters * 2)])
         if i > 0:
             ax[i + (n_clusters * 2)].set_ylabel('')
