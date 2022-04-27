@@ -22,7 +22,7 @@ def get_single_cell_plots_dir():
     return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/single_cell_plots'
 
 
-def save_figure(fig, figsize, save_dir, folder, fig_title, formats=['.png']):
+def save_figure(fig, figsize, save_dir, folder, fig_title, formats=['.png', '.pdf']):
     fig_dir = os.path.join(save_dir, folder)
     if not os.path.exists(fig_dir):
         os.mkdir(fig_dir)
@@ -351,6 +351,6 @@ def get_conditions_string(data_type, conditions):
     elif len(conditions) == 2:
         conditions_string = data_type + '_' + conditions[1]
     elif len(conditions) == 1:
-        conditions_string = data_typ + '_' + conditions[0]
+        conditions_string = data_type + '_' + conditions[0]
 
     return conditions_string
