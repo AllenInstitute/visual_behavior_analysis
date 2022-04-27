@@ -136,7 +136,7 @@ def get_stimulus_response_df_dir(interpolate=True, output_sampling_rate=30, even
 
 
 def get_multi_session_df_dir(interpolate=True, output_sampling_rate=30, event_type='all'):
-    base_dir = get_platform_analysis_cache_dir()
+    base_dir = get_production_cache_dir()
     if interpolate:
         save_dir = os.path.join(base_dir, 'multi_session_mean_response_dfs', event_type, 'interpolate_' + str(output_sampling_rate) + 'Hz')
     else:
@@ -350,7 +350,7 @@ def get_filtered_ophys_experiment_table(include_failed_data=True, release_data_o
 
 
     ### hack because of problem container
-    experiments = experiments[experiments.ophys_container_id!=1132424700]
+    # experiments = experiments[experiments.ophys_container_id!=1132424700]
 
     if overwrite_cached_file == True:
         print('overwriting pre-saved experiments table file')
@@ -2766,6 +2766,7 @@ def load_multi_session_df(data_type, event_type, conditions, interpolate=True, o
     # cache = bpc.from_s3_cache(cache_dir=cache_dir)
     # experiments_table = cache.get_ophys_experiment_table()
     experiments_table = get_filtered_ophys_experiment_table()
+    experiments_table = experiments_table[experiments_table.project_code == 'LearningmFISHTask1A']
 
     project_codes = experiments_table.project_code.unique()
     multi_session_df = pd.DataFrame()
@@ -2778,10 +2779,13 @@ def load_multi_session_df(data_type, event_type, conditions, interpolate=True, o
                 filename = get_file_name_for_multi_session_df(data_type, event_type, project_code, mouse_id, conditions)
                 multi_session_df_dir = get_multi_session_df_dir(interpolate=interpolate,
                                                                    output_sampling_rate=output_sampling_rate, event_type=event_type)
-                df = pd.read_hdf(os.path.join(multi_session_df_dir, filename), key='df')
+                filepath = os.path.join(multi_session_df_dir, filename)
+                print(filepath)
+                df = pd.read_hdf(filepath, key='df')
                 multi_session_df = pd.concat([multi_session_df, df])
+                print(multi_session_df.mouse_id.unique())
             except BaseException:
-                print('no multi_session_df for', project_code, session_type)
+                print('no multi_session_df for', project_code, mouse_id)
     return multi_session_df
 
 

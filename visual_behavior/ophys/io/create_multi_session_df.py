@@ -39,10 +39,11 @@ def get_multi_session_df(project_code, mouse_id, conditions, data_type, event_ty
 
     experiments_table = loading.get_filtered_ophys_experiment_table()
     experiments_table = experiments_table[experiments_table.project_code == 'LearningmFISHTask1A']
+    print(len(experiments_table), 'expts in experiments table')
 
     # session_type = float(session_type)
     experiments = experiments_table[(experiments_table.project_code == project_code) &
-                                    (experiments_table.mouse_id == mouse_id)].copy()
+                                    (experiments_table.mouse_id == str(mouse_id))].copy()
 
     mouse_id = experiments.mouse_id.unique()[0]
 
