@@ -82,7 +82,7 @@ def plot_population_averages_for_conditions(multi_session_df, data_type, event_t
         format_fig = True
         if horizontal:
             figsize = (3 * n_axes_conditions, 3)
-            fig, ax = plt.subplots(1, n_axes_conditions, figsize=figsize, sharey=False)
+            fig, ax = plt.subplots(1, n_axes_conditions, figsize=figsize, sharey=True)
         else:
             figsize = (5, 3.5 * n_axes_conditions)
             fig, ax = plt.subplots(n_axes_conditions, 1, figsize=figsize, sharex=True)
@@ -105,7 +105,10 @@ def plot_population_averages_for_conditions(multi_session_df, data_type, event_t
                 metadata_string = utils.get_container_metadata_string(utils.get_metadata_for_row_of_multi_session_df(cdf))
                 ax[i].set_title(metadata_string)
             else:
-                ax[i].set_title(axis)
+                if axes_column == 'experience_level':
+                    ax[i].set_title(axis, color=palette[i], fontsize=20)
+                else:
+                    ax[i].set_title(axis)
             ax[i].set_xlim(xlim_seconds)
             ax[i].set_xlabel(xlabel, fontsize=16)
             if horizontal:
@@ -226,14 +229,15 @@ def plot_fraction_responsive_cells(multi_session_df, responsiveness_threshold=0.
         if ylim is not None:
             ax[i].set_ylim(0, 1)
 
-    if format_fig and not save_dir:
-        fig.tight_layout()
-        fig_title = 'fraction_responsive_cells' + suffix
-        # plt.suptitle(fig_title, x=0.52, y=1.02, fontsize=16)
-    elif save_dir and format_fig:
-        fig_title = 'fraction_responsive_cells' + suffix
-        utils.save_figure(fig, figsize, save_dir, folder, fig_title)
-    else:
+    # if format_fig and not save_dir:
+    #     # fig.tight_layout()
+    #     fig_title = 'fraction_responsive_cells' + suffix
+    #     # plt.suptitle(fig_title, x=0.52, y=1.02, fontsize=16)
+    # elif save_dir and format_fig:
+    #     fig_title = 'fraction_responsive_cells' + suffix
+    #     utils.save_figure(fig, figsize, save_dir, folder, fig_title)
+    # else:
+    if save_dir:
         fig.subplots_adjust(hspace=0.5)
         fig_title = 'fraction_responsive_cells_' + suffix
         utils.save_figure(fig, figsize, save_dir, folder, fig_title)
@@ -388,29 +392,36 @@ def plot_mean_response_by_epoch(df, metric='mean_response', horizontal=True, ymi
         format_fig = True
         if horizontal:
             figsize = (13, 3.5)
-            fig, ax = plt.subplots(1, 3, figsize=figsize, sharex=False, sharey=False)
+            fig, ax = plt.subplots(1, 3, figsize=figsize, sharex=False, sharey=True)
         else:
-            figsize = (4.5, 10.5)
-            fig, ax = plt.subplots(3, 1, figsize=figsize, sharex=False)
+            figsize = (5,10)
+            fig, ax = plt.subplots(3, 1, figsize=figsize, sharex=True, sharey=True)
     else:
         format_fig = False
 
     for i, cell_type in enumerate(cell_types):
-        data = df[df.cell_type == cell_type]
-        ax[i] = sns.pointplot(data=data, x='experience_epoch', y=metric, hue='experience_level', hue_order=experience_levels,
-                              order=experience_epoch, palette=palette, ax=ax[i], estimator=estimator)
-        if ymin is not None:
-            ax[i].set_ylim(ymin=ymin)
-        ax[i].set_title(cell_type)
-        ax[i].set_ylabel(ylabel)
-        ax[i].set_xlabel('')
-        ax[i].get_legend().remove()
-        ax[i].set_xticklabels(xticks, fontsize=12)
-        ax[i].vlines(x=5.5, ymin=0, ymax=1, color='gray', linestyle='--')
-        ax[i].vlines(x=11.5, ymin=0, ymax=1, color='gray', linestyle='--')
-        ax[i].set_xlabel('10 min epoch within session', fontsize=14)
+        try:
+            data = df[df.cell_type == cell_type]
+            ax[i] = sns.pointplot(data=data, x='experience_epoch', y=metric, hue='experience_level', hue_order=experience_levels,
+                                  order=experience_epoch, palette=palette, ax=ax[i], estimator=estimator)
+            if ymin is not None:
+                ax[i].set_ylim(ymin=ymin)
+            ax[i].set_title('')
+            ax[i].set_ylabel(ylabel)
+            # ax[i].set_xlabel('')
+            ax[i].get_legend().remove()
+            ax[i].set_xticklabels(xticks, fontsize=13)
+            # ax[i].vlines(x=5.5, ymin=0, ymax=1, color='gray', linestyle='--')
+            # ax[i].vlines(x=11.5, ymin=0, ymax=1, color='gray', linestyle='--')
+            if  horizontal:
+                ax[i].set_xlabel('10 min epoch within session', fontsize=14)
+            else:
+                ax[i].set_xlabel('')
+        except:
+            pass
+    ax[i].set_xlabel('10 min epoch within session', fontsize=14)
     if format_fig:
-        plt.suptitle(metric + ' over time', x=0.52, y=1.03, fontsize=18)
+        # plt.suptitle(metric + ' over time', x=0.52, y=1.03, fontsize=18)
         fig.tight_layout()
     if save_dir:
         fig_title = metric + '_epochs' + suffix
