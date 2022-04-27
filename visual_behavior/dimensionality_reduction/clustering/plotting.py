@@ -1317,7 +1317,7 @@ def plot_pct_rel_to_chance_for_cluster(cre_counts, cluster_id, ax=None):
     return ax
 
 
-def plot_proportion_cells_for_cluster(cre_proportion, cluster_id, ax=None):
+def plot_proportion_cells_for_cluster(cre_proportion, cluster_id, ci=None, ax=None):
     """
     Plots the proportion of cells in each area and depth for a given cluster
     x values are areas & depths, y values are proportion cells
@@ -1332,7 +1332,7 @@ def plot_proportion_cells_for_cluster(cre_proportion, cluster_id, ax=None):
         fig, ax = plt.subplots()
 
     data = cre_proportion[cre_proportion.cluster_id == cluster_id]
-    ax = sns.barplot(data=data, x='location', y='proportion_cells', order=locations, orient='v',
+    ax = sns.barplot(data=data, x='location', y='proportion_cells', yerr=ci, order=locations, orient='v',
                      palette='Greys', ax=ax)
 #     ax.set_ylim(-0.5, 1.5)
 
@@ -1471,7 +1471,7 @@ def plot_clusters_pop_avg_rows(cluster_meta, feature_matrix, multi_session_df, c
 
 
 def plot_clusters_stats_pop_avg_rows(cluster_meta, feature_matrix, multi_session_df, proportions, fraction_cells, cre_line,
-                                     sort_order=None, save_dir=None, folder=None, suffix=''):
+                                     sort_order=None, save_dir=None, folder=None, suffix='', alpha=0.05):
     """
     For each cluster in a given cre_line, plots dropout heatmaps, fraction cells per area/depth relative to chance,
     fraction cells per cluster per area/depth, and population average omission response.
@@ -1509,8 +1509,10 @@ def plot_clusters_stats_pop_avg_rows(cluster_meta, feature_matrix, multi_session
     for i, cluster_id in enumerate(cluster_ids):
         # plot mean dropout heatmap for this cluster
         ax[i] = plot_dropout_heatmap(cluster_meta, feature_matrix, cre_line, cluster_id, ax=ax[i])
-        #
-        ax[i + (n_clusters * 2)] = plot_proportion_cells_for_cluster(cre_proportions, cluster_id, ax=ax[i + (n_clusters * 2)])
+        ci_df = processing.get_CI_for_clusters(cluster_meta, alpha=alpha)
+        this_ci = ci_df[(ci_df['cre_line'] == cre_line) &
+                        (ci_df['cluster_id'] == cluster_id)].sort_values('location')['CI'].values
+        ax[i + (n_clusters * 2)] = plot_proportion_cells_for_cluster(cre_proportions, cluster_id, ci=this_ci, ax=ax[i + (n_clusters * 2)])
         if i > 0:
             ax[i + (n_clusters * 2)].set_ylabel('')
         # ax[i + (n_clusters * 2)].get_legend().remove()
