@@ -21,6 +21,7 @@ import visual_behavior.data_access.utilities as utilities
 import visual_behavior_glm.GLM_analysis_tools as gat
 import visual_behavior_glm.GLM_params as glm_params
 from statsmodels.stats.proportion import proportion_confint as pc
+from statsmodels.stats.proportion import multinomial_proportions_confint as mpc
 
 import seaborn as sns
 sns.set_context('notebook', font_scale=1.5, rc={'lines.markeredgewidth': 2})
@@ -1372,60 +1373,90 @@ def shuffle_dropout_score(df_dropout, shuffle_type='all'):
     return df_shuffled
 
 
-def get_CI_for_clusters(df, alpha=0.05,
-                        columns_to_groupby=['cre_line', 'targeted_structure', 'layer']):
+def get_CI_for_clusters(cluster_meta, alpha=0.05,
+                        columns_to_groupby=['cre_line', 'targeted_structure', 'layer'], type_of_CI='mpc'):
     '''
     Computes CI for cluster sizes using statsmodels.stats.proportion.proportion_confint function
     Input:
-        df (pd.DataFrame): len of which is number of cells, with column 'cluster_id'
+        cluster_meta (pd.DataFrame): len of which is number of cells, with column 'cluster_id'
         alpha (int): p value, default = 0.01
         columns_to_groupby, default = ['cre_line', 'targeted_structure', 'layer'], do not add cluster-id here
-
+        type_of_CI (str), how CIs are computed, default mpc, mpc=multinomial_proportinal_confident, pc=proportion_confint
     Returns:
-        df_groupedby_per_cluster: pd.DataFrame with multiindex with columns Low_CI and High_CI
+        CI_df: pd.DataFrame with columns Low_CI, High_CI, and CI (difference)
     '''
 
-    df_groupedby_totals = df.groupby(columns_to_groupby).count().rename(columns={
+    df_groupedby_totals = cluster_meta.groupby(columns_to_groupby).count().rename(columns={
         'labels': 'n_cells_cluster'})[['n_cells_cluster']]
 
-    df_groupedby_per_cluster = df.groupby([*columns_to_groupby, 'cluster_id']).count().rename(columns={
+    df_groupedby_per_cluster = cluster_meta.groupby([*columns_to_groupby, 'cluster_id']).count().rename(columns={
         'labels': 'n_cells_cluster'})[['n_cells_cluster']]
 
     # this needs to be changed so that column names are not hardcoded
-    cre_lines = np.sort(df['cre_line'].unique())
-    areas = np.sort(df['targeted_structure'].unique())
-    layers = np.sort(df['layer'].unique())
+    cre_lines = np.sort(cluster_meta['cre_line'].unique())
+    areas = np.sort(cluster_meta['targeted_structure'].unique())
+    layers = np.sort(cluster_meta['layer'].unique())
 
-    CI_lower = []
-    CI_upper = []
     CI_df = pd.DataFrame(columns=['location', 'cluster_id', 'cre_line', 'CI_lower', 'CI_upper'])
-    for cre_line in cre_lines:
-        n_clusters = df[df['cre_line'] == cre_line]['cluster_id'].unique()
-        for area in areas:
-            for layer in layers:
-                nobs = df_groupedby_totals.loc[(cre_line, area, layer)].values
-                for cluster in n_clusters:
-                    try:
-                        n = df_groupedby_per_cluster.loc[(cre_line, area, layer, cluster)].values
-                        CI = pc(n, nobs, alpha=alpha, )
-                        CI_lower.append(CI[0])
-                        CI_upper.append(CI[1])
 
+    if type_of_CI == 'pc':
+        for cre_line in cre_lines:
+            cluster_ids = cluster_meta[cluster_meta['cre_line'] == cre_line]['cluster_id'].unique()
+            for area in areas:
+                for layer in layers:
+                    nobs = df_groupedby_totals.loc[(cre_line, area, layer)].values
+                    for cluster_id in cluster_ids:
+                        try:
+                            n = df_groupedby_per_cluster.loc[(cre_line, area, layer, cluster_id)].values
+                            CI = pc(n, nobs, alpha=alpha, )
+                            data = {'location': area + '_' + layer,
+                                    'cluster_id': cluster_id,
+                                    'cre_line': cre_line,
+                                    'CI_lower': CI[0],
+                                    'CI_upper': CI[1]}
+
+                        except KeyError:
+                            print(f'{cre_line, area, layer, cluster_id} no cells in this cluster')
+                            data = {'location': area + '_' + layer,
+                                    'cluster_id': cluster_id,
+                                    'cre_line': cre_line,
+                                    'CI_lower': [0],
+                                    'CI_upper': [0]}
+
+                        CI_df = CI_df.append(pd.DataFrame(data))
+
+    elif type_of_CI == 'mpc':
+        for cre_line in cre_lines:
+            cluster_ids = cluster_meta[cluster_meta['cre_line'] == cre_line]['cluster_id'].unique()
+            # if cluster ids start with 0 do nothing
+            if 0 in cluster_ids:
+                e = 0
+            else:  # if cluster ids start with 1, subtract 1 for indexing CIs
+                e = 1
+            for area in areas:
+                for layer in layers:
+                    N = []
+                    for cluster_id in cluster_ids:
+                        try:
+                            n = df_groupedby_per_cluster.loc[(cre_line, area, layer, cluster_id)].values
+                        except KeyError:
+                            print(f'{cre_line, area, layer, cluster_id} no cells in this cluster')
+                            n = 0
+                        N.append(n)
+                    CIs = mpc(N, alpha=0.05)
+                    for cluster_id in cluster_ids:
+                        # not sure why, mpc can return 3d or 2d array.
+                        # if 3d, first D is usually 1, second D = number of clusters, and third D = 2 CIs
+                        if len(CIs.shape) == 3 and CIs.shape[0] == 1:
+                            CI = CIs[0][cluster_id - e]
+                        elif len(CIs.shape) == 2:
+                            CI = CIs[cluster_id - e]
                         data = {'location': area + '_' + layer,
-                                'cluster_id': cluster,
+                                'cluster_id': cluster_id,
                                 'cre_line': cre_line,
-                                'CI_lower': CI[0],
-                                'CI_upper': CI[1]}
-
-                    except KeyError:
-                        # print(f'{cre_line, area, layer, cluster} no cells in this cluster')
-                        data = {'location': area + '_' + layer,
-                                'cluster_id': cluster,
-                                'cre_line': cre_line,
-                                'CI_lower': [0],
-                                'CI_upper': [0]}
-
-                    CI_df = CI_df.append(pd.DataFrame(data))
+                                'CI_lower': [CI[0]],
+                                'CI_upper': [CI[1]]}
+                        CI_df = CI_df.append(pd.DataFrame(data))
 
     CI_df['CI'] = CI_df['CI_upper'] - CI_df['CI_lower']
     return CI_df
