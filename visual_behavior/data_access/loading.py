@@ -549,7 +549,7 @@ def get_stimulus_response_df_filepath_for_experiment(ophys_experiment_id, data_t
 
 
 def get_stimulus_response_df(dataset, time_window=[-3, 3.1], interpolate=True, output_sampling_rate=30,
-                             data_type='filtered_events', event_type='all', load_from_file=True):
+                             data_type='filtered_events', event_type='all', load_from_file=True, exclude_invalid_rois=False):
     """
     load stimulus response df using mindscope_utilities and merge with stimulus_presentations that has trials metadata added
     inputs:
@@ -561,6 +561,9 @@ def get_stimulus_response_df(dataset, time_window=[-3, 3.1], interpolate=True, o
                     options: 'filtered_events', 'events', 'dff', 'running_speed', 'pupil_diameter', 'lick_rate'
         event_type: how to filter stimulus presentations before creating table
                     options: 'all', 'omissions', 'changes'
+        exclude_invalid_rois: Bool, if True, only 'valid' ROIs will be returned. If False, all ROIs including 'invalid' ROIs will be returned.
+                                Only applies if the dataset object that is provided was loaded from lims (not via AWS NWB files, which only have 'valid' ROIs in them)
+                                Note that including invalid ROIs will result in some cell traces being NaNs because traces are not computed for some types of invalid ROIs
     """
     import mindscope_utilities.visual_behavior_ophys.data_formatting as vb_ophys
     # load stimulus response df from file if it exists otherwise generate it
@@ -587,7 +590,8 @@ def get_stimulus_response_df(dataset, time_window=[-3, 3.1], interpolate=True, o
                 sdf = vb_ophys.get_stimulus_response_df(dataset, data_type=data_type, event_type=event_type,
                                                         time_window=time_window, interpolate=interpolate,
                                                         output_sampling_rate=output_sampling_rate,
-                                                        response_window_duration=response_window_duration)
+                                                        response_window_duration=response_window_duration,
+                                                        exclude_invalid_rois=exclude_invalid_rois)
                 try:  # some experiments with lots of neurons cant save
                     sdf.to_hdf(filepath, key='df')
                     print('saved response df to', filepath)
@@ -598,7 +602,8 @@ def get_stimulus_response_df(dataset, time_window=[-3, 3.1], interpolate=True, o
             sdf = vb_ophys.get_stimulus_response_df(dataset, data_type=data_type, event_type=event_type,
                                                     time_window=time_window, interpolate=interpolate,
                                                     output_sampling_rate=output_sampling_rate,
-                                                    response_window_duration=response_window_duration)
+                                                    response_window_duration=response_window_duration,
+                                                    exclude_invalid_rois=exclude_invalid_rois)
             try:  # some experiments with lots of neurons cant save
                 sdf.to_hdf(filepath, key='df')
                 print('saved response df to', filepath)
@@ -609,7 +614,8 @@ def get_stimulus_response_df(dataset, time_window=[-3, 3.1], interpolate=True, o
         sdf = vb_ophys.get_stimulus_response_df(dataset, data_type=data_type, event_type=event_type,
                                                 time_window=time_window, interpolate=interpolate,
                                                 output_sampling_rate=output_sampling_rate,
-                                                response_window_duration=response_window_duration)
+                                                response_window_duration=response_window_duration,
+                                                exclude_invalid_rois=exclude_invalid_rois)
 
     # if extended_stimulus_presentations is an attribute of the dataset object, use it, otherwise get regular stimulus_presentations
     if 'extended_stimulus_presentations' in dir(dataset):
@@ -772,8 +778,8 @@ class BehaviorOphysDataset(BehaviorOphysExperiment):
         return cell_specimen_id
 
 
-def get_ophys_dataset(ophys_experiment_id, include_invalid_rois=False, load_from_lims=True, load_from_nwb=False,
-                      get_extended_stimulus_presentations=True, get_behavior_movie_timestamps=False):
+def get_ophys_dataset(ophys_experiment_id, exclude_invalid_rois=False, load_from_lims=True, load_from_nwb=False,
+                      get_extended_stimulus_presentations=False, get_behavior_movie_timestamps=False):
     """
     Gets behavior + ophys data for one experiment (single imaging plane), either using the SDK LIMS API,
     SDK NWB API, or using BehaviorOphysDataset wrapper which inherits the LIMS API BehaviorOphysSession object,
@@ -781,7 +787,8 @@ def get_ophys_dataset(ophys_experiment_id, include_invalid_rois=False, load_from
 
     Arguments:
         ophys_experiment_id {int} -- 9 digit ophys experiment ID
-        include_invalid_rois {Boolean} -- if True, return all ROIs including invalid. If False, filter out invalid ROIs
+        exclude_invalid_rois {Boolean} -- if False, return all ROIs including invalid. If True, only return valid ROIs
+                                            only works when loading experiment from lims
         load_from_lims -- if True, loads dataset directly from BehaviorOphysSession.from_lims(). Invalid ROIs will be included.
         load_from_nwb -- if True, loads dataset directly from BehaviorOphysSession.from_nwb_path(). Invalid ROIs will not be included.
         get_extended_stimulus_presentations -- if True, adds an attribute "extended_stimulus_presentations" to the dataset object
@@ -799,9 +806,10 @@ def get_ophys_dataset(ophys_experiment_id, include_invalid_rois=False, load_from
     assert id_type == 'ophys_experiment_id', "The passed ID type is {}. It must be an ophys_experiment_id".format(id_type)
 
     if load_from_lims:
+        print('loading from lims, exclude_invalid_rois = ', exclude_invalid_rois)
         cache = bpc.from_lims()
-        dataset = cache.get_behavior_ophys_experiment(int(ophys_experiment_id))
-        # dataset = BehaviorOphysExperiment.from_lims(int(ophys_experiment_id))
+        # dataset = cache.get_behavior_ophys_experiment(int(ophys_experiment_id))
+        dataset = BehaviorOphysExperiment.from_lims(int(ophys_experiment_id), exclude_invalid_rois=exclude_invalid_rois)
     elif load_from_nwb:
         cache_dir = get_platform_analysis_cache_dir()
         cache = bpc.from_s3_cache(cache_dir=cache_dir)
