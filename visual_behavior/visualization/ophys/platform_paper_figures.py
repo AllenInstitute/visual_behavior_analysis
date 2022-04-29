@@ -23,7 +23,7 @@ sns.set_style('white', {'axes.spines.right': False, 'axes.spines.top': False})
 sns.set_palette('deep')
 
 
-def plot_population_averages_for_conditions(multi_session_df, data_type, event_type, axes_column, hue_column,
+def plot_population_averages_for_conditions(multi_session_df, data_type, event_type, axes_column, hue_column, hue_order=None,
                                             project_code=None, timestamps=None, palette=None, title=None, suptitle=None,
                                             horizontal=True, xlim_seconds=None, save_dir=None, folder=None, suffix='', ax=None):
     if palette is None:
@@ -68,10 +68,13 @@ def plot_population_averages_for_conditions(multi_session_df, data_type, event_t
         change = False
         xlabel = 'time (s)'
 
-    if hue_column == 'experience_level':
-        hue_conditions = ['Familiar', 'Novel 1', 'Novel >1']
+    if not hue_order:
+        if hue_column == 'experience_level':
+            hue_conditions = ['Familiar', 'Novel 1', 'Novel >1']
+        else:
+            hue_conditions = np.sort(sdf[hue_column].unique())
     else:
-        hue_conditions = np.sort(sdf[hue_column].unique())
+        hue_conditions = hue_order
     if axes_column == 'experience_level':
         axes_conditions = ['Familiar', 'Novel 1', 'Novel >1']
     else:
