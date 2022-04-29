@@ -59,15 +59,6 @@ def load_GLM_outputs(glm_version, experiments_table, cells_table, glm_output_dir
     return results_pivoted, weights_df, kernels
 
 
-# functions to get x-axis info to plot kernels
-def get_frame_rate_for_example_cell(weights_df, identifier):
-    if 'MESO' in weights_df.loc[identifier]['equipment_name']:
-        frame_rate = 11.
-    else:
-        frame_rate = 31.
-    return frame_rate
-
-
 def get_time_window_for_kernel(kernels, feature):
     time_window = (kernels[feature]['offset'], kernels[feature]['offset'] + kernels[feature]['length'])
     return time_window
@@ -272,7 +263,6 @@ def plot_matched_roi_and_traces_example_GLM(cell_metadata, cell_dropouts, cell_w
             image_weights.append(exp_weights[feature + '_weights'].values[0])
         mean_image_weights = np.mean(image_weights, axis=0)
 
-        # frame_rate = get_frame_rate_for_example_cell(cell_weights, identifier=cell_weights.index.values[0])
         # GLM output is all resampled to 30Hz now
         frame_rate = 31
         t_array = get_t_array_for_kernel(kernels, feature, frame_rate)
