@@ -394,7 +394,7 @@ def plot_mean_response_by_epoch(df, metric='mean_response', horizontal=True, ymi
             figsize = (13, 3.5)
             fig, ax = plt.subplots(1, 3, figsize=figsize, sharex=False, sharey=True)
         else:
-            figsize = (5,10)
+            figsize = (5, 10)
             fig, ax = plt.subplots(3, 1, figsize=figsize, sharex=True, sharey=True)
     else:
         format_fig = False
@@ -413,12 +413,12 @@ def plot_mean_response_by_epoch(df, metric='mean_response', horizontal=True, ymi
             ax[i].set_xticklabels(xticks, fontsize=13)
             # ax[i].vlines(x=5.5, ymin=0, ymax=1, color='gray', linestyle='--')
             # ax[i].vlines(x=11.5, ymin=0, ymax=1, color='gray', linestyle='--')
-            if  horizontal:
+            if horizontal:
                 ax[i].set_xlabel('10 min epoch within session', fontsize=14)
             else:
                 ax[i].set_xlabel('')
-        except:
-            pass
+        except Exception as e:
+            print(e)
     ax[i].set_xlabel('10 min epoch within session', fontsize=14)
     if format_fig:
         # plt.suptitle(metric + ' over time', x=0.52, y=1.03, fontsize=18)
