@@ -1816,3 +1816,22 @@ def get_behavior_session_ids_to_analyze():
     behavior_session_ids_to_analyze = ophys_behavior_session_ids + behavior_session_session_ids
 
     return behavior_session_ids_to_analyze
+
+
+def get_nan_trace_csids(traces):
+    """
+    function to loop through all cell_specimen_ids in traces and identify which traces are NaNs.
+    can be used to keep or exclude cells from analysis that have NaN traces.
+    NaN traces can occur when invalid ROIs are included in analysis because traces arent computed for some invalid ROIs.
+
+    returns: nan_csids: a list of cell_specimen_ids where traces are NaN
+             csids_to_keep: a list of cell_specimen_ids where traces are not NaN
+    """
+    nan_csids = []
+    csids_to_keep = []
+    for csid in traces.index.values:
+        if np.isnan(traces.loc[csid].dff[0]):
+            nan_csids.append(csid)
+        else:
+            csids_to_keep.append(csid)
+    return nan_csids, csids_to_keep

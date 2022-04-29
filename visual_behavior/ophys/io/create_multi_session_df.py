@@ -30,13 +30,6 @@ def get_multi_session_df(project_code, mouse_id, conditions, data_type, event_ty
         get_pref_stim = False
     print('get_pref_stim', get_pref_stim)
 
-    # cache_dir = loading.get_platform_analysis_cache_dir()
-    # cache = VisualBehaviorOphysProjectCache.from_s3_cache(cache_dir=cache_dir)
-    # print(cache_dir)
-    # experiments_table = cache.get_ophys_experiment_table()
-    # # dont include Ai94 experiments because they makes things too slow
-    # experiments_table = experiments_table[(experiments_table.reporter_line != 'Ai94(TITL-GCaMP6s)')]
-
     experiments_table = loading.get_filtered_ophys_experiment_table()
     experiments_table = experiments_table[experiments_table.project_code == 'LearningmFISHTask1A']
     print(len(experiments_table), 'expts in experiments table')

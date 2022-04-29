@@ -624,6 +624,13 @@ def get_stimulus_response_df(dataset, time_window=[-3, 3.1], interpolate=True, o
         stimulus_presentations = vb_ophys.get_annotated_stimulus_presentations(dataset)
     sdf = sdf.merge(stimulus_presentations, on='stimulus_presentations_id')
 
+    # add run params
+    sdf['interpolate'] = interpolate
+    sdf['frame_rate'] = output_sampling_rate
+    sdf['data_type'] = data_type
+    sdf['event_type'] = event_type
+    sdf['exclude_invalid_rois'] = exclude_invalid_rois
+
     return sdf
 
 
@@ -806,7 +813,7 @@ def get_ophys_dataset(ophys_experiment_id, exclude_invalid_rois=False, load_from
     assert id_type == 'ophys_experiment_id', "The passed ID type is {}. It must be an ophys_experiment_id".format(id_type)
 
     if load_from_lims:
-        print('loading from lims, exclude_invalid_rois = ', exclude_invalid_rois)
+        print('loading from lims, exclude_invalid_rois =', exclude_invalid_rois)
         cache = bpc.from_lims()
         # dataset = cache.get_behavior_ophys_experiment(int(ophys_experiment_id))
         dataset = BehaviorOphysExperiment.from_lims(int(ophys_experiment_id), exclude_invalid_rois=exclude_invalid_rois)
