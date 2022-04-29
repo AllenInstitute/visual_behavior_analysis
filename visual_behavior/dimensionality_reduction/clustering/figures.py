@@ -294,4 +294,3 @@ for cre_line in cre_lines:
                                               proportions, fraction_cells, cre_line,
                                               sort_order=None, suffix='_proportion_rel_avg_cluster_size_order',
                                               save_dir=base_dir, folder=folder, )
-
