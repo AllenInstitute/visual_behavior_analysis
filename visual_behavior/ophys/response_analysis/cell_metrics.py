@@ -733,7 +733,7 @@ def generate_and_save_all_metrics_tables_for_experiment(ophys_experiment_id, dat
     i = 0
     problem_expts = pd.DataFrame()
 
-    #trace metrics ###
+    # trace metrics ###
     condition = 'traces'
     session_subset = 'full_session'
     stimuli = 'full_session'
