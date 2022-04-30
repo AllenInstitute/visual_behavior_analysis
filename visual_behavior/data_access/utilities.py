@@ -54,18 +54,6 @@ def get_cell_types_dict(cre_lines, experiments_table):
     return cell_types
 
 
-def check_for_model_outputs(behavior_session_id):
-    """
-    Checks whether model output file with omission regressors exists (does not say '_training' at end of filename)
-    :param behavior_session_id:
-    :return:
-    """
-    model_output_dir = loading.get_behavior_model_outputs_dir()
-    model_output_file = [file for file in os.listdir(model_output_dir) if
-                         (str(behavior_session_id) in file) and ('training' not in file)]
-    return len(model_output_file) > 0
-
-
 def get_all_session_ids(ophys_experiment_id=None, ophys_session_id=None, behavior_session_id=None, foraging_id=None):
     '''
     a function to get all ID types for a given experiment ID
