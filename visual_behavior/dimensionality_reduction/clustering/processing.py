@@ -1461,9 +1461,11 @@ def get_CI_for_clusters(cluster_meta, alpha=0.05,
     CI_df['CI'] = CI_df['CI_upper'] - CI_df['CI_lower']
     return CI_df
 
+
 def add_location_column(cluster_meta):
+
     cluster_meta_copy = cluster_meta.reset_index().copy()
     cluster_meta_copy['coarse_binned_depth'] = ['upper' if x < 250 else 'lower' for x in cluster_meta_copy['imaging_depth']]
-    cluster_meta_copy['location'] = cluster_meta_copy['targeted_structure']+'_'+cluster_meta_copy['coarse_binned_depth']
+    cluster_meta_copy['location'] = cluster_meta_copy['targeted_structure'] + '_' + cluster_meta_copy['coarse_binned_depth']
 
     return cluster_meta_copy
