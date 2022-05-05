@@ -13,6 +13,8 @@ from sklearn.cluster import KMeans
 import visual_behavior.visualization.utils as utils
 import visual_behavior.data_access.loading as loading
 
+from visual_behavior_glm import GLM_clustering as gc
+
 from visual_behavior.dimensionality_reduction.clustering import processing
 from visual_behavior.dimensionality_reduction.clustering.processing import get_silhouette_scores, get_cluster_density, get_cre_lines, get_cell_type_for_cre_line
 
@@ -1328,7 +1330,7 @@ def plot_proportion_cells_for_cluster(cre_proportion, cluster_id, ci=None, ax=No
     ci: confidence intervals, an array of int, len(ci) = len(locations), default is None
     """
     locations = list(np.sort(cre_proportion.location.unique()))
-
+    colormap = ['wheat', 'tan', 'yellowgreen', 'olivedrab']
     if ci is None:
         ci = np.zeros(len(locations))
 
@@ -1338,8 +1340,12 @@ def plot_proportion_cells_for_cluster(cre_proportion, cluster_id, ci=None, ax=No
     data = cre_proportion[cre_proportion.cluster_id == cluster_id]
     data = data.sort_values('location')
     ax = sns.barplot(data=data, x='location', y='proportion_cells', yerr=ci, orient='v',
-                     palette='Greys', ax=ax)
-#     ax.set_ylim(-0.5, 1.5)
+                     palette=colormap, ax=ax)
+    xticks_dict = {'VISp_upper': 'V1 upper',
+                   'VISp_lower': 'V1 lower',
+                   'VISl_upper': 'LM upper',
+                   'VISl_lower': 'LM lower'}
+    ax.set_xticklabels(xticks_dict)
 
 #     sig_data = data[data.sig_greater == True]
 #     for row in range(len(sig_data)):
@@ -1352,14 +1358,21 @@ def plot_proportion_cells_for_cluster(cre_proportion, cluster_id, ci=None, ax=No
 #             y_pos = layer_ind + 0.25
 #         x_pos = row_data.relative_to_random * 1.2
 #         ax.plot(x_pos, y_pos, marker='*', color='k')
-
+    # commenting it out to keep boarder lines
     # ax.legend(fontsize='small', title_fontsize='small')
     ax.set_ylabel('proportion cells\n rel. cluster avg.', fontsize=14)
     ax.set_xticklabels(locations, fontsize=14, rotation=90)
     ax.set_xlabel('')
     # flip axes so upper layer is on top
-    ax.set_xlim(ax.get_xlim()[::-1])
-    sns.despine(ax=ax, left=True, bottom=True)
+    ax.set_xlim(ax.get_xlim()[::-1])  # xtick labels below assume this order
+    ax.set_xticklabels(['LM lower', 'LM upper', 'V1 lower', 'V1 upper' ])  # this is dangerous hardcoding that could lead to mislabeling
+
+    # ax.set_xticks([])
+    ax.spines['right'].set_visible(False)
+    ax.spines['top'].set_visible(False)
+    ax.tick_params(axis='x', length=0)
+
+    # sns.despine(ax=ax, left=True, bottom=True)
     # make fonts small
     ax = standardize_axes_fontsize(ax)
     return ax
@@ -1508,9 +1521,19 @@ def plot_clusters_stats_pop_avg_rows(cluster_meta, feature_matrix, multi_session
     # cre_fraction = fraction_cells[fraction_cells.cre_line == cre_line]
 
     # compute CI for this cre line, cluster id and location
+    cluster_meta_sel = cluster_meta[cluster_meta.cre_line == cre_line].copy()
+    cluster_meta_copy = processing.add_location_column(cluster_meta_sel)
+
     if alpha is not None:
-        cluster_meta_sel = cluster_meta[cluster_meta.cre_line == cre_line]
         ci_df = processing.get_CI_for_clusters(cluster_meta_sel, alpha=alpha)
+
+    # compute significance for each cluster per area and depth
+    p, s = gc.final(cluster_meta_copy, cre_line)
+    y_max = p.max().max()
+    dh = y_max * 0.2  # extra y space for plotting significance
+    ci_error = ci_df['CI'].max()
+    bary = np.array([y_max, y_max]) + ci_error
+    # for plotting
 
     n_rows = 3  # 4 if including proportion plots
     figsize = (n_clusters * 2.5, n_rows * 2.5)
@@ -1527,6 +1550,20 @@ def plot_clusters_stats_pop_avg_rows(cluster_meta, feature_matrix, multi_session
         else:
             this_ci = None
         ax[i + (n_clusters * 2)] = plot_proportion_cells_for_cluster(cre_proportions, cluster_id, ci=this_ci, ax=ax[i + (n_clusters * 2)])
+
+        # plot significance
+        this_s = s.loc[cluster_id]
+        if this_s['bh_significant'] == True:
+            barx = [3, 0]
+            ax[i + (n_clusters * 2)].plot(barx, bary, color='k')
+            if this_s['imq'] < 0.0005:
+                text = '***'
+            elif this_s['imq'] < 0.005:
+                text = '**'
+            elif this_s['imq'] < 0.05:
+                text = '*'
+            ax[i + (n_clusters * 2)].text(1.8, bary[0] + dh, text, color='k', fontsize=20)
+
         if i > 0:
             ax[i + (n_clusters * 2)].set_ylabel('')
         # ax[i + (n_clusters * 2)].get_legend().remove()
