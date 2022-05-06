@@ -463,3 +463,46 @@ def get_cluster_mapping(matrix, threshold=1, ):
     return cluster_mapping_comparisons
 
 
+def get_mean_dropout_scores_per_cluster(dropout_df, cluster_df=None, labels=None, stacked=True):
+    '''
+    INPUT:
+    dropout_df: (pd.DataFrame) of GLM dropout scores (cell_specimen_ids by regressors x experience)
+    cluster_df: (pd.DataFrame), must contain columns 'cluster_id', 'cell_specimen_id'
+    labels: (list, np.array) list or array of int indicating cells' cluster ids,
+                            if provided, len(labels)==len(dropout_df)
+
+    Provide either cluster_df or labels. Cluster df must be df with 'cluster_id' and 'cell_specimen_id' columns,
+    labels can be np array or list of cluster ids
+
+    if unstacked, returns dictionary of DataFrames for each cluster. This version is helpful for plotting
+    if stacked, returns a DataFrame of mean dropout scores per cluster, this version is great for computing corr or SSE
+    (rows are droopout scores, columns are cluster ids)
+
+    Clusters are sorted by size.
+    '''
+    if isinstance(cluster_df, pd.core.frame.DataFrame):
+        cluster_ids = cluster_df['cluster_id'].value_counts().index.values  # sort cluster ids by size
+    elif labels is not None:
+        cluster_df = pd.DataFrame(data={'cluster_id': labels, 'cell_specimen_id': dropout_df.index.values})
+        cluster_ids = cluster_df['cluster_id'].value_counts().index.values  # sort cluster ids by size
+
+    if min(cluster_ids) == 0:  # if cluster ids start with 0, add 1 to return cluster labels starting with 1
+        err = 1
+    else:
+        err = 0
+
+    n_clusters = len(cluster_ids)
+    mean_cluster = {}
+    for i, cluster_id in enumerate(cluster_ids):
+        this_cluster_ids = cluster_df[cluster_df['cluster_id'] == cluster_id]['cell_specimen_id'].unique()
+        if stacked is True:
+            mean_dropout_df = dropout_df.loc[this_cluster_ids].mean()
+            mean_cluster[i + err] = mean_dropout_df.values
+        elif stacked is False:
+            mean_dropout_df = dropout_df.loc[this_cluster_ids].mean().unstack()
+            mean_cluster[i + err] = mean_dropout_df
+
+    if stacked is True:
+        return (pd.DataFrame(mean_cluster))
+    elif stacked is False:
+        return (mean_cluster)
