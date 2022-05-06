@@ -337,7 +337,9 @@ def shuffle_dropout_score(df_dropout, shuffle_type='all'):
                 for regressor in regressors:
                     df_shuffled.loc[cid][regressor][experience_levels[j]] = df_dropout.loc[cid][regressor][
                         experience_level]
-
+    else:
+        print('no such shuffle type..')
+        df_shuffled = None
     return df_shuffled
 
 
