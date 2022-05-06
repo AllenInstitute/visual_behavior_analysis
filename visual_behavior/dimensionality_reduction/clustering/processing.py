@@ -408,6 +408,24 @@ def get_eigenDecomposition(A, max_n_clusters=25):
     return eigenvalues, eigenvectors, nb_clusters
 
 
+def compute_SEE(mean_dropout_df_original, mean_dropout_df_compare):
+    '''
+    mean dropout_df should be computed with get_mean_dropout_scores_per_cluste function, stacked=True
+    returns:
+    SSE_matrix, rows are original clusters, columns are compared clusters
+    '''
+    SSE_matrix = []
+    for cluster_original in mean_dropout_df_original.keys():  # cluster ids are columns
+        x = mean_dropout_df_original[cluster_original].values
+        row = []
+        for cluster_compare in mean_dropout_df_compare.keys():
+            y = mean_dropout_df_compare[cluster_compare].values
+            sse = np.sum((np.abs(x) - np.abs(y)) ** 2)
+            row.append(sse)
+        SSE_matrix.append(row)
+
+    return SSE_matrix
+
 def get_cluster_mapping(matrix, threshold=1, ):
     '''
     find clusters with most similar SSE, create a dictionaty of cluster maps.
@@ -443,3 +461,5 @@ def get_cluster_mapping(matrix, threshold=1, ):
         cluster_mapping_comparisons[comparison] = cluster_mapping
 
     return cluster_mapping_comparisons
+
+
