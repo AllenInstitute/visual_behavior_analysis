@@ -496,7 +496,7 @@ def add_time_from_last_change(stimulus_presentations):
         RETURNS: stimulus_presentations
     '''
     flash_times = stimulus_presentations["start_time"].values
-    change_times = stimulus_presentations.query('change')['start_time'].values
+    change_times = stimulus_presentations.query('is_change')['start_time'].values
     time_from_last_change = esp.time_from_last(flash_times, change_times)
     stimulus_presentations["time_from_last_change"] = time_from_last_change
     return stimulus_presentations
@@ -715,7 +715,7 @@ def add_time_from_last_change_inplace(session):
         RETURNS: nothing
     '''
     flash_times = session.stimulus_presentations["start_time"].values
-    change_times = session.stimulus_presentations.query('change')['start_time'].values
+    change_times = session.stimulus_presentations.query('is_change')['start_time'].values
     time_from_last_change = esp.time_from_last(flash_times, change_times)
     session.stimulus_presentations["time_from_last_change"] = time_from_last_change
 
