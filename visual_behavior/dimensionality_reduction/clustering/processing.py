@@ -1090,7 +1090,7 @@ def get_proportion_cells_rel_cluster_average(cluster_meta, cre_lines, groupby_co
         # location column is a categorical variable (string) that can be a combination of area and depth or just area or depth (or whatever)
         cluster_meta_cre = cluster_meta[cluster_meta.cre_line == cre_line].copy()
         ### make this generalized by providing groupby to add_location_column
-        cluster_meta = processing.add_location_column(cluster_meta_cre)
+        cluster_meta = add_location_column(cluster_meta_cre)
 
         # this code gets the proportions across locations and computes significance with corrected chi-square test
         # glm_clust.final will use the location column in cluster_meta_copy to get proportions and stats for those groupings within each cluster
