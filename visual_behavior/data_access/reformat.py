@@ -3,7 +3,6 @@ import glob
 import numpy as np
 import pandas as pd
 
-from visual_behavior.data_access import utilities
 import visual_behavior.ophys.dataset.extended_stimulus_processing as esp
 
 
@@ -191,18 +190,6 @@ def add_omission_exposure_number_to_experiments_table(experiments, behavior_sess
     return experiments
 
 
-def add_model_outputs_availability_to_table(table):
-    """
-    Evaluates whether model output files are available for each experiment/session in the table
-        Requires that the table has a column 'behavior_session_id' with 9-digit behavior session identifiers
-    :param table: table of experiment or session level metadata (can be experiments_table or ophys_sessions_table)
-    :return: table with added column 'model_outputs_available', values are Boolean
-    """
-    table['model_outputs_available'] = [utilities.model_outputs_available_for_behavior_session(behavior_session_id)
-                                        for behavior_session_id in table.behavior_session_id.values]
-    return table
-
-
 def reformat_experiments_table(experiments):
     """
     adds extra columns to experiments table
@@ -219,7 +206,6 @@ def reformat_experiments_table(experiments):
     # replace session types that are NaN with string None
     experiments.at[experiments[experiments.session_type.isnull()].index.values, 'session_type'] = 'None'
     experiments = add_mouse_seeks_fail_tags_to_experiments_table(experiments)
-    experiments = add_model_outputs_availability_to_table(experiments)
     if 'level_0' in experiments.columns:
         experiments = experiments.drop(columns='level_0')
     if 'index' in experiments.columns:
@@ -510,7 +496,7 @@ def add_time_from_last_change(stimulus_presentations):
         RETURNS: stimulus_presentations
     '''
     flash_times = stimulus_presentations["start_time"].values
-    change_times = stimulus_presentations.query('change')['start_time'].values
+    change_times = stimulus_presentations.query('is_change')['start_time'].values
     time_from_last_change = esp.time_from_last(flash_times, change_times)
     stimulus_presentations["time_from_last_change"] = time_from_last_change
     return stimulus_presentations
@@ -729,7 +715,7 @@ def add_time_from_last_change_inplace(session):
         RETURNS: nothing
     '''
     flash_times = session.stimulus_presentations["start_time"].values
-    change_times = session.stimulus_presentations.query('change')['start_time'].values
+    change_times = session.stimulus_presentations.query('is_change')['start_time'].values
     time_from_last_change = esp.time_from_last(flash_times, change_times)
     session.stimulus_presentations["time_from_last_change"] = time_from_last_change
 

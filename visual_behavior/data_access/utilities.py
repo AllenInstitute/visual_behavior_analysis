@@ -5,7 +5,6 @@ import numpy as np
 import pandas as pd
 from pathlib import Path
 
-from visual_behavior.data_access import loading
 from visual_behavior.ophys.io.lims_database import LimsDatabase
 from visual_behavior.ophys.sync.sync_dataset import Dataset as SyncDataset
 from visual_behavior.ophys.sync.process_sync import filter_digital, calculate_delay
@@ -43,18 +42,6 @@ class LazyLoadable(object):
 
         self.name = name
         self.calculate = calculate
-
-
-def check_for_model_outputs(behavior_session_id):
-    """
-    Checks whether model output file with omission regressors exists (does not say '_training' at end of filename)
-    :param behavior_session_id:
-    :return:
-    """
-    model_output_dir = loading.get_behavior_model_outputs_dir()
-    model_output_file = [file for file in os.listdir(model_output_dir) if
-                         (str(behavior_session_id) in file) and ('training' not in file)]
-    return len(model_output_file) > 0
 
 
 def get_all_session_ids(ophys_experiment_id=None, ophys_session_id=None, behavior_session_id=None, foraging_id=None):
@@ -330,32 +317,6 @@ def get_donor_id_from_specimen_id(specimen_id, cache=None):
             where specimens.id = '{}'
         '''
         return db.lims_query(lims_query_string.format(specimen_id)).astype(int)
-
-
-def model_outputs_available_for_behavior_session(behavior_session_id):
-    """
-    Check whether behavior model outputs are available in the default directory
-
-    :param behavior_session_id: 9-digit behavior session ID
-    :return: Boolean, True if outputs are available, False if not
-    """
-    model_output_dir = loading.get_behavior_model_outputs_dir()
-    model_output_file = [file for file in os.listdir(model_output_dir) if str(behavior_session_id) in file]
-    if len(model_output_file) > 0:
-        return True
-    else:
-        return False
-
-
-# def get_cell_matching_output_dir_for_container(container_id, experiments_table):
-#     container_expts = experiments_table[experiments_table.container_id==container_id]
-#     ophys_experiment_id = container_expts.index[0]
-#     lims_data = get_lims_data(ophys_experiment_id)
-#     session_dir = lims_data.ophys_session_dir.values[0]
-#     cell_matching_dir = os.path.join(session_dir[:-23], 'experiment_container_'+str(container_id), 'OphysNwayCellMatchingStrategy')
-#     cell_matching_output_dir = os.path.join(cell_matching_dir, np.sort(os.listdir(cell_matching_dir))[-1])
-#     return cell_matching_output_dir
-#
 
 
 def get_cell_matching_output_dir_for_container(experiment_id):
@@ -1768,28 +1729,3 @@ def count_mice_expts_containers(df):
     counts = mice.merge(experiments, on=['cell_type', 'experience_level'])
     counts = counts.merge(containers, on=['cell_type', 'experience_level'])
     return counts
-
-
-def get_behavior_session_ids_to_analyze():
-    """
-    Gets a list of behavior_session_ids by combining the behavior_session_ids present in the platform paper experiments table
-    with the behavior_session_ids for non-ophys sessions from the behavior session table,
-    for mice present in the platform paper experiments table
-    """
-    # ophys data
-    experiments_table = loading.get_platform_paper_experiment_table()
-    # skip passive sessions
-    experiments_table = experiments_table[experiments_table.passive == False]
-    ophys_behavior_session_ids = list(experiments_table.behavior_session_id.unique())
-
-    # behavior only data
-    behavior_sessions = loading.get_platform_paper_behavior_session_table()
-    # limit to mice with ophys data going in to the paper
-    behavior_sessions = behavior_sessions[behavior_sessions.mouse_id.isin(experiments_table.mouse_id.unique())]
-    # remove all ophys sessions, use experiments_table to get ophys info
-    behavior_sessions = behavior_sessions[behavior_sessions.session_type.str.contains('OPHYS') == False]
-    behavior_session_session_ids = list(behavior_sessions.index.values)
-
-    behavior_session_ids_to_analyze = ophys_behavior_session_ids + behavior_session_session_ids
-
-    return behavior_session_ids_to_analyze
