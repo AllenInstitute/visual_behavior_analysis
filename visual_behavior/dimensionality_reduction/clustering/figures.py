@@ -194,20 +194,20 @@ plotting.plot_cell_stats_per_cluster_for_areas_depths(cluster_meta, proportions,
                                                       suffix=suffix)
 
 # sort clusters by the fraction of cells in VISp upper
-value_to_plot = 'proportion_cells'
-cbar_label = 'proportion cells\n rel. to cluster avg'
-suffix = '_VISp_upper_sort'
-
-proportions = processing.get_proportion_cells_rel_cluster_average(cluster_meta, cre_lines, groupby_columns=['targeted_structure', 'layer'])
-
-vmax = proportions[value_to_plot].max()
-cluster_order = processing.get_cluster_order_for_metric_location(proportions, cluster_meta,
-                                                                 location='VISp_upper', metric='proportion_cells')
-
-plotting.plot_cell_stats_per_cluster_for_areas_depths(cluster_meta, proportions, n_clusters_cre,
-                                                      value_to_plot, cbar_label, cmap='PRGn', vmin=-vmax, vmax=vmax,
-                                                      cluster_order=cluster_order, save_dir=base_dir, folder=folder,
-                                                      suffix=suffix)
+# value_to_plot = 'proportion_cells'
+# cbar_label = 'proportion cells\n rel. to cluster avg'
+# suffix = '_VISp_upper_sort'
+#
+# proportions = processing.get_proportion_cells_rel_cluster_average(cluster_meta, cre_lines, groupby_columns=['targeted_structure', 'layer'])
+#
+# vmax = proportions[value_to_plot].max()
+# cluster_order = processing.get_cluster_order_for_metric_location(proportions, cluster_meta,
+#                                                                  location='VISp_upper', metric='proportion_cells')
+#
+# plotting.plot_cell_stats_per_cluster_for_areas_depths(cluster_meta, proportions, n_clusters_cre,
+#                                                       value_to_plot, cbar_label, cmap='PRGn', vmin=-vmax, vmax=vmax,
+#                                                       cluster_order=cluster_order, save_dir=base_dir, folder=folder,
+#                                                       suffix=suffix)
 
 # plot dropouts and pop avgs in this order
 
@@ -225,72 +225,70 @@ print(len(multi_session_df.ophys_experiment_id.unique()))
 cluster_mdf = multi_session_df.merge(cluster_meta[['cluster_id']],
                                      on='cell_specimen_id', how='inner')
 
-# input needed for plot functions
-fraction_cells = processing.get_fraction_cells_per_area_depth(cluster_meta)
-
-cluster_order = processing.get_cluster_order_for_metric_location(proportions, cluster_meta,
-                                                                 location='VISp_upper', metric='proportion_cells')
-
-for cre_line in cre_lines:
-    plotting.plot_clusters_stats_pop_avg_rows(cluster_meta, feature_matrix, multi_session_df,
-                                              proportions, fraction_cells, cre_line,
-                                              sort_order=cluster_order, suffix='_VISp_upper_proportion_rel_avg',
-                                              save_dir=base_dir, folder=folder, )
+# # input needed for plot functions
+# fraction_cells = processing.get_fraction_cells_per_area_depth(cluster_meta)
+#
+# cluster_order = processing.get_cluster_order_for_metric_location(proportions, cluster_meta,
+#                                                                  location='VISp_upper', metric='proportion_cells')
+#
+# for cre_line in cre_lines:
+#     plotting.plot_clusters_stats_pop_avg_rows(cluster_meta, feature_matrix, multi_session_df, cre_line,
+#                                               sort_order=cluster_order, suffix='_VISp_upper_proportion_rel_avg',
+#                                               save_dir=base_dir, folder=folder, )
 
 
 # try for just V1 vs LM or upper vs lower
 
-# areas
-area_proportions = processing.get_proportion_cells_rel_cluster_average(cluster_meta, cre_lines,
-                                                                       groupby_columns=['targeted_structure'])
-area_proportions['location'] = area_proportions.targeted_structure
-
-value_to_plot = 'proportion_cells'
-cbar_label = 'proportion cells\n rel. to cluster avg'
-suffix = '_proportion_rel_avg_area_sort'
-vmax = area_proportions.proportion_cells.max().max()
-
-cluster_order = processing.get_cluster_order_for_metric_location(area_proportions, cluster_meta,
-                                                                 location='VISp', metric='proportion_cells')
-
-plotting.plot_cell_stats_per_cluster_for_areas_depths(cluster_meta, area_proportions, n_clusters_cre,
-                                                      value_to_plot, cbar_label, cmap='PRGn', vmin=-vmax, vmax=vmax,
-                                                      cluster_order=cluster_order, save_dir=base_dir, folder=folder,
-                                                      suffix=suffix)
-
-for cre_line in cre_lines:
-    plotting.plot_clusters_stats_pop_avg_rows(cluster_meta, feature_matrix, multi_session_df,
-                                              area_proportions, fraction_cells, cre_line,
-                                              sort_order=cluster_order, suffix=suffix,
-                                              save_dir=base_dir, folder=folder, )
-
-# depths
-layer_proportions = processing.get_proportion_cells_rel_cluster_average(cluster_meta, cre_lines,
-                                                                        groupby_columns=['layer'])
-layer_proportions['location'] = layer_proportions.layer
-
-value_to_plot = 'proportion_cells'
-cbar_label = 'proportion cells\n rel. to cluster avg'
-suffix = '_proportion_rel_avg_layer_sort'
-vmax = layer_proportions.proportion_cells.max().max()
-
-cluster_order = processing.get_cluster_order_for_metric_location(layer_proportions, cluster_meta,
-                                                                 location='upper', metric='proportion_cells')
-
-plotting.plot_cell_stats_per_cluster_for_areas_depths(cluster_meta, layer_proportions, n_clusters_cre,
-                                                      value_to_plot, cbar_label, cmap='PRGn', vmin=-vmax, vmax=vmax,
-                                                      cluster_order=cluster_order, save_dir=base_dir, folder=folder,
-                                                      suffix=suffix)
-
-for cre_line in cre_lines:
-    plotting.plot_clusters_pop_avg_rows(cluster_meta, feature_matrix, multi_session_df, cre_line,
-                                        sort_order=cluster_order, suffix=suffix,
-                                        save_dir=base_dir, folder=folder, )
+# # areas
+# area_proportions = processing.get_proportion_cells_rel_cluster_average(cluster_meta, cre_lines,
+#                                                                        groupby_columns=['targeted_structure'])
+# area_proportions['location'] = area_proportions.targeted_structure
+#
+# value_to_plot = 'proportion_cells'
+# cbar_label = 'proportion cells\n rel. to cluster avg'
+# suffix = '_proportion_rel_avg_area_sort'
+# vmax = area_proportions.proportion_cells.max().max()
+#
+# cluster_order = processing.get_cluster_order_for_metric_location(area_proportions, cluster_meta,
+#                                                                  location='VISp', metric='proportion_cells')
+#
+# plotting.plot_cell_stats_per_cluster_for_areas_depths(cluster_meta, area_proportions, n_clusters_cre,
+#                                                       value_to_plot, cbar_label, cmap='PRGn', vmin=-vmax, vmax=vmax,
+#                                                       cluster_order=cluster_order, save_dir=base_dir, folder=folder,
+#                                                       suffix=suffix)
+#
+# for cre_line in cre_lines:
+#     plotting.plot_clusters_stats_pop_avg_rows(cluster_meta, feature_matrix, multi_session_df, cre_line,
+#                                               sort_order=cluster_order, suffix=suffix,
+#                                               save_dir=base_dir, folder=folder, )
+#
+# # depths
+# layer_proportions = processing.get_proportion_cells_rel_cluster_average(cluster_meta, cre_lines,
+#                                                                         groupby_columns=['layer'])
+# layer_proportions['location'] = layer_proportions.layer
+#
+# value_to_plot = 'proportion_cells'
+# cbar_label = 'proportion cells\n rel. to cluster avg'
+# suffix = '_proportion_rel_avg_layer_sort'
+# vmax = layer_proportions.proportion_cells.max().max()
+#
+# cluster_order = processing.get_cluster_order_for_metric_location(layer_proportions, cluster_meta,
+#                                                                  location='upper', metric='proportion_cells')
+#
+# plotting.plot_cell_stats_per_cluster_for_areas_depths(cluster_meta, layer_proportions, n_clusters_cre,
+#                                                       value_to_plot, cbar_label, cmap='PRGn', vmin=-vmax, vmax=vmax,
+#                                                       cluster_order=cluster_order, save_dir=base_dir, folder=folder,
+#                                                       suffix=suffix)
+#
+# for cre_line in cre_lines:
+#     plotting.plot_clusters_pop_avg_rows(cluster_meta, feature_matrix, multi_session_df, cre_line,
+#                                         sort_order=cluster_order, suffix=suffix,
+#                                         save_dir=base_dir, folder=folder, )
 
 # plot in cluster size order
 
 for cre_line in cre_lines:
-    plotting.plot_clusters_stats_pop_avg_rows(cluster_meta, feature_matrix, multi_session_df,
-                                              proportions, fraction_cells, cre_line,
+    plotting.plot_clusters_stats_pop_avg_rows(cluster_meta, feature_matrix, multi_session_df, cre_line,
                                               sort_order=None, suffix='_proportion_rel_avg_cluster_size_order',
                                               save_dir=base_dir, folder=folder, )
+
