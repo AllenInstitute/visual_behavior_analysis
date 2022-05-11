@@ -103,11 +103,11 @@ cluster_meta = processing.get_cluster_meta(cluster_labels, cell_metadata, featur
 # ax = sns.clustermap(data=data, cmap='Greys', cbar_kws={'label':'co-clustering probability'})
 
 
-# sort coclustering matrix by cluster ID / cluster size
-cre_lines = processing.get_cre_lines(cell_metadata)
-for cre_line in cre_lines:
-    plotting.plot_coclustering_matrix_sorted_by_cluster_size(coclustering_matrices, cluster_meta, cre_line,
-                                                             save_dir=base_dir, folder=folder, ax=None)
+# # sort coclustering matrix by cluster ID / cluster size
+# cre_lines = processing.get_cre_lines(cell_metadata)
+# for cre_line in cre_lines:
+#     plotting.plot_coclustering_matrix_sorted_by_cluster_size(coclustering_matrices, cluster_meta, cre_line,
+#                                                              save_dir=base_dir, folder=folder, ax=None)
 
 # plot average dropout scores for each cluster
 

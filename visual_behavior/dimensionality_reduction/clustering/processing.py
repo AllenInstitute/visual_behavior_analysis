@@ -1071,17 +1071,40 @@ def compute_cluster_proportion_cre(cluster_meta, cre_line, groupby_columns=['tar
     return table
 
 
+# def get_proportion_cells_rel_cluster_average(cluster_meta, cre_lines, groupby_columns=['targeted_structure', 'layer']):
+#     cluster_proportions = pd.DataFrame()
+#     for cre_line in cre_lines:
+#         table = compute_cluster_proportion_cre(cluster_meta, cre_line, groupby_columns=groupby_columns)
+#         df = pd.DataFrame(table.unstack(), columns=['proportion_cells'])
+#         df = df.reset_index()
+#         df = df.rename(columns={'level_0': 'location'})
+#         df['cre_line'] = cre_line
+#         cluster_proportions = pd.concat([cluster_proportions, df])
+#     return cluster_proportions
+
+
 def get_proportion_cells_rel_cluster_average(cluster_meta, cre_lines, groupby_columns=['targeted_structure', 'layer']):
+    from visual_behavior_glm import GLM_clustering as glm_clust
     cluster_proportions = pd.DataFrame()
     for cre_line in cre_lines:
-        table = compute_cluster_proportion_cre(cluster_meta, cre_line, groupby_columns=groupby_columns)
-        df = pd.DataFrame(table.unstack(), columns=['proportion_cells'])
-        df = df.reset_index()
-        df = df.rename(columns={'level_0': 'location'})
-        df['cre_line'] = cre_line
-        cluster_proportions = pd.concat([cluster_proportions, df])
-    return cluster_proportions
+        # location column is a categorical variable (string) that can be a combination of area and depth or just area or depth (or whatever)
+        cluster_meta_cre = cluster_meta[cluster_meta.cre_line == cre_line].copy()
+        ### make this generalized by providing groupby to add_location_column
+        cluster_meta = processing.add_location_column(cluster_meta_cre)
 
+        # this code gets the proportions across locations and computes significance with corrected chi-square test
+        # glm_clust.final will use the location column in cluster_meta_copy to get proportions and stats for those groupings within each cluster
+        proportion_table, stats_table = glm_clust.final(cluster_meta.reset_index(), cre_line)
+
+        # reformat proportion_table to match format expected by downstream plotting code
+        cre_proportions = pd.DataFrame(proportion_table.unstack()).rename(columns={0: 'proportion'})
+        cre_proportions = cre_proportions.reset_index()
+        cre_proportions['cre_line'] = cre_line
+
+        # add cre line proportions to unified table
+        cluster_proportions = pd.concat([cluster_proportions, cre_proportions])
+
+    return cluster_proportions
 
 def stats(df, cre):
     '''
