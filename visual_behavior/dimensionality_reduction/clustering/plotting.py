@@ -1516,13 +1516,13 @@ def plot_clusters_stats_pop_avg_rows(cluster_meta, feature_matrix, multi_session
         cluster_ids = sort_order[cre_line]
     n_clusters = len(cluster_ids)
     # cell counts and fraction for this cre line
-    cre_proportions = proportions[proportions.cre_line == cre_line]
+
     # cre_fraction = fraction_cells[fraction_cells.cre_line == cre_line]
 
     # compute CI for this cre line, cluster id and location
     cluster_meta_sel = cluster_meta[cluster_meta.cre_line == cre_line].copy()
     # location column is a categorical variable (string) that can be a combination of area and depth or just area or depth (or whatever)
-    cluster_meta = processing.add_location_column(cluster_meta_sel)
+    cluster_meta_sel = processing.add_location_column(cluster_meta_sel)
 
     if alpha is not None:
         ci_df = processing.get_CI_for_clusters(cluster_meta_sel, alpha=alpha)
@@ -1530,7 +1530,7 @@ def plot_clusters_stats_pop_avg_rows(cluster_meta, feature_matrix, multi_session
     # compute significance for each cluster per area and depth
     # this code gets the proportions across locations and computes significance with corrected chi-square test
     # glm_clust.final will use the location column in cluster_meta_copy to get proportions and stats for those groupings within each cluster
-    proportion_table, stats_table = glm_clust.final(cluster_meta.reset_index(), cre_line)
+    proportion_table, stats_table = glm_clust.final(cluster_meta_sel.reset_index(), cre_line)
     y_max = proportion_table.max().max()
     dh = y_max * 0.2  # extra y space for plotting significance
     ci_error = ci_df['CI'].max()
@@ -1542,8 +1542,8 @@ def plot_clusters_stats_pop_avg_rows(cluster_meta, feature_matrix, multi_session
     cre_proportions['cre_line'] = cre_line
 
     # function to load proportion cells using glm_clustering code and reformat to be compatible with plotting
-    get_proportion_cells_rel_cluster_average(cluster_meta, cre_lines, groupby_columns=['targeted_structure', 'layer'])
-
+    proportions, _ = processing.get_proportion_cells_rel_cluster_average(cluster_meta_sel, np.array(cre_line), groupby_columns=['targeted_structure', 'layer'])
+    cre_proportions = proportions[proportions.cre_line == cre_line]
     n_rows = 3  # 4 if including proportion plots
     figsize = (n_clusters * 2.5, n_rows * 2.5)
     fig, ax = plt.subplots(n_rows, n_clusters, figsize=figsize, sharex='row', sharey='row',
@@ -1551,7 +1551,7 @@ def plot_clusters_stats_pop_avg_rows(cluster_meta, feature_matrix, multi_session
     ax = ax.ravel()
     for i, cluster_id in enumerate(cluster_ids):
         # plot mean dropout heatmap for this cluster
-        ax[i] = plot_dropout_heatmap(cluster_meta, feature_matrix, cre_line, cluster_id, ax=ax[i])
+        ax[i] = plot_dropout_heatmap(cluster_meta_sel, feature_matrix, cre_line, cluster_id, ax=ax[i])
 
         # plot population averages per cluster
         ax[i + (n_clusters * 1)] = plot_population_average_response_for_cluster(cluster_mdf, cre_line, cluster_id,
@@ -1574,6 +1574,7 @@ def plot_clusters_stats_pop_avg_rows(cluster_meta, feature_matrix, multi_session
         this_s = stats_table.loc[cluster_id]
         if this_s['bh_significant'] == True:
             barx = [3, 0]
+            mid = np.mean(barx)
             ax[i + (n_clusters * 2)].plot(barx, bary, color='k')
             if this_s['imq'] < 0.0005:
                 text = '***'
@@ -1581,7 +1582,7 @@ def plot_clusters_stats_pop_avg_rows(cluster_meta, feature_matrix, multi_session
                 text = '**'
             elif this_s['imq'] < 0.05:
                 text = '*'
-            ax[i + (n_clusters * 2)].text(1.8, bary[0] + dh, text, color='k', fontsize=20)
+            ax[i + (n_clusters * 2)].text(mid, bary[0] + dh, text, color='k', fontsize=20)
 
         if i > 0:
             ax[i + (n_clusters * 2)].set_ylabel('')
