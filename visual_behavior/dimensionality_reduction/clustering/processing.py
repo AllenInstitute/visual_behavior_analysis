@@ -1090,11 +1090,11 @@ def get_proportion_cells_rel_cluster_average(cluster_meta, cre_lines, groupby_co
         # location column is a categorical variable (string) that can be a combination of area and depth or just area or depth (or whatever)
         cluster_meta_cre = cluster_meta[cluster_meta.cre_line == cre_line].copy()
         ### make this generalized by providing groupby to add_location_column
-        cluster_meta = processing.add_location_column(cluster_meta_cre)
+        cluster_meta_cre = processing.add_location_column(cluster_meta_cre, groupby_columns)
 
         # this code gets the proportions across locations and computes significance with corrected chi-square test
         # glm_clust.final will use the location column in cluster_meta_copy to get proportions and stats for those groupings within each cluster
-        proportion_table, stats_table = glm_clust.final(cluster_meta.reset_index(), cre_line)
+        proportion_table, stats_table = glm_clust.final(cluster_meta_cre.reset_index(), cre_line)
 
         # reformat proportion_table to match format expected by downstream plotting code
         cre_proportions = pd.DataFrame(proportion_table.unstack()).rename(columns={0: 'proportion'})
@@ -1485,10 +1485,29 @@ def get_CI_for_clusters(cluster_meta, alpha=0.05,
     return CI_df
 
 
-def add_location_column(cluster_meta):
+def add_location_column(cluster_meta, columns_groupby = ['targeted_structure', 'layer']):
+    '''
+    function to add location column to a df
+    INPUT:
+    cluster_meta: (pd.DataFrame) of groupout scores for each cell with other meta data columns
+    columns_groupby: (array) of columns to group by
 
-    cluster_meta_copy = cluster_meta.reset_index().copy()
-    cluster_meta_copy['coarse_binned_depth'] = ['upper' if x < 250 else 'lower' for x in cluster_meta_copy['imaging_depth']]
-    cluster_meta_copy['location'] = cluster_meta_copy['targeted_structure'] + '_' + cluster_meta_copy['coarse_binned_depth']
+    '''
+    cluster_meta_copy = cluster_meta.copy()
+    if 'layer' not in cluster_meta.keys():
+        cluster_meta_copy['layer'] = ['upper' if x < 250 else 'lower' for x in cluster_meta_copy['imaging_depth']]
+        print('column layer is not in the dataframe, using 250 as a threshold to create the column')
+    if len(columns_groupby) == 0:
+        print('no columns were provided for grouping location')
+    elif len(columns_groupby) == 1:
+        cluster_meta_copy['location'] = cluster_meta_copy[columns_groupby [0]]
+    elif len(columns_groupby) == 2:
+        cluster_meta_copy['location'] = cluster_meta_copy[columns_groupby [0]] + '_' + cluster_meta_copy[columns_groupby[1]]
+    elif len(columns_groupby) == 3:
+        cluster_meta_copy['location'] = cluster_meta_copy[columns_groupby[0]] + '_' + cluster_meta_copy[
+            columns_groupby[1]]+ '_' + cluster_meta_copy[
+            columns_groupby[2]]
+    elif len(columns_groupby) > 3:
+        print('cannot combine more than three columns into a location column')
 
     return cluster_meta_copy
