@@ -1530,9 +1530,9 @@ def plot_clusters_stats_pop_avg_rows(cluster_meta, feature_matrix, multi_session
 
     # max confidence interval to know where to plot the significance bar
     y_max = cre_proportions['proportion_cells'].max()
-    dh = y_max * 0.2  # extra y space for plotting significance
-    ci_error = ci_df['CI'].max()
-    bary = np.array([y_max, y_max]) + ci_error
+    dh = y_max * 0.2  # extra y space for plotting significance star
+    ci_error = ci_df['CI'].max() # use this max to plot vertical line for stats at the same height for all clusters
+    bary = np.array([y_max, y_max]) + ci_error # height of the vertical line for statistics comparison
 
     # plot
     n_rows = 3  # 4 if including proportion plots
