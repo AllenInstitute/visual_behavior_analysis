@@ -1505,8 +1505,13 @@ def plot_clusters_stats_pop_avg_rows(cluster_meta, feature_matrix, multi_session
         cluster_ids = sort_order[cre_line]
     n_clusters = len(cluster_ids)
 
+    # if using a numeric value column, like 'binned_depth', convert to a string so downstream code doesnt break
+    if 'binned_depth' in columns_to_groupby:
+        cluster_meta['binned_depth'] = [str(depth) for depth in cluster_meta.binned_depth.values]
+
     # location column is a categorical variable (string) that can be a combination of area and depth or just area or depth (or whatever)
     cluster_meta = processing.add_location_column(cluster_meta, columns_to_groupby)
+
     # limit to this cre line
     cluster_meta_cre = cluster_meta[cluster_meta.cre_line == cre_line].copy()
 
@@ -1553,8 +1558,8 @@ def plot_clusters_stats_pop_avg_rows(cluster_meta, feature_matrix, multi_session
         # plot significance with bh corrected chi-square test
         this_s = cre_stats.loc[cluster_id]
         if this_s['bh_significant'] == True:
-            barx = [int(len(cre_proportions.location.unique())), 0]
-            mid = np.mean(barx)
+            barx = [int(len(cre_proportions.location.unique()))-1, 0]
+            mid = np.mean(barx)+0.25
             ax[i + (n_clusters * 2)].plot(barx, bary, color='k')
             if this_s['imq'] < 0.0005:
                 text = '***'
