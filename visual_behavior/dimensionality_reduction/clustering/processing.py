@@ -1106,10 +1106,12 @@ def get_proportion_cells_rel_cluster_average(cluster_meta, cre_lines, columns_to
     cluster_proportions = pd.DataFrame()
     stats_table = pd.DataFrame()
     for cre_line in cre_lines:
-        # location column is a categorical variable (string) that can be a combination of area and depth or just area or depth (or whatever)
+        # limit to cre line
         cluster_meta_cre = cluster_meta[cluster_meta.cre_line == cre_line].copy()
-        ### make this generalized by providing groupby to add_location_column
-        cluster_meta_cre = add_location_column(cluster_meta_cre, columns_to_groupby)
+        # add location to quantify proportions in
+        # location column is a categorical variable (string) that can be a combination of area and depth or just area or depth (or whatever)
+        if 'location' not in cluster_meta_cre.keys():
+            cluster_meta_cre = add_location_column(cluster_meta_cre, columns_to_groupby)
 
         # this code gets the proportions across locations and computes significance with corrected chi-square test
         # glm_clust.final will use the location column in cluster_meta_copy to get proportions and stats for those groupings within each cluster
@@ -1539,7 +1541,7 @@ def get_CI_for_clusters(cluster_meta, columns_to_groupby=['targeted_structure', 
     return CI_df
 
 
-def add_location_column(cluster_meta, columns_groupby = ['targeted_structure', 'layer']):
+def add_location_column(cluster_meta, columns_to_groupby=['targeted_structure', 'layer']):
     '''
     function to add location column to a df
     INPUT:
@@ -1552,17 +1554,16 @@ def add_location_column(cluster_meta, columns_groupby = ['targeted_structure', '
     if 'layer' not in cluster_meta.keys():
         cluster_meta_copy['layer'] = ['upper' if x < 250 else 'lower' for x in cluster_meta_copy['imaging_depth']]
         print('column layer is not in the dataframe, using 250 as a threshold to create the column')
-    if len(columns_groupby) == 0:
+    if len(columns_to_groupby) == 0:
         print('no columns were provided for grouping location')
-    elif len(columns_groupby) == 1:
-        cluster_meta_copy['location'] = cluster_meta_copy[columns_groupby [0]]
-    elif len(columns_groupby) == 2:
-        cluster_meta_copy['location'] = cluster_meta_copy[columns_groupby [0]] + '_' + cluster_meta_copy[columns_groupby[1]]
-    elif len(columns_groupby) == 3:
-        cluster_meta_copy['location'] = cluster_meta_copy[columns_groupby[0]] + '_' + cluster_meta_copy[
-            columns_groupby[1]]+ '_' + cluster_meta_copy[
-            columns_groupby[2]]
-    elif len(columns_groupby) > 3:
+    elif len(columns_to_groupby) == 1:
+        cluster_meta_copy['location'] = cluster_meta_copy[columns_to_groupby[0]]
+    elif len(columns_to_groupby) == 2:
+        cluster_meta_copy['location'] = cluster_meta_copy[columns_to_groupby[0]] + '_' + cluster_meta_copy[columns_to_groupby[1]]
+    elif len(columns_to_groupby) == 3:
+        cluster_meta_copy['location'] = cluster_meta_copy[columns_to_groupby[0]] + '_' + cluster_meta_copy[
+            columns_to_groupby[1]]+ '_' + cluster_meta_copy[columns_to_groupby[2]]
+    elif len(columns_to_groupby) > 3:
         print('cannot combine more than three columns into a location column')
 
     return cluster_meta_copy

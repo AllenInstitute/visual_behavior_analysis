@@ -1319,7 +1319,7 @@ def plot_pct_rel_to_chance_for_cluster(cre_counts, cluster_id, ax=None):
     return ax
 
 
-def plot_proportion_cells_for_cluster(cre_proportion, cluster_id, ci=None, ax=None):
+def plot_proportion_cells_for_cluster(cre_proportion, cluster_id, ci_df=None, ax=None):
     """
     Plots the proportion of cells in each area and depth for a given cluster
     x values are areas & depths, y values are proportion cells
@@ -1327,45 +1327,33 @@ def plot_proportion_cells_for_cluster(cre_proportion, cluster_id, ci=None, ax=No
     proportion: proportion of cells relative to cluster average per cluster limited to a given cre line
                 must include columns: location, proportion_cells, cluster_id, sig_greater
     cluster_id: cluster id to plot
-    ci: confidence intervals, an array of int, len(ci) = len(locations), default is None
+    ci_df: dataframe of confidence intervals per location per cluster
     """
-    locations = list(np.sort(cre_proportion.location.unique()))
+
+    if 'location' not in cre_proportion.keys():
+        print('location column must be in cre_proportion df provided to plot_proportion_cells_per_cluster function')
+
+    locations = list(np.sort(cre_proportion.location.unique())) # make sure to sort so it matches the data and ci order
     colormap = sns.color_palette("Paired", len(locations))
-    if ci is None:
+
+    if ci_df is None:
         ci = np.zeros(len(locations))
+    else:
+        # make sure to sort by location so it matches the data
+        ci = ci_df[ci_df['cluster_id'] == cluster_id].sort_values('location')['CI'].values
 
     if ax is None:
         fig, ax = plt.subplots()
 
     data = cre_proportion[cre_proportion.cluster_id == cluster_id]
-    data = data.sort_values('location')
-    ax = sns.barplot(data=data, x='location', y='proportion_cells', yerr=ci, orient='v',
-                     palette=colormap, ax=ax)
-    # xticks_dict = {'VISp_upper': 'V1 upper',
-    #                'VISp_lower': 'V1 lower',
-    #                'VISl_upper': 'LM upper',
-    #                'VISl_lower': 'LM lower'}
-    # ax.set_xticklabels(xticks_dict)
+    data = data.sort_values('location') # make sure to sort by location so it matches the ci
+    ax = sns.barplot(data=data, x='location', y='proportion_cells', order=locations, yerr=ci, orient='v', palette=colormap, ax=ax)
 
-#     sig_data = data[data.sig_greater == True]
-#     for row in range(len(sig_data)):
-#         row_data = sig_data.iloc[row]
-#         layer_ind = order.index(row_data.layer)
-#         area_ind = hue_order.index(row_data.targeted_structure)
-#         if area_ind == 0:
-#             y_pos = layer_ind - 0.25
-#         elif area_ind == 1:
-#             y_pos = layer_ind + 0.25
-#         x_pos = row_data.relative_to_random * 1.2
-#         ax.plot(x_pos, y_pos, marker='*', color='k')
-    # commenting it out to keep boarder lines
-    # ax.legend(fontsize='small', title_fontsize='small')
     ax.set_ylabel('proportion cells\n rel. cluster avg.', fontsize=14)
     ax.set_xticklabels(locations, fontsize=14, rotation=90)
     ax.set_xlabel('')
-    # flip axes so upper layer is on top
-    ax.set_xlim(ax.get_xlim()[::-1])  # xtick labels below assume this order
-    # ax.set_xticklabels(['LM lower', 'LM upper', 'V1 lower', 'V1 upper' ])  # this is dangerous hardcoding that could lead to mislabeling
+    # flip axes so V1 and/or upper layer is first
+    ax.set_xlim(ax.get_xlim()[::-1])
 
     # ax.set_xticks([])
     ax.spines['right'].set_visible(False)
@@ -1510,41 +1498,32 @@ def plot_clusters_stats_pop_avg_rows(cluster_meta, feature_matrix, multi_session
     :return:
     """
     # add cluster_id to multi_session_df
-    cluster_mdf = multi_session_df.merge(cluster_meta[['cluster_id']],
-                                         on='cell_specimen_id', how='inner')
+    cluster_mdf = multi_session_df.merge(cluster_meta[['cluster_id']], on='cell_specimen_id', how='inner')
     cluster_ids = np.sort(cluster_meta[cluster_meta.cre_line == cre_line].cluster_id.unique())
     # if order to sort clusters is provided, use it
     if sort_order:
         cluster_ids = sort_order[cre_line]
     n_clusters = len(cluster_ids)
 
-    # compute CI for this cre line, cluster id and location
-    cluster_meta_cre = cluster_meta[cluster_meta.cre_line == cre_line].copy()
     # location column is a categorical variable (string) that can be a combination of area and depth or just area or depth (or whatever)
-    # cluster_meta_cre = processing.add_location_column(cluster_meta_cre, columns_to_groupby)
+    cluster_meta = processing.add_location_column(cluster_meta, columns_to_groupby)
+    # limit to this cre line
+    cluster_meta_cre = cluster_meta[cluster_meta.cre_line == cre_line].copy()
 
+    # compute CI for this cre line, cluster id and location
     if alpha is not None:
-        ci_df = processing.get_CI_for_clusters(cluster_meta_cre, columns_to_groupby, alpha=alpha)
-
-    # compute significance for each cluster per area and depth
-    # this code gets the proportions across locations and computes significance with corrected chi-square test
-    # glm_clust.final will use the location column in cluster_meta_copy to get proportions and stats for those groupings within each cluster
-    # proportion_table, stats_table = glm_clust.final(cluster_meta_cre.reset_index(), cre_line)
-
-
-    # reformat proportion_table to match format expected by downstream plotting code
-    # cre_proportions = pd.DataFrame(proportion_table.unstack()).rename(columns={0: 'proportion'})
-    # cre_proportions = cre_proportions.reset_index()
-    # cre_proportions['cre_line'] = cre_line
-
+        ci_df = processing.get_CI_for_clusters(cluster_meta, columns_to_groupby, alpha=alpha, type_of_CI='mpc', cre='all')
+        ci_df = ci_df[ci_df.cre_line==cre_line]
+    else:
+        ci_df = None
     # compute proportion cells per location for each cluster and stats using glm_clustering code
-    # computes proportions for all cre lines so need to filter afterwards
+    # computes proportions for all cre lines so need to limit to this cre afterwards
     proportions, stats_table = processing.get_proportion_cells_rel_cluster_average(cluster_meta, cluster_meta.cre_line.unique(),
-                                                                                   columns_to_groupby=['targeted_structure', 'layer'])
+                                                                                   columns_to_groupby)
     cre_proportions = proportions[proportions.cre_line == cre_line]
     cre_stats = stats_table[stats_table.cre_line==cre_line]
 
-    # get confidence intervals to plot
+    # max confidence interval to know where to plot the significance bar
     y_max = cre_proportions['proportion_cells'].max()
     dh = y_max * 0.2  # extra y space for plotting significance
     ci_error = ci_df['CI'].max()
@@ -1569,16 +1548,12 @@ def plot_clusters_stats_pop_avg_rows(cluster_meta, feature_matrix, multi_session
 
         # plot proportion of cells per cluster relative to cluster average, with stats
         # get confidence intervals for this cluster id
-        if alpha is not None:
-            this_ci = ci_df[ci_df['cluster_id'] == cluster_id].sort_values('location')['CI'].values
-        else:
-            this_ci = None
-        ax[i + (n_clusters * 2)] = plot_proportion_cells_for_cluster(cre_proportions, cluster_id, ci=this_ci, ax=ax[i + (n_clusters * 2)])
+        ax[i + (n_clusters * 2)] = plot_proportion_cells_for_cluster(cre_proportions, cluster_id, ci_df=ci_df, ax=ax[i + (n_clusters * 2)])
 
         # plot significance with bh corrected chi-square test
         this_s = cre_stats.loc[cluster_id]
         if this_s['bh_significant'] == True:
-            barx = [3, 0]
+            barx = [int(len(cre_proportions.location.unique())), 0]
             mid = np.mean(barx)
             ax[i + (n_clusters * 2)].plot(barx, bary, color='k')
             if this_s['imq'] < 0.0005:
