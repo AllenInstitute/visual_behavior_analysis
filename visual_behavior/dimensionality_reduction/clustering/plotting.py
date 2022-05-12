@@ -1330,7 +1330,7 @@ def plot_proportion_cells_for_cluster(cre_proportion, cluster_id, ci=None, ax=No
     ci: confidence intervals, an array of int, len(ci) = len(locations), default is None
     """
     locations = list(np.sort(cre_proportion.location.unique()))
-    colormap = ['wheat', 'tan', 'yellowgreen', 'olivedrab']
+    colormap = sns.color_palette("Paired", len(locations))
     if ci is None:
         ci = np.zeros(len(locations))
 
@@ -1488,7 +1488,7 @@ def plot_clusters_pop_avg_rows(cluster_meta, feature_matrix, multi_session_df, c
         utils.save_figure(fig, figsize, save_dir, folder, 'clusters_pop_avg_rows_' + cre_line.split('-')[0] + suffix)
 
 
-def plot_clusters_stats_pop_avg_rows(cluster_meta, feature_matrix, multi_session_df, cre_line,
+def plot_clusters_stats_pop_avg_rows(cluster_meta, feature_matrix, multi_session_df, cre_line, columns_to_groupby=['targeted_structure', 'layer'],
                                      sort_order=None, save_dir=None, folder=None, suffix='', alpha=0.05):
     """
     For each cluster in a given cre_line, plots dropout heatmaps, fraction cells per location (area and/or depth) relative to the cluster average,
@@ -1500,6 +1500,8 @@ def plot_clusters_stats_pop_avg_rows(cluster_meta, feature_matrix, multi_session
     :param feature_matrix: dropout scores for matched cells with experience levels x features as cols, cells as rows
     :param multi_session_df: table of cell responses for a set of conditions, from loading.get_multi_session_df_for_conditions()
     :param cre_line: cre line to plot for
+    :param columns_to_groupby: columns in cluster_meta to use when computing proportion cells per location;
+                                location is defined as the concatenation of the groups in columns_to_groupby
     :param sort_order: dictionary with cre_lines as keys, sorted cluster_ids as values
     :param save_dir: directory to save plot to
     :param folder: folder within save_dir to save plot to
@@ -1515,35 +1517,40 @@ def plot_clusters_stats_pop_avg_rows(cluster_meta, feature_matrix, multi_session
     if sort_order:
         cluster_ids = sort_order[cre_line]
     n_clusters = len(cluster_ids)
-    # cell counts and fraction for this cre line
-
-    # cre_fraction = fraction_cells[fraction_cells.cre_line == cre_line]
 
     # compute CI for this cre line, cluster id and location
-    cluster_meta_sel = cluster_meta[cluster_meta.cre_line == cre_line].copy()
+    cluster_meta_cre = cluster_meta[cluster_meta.cre_line == cre_line].copy()
     # location column is a categorical variable (string) that can be a combination of area and depth or just area or depth (or whatever)
-    cluster_meta_sel = processing.add_location_column(cluster_meta_sel)
+    # cluster_meta_cre = processing.add_location_column(cluster_meta_cre, columns_to_groupby)
 
     if alpha is not None:
-        ci_df = processing.get_CI_for_clusters(cluster_meta_sel, alpha=alpha)
+        ci_df = processing.get_CI_for_clusters(cluster_meta_cre, columns_to_groupby, alpha=alpha)
 
     # compute significance for each cluster per area and depth
     # this code gets the proportions across locations and computes significance with corrected chi-square test
     # glm_clust.final will use the location column in cluster_meta_copy to get proportions and stats for those groupings within each cluster
-    proportion_table, stats_table = glm_clust.final(cluster_meta_sel.reset_index(), cre_line)
-    y_max = proportion_table.max().max()
+    # proportion_table, stats_table = glm_clust.final(cluster_meta_cre.reset_index(), cre_line)
+
+
+    # reformat proportion_table to match format expected by downstream plotting code
+    # cre_proportions = pd.DataFrame(proportion_table.unstack()).rename(columns={0: 'proportion'})
+    # cre_proportions = cre_proportions.reset_index()
+    # cre_proportions['cre_line'] = cre_line
+
+    # compute proportion cells per location for each cluster and stats using glm_clustering code
+    # computes proportions for all cre lines so need to filter afterwards
+    proportions, stats_table = processing.get_proportion_cells_rel_cluster_average(cluster_meta, cluster_meta.cre_line.unique(),
+                                                                                   columns_to_groupby=['targeted_structure', 'layer'])
+    cre_proportions = proportions[proportions.cre_line == cre_line]
+    cre_stats = stats_table[stats_table.cre_line==cre_line]
+
+    # get confidence intervals to plot
+    y_max = cre_proportions['proportion_cells'].max()
     dh = y_max * 0.2  # extra y space for plotting significance
     ci_error = ci_df['CI'].max()
     bary = np.array([y_max, y_max]) + ci_error
 
-    # reformat proportion_table to match format expected by downstream plotting code
-    cre_proportions = pd.DataFrame(proportion_table.unstack()).rename(columns={0: 'proportion'})
-    cre_proportions = cre_proportions.reset_index()
-    cre_proportions['cre_line'] = cre_line
-
-    # function to load proportion cells using glm_clustering code and reformat to be compatible with plotting
-    proportions, _ = processing.get_proportion_cells_rel_cluster_average(cluster_meta_sel, np.array(cre_line), groupby_columns=['targeted_structure', 'layer'])
-    cre_proportions = proportions[proportions.cre_line == cre_line]
+    # plot
     n_rows = 3  # 4 if including proportion plots
     figsize = (n_clusters * 2.5, n_rows * 2.5)
     fig, ax = plt.subplots(n_rows, n_clusters, figsize=figsize, sharex='row', sharey='row',
@@ -1551,7 +1558,7 @@ def plot_clusters_stats_pop_avg_rows(cluster_meta, feature_matrix, multi_session
     ax = ax.ravel()
     for i, cluster_id in enumerate(cluster_ids):
         # plot mean dropout heatmap for this cluster
-        ax[i] = plot_dropout_heatmap(cluster_meta_sel, feature_matrix, cre_line, cluster_id, ax=ax[i])
+        ax[i] = plot_dropout_heatmap(cluster_meta_cre, feature_matrix, cre_line, cluster_id, ax=ax[i])
 
         # plot population averages per cluster
         ax[i + (n_clusters * 1)] = plot_population_average_response_for_cluster(cluster_mdf, cre_line, cluster_id,
@@ -1560,18 +1567,16 @@ def plot_clusters_stats_pop_avg_rows(cluster_meta, feature_matrix, multi_session
         if i > 0:
             ax[i + (n_clusters * 1)].set_ylabel('')
 
-
-        # plot area and depth proportions with stats
+        # plot proportion of cells per cluster relative to cluster average, with stats
         # get confidence intervals for this cluster id
         if alpha is not None:
             this_ci = ci_df[ci_df['cluster_id'] == cluster_id].sort_values('location')['CI'].values
         else:
             this_ci = None
-        ### use Alex's proportions table here instead ###
         ax[i + (n_clusters * 2)] = plot_proportion_cells_for_cluster(cre_proportions, cluster_id, ci=this_ci, ax=ax[i + (n_clusters * 2)])
 
         # plot significance with bh corrected chi-square test
-        this_s = stats_table.loc[cluster_id]
+        this_s = cre_stats.loc[cluster_id]
         if this_s['bh_significant'] == True:
             barx = [3, 0]
             mid = np.mean(barx)

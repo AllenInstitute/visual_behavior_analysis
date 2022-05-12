@@ -175,14 +175,14 @@ plotting.plot_fraction_cells_by_area_depth(cluster_meta, n_clusters_cre, normali
 # cluster_proportions_cre
 
 # cluster proportions for all cre lines
-proportions = processing.get_proportion_cells_rel_cluster_average(cluster_meta, cre_lines, groupby_columns=['targeted_structure', 'layer'])
+proportions, stats = processing.get_proportion_cells_rel_cluster_average(cluster_meta, cre_lines, columns_to_groupby=['targeted_structure', 'layer'])
 
 # plot fraction cells per area depth
 value_to_plot = 'proportion_cells'
 cbar_label = 'proportion relative\n to cluster avg'
 suffix = '_size_order'
 
-vmax = proportions[value_to_plot].max()
+vmax = np.amax(proportions[value_to_plot].values)
 
 plotting.plot_cell_stats_per_cluster_for_areas_depths(cluster_meta, proportions, n_clusters_cre,
                                                       value_to_plot, cbar_label, cmap='PRGn', vmin=-vmax, vmax=vmax,
@@ -194,7 +194,7 @@ plotting.plot_cell_stats_per_cluster_for_areas_depths(cluster_meta, proportions,
 # cbar_label = 'proportion cells\n rel. to cluster avg'
 # suffix = '_VISp_upper_sort'
 #
-# proportions = processing.get_proportion_cells_rel_cluster_average(cluster_meta, cre_lines, groupby_columns=['targeted_structure', 'layer'])
+# proportions, stats = processing.get_proportion_cells_rel_cluster_average(cluster_meta, cre_lines, groupby_columns=['targeted_structure', 'layer'])
 #
 # vmax = proportions[value_to_plot].max()
 # cluster_order = processing.get_cluster_order_for_metric_location(proportions, cluster_meta,
@@ -236,7 +236,7 @@ cluster_mdf = multi_session_df.merge(cluster_meta[['cluster_id']],
 # try for just V1 vs LM or upper vs lower
 
 # # areas
-# area_proportions = processing.get_proportion_cells_rel_cluster_average(cluster_meta, cre_lines,
+# area_proportions, stats = processing.get_proportion_cells_rel_cluster_average(cluster_meta, cre_lines,
 #                                                                        groupby_columns=['targeted_structure'])
 # area_proportions['location'] = area_proportions.targeted_structure
 #
@@ -259,7 +259,7 @@ cluster_mdf = multi_session_df.merge(cluster_meta[['cluster_id']],
 #                                               save_dir=base_dir, folder=folder, )
 #
 # # depths
-# layer_proportions = processing.get_proportion_cells_rel_cluster_average(cluster_meta, cre_lines,
+# layer_proportions, stats = processing.get_proportion_cells_rel_cluster_average(cluster_meta, cre_lines,
 #                                                                         groupby_columns=['layer'])
 # layer_proportions['location'] = layer_proportions.layer
 #

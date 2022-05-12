@@ -20,8 +20,8 @@ import visual_behavior.data_access.utilities as utilities
 
 import visual_behavior_glm.GLM_analysis_tools as gat
 import visual_behavior_glm.GLM_params as glm_params
-from statsmodels.stats.proportion import proportion_confint as pc
-from statsmodels.stats.proportion import multinomial_proportions_confint as mpc
+from statsmodels.stats.proportion import proportion_confint
+from statsmodels.stats.proportion import multinomial_proportions_confint
 
 import seaborn as sns
 sns.set_context('notebook', font_scale=1.5, rc={'lines.markeredgewidth': 2})
@@ -1083,28 +1083,49 @@ def compute_cluster_proportion_cre(cluster_meta, cre_line, groupby_columns=['tar
 #     return cluster_proportions
 
 
-def get_proportion_cells_rel_cluster_average(cluster_meta, cre_lines, groupby_columns=['targeted_structure', 'layer']):
+def get_proportion_cells_rel_cluster_average(cluster_meta, cre_lines, columns_to_groupby=['targeted_structure', 'layer']):
+    """
+
+    computes the proportion of cells in each location (defined by values of columns_to_groupby) for a given cluster,
+    relative to the average proportion of cells across all locations in that cluster, for each cre line;
+    as well as the significance of proportions relative to the average using bh corrected chi-square test
+    uses visual_behavior_glm functions to compute proportions and stats
+
+    Note that the input is NOT limited to one cre line
+
+    :param cluster_meta: dataframe containing metadata for all cell_specimen_ids, including cluster_id
+    :param cre_lines: cre lines to iterate over when creating proportions table
+    :param columns_to_groupby: columns in cluster_meta to use when computing proportion cells per location;
+                                location is defined as the concatenation of the groups in columns_to_groupby
+    :return: cluster_proportions: table with columns for cre line, cluster_id, location, and proportion
+                                    proportion is the proportion of cells in location for a given cluster, relative to cluster average
+            stats_table: table of pvalues for bh corrected chi-square test to quantify significance of proportion cells relative to cluster average
+                                    includes stats for each cre line and couster
+    """
     from visual_behavior_glm import GLM_clustering as glm_clust
     cluster_proportions = pd.DataFrame()
+    stats_table = pd.DataFrame()
     for cre_line in cre_lines:
         # location column is a categorical variable (string) that can be a combination of area and depth or just area or depth (or whatever)
         cluster_meta_cre = cluster_meta[cluster_meta.cre_line == cre_line].copy()
         ### make this generalized by providing groupby to add_location_column
-        cluster_meta = add_location_column(cluster_meta_cre)
+        cluster_meta_cre = add_location_column(cluster_meta_cre, columns_to_groupby)
 
         # this code gets the proportions across locations and computes significance with corrected chi-square test
         # glm_clust.final will use the location column in cluster_meta_copy to get proportions and stats for those groupings within each cluster
-        proportion_table, stats_table = glm_clust.final(cluster_meta_cre.reset_index(), cre_line)
+        proportion_table, stats = glm_clust.final(cluster_meta_cre.reset_index(), cre_line)
+        stats['cre_line'] = cre_line
 
         # reformat proportion_table to match format expected by downstream plotting code
-        cre_proportions = pd.DataFrame(proportion_table.unstack()).rename(columns={0: 'proportion'})
+        cre_proportions = pd.DataFrame(proportion_table.unstack()).rename(columns={0: 'proportion_cells'})
         cre_proportions = cre_proportions.reset_index()
         cre_proportions['cre_line'] = cre_line
 
         # add cre line proportions to unified table
         cluster_proportions = pd.concat([cluster_proportions, cre_proportions])
+        stats_table = pd.concat([stats_table, stats])
 
-    return cluster_proportions
+    return cluster_proportions, stats_table
 
 def stats(df, cre):
     '''
@@ -1396,14 +1417,15 @@ def shuffle_dropout_score(df_dropout, shuffle_type='all'):
     return df_shuffled
 
 
-def get_CI_for_clusters(cluster_meta, alpha=0.05,
-                        columns_to_groupby=['targeted_structure', 'layer'], type_of_CI='mpc', cre = 'all'):
+def get_CI_for_clusters(cluster_meta, columns_to_groupby=['targeted_structure', 'layer'], alpha=0.05, type_of_CI='mpc', cre = 'all'):
     '''
     Computes CI for cluster sizes using statsmodels.stats.proportion.proportion_confint function
     Input:
         cluster_meta (pd.DataFrame): len of which is number of cells, with column 'cluster_id'
         alpha (int): p value, default = 0.01
-        columns_to_groupby, default = [ 'targeted_structure', 'layer'], do not add cluster-id here
+        columns_to_groupby: columns in cluster_meta to use when computing proportion cells per location;
+                                location is defined as the concatenation of the groups in columns_to_groupby,
+                                default = [ 'targeted_structure', 'layer'], do not add cluster-id here
         type_of_CI (str), how CIs are computed, default mpc, mpc=multinomial_proportinal_confident, pc=proportion_confint
     Returns:
         CI_df: pd.DataFrame with columns Low_CI, High_CI, and CI (difference)
@@ -1424,11 +1446,11 @@ def get_CI_for_clusters(cluster_meta, alpha=0.05,
     if type_of_CI == 'pc':
         for cre_line in cre_lines:
             # subset cre_line
-            cluster_meta_cre = cluster_meta[cluster_meta['cre_line'] == cre_line]
+            cluster_meta_cre = cluster_meta[cluster_meta['cre_line'] == cre_line].copy()
 
             # get groupby totals for all locations
             df_groupedby_totals = cluster_meta_cre.reset_index().groupby('location').count().rename(columns={
-                'cell_specimen_id': 'n_cells_cluster'})[['n_cells_cluster']]
+                'cell_specimen_id': 'n_cells_total'})[['n_cells_total']]
 
             # get groupby totals for locations and cluster id
             df_groupedby_per_cluster = \
@@ -1441,12 +1463,12 @@ def get_CI_for_clusters(cluster_meta, alpha=0.05,
             # iterate over locations
             for location in locations:
                 # total N of observation in this location
-                nobs = df_groupedby_totals.loc[(cre_line, location)].values
+                n_total = df_groupedby_totals.loc[(location)].values
                 for cluster_id in cluster_ids:
                     # compute CI for this cluster/location
                     try:
-                        n = df_groupedby_per_cluster.loc[(cre_line, location, cluster_id)].values
-                        CI = pc(n, nobs, alpha=alpha, )
+                        n_cluster = df_groupedby_per_cluster.loc[(location, cluster_id)].values[0]
+                        CI = proportion_confint(n_cluster, n_total, alpha=alpha, )
                         data = {'location': location,
                                 'cluster_id': cluster_id,
                                 'cre_line': cre_line,
@@ -1466,11 +1488,11 @@ def get_CI_for_clusters(cluster_meta, alpha=0.05,
     elif type_of_CI == 'mpc':
         for cre_line in cre_lines:
             # subset cre_line
-            cluster_meta_cre = cluster_meta[cluster_meta['cre_line'] == cre_line]
+            cluster_meta_cre = cluster_meta[cluster_meta['cre_line'] == cre_line].copy()
 
             # get groupby totals for all locations
             df_groupedby_totals = cluster_meta_cre.reset_index().groupby('location').count().rename(columns={
-                'cell_specimen_id': 'n_cells_cluster'})[['n_cells_cluster']]
+                'cell_specimen_id': 'n_cells_total'})[['n_cells_total']]
 
             # get groupby totals for locations and cluster id
             df_groupedby_per_cluster = \
@@ -1480,9 +1502,7 @@ def get_CI_for_clusters(cluster_meta, alpha=0.05,
             # get cluster ids for from this dataframe
             cluster_ids = cluster_meta_cre['cluster_id'].unique()
 
-            cluster_ids = cluster_meta[cluster_meta['cre_line'] == cre_line]['cluster_id'].unique()
             # if cluster ids start with 0 do nothing
-
             if 0 in cluster_ids:
                 e = 0
             else:  # if cluster ids start with 1, subtract 1 for indexing CIs
@@ -1492,13 +1512,13 @@ def get_CI_for_clusters(cluster_meta, alpha=0.05,
                 # collect all n per cluster in this location into one array N
                 for cluster_id in cluster_ids:
                     try:
-                        n = df_groupedby_per_cluster.loc[(cre_line, location, cluster_id)].values
-                    except KeyError:
+                        n_cluster = df_groupedby_per_cluster.loc[(location, cluster_id)].values[0]
+                    except: # used to have KeyError here but sometimes its a TypeError when there are no cells in a cluster
                         print(f'{cre_line, location, cluster_id} no cells in this cluster')
-                        n = 0
-                    N.append(n)
+                        n_cluster = 0
+                    N.append(n_cluster)
                 #compute CIs for this location
-                CIs = mpc(N, alpha= alpha,)
+                CIs = multinomial_proportions_confint(N, alpha=alpha)
 
                 # asign CIs to their cluster
                 for cluster_id in cluster_ids:
@@ -1524,7 +1544,8 @@ def add_location_column(cluster_meta, columns_groupby = ['targeted_structure', '
     function to add location column to a df
     INPUT:
     cluster_meta: (pd.DataFrame) of groupout scores for each cell with other meta data columns
-    columns_groupby: (array) of columns to group by
+    columns_to_groupby: columns in cluster_meta to use to create new location column
+                                location is defined as the concatenation of the column values in columns_to_groupby
 
     '''
     cluster_meta_copy = cluster_meta.copy()
