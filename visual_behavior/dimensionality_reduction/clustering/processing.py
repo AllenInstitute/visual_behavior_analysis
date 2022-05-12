@@ -1427,12 +1427,12 @@ def get_CI_for_clusters(cluster_meta, alpha=0.05,
             cluster_meta_cre = cluster_meta[cluster_meta['cre_line'] == cre_line]
 
             # get groupby totals for all locations
-            df_groupedby_totals = cluster_meta_cre.reset_index().groupby(columns_to_groupby).count().rename(columns={
+            df_groupedby_totals = cluster_meta_cre.reset_index().groupby('location').count().rename(columns={
                 'cell_specimen_id': 'n_cells_cluster'})[['n_cells_cluster']]
 
             # get groupby totals for locations and cluster id
             df_groupedby_per_cluster = \
-            cluster_meta_cre.reset_index().groupby([*columns_to_groupby, 'cluster_id']).count().rename(columns={
+            cluster_meta_cre.reset_index().groupby(['location', 'cluster_id']).count().rename(columns={
                 'cell_specimen_id': 'n_cells_cluster'})[['n_cells_cluster']]
 
             # get cluster ids for from this dataframe
@@ -1469,18 +1469,16 @@ def get_CI_for_clusters(cluster_meta, alpha=0.05,
             cluster_meta_cre = cluster_meta[cluster_meta['cre_line'] == cre_line]
 
             # get groupby totals for all locations
-            df_groupedby_totals = cluster_meta_cre.reset_index().groupby(columns_to_groupby).count().rename(columns={
+            df_groupedby_totals = cluster_meta_cre.reset_index().groupby('location').count().rename(columns={
                 'cell_specimen_id': 'n_cells_cluster'})[['n_cells_cluster']]
 
             # get groupby totals for locations and cluster id
             df_groupedby_per_cluster = \
-                cluster_meta_cre.reset_index().groupby([*columns_to_groupby, 'cluster_id']).count().rename(columns={
+                cluster_meta_cre.reset_index().groupby(['location', 'cluster_id']).count().rename(columns={
                     'cell_specimen_id': 'n_cells_cluster'})[['n_cells_cluster']]
 
             # get cluster ids for from this dataframe
             cluster_ids = cluster_meta_cre['cluster_id'].unique()
-
-
 
             cluster_ids = cluster_meta[cluster_meta['cre_line'] == cre_line]['cluster_id'].unique()
             # if cluster ids start with 0 do nothing
