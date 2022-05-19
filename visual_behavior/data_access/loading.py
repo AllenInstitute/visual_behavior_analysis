@@ -189,7 +189,7 @@ def get_platform_paper_experiment_table(add_extra_columns=True, include_4x2_data
 
     # remove 4x2 and Ai94 data
     if include_4x2_data:
-        experiment_table = experiment_table[(experiment_table.reporter_line != 'Ai94(TITL-GCaMP6s)')].copy() 
+        experiment_table = experiment_table[(experiment_table.reporter_line != 'Ai94(TITL-GCaMP6s)')].copy()
     else:
         experiment_table = experiment_table[(experiment_table.project_code != 'VisualBehaviorMultiscope4areasx2d') &
                                             (experiment_table.reporter_line != 'Ai94(TITL-GCaMP6s)')].copy()
