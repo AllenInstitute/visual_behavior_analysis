@@ -174,7 +174,7 @@ def get_released_ophys_experiment_table(exclude_ai94=True):
     return experiment_table
 
 
-def get_platform_paper_experiment_table(add_extra_columns=True,include_4x2_data=False):
+def get_platform_paper_experiment_table(add_extra_columns=True, include_4x2_data=False):
     """
     loads the experiment table that was downloaded from AWS and saved to the the platform paper cache dir.
     Then filter out VisualBehaviorMultiscope4areasx2d and Ai94 data.
@@ -189,7 +189,7 @@ def get_platform_paper_experiment_table(add_extra_columns=True,include_4x2_data=
 
     # remove 4x2 and Ai94 data
     if include_4x2_data:
-        experiment_table = experiment_table[(experiment_table.reporter_line != 'Ai94(TITL-GCaMP6s)')].copy()      
+        experiment_table = experiment_table[(experiment_table.reporter_line != 'Ai94(TITL-GCaMP6s)')].copy() 
     else:
         experiment_table = experiment_table[(experiment_table.project_code != 'VisualBehaviorMultiscope4areasx2d') &
                                             (experiment_table.reporter_line != 'Ai94(TITL-GCaMP6s)')].copy()
@@ -226,7 +226,7 @@ def get_platform_paper_behavior_session_table(include_4x2_data=False):
     loads the behavior sessions table that was downloaded from AWS and saved to the the platform paper cache dir.
     Then filter out VisualBehaviorMultiscope4areasx2d and Ai94 data.
     And add cell_type column (values = ['Excitatory', 'Sst Inhibitory', 'Vip Inhibitory']
-    
+
     include_4x2_data (bool), if True, include Multiscope 4areas x 2 depth data
     """
     cache_dir = get_platform_analysis_cache_dir()
@@ -3121,10 +3121,10 @@ def get_cell_table(platform_paper_only=True, add_extra_columns=True, include_4x2
     # optionally filter to limit to platform paper datasets
     if platform_paper_only == True:
         # load experiments table and merge
-        experiment_table = get_platform_paper_experiment_table(add_extra_columns=add_extra_columns,include_4x2_data = include_4x2_data)
+        experiment_table = get_platform_paper_experiment_table(add_extra_columns=add_extra_columns, include_4x2_data=include_4x2_data)
         cell_table = cell_table.reset_index().merge(experiment_table, on='ophys_experiment_id')
         if include_4x2_data:
-            cell_table = cell_table[(cell_table.reporter_line != 'Ai94(TITL-GCaMP6s)')]       
+            cell_table = cell_table[(cell_table.reporter_line != 'Ai94(TITL-GCaMP6s)')]
         else:
             cell_table = cell_table[(cell_table.reporter_line != 'Ai94(TITL-GCaMP6s)') & (cell_table.project_code != 'VisualBehaviorMultiscope4areasx2d')]
         cell_table = cell_table.set_index('cell_roi_id')
