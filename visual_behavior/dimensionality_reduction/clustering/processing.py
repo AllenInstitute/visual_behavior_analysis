@@ -1129,6 +1129,7 @@ def get_proportion_cells_rel_cluster_average(cluster_meta, cre_lines, columns_to
 
     return cluster_proportions, stats_table
 
+
 def stats(df, cre):
     '''
         Performs chi-squared tests to asses whether the observed cell counts in each area/depth differ
@@ -1419,7 +1420,7 @@ def shuffle_dropout_score(df_dropout, shuffle_type='all'):
     return df_shuffled
 
 
-def get_CI_for_clusters(cluster_meta, columns_to_groupby=['targeted_structure', 'layer'], alpha=0.05, type_of_CI='mpc', cre = 'all'):
+def get_CI_for_clusters(cluster_meta, columns_to_groupby=['targeted_structure', 'layer'], alpha=0.05, type_of_CI='mpc', cre='all'):
     '''
     Computes CI for cluster sizes using statsmodels.stats.proportion.proportion_confint function
     Input:
@@ -1456,8 +1457,8 @@ def get_CI_for_clusters(cluster_meta, columns_to_groupby=['targeted_structure', 
 
             # get groupby totals for locations and cluster id
             df_groupedby_per_cluster = \
-            cluster_meta_cre.reset_index().groupby(['location', 'cluster_id']).count().rename(columns={
-                'cell_specimen_id': 'n_cells_cluster'})[['n_cells_cluster']]
+                cluster_meta_cre.reset_index().groupby(['location', 'cluster_id']).count().rename(columns={
+                    'cell_specimen_id': 'n_cells_cluster'})[['n_cells_cluster']]
 
             # get cluster ids for from this dataframe
             cluster_ids = cluster_meta_cre['cluster_id'].unique()
@@ -1515,11 +1516,11 @@ def get_CI_for_clusters(cluster_meta, columns_to_groupby=['targeted_structure', 
                 for cluster_id in cluster_ids:
                     try:
                         n_cluster = df_groupedby_per_cluster.loc[(location, cluster_id)].values[0]
-                    except: # used to have KeyError here but sometimes its a TypeError when there are no cells in a cluster
+                    except: # noqa E501 # used to have KeyError here but sometimes its a TypeError when there are no cells in a cluster
                         print(f'{cre_line, location, cluster_id} no cells in this cluster')
                         n_cluster = 0
                     N.append(n_cluster)
-                #compute CIs for this location
+                # compute CIs for this location
                 CIs = multinomial_proportions_confint(N, alpha=alpha)
 
                 # asign CIs to their cluster
@@ -1562,7 +1563,7 @@ def add_location_column(cluster_meta, columns_to_groupby=['targeted_structure', 
         cluster_meta_copy['location'] = cluster_meta_copy[columns_to_groupby[0]] + '_' + cluster_meta_copy[columns_to_groupby[1]]
     elif len(columns_to_groupby) == 3:
         cluster_meta_copy['location'] = cluster_meta_copy[columns_to_groupby[0]] + '_' + cluster_meta_copy[
-            columns_to_groupby[1]]+ '_' + cluster_meta_copy[columns_to_groupby[2]]
+            columns_to_groupby[1]] + '_' + cluster_meta_copy[columns_to_groupby[2]]
     elif len(columns_to_groupby) > 3:
         print('cannot combine more than three columns into a location column')
 

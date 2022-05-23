@@ -43,7 +43,7 @@ cell_types = utilities.get_cell_types_dict(cre_lines, experiments_table)
 glm_version = '24_events_all_L2_optimize_by_session'
 model_output_type = 'adj_fraction_change_from_full'
 
-base_dir = '//allen\programs/braintv/workgroups/nc-ophys/visual_behavior/platform_paper_plots/figure_4'
+base_dir = '//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/platform_paper_plots/figure_4'
 base_dir = os.path.join(base_dir, glm_version)
 if not os.path.exists(base_dir):
     os.mkdir(base_dir)

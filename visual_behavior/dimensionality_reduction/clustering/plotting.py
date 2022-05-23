@@ -13,7 +13,7 @@ from sklearn.cluster import KMeans
 import visual_behavior.visualization.utils as utils
 import visual_behavior.data_access.loading as loading
 
-from visual_behavior_glm import GLM_clustering as glm_clust
+from visual_behavior_glm import GLM_clustering as glm_clust # noqa E501
 
 from visual_behavior.dimensionality_reduction.clustering import processing
 from visual_behavior.dimensionality_reduction.clustering.processing import get_silhouette_scores, get_cluster_density, get_cre_lines, get_cell_type_for_cre_line
@@ -1333,7 +1333,7 @@ def plot_proportion_cells_for_cluster(cre_proportion, cluster_id, ci_df=None, ax
     if 'location' not in cre_proportion.keys():
         print('location column must be in cre_proportion df provided to plot_proportion_cells_per_cluster function')
 
-    locations = list(np.sort(cre_proportion.location.unique())) # make sure to sort so it matches the data and ci order
+    locations = list(np.sort(cre_proportion.location.unique()))  # make sure to sort so it matches the data and ci order
     colormap = sns.color_palette("Paired", len(locations))
 
     if ci_df is None:
@@ -1346,7 +1346,7 @@ def plot_proportion_cells_for_cluster(cre_proportion, cluster_id, ci_df=None, ax
         fig, ax = plt.subplots()
 
     data = cre_proportion[cre_proportion.cluster_id == cluster_id]
-    data = data.sort_values('location') # make sure to sort by location so it matches the ci
+    data = data.sort_values('location')  # make sure to sort by location so it matches the ci
     ax = sns.barplot(data=data, x='location', y='proportion_cells', order=locations, yerr=ci, orient='v', palette=colormap, ax=ax)
 
     ax.set_ylabel('proportion cells\n rel. cluster avg.', fontsize=14)
@@ -1518,7 +1518,7 @@ def plot_clusters_stats_pop_avg_rows(cluster_meta, feature_matrix, multi_session
     # compute CI for this cre line, cluster id and location
     if alpha is not None:
         ci_df = processing.get_CI_for_clusters(cluster_meta, columns_to_groupby, alpha=alpha, type_of_CI='mpc', cre='all')
-        ci_df = ci_df[ci_df.cre_line==cre_line]
+        ci_df = ci_df[ci_df.cre_line == cre_line]
     else:
         ci_df = None
     # compute proportion cells per location for each cluster and stats using glm_clustering code
@@ -1526,13 +1526,13 @@ def plot_clusters_stats_pop_avg_rows(cluster_meta, feature_matrix, multi_session
     proportions, stats_table = processing.get_proportion_cells_rel_cluster_average(cluster_meta, cluster_meta.cre_line.unique(),
                                                                                    columns_to_groupby)
     cre_proportions = proportions[proportions.cre_line == cre_line]
-    cre_stats = stats_table[stats_table.cre_line==cre_line]
+    cre_stats = stats_table[stats_table.cre_line == cre_line]
 
     # max confidence interval to know where to plot the significance bar
     y_max = cre_proportions['proportion_cells'].max()
     dh = y_max * 0.2  # extra y space for plotting significance star
-    ci_error = ci_df['CI'].max() # use this max to plot vertical line for stats at the same height for all clusters
-    bary = np.array([y_max, y_max]) + ci_error # height of the vertical line for statistics comparison
+    ci_error = ci_df['CI'].max()  # use this max to plot vertical line for stats at the same height for all clusters
+    bary = np.array([y_max, y_max]) + ci_error  # height of the vertical line for statistics comparison
 
     # plot
     n_rows = 3  # 4 if including proportion plots
@@ -1558,8 +1558,8 @@ def plot_clusters_stats_pop_avg_rows(cluster_meta, feature_matrix, multi_session
         # plot significance with bh corrected chi-square test
         this_s = cre_stats.loc[cluster_id]
         if this_s['bh_significant'] == True:
-            barx = [int(len(cre_proportions.location.unique()))-1, 0]
-            mid = np.mean(barx)+0.25
+            barx = [int(len(cre_proportions.location.unique())) - 1, 0]
+            mid = np.mean(barx) + 0.25
             ax[i + (n_clusters * 2)].plot(barx, bary, color='k')
             if this_s['imq'] < 0.0005:
                 text = '***'
