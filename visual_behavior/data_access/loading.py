@@ -207,22 +207,27 @@ def get_released_ophys_experiment_table(exclude_ai94=True):
     return experiment_table
 
 
-def get_platform_paper_experiment_table(add_extra_columns=True, limit_to_closest_active=False):
+def get_platform_paper_experiment_table(add_extra_columns=True, limit_to_closest_active=False, include_4x2_data=False):
     """
     loads the experiment table that was downloaded from AWS and saved to the the platform paper cache dir.
     Then filter out VisualBehaviorMultiscope4areasx2d and Ai94 data.
     And add cell_type column (values = ['Excitatory', 'Sst Inhibitory', 'Vip Inhibitory']
     Set add_extra_columns to False if you dont need things like 'cell_type', 'binned_depth', or 'add_last_familiar'
+        with only the closest familiar and novel active sessions to the first novel session to be included (i.e. only one session of each type per container)
     Set limit_to_closest_active to True if you want to limit to experiments that are matched in all experience levels,
         with only the closest familiar and novel active sessions to the first novel session to be included (i.e. only one session of each type per container)
+    include_4x2_data (bool), if True, then includes VisualBehaviorMultiscope4areasx2d data
     """
     cache_dir = get_platform_analysis_cache_dir()
     cache = bpc.from_s3_cache(cache_dir=cache_dir)
     experiment_table = cache.get_ophys_experiment_table()
 
     # remove 4x2 and Ai94 data
-    experiment_table = experiment_table[(experiment_table.project_code != 'VisualBehaviorMultiscope4areasx2d') &
-                                        (experiment_table.reporter_line != 'Ai94(TITL-GCaMP6s)')].copy()
+    if include_4x2_data:
+        experiment_table = experiment_table[(experiment_table.reporter_line != 'Ai94(TITL-GCaMP6s)')].copy()
+    else:
+        experiment_table = experiment_table[(experiment_table.project_code != 'VisualBehaviorMultiscope4areasx2d') &
+                                            (experiment_table.reporter_line != 'Ai94(TITL-GCaMP6s)')].copy()
 
     # overwrite session number and passive columns to patch for bug flagged in this SDK issue:
     # https://github.com/AllenInstitute/AllenSDK/issues/2251
@@ -256,11 +261,13 @@ def get_platform_paper_experiment_table(add_extra_columns=True, limit_to_closest
     return experiment_table
 
 
-def get_platform_paper_behavior_session_table():
+def get_platform_paper_behavior_session_table(include_4x2_data=False):
     """
     loads the behavior sessions table that was downloaded from AWS and saved to the the platform paper cache dir.
     Then filter out VisualBehaviorMultiscope4areasx2d and Ai94 data.
     And add cell_type column (values = ['Excitatory', 'Sst Inhibitory', 'Vip Inhibitory']
+
+    include_4x2_data (bool), if True, include Multiscope 4areas x 2 depth data
     """
     cache_dir = get_platform_analysis_cache_dir()
     cache = bpc.from_s3_cache(cache_dir=cache_dir)
@@ -270,8 +277,11 @@ def get_platform_paper_behavior_session_table():
     behavior_sessions = behavior_sessions[behavior_sessions.session_type.isnull() == False]
 
     # remove 4x2 and Ai94 data
-    behavior_sessions = behavior_sessions[(behavior_sessions.project_code != 'VisualBehaviorMultiscope4areasx2d') &
-                                          (behavior_sessions.reporter_line != 'Ai94(TITL-GCaMP6s)')].copy()
+    if include_4x2_data:
+        behavior_sessions = behavior_sessions[(behavior_sessions.reporter_line != 'Ai94(TITL-GCaMP6s)')].copy()
+    else:
+        behavior_sessions = behavior_sessions[(behavior_sessions.project_code != 'VisualBehaviorMultiscope4areasx2d') &
+                                              (behavior_sessions.reporter_line != 'Ai94(TITL-GCaMP6s)')].copy()
 
     # overwrite session number and passive columns to patch for bug flagged in this SDK issue:
     # https://github.com/AllenInstitute/AllenSDK/issues/2251
@@ -3169,10 +3179,11 @@ def get_cell_table_from_lims(ophys_experiment_ids=None, columns_to_return='*', v
     return lims_rois
 
 
-def get_cell_table(platform_paper_only=True, add_extra_columns=True, limit_to_closest_active=False, limit_to_matched_cells=False):
+def get_cell_table(platform_paper_only=True, add_extra_columns=True, limit_to_closest_active=False, limit_to_matched_cells=False, include_4x2_data=False):
     """
     loads ophys_cells_table from the SDK using platform paper analysis cache and merges with experiment_table to get metadata
     if 'platform_paper_only' is True, will filter out Ai94 and VisuaBehaviorMultiscope4areasx2d and add extra columns
+    if `include_4x2_data` is True, then `platform_paper_only` will NOT filter out 4areasx2d data
     if 'limit_to_closest_active' is True, will limit to containers with all 3 experience levels, only including the closest (in time)
         familiar and novel active sessions to the first novel session
     if 'limit_to_matched_cells' is True, will only return cells that are matched in all 3 experience levels
@@ -3185,9 +3196,12 @@ def get_cell_table(platform_paper_only=True, add_extra_columns=True, limit_to_cl
     # optionally filter to limit to platform paper datasets
     if platform_paper_only == True:
         # load experiments table and merge
-        experiment_table = get_platform_paper_experiment_table(add_extra_columns=add_extra_columns)
+        experiment_table = get_platform_paper_experiment_table(add_extra_columns=add_extra_columns, include_4x2_data=include_4x2_data)
         cell_table = cell_table.reset_index().merge(experiment_table, on='ophys_experiment_id')
-        cell_table = cell_table[(cell_table.reporter_line != 'Ai94(TITL-GCaMP6s)') & (cell_table.project_code != 'VisualBehaviorMultiscope4areasx2d')]
+        if include_4x2_data:
+            cell_table = cell_table[(cell_table.reporter_line != 'Ai94(TITL-GCaMP6s)')]
+        else:
+            cell_table = cell_table[(cell_table.reporter_line != 'Ai94(TITL-GCaMP6s)') & (cell_table.project_code != 'VisualBehaviorMultiscope4areasx2d')]
         cell_table = cell_table.set_index('cell_roi_id')
     else:
         # load platform experiments table and merge
