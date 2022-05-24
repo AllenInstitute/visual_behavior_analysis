@@ -128,6 +128,8 @@ if __name__ == '__main__':
     for cell_specimen_id in container_csids:
         cluster_id = container_data[container_data.cell_specimen_id==cell_specimen_id].cluster_id.unique()[0]
         folder = 'cluster_' + str(int(cluster_id))
+        if not os.path.exists(os.path.join(save_dir, folder)):
+            os.mkdir(os.path.join(save_dir, folder))
         try:
             print('generating plot for', cell_specimen_id)
             psc.plot_cell_rois_and_GLM_weights(cell_specimen_id, cells_table, experiments_table, dropout_features,
