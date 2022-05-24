@@ -4,21 +4,25 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import seaborn as sns
 
+sns.set_context('notebook', font_scale=1.5, rc={'lines.markeredgewidth': 2})
 
 def get_container_plots_dir():
     return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/container_plots'
 
+
 def get_session_plots_dir():
     return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/session_plots'
 
+
 def get_experiment_plots_dir():
     return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/experiment_plots'
+
 
 def get_single_cell_plots_dir():
     return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/single_cell_plots'
 
 
-def save_figure(fig, figsize, save_dir, folder, fig_title, formats=['.png']):
+def save_figure(fig, figsize, save_dir, folder, fig_title, formats=['.png', '.pdf']):
     fig_dir = os.path.join(save_dir, folder)
     if not os.path.exists(fig_dir):
         os.mkdir(fig_dir)
@@ -52,6 +56,7 @@ def get_experience_level_colors():
 
     return colors
 
+
 def lighter(color, percent):
     color = np.array(color)
     white = np.array([255, 255, 255])
@@ -63,9 +68,9 @@ def get_cre_line_colors():
     """
     returns colors in order of Slc17a7, Sst, Vip
     """
-    colors = [(255/255,152/255,150/255),
-              (158/255, 218/255, 229/255),
-              (197/255, 176/255, 213/255)]
+    colors = [(255 / 255, 152 / 255, 150 / 255),
+              (158 / 255, 218 / 255, 229 / 255),
+              (197 / 255, 176 / 255, 213 / 255)]
     return colors
 
 
@@ -73,7 +78,30 @@ def get_session_type_color_map():
     colors = np.floor(np.array([list(x) for x in get_colors_for_session_numbers()]) * 255).astype(np.uint8)
     black = np.array([0, 0, 0]).astype(np.uint8)
 
+
     session_type_color_map = {
+        'TRAINING_0_gratings_autorewards_15min': black,
+        'TRAINING_1_gratings': lighter(black, 0.2),
+        'TRAINING_2_gratings_flashed': lighter(black, 0.4),
+        'TRAINING_3_images_A_10uL_reward': lighter(black, 0.6),
+        'TRAINING_3_images_B_10uL_reward': lighter(black, 0.6),
+        'TRAINING_3_images_G_10uL_reward': lighter(black, 0.6),
+        'TRAINING_4_images_A_handoff_lapsed': lighter(black, 0.8),
+        'TRAINING_4_images_A_handoff_ready': lighter(black, 0.8),
+        'TRAINING_4_images_A_training': lighter(black, 0.8),
+        'TRAINING_4_images_B_training': lighter(black, 0.8),
+        'TRAINING_4_images_G_training': lighter(black, 0.8),
+        'TRAINING_5_images_A_epilogue': lighter(black, 0.8),
+        'TRAINING_5_images_A_handoff_lapsed': lighter(black, 0.8),
+        'TRAINING_5_images_A_handoff_ready': lighter(black, 0.8),
+        'TRAINING_5_images_B_epilogue': lighter(black, 0.8),
+        'TRAINING_5_images_B_handoff_lapsed': lighter(black, 0.8),
+        'TRAINING_5_images_B_handoff_ready': lighter(black, 0.8),
+        'TRAINING_5_images_G_epilogue': lighter(black, 0.8),
+        'TRAINING_5_images_G_handoff_lapsed': lighter(black, 0.8),
+        'TRAINING_5_images_G_handoff_ready': lighter(black, 0.8),
+
+
         'OPHYS_0_images_A_habituation': lighter(colors[0, :], 0.8),
         'OPHYS_1_images_A': colors[0, :],
         'OPHYS_2_images_A_passive': colors[1, :],
@@ -149,6 +177,7 @@ def make_color_transparent(rgb_color, background_rgb=[255, 255, 255], alpha=0.5)
     return [alpha * c1 + (1 - alpha) * c2
             for (c1, c2) in zip(rgb_color, background_rgb)]
 
+
 def placeAxesOnGrid(fig, dim=[1, 1], xspan=[0, 1], yspan=[0, 1], wspace=None, hspace=None, sharex=False, sharey=False):
     '''
     Takes a figure with a gridspec defined and places an array of sub-axes on a portion of the gridspec
@@ -168,8 +197,8 @@ def placeAxesOnGrid(fig, dim=[1, 1], xspan=[0, 1], yspan=[0, 1], wspace=None, hs
     outer_grid = gridspec.GridSpec(100, 100)
     inner_grid = gridspec.GridSpecFromSubplotSpec(dim[0], dim[1],
                                                   subplot_spec=outer_grid[int(100 * yspan[0]):int(100 * yspan[1]),
-                                                               # flake8: noqa: E999
-                                                               int(100 * xspan[0]):int(100 * xspan[1])], wspace=wspace,
+                                                                          # flake8: noqa: E999
+                                                                          int(100 * xspan[0]):int(100 * xspan[1])], wspace=wspace,
                                                   hspace=hspace)  # flake8: noqa: E999
 
     # NOTE: A cleaner way to do this is with list comprehension:
@@ -198,8 +227,7 @@ def placeAxesOnGrid(fig, dim=[1, 1], xspan=[0, 1], yspan=[0, 1], wspace=None, hs
     return inner_ax
 
 
-
-def plot_flashes_on_trace(ax, timestamps, change=None, omitted=False, alpha=0.15, facecolor='gray'):
+def plot_flashes_on_trace(ax, timestamps, change=None, omitted=False, alpha=0.075, facecolor='gray'):
     """
     plot stimulus flash durations on the given axis according to the provided timestamps
     """
@@ -211,15 +239,21 @@ def plot_flashes_on_trace(ax, timestamps, change=None, omitted=False, alpha=0.15
     interval = (blank_duration + stim_duration)
     # after time 0
     if omitted:
-        array = np.arange((change_time + interval), end_time, interval)
+        array = np.arange((change_time + interval), end_time, interval) # image array starts at the next interval
+        # plot a dashed line where the stimulus time would have been
+        ax.axvline(x=change_time, ymin=0, ymax=1, linestyle='--', color=sns.color_palette()[9], linewidth=1.5)
     else:
         array = np.arange(change_time, end_time, interval)
     for i, vals in enumerate(array):
         amin = array[i]
         amax = array[i] + stim_duration
-        ax.axvspan(amin, amax, facecolor=facecolor, edgecolor='none', alpha=alpha, linewidth=0, zorder=1)
-    if change == True:
-        alpha = alpha * 3
+        if change and (i == 0):
+            change_color = sns.color_palette()[0]
+            ax.axvspan(amin, amax, facecolor=change_color, edgecolor='none', alpha=alpha*1.5, linewidth=0, zorder=1)
+        else:
+            ax.axvspan(amin, amax, facecolor=facecolor, edgecolor='none', alpha=alpha, linewidth=0, zorder=1)
+    # if change == True:
+    #     alpha = alpha / 2.
     else:
         alpha
     # before time 0
@@ -232,21 +266,53 @@ def plot_flashes_on_trace(ax, timestamps, change=None, omitted=False, alpha=0.15
     return ax
 
 
-def plot_mean_trace(traces, timestamps, ylabel='dF/F', legend_label=None, color='k', interval_sec=1, xlim_seconds=[-2,2],
+def plot_mean_trace(traces, timestamps, ylabel='dF/F', legend_label=None, color='k', interval_sec=1, xlim_seconds=[-2, 2],
                     plot_sem=True, ax=None):
     if ax is None:
         fig, ax = plt.subplots()
     if len(traces) > 0:
         trace = np.mean(traces, axis=0)
-        sem = (traces.std()) / np.sqrt(float(len(traces)))
+        sem = (np.std(traces)) / np.sqrt(float(len(traces)))
         ax.plot(timestamps, trace, label=legend_label, linewidth=2, color=color)
         if plot_sem:
             ax.fill_between(timestamps, trace + sem, trace - sem, alpha=0.5, color=color)
-        ax.set_xticks(np.arange(int(timestamps[0]), int(timestamps[-1])+1, interval_sec))
+        ax.set_xticks(np.arange(int(timestamps[0]), int(timestamps[-1]) + 1, interval_sec))
         ax.set_xlim(xlim_seconds)
         ax.set_xlabel('time (sec)')
         ax.set_ylabel(ylabel)
     sns.despine(ax=ax)
+    return ax
+
+
+def plot_stimulus_response_df_trace(stimulus_response_df, time_window=[-1, 1], change=True, omitted=False,
+                                    ylabel=None, legend_label=None, title=None, color='k', ax=None):
+    """
+    Plot average +/- sem trace for a subset of a stimulus_response_df, loaded via loading.get_stimulus_response_df()
+    or directly from mindscope_utilities.visual_behavior_ophys.data_formatting.get_stimulus_response_df()
+    :param stimulus_response_df:
+    :param time_window:
+    :param change:
+    :param omitted:
+    :param ylabel:
+    :param legend_label:
+    :param title:
+    :param color:
+    :param ax:
+    :return:
+    """
+    traces = np.vstack(stimulus_response_df.trace.values)
+    timestamps = stimulus_response_df.trace_timestamps.values[0]
+
+    if ax is None:
+        fig, ax = plt.subplots(figsize=(6, 4))
+    ax = plot_mean_trace(traces, timestamps, ylabel=ylabel, legend_label=legend_label, color=color,
+                         interval_sec=1, xlim_seconds=time_window, plot_sem=True, ax=ax)
+
+    ax = plot_flashes_on_trace(ax, timestamps, change=change, omitted=omitted, alpha=0.15, facecolor='gray')
+
+    if title:
+        ax.set_title(title)
+
     return ax
 
 
@@ -260,3 +326,54 @@ def get_metadata_string(metadata):
     m = metadata.copy()
     metadata_string = str(m['mouse_id']) + '_' + str(m['ophys_experiment_id']) + '_' + m['cre_line'].split('-')[0] + '_' + m['targeted_structure'] + '_' + str(m['imaging_depth']) + '_' + m['session_type']
     return metadata_string
+
+
+def get_container_metadata_string(metadata):
+    m = metadata
+    metadata_string = str(m['mouse_id']) + '_' + str(m['experiment_container_id']) + '_' + m['cre_line'].split('-')[0] + '_' + m['targeted_structure'] + '_' + str(m['imaging_depth'])
+    return metadata_string
+
+
+def get_metadata_for_row_of_multi_session_df(df):
+    if len(df) > 1:
+        metadata = {}
+        metadata['mouse_id'] = df.mouse_id.unique()[0]
+        metadata['experiment_container_id'] = df.ophys_container_id.unique()[0]
+        metadata['cre_line'] = df.cre_line.unique()[0]
+        metadata['targeted_structure'] = df.targeted_structure.unique()[0]
+        metadata['imaging_depth'] = df.imaging_depth.unique()[0]
+    else:
+        metadata = {}
+        metadata['mouse_id'] = df.mouse_id
+        metadata['experiment_container_id'] = df.ophys_container_id
+        metadata['cre_line'] = df.cre_line
+        metadata['targeted_structure'] = df.targeted_structure
+        metadata['imaging_depth'] = df.imaging_depth
+    return metadata
+
+
+def get_conditions_string(data_type, conditions):
+    """
+    creates a string containing the data_type and conditions corresponding to a given multi_session_df.
+    ignores first element in conditions which is usually 'cell_specimen_id' or 'ophys_experiment_id'
+    :param data_type: 'events', 'filtered_events', 'dff'
+    :param conditions: list of conditions used to group for averaging in multi_session_df
+                        ex: ['cell_specimen_id', 'is_change', 'image_name'], or ['cell_specimen_id', 'engagement_state', 'omitted']
+    """
+
+    if len(conditions) == 6:
+        conditions_string = data_type + '_' + conditions[1] + '_' + conditions[2] + '_' + conditions[3] + '_' + \
+                            conditions[4] + '_' + conditions[5]
+    elif len(conditions) == 5:
+        conditions_string = data_type + '_' + conditions[1] + '_' + conditions[2] + '_' + conditions[3] + '_' + \
+                            conditions[4]
+    elif len(conditions) == 4:
+        conditions_string = data_type + '_' + conditions[1] + '_' + conditions[2] + '_' + conditions[3]
+    elif len(conditions) == 3:
+        conditions_string = data_type + '_' + conditions[1] + '_' + conditions[2]
+    elif len(conditions) == 2:
+        conditions_string = data_type + '_' + conditions[1]
+    elif len(conditions) == 1:
+        conditions_string = data_type + '_' + conditions[0]
+
+    return conditions_string

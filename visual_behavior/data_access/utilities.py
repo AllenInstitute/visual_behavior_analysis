@@ -44,6 +44,16 @@ class LazyLoadable(object):
         self.calculate = calculate
 
 
+def get_cell_types_dict(cre_lines, experiments_table):
+    """
+    gets dictionary where keys are cre lines and values are cell types
+    """
+    cell_types = {}
+    for cre_line in cre_lines:
+        cell_types[cre_line] = experiments_table[experiments_table.cre_line == cre_line].cell_type.unique()[0]
+    return cell_types
+
+
 def get_all_session_ids(ophys_experiment_id=None, ophys_session_id=None, behavior_session_id=None, foraging_id=None):
     '''
     a function to get all ID types for a given experiment ID
@@ -1450,6 +1460,24 @@ def add_binned_depth_column(df):
     return df
 
 
+def add_layer_column(df):
+    """
+    Adds a column called 'layer' that is based on the 'imaging_depth' for each experiment.
+    if imaging_depth is <250um, layer is 'upper, if >250um, layer is 'lower'
+    :param df:
+    :return:
+    """
+    df.loc[:, 'layer'] = None
+
+    indices = df[(df.depth < 250)].index.values
+    df.loc[indices, 'layer'] = 'upper'
+
+    indices = df[(df.depth > 250)].index.values
+    df.loc[indices, 'layer'] = 'lower'
+
+    return df
+
+
 def dateformat(exp_date):
     """
     reformat date of acquisition for accurate sorting by date
@@ -1701,19 +1729,30 @@ def value_counts(df, conditions=['cell_type', 'experience_level', 'mouse_id']):
     return counts
 
 
-def count_mice_expts_containers_cells(df):
+def count_mice_expts_containers_cells(df, conditions_to_group=['cell_type', 'experience_level']):
     """
-    count the number of mice, experiments, containers, and cells in input dataframe
+    count the number of mice, sessions, experiments, containers, and cells in input dataframe
     input dataframe is typically ophys_cells_table merged with ophys_experiment_table
-    """
-    mice = value_counts(df, conditions=['cell_type', 'experience_level', 'mouse_id'])
-    experiments = value_counts(df, conditions=['cell_type', 'experience_level', 'ophys_experiment_id'])
-    containers = value_counts(df, conditions=['cell_type', 'experience_level', 'ophys_container_id'])
-    cells = value_counts(df, conditions=['cell_type', 'experience_level', 'cell_specimen_id'])
 
-    counts = mice.merge(experiments, on=['cell_type', 'experience_level'])
-    counts = counts.merge(containers, on=['cell_type', 'experience_level'])
-    counts = counts.merge(cells, on=['cell_type', 'experience_level'])
+    conditions_to_group: list of columns in df to use to groupby before counting number of experiments, cells etc
+
+    """
+    mice = value_counts(df, conditions=conditions_to_group + ['mouse_id'])
+    sessions = value_counts(df, conditions=conditions_to_group + ['ophys_session_id'])
+    experiments = value_counts(df, conditions=conditions_to_group + ['ophys_experiment_id'])
+    containers = value_counts(df, conditions=conditions_to_group + ['ophys_container_id'])
+    cells = value_counts(df, conditions=conditions_to_group + ['cell_specimen_id'])
+
+    matched_cells = limit_to_last_familiar_second_novel_active(df)
+    matched_cells = limit_to_cell_specimen_ids_matched_in_all_experience_levels(matched_cells)
+    matched_cells = value_counts(matched_cells, conditions=conditions_to_group + ['cell_specimen_id'])
+    matched_cells = matched_cells.rename(columns={'n_cell_specimen_id': 'n_matched_cells'})
+
+    counts = mice.merge(sessions, on=conditions_to_group)
+    counts = counts.merge(experiments, on=conditions_to_group)
+    counts = counts.merge(containers, on=conditions_to_group)
+    counts = counts.merge(cells, on=conditions_to_group)
+    counts = counts.merge(matched_cells, on=conditions_to_group)
     return counts
 
 

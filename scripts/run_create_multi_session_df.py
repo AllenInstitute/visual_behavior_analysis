@@ -22,14 +22,13 @@ python_path = os.path.join(
 )
 
 # define the job record output folder
-stdout_location = r'/allen/programs/braintv/workgroups/nc-ophys/Marina/ClusterJobs/JobRecords'
+stdout_location = r"/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/cluster_jobs/multi_session_dfs"
 
 cache_dir = loading.get_platform_analysis_cache_dir()
 cache = bpc.from_s3_cache(cache_dir=cache_dir)
 print(cache_dir)
 
 experiments_table = cache.get_ophys_experiment_table()
-
 
 # call the `sbatch` command to run the jobs.
 for project_code in experiments_table.project_code.unique():
