@@ -22,7 +22,7 @@ def deploy_get_behavior_summary_for_all_sessions():
         partition='braintv', 
         cpus_per_task=1, 
         mem='40g',
-        time='10:00:00',
+        time='01:00:00',
         output=f'{stdout_location}/{Slurm.JOB_ARRAY_MASTER_ID}_{Slurm.JOB_ARRAY_ID}.out',
     )
 

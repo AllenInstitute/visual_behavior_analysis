@@ -10,4 +10,9 @@ if __name__ == '__main__':
 
     experiments_table = loading.get_platform_paper_experiment_table()
 
-    cell_metrics.load_and_save_all_metrics_tables_for_all_experiments(experiments_table)
+    interpolate = True
+    output_sampling_rate = 30
+
+    for data_type in ['events', 'filtered_events', 'dff']:
+        cell_metrics.load_and_save_all_metrics_tables_for_all_experiments(experiments_table, data_type=data_type,
+                                                                      interpolate=interpolate, output_sampling_rate=output_sampling_rate)

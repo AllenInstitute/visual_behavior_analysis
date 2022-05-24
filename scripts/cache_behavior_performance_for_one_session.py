@@ -35,3 +35,5 @@ if __name__ == "__main__":
             vbu.cache_behavior_stats(behavior_session_id, 'sdk')
         except:
             print('problem for behavior_session_id:', behavior_session_id)
+    print(args.behavior_session_id, args.method)
+    cache_behavior_performance(args.behavior_session_id, args.method)

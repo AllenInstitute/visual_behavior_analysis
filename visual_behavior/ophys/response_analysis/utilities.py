@@ -323,21 +323,6 @@ def get_fraction_nonzero_trials(group):
     return pd.Series({'fraction_nonzero_trials': fraction_nonzero_trials})
 
 
-# def compute_reliability_for_traces(traces):
-#     # computes trial to trial correlation across input traces, across entire trace timeseries
-#     import scipy as sp
-#     from itertools import combinations
-#     traces = np.vstack(traces)
-#     combos = combinations(traces, 2)
-#     corr_values = []
-#     for combo in combos:
-#         corr = sp.stats.pearsonr(combo[0], combo[1])[0]
-#         corr_values.append(corr)
-#     corr_values = np.asarray(corr_values)
-#     reliability = np.mean(corr_values)
-#     return reliability
-
-
 def compute_reliability_vectorized(traces):
     '''
     Compute average pearson correlation between pairs of rows of the input matrix.
@@ -359,12 +344,12 @@ def compute_reliability_vectorized(traces):
     return reliability, correlation_values
 
 
-def compute_reliability(group, params, frame_rate):
+def compute_reliability(group, window=[-3, 3], response_window_duration=0.5, frame_rate=30.):
     # computes trial to trial correlation across input traces in group,
     # only for portion of the trace after the change time or flash onset time
 
-    onset = int(np.abs(params['window_around_timepoint_seconds'][0]) * frame_rate)
-    response_window = [onset, onset + (int(params['response_window_duration_seconds'] * frame_rate))]
+    onset = int(np.abs(window[0]) * frame_rate)
+    response_window = [onset, onset + (int(response_window_duration * frame_rate))]
     traces = group['trace'].values
     traces = np.vstack(traces)
     if traces.shape[0] > 5:
@@ -392,69 +377,50 @@ def get_window(analysis=None, flashes=False, omitted=False):
     return window
 
 
-def get_mean_df(response_df, analysis=None, conditions=['cell', 'change_image_name'], flashes=False, omitted=False,
-                get_reliability=True, get_pref_stim=True, exclude_omitted_from_pref_stim=True):
+def get_mean_df(response_df, conditions=['cell', 'change_image_name'], frame_rate=30.,
+                window_around_timepoint_seconds=[-3, 3], response_window_duration_seconds=0.5,
+                get_pref_stim=True, exclude_omitted_from_pref_stim=True):
 
-    import visual_behavior.ophys.response_analysis.response_processing as rp
-
-    if omitted:
-        params = rp.get_default_omission_response_params()
-    elif flashes:
-        params = rp.get_default_stimulus_response_params()
-    else:
-        params = rp.get_default_trial_response_params()
-    window = params['window_around_timepoint_seconds']
+    window = window_around_timepoint_seconds
+    response_window_duration = response_window_duration_seconds
 
     rdf = response_df.copy()
 
     mdf = rdf.groupby(conditions).apply(get_mean_sem_trace)
-    mdf = mdf[
-        ['mean_response', 'sem_response', 'mean_trace', 'sem_trace', 'trace_timestamps', 'mean_responses', 'mean_baseline', 'sem_baseline']]
+    mdf = mdf[['mean_response', 'sem_response', 'mean_trace', 'sem_trace', 'trace_timestamps', 'mean_responses', 'mean_baseline', 'sem_baseline']]
     mdf = mdf.reset_index()
+    # save response window duration as a column for reference
+    mdf['response_window_duration'] = response_window_duration
+
     if get_pref_stim:
         if ('image_name' in conditions) or ('change_image_name' in conditions) or ('prior_image_name' in conditions):
             mdf = annotate_mean_df_with_pref_stim(mdf, exclude_omitted_from_pref_stim)
-    if analysis is not None:
-        # mdf = annotate_mean_df_with_p_value(analysis, mdf, window=window)
-        # mdf = annotate_mean_df_with_sd_over_baseline(analysis, mdf, window=window)
-        try:
-            mdf = annotate_mean_df_with_time_to_peak(analysis, mdf, window=window)
-            mdf = annotate_mean_df_with_fano_factor(analysis, mdf)
-        except:  # NOQA E722
-            pass
 
-    fraction_significant_p_value_gray_screen = rdf.groupby(conditions).apply(
-        get_fraction_significant_p_value_gray_screen)
-    fraction_significant_p_value_gray_screen = fraction_significant_p_value_gray_screen.reset_index()
-    mdf[
-        'fraction_significant_p_value_gray_screen'] = fraction_significant_p_value_gray_screen.fraction_significant_p_value_gray_screen
+    try:
+        mdf = annotate_mean_df_with_fano_factor(mdf)
+        mdf = annotate_mean_df_with_time_to_peak(mdf, window, frame_rate)
+        mdf = annotate_mean_df_with_p_value(mdf, window, response_window_duration, frame_rate)
+        mdf = annotate_mean_df_with_sd_over_baseline(mdf, window, response_window_duration, frame_rate)
+    except Exception as e:  # NOQA E722
+        print(e)
+        pass
 
-    fraction_significant_p_value_omission = rdf.groupby(conditions).apply(get_fraction_significant_p_value_omission)
-    fraction_significant_p_value_omission = fraction_significant_p_value_omission.reset_index()
-    mdf[
-        'fraction_significant_p_value_omission'] = fraction_significant_p_value_omission.fraction_significant_p_value_omission
+    if 'p_value_gray_screen' in rdf.keys():
+        fraction_significant_p_value_gray_screen = rdf.groupby(conditions).apply(
+            get_fraction_significant_p_value_gray_screen)
+        fraction_significant_p_value_gray_screen = fraction_significant_p_value_gray_screen.reset_index()
+        mdf['fraction_significant_p_value_gray_screen'] = fraction_significant_p_value_gray_screen.fraction_significant_p_value_gray_screen
 
-    fraction_significant_p_value_stimulus = rdf.groupby(conditions).apply(get_fraction_significant_p_value_stimulus)
-    fraction_significant_p_value_stimulus = fraction_significant_p_value_stimulus.reset_index()
-    mdf[
-        'fraction_significant_p_value_stimulus'] = fraction_significant_p_value_stimulus.fraction_significant_p_value_stimulus
-
-    if 'p_value_baseine' in rdf.keys():
-        fraction_responsive_trials = rdf.groupby(conditions).apply(get_fraction_responsive_trials)
-        fraction_responsive_trials = fraction_responsive_trials.reset_index()
-        mdf['fraction_responsive_trials'] = fraction_responsive_trials.fraction_responsive_trials
-
-    # if get_reliability:
-        # print('computing reliability')
-    if analysis:
-        frame_rate = analysis.ophys_frame_rate
-        reliability = rdf.groupby(conditions).apply(compute_reliability, params, frame_rate)
+    try:
+        reliability = rdf.groupby(conditions).apply(compute_reliability, window, response_window_duration, frame_rate)
         reliability = reliability.reset_index()
         mdf['reliability'] = reliability.reliability
         mdf['correlation_values'] = reliability.correlation_values
         # print('done computing reliability')
-    else:
-        print('must provide analysis object to get_mean_df to compute reliability')
+    except Exception as e:
+        print('failed to compute reliability')
+        print(e)
+        pass
 
     if 'index' in mdf.keys():
         mdf = mdf.drop(columns=['index'])
@@ -566,9 +532,6 @@ def get_colors_for_behavioral_response_types():
 def add_metadata_to_mean_df(mdf, metadata):
     import visual_behavior.data_access.reformat as reformat
     metadata = reformat.convert_metadata_to_dataframe(metadata)
-    # metadata = metadata.reset_index()
-    # metadata['experiment_id'] = metadata['ophys_experiment_id']
-    # metadata = metadata.rename(columns={'ophys_experiment_id': 'experiment_id'})
     metadata = metadata.drop(columns=['excitation_lambda', 'emission_lambda', 'indicator',
                                       'field_of_view_width', 'field_of_view_height'])
     metadata['image_set'] = metadata['session_type'].values[0][-1]
@@ -577,10 +540,9 @@ def add_metadata_to_mean_df(mdf, metadata):
     return mdf
 
 
-def get_time_to_peak(analysis, trace, window=[-4, 8]):
+def get_time_to_peak(trace, window=[-4, 8], frame_rate=30.):
     response_window_duration = 0.75
     response_window = [np.abs(window[0]), np.abs(window[0]) + response_window_duration]
-    frame_rate = analysis.ophys_frame_rate
     response_window_trace = trace[int(response_window[0] * frame_rate):(int(response_window[1] * frame_rate))]
     peak_response = np.amax(response_window_trace)
     peak_frames_from_response_window_start = np.where(response_window_trace == np.amax(response_window_trace))[0][0]
@@ -588,12 +550,12 @@ def get_time_to_peak(analysis, trace, window=[-4, 8]):
     return peak_response, time_to_peak
 
 
-def annotate_mean_df_with_time_to_peak(analysis, mean_df, window=[-4, 8]):
+def annotate_mean_df_with_time_to_peak(mean_df, window=[-4, 8], frame_rate=30.):
     ttp_list = []
     peak_list = []
     for idx in mean_df.index:
         mean_trace = mean_df.iloc[idx].mean_trace
-        peak_response, time_to_peak = get_time_to_peak(analysis, mean_trace, window=window)
+        peak_response, time_to_peak = get_time_to_peak(mean_trace, window=window, frame_rate=frame_rate)
         ttp_list.append(time_to_peak)
         peak_list.append(peak_response)
     mean_df['peak_response'] = peak_list
@@ -601,7 +563,7 @@ def annotate_mean_df_with_time_to_peak(analysis, mean_df, window=[-4, 8]):
     return mean_df
 
 
-def annotate_mean_df_with_fano_factor(analysis, mean_df):
+def annotate_mean_df_with_fano_factor(mean_df):
     ff_list = []
     for idx in mean_df.index:
         mean_responses = mean_df.iloc[idx].mean_responses
@@ -613,10 +575,8 @@ def annotate_mean_df_with_fano_factor(analysis, mean_df):
     return mean_df
 
 
-def annotate_mean_df_with_p_value(analysis, mean_df, window=[-4, 8]):
-    response_window_duration = analysis.response_window_duration
+def annotate_mean_df_with_p_value(mean_df, window=[-4, 8], response_window_duration=0.5, frame_rate=30.):
     response_window = [np.abs(window[0]), np.abs(window[0]) + response_window_duration]
-    frame_rate = analysis.ophys_frame_rate
     p_val_list = []
     for idx in mean_df.index:
         mean_trace = mean_df.iloc[idx].mean_trace
@@ -626,11 +586,9 @@ def annotate_mean_df_with_p_value(analysis, mean_df, window=[-4, 8]):
     return mean_df
 
 
-def annotate_mean_df_with_sd_over_baseline(analysis, mean_df, window=[-4, 8]):
-    response_window_duration = analysis.response_window_duration
+def annotate_mean_df_with_sd_over_baseline(mean_df, window=[-4, 8], response_window_duration=0.5, frame_rate=30.):
     response_window = [np.abs(window[0]), np.abs(window[0]) + response_window_duration]
     baseline_window = [np.abs(window[0]) - response_window_duration, (np.abs(window[0]))]
-    frame_rate = analysis.ophys_frame_rate
     sd_list = []
     for idx in mean_df.index:
         mean_trace = mean_df.iloc[idx].mean_trace
