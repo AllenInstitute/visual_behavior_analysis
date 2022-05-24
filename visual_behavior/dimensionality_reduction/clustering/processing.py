@@ -1582,3 +1582,103 @@ def add_location_column(cluster_meta, columns_to_groupby=['targeted_structure', 
         print('cannot combine more than three columns into a location column')
 
     return cluster_meta_copy
+
+
+def get_cluster_mapping(matrix, threshold=1, ):
+    '''
+    find clusters with most similar SSE, create a dictionaty of cluster maps.
+
+    Input:
+    matrix: (np.array) SSE matrix (n clusters by n clusters), can be any other matrix (correlation, etc)
+    threshold: (int) a value, abov which the matrix will not find an optimally similar cluster
+
+    Returns:
+    cluster_mapping_comparisons: (dict) {original cluster id: matched cluster id}
+
+    '''
+    comparisons = matrix.keys()
+
+    # comparison dictionary
+    cluster_mapping_comparisons = {}
+    for i, comparison in enumerate(comparisons):
+        tmp_matrix = matrix[comparison]
+
+        # cluster
+        cluster_mapping = {}
+        for k in range(0, len(tmp_matrix)):
+
+            # if min less than threshold
+            if min(tmp_matrix[k]) < threshold:
+                cluster_id = tmp_matrix[k].index(min(tmp_matrix[k])) + 1
+                cluster_mapping[k + 1] = cluster_id
+
+            # else there is no cluster
+            else:
+                cluster_mapping[k + 1] = -1
+
+        cluster_mapping_comparisons[comparison] = cluster_mapping
+
+    return cluster_mapping_comparisons
+
+def get_mean_dropout_scores_per_cluster(dropout_df, cluster_df=None, labels=None, stacked=True):
+    '''
+    INPUT:
+    dropout_df: (pd.DataFrame) of GLM dropout scores (cell_specimen_ids by regressors x experience)
+    cluster_df: (pd.DataFrame), must contain columns 'cluster_id', 'cell_specimen_id'
+    labels: (list, np.array) list or array of int indicating cells' cluster ids,
+                            if provided, len(labels)==len(dropout_df)
+
+    Provide either cluster_df or labels. Cluster df must be df with 'cluster_id' and 'cell_specimen_id' columns,
+    labels can be np array or list of cluster ids
+
+    if unstacked, returns dictionary of DataFrames for each cluster. This version is helpful for plotting
+    if stacked, returns a DataFrame of mean dropout scores per cluster, this version is great for computing corr or SSE
+    (rows are droopout scores, columns are cluster ids)
+
+    Clusters are sorted by size.
+    '''
+    if isinstance(cluster_df, pd.core.frame.DataFrame):
+        cluster_ids = cluster_df['cluster_id'].value_counts().index.values  # sort cluster ids by size
+    elif labels is not None:
+        cluster_df = pd.DataFrame(data={'cluster_id': labels, 'cell_specimen_id': dropout_df.index.values})
+        cluster_ids = cluster_df['cluster_id'].value_counts().index.values  # sort cluster ids by size
+
+    if min(cluster_ids) == 0:  # if cluster ids start with 0, add 1 to return cluster labels starting with 1
+        err = 1
+    else:
+        err = 0
+
+    n_clusters = len(cluster_ids)
+    mean_cluster = {}
+    for i, cluster_id in enumerate(cluster_ids):
+        this_cluster_ids = cluster_df[cluster_df['cluster_id'] == cluster_id]['cell_specimen_id'].unique()
+        if stacked is True:
+            mean_dropout_df = dropout_df.loc[this_cluster_ids].mean()
+            mean_cluster[i + err] = mean_dropout_df.values
+        elif stacked is False:
+            mean_dropout_df = dropout_df.loc[this_cluster_ids].mean().unstack()
+            mean_cluster[i + err] = mean_dropout_df
+
+    if stacked is True:
+        return (pd.DataFrame(mean_cluster))
+    elif stacked is False:
+        return (mean_cluster)
+
+
+def compute_SSE(mean_dropout_df_original, mean_dropout_df_compare):
+    '''
+    mean dropout_df should be computed with get_mean_dropout_scores_per_cluste function, stacked=True
+    returns:
+    SSE_matrix, rows are original clusters, columns are compared clusters
+    '''
+    SSE_matrix = []
+    for cluster_original in mean_dropout_df_original.keys():  # cluster ids are columns
+        x = mean_dropout_df_original[cluster_original].values
+        row = []
+        for cluster_compare in mean_dropout_df_compare.keys():
+            y = mean_dropout_df_compare[cluster_compare].values
+            sse = np.sum((np.abs(x) - np.abs(y)) ** 2)
+            row.append(sse)
+        SSE_matrix.append(row)
+
+    return SSE_matrix
