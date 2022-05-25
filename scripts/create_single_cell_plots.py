@@ -66,7 +66,7 @@ if __name__ == '__main__':
     base_dir = os.path.join(base_dir, glm_version)
 
     # folder in save_dir where you want to load GLM results from
-    glm_output_folder = '220513_stats_across_session_norm'
+    glm_output_folder = '220513_stats'
     glm_output_dir = os.path.join(base_dir, glm_output_folder)
     print(glm_output_dir)
 
@@ -102,8 +102,8 @@ if __name__ == '__main__':
     # results_pivoted = results_pivoted[results_pivoted.cell_specimen_id.isin(matched_cells)]
 
     # set features to use in plots
-    # dropout_features = ['variance_explained_full', 'all-images', 'omissions', 'behavioral', 'task']
-    dropout_features = ['all-images', 'omissions', 'behavioral', 'task']
+    dropout_features = ['variance_explained_full', 'all-images', 'omissions', 'behavioral', 'task']
+    # dropout_features = ['all-images', 'omissions', 'behavioral', 'task']
 
     # features to use for weights_df
     weights_features = ['image0', 'image1', 'image2', 'image3', 'image4', 'image5', 'image6', 'image7', 'hits', 'misses', 'omissions']
