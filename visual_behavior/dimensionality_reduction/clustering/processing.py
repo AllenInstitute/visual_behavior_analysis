@@ -509,6 +509,21 @@ def compute_inertia(a, X, metric='euclidean'):
 
 
 def compute_gap(clustering, data, k_max=5, n_boots=20, reference=None, metric='euclidean'):
+    '''
+    Computes gap statistic between clustered data (ondata inertia) and null hypothesis (reference intertia).
+
+    :param clustering: clustering object that includes "n_clusters" and "fit_predict"
+    :param data: an array of data to be clustered (n samples by n features)
+    :param k_max: (int) maximum number of clusters to test
+    :param n_boots: (int) number of repetitions for computing mean inertias
+    :param reference: an array of data to cluster as a null hypothesis (shuffled data)
+    :param metric: (str) type of distance to use, default = 'euclidean'
+    :return:
+    gap: array of gap values that are the difference between two inertias
+    reference_inertia: array of log of reference inertia
+    ondata_inertia: array of log of ondata inertia
+    '''
+    
     if len(data.shape) == 1:
         data = data.reshape(-1, 1)
     if reference is None:
