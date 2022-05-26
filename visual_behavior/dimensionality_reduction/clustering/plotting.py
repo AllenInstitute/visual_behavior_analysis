@@ -1651,3 +1651,28 @@ def plot_clusters_stats_pop_avg_cols(cluster_meta, feature_matrix, multi_session
     fig.suptitle(get_cell_type_for_cre_line(cluster_meta, cre_line), x=0.5, y=0.92, fontsize=16)
     if save_dir:
         utils.save_figure(fig, figsize, save_dir, folder, 'clusters_cols_' + cre_line.split('-')[0] + suffix)
+
+
+def plot_eigengap_values(eigenvalues, cre_line = '', save_dir=None, folder=None):
+    suffix = cre_line
+    figsize = (7, 7)
+    fig, ax = plt.subplots(2, 1, figsize=figsize, sharex='true')
+
+    ax[0].plot(np.arange(1, len(eigenvalues) + 1), eigenvalues, '-o')
+    ax[0].grid()
+    ax[0].set_title(cre_line)
+    ax[0].set_ylabel('eigen value (sorted)')
+    ax[0].set_xlabel('eigen number')
+    ax[0].set_xlim([2, 20])
+
+    ax[1].plot(np.arange(2, len(eigenvalues) + 1), np.diff(eigenvalues), '-o')
+    ax[1].set_ylabel('gap value (difference)')
+    ax[1].set_xlabel('eigen number')
+    ax[1].set_xlim([0, 20])
+    ax[1].set_ylim([0, 0.20])
+    ax[1].grid()
+    plt.tight_layout()
+
+    if save_dir:
+        utils.save_figure(fig, figsize, save_dir, folder, 'eigengap' + suffix)
+
