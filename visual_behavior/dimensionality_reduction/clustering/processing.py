@@ -636,7 +636,6 @@ def load_silhouette_scores(glm_version, feature_matrix, cell_metadata, save_dir,
         print('done.')
     else:
         # generate silhouette scores by running spectral clustering n_boots times for each n_clusters
-        from sklearn.cluster import SpectralClustering
         silhouette_scores = {}
         for cre_line in get_cre_lines(cell_metadata):
             feature_matrix_cre = get_feature_matrix_for_cre_line(feature_matrix, cell_metadata, cre_line)
@@ -679,6 +678,7 @@ def load_gap_statistic(glm_version, feature_matrix, cell_metadata, save_dir,
 
 
     return eigengap
+
 
 def get_labels_for_coclust_matrix(X, model=SpectralClustering, nboot=np.arange(100), n_clusters=8):
     '''
