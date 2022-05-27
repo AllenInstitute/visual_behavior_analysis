@@ -338,7 +338,7 @@ def generate_GLM_outputs(glm_version, experiments_table, cells_table, glm_output
         import visual_behavior_glm.GLM_across_session as gas
 
         # get across session normalized dropout scores
-        df, failed_cells = gas.load_cells(cells='all')
+        df, failed_cells = gas.load_cells(glm_version, clean_df=True)
         df = df.set_index('identifier')
 
         # only use across session values
@@ -408,9 +408,10 @@ def generate_GLM_outputs(glm_version, experiments_table, cells_table, glm_output
     # take absolute value or flip sign of dropouts so that reduction in explained variance is a positive coding score
     features_to_invert = get_features_for_clustering()  # only invert dropout scores, skip var_exp_full if using
     results_pivoted = flip_sign_of_dropouts(results_pivoted, features_to_invert, use_signed_weights)
+    print(results_pivoted.keys())
 
     # save processed results_pivoted
-    results_pivoted.to_hdf(os.path.join(glm_output_dir, glm_version + '_results_pivoted.h5'), key='df')
+    results_pivoted.to_hdf(os.path.join(glm_output_dir, glm_version + '_results_pivoted.h5'), key='df', format='table')
 
     # now drop ophys_experiment_id
     results_pivoted = results_pivoted.drop(columns=['ophys_experiment_id'])
