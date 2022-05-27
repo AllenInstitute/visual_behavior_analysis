@@ -651,8 +651,9 @@ def load_silhouette_scores(glm_version, feature_matrix, cell_metadata, save_dir,
         save_clustering_results(silhouette_scores, filename_string=sil_filename, path=save_dir)
     return silhouette_scores
 
+
 def load_gap_statistic(glm_version, feature_matrix, cell_metadata, save_dir=None,
-                       metric = 'euclidean', shuffle_type = 'all', k_max = 25, n_boots = 20):
+                       metric='euclidean', shuffle_type='all', k_max=25, n_boots=20):
     """
        if gap statistic was computed and file exists in save_dir, load it
        otherwise run spectral clustering n_boots times, for a range of 1 to k_max clusters
@@ -660,7 +661,7 @@ def load_gap_statistic(glm_version, feature_matrix, cell_metadata, save_dir=None
         shuffle_type is an input to shuffle_dropout_score function, which is used as a null hypothesis or reference data
         metric is distance metric used for in compute gap function
        """
-    gap_filename = 'gap_cores_' + metric + '_'+ glm_version + '_' + shuffle_type +'.pkl'
+    gap_filename = 'gap_cores_' + metric + '_' + glm_version + '_' + shuffle_type + '.pkl'
     gap_path = os.path.join(save_dir, gap_filename)
     if os.path.exists(gap_path):
         print('loading gap statistic scores from', gap_path)
@@ -673,7 +674,7 @@ def load_gap_statistic(glm_version, feature_matrix, cell_metadata, save_dir=None
         for cre_line in get_cre_lines(cell_metadata):
             feature_matrix_cre = get_feature_matrix_for_cre_line(feature_matrix, cell_metadata, cre_line)
             X = feature_matrix_cre.values
-            feature_matrix_cre_shuffled = shuffle_dropout_score(feature_matrix_cre, shuffle_type = shuffle_type)
+            feature_matrix_cre_shuffled = shuffle_dropout_score(feature_matrix_cre, shuffle_type=shuffle_type)
             reference = feature_matrix_cre_shuffled.values
             # create an instance of Spectral clustering object
             sc = SpectralClustering()
@@ -682,6 +683,7 @@ def load_gap_statistic(glm_version, feature_matrix, cell_metadata, save_dir=None
         save_clustering_results(gap_statistic, filename_string=gap_filename, path=save_dir)
     return gap_statistic
 
+
 def load_eigengap(glm_version, feature_matrix, cell_metadata, save_dir=None, k_max=25):
     """
            if eigengap values were computed and file exists in save_dir, load it
@@ -689,7 +691,7 @@ def load_eigengap(glm_version, feature_matrix, cell_metadata, save_dir=None, k_m
            returns dictionary of eigengap for each cre line = [nb_clusters, eigenvalues, eigenvectors]
            # this doesnt actually take too long, so might not be a huge need to save files besides records
            """
-    eigengap_filename = 'eigengap_'  + glm_version + '.pkl'
+    eigengap_filename = 'eigengap_' + glm_version + '.pkl'
     eigengap_path = os.path.join(save_dir, eigengap_filename)
     if os.path.exists(eigengap_path):
         print('loading eigengap values scores from', eigengap_path)
@@ -706,7 +708,7 @@ def load_eigengap(glm_version, feature_matrix, cell_metadata, save_dir=None, k_m
             # but you can obtain affinity matrix only after fitting, thus some N of clusters must be provided.
             sc.fit(X)
             A = sc.affinity_matrix_
-            eigenvalues, eigenvectors, nb_clusters = get_eigenDecomposition(A, max_n_clusters = k_max)
+            eigenvalues, eigenvectors, nb_clusters = get_eigenDecomposition(A, max_n_clusters=k_max)
             eigengap[cre_line] = [nb_clusters, eigenvalues, eigenvectors]
     return eigengap
 
@@ -1604,7 +1606,7 @@ def get_CI_for_clusters(cluster_meta, columns_to_groupby=['targeted_structure', 
                 for cluster_id in cluster_ids:
                     try:
                         n_cluster = df_groupedby_per_cluster.loc[(location, cluster_id)].values[0]
-                    except: # noqa E501 # used to have KeyError here but sometimes its a TypeError when there are no cells in a cluster
+                    except:  # noqa E501 # used to have KeyError here but sometimes its a TypeError when there are no cells in a cluster
                         print(f'{cre_line, location, cluster_id} no cells in this cluster')
                         n_cluster = 0
                     N.append(n_cluster)
@@ -1694,6 +1696,7 @@ def get_cluster_mapping(matrix, threshold=1, ):
 
     return cluster_mapping_comparisons
 
+
 def get_mean_dropout_scores_per_cluster(dropout_df, cluster_df=None, labels=None, stacked=True):
     '''
     INPUT:
@@ -1722,7 +1725,6 @@ def get_mean_dropout_scores_per_cluster(dropout_df, cluster_df=None, labels=None
     else:
         err = 0
 
-    n_clusters = len(cluster_ids)
     mean_cluster = {}
     for i, cluster_id in enumerate(cluster_ids):
         this_cluster_ids = cluster_df[cluster_df['cluster_id'] == cluster_id]['cell_specimen_id'].unique()

@@ -13,7 +13,7 @@ from sklearn.cluster import KMeans
 import visual_behavior.visualization.utils as utils
 import visual_behavior.data_access.loading as loading
 
-from visual_behavior_glm import GLM_clustering as glm_clust # noqa E501
+from visual_behavior_glm import GLM_clustering as glm_clust  # noqa E501
 
 from visual_behavior.dimensionality_reduction.clustering import processing
 from visual_behavior.dimensionality_reduction.clustering.processing import get_silhouette_scores, get_cluster_density, get_cre_lines, get_cell_type_for_cre_line
@@ -1677,7 +1677,7 @@ def plot_eigengap_values(eigenvalues_cre, cre_lines, save_dir=None, folder=None)
         eigenvalues = eigenvalues_cre[cre_line]
         suffix = cre_line
         figsize = (7, 7)
-        fig, ax = plt.subplots(2, 1, figsize=figsize, sharex='true')
+        fig, ax = plt.subplots(2, 1, figsize=figsize, sharex='all')
 
         ax[0].plot(np.arange(1, len(eigenvalues) + 1), eigenvalues, '-o')
         ax[0].grid()
@@ -1696,4 +1696,3 @@ def plot_eigengap_values(eigenvalues_cre, cre_lines, save_dir=None, folder=None)
 
         if save_dir:
             utils.save_figure(fig, figsize, save_dir, folder, 'eigengap' + suffix)
-
