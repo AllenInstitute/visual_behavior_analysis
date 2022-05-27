@@ -651,9 +651,15 @@ def load_silhouette_scores(glm_version, feature_matrix, cell_metadata, save_dir,
         save_clustering_results(silhouette_scores, filename_string=sil_filename, path=save_dir)
     return silhouette_scores
 
-def load_gap_statistic(glm_version, feature_matrix, cell_metadata, save_dir,
-                       metric = 'euclidean', shuffle_type = 'all', k_max = 25):
-
+def load_gap_statistic(glm_version, feature_matrix, cell_metadata, save_dir=None,
+                       metric = 'euclidean', shuffle_type = 'all', k_max = 25, n_boots = 20):
+    """
+       if gap statistic was computed and file exists in save_dir, load it
+       otherwise run spectral clustering n_boots times, for a range of 1 to k_max clusters
+       returns dictionary of gap_statistic for each cre line
+        shuffle_type is an input to shuffle_dropout_score function, which is used as a null hypothesis or reference data
+        metric is distance metric used for in compute gap function
+       """
     gap_filename = 'gap_cores_' + metric + '_'+ glm_version + '_' + shuffle_type +'.pkl'
     gap_path = os.path.join(save_dir, gap_filename)
     if os.path.exists(gap_path):
@@ -669,16 +675,21 @@ def load_gap_statistic(glm_version, feature_matrix, cell_metadata, save_dir,
             X = feature_matrix_cre.values
             feature_matrix_cre_shuffled = shuffle_dropout_score(feature_matrix_cre, shuffle_type = shuffle_type)
             reference = feature_matrix_cre_shuffled.values
-            gap, reference_inertia, ondata_inertia = compute_gap(sc, X, k_max=25, reference=reference, metric=metric)
+            # create an instance of Spectral clustering object
             sc = SpectralClustering()
+            gap, reference_inertia, ondata_inertia = compute_gap(sc, X, k_max=k_max, reference=reference, metric=metric, n_boots=n_boots)
             gap_statistic[cre_line] = [gap, reference_inertia, ondata_inertia]
         save_clustering_results(gap_statistic, filename_string=gap_filename, path=save_dir)
-
     return gap_statistic
 
-def load_eigengap(glm_version, feature_matrix, cell_metadata, save_dir,
-                           metric='euclidean', k_max=25):
-    eigengap_filename = 'gap_cores_' + metric + '_' + glm_version + '.pkl'
+def load_eigengap(glm_version, feature_matrix, cell_metadata, save_dir=None, k_max=25):
+    """
+           if eigengap values were computed and file exists in save_dir, load it
+           otherwise run get_eigenDecomposition for a range of 1 to k_max clusters
+           returns dictionary of eigengap for each cre line = [nb_clusters, eigenvalues, eigenvectors]
+           # this doesnt actually take too long, so might not be a huge need to save files besides records
+           """
+    eigengap_filename = 'eigengap_'  + glm_version + '.pkl'
     eigengap_path = os.path.join(save_dir, eigengap_filename)
     if os.path.exists(eigengap_path):
         print('loading eigengap values scores from', eigengap_path)

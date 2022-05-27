@@ -8,8 +8,8 @@ from visual_behavior.dimensionality_reduction.clustering import plotting
 from visual_behavior.dimensionality_reduction.clustering import processing
 
 import seaborn as sns
-sns.set_context('notebook', font_scale=1.5, rc={'lines.markeredgewidth': 2})
 
+sns.set_context('notebook', font_scale=1.5, rc={'lines.markeredgewidth': 2})
 
 # set critical params for processing and saving
 folder = '220510_proportion_code_test'
@@ -21,7 +21,6 @@ include_var_exp_full = False
 n_clusters_cre = {'Slc17a7-IRES2-Cre': 10,
                   'Sst-IRES-Cre': 5,
                   'Vip-IRES-Cre': 12}
-
 
 # load experiments table
 experiments_table = loading.get_platform_paper_experiment_table()
@@ -53,9 +52,10 @@ save_dir = os.path.join(base_dir, folder)
 if not os.path.exists(save_dir):
     os.mkdir(save_dir)
 
-results_pivoted, weights_df, kernels = processing.generate_GLM_outputs(glm_version, experiments_table, cells_table, save_dir,
-                                                                       use_signed_weights, across_session_norm, include_var_exp_full)
-
+results_pivoted, weights_df, kernels = processing.generate_GLM_outputs(glm_version, experiments_table, cells_table,
+                                                                       save_dir,
+                                                                       use_signed_weights, across_session_norm,
+                                                                       include_var_exp_full)
 
 # unstack dropout scores to get a vector of features x experience levels for each cell
 feature_matrix = processing.get_feature_matrix_for_clustering(results_pivoted, glm_version, save_dir=save_dir)
@@ -69,22 +69,22 @@ cell_metadata.head()
 plotting.plot_feature_matrix_for_cre_lines(feature_matrix, cell_metadata, save_dir=base_dir, folder=folder)
 
 # get Silhouette scores
-silhouette_scores = processing.load_silhouette_scores(glm_version, feature_matrix, cell_metadata, save_dir)
-
+silhouette_scores = processing.load_silhouette_scores(glm_version, feature_matrix, cell_metadata, save_dir=base_dir)
 
 # plot silhouettes with selected # clusters
 plotting.plot_silhouette_scores_n_clusters(silhouette_scores, cell_metadata, n_clusters_cre=n_clusters_cre,
                                            save_dir=base_dir, folder=folder)
 
 # get gap statistic values
-gap_statistic = processing.load_gap_statistic()
+gap_statistic = processing.load_gap_statistic(glm_version, feature_matrix, cell_metadata, save_dir=base_dir,
+                                              metric='euclidean', shuffle_type='all', k_max=25, n_boots=20)
 
 # plot gap statistic
 plotting.plot_gap_statistic(gap_statistic, cre_lines, save_dir=base_dir, folder=folder)
 
 # load eigengap values
-eigengap = processing.load_eigengap(glm_version, feature_matrix, cell_metadata, save_dir= base_dir,
-                           metric='euclidean', k_max=25)
+eigengap = processing.load_eigengap(glm_version, feature_matrix, cell_metadata, save_dir=base_dir, k_max=25)
+
 # plot eigen gap values
 plotting.plot_eigengap_values(eigengap, cre_lines, save_dir=base_dir, folder=folder)
 
@@ -99,7 +99,6 @@ cluster_labels = processing.get_cluster_labels(coclustering_matrices, cell_metad
 # merge cluster labels with cell metadata, remove small clusters, and add manual sort order
 cluster_meta = processing.get_cluster_meta(cluster_labels, cell_metadata, feature_matrix, n_clusters_cre, save_dir,
                                            load=False)
-
 
 # plot co-clustering matrix and dendrograms sorted by linkage matrix
 # for i, cre_line in enumerate(processing.get_cre_lines(cluster_meta)):
@@ -130,7 +129,6 @@ if not os.path.exists(cell_examples_dir):
 sort_col = 'cluster_id'
 plotting.plot_dropout_heatmaps_for_clusters(cluster_meta, feature_matrix, sort_col=sort_col, save_dir=base_dir,
                                             folder=folder)
-
 
 # plot feature matrix sorted by cluster ID
 plotting.plot_feature_matrix_sorted(feature_matrix, cluster_meta, sort_col='cluster_id', save_dir=base_dir,
@@ -169,7 +167,9 @@ plotting.plot_fraction_cells_by_area_depth(cluster_meta, n_clusters_cre, normali
 # compute proportion of cells per area / depth relative to cluster average
 
 # cluster proportions for all cre lines
-proportions, stats = processing.get_proportion_cells_rel_cluster_average(cluster_meta, cre_lines, columns_to_groupby=['targeted_structure', 'layer'])
+proportions, stats = processing.get_proportion_cells_rel_cluster_average(cluster_meta, cre_lines,
+                                                                         columns_to_groupby=['targeted_structure',
+                                                                                             'layer'])
 
 # plot fraction cells per area depth
 value_to_plot = 'proportion_cells'
@@ -215,7 +215,6 @@ print(len(multi_session_df.ophys_experiment_id.unique()))
 
 cluster_mdf = multi_session_df.merge(cluster_meta[['cluster_id']],
                                      on='cell_specimen_id', how='inner')
-
 
 # area and layer
 for cre_line in cre_lines:
