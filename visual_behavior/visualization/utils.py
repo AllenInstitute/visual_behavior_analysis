@@ -4,7 +4,6 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-sns.set_context('notebook', font_scale=1.5, rc={'lines.markeredgewidth': 2})
 
 def get_container_plots_dir():
     return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/container_plots'
