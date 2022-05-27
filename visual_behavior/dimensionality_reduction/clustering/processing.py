@@ -676,7 +676,27 @@ def load_gap_statistic(glm_version, feature_matrix, cell_metadata, save_dir,
 
     return gap_statistic
 
-
+def load_eigengap(glm_version, feature_matrix, cell_metadata, save_dir,
+                           metric='euclidean', shuffle_type='all', k_max=25):
+    eigengap_filename = 'gap_cores_' + metric + '_' + glm_version + '_' + shuffle_type + '.pkl'
+    eigengap_path = os.path.join(save_dir, eigengap_filename)
+    if os.path.exists(eigengap_path):
+        print('loading eigengap values scores from', eigengap_path)
+        with open(eigengap_path, 'rb') as f:
+            eigengap = pickle.load(f)
+            f.close()
+        print('done.')
+    else:
+        eigengap = {}
+        for cre_line in get_cre_lines(cell_metadata):
+            feature_matrix_cre = get_feature_matrix_for_cre_line(feature_matrix, cell_metadata, cre_line)
+            X = feature_matrix_cre.values
+            sc = SpectralClustering(2)  # N of clusters does not impact affinity matrix
+            # but you can obtain affinity matrix only after fitting, thus some N of clusters must be provided.
+            sc.fit(X)
+            A = sc.affinity_matrix_
+            eigenvalues, eigenvectors, nb_clusters = get_eigenDecomposition(A, max_n_clusters = k_max)
+            eigengap[cre_line] = [nb_clusters, eigenvalues, eigenvectors]
     return eigengap
 
 
