@@ -661,7 +661,7 @@ def load_gap_statistic(glm_version, feature_matrix, cell_metadata, save_dir=None
         shuffle_type is an input to shuffle_dropout_score function, which is used as a null hypothesis or reference data
         metric is distance metric used for in compute gap function
        """
-    gap_filename = 'gap_cores_' + metric + '_' + glm_version + '_' + shuffle_type + '.pkl'
+    gap_filename = 'gap_cores_' + metric + '_' + glm_version + '_' + shuffle_type + 'kmax' + str(k_max) + '_' + 'nb' + str(n_boots) + '.pkl'
     gap_path = os.path.join(save_dir, gap_filename)
     if os.path.exists(gap_path):
         print('loading gap statistic scores from', gap_path)
@@ -691,7 +691,7 @@ def load_eigengap(glm_version, feature_matrix, cell_metadata, save_dir=None, k_m
            returns dictionary of eigengap for each cre line = [nb_clusters, eigenvalues, eigenvectors]
            # this doesnt actually take too long, so might not be a huge need to save files besides records
            """
-    eigengap_filename = 'eigengap_' + glm_version + '.pkl'
+    eigengap_filename = 'eigengap_' + glm_version + '_' + 'kmax' + str(k_max) + '.pkl'
     eigengap_path = os.path.join(save_dir, eigengap_filename)
     if os.path.exists(eigengap_path):
         print('loading eigengap values scores from', eigengap_path)
@@ -710,6 +710,7 @@ def load_eigengap(glm_version, feature_matrix, cell_metadata, save_dir=None, k_m
             A = sc.affinity_matrix_
             eigenvalues, eigenvectors, nb_clusters = get_eigenDecomposition(A, max_n_clusters=k_max)
             eigengap[cre_line] = [nb_clusters, eigenvalues, eigenvectors]
+        save_clustering_results(eigengap, filename_string=eigengap_filename, path=save_dir)
     return eigengap
 
 

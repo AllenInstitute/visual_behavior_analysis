@@ -1674,7 +1674,7 @@ def plot_gap_statistic(gap_statistic, cre_lines, save_dir=None, folder=None):
 
 def plot_eigengap_values(eigenvalues_cre, cre_lines, save_dir=None, folder=None):
     for cre_line in cre_lines:
-        eigenvalues = eigenvalues_cre[cre_line]
+        eigenvalues = eigenvalues_cre[cre_line][1]
         suffix = cre_line
         figsize = (7, 7)
         fig, ax = plt.subplots(2, 1, figsize=figsize, sharex='all')

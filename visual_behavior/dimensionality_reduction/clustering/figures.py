@@ -69,21 +69,21 @@ cell_metadata.head()
 plotting.plot_feature_matrix_for_cre_lines(feature_matrix, cell_metadata, save_dir=base_dir, folder=folder)
 
 # get Silhouette scores
-silhouette_scores = processing.load_silhouette_scores(glm_version, feature_matrix, cell_metadata, save_dir=base_dir)
+silhouette_scores = processing.load_silhouette_scores(glm_version, feature_matrix, cell_metadata, save_dir=save_dir)
 
 # plot silhouettes with selected # clusters
 plotting.plot_silhouette_scores_n_clusters(silhouette_scores, cell_metadata, n_clusters_cre=n_clusters_cre,
                                            save_dir=base_dir, folder=folder)
 
 # get gap statistic values
-gap_statistic = processing.load_gap_statistic(glm_version, feature_matrix, cell_metadata, save_dir=base_dir,
+gap_statistic = processing.load_gap_statistic(glm_version, feature_matrix, cell_metadata, save_dir=save_dir,
                                               metric='euclidean', shuffle_type='all', k_max=25, n_boots=20)
 
 # plot gap statistic
 plotting.plot_gap_statistic(gap_statistic, cre_lines, save_dir=base_dir, folder=folder)
 
 # load eigengap values
-eigengap = processing.load_eigengap(glm_version, feature_matrix, cell_metadata, save_dir=base_dir, k_max=25)
+eigengap = processing.load_eigengap(glm_version, feature_matrix, cell_metadata, save_dir=save_dir, k_max=25)
 
 # plot eigen gap values
 plotting.plot_eigengap_values(eigengap, cre_lines, save_dir=base_dir, folder=folder)
