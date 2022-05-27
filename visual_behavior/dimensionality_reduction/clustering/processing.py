@@ -523,7 +523,7 @@ def compute_gap(clustering, data, k_max=5, n_boots=20, reference=None, metric='e
     reference_inertia: array of log of reference inertia
     ondata_inertia: array of log of ondata inertia
     '''
-    
+
     if len(data.shape) == 1:
         data = data.reshape(-1, 1)
     if reference is None:
@@ -546,6 +546,7 @@ def compute_gap(clustering, data, k_max=5, n_boots=20, reference=None, metric='e
             local_inertia.append(compute_inertia(assignments, data, metric=metric))
         ondata_inertia.append(np.mean(local_inertia))
 
+    # maybe plotting error bars with this metric would be helpful but for now I'll leave it
     gap = np.log(reference_inertia) - np.log(ondata_inertia)
     return gap, np.log(reference_inertia), np.log(ondata_inertia)
 
@@ -651,6 +652,33 @@ def load_silhouette_scores(glm_version, feature_matrix, cell_metadata, save_dir,
         save_clustering_results(silhouette_scores, filename_string=sil_filename, path=save_dir)
     return silhouette_scores
 
+def load_gap_statistic(glm_version, feature_matrix, cell_metadata, save_dir,
+                       metric = 'euclidean', shuffle_type = 'all', k_max = 25):
+
+    gap_filename = 'gap_cores_' + metric + '_'+ glm_version + '_' + shuffle_type +'.pkl'
+    gap_path = os.path.join(save_dir, gap_filename)
+    if os.path.exists(gap_path):
+        print('loading gap statistic scores from', gap_path)
+        with open(gap_path, 'rb') as f:
+            gap_statistic = pickle.load(f)
+            f.close()
+        print('done.')
+    else:
+        gap_statistic = {}
+        for cre_line in get_cre_lines(cell_metadata):
+            feature_matrix_cre = get_feature_matrix_for_cre_line(feature_matrix, cell_metadata, cre_line)
+            X = feature_matrix_cre.values
+            feature_matrix_cre_shuffled = shuffle_dropout_score(feature_matrix_cre, shuffle_type = shuffle_type)
+            reference = feature_matrix_cre_shuffled.values
+            gap, reference_inertia, ondata_inertia = compute_gap(sc, X, k_max=25, reference=reference, metric=metric)
+            sc = SpectralClustering()
+            gap_statistic[cre_line] = [gap, reference_inertia, ondata_inertia]
+        save_clustering_results(gap_statistic, filename_string=gap_filename, path=save_dir)
+
+    return gap_statistic
+
+
+    return eigengap
 
 def get_labels_for_coclust_matrix(X, model=SpectralClustering, nboot=np.arange(100), n_clusters=8):
     '''
