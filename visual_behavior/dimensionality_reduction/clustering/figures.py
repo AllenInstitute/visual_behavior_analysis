@@ -76,6 +76,18 @@ silhouette_scores = processing.load_silhouette_scores(glm_version, feature_matri
 plotting.plot_silhouette_scores_n_clusters(silhouette_scores, cell_metadata, n_clusters_cre=n_clusters_cre,
                                            save_dir=base_dir, folder=folder)
 
+# get gap statistic values
+gap_statistic = processing.load_gap_statistic()
+
+# plot gap statistic
+plotting.plot_gap_statistic(gap_statistic, cre_lines, save_dir=base_dir, folder=folder)
+
+# load eigengap values
+eigengap = processing.load_eigengap(glm_version, feature_matrix, cell_metadata, save_dir= base_dir,
+                           metric='euclidean', k_max=25)
+# plot eigen gap values
+plotting.plot_eigengap_values(eigengap, cre_lines, save_dir=base_dir, folder=folder)
+
 # get coclustering matrices per cre line
 coclustering_matrices = processing.get_coclustering_matrix(glm_version, feature_matrix, cell_metadata, n_clusters_cre,
                                                            save_dir, nboot=100)

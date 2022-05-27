@@ -677,8 +677,8 @@ def load_gap_statistic(glm_version, feature_matrix, cell_metadata, save_dir,
     return gap_statistic
 
 def load_eigengap(glm_version, feature_matrix, cell_metadata, save_dir,
-                           metric='euclidean', shuffle_type='all', k_max=25):
-    eigengap_filename = 'gap_cores_' + metric + '_' + glm_version + '_' + shuffle_type + '.pkl'
+                           metric='euclidean', k_max=25):
+    eigengap_filename = 'gap_cores_' + metric + '_' + glm_version + '.pkl'
     eigengap_path = os.path.join(save_dir, eigengap_filename)
     if os.path.exists(eigengap_path):
         print('loading eigengap values scores from', eigengap_path)
