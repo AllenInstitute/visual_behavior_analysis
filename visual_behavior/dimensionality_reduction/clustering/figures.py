@@ -12,8 +12,8 @@ import seaborn as sns
 sns.set_context('notebook', font_scale=1.5, rc={'lines.markeredgewidth': 2})
 
 # set critical params for processing and saving
-folder = '220510_proportion_code_test'
-across_session_norm = False
+folder = '220527_across_session_norm'
+across_session_norm = True
 use_signed_weights = False
 include_var_exp_full = False
 
