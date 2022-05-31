@@ -12,7 +12,7 @@ import seaborn as sns
 sns.set_context('notebook', font_scale=1.5, rc={'lines.markeredgewidth': 2})
 
 # set critical params for processing and saving
-folder = '220527_across_session_norm'
+folder = '220527_across_session_norm_10_5_10'
 across_session_norm = True
 use_signed_weights = False
 include_var_exp_full = False
@@ -20,7 +20,7 @@ include_var_exp_full = False
 # number of clusters to use
 n_clusters_cre = {'Slc17a7-IRES2-Cre': 10,
                   'Sst-IRES-Cre': 5,
-                  'Vip-IRES-Cre': 12}
+                  'Vip-IRES-Cre': 10}
 
 # load experiments table
 experiments_table = loading.get_platform_paper_experiment_table()

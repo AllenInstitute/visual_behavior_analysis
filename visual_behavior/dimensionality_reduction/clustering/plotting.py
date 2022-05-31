@@ -1319,7 +1319,7 @@ def plot_pct_rel_to_chance_for_cluster(cre_counts, cluster_id, ax=None):
     return ax
 
 
-def plot_proportion_cells_for_cluster(cre_proportion, cluster_id, ci_df=None, ax=None):
+def plot_proportion_cells_for_cluster(cre_proportion, cluster_id, ci_df=None, ax=None, orient='v', small_font=True):
     """
     Plots the proportion of cells in each area and depth for a given cluster
     x values are areas & depths, y values are proportion cells
@@ -1347,22 +1347,34 @@ def plot_proportion_cells_for_cluster(cre_proportion, cluster_id, ci_df=None, ax
 
     data = cre_proportion[cre_proportion.cluster_id == cluster_id]
     data = data.sort_values('location')  # make sure to sort by location so it matches the ci
-    ax = sns.barplot(data=data, x='location', y='proportion_cells', order=locations, yerr=ci, orient='v', palette=colormap, ax=ax)
-
-    ax.set_ylabel('proportion cells\n rel. cluster avg.', fontsize=14)
-    ax.set_xticklabels(locations, fontsize=14, rotation=90)
-    ax.set_xlabel('')
-    # flip axes so V1 and/or upper layer is first
-    ax.set_xlim(ax.get_xlim()[::-1])
+    if orient == 'v':
+        ax = sns.barplot(data=data, x='location', y='proportion_cells', order=locations, yerr=ci, orient='v', palette=colormap, ax=ax)
+        ax.set_ylabel('proportion cells\n rel. cluster avg.', fontsize=14)
+        ax.set_xticklabels(locations, rotation=90)
+        ax.set_xlabel('')
+        # flip axes so V1 and/or upper layer is first
+        ax.set_xlim(ax.get_xlim()[::-1])
+        ax.tick_params(axis='x', length=0)
+    elif orient == 'h':
+        ax = sns.barplot(data=data, y='location', x='proportion_cells', order=locations, yerr=ci, orient='h', palette=colormap, ax=ax)
+        ax.set_xlabel('proportion cells\n rel. cluster avg.', fontsize=14)
+        ax.set_yticklabels(locations, rotation=0)
+        ax.set_ylabel('')
+        # flip axes so V1 and/or upper layer is first
+        ax.set_ylim(ax.get_ylim()[::-1])
+        ax.tick_params(axis='y', length=0)
 
     # ax.set_xticks([])
     ax.spines['right'].set_visible(False)
     ax.spines['top'].set_visible(False)
-    ax.tick_params(axis='x', length=0)
+    ax.spines['left'].set_visible(False)
+    ax.spines['bottom'].set_visible(False)
+
 
     # sns.despine(ax=ax, left=True, bottom=True)
     # make fonts small
-    ax = standardize_axes_fontsize(ax)
+    if small_font:
+        ax = standardize_axes_fontsize(ax)
     return ax
 
 

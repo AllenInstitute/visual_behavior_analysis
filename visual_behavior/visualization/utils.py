@@ -73,6 +73,16 @@ def get_cre_line_colors():
     return colors
 
 
+def get_cre_line_color_dict():
+    """
+    returns colors as a dict with cre line as key and color as value
+    """
+    colors = {'Slc17a7-IRES2-Cre':(255 / 255, 152 / 255, 150 / 255),
+              'Sst-IRES-Cre':(158 / 255, 218 / 255, 229 / 255),
+              'Vip-IRES-Cre':(197 / 255, 176 / 255, 213 / 255)}
+    return colors
+
+
 def get_session_type_color_map():
     colors = np.floor(np.array([list(x) for x in get_colors_for_session_numbers()]) * 255).astype(np.uint8)
     black = np.array([0, 0, 0]).astype(np.uint8)

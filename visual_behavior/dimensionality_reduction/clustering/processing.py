@@ -425,14 +425,14 @@ def generate_GLM_outputs(glm_version, experiments_table, cells_table, glm_output
     return results_pivoted, weights_df, kernels
 
 
-def load_GLM_outputs(glm_version, glm_output_dir):
+def load_GLM_outputs(glm_version, base_dir):
     """
-    loads results_pivoted and weights_df from files in base_dir, or generates them from mongo and save to base_dir
+    loads results_pivoted and weights_df from files in base_dir
     results_pivoted and weights_df will be limited to the ophys_experiment_ids and cell_specimen_ids present in experiments_table and cells_table
     because this function simply loads the results, any pre-processing applied to results_pivoted (such as across session normalization or signed weights) will be used here
 
     :param glm_version: example = '24_events_all_L2_optimize_by_session'
-    :param glm_output_dir: directory containing GLM output files to load
+    :param base_dir: directory containing output files to load
     :return:
         results_pivoted: table of dropout scores for all cell_specimen_ids in cells_table
         weights_df: table with model weights for all cell_specimen_ids in cells_table
@@ -444,14 +444,14 @@ def load_GLM_outputs(glm_version, glm_output_dir):
     kernels = run_params['kernels']
     # if glm_output_dir is not None:
     # load GLM results for all cells and sessions from file if it exists otherwise load from mongo
-    glm_results_path = os.path.join(glm_output_dir, glm_version + '_results_pivoted.h5')
+    glm_results_path = os.path.join(base_dir, glm_version + '_results_pivoted.h5')
     if os.path.exists(glm_results_path):
         results_pivoted = pd.read_hdf(glm_results_path, key='df')
     else:
         print('no results_pivoted at', glm_results_path)
         print('please generate before using load_glm_outputs')
 
-    weights_path = os.path.join(glm_output_dir, glm_version + '_weights_df.h5')
+    weights_path = os.path.join(base_dir, glm_version + '_weights_df.h5')
     if os.path.exists(weights_path):  # if it exists, load it
         weights_df = pd.read_hdf(weights_path, key='df')
     else:
@@ -919,6 +919,7 @@ def get_cluster_meta(cluster_labels, cell_metadata, feature_matrix, n_clusters_c
     """
     cluster_meta_filename = get_cluster_label_file_name(get_cre_lines(cell_metadata), n_clusters_cre, prefix='cluster_metadata')
     cluster_meta_filepath = os.path.join(save_dir, cluster_meta_filename)
+    generate_data = False
     if load:
         if os.path.exists(cluster_meta_filepath):
             print('loading cluster_meta from', cluster_meta_filepath)
@@ -1413,7 +1414,7 @@ def build_stats_table(metrics_df, metrics_columns=None, dropna=True, pivot=False
     # check for cre lines
     if 'cre_line' in metrics_df.keys():
         cre_lines = metrics_df['cre_line'].unique()
-        cre_line_ids = get_cre_line_cell_specimen_ids(metrics_df)
+        cre_line_ids = get_cre_line_cell_specimen_ids(metrics_df, metrics_df[m])
     else:
         cre_lines = ['all']
         cre_line_ids = metrics_df['cell_specimen_id'].unique()
@@ -1571,7 +1572,7 @@ def get_CI_for_clusters(cluster_meta, columns_to_groupby=['targeted_structure', 
                                 'CI_upper': CI[1]}
                     # if no such cluster found, there were no cells in this location
                     except KeyError:
-                        print(f'{cre_line, location, cluster_id} no cells in this cluster')
+                        # print(f'{cre_line, location, cluster_id} no cells in this cluster')
                         data = {'location': location,
                                 'cluster_id': cluster_id,
                                 'cre_line': cre_line,
