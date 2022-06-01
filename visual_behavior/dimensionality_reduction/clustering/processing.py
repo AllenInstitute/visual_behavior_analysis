@@ -517,7 +517,7 @@ def compute_gap(clustering, data, k_max=5, n_boots=20, reference=None, metric='e
 
     :param clustering: clustering object that includes "n_clusters" and "fit_predict"
     :param data: an array of data to be clustered (n samples by n features)
-    :param k_max: (int) maximum number of clusters to test
+    :param k_max: (int) maximum number of clusters to test, starts at 1
     :param n_boots: (int) number of repetitions for computing mean inertias
     :param reference: an array of data to cluster as a null hypothesis (shuffled data)
     :param metric: (str) type of distance to use, default = 'euclidean'
@@ -1762,3 +1762,21 @@ def compute_SSE(mean_dropout_df_original, mean_dropout_df_compare):
         SSE_matrix.append(row)
 
     return SSE_matrix
+
+
+def get_cre_line_map(cre_line):
+
+    cre_line_dict = {'Slc17a7-IRES2-Cre': 'Excitatory',
+                     'Sst-IRES-Cre': 'SST inhibitory',
+                     'Vip-IRES-Cre': 'VIP inhibitory'}
+
+    mapped_cre_line = cre_line_dict[cre_line]
+    return mapped_cre_line
+
+
+def get_n_clusters_cre():
+    ''' Number of clusters used in clustering per cre line'''
+    n_clusters_cre = {'Slc17a7-IRES2-Cre': 10,
+                      'Sst-IRES-Cre': 5,
+                      'Vip-IRES-Cre': 10}
+    return n_clusters_cre
