@@ -495,12 +495,14 @@ def get_cell_metadata_for_feature_matrix(feature_matrix, cells_table):
     return cell_metadata
 
 
-def get_feature_matrix_for_cre_line(feature_matrix, cell_metadata, cre_line):
+def get_feature_matrix_for_cre_line(feature_matrix, cell_metadata, cre_line, dropna = True):
     """
     limit feature_matrix to cell_specimen_ids for this cre line
     """
     cre_cell_specimen_ids = cell_metadata[cell_metadata['cre_line'] == cre_line].index.values
-    feature_matrix_cre = feature_matrix.loc[cre_cell_specimen_ids].copy()
+    feature_matrix_cre = feature_matrix.loc[cre_cell_specimen_ids].copy() 
+    if dropna is True:
+        feature_matrix_cre = feature_matrix_cre.dropna(axis=0)
     return feature_matrix_cre
 
 
