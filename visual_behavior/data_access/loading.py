@@ -484,9 +484,9 @@ def get_extended_stimulus_presentations_table(stimulus_presentations, licks, rew
 
     reward_threshold = 2 / 3  # 2/3 rewards per minute = 1/90 rewards/second
     stimulus_presentations['engaged'] = [x > reward_threshold for x in stimulus_presentations['reward_rate']]
-    stimulus_presentations['engagement_state'] = ['engaged' if True else 'disengaged' for engaged in stimulus_presentations['engaged'].values]
+    stimulus_presentations['engagement_state'] = ['engaged' if engaged==True else 'disengaged' for engaged in stimulus_presentations['engaged'].values]
     stimulus_presentations = reformat.add_response_latency(stimulus_presentations)
-    # stimulus_presentations = reformat.add_image_contrast_to_stimulus_presentations(stimulus_presentations) # Commented out because it requires connection to LIMS (2022/05/30 JK)
+    stimulus_presentations = reformat.add_image_contrast_to_stimulus_presentations(stimulus_presentations)
     stimulus_presentations = reformat.add_time_from_last_lick(stimulus_presentations, licks)
     stimulus_presentations = reformat.add_time_from_last_reward(stimulus_presentations, rewards)
     stimulus_presentations = reformat.add_time_from_last_change(stimulus_presentations)
