@@ -1653,14 +1653,14 @@ def plot_clusters_stats_pop_avg_cols(cluster_meta, feature_matrix, multi_session
         utils.save_figure(fig, figsize, save_dir, folder, 'clusters_cols_' + cre_line.split('-')[0] + suffix)
 
 
-def plot_gap_statistic(gap_statistic, cre_lines, n_clusters_cre=None, save_dir=None, folder=None):
+def plot_gap_statistic(gap_statistic, cre_lines, n_clusters_cre=None, tag='', save_dir=None, folder=None):
 
     if n_clusters_cre is None:
         n_clusters_cre = processing.get_n_clusters_cre()
 
     for cre_line in cre_lines:
 
-        suffix = cre_line
+        suffix = cre_line + '_' + tag
         n_clusters = n_clusters_cre[cre_line]
         x = len(gap_statistic[cre_line][0])
 
@@ -1684,7 +1684,7 @@ def plot_gap_statistic(gap_statistic, cre_lines, n_clusters_cre=None, save_dir=N
         plt.tight_layout()
 
         if save_dir:
-            utils.save_figure(fig, figsize, save_dir, folder, 'Gap_euclidean_all_' + suffix)
+            utils.save_figure(fig, figsize, save_dir, folder, 'Gap_euclidean_all_' + suffix )
 
 
 def plot_eigengap_values(eigenvalues_cre, cre_lines, n_clusters_cre=None, save_dir=None, folder=None):
