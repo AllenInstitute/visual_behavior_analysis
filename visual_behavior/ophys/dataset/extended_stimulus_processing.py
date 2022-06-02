@@ -162,18 +162,18 @@ def licks_each_flash(stimulus_presentations_df, licks_df,
 
     lick_times = licks_df['timestamps'].values
     stimulus_presentations_df['next_start'] = stimulus_presentations_df['start_time'].shift(-1)
-    stimulus_presentations_df.at[stimulus_presentations_df.index[-1],'next_start'] = stimulus_presentations_df.iloc[-1]['start_time'] + .75
+    stimulus_presentations_df.at[stimulus_presentations_df.index[-1], 'next_start'] = stimulus_presentations_df.iloc[-1]['start_time'] + .75
     licks_each_flash = stimulus_presentations_df.apply(
         lambda row: lick_times[
             ((
-                lick_times > row["start_time"] 
+                lick_times > row["start_time"]
             ) & (
-                lick_times <= row["next_start"] 
+                lick_times <= row["next_start"]
             ))
         ],
         axis=1,
     )
-    stimulus_presentations_df.drop(columns=['next_start'],inplace=True)
+    stimulus_presentations_df.drop(columns=['next_start'], inplace=True)
     return licks_each_flash
 
 
@@ -195,18 +195,18 @@ def rewards_each_flash(stimulus_presentations_df, rewards_df,
 
     reward_times = rewards_df['timestamps'].values
     stimulus_presentations_df['next_start'] = stimulus_presentations_df['start_time'].shift(-1)
-    stimulus_presentations_df.at[stimulus_presentations_df.index[-1],'next_start'] = stimulus_presentations_df.iloc[-1]['start_time'] + .75
+    stimulus_presentations_df.at[stimulus_presentations_df.index[-1], 'next_start'] = stimulus_presentations_df.iloc[-1]['start_time'] + .75
     rewards_each_flash = stimulus_presentations_df.apply(
         lambda row: reward_times[
             ((
-                reward_times > row["start_time"] 
+                reward_times > row["start_time"]
             ) & (
-                reward_times <= row["next_start"] 
+                reward_times <= row["next_start"]
             ))
         ],
         axis=1,
     )
-    stimulus_presentations_df.drop(columns=['next_start'],inplace=True)
+    stimulus_presentations_df.drop(columns=['next_start'], inplace=True)
 
     return rewards_each_flash
 
