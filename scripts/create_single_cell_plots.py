@@ -66,7 +66,7 @@ if __name__ == '__main__':
     base_dir = os.path.join(base_dir, glm_version)
 
     # folder in save_dir where you want to load GLM results from
-    glm_output_folder = '220420_SAC'
+    glm_output_folder = '220527_across_session_norm'
     glm_output_dir = os.path.join(base_dir, glm_output_folder)
     print(glm_output_dir)
 
