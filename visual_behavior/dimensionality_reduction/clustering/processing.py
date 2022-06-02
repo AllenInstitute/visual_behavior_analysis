@@ -85,42 +85,6 @@ def get_cell_type_for_cre_line(cell_metadata, cre_line):
     return cell_type
 
 
-def get_manual_sort_order():
-    """
-    manually selected cluster order for each cre line
-    based on whatever Marina thinks would be useful to sort by
-    """
-    manual_sort_order = {'Vip-IRES-Cre': [6, 9, 2, 7, 3, 10, 4, 5, 8, 12, 11, 1],
-                         'Sst-IRES-Cre': [1, 2, 3, 5, 4, 6],
-                         'Slc17a7-IRES2-Cre': [2, 9, 7, 4, 3, 8, 6, 5, 1, 10]}
-    return manual_sort_order
-
-
-def get_manual_sort_order_for_cre_line(cre_line):
-    """
-    gets order to sort clusters by for a given cre line based on Marina's manual sorting
-    """
-    manual_sort_order = get_manual_sort_order()
-    return manual_sort_order[cre_line]
-
-
-def add_manual_sort_order_to_cluster_meta(cluster_meta):
-    """
-    Adds a new cluster_id label called 'manual_sort_order' to cluster_meta (or any df with 'cluster_id')
-    manually sorted order is hard coded
-    """
-    cluster_meta['manual_sort_order'] = None
-    for cell_specimen_id in cluster_meta.index.values:
-        cre_line = cluster_meta.loc[cell_specimen_id].cre_line
-        cluster_id = cluster_meta.loc[cell_specimen_id].cluster_id
-        manual_sort = get_manual_sort_order_for_cre_line(cre_line)
-        # new ID is the position of this cluster ID in the manually sorted list
-        # print(cluster_id, manual_sort)
-        manual_cluster_id = np.where(manual_sort == cluster_id)[0][0]
-        cluster_meta.at[cell_specimen_id, 'manual_sort_order'] = manual_cluster_id
-    return cluster_meta
-
-
 def get_cre_line_cell_specimen_ids(df_no_cre, df_cre):
     '''
     This function is used to assign correct cre line to cell specimen ids.
@@ -939,7 +903,6 @@ def get_cluster_meta(cluster_labels, cell_metadata, feature_matrix, n_clusters_c
         # annotate & clean cluster metadata
         cluster_meta = clean_cluster_meta(cluster_meta)  # drop cluster IDs with fewer than 5 cells in them
         cluster_meta['original_cluster_id'] = cluster_meta.cluster_id
-        # cluster_meta = add_manual_sort_order_to_cluster_meta(cluster_meta)
         cluster_meta = add_within_cluster_corr_to_cluster_meta(feature_matrix, cluster_meta, use_spearmanr=False)
         # save
         print('saving cluster_meta to', cluster_meta_filepath)
