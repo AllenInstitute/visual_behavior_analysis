@@ -164,7 +164,7 @@ def licks_each_flash(stimulus_presentations_df, licks_df,
     licks_each_flash = stimulus_presentations_df.apply(
         lambda row: lick_times[
             ((
-                lick_times > row["start_time"] + range_relative_to_stimulus_start[0]
+                lick_times >= row["start_time"] + range_relative_to_stimulus_start[0]
             ) & (
                 lick_times < row["start_time"] + range_relative_to_stimulus_start[1]
             ))
@@ -194,7 +194,7 @@ def rewards_each_flash(stimulus_presentations_df, rewards_df,
     rewards_each_flash = stimulus_presentations_df.apply(
         lambda row: reward_times[
             ((
-                reward_times > row["start_time"] + range_relative_to_stimulus_start[0]
+                reward_times >= row["start_time"] + range_relative_to_stimulus_start[0]
             ) & (
                 reward_times < row["start_time"] + range_relative_to_stimulus_start[1]
             ))
