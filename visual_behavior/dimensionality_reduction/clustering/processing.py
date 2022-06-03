@@ -9,6 +9,7 @@ from numpy import linalg as linalg
 from scipy.stats import spearmanr
 from scipy.stats import kruskal
 from scipy.stats import ttest_ind
+from scipy.stats import sem
 from scipy.sparse import csgraph
 
 from sklearn.metrics import silhouette_score
@@ -511,7 +512,7 @@ def compute_inertia(a, X, metric='euclidean'):
     return np.mean(W)
 
 
-def compute_gap(clustering, data, k_max=5, n_boots=20, reference=None, metric='euclidean'):
+def compute_gap(clustering, data, k_max=5, n_boots=20, reference_shuffle='all', metric='euclidean'):
     '''
     Computes gap statistic between clustered data (ondata inertia) and null hypothesis (reference intertia).
 
@@ -519,7 +520,8 @@ def compute_gap(clustering, data, k_max=5, n_boots=20, reference=None, metric='e
     :param data: an array of data to be clustered (n samples by n features)
     :param k_max: (int) maximum number of clusters to test, starts at 1
     :param n_boots: (int) number of repetitions for computing mean inertias
-    :param reference: an array of data to cluster as a null hypothesis (shuffled data)
+    :param reference: (str) what type of shuffle to use, shuffle_dropout_scores,
+            None is use random normal distribution
     :param metric: (str) type of distance to use, default = 'euclidean'
     :return:
     gap: array of gap values that are the difference between two inertias
@@ -529,29 +531,58 @@ def compute_gap(clustering, data, k_max=5, n_boots=20, reference=None, metric='e
 
     if len(data.shape) == 1:
         data = data.reshape(-1, 1)
-    if reference is None:
-        reference = np.random.rand(*data.shape) * -1
+
+    if type(data) == pd.core.frame.DataFrame:
+        data_array = data.values
+
+    gap_statistics = {}
     reference_inertia = []
+    reference_sem = []
+    gap_mean = []
+    gap_sem = []
     for k in range(1, k_max ):
-        local_inertia = []
+        local_ref_inertia = []
         for _ in range(n_boots):
+            # draw random dist or shuffle for every nboot
+            if reference_shuffle is None:
+                reference = np.random.rand(*data.shape) * -1
+            else:
+                reference_df = shuffle_dropout_score(data, shuffle_type=reference_shuffle)
+                reference = reference_df.values
             clustering.n_clusters = k
             assignments = clustering.fit_predict(reference)
-            local_inertia.append(compute_inertia(assignments, reference, metric=metric))
-        reference_inertia.append(np.mean(local_inertia))
+            local_ref_inertia.append(compute_inertia(assignments, reference, metric=metric))
+        reference_inertia.append(np.mean(local_ref_inertia))
+        reference_sem.append(sem(local_ref_inertia))
 
     ondata_inertia = []
+    ondata_sem =  []
     for k in range(1, k_max ):
-        local_inertia = []
+        local_ondata_inertia = []
         for _ in range(n_boots):
             clustering.n_clusters = k
-            assignments = clustering.fit_predict(data)
-            local_inertia.append(compute_inertia(assignments, data, metric=metric))
-        ondata_inertia.append(np.mean(local_inertia))
+            assignments = clustering.fit_predict(data_array)
+            local_ondata_inertia.append(compute_inertia(assignments, data_array, metric=metric))
+        ondata_inertia.append(np.mean(local_ondata_inertia))
+        ondata_sem.append(sem(local_ondata_inertia))
+
+        # compute difference before mean
+        gap_mean.append(np.mean(local_ondata_inertia - local_ref_inertia))
+        gap_sem.append(sem(local_ondata_inertia - local_ref_inertia))
 
     # maybe plotting error bars with this metric would be helpful but for now I'll leave it
     gap = np.log(reference_inertia) - np.log(ondata_inertia)
-    return gap, np.log(reference_inertia), np.log(ondata_inertia)
+
+    # we potentially do not need all of this info but saving it to plot it for now
+    gap_statistics['gap'] = gap
+    gap_statistics['reference_inertia'] = np.log(reference_inertia)
+    gap_statistics['ondata_inertia'] = np.log(ondata_inertia)
+    gap_statistics['reference_sem'] = reference_sem
+    gap_statistics['ondata_sem'] = ondata_sem
+    gap_statistics['gap_mean'] = np.log(gap_mean)
+    gap_statistics['gap_sem'] = gap_sem
+
+    return gap_statistics
 
 
 def get_eigenDecomposition(A, max_n_clusters=25):
