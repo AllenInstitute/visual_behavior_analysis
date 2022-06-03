@@ -534,6 +534,8 @@ def compute_gap(clustering, data, k_max=5, n_boots=20, reference_shuffle='all', 
 
     if type(data) == pd.core.frame.DataFrame:
         data_array = data.values
+    else:
+        data_array = data
 
     gap_statistics = {}
     reference_inertia = []
@@ -549,6 +551,7 @@ def compute_gap(clustering, data, k_max=5, n_boots=20, reference_shuffle='all', 
             else:
                 reference_df = shuffle_dropout_score(data, shuffle_type=reference_shuffle)
                 reference = reference_df.values
+
             clustering.n_clusters = k
             assignments = clustering.fit_predict(reference)
             local_ref_inertia.append(compute_inertia(assignments, reference, metric=metric))
@@ -567,8 +570,8 @@ def compute_gap(clustering, data, k_max=5, n_boots=20, reference_shuffle='all', 
         ondata_sem.append(sem(local_ondata_inertia))
 
         # compute difference before mean
-        gap_mean.append(np.mean(local_ondata_inertia - local_ref_inertia))
-        gap_sem.append(sem(local_ondata_inertia - local_ref_inertia))
+        gap_mean.append(np.mean(np.subtract(np.log(local_ondata_inertia),np.log(local_ref_inertia))))
+        gap_sem.append(sem(np.subtract(np.log(local_ondata_inertia), np.log(local_ref_inertia))))
 
     # maybe plotting error bars with this metric would be helpful but for now I'll leave it
     gap = np.log(reference_inertia) - np.log(ondata_inertia)
@@ -579,7 +582,7 @@ def compute_gap(clustering, data, k_max=5, n_boots=20, reference_shuffle='all', 
     gap_statistics['ondata_inertia'] = np.log(ondata_inertia)
     gap_statistics['reference_sem'] = reference_sem
     gap_statistics['ondata_sem'] = ondata_sem
-    gap_statistics['gap_mean'] = np.log(gap_mean)
+    gap_statistics['gap_mean'] = gap_mean
     gap_statistics['gap_sem'] = gap_sem
 
     return gap_statistics
