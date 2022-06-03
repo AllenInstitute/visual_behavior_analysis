@@ -1690,6 +1690,50 @@ def plot_gap_statistic(gap_statistic, cre_lines = None, n_clusters_cre=None, tag
             utils.save_figure(fig, figsize, save_dir, folder, 'Gap_' + suffix )
 
 
+def plot_gap_statistic_with_sem(gap_statistics, cre_lines = None, n_clusters_cre=None, tag='', save_dir=None, folder=None):
+
+    if n_clusters_cre is None:
+        n_clusters_cre = processing.get_n_clusters_cre()
+
+    if cre_lines is None:
+        cre_lines = gap_statistics.keys()
+
+    for cre_line in cre_lines:
+
+        suffix = cre_line + '_' + tag
+        n_clusters = n_clusters_cre[cre_line]
+        x = len(gap_statistics[cre_line]['gap'])
+
+        figsize = (10, 4)
+        fig, ax = plt.subplots(1, 2, figsize=figsize)
+
+        ax[0].errorbar(x = np.arange(1, x + 1),
+                   y = gap_statistics[cre_line]['reference_inertia'],
+                   yerr = gap_statistics[cre_line]['reference_sem'],
+                   label = 'reference inertia')
+        ax[0].errorbar(x = np.arange(1, x + 1),
+                   y = gap_statistics[cre_line]['ondata_inertia'],
+                   yerr = gap_statistics[cre_line]['ondata_sem'],
+                    label = 'ondata inertia')
+        ax[0].set_ylabel('Natural log of euclidean \ndistance values')
+        ax[0].set_xlabel('Number of clusters')
+        ax[0].axvline(x=n_clusters, ymin=0, ymax=1, linestyle='--', color='gray')
+
+        ax[1].errorbar(x = np.arange(1, x + 1),
+                       y = gap_statistics[cre_line]['gap_mean'],
+                       yerr = gap_statistics[cre_line]['gap_sem'],
+                       )
+        ax[1].set_ylabel('Gap statistic')
+        ax[1].set_xlabel('Number of clusters')
+        ax[1].axvline(x=n_clusters, ymin=0, ymax=1, linestyle='--', color='gray')
+
+        title = processing.get_cre_line_map(cre_line)  # get a more interpretable cell type name
+        plt.suptitle(title)
+        plt.tight_layout()
+
+        if save_dir:
+            utils.save_figure(fig, figsize, save_dir, folder, 'Gap_' + suffix )
+
 def plot_eigengap_values(eigenvalues_cre, cre_lines, n_clusters_cre=None, save_dir=None, folder=None):
 
     if n_clusters_cre is None:
