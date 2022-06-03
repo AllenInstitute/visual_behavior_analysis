@@ -39,6 +39,22 @@ sns.set_context('notebook', font_scale=1.5, rc={'lines.markeredgewidth': 2})
 
 # utilities ###
 
+def get_multi_session_df_for_omissions():
+    """
+    loads multi-session omission response dataframe for events, only closest familiar and novel active
+    """
+    # load multi session dataframe with response traces
+    df_name = 'omission_response_df'
+    conditions = ['cell_specimen_id', 'omitted']
+
+    data_type = 'events'
+    event_type = 'omissions'
+    inclusion_criteria = 'active_only_closest_familiar_and_novel_containers_with_all_levels'
+
+    multi_session_df = loading.get_multi_session_df_for_conditions(data_type, event_type, conditions, inclusion_criteria)
+    print(len(multi_session_df.ophys_experiment_id.unique()))
+    return multi_session_df
+
 
 def save_clustering_results(data, filename_string='', path=None):
     '''
@@ -1575,7 +1591,7 @@ def get_CI_for_clusters(cluster_meta, columns_to_groupby=['targeted_structure', 
                     try:
                         n_cluster = df_groupedby_per_cluster.loc[(location, cluster_id)].values[0]
                     except:  # noqa E501 # used to have KeyError here but sometimes its a TypeError when there are no cells in a cluster
-                        print(f'{cre_line, location, cluster_id} no cells in this cluster')
+                       # print(f'{cre_line, location, cluster_id} no cells in this cluster')
                         n_cluster = 0
                     N.append(n_cluster)
                 # compute CIs for this location

@@ -110,11 +110,11 @@ cluster_meta = processing.get_cluster_meta(cluster_labels, cell_metadata, featur
 # ax = sns.clustermap(data=data, cmap='Greys', cbar_kws={'label':'co-clustering probability'})
 
 
-# # sort coclustering matrix by cluster ID / cluster size
-# cre_lines = processing.get_cre_lines(cell_metadata)
-# for cre_line in cre_lines:
-#     plotting.plot_coclustering_matrix_sorted_by_cluster_size(coclustering_matrices, cluster_meta, cre_line,
-#                                                              save_dir=base_dir, folder=folder, ax=None)
+# sort coclustering matrix by cluster ID / cluster size
+cre_lines = processing.get_cre_lines(cell_metadata)
+for cre_line in cre_lines:
+    plotting.plot_coclustering_matrix_sorted_by_cluster_size(coclustering_matrices, cluster_meta, cre_line,
+                                                             save_dir=base_dir, folder=folder, ax=None)
 
 # plot average dropout scores for each cluster
 
@@ -144,6 +144,15 @@ plotting.plot_within_cluster_correlations_all_cre(cluster_meta, n_clusters_cre, 
 
 # average dropouts per cre line
 plotting.plot_average_dropout_heatmap_for_cre_lines(results_pivoted, cluster_meta, save_dir=base_dir, folder=folder)
+
+# plot std dropouts per cre line
+plotting.plot_std_dropout_heatmap_for_cre_lines(results_pivoted, cluster_meta, save_dir=base_dir, folder=folder)
+
+# plot clusters as rows
+
+for cre in cre_lines:
+    plotting.plot_clusters_row(cluster_meta, feature_matrix, cre_line,
+                                   sort_order=None, save_dir=base_dir, folder=folder, suffix='')
 
 # # plot 100 cells per cluster to examine within cluster variability
 # dropouts = results_pivoted.merge(cells_table[['cell_specimen_id', 'experience_level', 'ophys_experiment_id']], on=['cell_specimen_id', 'experience_level'])
@@ -183,6 +192,16 @@ plotting.plot_cell_stats_per_cluster_for_areas_depths(cluster_meta, proportions,
                                                       cluster_order=None, save_dir=base_dir, folder=folder,
                                                       suffix=suffix)
 
+# plot fraction of cells in each area and depth belonging to each cluster as a pie chart
+plotting.plot_proportion_cells_area_depth_pie_chart(cluster_meta, save_dir=base_dir, folder=folder)
+
+
+# plot fraction of cells in each area and depth belonging to each cluster as a lollipop graph
+plotting.plot_fraction_cells_per_cluster_per_location_vert(cluster_meta, save_dir=base_dir, folder=folder)
+plotting.plot_fraction_cells_per_cluster_per_location_horiz(cluster_meta, save_dir=base_dir, folder=folder)
+
+
+
 # sort clusters by the fraction of cells in VISp upper
 # value_to_plot = 'proportion_cells'
 # cbar_label = 'proportion cells\n rel. to cluster avg'
@@ -203,15 +222,7 @@ plotting.plot_cell_stats_per_cluster_for_areas_depths(cluster_meta, proportions,
 # plot cluster heatmaps, pop avgs and proportion cells
 
 # load multi session dataframe with response traces
-df_name = 'omission_response_df'
-conditions = ['cell_specimen_id', 'omitted']
-
-data_type = 'events'
-event_type = 'omissions'
-inclusion_criteria = 'active_only_closest_familiar_and_novel_containers_with_all_levels'
-
-multi_session_df = loading.get_multi_session_df_for_conditions(data_type, event_type, conditions, inclusion_criteria)
-print(len(multi_session_df.ophys_experiment_id.unique()))
+multi_session_df = processing.get_multi_session_df_for_omissions()
 
 cluster_mdf = multi_session_df.merge(cluster_meta[['cluster_id']],
                                      on='cell_specimen_id', how='inner')
@@ -243,3 +254,11 @@ for cre_line in cre_lines:
                                               columns_to_groupby=['binned_depth'],
                                               sort_order=None, suffix='_binned_depth',
                                               save_dir=base_dir, folder=folder, )
+
+
+# plot as columns
+for cre_line in cre_lines:
+    plotting.plot_clusters_stats_pop_avg_cols(cluster_meta, feature_matrix, multi_session_df, cre_line,
+                                     columns_to_groupby=['targeted_structure', 'layer'],
+                                     sort_order=None, save_dir=base_dir, folder=folder, suffix='_pop_avg')
+
