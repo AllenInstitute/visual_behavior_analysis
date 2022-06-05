@@ -38,6 +38,11 @@ def get_colors_for_session_numbers():
     return reds + blues
 
 
+def get_experience_levels():
+    experience_levels = ['Familiar', 'Novel 1', 'Novel >1']
+    return experience_levels
+
+
 def get_experience_level_colors():
     """
     get color map corresponding to Familiar, Novel 1 and Novel >1

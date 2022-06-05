@@ -2051,3 +2051,100 @@ def plot_proportion_cells_area_depth_pie_chart(cluster_meta, save_dir=None, fold
     fig.tight_layout()
     if save_dir:
         utils.save_figure(fig, figsize, save_dir, folder, 'proportion_cells_pie_chart')
+
+
+
+def plot_cluster_percent_pie_legends(save_dir=None, folder=None):
+    # cluster types
+    cluster_types = processing.get_cluster_types()
+
+    fake_data = pd.DataFrame()
+    fake_data['cluster_id'] = np.arange(0, len(cluster_types), 1)
+    fake_data['fraction'] = np.repeat(100 / len(cluster_types), len(cluster_types))
+    fake_data['cluster_type'] = processing.get_cluster_types()
+    fake_data = fake_data.merge(processing.get_cluster_type_color_df(), on='cluster_type')
+
+    figsize = (5, 5)
+    fig, ax = plt.subplots(figsize=figsize)
+    wedges, texts = ax.pie(fake_data.fraction.values, radius=1, wedgeprops=dict(width=0.4, edgecolor='w'),
+                           colors=fake_data.cluster_type_color.values, labels=fake_data.cluster_type.values)
+    ax.legend(bbox_to_anchor=(1.5, 1), fontsize='small')
+    if save_dir:
+        utils.save_figure(fig, figsize, save_dir, folder, 'cluster_proportions_cluster_types_legend')
+
+    # experience_levels
+    experience_levels = utils.get_experience_levels()
+    exp_colors = utils.get_experience_level_colors()
+
+    fake_data = pd.DataFrame()
+    fake_data['cluster_id'] = np.arange(0, len(experience_levels), 1)
+    fake_data['fraction'] = np.repeat(100 / len(experience_levels), len(experience_levels))
+    fake_data['dominant_experience_level'] = experience_levels
+    fake_data['exp_level_colors'] = exp_colors
+
+    figsize = (5, 5)
+    fig, ax = plt.subplots(figsize=figsize)
+    wedges, texts = ax.pie(fake_data.fraction.values, radius=1, wedgeprops=dict(width=0.4, edgecolor='w'),
+                           colors=fake_data.exp_level_colors.values, labels=fake_data.dominant_experience_level.values)
+    ax.legend(bbox_to_anchor=(1.5, 1), fontsize='small')
+
+    if save_dir:
+        utils.save_figure(fig, figsize, save_dir, folder, 'cluster_proportions_exp_levels_legend')
+
+
+def plot_cluster_proportions_for_location(location_fractions, cre_line, location, ax=None, save_dir=None, folder=None):
+    data = location_fractions[(location_fractions.cre_line==cre_line)&(location_fractions.location==location)]
+    data = data.sort_values(by='cluster_id')
+    if ax is None:
+        figsize = (5,5)
+        fig, ax = plt.subplots()
+    wedges, texts = ax.pie(data.fraction.values, radius=1, colors=data.cluster_type_color.values,
+                                   labels=data.cluster_id.values, textprops=dict(fontsize=12, color='k'),
+                                   wedgeprops=dict(width=0.4, edgecolor='w'))
+
+    wedges, texts = ax.pie(data.fraction.values, radius=0.6, colors=data.exp_level_color.values,
+#                                    autopct=lambda p: '{:.2f}'.format(p/100),
+                                   labels=np.round(data.fraction.values,2), rotatelabels=True,
+                                   labeldistance=1, textprops=dict(fontsize=12, color='w'),
+                                   wedgeprops=dict(width=0.3, edgecolor='w'))
+    ax.set_title(plotting.get_abbreviated_location(location, abbrev_layer=False))
+    if save_dir:
+        utils.save_figure(fig, figsize, plot_save_dir, folder, cre_line[:3]+'_'+location)
+
+
+def plot_cluster_proportions_for_location(location_fractions, cre_line, location, ax=None, save_dir=None, folder=None):
+    data = location_fractions[(location_fractions.cre_line==cre_line)&(location_fractions.location==location)]
+    data = data.sort_values(by='cluster_id')
+    if ax is None:
+        figsize = (5,5)
+        fig, ax = plt.subplots()
+    wedges, texts = ax.pie(data.fraction.values, radius=1, colors=data.cluster_type_color.values,
+                                   labels=data.cluster_id.values, textprops=dict(fontsize=12, color='k'),
+                                   wedgeprops=dict(width=0.4, edgecolor='w'))
+
+    wedges, texts = ax.pie(data.fraction.values, radius=0.6, colors=data.exp_level_color.values,
+#                                    autopct=lambda p: '{:.2f}'.format(p/100),
+                                   labels=np.round(data.fraction.values,2), rotatelabels=True,
+                                   labeldistance=1, textprops=dict(fontsize=12, color='w'),
+                                   wedgeprops=dict(width=0.3, edgecolor='w'))
+    ax.set_title(get_abbreviated_location(location, abbrev_layer=False))
+    if save_dir:
+        utils.save_figure(fig, figsize, plot_save_dir, folder, cre_line[:3]+'_'+location)
+
+
+def plot_cluster_proportions_all_locations(cluster_meta, feature_matrix, results_pivoted, save_dir=None, folder=None):
+    locations = ['VISp_upper', 'VISl_upper', 'VISp_lower', 'VISl_lower']
+    location_fractions = processing.get_cluster_fractions_per_location(cluster_meta, feature_matrix, results_pivoted)
+    cre_lines = np.sort(cluster_meta.cre_line.unique())
+    
+    for cre_line in cre_lines:
+        figsize = (8,8)
+        fig, ax = plt.subplots(2,2, figsize=figsize)
+        ax = ax.ravel()
+        for i, location in enumerate(locations):
+            plot_cluster_proportions_for_location(location_fractions, cre_line, location, ax=ax[i], save_dir=None, folder=None)
+            ax[i].set_title(location)
+        fig.suptitle(processing.get_cell_type_for_cre_line(cluster_meta, cre_line), x=0.5, y=1.1)
+        fig.tight_layout()
+        if save_dir:
+            utils.save_figure(fig, figsize, save_dir, folder, 'cluster_proportions_per_location_'+cre_line[:3])

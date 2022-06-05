@@ -1131,18 +1131,6 @@ def compute_cluster_proportion_cre(cluster_meta, cre_line, groupby_columns=['tar
     return table
 
 
-# def get_proportion_cells_rel_cluster_average(cluster_meta, cre_lines, groupby_columns=['targeted_structure', 'layer']):
-#     cluster_proportions = pd.DataFrame()
-#     for cre_line in cre_lines:
-#         table = compute_cluster_proportion_cre(cluster_meta, cre_line, groupby_columns=groupby_columns)
-#         df = pd.DataFrame(table.unstack(), columns=['proportion_cells'])
-#         df = df.reset_index()
-#         df = df.rename(columns={'level_0': 'location'})
-#         df['cre_line'] = cre_line
-#         cluster_proportions = pd.concat([cluster_proportions, df])
-#     return cluster_proportions
-
-
 def get_proportion_cells_rel_cluster_average(cluster_meta, cre_lines, columns_to_groupby=['targeted_structure', 'layer']):
     """
 
@@ -1340,6 +1328,7 @@ def get_coding_metrics(index_dropouts, index_value, index_name):
     # get experience modulation indices
     row = index_dropouts[dominant_feature]
     # direction of exp mod is whether coding is stronger for familiar or novel
+    # if we wanted consider either novel session, could use novel_dropout = np.amax([row['Novel 1'], row['Novel >1']])
     exp_mod_direction = (row['Novel 1'] - row['Familiar']) / (row['Novel 1'] + row['Familiar'])
     # persistence of exp mod is whether coding stays similar after repetition of novel session
 #     exp_mod_persistence = (row['Novel >1']-row['Novel 1'])/(row['Novel >1']+row['Novel 1'])
@@ -1370,6 +1359,59 @@ def get_coding_metrics(index_dropouts, index_value, index_name):
     stats.loc[index_value, 'feature_sel_within_session'] = feature_sel_within_session
     stats.loc[index_value, 'feature_sel_across_sessions'] = feature_sel_across_sessions
     return stats
+
+
+def get_cell_metrics(cluster_meta, results_pivoted):
+    """
+    computes metrics on dropout scores for each cell, including experience level and feature selectivity
+    """
+    cell_metrics = pd.DataFrame()
+    for i, cell_specimen_id in enumerate(cluster_meta.index.values):
+        cell_dropouts = results_pivoted[results_pivoted.cell_specimen_id==cell_specimen_id].groupby('experience_level').mean()[get_features_for_clustering()]
+        stats = get_coding_metrics(index_dropouts=cell_dropouts, index_value=cell_specimen_id, index_name='cell_specimen_id')
+        cell_metrics = pd.concat([cell_metrics, stats], sort=False)
+    cell_metrics = cell_metrics.merge(cluster_meta, on='cell_specimen_id')
+    return cell_metrics
+
+
+def get_cluster_metrics(cluster_meta, feature_matrix, results_pivoted):
+    """
+    computes metrics for each cluster, including experience modulation, feature selectivity, etc
+    """
+    cre_lines = np.sort(cluster_meta.cre_line.unique())
+    cell_metrics = get_cell_metrics(cluster_meta, results_pivoted)
+    cluster_metrics = pd.DataFrame()
+    for cre_line in cre_lines:
+        # get cell specimen ids for this cre line
+        cre_cell_specimen_ids = cluster_meta[cluster_meta.cre_line == cre_line].index.values
+        # get cluster labels dataframe for this cre line
+        cre_cluster_ids = cluster_meta.loc[cre_cell_specimen_ids]
+        # get unique cluster labels for this cre line
+        cluster_labels = np.sort(cre_cluster_ids.cluster_id.unique())
+        # limit dropouts df to cells in this cre line
+        feature_matrix_cre = feature_matrix.loc[cre_cell_specimen_ids]
+        for i, cluster_id in enumerate(cluster_labels):
+            # get cell specimen ids in this cluster in this cre line
+            this_cluster_csids = cre_cluster_ids[cre_cluster_ids['cluster_id'] == cluster_id].index.values
+            # get dropout scores for cells in this cluster in this cre line
+            mean_dropout_df = np.abs(feature_matrix_cre.loc[this_cluster_csids].mean().unstack())
+            stats = get_coding_metrics(index_dropouts=mean_dropout_df.T, index_value=cluster_id,
+                                                  index_name='cluster_id')
+            fraction_cre = len(this_cluster_csids) / float(len(cre_cell_specimen_ids))
+            stats['fraction_cre'] = fraction_cre
+            stats['cre_line'] = cre_line
+            stats['F_max'] = mean_dropout_df['Familiar'].max()
+            stats['N1_max'] = mean_dropout_df['Novel 1'].max()
+            stats['N2_max'] = mean_dropout_df['Novel >1'].max()
+            stats['abs_max'] = mean_dropout_df.max().max()
+            cluster_metrics = pd.concat([cluster_metrics, stats])
+    cluster_metrics = cluster_metrics.reset_index()
+    print(cluster_metrics.keys())
+    n_cells = cell_metrics.groupby(['cre_line', 'cluster_id']).count()[['labels']].rename(
+        columns={'labels': 'n_cells_cluster'})
+    cluster_metrics = cluster_metrics.merge(n_cells, on=['cre_line', 'cluster_id'])
+
+    return cluster_metrics
 
 
 def kruskal_by_experience_level(df_pivoted, posthoc=True):
@@ -1760,3 +1802,173 @@ def get_n_clusters_cre():
                       'Sst-IRES-Cre': 5,
                       'Vip-IRES-Cre': 10}
     return n_clusters_cre
+
+
+def get_location_fractions(cluster_meta):
+    """
+    for each location, compute percent of cells belonging to each cluster
+    """
+
+    cre_lines = np.sort(cluster_meta.cre_line.unique())
+    locations = np.sort(cluster_meta.location.unique())[::-1]
+    location_fractions = pd.DataFrame()
+    for cre_line in cre_lines:
+        for location in locations:
+            cells = cluster_meta[(cluster_meta.location == location) & (cluster_meta.cre_line == cre_line)]
+            total = len(cells)
+            cluster_cells = cells.groupby('cluster_id').count()[['labels']].rename(columns={'labels': 'n_cells'})
+            fraction = cluster_cells.n_cells / total
+
+            cluster_cells['fraction'] = fraction
+            cluster_cells = cluster_cells.reset_index()
+            cluster_cells['cre_line'] = cre_line
+            cluster_cells['location'] = location
+            location_fractions = pd.concat([location_fractions, cluster_cells])
+
+    return location_fractions
+
+
+def define_cluster_types(cluster_metrics):
+    """
+    defines clusters as non-coding, mixed coding, image, behavioral, omission or task depending on
+    max dropout score, degree of selectivity across sessions, and max feature category
+    adds column 'cluster_types' to cluster_metrics
+    """
+    cluster_types = []
+    for i in range(len(cluster_metrics)):
+        row = cluster_metrics.iloc[i]
+        if row.abs_max < 0.1:
+            cluster_type = 'non-coding'
+        elif row.feature_sel_across_sessions<0.2:
+            cluster_type = 'mixed coding'
+        else:
+            cluster_type = row.dominant_feature
+        cluster_types.append(cluster_type)
+    cluster_metrics['cluster_type'] = cluster_types
+    return cluster_metrics
+
+
+def add_cluster_types(location_fractions, cluster_metrics):
+    """
+    add column to location_fractions indicating the cluster type for each cluster
+    cluster_types include ['all-images', 'omissions', 'behavioral', 'task', 'mixed coding', 'non-coding']
+    """
+    cluster_metrics = define_cluster_types(cluster_metrics)
+
+    # merge location fractions with metrics per cluster
+    cs = cluster_metrics[['cre_line', 'cluster_id', 'cluster_type', 'dominant_feature', 'dominant_experience_level', 'exp_mod_direction', 'exp_mod_persistence']]
+    location_fractions = location_fractions.merge(cs, on=['cre_line', 'cluster_id'])
+    return location_fractions
+
+
+def get_cluster_types():
+    return ['all-images', 'omissions', 'behavioral', 'task', 'mixed coding', 'non-coding']
+
+
+def get_cluster_type_color_df():
+    """
+    creates a dataframe with columns for cluster_type and corresponding cluster_type_color
+    """
+    cluster_types = get_cluster_types()
+
+    # get feature colors from gvt
+    import visual_behavior_glm.GLM_visualization_tools as gvt
+    cluster_type_colors = [
+        gvt.project_colors()[cluster_type][:3] if cluster_type in list(gvt.project_colors().keys()) else (0.5, 0.5, 0.5)
+        for cluster_type in cluster_types]
+
+    cluster_type_color_df = pd.DataFrame(columns=['cluster_type', 'color'])
+    cluster_type_color_df['cluster_type'] = cluster_types
+    cluster_type_color_df['cluster_type_color'] = cluster_type_colors
+
+    # make mixed and non-coding shades of gray
+    index = cluster_type_color_df[cluster_type_color_df.cluster_type == 'non-coding'].index[0]
+    cluster_type_color_df.at[index, 'cluster_type_color'] = (0.8, 0.8, 0.8)
+    index = cluster_type_color_df[cluster_type_color_df.cluster_type == 'mixed coding'].index[0]
+    cluster_type_color_df.at[index, 'cluster_type_color'] = (0.4, 0.4, 0.4)
+
+    return cluster_type_color_df
+
+
+def get_experience_level_color_df():
+    """
+    create dataframe with columns for experience_level and exp_level_color
+    """
+    import pandas as pd
+    import visual_behavior.visualization.utils as utils
+    colors = utils.get_experience_level_colors()
+    experience_levels = utils.get_experience_levels()
+    exp_colors = [colors[np.where(np.asarray(experience_levels) == exp_level)[0][0]] for exp_level in experience_levels]
+
+    exp_level_color_df = pd.DataFrame()
+    exp_level_color_df['experience_level'] = experience_levels
+    exp_level_color_df['exp_level_color'] = exp_colors
+    return exp_level_color_df
+
+
+def define_cluster_types(cluster_metrics):
+    """
+    defines clusters as non-coding, mixed coding, image, behavioral, omission or task depending on
+    max dropout score, degree of selectivity across sessions, and max feature category
+    adds column 'cluster_types' to cluster_metrics
+    """
+    cluster_types = []
+    for i in range(len(cluster_metrics)):
+        row = cluster_metrics.iloc[i]
+        if row.abs_max < 0.1:
+            cluster_type = 'non-coding'
+        elif row.feature_sel_across_sessions<0.2:
+            cluster_type = 'mixed coding'
+        else:
+            cluster_type = row.dominant_feature
+        cluster_types.append(cluster_type)
+    cluster_metrics['cluster_type'] = cluster_types
+    return cluster_metrics
+
+
+def add_cluster_types(location_fractions, cluster_metrics):
+    """
+    add column to location_fractions indicating the cluster type for each cluster
+    cluster_types include ['all-images', 'omissions', 'behavioral', 'task', 'mixed coding', 'non-coding']
+    """
+    cluster_metrics = define_cluster_types(cluster_metrics)
+
+    # merge location fractions with metrics per cluster
+    cs = cluster_metrics[['cre_line', 'cluster_id', 'cluster_type', 'dominant_feature', 'dominant_experience_level', 'exp_mod_direction', 'exp_mod_persistence']]
+    location_fractions = location_fractions.merge(cs, on=['cre_line', 'cluster_id'])
+    return location_fractions
+
+
+def get_cluster_types():
+    return ['all-images', 'omissions', 'behavioral', 'task', 'mixed coding', 'non-coding']
+
+
+def get_cluster_fractions_per_location(cluster_meta, feature_matrix, results_pivoted):
+    """
+    Compute the fraction of cells in each location that belong to each cluster
+    Designate a 'cluster_type', based on metrics of feature and experience selectivity
+    Add colors for cluster_types and preferred experience levels for plotting
+    This function is used in plotting.plot_cluster_proportions_all_locations()
+
+    :param cluster_meta: table of metadata for each cell_specimen_id, including their cluster_id
+    :param feature_matrix: dropout scores for all cell_specimen_ids
+    :return:
+    """
+    cre_lines = np.sort(cluster_meta.cre_line.unique())
+    # get metrics for clusters
+    cluster_metrics = get_cluster_metrics(cluster_meta, feature_matrix, results_pivoted)
+    # get fraction cells per location belonging to each cluster
+    location_fractions = get_location_fractions(cluster_meta)
+    # add cluster types
+    location_fractions = add_cluster_types(location_fractions, cluster_metrics)
+    # merge with cluster type colors
+    cluster_type_color_df = get_cluster_type_color_df()
+    location_fractions = location_fractions.merge(cluster_type_color_df, on='cluster_type')
+    # merge with experience level colors
+    exp_level_color_df = get_experience_level_color_df()
+    exp_level_color_df = exp_level_color_df.rename(columns={'experience_level':'dominant_experience_level'})
+    location_fractions = location_fractions.merge(exp_level_color_df, on='dominant_experience_level')
+    # make exp level color gray for non-coding clusters
+    non_coding_inds = location_fractions[location_fractions.cluster_type=='non-coding'].index
+    location_fractions.at[non_coding_inds, 'exp_level_color'] = location_fractions.loc[non_coding_inds, 'cluster_type_color']
+    return location_fractions
