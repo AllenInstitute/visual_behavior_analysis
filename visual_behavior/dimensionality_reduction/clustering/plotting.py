@@ -2114,7 +2114,8 @@ def plot_cluster_proportions_for_location(location_fractions, cre_line, location
 
 def plot_cluster_proportions_for_location(location_fractions, cre_line, location, ax=None, save_dir=None, folder=None):
     data = location_fractions[(location_fractions.cre_line==cre_line)&(location_fractions.location==location)]
-    data = data.sort_values(by='cluster_id')
+    data = data.sort_values(by=['location', 'cluster_type'])
+    # data = data.sort_values(by='cluster_id')
     if ax is None:
         figsize = (5,5)
         fig, ax = plt.subplots()
@@ -2136,7 +2137,7 @@ def plot_cluster_proportions_all_locations(cluster_meta, feature_matrix, results
     locations = ['VISp_upper', 'VISl_upper', 'VISp_lower', 'VISl_lower']
     location_fractions = processing.get_cluster_fractions_per_location(cluster_meta, feature_matrix, results_pivoted)
     cre_lines = np.sort(cluster_meta.cre_line.unique())
-    
+
     for cre_line in cre_lines:
         figsize = (8,8)
         fig, ax = plt.subplots(2,2, figsize=figsize)
