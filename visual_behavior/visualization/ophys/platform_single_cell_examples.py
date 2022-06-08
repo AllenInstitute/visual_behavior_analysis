@@ -328,7 +328,7 @@ def plot_matched_roi_and_traces_example_GLM(cell_metadata, cell_dropouts, cell_w
 
 
 
-def plot_matched_rois(cell_metadata, experiments_table, data_type, save_dir=None, folder=None):
+def plot_matched_rois(cell_metadata, data_type, save_dir=None, folder=None):
     """
     This function will plot the following panels:
         cell ROI masks matched across sessions for a given cell_specimen_id,
@@ -352,7 +352,7 @@ def plot_matched_rois(cell_metadata, experiments_table, data_type, save_dir=None
     cell_specimen_id = cell_metadata.cell_specimen_id.unique()[0]
     ophys_container_id = cell_metadata.ophys_container_id.unique()[0]
     # need to get all experiments for this container, not just for this cell
-    ophys_experiment_ids = experiments_table[experiments_table.ophys_container_id == ophys_container_id].index.values
+    ophys_experiment_ids = cell_metadata[cell_metadata.ophys_container_id == ophys_container_id].ophys_experiment_id.values
     n_expts = len(ophys_experiment_ids)
     if n_expts > 3:
         print('There are more than 3 experiments for this cell. There should be a max of 1 experiment per experience level')
@@ -381,8 +381,8 @@ def plot_matched_rois(cell_metadata, experiments_table, data_type, save_dir=None
 
         # get ophys_experiment_id for this experience level
         # experiments_table must only include one experiment per experience level for a given container
-        ophys_experiment_id = experiments_table[(experiments_table.ophys_container_id == ophys_container_id) &
-                                                (experiments_table.experience_level == experience_level)].index.values[0]
+        ophys_experiment_id = cell_metadata[(cell_metadata.ophys_container_id == ophys_container_id) &
+                                                (cell_metadata.experience_level == experience_level)].index.values[0]
         print('ophys_experiment_id:', ophys_experiment_id)
         ind = experience_levels.index(experience_level)
         color = colors[ind]

@@ -12,7 +12,7 @@ import seaborn as sns
 sns.set_context('notebook', font_scale=1.5, rc={'lines.markeredgewidth': 2})
 
 # set critical params for processing and saving
-folder = '220606_test_4x2'
+folder = '220606_test_4x2_only'
 across_session_norm = False
 use_signed_weights = False
 include_var_exp_full = False
@@ -25,6 +25,9 @@ n_clusters_cre = {'Slc17a7-IRES2-Cre': 10,
 # load experiments table
 experiments_table = loading.get_platform_paper_experiment_table(include_4x2_data=True, add_extra_columns=True,
                                                                 limit_to_closest_active=True)
+# limit to 4x2 data
+experiments_table = experiments_table[experiments_table.project_code=='VisualBehaviorMultiscope4areasx2d']
+
 # limit to closest familiar and novel active
 experiments_table = utilities.limit_to_last_familiar_second_novel_active(experiments_table)
 experiments_table = utilities.limit_to_containers_with_all_experience_levels(experiments_table)
@@ -34,6 +37,10 @@ print(len(experiments_table), 'experiments')
 # cells_table = loading.get_matched_cells_table(cells_table)
 cells_table = loading.get_cell_table(platform_paper_only=True, add_extra_columns=True, limit_to_closest_active=True,
                                      limit_to_matched_cells=True, include_4x2_data=True)
+
+# limit to 4x2 data
+cells_table = cells_table[cells_table.project_code=='VisualBehaviorMultiscope4areasx2d']
+
 matched_cells = cells_table.cell_specimen_id.unique()
 matched_experiments = cells_table.ophys_experiment_id.unique()
 print(len(matched_cells), 'matched_cells')

@@ -36,7 +36,7 @@ if __name__ == '__main__':
     container_csids = cells_table[cells_table.ophys_container_id==ophys_container_id].cell_specimen_id.unique()
     for cell_specimen_id in container_csids:
         cell_metadata = cells_table[cells_table.cell_specimen_id==cell_specimen_id]
-        psc.plot_matched_rois(cell_metadata, experiments_table, data_type='events', save_dir=save_dir, folder=folder)
+        psc.plot_matched_rois(cell_metadata, data_type='events', save_dir=save_dir, folder=folder)
 
 
 
