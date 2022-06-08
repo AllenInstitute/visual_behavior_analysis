@@ -12,7 +12,17 @@ parser.add_argument('--scriptname', type=str, default='create_single_cell_plots.
 
 
 
-container_ids = loading.get_ophys_container_ids(platform_paper_only=True, add_extra_columns=True)
+# container_ids = loading.get_ophys_container_ids(platform_paper_only=True, add_extra_columns=True)
+
+cells_table = loading.get_cell_table(platform_paper_only=True, add_extra_columns=True,
+                                         limit_to_closest_active=True, limit_to_matched_cells=True, include_4x2_data=True)
+# limit to 4x2
+cells_table = cells_table[cells_table.project_code == 'VisualBehaviorMultiscope4areasx2d']
+container_ids = cells_table.ophys_container_id.unique()
+
+print(len(cells_table.cell_specimen_id.unique()), 'matched cells in 4x2 cells table')
+print(len(container_ids), 'container_ids in 4x2 cells table')
+
 
 if __name__ == "__main__":
     args = parser.parse_args()

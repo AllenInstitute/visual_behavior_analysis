@@ -12,8 +12,8 @@ import seaborn as sns
 sns.set_context('notebook', font_scale=1.5, rc={'lines.markeredgewidth': 2})
 
 # set critical params for processing and saving
-folder = '220527_across_session_norm_10_5_10'
-across_session_norm = True
+folder = '220606_test_4x2'
+across_session_norm = False
 use_signed_weights = False
 include_var_exp_full = False
 
@@ -23,23 +23,28 @@ n_clusters_cre = {'Slc17a7-IRES2-Cre': 10,
                   'Vip-IRES-Cre': 10}
 
 # load experiments table
-experiments_table = loading.get_platform_paper_experiment_table()
+experiments_table = loading.get_platform_paper_experiment_table(include_4x2_data=True, add_extra_columns=True,
+                                                                limit_to_closest_active=True)
 # limit to closest familiar and novel active
 experiments_table = utilities.limit_to_last_familiar_second_novel_active(experiments_table)
 experiments_table = utilities.limit_to_containers_with_all_experience_levels(experiments_table)
+print(len(experiments_table), 'experiments')
 
 # load matched cells table
-cells_table = loading.get_cell_table()
-cells_table = loading.get_matched_cells_table(cells_table)
+# cells_table = loading.get_matched_cells_table(cells_table)
+cells_table = loading.get_cell_table(platform_paper_only=True, add_extra_columns=True, limit_to_closest_active=True,
+                                     limit_to_matched_cells=True, include_4x2_data=True)
 matched_cells = cells_table.cell_specimen_id.unique()
 matched_experiments = cells_table.ophys_experiment_id.unique()
+print(len(matched_cells), 'matched_cells')
+
 
 # get cre_lines and cell types for plot labels
 cre_lines = np.sort(cells_table.cre_line.unique())
 cell_types = utilities.get_cell_types_dict(cre_lines, experiments_table)
 
 # get GLM output, filter and reshape
-glm_version = '24_events_all_L2_optimize_by_session'
+glm_version = '25_events_all_L2_optimize_by_session_4x2'
 model_output_type = 'adj_fraction_change_from_full'
 
 base_dir = '//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/platform_paper_plots/figure_4'

@@ -324,3 +324,123 @@ def plot_matched_roi_and_traces_example_GLM(cell_metadata, cell_dropouts, cell_w
         print('saving plot for', cell_specimen_id)
         utils.save_figure(fig, figsize, save_dir, folder, str(cell_specimen_id) + '_' + metadata_string + '_' + data_type)
         print('saved')
+
+
+
+
+def plot_matched_rois(cell_metadata, experiments_table, data_type, save_dir=None, folder=None):
+    """
+    This function will plot the following panels:
+        cell ROI masks matched across sessions for a given cell_specimen_id,
+        change and omission triggered average respones across sessions.
+    Plots the ROI masks and cell traces for a cell matched across sessions
+    Cell_metadata is a subset of the ophys_cells_table limited to the cell_specimen_id of interest
+    all input dataframes must be limited to last familiar and second novel active (i.e. max of one session per type)
+    if one session type is missing, the max projection but no ROI will be plotted and the traces and weights will be missing for that experience level
+    """
+
+    if len(cell_metadata.cell_specimen_id.unique()) > 1:
+        print('There is more than one cell_specimen_id in the provided cell_metadata table')
+        print('Please limit input to a single cell_specimen_id')
+
+    # set up plotting for each experience level
+    experience_levels = ['Familiar', 'Novel 1', 'Novel >1']
+    colors = utils.get_experience_level_colors()
+    n_exp_levels = len(experience_levels)
+    # get relevant info for this cell
+    cell_metadata = cell_metadata.sort_values(by='experience_level')
+    cell_specimen_id = cell_metadata.cell_specimen_id.unique()[0]
+    ophys_container_id = cell_metadata.ophys_container_id.unique()[0]
+    # need to get all experiments for this container, not just for this cell
+    ophys_experiment_ids = experiments_table[experiments_table.ophys_container_id == ophys_container_id].index.values
+    n_expts = len(ophys_experiment_ids)
+    if n_expts > 3:
+        print('There are more than 3 experiments for this cell. There should be a max of 1 experiment per experience level')
+        print('Please limit input to only one experiment per experience level')
+
+    # set up labels for different trace types
+    if data_type == 'dff':
+        ylabel = 'dF/F'
+    else:
+        ylabel = 'response'
+
+    # number of columns is one for each experience level,
+    # plus additional columns for stimulus and omission traces, and running and pupil averages (TBD)
+    extra_cols = 2
+    n_cols = n_exp_levels + extra_cols
+    print(extra_cols, 'extra cols')
+
+    figsize = (3.5 * n_cols, 6)
+    fig, ax = plt.subplots(2, n_cols, figsize=figsize)
+    ax = ax.ravel()
+
+    print('cell_specimen_id:', cell_specimen_id)
+    # loop through experience levels for this cell
+    for e, experience_level in enumerate(experience_levels):
+        print('experience_level:', experience_level)
+
+        # get ophys_experiment_id for this experience level
+        # experiments_table must only include one experiment per experience level for a given container
+        ophys_experiment_id = experiments_table[(experiments_table.ophys_container_id == ophys_container_id) &
+                                                (experiments_table.experience_level == experience_level)].index.values[0]
+        print('ophys_experiment_id:', ophys_experiment_id)
+        ind = experience_levels.index(experience_level)
+        color = colors[ind]
+
+        # load dataset for this experiment
+        dataset = loading.get_ophys_dataset(ophys_experiment_id, get_extended_stimulus_presentations=False)
+
+        try:  # attempt to generate plots for this cell in this this experience level. if cell does not have this exp level, skip
+            # plot ROI mask for this experiment
+            ct = dataset.cell_specimen_table.copy()
+            cell_roi_id = ct.loc[cell_specimen_id].cell_roi_id  # typically will fail here if the cell_specimen_id isnt in the session
+            roi_masks = dataset.roi_masks.copy()  # save this to get approx ROI position if subsequent session is missing the ROI (fails if the first session is the one missing the ROI)
+            ax[e] = sf.plot_cell_zoom(dataset.roi_masks, dataset.max_projection, cell_roi_id,
+                                      spacex=50, spacey=50, show_mask=True, ax=ax[e])
+            ax[e].set_title(experience_level, color=color)
+
+            # get change responses and plot on second to next axis after ROIs (there are n_expts # of ROIs)
+            window = [-1, 1.5]  # window around event
+            sdf = loading.get_stimulus_response_df(dataset, time_window=window, interpolate=True, output_sampling_rate=30,
+                                                   data_type=data_type, event_type='changes', load_from_file=True)
+            cell_data = sdf[(sdf.cell_specimen_id == cell_specimen_id) & (sdf.is_change == True)]
+
+            ax[n_expts] = utils.plot_mean_trace(cell_data.trace.values, cell_data.trace_timestamps.values[0],
+                                                ylabel=ylabel, legend_label=None, color=color, interval_sec=1,
+                                                xlim_seconds=window, plot_sem=True, ax=ax[n_expts])
+            ax[n_expts] = utils.plot_flashes_on_trace(ax[n_expts], cell_data.trace_timestamps.values[0],
+                                                      change=True, omitted=False)
+            ax[n_expts].set_title('changes')
+
+            # get omission responses and plot on last axis
+            sdf = loading.get_stimulus_response_df(dataset, time_window=window, interpolate=True, output_sampling_rate=30,
+                                                   data_type=data_type, event_type='omissions', load_from_file=True)
+            cell_data = sdf[(sdf.cell_specimen_id == cell_specimen_id) & (sdf.omitted == True)]
+
+            ax[n_expts + 1] = utils.plot_mean_trace(cell_data.trace.values, cell_data.trace_timestamps.values[0],
+                                                    ylabel=ylabel, legend_label=None, color=color, interval_sec=1,
+                                                    xlim_seconds=window, plot_sem=True, ax=ax[n_expts + 1])
+            ax[n_expts + 1] = utils.plot_flashes_on_trace(ax[n_expts + 1], cell_data.trace_timestamps.values[0],
+                                                          change=False, omitted=True)
+            ax[n_expts + 1].set_title('omissions')
+
+        except:  # plot area of max projection where ROI would have been if it was in this session
+            # plot the max projection image with the xy location of the previous ROI
+            # this will fail if the familiar session is the one without the cell matched
+            print('no cell ROI for', experience_level)
+            ax[e] = sf.plot_cell_zoom(roi_masks, dataset.max_projection, cell_roi_id,
+                                      spacex=50, spacey=50, show_mask=False, ax=ax[e])
+            ax[e].set_title(experience_level)
+
+
+    metadata_string = utils.get_container_metadata_string(dataset.metadata)
+
+    fig.tight_layout()
+    fig.subplots_adjust(hspace=0.6, wspace=0.7)
+    fig.suptitle(str(cell_specimen_id) + '_' + metadata_string, x=0.53, y=1.02,
+                 horizontalalignment='center', fontsize=16)
+
+    if save_dir:
+        print('saving plot for', cell_specimen_id)
+        utils.save_figure(fig, figsize, save_dir, folder, str(cell_specimen_id) + '_' + metadata_string + '_' + data_type)
+        print('saved')
