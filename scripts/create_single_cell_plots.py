@@ -28,7 +28,7 @@ if __name__ == '__main__':
                                          limit_to_closest_active=True, limit_to_matched_cells=True, include_4x2_data=True)
     # limit to 4x2
     cells_table = cells_table[cells_table.project_code == 'VisualBehaviorMultiscope4areasx2d']
-    print(len(cells_table.cell_specimen_id.unique), 'matched cells in 4x2 cells table')
+    print(len(cells_table.cell_specimen_id.unique()), 'matched cells in 4x2 cells table')
 
     save_dir = r'/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/test_cell_matching_4x2'
     folder = 'matched_cell_examples'
