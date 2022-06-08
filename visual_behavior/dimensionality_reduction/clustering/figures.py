@@ -62,6 +62,9 @@ results_pivoted, weights_df, kernels = processing.generate_GLM_outputs(glm_versi
                                                                        use_signed_weights, across_session_norm,
                                                                        include_var_exp_full)
 
+print(len(results_pivoted.cell_specimen_id.unique()), 'cells in results pivoted')
+
+
 # unstack dropout scores to get a vector of features x experience levels for each cell
 feature_matrix = processing.get_feature_matrix_for_clustering(results_pivoted, glm_version, save_dir=save_dir)
 feature_matrix.head()

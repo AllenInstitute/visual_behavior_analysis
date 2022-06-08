@@ -225,7 +225,11 @@ def get_glm_results_pivoted_for_clustering(glm_version='24_events_all_L2_optimiz
         results_pivoted = results_pivoted[results_pivoted.passive == False]
 
         # get cells table and limit to cells matched in closest familiar and novel active
-        cells_table = loading.get_cell_table()
+        # cells_table = loading.get_cell_table()
+        cells_table = loading.get_cell_table(platform_paper_only=True, add_extra_columns=True,
+                                             limit_to_closest_active=True,
+                                             limit_to_matched_cells=True, include_4x2_data=True)
+
         cells_table = utilities.limit_to_last_familiar_second_novel_active(cells_table)
         cells_table = utilities.limit_to_containers_with_all_experience_levels(cells_table)
         cells_table = utilities.limit_to_cell_specimen_ids_matched_in_all_experience_levels(cells_table)
