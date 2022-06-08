@@ -382,7 +382,7 @@ def plot_matched_rois(cell_metadata, data_type, save_dir=None, folder=None):
         # get ophys_experiment_id for this experience level
         # experiments_table must only include one experiment per experience level for a given container
         ophys_experiment_id = cell_metadata[(cell_metadata.ophys_container_id == ophys_container_id) &
-                                                (cell_metadata.experience_level == experience_level)].index.values[0]
+                                                (cell_metadata.experience_level == experience_level)].ophys_experiment_id.values[0]
         print('ophys_experiment_id:', ophys_experiment_id)
         ind = experience_levels.index(experience_level)
         color = colors[ind]
