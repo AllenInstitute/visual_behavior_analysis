@@ -2114,7 +2114,7 @@ def plot_cluster_proportions_for_location(location_fractions, cre_line, location
 
 def plot_cluster_proportions_for_location(location_fractions, cre_line, location, ax=None, save_dir=None, folder=None):
     data = location_fractions[(location_fractions.cre_line==cre_line)&(location_fractions.location==location)]
-    data = data.sort_values(by=['location', 'cluster_type'])
+    data = data.sort_values(by=['location', 'cluster_type', 'dominant_experience_level'])
     # data = data.sort_values(by='cluster_id')
     if ax is None:
         figsize = (5,5)
