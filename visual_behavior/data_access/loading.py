@@ -3146,7 +3146,8 @@ def get_cell_table_from_lims(ophys_experiment_ids=None, columns_to_return='*', v
     # this includes failed experiments
     if ophys_experiment_ids is None:
         cache = bpc.from_lims()
-        experiment_table = cache.get_ophys_experiment_table()
+        experiment_table = cache.get_ophys_experiment_table(passed_only=False)
+        print(len(experiment_table))
 
         # Exclude 4x2 and GCaMP6s mice
         if platform_paper_only:
@@ -3154,6 +3155,7 @@ def get_cell_table_from_lims(ophys_experiment_ids=None, columns_to_return='*', v
             experiment_table = experiment_table[(experiment_table.project_code != "VisualBehaviorMultiscope4areasx2d") & (experiment_table.reporter_line != "Ai94(TITL-GCaMP6s)")]
 
         ophys_experiment_ids = experiment_table.index.unique()
+        print(len(ophys_experiment_ids))
 
     if columns_to_return != '*':
         columns_to_return = ', '.join(columns_to_return).replace('cell_roi_id', 'id')
