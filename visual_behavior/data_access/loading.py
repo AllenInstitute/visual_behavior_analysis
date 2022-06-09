@@ -80,7 +80,7 @@ def get_production_cache_dir():
 
 
 def get_qc_plots_dir():
-    return r'/allen/programs/mindscope/workgroups/learning/ophys/qc_plots'
+    return r'/allen/programs/mindscope/workgroups/learning/ophys/qc_plots/MSN_TTN'
     # return r'\\allen\programs\mindscope\workgroups\learning\ophys\qc_plots'
 
 
@@ -3169,6 +3169,7 @@ def get_cell_table_from_lims(ophys_experiment_ids=None, columns_to_return='*', v
             experiment_table = experiment_table[(experiment_table.project_code != "VisualBehaviorMultiscope4areasx2d") & (experiment_table.reporter_line != "Ai94(TITL-GCaMP6s)")]
 
         ophys_experiment_ids = experiment_table.index.unique()
+
 
     if columns_to_return != '*':
         columns_to_return = ', '.join(columns_to_return).replace('cell_roi_id', 'id')
