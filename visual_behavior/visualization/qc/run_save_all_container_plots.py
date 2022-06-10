@@ -23,8 +23,7 @@ from allensdk.brain_observatory.behavior.behavior_project_cache import VisualBeh
 
 cache = VisualBehaviorOphysProjectCache.from_lims()
 experiments_table = cache.get_ophys_experiment_table(passed_only=False)
-# experiments = experiments_table[experiments_table.project_code=='LearningmFISHTask1A']
-experiments = experiments_table[experiments_table.project_code.isin(['MultiscopeSignalNoise', 'TaskTrainedNetworksMultiscope'])]
+experiments = experiments_table[experiments_table.project_code=='LearningmFISHTask1A']
 container_ids = experiments.ophys_container_id.unique()
 
 if __name__ == "__main__":
