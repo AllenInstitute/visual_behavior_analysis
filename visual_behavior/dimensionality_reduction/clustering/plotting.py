@@ -13,7 +13,7 @@ from sklearn.cluster import KMeans
 import visual_behavior.visualization.utils as utils
 import visual_behavior.data_access.loading as loading
 
-from visual_behavior_glm import GLM_clustering as glm_clust # noqa E501
+from visual_behavior_glm import GLM_clustering as glm_clust  # noqa E501
 
 from visual_behavior.dimensionality_reduction.clustering import processing
 from visual_behavior.dimensionality_reduction.clustering.processing import get_silhouette_scores, get_cluster_density, get_cre_lines, get_cell_type_for_cre_line
@@ -1651,3 +1651,71 @@ def plot_clusters_stats_pop_avg_cols(cluster_meta, feature_matrix, multi_session
     fig.suptitle(get_cell_type_for_cre_line(cluster_meta, cre_line), x=0.5, y=0.92, fontsize=16)
     if save_dir:
         utils.save_figure(fig, figsize, save_dir, folder, 'clusters_cols_' + cre_line.split('-')[0] + suffix)
+
+
+def plot_gap_statistic(gap_statistic, cre_lines, n_clusters_cre=None, save_dir=None, folder=None):
+
+    if n_clusters_cre is None:
+        n_clusters_cre = processing.get_n_clusters_cre()
+
+    for cre_line in cre_lines:
+
+        suffix = cre_line
+        n_clusters = n_clusters_cre[cre_line]
+        x = len(gap_statistic[cre_line][0])
+
+        figsize = (10, 4)
+        fig, ax = plt.subplots(1, 2, figsize=figsize)
+
+        ax[0].plot(np.arange(1, x + 1), gap_statistic[cre_line][1], 'o-')
+        ax[0].plot(np.arange(1, x + 1), gap_statistic[cre_line][2], 'o-')
+        ax[0].legend(['reference inertia', 'ondata intertia'])
+        ax[0].set_ylabel('Natural log of euclidean \ndistance values')
+        ax[0].set_xlabel('Number of clusters')
+        ax[0].axvline(x=n_clusters, ymin=0, ymax=1, linestyle='--', color='gray')
+
+        ax[1].plot(np.arange(1, x + 1), gap_statistic[cre_line][0], 'o-')
+        ax[1].set_ylabel('Gap statistic')
+        ax[1].set_xlabel('Number of clusters')
+        ax[1].axvline(x=n_clusters, ymin=0, ymax=1, linestyle='--', color='gray')
+
+        title = processing.get_cre_line_map(cre_line)  # get a more interpretable cell type name
+        plt.suptitle(title)
+        plt.tight_layout()
+
+        if save_dir:
+            utils.save_figure(fig, figsize, save_dir, folder, 'Gap_euclidean_all_' + suffix)
+
+
+def plot_eigengap_values(eigenvalues_cre, cre_lines, n_clusters_cre=None, save_dir=None, folder=None):
+
+    if n_clusters_cre is None:
+        n_clusters_cre = processing.get_n_clusters_cre()
+
+    for cre_line in cre_lines:
+        eigenvalues = eigenvalues_cre[cre_line][1]
+        n_clusters = n_clusters_cre[cre_line]
+        suffix = cre_line
+        title = processing.get_cre_line_map(cre_line)  # get a more interpretable cell type name
+
+        figsize = (10, 4)
+        fig, ax = plt.subplots(1, 2, figsize=figsize)
+        ax[0].plot(np.arange(1, len(eigenvalues) + 1), eigenvalues, '-o')
+        # ax[0].grid()
+        ax[0].set_ylabel('Eigen values \n(sorted)')
+        ax[0].set_xlabel('Eigen number')
+        ax[0].set_xlim([0, 20])
+        ax[0].axvline(x=n_clusters, ymin=0, ymax=1, linestyle='--', color='gray')
+
+        ax[1].plot(np.arange(2, len(eigenvalues) + 1), np.diff(eigenvalues), '-o')
+        ax[1].set_ylabel('Eigengap value \n(difference)')
+        ax[1].set_xlabel('Eigen number')
+        ax[1].set_xlim([0, 20])
+        ax[1].set_ylim([0, 0.20])
+        # ax[1].grid()
+        ax[1].axvline(x=n_clusters, ymin=0, ymax=1, linestyle='--', color='gray')
+        plt.suptitle(title)
+        plt.tight_layout()
+
+        if save_dir:
+            utils.save_figure(fig, figsize, save_dir, folder, 'eigengap' + suffix)

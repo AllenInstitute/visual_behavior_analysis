@@ -338,7 +338,7 @@ def generate_GLM_outputs(glm_version, experiments_table, cells_table, glm_output
         import visual_behavior_glm.GLM_across_session as gas
 
         # get across session normalized dropout scores
-        df, failed_cells = gas.load_cells(cells='all')
+        df, failed_cells = gas.load_cells(glm_version, clean_df=True)
         df = df.set_index('identifier')
 
         # only use across session values
@@ -408,9 +408,10 @@ def generate_GLM_outputs(glm_version, experiments_table, cells_table, glm_output
     # take absolute value or flip sign of dropouts so that reduction in explained variance is a positive coding score
     features_to_invert = get_features_for_clustering()  # only invert dropout scores, skip var_exp_full if using
     results_pivoted = flip_sign_of_dropouts(results_pivoted, features_to_invert, use_signed_weights)
+    print(results_pivoted.keys())
 
     # save processed results_pivoted
-    results_pivoted.to_hdf(os.path.join(glm_output_dir, glm_version + '_results_pivoted.h5'), key='df')
+    results_pivoted.to_hdf(os.path.join(glm_output_dir, glm_version + '_results_pivoted.h5'), key='df', format='table')
 
     # now drop ophys_experiment_id
     results_pivoted = results_pivoted.drop(columns=['ophys_experiment_id'])
@@ -494,12 +495,14 @@ def get_cell_metadata_for_feature_matrix(feature_matrix, cells_table):
     return cell_metadata
 
 
-def get_feature_matrix_for_cre_line(feature_matrix, cell_metadata, cre_line):
+def get_feature_matrix_for_cre_line(feature_matrix, cell_metadata, cre_line, dropna=True):
     """
     limit feature_matrix to cell_specimen_ids for this cre line
     """
     cre_cell_specimen_ids = cell_metadata[cell_metadata['cre_line'] == cre_line].index.values
     feature_matrix_cre = feature_matrix.loc[cre_cell_specimen_ids].copy()
+    if dropna is True:
+        feature_matrix_cre = feature_matrix_cre.dropna(axis=0)
     return feature_matrix_cre
 
 
@@ -509,6 +512,21 @@ def compute_inertia(a, X, metric='euclidean'):
 
 
 def compute_gap(clustering, data, k_max=5, n_boots=20, reference=None, metric='euclidean'):
+    '''
+    Computes gap statistic between clustered data (ondata inertia) and null hypothesis (reference intertia).
+
+    :param clustering: clustering object that includes "n_clusters" and "fit_predict"
+    :param data: an array of data to be clustered (n samples by n features)
+    :param k_max: (int) maximum number of clusters to test, starts at 1
+    :param n_boots: (int) number of repetitions for computing mean inertias
+    :param reference: an array of data to cluster as a null hypothesis (shuffled data)
+    :param metric: (str) type of distance to use, default = 'euclidean'
+    :return:
+    gap: array of gap values that are the difference between two inertias
+    reference_inertia: array of log of reference inertia
+    ondata_inertia: array of log of ondata inertia
+    '''
+
     if len(data.shape) == 1:
         data = data.reshape(-1, 1)
     if reference is None:
@@ -531,6 +549,7 @@ def compute_gap(clustering, data, k_max=5, n_boots=20, reference=None, metric='e
             local_inertia.append(compute_inertia(assignments, data, metric=metric))
         ondata_inertia.append(np.mean(local_inertia))
 
+    # maybe plotting error bars with this metric would be helpful but for now I'll leave it
     gap = np.log(reference_inertia) - np.log(ondata_inertia)
     return gap, np.log(reference_inertia), np.log(ondata_inertia)
 
@@ -620,7 +639,6 @@ def load_silhouette_scores(glm_version, feature_matrix, cell_metadata, save_dir,
         print('done.')
     else:
         # generate silhouette scores by running spectral clustering n_boots times for each n_clusters
-        from sklearn.cluster import SpectralClustering
         silhouette_scores = {}
         for cre_line in get_cre_lines(cell_metadata):
             feature_matrix_cre = get_feature_matrix_for_cre_line(feature_matrix, cell_metadata, cre_line)
@@ -635,6 +653,68 @@ def load_silhouette_scores(glm_version, feature_matrix, cell_metadata, save_dir,
         # save it for next time
         save_clustering_results(silhouette_scores, filename_string=sil_filename, path=save_dir)
     return silhouette_scores
+
+
+def load_gap_statistic(glm_version, feature_matrix, cell_metadata, save_dir=None,
+                       metric='euclidean', shuffle_type='all', k_max=25, n_boots=20):
+    """
+       if gap statistic was computed and file exists in save_dir, load it
+       otherwise run spectral clustering n_boots times, for a range of 1 to k_max clusters
+       returns dictionary of gap_statistic for each cre line
+        shuffle_type is an input to shuffle_dropout_score function, which is used as a null hypothesis or reference data
+        metric is distance metric used for in compute gap function
+       """
+    gap_filename = 'gap_cores_' + metric + '_' + glm_version + '_' + shuffle_type + 'kmax' + str(k_max) + '_' + 'nb' + str(n_boots) + '.pkl'
+    gap_path = os.path.join(save_dir, gap_filename)
+    if os.path.exists(gap_path):
+        print('loading gap statistic scores from', gap_path)
+        with open(gap_path, 'rb') as f:
+            gap_statistic = pickle.load(f)
+            f.close()
+        print('done.')
+    else:
+        gap_statistic = {}
+        for cre_line in get_cre_lines(cell_metadata):
+            feature_matrix_cre = get_feature_matrix_for_cre_line(feature_matrix, cell_metadata, cre_line)
+            X = feature_matrix_cre.values
+            feature_matrix_cre_shuffled = shuffle_dropout_score(feature_matrix_cre, shuffle_type=shuffle_type)
+            reference = feature_matrix_cre_shuffled.values
+            # create an instance of Spectral clustering object
+            sc = SpectralClustering()
+            gap, reference_inertia, ondata_inertia = compute_gap(sc, X, k_max=k_max, reference=reference, metric=metric, n_boots=n_boots)
+            gap_statistic[cre_line] = [gap, reference_inertia, ondata_inertia]
+        save_clustering_results(gap_statistic, filename_string=gap_filename, path=save_dir)
+    return gap_statistic
+
+
+def load_eigengap(glm_version, feature_matrix, cell_metadata, save_dir=None, k_max=25):
+    """
+           if eigengap values were computed and file exists in save_dir, load it
+           otherwise run get_eigenDecomposition for a range of 1 to k_max clusters
+           returns dictionary of eigengap for each cre line = [nb_clusters, eigenvalues, eigenvectors]
+           # this doesnt actually take too long, so might not be a huge need to save files besides records
+           """
+    eigengap_filename = 'eigengap_' + glm_version + '_' + 'kmax' + str(k_max) + '.pkl'
+    eigengap_path = os.path.join(save_dir, eigengap_filename)
+    if os.path.exists(eigengap_path):
+        print('loading eigengap values scores from', eigengap_path)
+        with open(eigengap_path, 'rb') as f:
+            eigengap = pickle.load(f)
+            f.close()
+        print('done.')
+    else:
+        eigengap = {}
+        for cre_line in get_cre_lines(cell_metadata):
+            feature_matrix_cre = get_feature_matrix_for_cre_line(feature_matrix, cell_metadata, cre_line)
+            X = feature_matrix_cre.values
+            sc = SpectralClustering(2)  # N of clusters does not impact affinity matrix
+            # but you can obtain affinity matrix only after fitting, thus some N of clusters must be provided.
+            sc.fit(X)
+            A = sc.affinity_matrix_
+            eigenvalues, eigenvectors, nb_clusters = get_eigenDecomposition(A, max_n_clusters=k_max)
+            eigengap[cre_line] = [nb_clusters, eigenvalues, eigenvectors]
+        save_clustering_results(eigengap, filename_string=eigengap_filename, path=save_dir)
+    return eigengap
 
 
 def get_labels_for_coclust_matrix(X, model=SpectralClustering, nboot=np.arange(100), n_clusters=8):
@@ -1388,7 +1468,7 @@ def build_stats_table(metrics_df, metrics_columns=None, dropna=True, pivot=False
 def shuffle_dropout_score(df_dropout, shuffle_type='all'):
     '''
     Shuffles dataframe with dropout scores from GLM.
-    shuffle_type: str, default='all', other options= 'experience', 'regressors'
+    shuffle_type: str, default='all', other options= 'experience', 'regressors', 'experience_within_cell'
     '''
     df_shuffled = df_dropout.copy()
     regressors = df_dropout.columns.levels[0].values
@@ -1417,6 +1497,20 @@ def shuffle_dropout_score(df_dropout, shuffle_type='all'):
             for i, cid in enumerate(randomized_cids):
                 for experience_level in experience_levels:
                     df_shuffled.iloc[i][regressor][experience_level] = df_dropout.loc[cid][regressor][experience_level]
+
+    elif shuffle_type == 'experience_within_cell':
+        print('shuffling data across experience within each cell')
+        cids = df_dropout.index.values
+        experience_level_shuffled = experience_levels.copy()
+        for cid in cids:
+            np.random.shuffle(experience_level_shuffled)
+            for j, experience_level in enumerate(experience_level_shuffled):
+                for regressor in regressors:
+                    df_shuffled.loc[cid][regressor][experience_levels[j]] = df_dropout.loc[cid][regressor][
+                        experience_level]
+    else:
+        print('no such shuffle type..')
+        df_shuffled = None
     return df_shuffled
 
 
@@ -1516,7 +1610,7 @@ def get_CI_for_clusters(cluster_meta, columns_to_groupby=['targeted_structure', 
                 for cluster_id in cluster_ids:
                     try:
                         n_cluster = df_groupedby_per_cluster.loc[(location, cluster_id)].values[0]
-                    except: # noqa E501 # used to have KeyError here but sometimes its a TypeError when there are no cells in a cluster
+                    except:  # noqa E501 # used to have KeyError here but sometimes its a TypeError when there are no cells in a cluster
                         print(f'{cre_line, location, cluster_id} no cells in this cluster')
                         n_cluster = 0
                     N.append(n_cluster)
@@ -1568,3 +1662,121 @@ def add_location_column(cluster_meta, columns_to_groupby=['targeted_structure', 
         print('cannot combine more than three columns into a location column')
 
     return cluster_meta_copy
+
+
+def get_cluster_mapping(matrix, threshold=1, ):
+    '''
+    find clusters with most similar SSE, create a dictionaty of cluster maps.
+
+    Input:
+    matrix: (np.array) SSE matrix (n clusters by n clusters), can be any other matrix (correlation, etc)
+    threshold: (int) a value, abov which the matrix will not find an optimally similar cluster
+
+    Returns:
+    cluster_mapping_comparisons: (dict) {original cluster id: matched cluster id}
+
+    '''
+    comparisons = matrix.keys()
+
+    # comparison dictionary
+    cluster_mapping_comparisons = {}
+    for i, comparison in enumerate(comparisons):
+        tmp_matrix = matrix[comparison]
+
+        # cluster
+        cluster_mapping = {}
+        for k in range(0, len(tmp_matrix)):
+
+            # if min less than threshold
+            if min(tmp_matrix[k]) < threshold:
+                cluster_id = tmp_matrix[k].index(min(tmp_matrix[k])) + 1
+                cluster_mapping[k + 1] = cluster_id
+
+            # else there is no cluster
+            else:
+                cluster_mapping[k + 1] = -1
+
+        cluster_mapping_comparisons[comparison] = cluster_mapping
+
+    return cluster_mapping_comparisons
+
+
+def get_mean_dropout_scores_per_cluster(dropout_df, cluster_df=None, labels=None, stacked=True):
+    '''
+    INPUT:
+    dropout_df: (pd.DataFrame) of GLM dropout scores (cell_specimen_ids by regressors x experience)
+    cluster_df: (pd.DataFrame), must contain columns 'cluster_id', 'cell_specimen_id'
+    labels: (list, np.array) list or array of int indicating cells' cluster ids,
+                            if provided, len(labels)==len(dropout_df)
+
+    Provide either cluster_df or labels. Cluster df must be df with 'cluster_id' and 'cell_specimen_id' columns,
+    labels can be np array or list of cluster ids
+
+    if unstacked, returns dictionary of DataFrames for each cluster. This version is helpful for plotting
+    if stacked, returns a DataFrame of mean dropout scores per cluster, this version is great for computing corr or SSE
+    (rows are droopout scores, columns are cluster ids)
+
+    Clusters are sorted by size.
+    '''
+    if isinstance(cluster_df, pd.core.frame.DataFrame):
+        cluster_ids = cluster_df['cluster_id'].value_counts().index.values  # sort cluster ids by size
+    elif labels is not None:
+        cluster_df = pd.DataFrame(data={'cluster_id': labels, 'cell_specimen_id': dropout_df.index.values})
+        cluster_ids = cluster_df['cluster_id'].value_counts().index.values  # sort cluster ids by size
+
+    if min(cluster_ids) == 0:  # if cluster ids start with 0, add 1 to return cluster labels starting with 1
+        err = 1
+    else:
+        err = 0
+
+    mean_cluster = {}
+    for i, cluster_id in enumerate(cluster_ids):
+        this_cluster_ids = cluster_df[cluster_df['cluster_id'] == cluster_id]['cell_specimen_id'].unique()
+        if stacked is True:
+            mean_dropout_df = dropout_df.loc[this_cluster_ids].mean()
+            mean_cluster[i + err] = mean_dropout_df.values
+        elif stacked is False:
+            mean_dropout_df = dropout_df.loc[this_cluster_ids].mean().unstack()
+            mean_cluster[i + err] = mean_dropout_df
+
+    if stacked is True:
+        return (pd.DataFrame(mean_cluster))
+    elif stacked is False:
+        return (mean_cluster)
+
+
+def compute_SSE(mean_dropout_df_original, mean_dropout_df_compare):
+    '''
+    mean dropout_df should be computed with get_mean_dropout_scores_per_cluste function, stacked=True
+    returns:
+    SSE_matrix, rows are original clusters, columns are compared clusters
+    '''
+    SSE_matrix = []
+    for cluster_original in mean_dropout_df_original.keys():  # cluster ids are columns
+        x = mean_dropout_df_original[cluster_original].values
+        row = []
+        for cluster_compare in mean_dropout_df_compare.keys():
+            y = mean_dropout_df_compare[cluster_compare].values
+            sse = np.sum((np.abs(x) - np.abs(y)) ** 2)
+            row.append(sse)
+        SSE_matrix.append(row)
+
+    return SSE_matrix
+
+
+def get_cre_line_map(cre_line):
+
+    cre_line_dict = {'Slc17a7-IRES2-Cre': 'Excitatory',
+                     'Sst-IRES-Cre': 'SST inhibitory',
+                     'Vip-IRES-Cre': 'VIP inhibitory'}
+
+    mapped_cre_line = cre_line_dict[cre_line]
+    return mapped_cre_line
+
+
+def get_n_clusters_cre():
+    ''' Number of clusters used in clustering per cre line'''
+    n_clusters_cre = {'Slc17a7-IRES2-Cre': 10,
+                      'Sst-IRES-Cre': 5,
+                      'Vip-IRES-Cre': 10}
+    return n_clusters_cre
