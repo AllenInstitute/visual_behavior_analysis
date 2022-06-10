@@ -394,6 +394,14 @@ def annotate_stimuli(trial, stimuli):
     else:
         raise ValueError("invalid implied type: {}".format(implied_type))
 
+def annotate_omitted_rewards():
+    """Omitted rewards for learning + mFISH"""
+    # place holder functions TODO
+
+    return
+
+    
+
 
 def _resolve_initial_image(stimuli, start_frame):
     """Attempts to resolve the initial image for a given start_frame for a trial
