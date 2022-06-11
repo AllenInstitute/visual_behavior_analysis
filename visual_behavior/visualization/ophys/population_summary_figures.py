@@ -653,8 +653,7 @@ def plot_stim_on_trace(ax, window=[-0.5, 0.75], alpha=0.3, facecolor='gray'):
 
 
 def plot_mean_trace_from_mean_df(cell_data, frame_rate=31., ylabel='dF/F', legend_label=None, color='k', interval_sec=1,
-                                 xlims=[-4, 4],
-                                 ax=None, plot_sem=True, width=3):
+                                 xlims=[-4, 4], ax=None, plot_sem=True, width=3):
     xlim = [0, xlims[1] + np.abs(xlims[0])]
     if ax is None:
         fig, ax = plt.subplots()

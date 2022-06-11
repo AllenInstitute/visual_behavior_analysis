@@ -26,6 +26,41 @@ sns.set_palette('deep')
 def plot_population_averages_for_conditions(multi_session_df, data_type, event_type, axes_column, hue_column, hue_order=None,
                                             project_code=None, timestamps=None, palette=None, title=None, suptitle=None,
                                             horizontal=True, xlim_seconds=None, save_dir=None, folder=None, suffix='', ax=None):
+    """
+    Plots population average response across cells in a multi session dataframe for various conditions defined by
+    axes_column and hue_column, which are columns in the multi_session_df.
+    There will be one axis for each value of axes_column in the multi_session_df (ex: axes_column='cre_line').
+    Within each axis, data will be further split and colorized based on the values of hue_column (ex: hue_column='session_type')
+
+    multi_session_df is created by vba.ophys.io.create_multi_session_df.get_multi_session_df(), which aggregates the output of
+    vba.ophys.response_analysis.utilities.get_mean_df(), which takes the average across trials of a stimulus_response_df for a set of conditions.
+    stimulus_response_df comes from mindscope_utilities.visual_behavior_ophys.data_formatting.get_stimulus_response_df()
+    or vba.data_access.loading.get_stimulus_response_df()
+
+
+    :param multi_session_df: dataframe containing trial averaged responses for a set of conditions, aggregated over multiple cells and sessions
+    :param data_type: can be ['dff', 'events', 'filtered_events', 'running_speed', 'pupil_width', 'lick_rate]
+                        must be the same value as was used to create the stimulus_response_df that was used to create multi_session_df
+    :param event_type: can be either ['changes', 'omissions', 'all'], whichever was used to create the stimulus_response_df
+                        that was used to create multi_session_df
+    :param axes_column: column in multi_session_df to split data by to plot on each axis
+    :param hue_column: column in multi_session_df to colorize data by within each axis
+    :param hue_order: order of hue values. If None, will sort hue values for each axis.
+    :param project_code: project_code string used for filename when saving plot
+    :param timestamps: timestamps to use. If None, will use timestamps available in multi_session_df (if any)
+    :param palette: color palette for hue labels. If None, uses experience_level_colors
+    :param metadata_as_title: if True, creates a title composed of mouse_id, container_id, cre_line, imaging_depth, and targeted_structure
+                            If False, use axes_column value.
+    :param suptitle: suptitle for entire figure; if None is provided, title will be auto generated
+    :param horizontal: Boolean, Whether to plot axes in horizontal dimension, if False, plot vertical
+    :param xlim_seconds: time window around the event of interest to limit plot xaxis to. value must be less than the time_window used to create stimulus_response_df.
+                        If None, infers xlims from timestamps
+    :param save_dir: top level directory to save figure to
+    :param folder: folder within save_dir to save to
+    :param suffix: string to append to filename
+    :param ax: if axis is provided, plot on that axis, otherwise generate a new figure and axes
+    :return: ax
+    """
     if palette is None:
         palette = utils.get_experience_level_colors()
 
@@ -68,13 +103,6 @@ def plot_population_averages_for_conditions(multi_session_df, data_type, event_t
         change = False
         xlabel = 'time (s)'
 
-    if not hue_order:
-        if hue_column == 'experience_level':
-            hue_conditions = ['Familiar', 'Novel 1', 'Novel >1']
-        else:
-            hue_conditions = np.sort(sdf[hue_column].unique())
-    else:
-        hue_conditions = hue_order
     if axes_column == 'experience_level':
         axes_conditions = ['Familiar', 'Novel 1', 'Novel >1']
     else:
@@ -95,6 +123,15 @@ def plot_population_averages_for_conditions(multi_session_df, data_type, event_t
     else:
         format_fig = False
     for i, axis in enumerate(axes_conditions):
+        # set hue order here in case each axis has different values for hue_column
+        if not hue_order:
+            if hue_column == 'experience_level':
+                hue_conditions = ['Familiar', 'Novel 1', 'Novel >1']
+            else:
+                hue_conditions = np.sort(sdf[(sdf[axes_column] == axis)][hue_column].unique())
+        else:
+            hue_conditions = hue_order
+        # now plot for each unique hue value
         for c, hue in enumerate(hue_conditions):
             # try:
             cdf = sdf[(sdf[axes_column] == axis) & (sdf[hue_column] == hue)]
@@ -107,7 +144,7 @@ def plot_population_averages_for_conditions(multi_session_df, data_type, event_t
             if omitted:
                 omission_color = sns.color_palette()[9]
                 ax[i].axvline(x=0, ymin=0, ymax=1, linestyle='--', color=omission_color)
-            if title == 'metadata':
+            if metadata_as_title:
                 metadata_string = utils.get_container_metadata_string(utils.get_metadata_for_row_of_multi_session_df(cdf))
                 ax[i].set_title(metadata_string)
             else:
