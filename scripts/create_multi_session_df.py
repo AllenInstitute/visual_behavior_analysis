@@ -23,7 +23,6 @@ if __name__ == '__main__':
     time_window = [-3, 3.1]
     interpolate = True
     output_sampling_rate = 30
-    # response_window_duration_seconds = 0.5
     use_extended_stimulus_presentations = False
 
     # set up conditions to make multi session dfs for
@@ -53,7 +52,7 @@ if __name__ == '__main__':
                             ['cell_specimen_id', 'omitted', 'pre_omitted'],]
 
 
-    # event types corresponding to the above physio and behavior conditions - must be in same sequential order
+    # event types corresponding to the above physio and behavior conditions - must be in same sequential order!!
     event_types_for_conditions = ['changes', 'omissions',
                                   'changes', 'omissions',
                                   'changes', 'changes', 'changes',
@@ -86,7 +85,7 @@ if __name__ == '__main__':
             print(e)
 
 
-    create dfs for all data types and conditions for behavior data
+    # create dfs for all data types and conditions for behavior data
     for data_type in behavior_data_types:
         for i, conditions in enumerate(behavior_conditions):
             event_type = event_types_for_conditions[i]
