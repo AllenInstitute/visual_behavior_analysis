@@ -549,7 +549,7 @@ def get_stimulus_response_df_filepath_for_experiment(ophys_experiment_id, data_t
 
 
 def get_stimulus_response_df(dataset, time_window=[-3, 3.1], interpolate=True, output_sampling_rate=30,
-                             data_type='filtered_events', event_type='all', load_from_file=True, exclude_invalid_rois=False):
+                             data_type='filtered_events', event_type='all', load_from_file=False, exclude_invalid_rois=True):
     """
     load stimulus response df using mindscope_utilities and merge with stimulus_presentations that has trials metadata added
     inputs:
@@ -785,7 +785,7 @@ class BehaviorOphysDataset(BehaviorOphysExperiment):
         return cell_specimen_id
 
 
-def get_ophys_dataset(ophys_experiment_id, exclude_invalid_rois=False, load_from_lims=True, load_from_nwb=False,
+def get_ophys_dataset(ophys_experiment_id, exclude_invalid_rois=True, load_from_lims=True, load_from_nwb=False,
                       get_extended_stimulus_presentations=False, get_behavior_movie_timestamps=False):
     """
     Gets behavior + ophys data for one experiment (single imaging plane), either using the SDK LIMS API,
