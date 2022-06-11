@@ -130,8 +130,7 @@ def get_multi_session_df(project_code, mouse_id, conditions, data_type, event_ty
                 window_around_timepoint_seconds = [timestamps[0], timestamps[-1]]
 
                 mdf = ut.get_mean_df(df, conditions=conditions, frame_rate=output_sampling_rate,
-                                     window_around_timepoint_seconds=time_window,
-                                     response_window_duration_seconds=response_window_duration,
+                                     time_window=time_window, response_window_duration=response_window_duration,
                                      get_pref_stim=get_pref_stim, exclude_omitted_from_pref_stim=True)
                 if 'correlation_values' in mdf.keys():
                     mdf = mdf.drop(columns=['correlation_values'])

@@ -378,13 +378,35 @@ def get_window(analysis=None, flashes=False, omitted=False):
 
 
 def get_mean_df(response_df, conditions=['cell', 'change_image_name'], frame_rate=30.,
-                window_around_timepoint_seconds=[-3, 3.1], response_window_duration_seconds=0.5,
+                time_window=[-3, 3.1], response_window_duration=0.5,
                 get_pref_stim=True, exclude_omitted_from_pref_stim=True):
+    """
+
+    Takes stimulus_response_df as input (dataframe with trace for each cell for each stimulus presentation in a session,
+        and averages over the conditions provided to produce an average timeseries, mean response value,
+        and computes other metrics across the trials for each condition (such as trial to trial reliability).
+
+    :param response_df: stimulus_response_df from mindscope_utilities.visual_behavior_ophys.data_formatting.get_stimulus_response_df()
+    :param conditions: columns in response_df to groupby before averaging. Columns must be Bool or categorical.
+                            ex: ['cell_specimen_id', 'image_name', 'change'] gives the average response for each cell, for each image name for changes and non-changes
+    :param frame_rate: Frame rate of timeseries. Either the native frame rate of the physio, or if interpolation was used in
+                            get_stimulus_response_df(), provide the output_sampling_rate used for interpolation
+    :param time_window: window of time around each stimulus_presentation_id that was used to extract stimulus aligned traces to create stimulus_response_df
+    :param response_window_duration: duration of time, in seconds, following the start_time for each stimulus_presentations_id,
+                            over which to average to get a mean response for each stimulus
+    :param get_pref_stim: Boolean, whether or not to annotate dataframe with a 'pref_stim' column,
+                            which is also a Boolean indicating which image gave the maximal response for each condition for each cell.
+                            Only works if one of the conditions is 'image_name', 'change_image_name' or 'prior_image_name'
+    :param exclude_omitted_from_pref_stim: Boolean, whether or not to exclude image_name='omitted' from calculation of preferred stimulus
+                            If False, stimulus omissions can be the 'pref_stim' for a given cell
+
+    :return: response df averaged over the provided conditions, including the average timeseries, the mean response given by response_window_duration,
+                            and several other metrics characterizing trial to trial variability (i.e. fano factor, reliability, etc)
+    """
 
     import visual_behavior.ophys.response_analysis.response_processing as rp
 
-    window = window_around_timepoint_seconds
-    response_window_duration = response_window_duration_seconds
+    window = time_window
 
     rdf = response_df.copy()
 
@@ -400,9 +422,9 @@ def get_mean_df(response_df, conditions=['cell', 'change_image_name'], frame_rat
 
     try:
         mdf = annotate_mean_df_with_fano_factor(mdf)
-        mdf = annotate_mean_df_with_time_to_peak(mdf, window, frame_rate)
+        mdf = annotate_mean_df_with_time_to_peak(mdf, time_window, frame_rate)
         mdf = annotate_mean_df_with_p_value(mdf, window, response_window_duration, frame_rate)
-        mdf = annotate_mean_df_with_sd_over_baseline(mdf, window, response_window_duration, frame_rate)
+        mdf = annotate_mean_df_with_sd_over_baseline(mdf, time_window, response_window_duration, frame_rate)
     except Exception as e:  # NOQA E722
         print(e)
         pass
@@ -414,7 +436,7 @@ def get_mean_df(response_df, conditions=['cell', 'change_image_name'], frame_rat
         mdf['fraction_significant_p_value_gray_screen'] = fraction_significant_p_value_gray_screen.fraction_significant_p_value_gray_screen
 
     try:
-        reliability = rdf.groupby(conditions).apply(compute_reliability, window, response_window_duration, frame_rate)
+        reliability = rdf.groupby(conditions).apply(compute_reliability, time_window, response_window_duration, frame_rate)
         reliability = reliability.reset_index()
         mdf['reliability'] = reliability.reliability
         mdf['correlation_values'] = reliability.correlation_values
