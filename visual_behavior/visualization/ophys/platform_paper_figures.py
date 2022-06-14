@@ -24,7 +24,7 @@ sns.set_palette('deep')
 
 
 def plot_population_averages_for_conditions(multi_session_df, data_type, event_type, axes_column, hue_column, hue_order=None,
-                                            project_code=None, timestamps=None, palette=None, title=None, suptitle=None,
+                                            project_code=None, timestamps=None, palette=None, metadata_as_title=False, suptitle=None,
                                             horizontal=True, xlim_seconds=None, save_dir=None, folder=None, suffix='', ax=None):
     """
     Plots population average response across cells in a multi session dataframe for various conditions defined by
