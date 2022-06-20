@@ -37,8 +37,7 @@ def plot_across_session_responses(ophys_container_id, cell_specimen_id, use_even
         print('ophys_experiment_id:', ophys_experiment_id)
         try:
             dataset = data_loading.get_ophys_dataset(ophys_experiment_id, include_invalid_rois=False)
-            # dff_traces = dataset.dff_traces.copy()
-            # dff_traces = utilities.replace_cell_specimen_id_with_cell_roi_id(dff_traces)
+
             if cell_specimen_id in dataset.dff_traces.index:
                 sdf = loading.get_stimulus_response_df(dataset, data_type='dff', event_type='all')
                 sdf = ut.get_mean_df(sdf, conditions=['cell_roi_id', 'is_change', 'image_name'])
