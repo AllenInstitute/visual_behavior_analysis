@@ -33,7 +33,7 @@ def plot_max_projection_image(dataset, save_dir=None, folder='max_projection'):
         save_figure(fig, figsize, save_dir, folder, str(dataset.experiment_id))
 
 
-def plot_cell_zoom(roi_masks, max_projection, cell_roi_id, spacex=10, spacey=10, show_mask=False, full_image=False, ax=None):
+def plot_cell_zoom(roi_masks, max_projection, cell_roi_id, spacex=10, spacey=10, show_mask=False, alpha=0.3, full_image=False, ax=None):
     """
     Plot roi mask image, with or without max projection, either in full image or in a zoomed in portion of image
 
@@ -60,7 +60,7 @@ def plot_cell_zoom(roi_masks, max_projection, cell_roi_id, spacex=10, spacey=10,
         fig, ax = plt.subplots()
     ax.imshow(max_projection, cmap='gray', vmin=0, vmax=np.amax(max_projection) / 2.)
     if show_mask:
-        ax.imshow(mask, cmap='jet', alpha=0.3, vmin=0, vmax=1)
+        ax.imshow(mask, cmap='jet', alpha=alpha, vmin=0, vmax=1)
     if not full_image:
         ax.set_xlim(xmin - spacex, xmax + spacex)
         ax.set_ylim(ymax + spacey, ymin - spacey)
