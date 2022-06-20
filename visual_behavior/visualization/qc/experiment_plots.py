@@ -21,59 +21,124 @@ from visual_behavior.utilities import EyeTrackingData
 bitdepth_16 = 65536
 
 
+def get_metadata_string(ophys_experiment_id):
+    """
+    Create a string of metadata information to be used in filenames and figure titles.
+    Includes information such as experiment_id, cre_line, acquisition_date, rig_id, etc
+    :param ophys_experiment_id:
+    :return:
+    """
+    dataset = loading.get_ophys_dataset(ophys_experiment_id)
+    m = dataset.metadata.copy()
+    metadata_string = str(m['mouse_id']) + '_' + str(m['ophys_experiment_id']) + '_' + m['cre_line'].split('-')[0] + '_' + m['targeted_structure'] + '_' + str(m['imaging_depth']) + '_' + m['session_type']
+    return metadata_string
+
+
+def get_file_name_for_experiment(ophys_experiment_id):
+    """
+    gets standardized filename for saving figures
+    format "experiment_id_"+str(ophys_experiment_id) is necessary for files to be able to be viewed in Dougs QC viewer
+    using get_metadata_string(ophys_experiment_id) gives a more interpretable filename with cre line, area, etc
+    :param ophys_experiment_id:
+    :return:
+    """
+    # filename = 'experiment_id'+str(ophys_experiment_id)
+    filename = get_metadata_string(ophys_experiment_id)
+    return filename
+
 def plot_max_intensity_projection_for_experiment(ophys_experiment_id, ax=None):
     if ax is None:
-        fig, ax = plt.subplots()
+        figsize = (5,5)
+        fig, ax = plt.subplots(figsize=figsize)
+        save_figure = True
+    else:
+        save_figure = False
     dataset = loading.get_ophys_dataset(ophys_experiment_id)
     max_projection = dataset.max_projection.data
     ax.imshow(max_projection, cmap='gray', vmax=np.percentile(max_projection, 99))
     ax.set_title(str(ophys_experiment_id))
     ax.axis('off')
+    if save_figure:
+        ut.save_figure(fig, figsize, loading.get_experiment_plots_dir(), 'max_intensity_projection',
+                       get_file_name_for_experiment(ophys_experiment_id))
     return ax
 
 
 def plot_average_image_for_experiment(ophys_experiment_id, ax=None):
     if ax is None:
-        fig, ax = plt.subplots()
+        figsize = (5,5)
+        fig, ax = plt.subplots(figsize=figsize)
+        save_figure = True
+    else:
+        save_figure = False
     dataset = loading.get_ophys_dataset(ophys_experiment_id)
     average_projection = dataset.average_projection.data
     ax.imshow(average_projection, cmap='gray', vmax=np.amax(average_projection))
     ax.axis('off')
+    if save_figure:
+        ut.save_figure(fig, figsize, loading.get_experiment_plots_dir(), 'average_intensity_image',
+                       get_file_name_for_experiment(ophys_experiment_id))
     return ax
 
 
 def plot_motion_correction_average_image_for_experiment(ophys_experiment_id, ax=None):
     if ax is None:
-        fig, ax = plt.subplots()
+        figsize = (5,5)
+        fig, ax = plt.subplots(figsize=figsize)
+        save_figure = True
+    else:
+        save_figure = False
     average_image = processing.experiment_average_FOV_from_motion_corrected_movie(ophys_experiment_id)
     ax.imshow(average_image, cmap='gray', vmin=0, vmax=8000)
     ax.axis('off')
+    if save_figure:
+        ut.save_figure(fig, figsize, loading.get_experiment_plots_dir(), 'average_image_movie',
+                       get_file_name_for_experiment(ophys_experiment_id))
     return ax
 
 
 def plot_motion_correction_max_image_for_experiment(ophys_experiment_id, ax=None):
     if ax is None:
-        fig, ax = plt.subplots()
+        figsize = (5,5)
+        fig, ax = plt.subplots(figsize=figsize)
+        save_figure = True
+    else:
+        save_figure = False
     max_image = processing.experiment_max_FOV_from_motion_corrected_movie(ophys_experiment_id)
     ax.imshow(max_image, cmap='gray', vmin=0, vmax=8000)
     ax.set_title(str(ophys_experiment_id))
     ax.axis('off')
+    if save_figure:
+        ut.save_figure(fig, figsize, loading.get_experiment_plots_dir(), 'max_image_movie',
+                       get_file_name_for_experiment(ophys_experiment_id))
     return ax
 
 
 def plot_segmentation_mask_for_experiment(ophys_experiment_id, ax=None):
     if ax is None:
-        fig, ax = plt.subplots()
+        figsize = (5,5)
+        fig, ax = plt.subplots(figsize=figsize)
+        save_figure = True
+    else:
+        save_figure = False
+
     dataset = loading.get_ophys_dataset(ophys_experiment_id)
     segmentation_mask = dataset.segmentation_mask_image  # i am not sure if this is correct, check relevant SDK issue to see what they did
     ax.imshow(segmentation_mask, cmap='gray', vmin=0, vmax=1)
     ax.axis('off')
+    if save_figure:
+        ut.save_figure(fig, figsize, loading.get_experiment_plots_dir(), 'segmentation_mask_image',
+                       get_file_name_for_experiment(ophys_experiment_id))
     return ax
 
 
 def plot_valid_segmentation_mask_overlay_for_experiment(ophys_experiment_id, ax=None):
     if ax is None:
-        fig, ax = plt.subplots()
+        figsize = (5,5)
+        fig, ax = plt.subplots(figsize=figsize)
+        save_figure = True
+    else:
+        save_figure = False
     ax = plot_max_intensity_projection_for_experiment(ophys_experiment_id, ax=ax)
     try:
         dataset = loading.get_ophys_dataset(ophys_experiment_id, include_invalid_rois=False)
@@ -85,12 +150,19 @@ def plot_valid_segmentation_mask_overlay_for_experiment(ophys_experiment_id, ax=
     except BaseException:
         pass
     ax.axis('off')
+    if save_figure:
+        ut.save_figure(fig, figsize, loading.get_experiment_plots_dir(), 'segmentation_mask_overlay',
+                       get_file_name_for_experiment(ophys_experiment_id))
     return ax
 
 
 def plot_all_segmentation_mask_overlay_for_experiment(ophys_experiment_id, ax=None):
     if ax is None:
-        fig, ax = plt.subplots()
+        figsize = (5,5)
+        fig, ax = plt.subplots(figsize=figsize)
+        save_figure = True
+    else:
+        save_figure = False
     ax = plot_max_intensity_projection_for_experiment(ophys_experiment_id, ax=ax)
     dataset = loading.get_ophys_dataset(ophys_experiment_id)
     segmentation_mask = dataset.segmentation_mask_image  # i am not sure if this is correct, check relevant SDK issue to see what they did
@@ -99,12 +171,19 @@ def plot_all_segmentation_mask_overlay_for_experiment(ophys_experiment_id, ax=No
     mask[segmentation_mask[0] == 1] = 1
     ax.imshow(mask, cmap='hsv', vmax=1, alpha=0.5)
     ax.axis('off')
+    if save_figure:
+        ut.save_figure(fig, figsize, loading.get_experiment_plots_dir(), 'segmentation_mask_overlay_all',
+                       get_file_name_for_experiment(ophys_experiment_id))
     return ax
 
 
 def plot_valid_segmentation_mask_outlines_for_experiment(ophys_experiment_id, ax=None):
     if ax is None:
-        fig, ax = plt.subplots()
+        figsize = (5,5)
+        fig, ax = plt.subplots(figsize=figsize)
+        save_figure = True
+    else:
+        save_figure = False
     ax = plot_max_intensity_projection_for_experiment(ophys_experiment_id, ax=ax)
     dataset = loading.get_ophys_dataset(ophys_experiment_id, include_invalid_rois=False)
     segmentation_mask = dataset.segmentation_mask_image  # i am not sure if this is correct, check relevant SDK issue to see what they did
@@ -113,12 +192,19 @@ def plot_valid_segmentation_mask_outlines_for_experiment(ophys_experiment_id, ax
     ax.contour(mask, levels=0, colors=['red'], linewidths=[0.6])
     ax.set_title(str(ophys_experiment_id))
     ax.axis('off')
+    if save_figure:
+        ut.save_figure(fig, figsize, loading.get_experiment_plots_dir(), 'segmentation_mask_valid',
+                       get_file_name_for_experiment(ophys_experiment_id))
     return ax
 
 
 def plot_valid_segmentation_mask_outlines_per_cell_for_experiment(ophys_experiment_id, ax=None):
     if ax is None:
-        fig, ax = plt.subplots()
+        figsize = (5,5)
+        fig, ax = plt.subplots(figsize=figsize)
+        save_figure = True
+    else:
+        save_figure = False
     ax = plot_max_intensity_projection_for_experiment(ophys_experiment_id, ax=ax)
     dataset = loading.get_ophys_dataset(ophys_experiment_id)
     cell_specimen_table = dataset.cell_specimen_table.copy()
@@ -128,12 +214,19 @@ def plot_valid_segmentation_mask_outlines_per_cell_for_experiment(ophys_experime
             ax.contour(mask, levels=0, colors=['red'], linewidths=[0.6])
     ax.set_title(str(ophys_experiment_id)+'\nn valid ROIs = ' + str(len(cell_specimen_table.cell_roi_id.values)))
     ax.axis('off')
+    if save_figure:
+        ut.save_figure(fig, figsize, loading.get_experiment_plots_dir(), 'segmentation_mask_valid_outlines',
+                       get_file_name_for_experiment(ophys_experiment_id))
     return ax
 
 
 def plot_valid_and_invalid_segmentation_mask_overlay_per_cell_for_experiment(ophys_experiment_id, ax=None):
     if ax is None:
-        fig, ax = plt.subplots()
+        figsize = (5,5)
+        fig, ax = plt.subplots(figsize=figsize)
+        save_figure = True
+    else:
+        save_figure = False
     ax = plot_max_intensity_projection_for_experiment(ophys_experiment_id, ax=ax)
     dataset = loading.get_ophys_dataset(ophys_experiment_id)
     cell_specimen_table = dataset.cell_specimen_table.copy()
@@ -158,22 +251,44 @@ def plot_valid_and_invalid_segmentation_mask_overlay_per_cell_for_experiment(oph
     except BaseException:
         pass
     ax.axis('off')
+    if save_figure:
+        ut.save_figure(fig, figsize, loading.get_experiment_plots_dir(), 'segmentation_mask_valid_invalid_overlay',
+                       get_file_name_for_experiment(ophys_experiment_id))
     return ax
 
 
 def plot_traces_heatmap_for_experiment(ophys_experiment_id, ax=None):
-    dataset = loading.get_ophys_dataset(ophys_experiment_id, load_from_lims=True)  # this means it will have invalid traces
+    dataset = loading.get_ophys_dataset(ophys_experiment_id)
     dff_traces = dataset.dff_traces.dff.values
     dff_traces = np.vstack(dff_traces)
     if ax is None:
         figsize = (14, 5)
         fig, ax = plt.subplots(figsize=figsize)
+        save_figure = True
+    else:
+        save_figure = False
     # ax.pcolormesh(dff_traces, cmap='magma', vmin=0, vmax=0.5)
     ax = sns.heatmap(dff_traces, cmap='magma', vmin=0, vmax=0.5, cbar_kws={'label': 'dF/F'}, ax=ax)
     ax.set_ylim(-0.5, dff_traces.shape[0] + 0.5)
     ax.set_ylabel('cells')
     ax.set_xlabel('2P frames')
+    if save_figure:
+        ut.save_figure(fig, figsize, loading.get_experiment_plots_dir(), 'dff_traces_heatmap',
+                       get_file_name_for_experiment(ophys_experiment_id))
     return ax
+
+
+def plot_cell_roi_masks_and_dff_traces_for_experiment(ophys_experiment_id, save_figure=True):
+    """
+    For each cell in the experiment, plot the ROI mask and dff traces, and save to single cell plots directory
+    :param ophys_experiment_id:
+    :param save_figure:
+    :return:
+    """
+    dataset = loading.get_ophys_dataset(ophys_experiment_id)
+    cell_roi_ids = dataset.cell_specimen_table.cell_roi_id.values
+    for cell_roi_id in cell_roi_ids:
+        scp.plot_cell_roi_mask_and_dff_trace(dataset, cell_roi_id, save_figure=save_figure)
 
 
 def plot_csid_snr_for_experiment(ophys_experiment_id, ax=None):
@@ -182,11 +297,18 @@ def plot_csid_snr_for_experiment(ophys_experiment_id, ax=None):
     exp_snr["stage_name_lims"] = experiment_df["stage_name_lims"][0]
     exp_stage_color_dict = pu.experiment_id_stage_color_dict_for_experiment(ophys_experiment_id)
     if ax is None:
-        fig, ax = plt.subplots(figsize=(6, 4))
+        figsize = (6,4)
+        fig, ax = plt.subplots(figsize=figsize)
+        save_figure = True
+    else:
+        save_figure = False
     ax = sns.violinplot(x="stage_name_lims", y="robust_snr", data=exp_snr.loc[exp_snr["snr_zscore"] < 3],
                         color=exp_stage_color_dict[ophys_experiment_id])
     ax.set_ylabel("robust snr")
     ax.set_xlabel("stage name")
+    if save_figure:
+        ut.save_figure(fig, figsize, loading.get_experiment_plots_dir(), 'cell_trace_snr',
+                       get_file_name_for_experiment(ophys_experiment_id))
     return ax
 
 
@@ -209,12 +331,20 @@ def plot_average_intensity_timeseries_for_experiment(ophys_experiment_id, ax=Non
     exp_stage_color_dict = pu.map_stage_name_colors_to_ophys_experiment_ids(experiment_df)
     average_intensity, frame_numbers = processing.get_experiment_average_intensity_timeseries(ophys_experiment_id)
     if ax is None:
-        fig, ax = plt.subplots()
+        figsize = (6,4)
+        fig, ax = plt.subplots(figsize=figsize)
+        save_figure = True
+    else:
+        save_figure = False
+
     ax.plot(frame_numbers, average_intensity,
             color=exp_stage_color_dict[ophys_experiment_id],
             label=experiment_df["stage_name_lims"][0])
     ax.set_ylabel('fluorescence value')
     ax.set_xlabel('frame #')
+    if save_figure:
+        ut.save_figure(fig, figsize, loading.get_experiment_plots_dir(), 'average_intensity_timeseries',
+                       get_file_name_for_experiment(ophys_experiment_id))
     return ax
 
 
@@ -224,7 +354,11 @@ def plot_motion_correction_xy_shift_for_experiment(ophys_experiment_id, ax=None)
     df = dataset.motion_correction.copy()
     timestamps = dataset.ophys_timestamps
     if ax is None:
-        fig, ax = plt.subplots(figsize=(20, 4))
+        figsize = (20,4)
+        fig, ax = plt.subplots(figsize=figsize)
+        save_figure = True
+    else:
+        save_figure = False
     ax.plot(timestamps, df.x.values, color=sns.color_palette()[3], label='x_shift')
     ax.plot(timestamps, df.y.values, color=sns.color_palette()[2], label='y_shift')
     ax.set_xlim(timestamps[0], timestamps[-1])
@@ -247,6 +381,9 @@ def plot_motion_correction_xy_shift_for_experiment(ophys_experiment_id, ax=None)
         for col in row_data.values_over_threshold:
             title = title + col + ', '
     ax.set_title(title)
+    if save_figure:
+        ut.save_figure(fig, figsize, loading.get_experiment_plots_dir(), 'motion_correction_xy_shift',
+                       get_file_name_for_experiment(ophys_experiment_id))
     return ax
 
 # BEHAVIOR
@@ -287,8 +424,12 @@ def make_pupil_area_plot(ophys_experiment_id, ax=None, label_x=True):
         time = ed['time'].values  # might need to be updated to timestamps in the future'
         area = ed['pupil_area'].values  # this should be blink corrected - no giant spikes
         if ax is None:
-            fig, ax = plt.subplots(figsize=(20, 4))
+            figsize = (20,4)
+            fig, ax = plt.subplots(figsize=figsize)
             ax.plot(time, area)
+            save_figure = True
+        else:
+            save_figure = False
         if label_x:
             ax.set_xlabel('time (minutes)')
         ax.set_ylabel('pupil diameter\n(pixels$^2$)')
@@ -301,6 +442,9 @@ def make_pupil_area_plot(ophys_experiment_id, ax=None, label_x=True):
 
         error_text = 'could not generate pupil area plot for ophys_experiment_id {}\n{}'.format(ophys_experiment_id, e)
         ax.set_title(error_text, ha='left')
+    if save_figure:
+        ut.save_figure(fig, figsize, loading.get_experiment_plots_dir(), 'pupil_area_plot',
+                       get_file_name_for_experiment(ophys_experiment_id))
     return ax
 
 
@@ -313,8 +457,12 @@ def make_pupil_area_plot_sdk(ophys_experiment_id, ax=None, label_x=True):
         time = et['time'].values / 60.  # might need to be updated to timestamps in the future'
         area = et['pupil_area_raw'].values  # this will have blink artifacts in it
         if ax is None:
-            fig, ax = plt.subplots(figsize=(20, 4))
+            figsize = (20,4)
+            fig, ax = plt.subplots(figsize=figsize)
             ax.plot(time, area)
+            save_figure = True
+        else:
+            save_figure = False
         if label_x:
             ax.set_xlabel('time (seconds)')
         ax.set_ylabel('pupil diameter\n(pixels$^2$)')
@@ -341,9 +489,13 @@ def make_pupil_position_plot(ophys_experiment_id, ax=None, label_x=True):
         y = ed['pupil_center_y'].values  # need to check eye_tracking table in SDK and replace with proper names
 
         if ax is None:
-            fig, ax = plt.subplots(figsize=(20, 4))
+            figsize = (20, 4)
+            fig, ax = plt.subplots(figsize=figsize)
             ax.plot(time, x, color='darkorange')
             ax.plot(time, y, color='olive')
+            save_figure = True
+        else:
+            save_figure = False
 
         if label_x:
             ax.set_xlabel('time (minutes)')
@@ -358,6 +510,9 @@ def make_pupil_position_plot(ophys_experiment_id, ax=None, label_x=True):
 
         error_text = 'could not generate pupil position plot for ophys_experiment_id {}\n{}'.format(ophys_experiment_id, e)
         ax.set_title(error_text, ha='left')
+    if save_figure:
+        ut.save_figure(fig, figsize, loading.get_experiment_plots_dir(), 'pupil_position',
+                       get_file_name_for_experiment(ophys_experiment_id))
     return ax
 
 
@@ -365,11 +520,17 @@ def plot_cell_snr_distribution_for_experiment(ophys_experiment_id, ax=None):
     import visual_behavior.data_access.processing as processing
     if ax is None:
         fig, ax = plt.subplots()
+        save_figure = True
+    else:
+        save_figure = False
     dataset = loading.get_ophys_dataset(ophys_experiment_id)
     dff_traces = processing.compute_robust_snr_on_dataframe(dataset.dff_traces.copy())
     ax.hist(dff_traces.robust_snr.values)
     ax.set_xlabel('robust_snr')
     ax.set_ylabel('n_cells')
+    if save_figure:
+        ut.save_figure(fig, figsize, loading.get_experiment_plots_dir(), 'cell_trace_robust_snr',
+                       get_file_name_for_experiment(ophys_experiment_id))
     return ax
 
 
@@ -399,12 +560,15 @@ def plot_behavior_timeseries_for_experiment(ophys_experiment_id, xlim_seconds=No
     pupil_timestamps = dataset.eye_tracking["timestamps"].values
 
     if ax is None:
+        save_figure = True
         if plot_face_motion_energy:
             figsize = (20, 8)
             fig, ax = plt.subplots(4, 1, figsize=figsize, sharex=True)
         else:
             figsize = (20, 6)
             fig, ax = plt.subplots(3, 1, figsize=figsize, sharex=True)
+    else:
+        save_figure = False
     colors = sns.color_palette()
     ax[2].plot(lick_timestamps, licks, '|', label='licks', color='gray')
     ax[2].plot(reward_timestamps, rewards, 'o', label='rewards', color=colors[9])
@@ -499,6 +663,9 @@ def plot_motion_correction_and_population_average(experiment_id, ax=None):
     if ax is None:
         figsize = (20, 10)
         fig, ax = plt.subplots(3, 1, figsize=figsize, sharex=True)
+        save_figure = True
+    else:
+        save_figure = False
 
     dataset = loading.get_ophys_dataset(experiment_id)
     timestamps = dataset.ophys_timestamps
@@ -526,6 +693,9 @@ def plot_motion_correction_and_population_average(experiment_id, ax=None):
     #     ax[1].set_ylabel('run speed\n(cm/s)')
     #     ax[1].set_xlim(running_timestamps[0], running_timestamps[-1])
     #     ax[1].set_xlabel('time (sec)')
+    if save_figure:
+        ut.save_figure(fig, figsize, loading.get_experiment_plots_dir(), 'pop_avg_and_motion_corr',
+                       get_file_name_for_experiment(ophys_experiment_id))
 
     return ax
 
@@ -900,40 +1070,6 @@ def plot_classifier_validation_for_experiment(ophys_experiment_id, save_figure=T
         save_dir = r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/classifier_validation/last_ditch_effort_annotation/classification_threshold_' + str(
             classification_threshold)
         utils.save_figure(fig, figsize, save_dir, folder, metadata_string + '_' + str(cell_roi_id) + '_' + str(roi_id))
-
-#
-# def plot_metrics_mask(roi_mask_dict, metrics_dict, metric_name, max_projection=None, vmin=-1, vmax=1, cmap='RdBu',
-#                       ax=None, save_dir=None, folder=None, colorbar=False):
-#     """
-#     roi_mask_dict: dictionary with keys as cell_specimen_id or cell_roi_id and values as the ROI masks,
-#                     placed within the full 512x512 image
-#     metrics_dict: dictionary with keys as cell_specimen_id or cell_roi_id and corresponding metric value for each ROI
-#     metric_name: name of metric provided to be used for colorbar label and filename of saved figure
-#     max_projection: maximum intensity projection. If None, only ROI masks will be shown, without max projection overlay.
-#     vmin: min value of metric to scale image by
-#     vmax: max value of metric to scale image by
-#     cmap: colormap to use
-#     ax: if axis is provided, image will be plotted on that axis. If None, a figure and axis will be created.
-#     save_dir: top level directory to save figure in. save_dir must be provided for figure to save.
-#     folder: folder within save_dir to save figure in
-#     colorbar: Boolean to indicate whether colorbar is displayed
-#     """
-#     if ax is None:
-#         figsize = (10, 10)
-#         fig, ax = plt.subplots(figsize=figsize)
-#     if max_projection is not None:
-#         ax.imshow(max_projection, cmap='gray', vmin=0, vmax=np.amax(max_projection))
-#     for roi_id in list(roi_mask_dict.keys()):
-#         roi_mask_dict[roi_id][roi_mask_dict[roi_id] == 1] = metrics_dict[roi_id]
-#     mask = np.sum(np.asarray(list(roi_mask_dict.values())), axis=0)
-#     cax = ax.imshow(mask, cmap=cmap, alpha=0.5, vmin=vmin, vmax=vmax)
-#     if colorbar:
-#         cbar = plt.colorbar(cax, ax=ax, use_gridspec=True)
-#         cbar.set_label(metric_name)
-#     if save_dir:
-#         plt.tight_layout()
-#         utils.save_figure(fig, figsize, save_dir, folder, fig_title=metric_name)
-#     return ax
 
 
 def plot_metrics_mask(roi_mask_dict, metrics_dict, metric_name, max_projection=None, title=None, outlines=False,

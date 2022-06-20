@@ -2,7 +2,7 @@ import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
 
-from visual_behavior.data_access import loading as data_loading
+from visual_behavior.data_access import loading as loading
 from visual_behavior.visualization import utils as utils
 import visual_behavior.visualization.ophys.summary_figures as sf
 
@@ -20,7 +20,7 @@ def plot_across_session_responses(ophys_container_id, cell_specimen_id, use_even
     Useful to validate cell matching as well as examine changes in activity profiles over days.
     """
     import visual_behavior.data_access.utilities as utilities
-    experiments_table = data_loading.get_filtered_ophys_experiment_table(release_data_only=True)
+    experiments_table = loading.get_filtered_ophys_experiment_table(release_data_only=True)
     container_expts = experiments_table[experiments_table.ophys_container_id == ophys_container_id]
     expts = np.sort(container_expts.index.values)
     if use_events:
@@ -41,7 +41,7 @@ def plot_across_session_responses(ophys_container_id, cell_specimen_id, use_even
     for i, ophys_experiment_id in enumerate(expts):
         print('ophys_experiment_id:', ophys_experiment_id)
         try:
-            dataset = data_loading.get_ophys_dataset(ophys_experiment_id, include_invalid_rois=False)
+            dataset = loading.get_ophys_dataset(ophys_experiment_id, include_invalid_rois=False)
 
             if cell_specimen_id in dataset.dff_traces.index:
                 sdf = loading.get_stimulus_response_df(dataset, data_type='dff', event_type='all',
@@ -181,3 +181,32 @@ def plot_single_cell_activity_and_behavior(dataset, cell_specimen_id, save_figur
         utils.save_figure(fig, figsize, utils.get_single_cell_plots_dir(), 'dff_trace_and_behavior',
                           str(cell_specimen_id) + '_' + dataset.metadata_string + '_dff_trace_and_behavior')
         plt.close()
+
+
+def plot_cell_roi_mask_and_dff_trace(dataset, cell_roi_id, save_figure=True):
+    dff_traces = dataset.dff_traces.copy()
+    roi_masks = dataset.roi_masks.copy()
+    max_projection = dataset.max_projection.data.copy()
+    average_image = dataset.average_projection.data.copy()
+    metadata = dataset.metadata.copy()
+
+    figsize=(20,10)
+    fig, ax = plt.subplots(2, 2, figsize=figsize, gridspec_kw={'width_ratios':[1,3]})
+    ax = ax.ravel()
+    ax[0] = sf.plot_cell_zoom(roi_masks, average_image, cell_roi_id, spacex=40, spacey=40, show_mask=True, ax=ax[0])
+    ax[1].plot(dataset.ophys_timestamps, dff_traces[dff_traces.cell_roi_id==cell_roi_id].dff.values[0])
+    ax[1].set_xlim(500, 560)
+    ax[1].set_xlabel('time (sec)')
+    ax[1].set_ylabel('dF/F')
+
+    ax[2] = sf.plot_cell_zoom(roi_masks, average_image, cell_roi_id, show_mask=True, alpha=1, full_image=True, ax=ax[2])
+    ax[3].plot(dataset.ophys_timestamps, dff_traces[dff_traces.cell_roi_id==cell_roi_id].dff.values[0])
+    ax[3].set_xlabel('time (sec)')
+    ax[3].set_ylabel('dF/F')
+
+    filename = utils.get_metadata_string(metadata)
+    filename = filename+'_'+str(cell_roi_id)
+    fig.suptitle(filename, x=0.5, y=1.)
+    if save_figure:
+        save_dir = loading.get_single_cell_plots_dir()
+        utils.save_figure(fig, figsize, save_dir, 'cell_roi_traces_and_masks', filename)

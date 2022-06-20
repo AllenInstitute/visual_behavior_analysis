@@ -29,7 +29,33 @@ def ax_to_array(ax):
         ax = np.array([ax])
     return ax
 
-# Container sequence
+
+def get_metadata_string(ophys_container_id):
+    """
+    Create a string of metadata information to be used in filenames and figure titles.
+    Includes information such as experiment_id, cre_line, acquisition_date, rig_id, etc
+    :param ophys_container_id:
+    :return:
+    """
+    experiments_table = loading.get_filtered_ophys_experiment_table()
+    ophys_experiment_ids = loading.get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id, experiments_table)
+    dataset = loading.get_ophys_dataset(ophys_experiment_ids[0])
+    m = dataset.metadata.copy()
+    metadata_string = str(m['mouse_id']) + '_' + str(m['experiment_container_id']) + '_' + m['cre_line'].split('-')[0] + '_' + m['targeted_structure'] + '_' + str(m['imaging_depth']) + '_' + m['session_type']
+    return metadata_string
+
+
+def get_file_name_for_container(ophys_container_id):
+    """
+    gets standardized filename for saving figures
+    format "container_id_"+str(ophys_container_id) is necessary for files to be able to be viewed in Dougs QC viewer
+    using get_metadata_string(ophys_container_id) gives a more interpretable filename with cre line, area, etc
+    :param ophys_container_id:
+    :return:
+    """
+    # filename =  "container_id_"+str(ophys_container_id)
+    filename = get_metadata_string(ophys_container_id)
+    return filename
 
 
 def plot_container_session_sequence(ophys_container_id, save_figure=True):
@@ -106,6 +132,8 @@ def plot_sdk_max_projection_images_for_container(ophys_container_id, save_figure
     for i, ophys_experiment_id in enumerate(ophys_experiment_ids):
         try:
             ax[i] = ep.plot_max_intensity_projection_for_experiment(ophys_experiment_id, ax=ax[i])
+            # plot and save to experiment_plots dir when ax=None
+            ep.plot_max_intensity_projection_for_experiment(ophys_experiment_id, ax=None)
         except:
             pass
         session_type = loading.get_session_type_for_ophys_experiment_id(ophys_experiment_id, experiments_table)
@@ -141,6 +169,7 @@ def plot_movie_max_projection_images_for_container(ophys_container_id, save_figu
     for i, ophys_experiment_id in enumerate(ophys_experiment_ids):
         try:
             ax[i] = ep.plot_motion_correction_max_image_for_experiment(ophys_experiment_id, ax=ax[i])
+            ep.plot_motion_correction_max_image_for_experiment(ophys_experiment_id, ax=None)
         except:
             pass
         session_type = loading.get_session_type_for_ophys_experiment_id(ophys_experiment_id, experiments_table)
@@ -176,6 +205,7 @@ def plot_sdk_average_images_for_container(ophys_container_id, save_figure=True):
     for i, ophys_experiment_id in enumerate(ophys_experiment_ids):
         try:
             ax[i] = ep.plot_average_image_for_experiment(ophys_experiment_id, ax=ax[i])
+            ep.plot_average_image_for_experiment(ophys_experiment_id, ax=None)
         except:
             pass
         session_type = loading.get_session_type_for_ophys_experiment_id(ophys_experiment_id, experiments_table)
@@ -211,6 +241,7 @@ def plot_movie_average_images_for_container(ophys_container_id, save_figure=True
     for i, ophys_experiment_id in enumerate(ophys_experiment_ids):
         try:
             ax[i] = ep.plot_motion_correction_average_image_for_experiment(ophys_experiment_id, ax=ax[i])
+            ep.plot_motion_correction_average_image_for_experiment(ophys_experiment_id, ax=None)
         except:
             pass
         session_type = loading.get_session_type_for_ophys_experiment_id(ophys_experiment_id, experiments_table)
@@ -261,6 +292,7 @@ def plot_segmentation_masks_for_container(ophys_container_id, save_figure=True):
     for i, ophys_experiment_id in enumerate(ophys_experiment_ids):
         try:
             ax[i] = ep.plot_valid_segmentation_mask_outlines_per_cell_for_experiment(ophys_experiment_id, ax=ax[i])
+            ep.plot_valid_segmentation_mask_outlines_per_cell_for_experiment(ophys_experiment_id, ax=None)
         except:
             pass
         session_type = loading.get_session_type_for_ophys_experiment_id(ophys_experiment_id, experiments_table)
@@ -317,7 +349,7 @@ def plot_segmentation_mask_overlays_for_container(ophys_container_id, save_figur
     if save_figure:
         ut.save_figure(fig, figsize, loading.get_container_plots_dir(), 'segmentation_mask_overlays',
                        get_file_name_for_container(ophys_container_id))
-    ut.save_figure(fig, figsize, loading.get_container_plots_dir(), 'all',
+        ut.save_figure(fig, figsize, loading.get_container_plots_dir(), 'all',
                            get_file_name_for_container(ophys_container_id)+'_segmentation_mask_overlays')
 
 
@@ -428,6 +460,7 @@ def plot_dff_traces_heatmaps_for_container(ophys_container_id, save_figure=True)
     for i, ophys_experiment_id in enumerate(ophys_experiment_ids):
         try:
             ax[i] = ep.plot_traces_heatmap_for_experiment(ophys_experiment_id, ax=ax[i])
+            ep.plot_traces_heatmap_for_experiment(ophys_experiment_id, ax=None)
         except:
             pass
         session_type = loading.get_session_type_for_ophys_experiment_id(ophys_experiment_id, experiments_table)
@@ -460,6 +493,7 @@ def plot_average_intensity_timeseries_for_container(ophys_container_id, save_fig
     for i, ophys_experiment_id in enumerate(container_df["ophys_experiment_id"].unique()):
         try:
             ax = ep.plot_average_intensity_timeseries_for_experiment(ophys_experiment_id, ax=ax)
+            ep.plot_average_intensity_timeseries_for_experiment(ophys_experiment_id, ax=None)
         except:
             pass
     ax.legend(exp_order_and_stage["stage_name_lims"], fontsize='xx-small', title='stage name', title_fontsize='xx-small',
@@ -961,34 +995,6 @@ def plot_flashes_on_trace(ax, timestamps, trial_type=None, omitted=False, alpha=
     return ax
 
 
-def get_metadata_string(ophys_container_id):
-    """
-    Create a string of metadata information to be used in filenames and figure titles.
-    Includes information such as experiment_id, cre_line, acquisition_date, rig_id, etc
-    :param ophys_container_id:
-    :return:
-    """
-    experiments_table = loading.get_filtered_ophys_experiment_table()
-    ophys_experiment_ids = loading.get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id, experiments_table)
-    dataset = loading.get_ophys_dataset(ophys_experiment_ids[0])
-    m = dataset.metadata.copy()
-    metadata_string = str(m['mouse_id']) + '_' + str(m['experiment_container_id']) + '_' + m['cre_line'].split('-')[0] + '_' + m['targeted_structure'] + '_' + str(m['imaging_depth']) + '_' + m['session_type']
-    return metadata_string
-
-
-def get_file_name_for_container(ophys_container_id):
-    """
-    gets standardized filename for saving figures
-    format "container_id_"+str(ophys_container_id) is necessary for files to be able to be viewed in Dougs QC viewer
-    using get_metadata_string(ophys_container_id) gives a more interpretable filename with cre line, area, etc
-    :param ophys_container_id:
-    :return:
-    """
-    # filename =  "container_id_"+str(ophys_container_id)
-    filename = get_metadata_string(ophys_container_id)
-    return filename
-
-
 def plot_population_average_across_sessions(container_df, ophys_container_id, data_type='dff', event_type='all', save_figure=True):
     """
     Plots population average response across all sessions within a container
@@ -1377,6 +1383,22 @@ def plot_dff_trace_and_behavior_for_container(ophys_container_id, save_figure=Tr
         try:
             ep.plot_population_activity_and_behavior_for_experiment(ophys_experiment_id, save_figure=save_figure)
             ep.plot_dff_trace_and_behavior_for_experiment(ophys_experiment_id, save_figure=save_figure)
+        except:
+            pass
+
+
+def plot_cell_rois_and_dff_traces_for_container(ophys_container_id, save_figure=True):
+    """
+    Plots the full and zoomed in cell ROI masks and dFF traces for each cell in each experiment in the container
+    Useful to visualize how the masks relate to the traces and whether output looks reasonable
+    """
+    experiments_table = loading.get_filtered_ophys_experiment_table()
+    ophys_experiments = experiments_table[experiments_table.ophys_container_id == ophys_container_id].sort_values(by='date_of_acquisition')
+    ophys_experiment_ids = ophys_experiments.index.values
+
+    for ophys_experiment_id in ophys_experiment_ids:
+        try:
+            ep.plot_cell_roi_masks_and_dff_traces_for_experiment(ophys_experiment_id, save_figure=save_figure)
         except:
             pass
 

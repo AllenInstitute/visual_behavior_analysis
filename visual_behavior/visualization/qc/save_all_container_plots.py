@@ -13,6 +13,7 @@ def main():
         "segmentation_masks": cp.plot_segmentation_masks_for_container,
         "segmentation_mask_overlays": cp.plot_segmentation_mask_overlays_for_container,
         "dff_traces_heatmaps": cp.plot_dff_traces_heatmaps_for_container,
+        "cell_roi_and_dff_traces": cp.plot_cell_rois_and_dff_traces_for_container,
         "motion_correction_xy_shift": cp.plot_motion_correction_xy_shift_for_container,
         "nway_match_fraction": cp.plot_nway_match_fraction,
         "nway_warp_overlay": cp.plot_nway_warp_overlay,
