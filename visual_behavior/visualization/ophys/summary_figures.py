@@ -33,11 +33,20 @@ def plot_max_projection_image(dataset, save_dir=None, folder='max_projection'):
         save_figure(fig, figsize, save_dir, folder, str(dataset.experiment_id))
 
 
-def plot_cell_zoom(roi_masks, max_projection, cell_roi_id, spacex=10, spacey=10, show_mask=False, ax=None):
-    # if isinstance(list(roi_mask_dict.keys())[0], str):
-    #     m = roi_mask_dict[str(cell_specimen_id)]
-    # else:
-    #     m = roi_mask_dict[int(cell_specimen_id)]
+def plot_cell_zoom(roi_masks, max_projection, cell_roi_id, spacex=10, spacey=10, show_mask=False, full_image=False, ax=None):
+    """
+    Plot roi mask image, with or without max projection, either in full image or in a zoomed in portion of image
+
+    :param roi_masks: dataframe with columns 'cell_roi_id', and 'roi_mask'; typically cell_specimen_table attribute of SDK dataset
+    :param max_projection: max intensity projection image, typically from 'max_projection' attribute of SDK dataset
+    :param cell_roi_id: cell ROI ID of cell to plot
+    :param spacex: how much space in x you want to show around the provided OI
+    :param spacey: how much space in y you want to show around the provided OI
+    :param show_mask: Boolean, whether or not to plot the ROI mask over the max projection
+    :param full_image: if True, dont use spacex and y to zoom in, just show the full max image
+    :param ax:
+    :return:
+    """
     m = roi_masks[roi_masks.cell_roi_id == cell_roi_id].roi_mask.values[0]
     (y, x) = np.where(m == 1)
     xmin = np.min(x)
@@ -52,8 +61,9 @@ def plot_cell_zoom(roi_masks, max_projection, cell_roi_id, spacex=10, spacey=10,
     ax.imshow(max_projection, cmap='gray', vmin=0, vmax=np.amax(max_projection) / 2.)
     if show_mask:
         ax.imshow(mask, cmap='jet', alpha=0.3, vmin=0, vmax=1)
-    ax.set_xlim(xmin - spacex, xmax + spacex)
-    ax.set_ylim(ymax + spacey, ymin - spacey)
+    if not full_image:
+        ax.set_xlim(xmin - spacex, xmax + spacex)
+        ax.set_ylim(ymax + spacey, ymin - spacey)
     ax.set_title('cell_roi_id ' + str(cell_roi_id))
     ax.grid(False)
     ax.axis('off')
