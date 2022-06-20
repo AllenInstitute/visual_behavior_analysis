@@ -1793,6 +1793,20 @@ def count_mice_expts_containers(df):
     return counts
 
 
+def replace_cell_specimen_id_with_cell_roi_id(df):
+    """
+    in cases where cell matching has not been run or has failed, the cell_specimen_id of all ROIs will be NaN
+    This function takes in any dataframe with cell_specimen_id as the index, and cell_roi_id as a column,
+    and replaces the cell_specimen_id with the cell_roi_id so that downstream functions that use the cell_specimen_id dont fail due to NaNs
+    works with SDK attribute dataframes such as dff_traces and cell_specimen_table
+    """
+    if df.index.values[0] is None:
+        df['cell_specimen_id'] = df.cell_roi_id.values
+        df = df.set_index('cell_specimen_id')
+    else:
+        print('the index values of this df are not NaN, this function is not needed')
+    return df
+
 def get_behavior_session_ids_to_analyze():
     """
     Gets a list of behavior_session_ids by combining the behavior_session_ids present in the platform paper experiments table

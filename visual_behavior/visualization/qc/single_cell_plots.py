@@ -17,6 +17,7 @@ def plot_across_session_responses(ophys_container_id, cell_specimen_id, use_even
     Compares across all sessions in a container for each cell, including the ROI mask across days.
     Useful to validate cell matching as well as examine changes in activity profiles over days.
     """
+    import visual_behavior.data_access.utilities as utilities
     experiments_table = data_loading.get_filtered_ophys_experiment_table(release_data_only=True)
     container_expts = experiments_table[experiments_table.ophys_container_id == ophys_container_id]
     expts = np.sort(container_expts.index.values)
@@ -35,19 +36,14 @@ def plot_across_session_responses(ophys_container_id, cell_specimen_id, use_even
     for i, ophys_experiment_id in enumerate(expts):
         print('ophys_experiment_id:', ophys_experiment_id)
         try:
-
             dataset = data_loading.get_ophys_dataset(ophys_experiment_id, include_invalid_rois=False)
+            # dff_traces = dataset.dff_traces.copy()
+            # dff_traces = utilities.replace_cell_specimen_id_with_cell_roi_id(dff_traces)
             if cell_specimen_id in dataset.dff_traces.index:
-                analysis = ResponseAnalysis(dataset, use_events=use_events, use_extended_stimulus_presentations=False)
-                sdf = ut.get_mean_df(analysis.get_response_df(df_name='stimulus_response_df'), analysis=analysis,
-                                     conditions=['cell_specimen_id', 'is_change', 'image_name'], flashes=True, omitted=False,
-                                     get_reliability=False, get_pref_stim=True, exclude_omitted_from_pref_stim=True)
-                odf = ut.get_mean_df(analysis.get_response_df(df_name='omission_response_df'), analysis=analysis,
-                                     conditions=['cell_specimen_id'], flashes=False, omitted=True,
-                                     get_reliability=False, get_pref_stim=False, exclude_omitted_from_pref_stim=False)
-                tdf = ut.get_mean_df(analysis.get_response_df(df_name='trials_response_df'), analysis=analysis,
-                                     conditions=['cell_specimen_id', 'go', 'hit', 'change_image_name'], flashes=False, omitted=False,
-                                     get_reliability=False, get_pref_stim=True, exclude_omitted_from_pref_stim=True)
+                sdf = loading.get_stimulus_response_df(dataset, data_type='dff', event_type='all')
+                sdf = ut.get_mean_df(sdf, conditions=['cell_roi_id', 'is_change', 'image_name'])
+                odf = ut.get_mean_df(sdf[sdf.omitted==True], conditions=['cell_specimen_id'])
+                tdf = ut.get_mean_df(sdf[sdf.is_change==True], conditions=['cell_specimen_id', 'go', 'hit', 'change_image_name'])
 
                 ct = dataset.cell_specimen_table.copy()
                 cell_roi_id = ct.loc[cell_specimen_id].cell_roi_id
