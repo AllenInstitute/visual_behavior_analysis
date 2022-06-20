@@ -1327,6 +1327,11 @@ def get_coding_metrics(index_dropouts, index_value, index_name):
     stats.loc[index_value, 'experience_selectivity'] = experience_selectivity
     # get experience modulation indices
     row = index_dropouts[dominant_feature]
+    # overall experience modulation is how strong novel session coding is relative to average of Familiar and Novel >1
+    # this makes sense under the assumption that Novel images becomes Familiar again rapidly in the Novel >1 session
+    # if we wanted consider either novel session, could use novel_dropout = np.amax([row['Novel 1'], row['Novel >1']])
+    exp_mod = (row['Novel 1'] - (np.mean([row['Familiar'], row['Novel >1']]))) / (row['Novel 1'] + (np.mean([row['Familiar'], row['Novel >1']])))
+    stats.loc[index_value, 'experience_modulation'] = exp_mod
     # direction of exp mod is whether coding is stronger for familiar or novel
     # if we wanted consider either novel session, could use novel_dropout = np.amax([row['Novel 1'], row['Novel >1']])
     exp_mod_direction = (row['Novel 1'] - row['Familiar']) / (row['Novel 1'] + row['Familiar'])
@@ -1943,7 +1948,7 @@ def get_cluster_types():
     return ['all-images', 'omissions', 'behavioral', 'task', 'mixed coding', 'non-coding']
 
 
-def get_cluster_fractions_per_location(cluster_meta, feature_matrix, results_pivoted):
+def get_cluster_fractions_per_location(cluster_meta, cluster_metrics):
     """
     Compute the fraction of cells in each location that belong to each cluster
     Designate a 'cluster_type', based on metrics of feature and experience selectivity
@@ -1951,12 +1956,10 @@ def get_cluster_fractions_per_location(cluster_meta, feature_matrix, results_piv
     This function is used in plotting.plot_cluster_proportions_all_locations()
 
     :param cluster_meta: table of metadata for each cell_specimen_id, including their cluster_id
-    :param feature_matrix: dropout scores for all cell_specimen_ids
+    :param cluster_metrics: metrics computed based on average coding scores of each cluster (ex: 'experience_modulation', 'dominant_feature', etc)
     :return:
     """
     cre_lines = np.sort(cluster_meta.cre_line.unique())
-    # get metrics for clusters
-    cluster_metrics = get_cluster_metrics(cluster_meta, feature_matrix, results_pivoted)
     # get fraction cells per location belonging to each cluster
     location_fractions = get_location_fractions(cluster_meta)
     # add cluster types
