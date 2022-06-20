@@ -603,6 +603,7 @@ def plot_dropout_heatmap(cluster_meta, feature_matrix, cre_line, cluster_id, cba
     this_cluster_csids = this_cluster_meta.index.values
     feature_matrix_cre = processing.get_feature_matrix_for_cre_line(feature_matrix, cluster_meta, cre_line)
     mean_dropout_df = feature_matrix_cre.loc[this_cluster_csids].mean().unstack()
+
     if ax is None:
         fig, ax = plt.subplots()
     ax = sns.heatmap(mean_dropout_df, cmap=cmap, vmin=vmin, vmax=1, ax=ax, cbar=cbar, cbar_kws={'label':'coding score'})
@@ -630,6 +631,8 @@ def plot_dropout_heatmap(cluster_meta, feature_matrix, cre_line, cluster_id, cba
     else:
         ax.set_xticklabels(mean_dropout_df.columns.values, rotation=90, fontsize=14)
     ax.set_ylim(0, mean_dropout_df.shape[0])
+    # invert y axis so images is always on top
+    ax.invert_yaxis()
     ax.set_xlabel('')
     if small_fontsize:
         ax = standardize_axes_fontsize(ax)
@@ -715,6 +718,7 @@ def plot_average_dropout_heatmap_for_cre_lines(dropouts, cluster_meta, save_dir=
         ax[i].set_title(get_cell_type_for_cre_line(cluster_meta, cre_line))
         ax[i].set_ylim(0, 4)
         ax[i].set_xlabel('')
+        ax[i].invert_yaxis()
     plt.subplots_adjust(wspace=1.2)
     if save_dir:
         utils.save_figure(fig, figsize, save_dir, folder, 'average_dropout_heatmaps')
@@ -731,10 +735,11 @@ def plot_std_dropout_heatmap_for_cre_lines(dropouts, cluster_meta, save_dir=None
     ax = ax.ravel()
     for i, cre_line in enumerate(get_cre_lines(cluster_meta)):
         mean_dropouts = dropouts_meta[dropouts_meta.cre_line == cre_line].groupby('experience_level').var()[processing.get_features_for_clustering()]
-        ax[i] = sns.heatmap(mean_dropouts.T, cmap='Purples', vmin=0, vmax=0.5, ax=ax[i], cbar_kws={'shrink': 0.7, 'label': 'standard\ndeviation'})
+        ax[i] = sns.heatmap(mean_dropouts.T, cmap='Purples', vmin=0, vmax=0.25, ax=ax[i], cbar_kws={'shrink': 0.7, 'label': 'standard\ndeviation'})
         ax[i].set_title(get_cell_type_for_cre_line(cluster_meta, cre_line))
         ax[i].set_ylim(0, 4)
         ax[i].set_xlabel('')
+        ax[i].invert_yaxis()
     plt.subplots_adjust(wspace=1.2)
     if save_dir:
         utils.save_figure(fig, figsize, save_dir, folder, 'standard_deviation_dropout_heatmaps')
@@ -1811,7 +1816,7 @@ def plot_cluster_data(cluster_meta, feature_matrix, cre_line, cluster_id, multi_
             folder = 'individual_cluster_plots_'+columns_to_groupby[0]+'_'+columns_to_groupby[1]
         else:
             print('function cant handle columns_to_groupby of greater than length 2')
-        utils.save_figure(fig, figsize, save_dir, folder, cell_type_abbreviation+'_cluster_'+str(cluster_id))
+        utils.save_figure(fig, figsize, save_dir, folder, cre_line[:3]+'_cluster_'+str(cluster_id))
     return ax
 
 
@@ -1970,7 +1975,7 @@ def plot_fraction_cells_per_cluster_per_location_horiz(cluster_meta, save_dir=No
             data = cre_data[cre_data.location == location]
             ax[i].vlines(x=data.cluster_id.values, ymin=0, ymax=data.fraction_cells.values)
             ax[i].scatter(x=data.cluster_id.values, y=data.fraction_cells.values, color='k')
-            ax[i].set_title(plotting.get_abbreviated_location(location, abbrev_layer=False))
+            ax[i].set_title(get_abbreviated_location(location, abbrev_layer=False))
             ax[i].set_xlim(0, len(cluster_ids) + 1)
             ax[i].set_xticks(np.arange(1, len(cluster_ids) + 1, 1));
             ax[i].set_xticklabels(np.arange(0, len(cluster_ids), 1) + 1);
@@ -2011,7 +2016,7 @@ def plot_fraction_cells_per_cluster_per_location_vert(cluster_meta, save_dir=Non
             data = cre_data[cre_data.location == location]
             ax[i].hlines(y=data.cluster_id.values, xmin=0, xmax=data.fraction_cells.values)
             ax[i].scatter(y=data.cluster_id.values, x=data.fraction_cells.values, color='k')
-            ax[i].set_title(plotting.get_abbreviated_location(location, abbrev_layer=False))
+            ax[i].set_title(get_abbreviated_location(location, abbrev_layer=False))
             ax[i].set_ylim(0, len(cluster_ids) + 1)
             ax[i].set_yticks(np.arange(1, len(cluster_ids) + 1, 1));
             ax[i].set_yticklabels(np.arange(0, len(cluster_ids), 1) + 1);
@@ -2107,14 +2112,14 @@ def plot_cluster_proportions_for_location(location_fractions, cre_line, location
                                    labels=np.round(data.fraction.values,2), rotatelabels=True,
                                    labeldistance=1, textprops=dict(fontsize=12, color='w'),
                                    wedgeprops=dict(width=0.3, edgecolor='w'))
-    ax.set_title(plotting.get_abbreviated_location(location, abbrev_layer=False))
+    ax.set_title(get_abbreviated_location(location, abbrev_layer=False))
     if save_dir:
         utils.save_figure(fig, figsize, plot_save_dir, folder, cre_line[:3]+'_'+location)
 
 
 def plot_cluster_proportions_for_location(location_fractions, cre_line, location, ax=None, save_dir=None, folder=None):
     data = location_fractions[(location_fractions.cre_line==cre_line)&(location_fractions.location==location)]
-    data = data.sort_values(by=['location', 'cluster_type', 'dominant_experience_level'])
+    data = data.sort_values(by=['location', 'cluster_type'])
     # data = data.sort_values(by='cluster_id')
     if ax is None:
         figsize = (5,5)
@@ -2124,7 +2129,6 @@ def plot_cluster_proportions_for_location(location_fractions, cre_line, location
                                    wedgeprops=dict(width=0.4, edgecolor='w'))
 
     wedges, texts = ax.pie(data.fraction.values, radius=0.6, colors=data.exp_level_color.values,
-#                                    autopct=lambda p: '{:.2f}'.format(p/100),
                                    labels=np.round(data.fraction.values,2), rotatelabels=True,
                                    labeldistance=1, textprops=dict(fontsize=12, color='w'),
                                    wedgeprops=dict(width=0.3, edgecolor='w'))
@@ -2133,9 +2137,9 @@ def plot_cluster_proportions_for_location(location_fractions, cre_line, location
         utils.save_figure(fig, figsize, plot_save_dir, folder, cre_line[:3]+'_'+location)
 
 
-def plot_cluster_proportions_all_locations(cluster_meta, feature_matrix, results_pivoted, save_dir=None, folder=None):
+def plot_cluster_proportions_all_locations(cluster_meta, cluster_metrics, save_dir=None, folder=None):
     locations = ['VISp_upper', 'VISl_upper', 'VISp_lower', 'VISl_lower']
-    location_fractions = processing.get_cluster_fractions_per_location(cluster_meta, feature_matrix, results_pivoted)
+    location_fractions = processing.get_cluster_fractions_per_location(cluster_meta, cluster_metrics)
     cre_lines = np.sort(cluster_meta.cre_line.unique())
 
     for cre_line in cre_lines:
