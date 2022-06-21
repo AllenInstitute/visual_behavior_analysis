@@ -46,6 +46,7 @@ def get_file_name_for_experiment(ophys_experiment_id):
     filename = get_metadata_string(ophys_experiment_id)
     return filename
 
+
 def plot_max_intensity_projection_for_experiment(ophys_experiment_id, ax=None):
     if ax is None:
         figsize = (5,5)
@@ -59,7 +60,7 @@ def plot_max_intensity_projection_for_experiment(ophys_experiment_id, ax=None):
     ax.set_title(str(ophys_experiment_id))
     ax.axis('off')
     if save_figure:
-        ut.save_figure(fig, figsize, loading.get_experiment_plots_dir(), 'max_intensity_projection',
+        utils.save_figure(fig, figsize, loading.get_experiment_plots_dir(), 'max_intensity_projection',
                        get_file_name_for_experiment(ophys_experiment_id))
     return ax
 
@@ -76,7 +77,7 @@ def plot_average_image_for_experiment(ophys_experiment_id, ax=None):
     ax.imshow(average_projection, cmap='gray', vmax=np.amax(average_projection))
     ax.axis('off')
     if save_figure:
-        ut.save_figure(fig, figsize, loading.get_experiment_plots_dir(), 'average_intensity_image',
+        utils.save_figure(fig, figsize, loading.get_experiment_plots_dir(), 'average_intensity_image',
                        get_file_name_for_experiment(ophys_experiment_id))
     return ax
 
@@ -92,7 +93,7 @@ def plot_motion_correction_average_image_for_experiment(ophys_experiment_id, ax=
     ax.imshow(average_image, cmap='gray', vmin=0, vmax=8000)
     ax.axis('off')
     if save_figure:
-        ut.save_figure(fig, figsize, loading.get_experiment_plots_dir(), 'average_image_movie',
+        utils.save_figure(fig, figsize, loading.get_experiment_plots_dir(), 'average_image_movie',
                        get_file_name_for_experiment(ophys_experiment_id))
     return ax
 
@@ -109,7 +110,7 @@ def plot_motion_correction_max_image_for_experiment(ophys_experiment_id, ax=None
     ax.set_title(str(ophys_experiment_id))
     ax.axis('off')
     if save_figure:
-        ut.save_figure(fig, figsize, loading.get_experiment_plots_dir(), 'max_image_movie',
+        utils.save_figure(fig, figsize, loading.get_experiment_plots_dir(), 'max_image_movie',
                        get_file_name_for_experiment(ophys_experiment_id))
     return ax
 
@@ -127,7 +128,7 @@ def plot_segmentation_mask_for_experiment(ophys_experiment_id, ax=None):
     ax.imshow(segmentation_mask, cmap='gray', vmin=0, vmax=1)
     ax.axis('off')
     if save_figure:
-        ut.save_figure(fig, figsize, loading.get_experiment_plots_dir(), 'segmentation_mask_image',
+        utils.save_figure(fig, figsize, loading.get_experiment_plots_dir(), 'segmentation_mask_image',
                        get_file_name_for_experiment(ophys_experiment_id))
     return ax
 
@@ -151,7 +152,7 @@ def plot_valid_segmentation_mask_overlay_for_experiment(ophys_experiment_id, ax=
         pass
     ax.axis('off')
     if save_figure:
-        ut.save_figure(fig, figsize, loading.get_experiment_plots_dir(), 'segmentation_mask_overlay',
+        utils.save_figure(fig, figsize, loading.get_experiment_plots_dir(), 'segmentation_mask_overlay',
                        get_file_name_for_experiment(ophys_experiment_id))
     return ax
 
@@ -172,7 +173,7 @@ def plot_all_segmentation_mask_overlay_for_experiment(ophys_experiment_id, ax=No
     ax.imshow(mask, cmap='hsv', vmax=1, alpha=0.5)
     ax.axis('off')
     if save_figure:
-        ut.save_figure(fig, figsize, loading.get_experiment_plots_dir(), 'segmentation_mask_overlay_all',
+        utils.save_figure(fig, figsize, loading.get_experiment_plots_dir(), 'segmentation_mask_overlay_all',
                        get_file_name_for_experiment(ophys_experiment_id))
     return ax
 
@@ -193,7 +194,7 @@ def plot_valid_segmentation_mask_outlines_for_experiment(ophys_experiment_id, ax
     ax.set_title(str(ophys_experiment_id))
     ax.axis('off')
     if save_figure:
-        ut.save_figure(fig, figsize, loading.get_experiment_plots_dir(), 'segmentation_mask_valid',
+        utils.save_figure(fig, figsize, loading.get_experiment_plots_dir(), 'segmentation_mask_valid',
                        get_file_name_for_experiment(ophys_experiment_id))
     return ax
 
@@ -215,7 +216,7 @@ def plot_valid_segmentation_mask_outlines_per_cell_for_experiment(ophys_experime
     ax.set_title(str(ophys_experiment_id)+'\nn valid ROIs = ' + str(len(cell_specimen_table.cell_roi_id.values)))
     ax.axis('off')
     if save_figure:
-        ut.save_figure(fig, figsize, loading.get_experiment_plots_dir(), 'segmentation_mask_valid_outlines',
+        utils.save_figure(fig, figsize, loading.get_experiment_plots_dir(), 'segmentation_mask_valid_outlines',
                        get_file_name_for_experiment(ophys_experiment_id))
     return ax
 
@@ -252,7 +253,7 @@ def plot_valid_and_invalid_segmentation_mask_overlay_per_cell_for_experiment(oph
         pass
     ax.axis('off')
     if save_figure:
-        ut.save_figure(fig, figsize, loading.get_experiment_plots_dir(), 'segmentation_mask_valid_invalid_overlay',
+        utils.save_figure(fig, figsize, loading.get_experiment_plots_dir(), 'segmentation_mask_valid_invalid_overlay',
                        get_file_name_for_experiment(ophys_experiment_id))
     return ax
 
@@ -273,7 +274,7 @@ def plot_traces_heatmap_for_experiment(ophys_experiment_id, ax=None):
     ax.set_ylabel('cells')
     ax.set_xlabel('2P frames')
     if save_figure:
-        ut.save_figure(fig, figsize, loading.get_experiment_plots_dir(), 'dff_traces_heatmap',
+        utils.save_figure(fig, figsize, loading.get_experiment_plots_dir(), 'dff_traces_heatmap',
                        get_file_name_for_experiment(ophys_experiment_id))
     return ax
 
@@ -307,7 +308,7 @@ def plot_csid_snr_for_experiment(ophys_experiment_id, ax=None):
     ax.set_ylabel("robust snr")
     ax.set_xlabel("stage name")
     if save_figure:
-        ut.save_figure(fig, figsize, loading.get_experiment_plots_dir(), 'cell_trace_snr',
+        utils.save_figure(fig, figsize, loading.get_experiment_plots_dir(), 'cell_trace_snr',
                        get_file_name_for_experiment(ophys_experiment_id))
     return ax
 
@@ -343,7 +344,7 @@ def plot_average_intensity_timeseries_for_experiment(ophys_experiment_id, ax=Non
     ax.set_ylabel('fluorescence value')
     ax.set_xlabel('frame #')
     if save_figure:
-        ut.save_figure(fig, figsize, loading.get_experiment_plots_dir(), 'average_intensity_timeseries',
+        utils.save_figure(fig, figsize, loading.get_experiment_plots_dir(), 'average_intensity_timeseries',
                        get_file_name_for_experiment(ophys_experiment_id))
     return ax
 
@@ -382,7 +383,7 @@ def plot_motion_correction_xy_shift_for_experiment(ophys_experiment_id, ax=None)
             title = title + col + ', '
     ax.set_title(title)
     if save_figure:
-        ut.save_figure(fig, figsize, loading.get_experiment_plots_dir(), 'motion_correction_xy_shift',
+        utils.save_figure(fig, figsize, loading.get_experiment_plots_dir(), 'motion_correction_xy_shift',
                        get_file_name_for_experiment(ophys_experiment_id))
     return ax
 
@@ -443,7 +444,7 @@ def make_pupil_area_plot(ophys_experiment_id, ax=None, label_x=True):
         error_text = 'could not generate pupil area plot for ophys_experiment_id {}\n{}'.format(ophys_experiment_id, e)
         ax.set_title(error_text, ha='left')
     if save_figure:
-        ut.save_figure(fig, figsize, loading.get_experiment_plots_dir(), 'pupil_area_plot',
+        utils.save_figure(fig, figsize, loading.get_experiment_plots_dir(), 'pupil_area_plot',
                        get_file_name_for_experiment(ophys_experiment_id))
     return ax
 
@@ -511,7 +512,7 @@ def make_pupil_position_plot(ophys_experiment_id, ax=None, label_x=True):
         error_text = 'could not generate pupil position plot for ophys_experiment_id {}\n{}'.format(ophys_experiment_id, e)
         ax.set_title(error_text, ha='left')
     if save_figure:
-        ut.save_figure(fig, figsize, loading.get_experiment_plots_dir(), 'pupil_position',
+        utils.save_figure(fig, figsize, loading.get_experiment_plots_dir(), 'pupil_position',
                        get_file_name_for_experiment(ophys_experiment_id))
     return ax
 
@@ -529,7 +530,7 @@ def plot_cell_snr_distribution_for_experiment(ophys_experiment_id, ax=None):
     ax.set_xlabel('robust_snr')
     ax.set_ylabel('n_cells')
     if save_figure:
-        ut.save_figure(fig, figsize, loading.get_experiment_plots_dir(), 'cell_trace_robust_snr',
+        utils.save_figure(fig, figsize, loading.get_experiment_plots_dir(), 'cell_trace_robust_snr',
                        get_file_name_for_experiment(ophys_experiment_id))
     return ax
 
@@ -694,7 +695,7 @@ def plot_motion_correction_and_population_average(experiment_id, ax=None):
     #     ax[1].set_xlim(running_timestamps[0], running_timestamps[-1])
     #     ax[1].set_xlabel('time (sec)')
     if save_figure:
-        ut.save_figure(fig, figsize, loading.get_experiment_plots_dir(), 'pop_avg_and_motion_corr',
+        utils.save_figure(fig, figsize, loading.get_experiment_plots_dir(), 'pop_avg_and_motion_corr',
                        get_file_name_for_experiment(ophys_experiment_id))
 
     return ax
