@@ -115,7 +115,7 @@ def plot_feature_matrix_for_cre_lines(feature_matrix, cell_metadata, use_abbrevi
                             robust=True, cbar_kws={"drawedges": False, "shrink": 0.7, "label": 'coding score'})
         for x in [3,6,9]:
             ax[i].axvline(x=x, ymin=0, ymax=data.shape[0], color='gray', linestyle='--', linewidth=1)
-        ax[i].set_title(get_cell_type_for_cre_line(cell_metadata, cre_line))
+        ax[i].set_title(get_cell_type_for_cre_line(cre_line, cell_metadata))
         ax[i].set_ylabel('cells')
         ax[i].set_ylim(0, data.shape[0])
         ax[i].set_yticks([0, data.shape[0]])
@@ -166,7 +166,7 @@ def plot_feature_matrix_sorted(feature_matrix, cluster_meta, sort_col='cluster_i
 
         for x in [3, 6, 9]:
             ax[i].axvline(x=x, ymin=0, ymax=data.shape[0], color='gray', linestyle='--', linewidth=1)
-        ax[i].set_title(get_cell_type_for_cre_line(cluster_meta, cre_line))
+        ax[i].set_title(get_cell_type_for_cre_line(cre_line, cluster_meta))
         ax[i].set_ylabel('cells')
         ax[i].set_ylim(0, data.shape[0])
         ax[i].set_yticks([0, data.shape[0]])
@@ -348,7 +348,7 @@ def plot_silhouette_scores_n_clusters(silhouette_scores, cell_metadata, n_cluste
         silhouette_scores_cre = silhouette_scores[cre_line]
         ax[i] = plot_silhouette_scores(silhouette_scores=silhouette_scores_cre[0],
                                        silhouette_std=silhouette_scores_cre[1], ax=ax[i])
-        ax[i].set_title(get_cell_type_for_cre_line(cell_metadata, cre_line))
+        ax[i].set_title(get_cell_type_for_cre_line(cre_line, cell_metadata))
         if n_clusters_cre:
             n_clusters = n_clusters_cre[cre_line]
             ax[i].axvline(x=n_clusters, ymin=0, ymax=1, linestyle='--', color='gray')
@@ -394,7 +394,7 @@ def plot_coclustering_matrix_and_dendrograms(coclustering_matrices, cre_line, cl
     # now plot the same dendrogram with labels
     dendrogram(Z, labels=leaf_cluster_ids, ax=ax[1])  # truncate_mode='level', p=p,
     ax[1].grid(False)
-    ax[1].set_title(get_cell_type_for_cre_line(cluster_meta, cre_line))
+    ax[1].set_title(get_cell_type_for_cre_line(cre_line, cluster_meta))
 
     # plot dendrogram with leaves truncated to highest level nodes (p=n_clusters)
     dendrogram(Z, truncate_mode='lastp', p=n_clusters_cre[cre_line], color_threshold=0, ax=ax[0])  # leaf_label_func=llf,truncate_mode='level', p=p,
@@ -444,7 +444,7 @@ def plot_coclustering_matrix_sorted_by_cluster_size(coclustering_matrices, clust
         fig, ax = plt.subplots(figsize=figsize)
     ax = sns.heatmap(sorted_coclustering_matrix, cmap="Greys", ax=ax, square=True,
                      cbar=True, cbar_kws={"drawedges": False, "label": 'probability of\nco-clustering', 'shrink': 0.7, },)
-    ax.set_title(get_cell_type_for_cre_line(cluster_meta, cre_line))
+    ax.set_title(get_cell_type_for_cre_line(cre_line, cluster_meta))
     ax.set_title('')
     ax.set_yticks((0, sorted_coclustering_matrix.shape[0]))
     ax.set_yticklabels((0, sorted_coclustering_matrix.shape[0]), fontsize=20)
@@ -489,7 +489,7 @@ def plot_umap_for_clusters(cluster_meta, feature_matrix, label_col='cluster_id',
         ax[i].set_xlabel('UMAP 0')
         ax[i].set_ylabel('UMAP 1')
         ax[i].legend(fontsize='x-small', title=label_col, title_fontsize='x-small', bbox_to_anchor=(1, 1))
-        ax[i].set_title(get_cell_type_for_cre_line(cluster_meta, cre_line))
+        ax[i].set_title(get_cell_type_for_cre_line(cre_line, cluster_meta))
     fig.tight_layout()
     if save_dir:
         utils.save_figure(fig, figsize, save_dir, folder, 'UMAP_' + label_col)
@@ -548,7 +548,7 @@ def plot_within_cluster_correlations_for_cre_line(cluster_meta, cre_line, sort_o
                      order=order, ax=ax, color='white', width=0.5)
     # add line at 0
     ax.axhline(y=0, xmin=0, xmax=1, color='grey', linestyle='--')
-    ax.set_title(get_cell_type_for_cre_line(cluster_meta, cre_line))
+    ax.set_title(get_cell_type_for_cre_line(cre_line, cluster_meta))
     ax.set_ylabel('correlation')
     ax.set_xlabel('cluster #')
     ax.set_ylim(-1.1, 1.1)
@@ -615,7 +615,7 @@ def plot_dropout_heatmap(cluster_meta, feature_matrix, cre_line, cluster_id, cba
         ax.set_title('cluster ' + str(cluster_id) + '\n' + str(fraction) + '%, n=' + str(len(this_cluster_csids)))
     else:
         # title is cre line abbreviation and cluster #
-        cell_type = processing.get_cell_type_for_cre_line(cluster_meta, cre_line)
+        cell_type = processing.get_cell_type_for_cre_line(cre_line, cluster_meta)
         cell_type_abbreviation = cell_type[:3]
         ax.set_title(cell_type_abbreviation + ' cluster ' + str(cluster_id))
     if abbreviate_features:
@@ -696,7 +696,7 @@ def plot_dropout_heatmaps_for_clusters(cluster_meta, feature_matrix, sort_col='c
                 cluster_meta[sort_col] == cluster_id)].original_cluster_id.unique()[0]
             ax[i] = plot_dropout_heatmap(cluster_meta, feature_matrix, cre_line, original_cluster_id, ax=ax[i])
 
-        plt.suptitle(get_cell_type_for_cre_line(cluster_meta, cre_line), x=0.51, y=.95, fontsize=16)
+        plt.suptitle(get_cell_type_for_cre_line(cre_line, cluster_meta), x=0.51, y=.95, fontsize=16)
         plt.subplots_adjust(hspace=0.6, wspace=0.4)
         if save_dir:
             utils.save_figure(fig, figsize, save_dir, folder,
@@ -715,7 +715,7 @@ def plot_average_dropout_heatmap_for_cre_lines(dropouts, cluster_meta, save_dir=
     for i, cre_line in enumerate(get_cre_lines(cluster_meta)):
         mean_dropouts = dropouts_meta[dropouts_meta.cre_line == cre_line].groupby('experience_level').mean()[processing.get_features_for_clustering()]
         ax[i] = sns.heatmap(mean_dropouts.T, cmap='Blues', vmin=0, vmax=0.5, ax=ax[i], cbar_kws={'shrink': 0.7, 'label': 'coding score'})
-        ax[i].set_title(get_cell_type_for_cre_line(cluster_meta, cre_line))
+        ax[i].set_title(get_cell_type_for_cre_line(cre_line, cluster_meta))
         ax[i].set_ylim(0, 4)
         ax[i].set_xlabel('')
         ax[i].invert_yaxis()
@@ -736,7 +736,7 @@ def plot_std_dropout_heatmap_for_cre_lines(dropouts, cluster_meta, save_dir=None
     for i, cre_line in enumerate(get_cre_lines(cluster_meta)):
         mean_dropouts = dropouts_meta[dropouts_meta.cre_line == cre_line].groupby('experience_level').var()[processing.get_features_for_clustering()]
         ax[i] = sns.heatmap(mean_dropouts.T, cmap='Purples', vmin=0, vmax=0.25, ax=ax[i], cbar_kws={'shrink': 0.7, 'label': 'standard\ndeviation'})
-        ax[i].set_title(get_cell_type_for_cre_line(cluster_meta, cre_line))
+        ax[i].set_title(get_cell_type_for_cre_line(cre_line, cluster_meta))
         ax[i].set_ylim(0, 4)
         ax[i].set_xlabel('')
         ax[i].invert_yaxis()
@@ -1255,7 +1255,7 @@ def plot_random_subset_of_cells_per_cluster(cluster_meta, dropouts, save_dir=Non
                 ax[i].set_xticklabels(experience_levels, rotation=90, fontsize=14)
             fig.tight_layout()
             fig.subplots_adjust(wspace=0.3)
-            fig.suptitle(get_cell_type_for_cre_line(cluster_meta, cre_line) + ' cluster ' + str(cluster_id), x=0.5, y=1.01)
+            fig.suptitle(get_cell_type_for_cre_line(cre_line, cluster_meta) + ' cluster ' + str(cluster_id), x=0.5, y=1.01)
             filename = cre_line + '_cluster_' + str(cluster_id)
             if save_dir:
                 utils.save_figure(fig, figsize, save_dir, 'dropout_heatmaps_per_cluster', filename)
@@ -1282,7 +1282,7 @@ def plot_fraction_cells_by_area_depth(cluster_meta, n_clusters_cre, normalize=Tr
         ax[i].set_ylim((0, len(frequency.index)))
         ax[i].set_xlim(-0.5, len(frequency.columns) + 0.5)
         ax[i].set_ylabel('')
-        ax[i].set_title(get_cell_type_for_cre_line(cluster_meta, cre_line))
+        ax[i].set_title(get_cell_type_for_cre_line(cre_line, cluster_meta))
     plt.subplots_adjust(wspace=0.5)
     if save_dir:
         if normalize:
@@ -1328,7 +1328,7 @@ def plot_cell_stats_per_cluster_for_areas_depths(cluster_meta, cell_count_stats,
         ax[i].set_xlim(0, len(data.index))
         ax[i].set_ylabel('')
         ax[i].set_xlabel('cluster #')
-        ax[i].set_title(get_cell_type_for_cre_line(cluster_meta, cre_line))
+        ax[i].set_title(get_cell_type_for_cre_line(cre_line, cluster_meta))
     # ax[i].set_xlim(ax[i].get_xlim()[::-1])
     plt.subplots_adjust(wspace=0.4)
     if save_dir:
@@ -1374,7 +1374,7 @@ def plot_dropout_heatmaps_for_clusters_sorted(cluster_meta, feature_matrix, clus
             #             original_cluster_id = cluster_meta[(cluster_meta.cre_line==cre_line)&(cluster_meta[sort_col]==cluster_id)].original_cluster_id.unique()[0]
             ax[i] = plot_dropout_heatmap(cluster_meta, feature_matrix, cre_line, cluster_id, ax=ax[i])
 
-        plt.suptitle(get_cell_type_for_cre_line(cluster_meta, cre_line), x=0.51, y=.95, fontsize=16)
+        plt.suptitle(get_cell_type_for_cre_line(cre_line, cluster_meta), x=0.51, y=.95, fontsize=16)
         plt.subplots_adjust(hspace=0.6, wspace=0.4)
         if save_dir:
             utils.save_figure(fig, figsize, save_dir, folder,
@@ -1604,7 +1604,7 @@ def plot_clusters_row(cluster_meta, feature_matrix, cre_line,
         #     ax[i + (n_clusters * 1)].set_ylabel('')
 
     fig.subplots_adjust(hspace=1.2, wspace=0.6)
-    # fig.suptitle(get_cell_type_for_cre_line(cluster_meta, cre_line), x=0.52, y=1.1, fontsize=16)
+    # fig.suptitle(get_cell_type_for_cre_line(cre_line, cluster_meta), x=0.52, y=1.1, fontsize=16)
     # fig.tight_layout()
     if save_dir:
         utils.save_figure(fig, figsize, save_dir, folder, 'clusters_row_' + cre_line.split('-')[0] + suffix)
@@ -1714,7 +1714,7 @@ def plot_clusters_stats_pop_avg_rows(cluster_meta, feature_matrix, multi_session
     # ax[(0 + n_clusters *2)].legend(loc='lower right', fontsize='x-small')
 
     fig.subplots_adjust(hspace=1.2, wspace=0.6)
-    fig.suptitle(get_cell_type_for_cre_line(cluster_meta, cre_line), x=0.51, y=1.01, fontsize=16)
+    fig.suptitle(get_cell_type_for_cre_line(cre_line, cluster_meta), x=0.51, y=1.01, fontsize=16)
     # fig.tight_layout()
     if save_dir:
         utils.save_figure(fig, figsize, save_dir, folder, 'clusters_stats_rows_' + cre_line.split('-')[0] + suffix)
@@ -1873,7 +1873,7 @@ def plot_clusters_stats_pop_avg_cols(cluster_meta, feature_matrix, multi_session
         y = 0.915
     else:
         y = 0.92
-    fig.suptitle(get_cell_type_for_cre_line(cluster_meta, cre_line), x=0.49, y=y, fontsize=22)
+    fig.suptitle(get_cell_type_for_cre_line(cre_line, cluster_meta), x=0.49, y=y, fontsize=22)
     if save_dir:
         utils.save_figure(fig, figsize, save_dir, folder, 'cluster_stats_cols_' + cre_line.split('-')[0] + suffix)
 
@@ -1981,7 +1981,7 @@ def plot_fraction_cells_per_cluster_per_location_horiz(cluster_meta, save_dir=No
             ax[i].set_xticklabels(np.arange(0, len(cluster_ids), 1) + 1);
             ax[i].set_xlabel('cluster ID')
         ax[0].set_ylabel('fraction cells')
-        #         fig.suptitle(processing.get_cell_type_for_cre_line(cluster_meta, cre_line), x=0.52, y=1.02)
+        #         fig.suptitle(processing.get_cell_type_for_cre_line(cre_line, cluster_meta), x=0.52, y=1.02)
         if save_dir:
             utils.save_figure(fig, figsize, save_dir, folder, 'fraction_cells_per_cluster_horiz_' + cre_line[:3])
 
@@ -2026,7 +2026,7 @@ def plot_fraction_cells_per_cluster_per_location_vert(cluster_meta, save_dir=Non
         ax[0].set_ylabel('cluster ID')
         ax[2].set_ylabel('cluster ID')
         fig.tight_layout()
-        fig.suptitle(processing.get_cell_type_for_cre_line(cluster_meta, cre_line), x=0.54, y=1.02)
+        fig.suptitle(processing.get_cell_type_for_cre_line(cre_line, cluster_meta), x=0.54, y=1.02)
         if save_dir:
             utils.save_figure(fig, figsize, save_dir, folder, 'fraction_cells_per_cluster_vert_' + cre_line[:3])
 

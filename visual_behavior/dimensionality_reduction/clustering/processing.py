@@ -92,12 +92,18 @@ def get_cre_lines(cell_metadata):
     return cre_lines
 
 
-def get_cell_type_for_cre_line(cell_metadata, cre_line):
+def get_cell_type_for_cre_line(cre_line, cell_metadata=None):
     """
-    gets cell_type label for a given cre_line using info in cell_metadata table
+    gets cell_type label for a given cre_line using info in cell_metadata table or hardcoded lookup dictionary
     cell_metadata is a table similar to ophys_cells_table from SDK but can have additional columns based on clustering results
     """
-    cell_type = cell_metadata[cell_metadata.cre_line == cre_line].cell_type.values[0]
+    if cell_metadata is not None:
+        cell_type = cell_metadata[cell_metadata.cre_line == cre_line].cell_type.values[0]
+    else:
+        cell_type_dict = {'Slc17a7-IRES2-Cre': 'Excitatory',
+                      'Vip-IRES-Cre': 'Vip Inhibitory',
+                      'Sst-IRES-Cre': 'Sst Inhibitory'}
+        cell_type = cell_type_dict[cre_line]
     return cell_type
 
 
