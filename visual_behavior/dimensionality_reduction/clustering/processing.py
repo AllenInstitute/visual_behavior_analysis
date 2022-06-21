@@ -1389,6 +1389,8 @@ def get_cluster_metrics(cluster_meta, feature_matrix, results_pivoted):
     """
     computes metrics for each cluster, including experience modulation, feature selectivity, etc
     """
+    if 'location' not in cluster_meta.keys():
+        cluster_meta = add_location_column(cluster_meta, columns_to_groupby=['targeted_structure', 'layer'])
     cre_lines = np.sort(cluster_meta.cre_line.unique())
     cell_metrics = get_cell_metrics(cluster_meta, results_pivoted)
     cluster_metrics = pd.DataFrame()
@@ -1867,7 +1869,9 @@ def add_cluster_types(location_fractions, cluster_metrics):
     cluster_metrics = define_cluster_types(cluster_metrics)
 
     # merge location fractions with metrics per cluster
-    cs = cluster_metrics[['cre_line', 'cluster_id', 'cluster_type', 'dominant_feature', 'dominant_experience_level', 'exp_mod_direction', 'exp_mod_persistence']]
+    cs = cluster_metrics[['cre_line', 'cluster_id', 'cluster_type',
+                        'dominant_feature', 'dominant_experience_level',
+                        'experience_modulation', 'exp_mod_direction', 'exp_mod_persistence']]
     location_fractions = location_fractions.merge(cs, on=['cre_line', 'cluster_id'])
     return location_fractions
 
@@ -1945,10 +1949,11 @@ def add_cluster_types(location_fractions, cluster_metrics):
     cluster_metrics = define_cluster_types(cluster_metrics)
 
     # merge location fractions with metrics per cluster
-    cs = cluster_metrics[['cre_line', 'cluster_id', 'cluster_type', 'dominant_feature', 'dominant_experience_level', 'exp_mod_direction', 'exp_mod_persistence']]
+    cs = cluster_metrics[['cre_line', 'cluster_id', 'cluster_type',
+                        'dominant_feature', 'dominant_experience_level',
+                        'experience_modulation', 'exp_mod_direction', 'exp_mod_persistence']]
     location_fractions = location_fractions.merge(cs, on=['cre_line', 'cluster_id'])
     return location_fractions
-
 
 def get_cluster_types():
     return ['all-images', 'omissions', 'behavioral', 'task', 'mixed coding', 'non-coding']
@@ -1965,6 +1970,8 @@ def get_cluster_fractions_per_location(cluster_meta, cluster_metrics):
     :param cluster_metrics: metrics computed based on average coding scores of each cluster (ex: 'experience_modulation', 'dominant_feature', etc)
     :return:
     """
+    if 'location' not in cluster_meta.keys():
+        cluster_meta = add_location_column(cluster_meta, columns_to_groupby=['targeted_structure', 'layer'])
     cre_lines = np.sort(cluster_meta.cre_line.unique())
     # get fraction cells per location belonging to each cluster
     location_fractions = get_location_fractions(cluster_meta)
@@ -1980,4 +1987,11 @@ def get_cluster_fractions_per_location(cluster_meta, cluster_metrics):
     # make exp level color gray for non-coding clusters
     non_coding_inds = location_fractions[location_fractions.cluster_type=='non-coding'].index
     location_fractions.at[non_coding_inds, 'exp_level_color'] = location_fractions.loc[non_coding_inds, 'cluster_type_color']
+    # add experience modulation index with color values in a continuous colormap
+    import matplotlib.pyplot as plt
+    cmap = plt.get_cmap('RdBu')
+    exp_mod = location_fractions.experience_modulation.values
+    exp_mod_normed = ((exp_mod+1)/2)*256
+    colors = [cmap(int(np.round(i)))[:3] for i in exp_mod_normed]
+    location_fractions['exp_mod_color'] = colors
     return location_fractions

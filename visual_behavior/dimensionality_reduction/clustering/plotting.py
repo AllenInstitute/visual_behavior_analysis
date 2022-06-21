@@ -1810,10 +1810,14 @@ def plot_cluster_data(cluster_meta, feature_matrix, cre_line, cluster_id, multi_
     ax[i].set_xlim(-xlim*1.2, xlim*1.2)
 
     if save_dir:
+        if multi_session_df is not None:
+            suffix = '_pop_avg'
+        else:
+            suffix = ''
         if len(columns_to_groupby)==1:
-            folder = 'individual_cluster_plots_'+columns_to_groupby[0]
+            folder = 'individual_cluster_plots_'+columns_to_groupby[0]+suffix
         elif len(columns_to_groupby)==2:
-            folder = 'individual_cluster_plots_'+columns_to_groupby[0]+'_'+columns_to_groupby[1]
+            folder = 'individual_cluster_plots_'+columns_to_groupby[0]+'_'+columns_to_groupby[1]+suffix
         else:
             print('function cant handle columns_to_groupby of greater than length 2')
         utils.save_figure(fig, figsize, save_dir, folder, cre_line[:3]+'_cluster_'+str(cluster_id))
@@ -2038,7 +2042,7 @@ def plot_proportion_cells_area_depth_pie_chart(cluster_meta, save_dir=None, fold
     fig, ax = plt.subplots(3,4, figsize=figsize)
     ax = ax.ravel()
     i = 0
-    for cre_line in cre_lines:
+    for cre_line in get_cre_lines(cluster_meta):
         for area in ['VISp', 'VISl']:
             for layer in ['upper', 'lower']:
                 cells = cluster_meta[(cluster_meta.targeted_structure==area)&(cluster_meta.layer==layer)&(cluster_meta.cre_line==cre_line)]
@@ -2116,40 +2120,438 @@ def plot_cluster_proportions_for_location(location_fractions, cre_line, location
     if save_dir:
         utils.save_figure(fig, figsize, plot_save_dir, folder, cre_line[:3]+'_'+location)
 
+#
+# def plot_cluster_proportions_for_location(location_fractions, cre_line, location, ax=None, save_dir=None, folder=None):
+#
+#     data = location_fractions[(location_fractions.cre_line==cre_line)&(location_fractions.location==location)]
+#     data = data.sort_values(by=['location', 'cluster_type'])
+#     # data = data.sort_values(by='cluster_id')
+#     if ax is None:
+#         figsize = (5,5)
+#         fig, ax = plt.subplots()
+#     wedges, texts = ax.pie(data.fraction.values, radius=1, colors=data.cluster_type_color.values,
+#                                    labels=data.cluster_id.values, textprops=dict(fontsize=12, color='k'),
+#                                    wedgeprops=dict(width=0.4, edgecolor='w'))
+#
+#     wedges, texts = ax.pie(data.fraction.values, radius=0.6, colors=data.exp_level_color.values,
+#                                    labels=np.round(data.fraction.values,2), rotatelabels=True,
+#                                    labeldistance=1, textprops=dict(fontsize=12, color='w'),
+#                                    wedgeprops=dict(width=0.3, edgecolor='w'))
+#     ax.set_title(get_abbreviated_location(location, abbrev_layer=False))
+#     if save_dir:
+#         utils.save_figure(fig, figsize, plot_save_dir, folder, cre_line[:3]+'_'+location)
 
-def plot_cluster_proportions_for_location(location_fractions, cre_line, location, ax=None, save_dir=None, folder=None):
-    data = location_fractions[(location_fractions.cre_line==cre_line)&(location_fractions.location==location)]
+
+def plot_cluster_proportion_donut_for_location(location_fractions, cre_line, location, use_exp_mod_continuous=False,
+                                          ax=None, save_dir=None, folder=None):
+    """
+    Create 2 tiered donut plot with fraction of cells per cluster as wedge size, color of outer ring indicating
+    feature preference of each cluster, and color of inner ring indicating either the dominant experience level
+    or a continuous measure of experience modulation computed as the difference of novel session to average of F and N>1 over the sum
+    :param location_fractions:
+    :param cre_line:
+    :param location:
+    :param ax:
+    :param save_dir:
+    :param folder:
+    :return:
+    """
+    data = location_fractions[(location_fractions.cre_line == cre_line) & (location_fractions.location == location)]
     data = data.sort_values(by=['location', 'cluster_type'])
-    # data = data.sort_values(by='cluster_id')
     if ax is None:
-        figsize = (5,5)
+        figsize = (5, 5)
         fig, ax = plt.subplots()
     wedges, texts = ax.pie(data.fraction.values, radius=1, colors=data.cluster_type_color.values,
-                                   labels=data.cluster_id.values, textprops=dict(fontsize=12, color='k'),
-                                   wedgeprops=dict(width=0.4, edgecolor='w'))
+                           labels=data.cluster_id.values, textprops=dict(fontsize=12, color='k'),
+                           wedgeprops=dict(width=0.4, edgecolor='w'))
 
-    wedges, texts = ax.pie(data.fraction.values, radius=0.6, colors=data.exp_level_color.values,
-                                   labels=np.round(data.fraction.values,2), rotatelabels=True,
-                                   labeldistance=1, textprops=dict(fontsize=12, color='w'),
-                                   wedgeprops=dict(width=0.3, edgecolor='w'))
+    if use_exp_mod_continuous:
+        # experience modulation as continual variable
+        wedges, texts = ax.pie(data.fraction.values, radius=0.6, colors=data.exp_mod_color.values,
+                               labels=np.round(data.fraction.values, 2), rotatelabels=True,
+                               labeldistance=1, textprops=dict(fontsize=12, color='w'),
+                               wedgeprops=dict(width=0.3, edgecolor='w'))
+
+    else:
+        # dominant experience level
+        wedges, texts = ax.pie(data.fraction.values, radius=0.6, colors=data.exp_level_color.values,
+                               labels=np.round(data.fraction.values, 2), rotatelabels=True,
+                               labeldistance=1, textprops=dict(fontsize=12, color='w'),
+                               wedgeprops=dict(width=0.3, edgecolor='w'))
+
+    # if using dominant experience level, reduce alpha of everything other than Novel 1
+    if use_exp_mod_continuous == False:
+        for i, exp_level in enumerate(data.dominant_experience_level.values):
+            if exp_level != 'Novel 1':
+                wedges[i].set_alpha(0.3)
+
     ax.set_title(get_abbreviated_location(location, abbrev_layer=False))
     if save_dir:
-        utils.save_figure(fig, figsize, plot_save_dir, folder, cre_line[:3]+'_'+location)
+        utils.save_figure(fig, figsize, plot_save_dir, folder, cre_line[:3] + '_' + location)
 
 
-def plot_cluster_proportions_all_locations(cluster_meta, cluster_metrics, save_dir=None, folder=None):
+def plot_cluster_proportion_donuts_all_locations(location_fractions, cluster_metrics, use_exp_mod_continuous=False,
+                                           save_dir=None, folder=None):
+    """
+    Generate and save donut plots with feature preference and experience level preference for each cluster for all cre lines & locations
+    Will either use dominant experience level, or a continuous metric of experience modulation
+    computed as the difference of novel session to average of F and N>1 over the sum
+    :param location_fractions:
+    :param cluster_metrics:
+    :param use_exp_mod_continuous:
+    :param save_dir:
+    :param folder:
+    :return:
+    """
     locations = ['VISp_upper', 'VISl_upper', 'VISp_lower', 'VISl_lower']
-    location_fractions = processing.get_cluster_fractions_per_location(cluster_meta, cluster_metrics)
-    cre_lines = np.sort(cluster_meta.cre_line.unique())
+    cre_lines = get_cre_lines(location_fractions)
 
     for cre_line in cre_lines:
         figsize = (8,8)
         fig, ax = plt.subplots(2,2, figsize=figsize)
         ax = ax.ravel()
         for i, location in enumerate(locations):
-            plot_cluster_proportions_for_location(location_fractions, cre_line, location, ax=ax[i], save_dir=None, folder=None)
+            plot_cluster_proportion_donut_for_location(location_fractions, cre_line, location, use_exp_mod_continuous=use_exp_mod_continuous,
+                                                  ax=ax[i], save_dir=None, folder=None)
             ax[i].set_title(location)
-        fig.suptitle(processing.get_cell_type_for_cre_line(cluster_meta, cre_line), x=0.5, y=1.1)
+        fig.suptitle(get_cell_type_for_cre_line(cre_line), x=0.5, y=1.1)
         fig.tight_layout()
         if save_dir:
-            utils.save_figure(fig, figsize, save_dir, folder, 'cluster_proportions_per_location_'+cre_line[:3])
+            if use_exp_mod_continuous:
+                suffix = '_continuous_exp_mod'
+            else:
+                suffix = '_pref_exp_level'
+            utils.save_figure(fig, figsize, save_dir, folder, 'cluster_proportions_per_location_'+cre_line[:3]+suffix)
+
+
+def plot_cell_counts_per_location(cluster_meta, save_dir=None, folder=None, ax=None):
+    """
+    Barplot of the number of cells for each area and depth for each cre line
+
+    :param cluster_meta:
+    :param save_dir:
+    :param folder:
+    :param ax:
+    :return:
+    """
+    if 'location' not in cluster_meta.keys():
+        cluster_meta = processing.add_location_column(cluster_meta,
+                                                      columns_to_groupby=['targeted_structure', 'layer'])
+
+    n_cells = cluster_meta.groupby(['cre_line', 'location', 'cluster_id']).count().rename(columns={'labels': 'n_cells'})[['n_cells']]
+    total_cells = cluster_meta.groupby(['cre_line', 'location']).count().rename(columns={'labels': 'total_cells'})[['total_cells']]
+    fraction_cells = n_cells.reset_index().merge(total_cells.reset_index(), on=['cre_line', 'location'])
+    fraction_cells['fraction_cells'] = fraction_cells.n_cells / fraction_cells.total_cells
+
+    data = total_cells.reset_index()
+    locations = np.sort(data.location.unique())[::-1]
+    cre_lines = np.sort(data.cre_line.unique())[::-1]
+    if ax is None:
+        figsize = (6, 4)
+        fig, ax = plt.subplots(figsize=figsize)
+        ax = sns.barplot(data=data, x='cre_line', y='total_cells', hue='location',
+                         order=cre_lines, hue_order=locations, palette=sns.color_palette('Paired'), ax=ax)
+        ax.set_xticklabels([get_cell_type_for_cre_line(cre_line, cluster_meta) for cre_line in cre_lines],
+            rotation=45)
+        ax.set_xlabel('')
+        ax.set_ylabel('# cells per location')
+        ax.legend(fontsize='small', title_fontsize='small')
+    if save_dir:
+        utils.save_figure(fig, figsize, save_dir, folder, 'n_cells_per_location')
+    return ax
+
+
+def plot_number_mice_per_cluster(cluster_meta, save_dir=None, folder=None):
+    n_mice = cluster_meta.groupby(['cre_line', 'cluster_id', 'mouse_id']).count().reset_index().groupby(['cre_line', 'cluster_id']).count().rename(columns={'mouse_id':'n_mice'})[['n_mice']]
+    n_mice = n_mice.reset_index()
+    cre_lines = processing.get_cre_lines(cluster_meta)
+
+    figsize = (15,4)
+    fig, ax = plt.subplots(1,3, figsize=figsize)
+    for i, cre_line in enumerate(cre_lines[::-1]):
+        data = n_mice[n_mice.cre_line==cre_line]
+        ax[i] = sns.barplot(data=data, x='cluster_id', y='n_mice', ax=ax[i], palette='Greys')
+        ax[i].set_title(get_cell_type_for_cre_line(cre_line, cluster_meta))
+
+    fig.tight_layout()
+    if save_dir:
+        utils.save_figure(fig, figsize, save_dir, folder, 'n_mice_per_cluster')
+
+
+def plot_number_clusters_per_mouse(cluster_meta, save_dir=None, folder=None):
+    n_clusters = cluster_meta.groupby(['cre_line', 'equipment_name', 'mouse_id', 'cluster_id', ]).count().reset_index().groupby(['cre_line', 'equipment_name', 'mouse_id']).count().rename(columns={'cluster_id':'n_clusters'})[['n_clusters']]
+    n_clusters = n_clusters.reset_index()
+    cre_lines = processing.get_cre_lines(cluster_meta)
+
+    rigs = np.sort(n_clusters.equipment_name.unique())
+    figsize = (20,4)
+    fig, ax = plt.subplots(1,3, figsize=figsize)
+    for i, cre_line in enumerate(cre_lines[::-1]):
+        data = n_clusters[n_clusters.cre_line==cre_line]
+        order = np.sort(data.mouse_id.unique())
+        ax[i] = sns.barplot(data=data, x='mouse_id', y='n_clusters', order=order,
+                            ax=ax[i], hue='equipment_name', hue_order=rigs)
+        ax[i].set_title(get_cell_type_for_cre_line(cre_line, cluster_meta))
+        ax[i].set_xticklabels(order, rotation=90, fontsize=12)
+        ax[i].legend(bbox_to_anchor=(1,1), fontsize='xx-small')
+    fig.tight_layout()
+    if save_dir:
+        utils.save_figure(fig, figsize, save_dir, folder, 'n_clusters_per_mouse')
+
+
+def plot_feature_preference_barplot(cluster_metrics, save_dir=None, folder=None):
+    """
+    plot fraction of clusters per cre line that prefer each feature
+    """
+    cre_lines = np.sort(cluster_metrics.cre_line.unique())[::-1]
+    palette = utils.get_cre_line_colors()
+    order = ['all-images', 'omissions', 'behavioral', 'task']
+
+    figsize = (6,4)
+    fig, ax = plt.subplots(figsize=figsize)
+    ax = sns.countplot(data=cluster_metrics, x='dominant_feature', hue='cre_line', order=order,
+                       hue_order=cre_lines, palette=palette, ax=ax
+                      )
+    ax.legend(bbox_to_anchor=(1,1), fontsize='xx-small', title_fontsize='xx-small')
+    ax.set_xticklabels(order, rotation=45)
+    ax.set_xlabel('')
+    ax.set_ylabel('# clusters')
+    ax.set_title('feature preference')
+    if save_dir:
+        utils.save_figure(fig, figsize, save_dir, folder, 'feature_preference_barplot')
+
+
+def plot_exp_level_preference_barplot(cluster_metrics, save_dir=None, folder=None):
+    """
+    plot fraction of clusters per cre line that prefer each experience level
+    """
+    cre_lines = np.sort(cluster_metrics.cre_line.unique())[::-1]
+    palette = utils.get_cre_line_colors()
+    order = ['Familiar', 'Novel 1', 'Novel >1']
+
+    figsize = (6,4)
+    fig, ax = plt.subplots(figsize=figsize)
+    ax = sns.countplot(data=cluster_metrics, x='dominant_experience_level', hue='cre_line', order=order,
+                       hue_order=cre_lines, palette=palette, ax=ax
+                      )
+    ax.legend(bbox_to_anchor=(1,1), fontsize='xx-small', title_fontsize='xx-small')
+    ax.set_xticklabels(order, rotation=45)
+    ax.set_xlabel('')
+    ax.set_ylabel('# clusters')
+    ax.set_title('experience level preference')
+    if save_dir:
+        utils.save_figure(fig, figsize, save_dir, folder, 'exp_level_preference_barplot')
+
+
+def plot_cluster_percent_pie_legends(save_dir=None, folder=None):
+    """
+    Create dummy figures with colorbars & legends for experience level modulation, feature preference, etc.
+    :param save_dir:
+    :param folder:
+    :return:
+    """
+    # make figure to put everything on
+    figsize = (20, 20)
+    fig, ax = plt.subplots(2, 2, figsize=figsize)
+    ax = ax.ravel()
+
+    # cluster types
+    cluster_types = processing.get_cluster_types()
+
+    fake_data = pd.DataFrame()
+    fake_data['cluster_id'] = np.arange(0, len(cluster_types), 1)
+    fake_data['fraction'] = np.repeat(100 / len(cluster_types), len(cluster_types))
+    fake_data['cluster_type'] = cluster_types
+    fake_data = fake_data.merge(processing.get_cluster_type_color_df(), on='cluster_type')
+
+    wedges, texts = ax[0].pie(fake_data.fraction.values, radius=1, wedgeprops=dict(width=0.4, edgecolor='w'),
+                              colors=fake_data.cluster_type_color.values, labels=fake_data.cluster_type.values)
+    ax[0].legend(bbox_to_anchor=(1.5, 1), fontsize='small')
+    #     if save_dir:
+    #         utils.save_figure(fig, figsize, save_dir, folder, 'cluster_proportions_cluster_types_legend')
+
+    # experience_levels
+    experience_levels = utils.get_experience_levels()
+    exp_colors = utils.get_experience_level_colors()
+
+    fake_data = pd.DataFrame()
+    fake_data['cluster_id'] = np.arange(0, len(experience_levels), 1)
+    fake_data['fraction'] = np.repeat(100 / len(experience_levels), len(experience_levels))
+    fake_data['dominant_experience_level'] = experience_levels
+    fake_data['exp_level_colors'] = exp_colors
+
+    wedges, texts = ax[1].pie(fake_data.fraction.values, radius=1, wedgeprops=dict(width=0.4, edgecolor='w'),
+                              colors=fake_data.exp_level_colors.values,
+                              labels=fake_data.dominant_experience_level.values)
+    ax[1].legend(bbox_to_anchor=(1.5, 1), fontsize='small')
+
+    # experience_modulation
+    experience_modulation_index_range = np.arange(-1, 1, 0.1)
+    experience_modulation_index_range = np.asarray([np.round(i, 1) for i in experience_modulation_index_range])
+    cmap = plt.get_cmap('RdBu')
+    exp_mod_normed = ((experience_modulation_index_range + 1) / 2) * 256
+    colors = [cmap(int(np.round(i)))[:3] for i in exp_mod_normed]
+
+    fake_data = pd.DataFrame()
+    fake_data['cluster_id'] = experience_modulation_index_range
+    fake_data['fraction'] = np.repeat(100 / len(experience_modulation_index_range),
+                                      len(experience_modulation_index_range))
+    fake_data['exp_mod'] = experience_modulation_index_range
+    fake_data['exp_mod_colors'] = colors
+
+    wedges, texts = ax[2].pie(fake_data.fraction.values, radius=1, wedgeprops=dict(width=0.4, edgecolor='w'),
+                              colors=fake_data.exp_mod_colors.values, labels=fake_data.exp_mod.values)
+    ax[2].legend(bbox_to_anchor=(1.5, 1), fontsize='small')
+
+    experience_modulation_index_range = np.arange(-1, 1, 0.1)
+    # make fake image data with our desired range
+    n = len(experience_modulation_index_range)
+    m = np.zeros((n, n))
+    for i in range(n):
+        m[i, :] = experience_modulation_index_range
+    # plot it with a colorbar
+    im = ax[3].imshow(m, cmap='RdBu', vmin=-1, vmax=1)
+    fig.colorbar(im, label='experience modulation', shrink=0.7)
+
+    fig.subplots_adjust(hspace=0.9, wspace=0.9)
+
+    if save_dir:
+        utils.save_figure(fig, figsize, save_dir, folder, 'cluster_proportions_legends')
+
+
+def plot_cluster_proportions_barplots(location_fractions, color_column='cluster_type_color', sort_by='cluster_type',
+                                      save_dir=None, folder=None):
+    """
+    Plot fraction of cells per cluster in each area and depth, colorized by color_column input
+    color_column can be ['cluster_type_color', 'exp_level_color',  'exp_mod_color']
+    clusters in the barplot can be sorted by ['cluster_id', 'cluster_type', 'experience_modulation']
+    Plots for all cre lines & locations
+    :param location_fractions:
+    :param color_column:
+    :param save_dir:
+    :param folder:
+    :return:
+    """
+    locations = np.sort(location_fractions.location.unique())
+    cre_lines = get_cre_lines(location_fractions)
+
+    figsize = (15, 4)
+    fig, ax = plt.subplots(1, 3, figsize=figsize, sharex=True, sharey=True)
+    for i, cre_line in enumerate(cre_lines):
+        for x_pos, location in enumerate(locations):
+            data = location_fractions[(location_fractions.cre_line == cre_line) & (location_fractions.location == location)]
+            data = data.sort_values(by=sort_by, ascending=False)
+            cluster_ids = data.cluster_id.values
+            next_bar_start = 0
+            for c, cluster_id in enumerate(cluster_ids):
+                if c == 0:
+                    this_value = data[data.cluster_id == cluster_id].fraction.values[0]
+                    color = data[data.cluster_id == cluster_id][color_column].values[0]
+                    ax[i].bar(x_pos, this_value, bottom=next_bar_start, color=color, edgecolor='w')
+                else:
+                    this_value = data[data.cluster_id == cluster_id].fraction.values[0]
+                    color = data[data.cluster_id == cluster_id][color_column].values[0]
+                    ax[i].bar(x_pos, this_value, bottom=next_bar_start, color=color, edgecolor='w')
+                next_bar_start = next_bar_start + this_value
+        ax[i].set_xticks(np.arange(len(locations)))
+        ax[i].set_xticklabels(
+            [get_abbreviated_location(location, abbrev_layer=False) for location in locations], rotation=90);
+        ax[i].set_title(processing.get_cell_type_for_cre_line(cre_line))
+        ax[i].spines['right'].set_visible(False)
+        ax[i].spines['top'].set_visible(False)
+        ax[i].spines['left'].set_visible(False)
+        ax[i].spines['bottom'].set_visible(False)
+        ax[i].invert_yaxis()
+    ax[0].set_ylabel('proportion of cells')
+
+    if save_dir:
+        utils.save_figure(fig, figsize, save_dir, folder, 'cluster_proportions_barplot_' + color_column)
+
+
+def plot_cluster_proportions_horizontal_barplots(location_fractions, color_column='cluster_type_color', sort_by='cluster_type',
+                                                 save_dir=None, folder=None):
+    """
+    Plot fraction of cells per cluster in each area and depth, colorized by color_column input
+    color_column can be ['cluster_type_color', 'exp_level_color',  'exp_mod_color']
+    clusters in the barplot can be sorted by ['cluster_id', 'cluster_type', 'experience_modulation']
+    Plots for all cre lines & locations
+    :param location_fractions:
+    :param color_column:
+    :param save_dir:
+    :param folder:
+    :return:
+    """
+    locations = np.sort(location_fractions.location.unique())
+    cre_lines = get_cre_lines(location_fractions)
+
+    figsize = (15, 4)
+    fig, ax = plt.subplots(1, 3, figsize=figsize, sharex=False, sharey=False)
+    for i, cre_line in enumerate(cre_lines):
+        for x_pos, location in enumerate(locations):
+            data = location_fractions[
+                (location_fractions.cre_line == cre_line) & (location_fractions.location == location)]
+            data = data.sort_values(by=sort_by, ascending=False)
+            cluster_ids = data.cluster_id.values
+            next_bar_start = 0
+            for c, cluster_id in enumerate(cluster_ids):
+                if c == 0:
+                    this_value = data[data.cluster_id == cluster_id].fraction.values[0]
+                    color = data[data.cluster_id == cluster_id][color_column].values[0]
+                    ax[i].barh(x_pos, this_value, left=next_bar_start, color=color, edgecolor='w')
+                else:
+                    this_value = data[data.cluster_id == cluster_id].fraction.values[0]
+                    color = data[data.cluster_id == cluster_id][color_column].values[0]
+                    ax[i].barh(x_pos, this_value, left=next_bar_start, color=color, edgecolor='w')
+                next_bar_start = next_bar_start + this_value
+        ax[i].set_yticks(np.arange(len(locations)))
+        ax[i].set_yticklabels(
+            [get_abbreviated_location(location, abbrev_layer=False) for location in locations], rotation=0);
+        ax[i].set_title(get_cell_type_for_cre_line(cre_line))
+        ax[i].spines['right'].set_visible(False)
+        ax[i].spines['top'].set_visible(False)
+        ax[i].spines['left'].set_visible(False)
+        ax[i].spines['bottom'].set_visible(False)
+        ax[i].set_xlabel('proportion of cells')
+        ax[i].invert_yaxis()
+    fig.subplots_adjust(wspace=0.6)
+    if save_dir:
+        utils.save_figure(fig, figsize, save_dir, folder, 'cluster_proportions_horiz_barplot_' + color_column)
+
+
+def plot_cluster_proportions_treemaps(location_fractions, cluster_meta, color_column='cluster_type_color',
+                                     sort_by='cluster_type', save_dir=None, folder=None):
+    """
+    Plot fraction of cells per area and depth for each cre line as a treemap (i.e. squareified pie chart),
+    colorized by color_column which can be ['cluster_type_color', 'exp_level_color',  'exp_mod_color']
+    clusters in the plot can be sorted by ['cluster_id', 'cluster_type', 'experience_modulation']
+    Plots for all cre lines & locations
+    :param location_fractions:
+    :param cluster_meta:
+    :param color_column:
+    :param sort_by:
+    :param save_dir:
+    :param folder:
+    :return:
+    """
+    import squarify
+
+    # hard code location order so they go in proper anatomical order in a grid
+    locations = ['VISp_upper', 'VISl_upper', 'VISp_lower', 'VISl_upper']
+    cre_lines = get_cre_lines(location_fractions)
+
+    for c, cre_line in enumerate(cre_lines):
+        figsize = (8, 8)
+        fig, ax = plt.subplots(2, 2, figsize=figsize)
+        ax = ax.ravel()
+        for i, location in enumerate(locations):
+            data = location_fractions[
+                (location_fractions.cre_line == cre_line) & (location_fractions.location == location)]
+            data = data.sort_values(by=sort_by, ascending=False)
+            ax[i] = squarify.plot(sizes=data['fraction'], label=data['cluster_id'], color=data[color_column], ax=ax[i],
+                                  bar_kwargs={'edgecolor': 'w'})
+            ax[i].axis('off')
+            ax[i].set_title(get_abbreviated_location(location, abbrev_layer=False))
+        fig.suptitle(get_cell_type_for_cre_line(cre_line))
+
+        if save_dir:
+            utils.save_figure(fig, figsize, save_dir, folder, 'cluster_proportions_treemap' + cre_line[:3] + '_' + color_column)

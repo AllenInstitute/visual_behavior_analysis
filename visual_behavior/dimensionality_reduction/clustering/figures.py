@@ -12,14 +12,14 @@ import seaborn as sns
 sns.set_context('notebook', font_scale=1.5, rc={'lines.markeredgewidth': 2})
 
 # set critical params for processing and saving
-folder = '220527_across_session_norm_10_5_10'
+folder = '220620_across_session_norm_10_6_9'
 across_session_norm = True
 use_signed_weights = False
 include_var_exp_full = False
 
 # number of clusters to use
-n_clusters_cre = {'Slc17a7-IRES2-Cre': 10,
-                  'Sst-IRES-Cre': 5,
+n_clusters_cre = {'Slc17a7-IRES2-Cre': 9,
+                  'Sst-IRES-Cre': 6,
                   'Vip-IRES-Cre': 10}
 
 # load experiments table
@@ -195,11 +195,9 @@ plotting.plot_cell_stats_per_cluster_for_areas_depths(cluster_meta, proportions,
 # plot fraction of cells in each area and depth belonging to each cluster as a pie chart
 plotting.plot_proportion_cells_area_depth_pie_chart(cluster_meta, save_dir=base_dir, folder=folder)
 
-
 # plot fraction of cells in each area and depth belonging to each cluster as a lollipop graph
 plotting.plot_fraction_cells_per_cluster_per_location_vert(cluster_meta, save_dir=base_dir, folder=folder)
-plotting.plot_fraction_cells_per_cluster_per_location_horiz(cluster_meta, save_dir=base_dir, folder=folder)
-
+# plotting.plot_fraction_cells_per_cluster_per_location_horiz(cluster_meta, save_dir=base_dir, folder=folder)
 
 
 # sort clusters by the fraction of cells in VISp upper
@@ -217,7 +215,6 @@ plotting.plot_fraction_cells_per_cluster_per_location_horiz(cluster_meta, save_d
 #                                                       value_to_plot, cbar_label, cmap='PRGn', vmin=-vmax, vmax=vmax,
 #                                                       cluster_order=cluster_order, save_dir=base_dir, folder=folder,
 #                                                       suffix=suffix)
-
 
 # plot cluster heatmaps, pop avgs and proportion cells
 
@@ -261,4 +258,78 @@ for cre_line in cre_lines:
     plotting.plot_clusters_stats_pop_avg_cols(cluster_meta, feature_matrix, multi_session_df, cre_line,
                                      columns_to_groupby=['targeted_structure', 'layer'],
                                      sort_order=None, save_dir=base_dir, folder=folder, suffix='_pop_avg')
+
+
+# plot each cluster as its own panel with abbreviated axes names
+for cre_line in cre_lines:
+    cluster_ids = np.sort(cluster_meta[cluster_meta.cre_line==cre_line].cluster_id.unique())
+    for cluster_id in cluster_ids:
+        # with pie chart
+        plotting.plot_cluster_data(cluster_meta, feature_matrix, cre_line, cluster_id,
+                              columns_to_groupby=['targeted_structure', 'layer'], save_dir=save_dir)
+        # also with pop avg instead of pie chart
+        plotting.plot_cluster_data(cluster_meta, feature_matrix, cre_line, cluster_id,
+                                   multi_session_df=multi_session_df,
+                                   columns_to_groupby=['targeted_structure', 'layer'], save_dir=save_dir)
+
+# same thing for mouse_id to see if clusters are biased (however this is confounded as some mice only have some areas or depths)
+for cre_line in cre_lines:
+    cluster_ids = np.sort(cluster_meta[cluster_meta.cre_line==cre_line].cluster_id.unique())
+    for cluster_id in cluster_ids:
+        plotting.plot_cluster_data(cluster_meta, feature_matrix, cre_line, cluster_id,
+                              columns_to_groupby=['mouse_id'], save_dir=save_dir)
+
+
+# cell counts per location
+plotting.plot_cell_counts_per_location(cluster_meta, save_dir=base_dir, folder=folder, ax=None)
+
+# plot n mice per cluster
+plot_number_mice_per_cluster(cluster_meta, save_dir=base_dir, folder=folder)
+plot_number_clusters_per_mouse(cluster_meta, save_dir=base_dir, folder=folder)
+
+
+# plot pref feature & exp level
+plotting.plot_feature_preference_barplot(cluster_metrics, save_dir=base_dir, folder=folder)
+plotting.plot_exp_level_preference_barplot(cluster_metrics, save_dir=base_dir, folder=folder)
+
+# get cell metrics to plot values per cluster & location
+cluster_metrics = processing.get_cluster_metrics(cluster_meta, feature_matrix, results_pivoted)
+
+# get cluster proportions per location along with metrics for each cluster
+location_fractions = processing.get_cluster_fractions_per_location(cluster_meta, cluster_metrics)
+
+# legends for subsequent proportion plots
+plotting.plot_cluster_percent_pie_legends(save_dir=base_dir, folder=folder)
+
+# plot donut plots with fraction cells per cluster in each depth and area, colorized by feature and experience preference
+# using dominant experience level
+plotting.plot_cluster_proportion_donuts_all_locations(location_fractions, cluster_metrics, use_exp_mod_continuous=False,
+                                       save_dir=base_dir, folder=folder)
+# using continuous meausre of experience modulation
+plotting.plot_cluster_proportion_donuts_all_locations(location_fractions, cluster_metrics, use_exp_mod_continuous=True,
+                                       save_dir=base_dir, folder=folder)
+
+# plot as horizontal barplots instead of donuts
+# by feature preference / cluster type
+plotting.plot_cluster_proportions_horizontal_barplots(location_fractions, color_column='cluster_type_color', sort_by='cluster_type',
+                                             save_dir=base_dir, folder=folder)
+
+# by experience modulation
+plotting.plot_cluster_proportions_horizontal_barplots(location_fractions, color_column='exp_mod_color', sort_by='experience_modulation',
+                                             save_dir=base_dir, folder=folder)
+
+# plot fraction cells per location as treemap
+# by feature preference / cluster type
+plotting.plot_cluster_proportions_treemap(location_fractions, cluster_meta, color_column='cluster_type_color',
+                                          sort_by='cluster_type', save_dir=base_dir, folder=folder)
+
+# by experience modulation
+plotting.plot_cluster_proportions_treemap(location_fractions, cluster_meta, color_column='exp_mod_color',
+                                          sort_by='experience_modulation', save_dir=base_dir, folder=folder)
+
+# by dominant experience leevl
+plotting.plot_cluster_proportions_treemap(location_fractions, cluster_meta, color_column='exp_level_color',
+                                          sort_by='dominant_experience_level', save_dir=base_dir, folder=folder)
+
+
 
