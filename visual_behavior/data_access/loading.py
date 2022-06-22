@@ -2627,7 +2627,7 @@ def build_container_df(experiment_table):
             'cre_line': subset['cre_line'][0],
             'targeted_structure': subset['targeted_structure'].unique()[0],
             'imaging_depth': subset['imaging_depth'].unique()[0],
-            'first_acquisition_date': subset['date_of_acquisition'].min().split(' ')[0],
+            # 'first_acquisition_date': subset['date_of_acquisition'].min().split(' ')[0],
             'equipment_name': subset['equipment_name'].unique(),
         }
         for idx, row in subset.iterrows():
