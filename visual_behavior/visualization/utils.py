@@ -38,6 +38,11 @@ def get_colors_for_session_numbers():
     return reds + blues
 
 
+def get_experience_levels():
+    experience_levels = ['Familiar', 'Novel 1', 'Novel >1']
+    return experience_levels
+
+
 def get_experience_level_colors():
     """
     get color map corresponding to Familiar, Novel 1 and Novel >1
@@ -70,6 +75,16 @@ def get_cre_line_colors():
     colors = [(255 / 255, 152 / 255, 150 / 255),
               (158 / 255, 218 / 255, 229 / 255),
               (197 / 255, 176 / 255, 213 / 255)]
+    return colors
+
+
+def get_cre_line_color_dict():
+    """
+    returns colors as a dict with cre line as key and color as value
+    """
+    colors = {'Slc17a7-IRES2-Cre':(255 / 255, 152 / 255, 150 / 255),
+              'Sst-IRES-Cre':(158 / 255, 218 / 255, 229 / 255),
+              'Vip-IRES-Cre':(197 / 255, 176 / 255, 213 / 255)}
     return colors
 
 

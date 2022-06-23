@@ -9,19 +9,54 @@ from visual_behavior.data_access import loading
 def get_multi_session_df(project_code, session_number, conditions, data_type, event_type,
                          time_window=[-3, 3.1], interpolate=True, output_sampling_rate=30,
                          response_window_duration=0.5, use_extended_stimulus_presentations=False, overwrite=False):
-    """
+       """
 
-    :param project_code:
-    :param session_number:
-    :param conditions:
-    :param data_type:
-    :param event_type:
-    :param time_window:
-    :param interpolate:
-    :param output_sampling_rate:
-    :param response_window_duration:
-    :param use_extended_stimulus_presentations:
-    :return:
+    For a given session_number (i.e. 1 for OPHYS_1, 2 for OPHYS_2) within a given project_code, loop through all ophys_experiment_ids, load the SDK dataset object,
+    create stimulus_response_df with event aligned traces for provided data_type (ex: 'dff', 'events', 'pupil_width', etc),
+    then average across a given set of conditions to get a trial averaged trace for those conditions.
+
+    Ex: if data_type = 'dff', event_type = 'changes', and conditions = ['cell_specimen_id', 'image_name'], this function
+    will compute the average change aligned dF/F trace for each 'image_name' for each 'cell_specimen_id'.
+
+    For non-neural timeseries, including data_type = 'pupil_width, 'running_speed', or 'lick_rate', conditions should include
+    'ophys_experiment_id' to use as index instead of 'cell_specimen_id'
+
+    trial averaged multi_session_dfs are saved to the directory defined by loading.get_multi_session_df_dir()
+    Will overwrite existing dfs if overwrite=True, otherwise will only save the df if the file corresponding to the provided
+    project_code and mouse_id does not exist.
+
+    Function can be run for multiple mouse_ids and/or project_codes using /scripts/run_create_multi_session_df.py
+
+    Currently does not work for behavior training sessions - switch to learning_mFISH branch to use with behavior training + ophys
+
+
+    :param project_code: lims project code to use when identifying what experiment_ids to include in the multi_session_df
+    :param session_number: session_number in ophys_experiments_table used to identify the OPHYS session of interest to
+                            aggregate and average responses over. must be one of [1, 2, 3, 4, 5, 6].
+    :param conditions: columns in stimulus_response_df to group by when averaging across trials / stimulus presentations
+                        if use_extended_stimulus_presentations is True, columns available include the set of columns provided in that table (ex: engagement_state)
+    :param data_type: which timeseries in dataset object to get event triggered responses for
+                        options: 'filtered_events', 'events', 'dff', 'running_speed', 'pupil_diameter', 'lick_rate'
+    :param event_type: how to filter stimulus presentations when creating table with loading.get_stimulus_response_df()
+                        options: 'all', 'omissions', 'changes'
+                        filtering for just changes or just omissions makes loading of stim_response_df much faster than using 'all'
+    :param time_window: window over which to extract the event triggered response around each stimulus presentation time
+    :param interpolate: Boolean, whether or not to interpolate traces
+    :param output_sampling_rate: sampling rate for interpolation, only used if interpolate is True
+    :param response_window_duration: window of time, in seconds, relative to the stimulus start_time, over which to compute the mean response
+                                        (ex: if response_window_duration = 0.5, the mean cell (or pupil or running) trace in a 500ms window will be computed).
+                                        Creates a column called 'mean_response' in the multi_session_df containing this value.
+                                        The same window will be applied to the pre-stimulus response period to create a column called 'baseline_response' in the multi_session-df
+    :param use_extended_stimulus_presentations: Boolean, whether or not to call loading.extended_stimulus_presentations_table() when loading the dataset object,
+                                        setting to True will result in many additional columns being added to the stimulus_presentations_table that can be used as
+                                        conditions to group by when computing averaged responses, such as engagement state, time from last lick / change / omission
+                                        or an index breaking the session up into 10 minute epochs
+    :param overwrite: Boolean, if False, will search for existing files for the provided project_code and mouse_id and
+                            will not save output if file exists. If True, will overwrite any existing files.
+
+    :return: multi_session_df: dataframe containing trial averaged event triggered responses for a given set of conditions,
+                                concatenated over all ophys_experiment_ids for the given mouse_id and project_code
+
     """
     # cant get prefered stimulus if images are not in the set of conditions
     if ('image_name' in conditions) or ('change_image_name' in conditions):

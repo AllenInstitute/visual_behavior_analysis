@@ -26,7 +26,7 @@ if __name__ == "__main__":
     slurm = Slurm(
         mem='120g',  # '24g'
         cpus_per_task=1,
-        time='5:00:00',
+        time='10:00:00',
         partition='braintv',
         job_name='single_cell_plots',
         output=f'{stdout_location}/{Slurm.JOB_ARRAY_MASTER_ID}_{Slurm.JOB_ARRAY_ID}.out',
