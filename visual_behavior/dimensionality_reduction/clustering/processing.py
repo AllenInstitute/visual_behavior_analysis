@@ -1555,7 +1555,7 @@ def shuffle_dropout_score(df_dropout, shuffle_type='all'):
             randomized_cids = df_dropout.sample(frac=1).index.values
             for i, cid in enumerate(randomized_cids):
                 for regressor in regressors:
-                    df_shuffled.iloc[i][regressor][experience_level] = df_dropout.loc[cid][regressor][experience_level]
+                    df_shuffled.iloc[i][(regressor, experience_level)] = df_dropout.loc[cid][(regressor, experience_level)]
 
     elif shuffle_type == 'regressors':
         print('shuffling data across regressors')
@@ -1565,7 +1565,7 @@ def shuffle_dropout_score(df_dropout, shuffle_type='all'):
             randomized_cids = df_dropout.sample(frac=1).index.values
             for i, cid in enumerate(randomized_cids):
                 for experience_level in experience_levels:
-                    df_shuffled.iloc[i][regressor][experience_level] = df_dropout.loc[cid][regressor][experience_level]
+                    df_shuffled.iloc[i][(regressor, experience_level)] = df_dropout.loc[cid][(regressor, experience_level)]
 
     elif shuffle_type == 'experience_within_cell':
         print('shuffling data across experience within each cell')
@@ -1575,8 +1575,8 @@ def shuffle_dropout_score(df_dropout, shuffle_type='all'):
             np.random.shuffle(experience_level_shuffled)
             for j, experience_level in enumerate(experience_level_shuffled):
                 for regressor in regressors:
-                    df_shuffled.loc[cid][regressor][experience_levels[j]] = df_dropout.loc[cid][regressor][
-                        experience_level]
+                    df_shuffled.loc[cid][(regressor, experience_levels[j])] = df_dropout.loc[cid][(regressor,
+                        experience_level)]
     else:
         print('no such shuffle type..')
         df_shuffled = None
@@ -1774,8 +1774,8 @@ def get_mean_dropout_scores_per_cluster(dropout_df, cluster_df=None, labels=None
     '''
     INPUT:
     dropout_df: (pd.DataFrame) of GLM dropout scores (cell_specimen_ids by regressors x experience)
-    cluster_df: (pd.DataFrame), must contain columns 'cluster_id', 'cell_specimen_id'
-    labels: (list, np.array) list or array of int indicating cells' cluster ids,
+    cluster_df: (pd.DataFrame), either provide this df, must contain columns 'cluster_id', 'cell_specimen_id'
+    labels: (list, np.array) or provide this array, list or array of int indicating cells' cluster ids,
                             if provided, len(labels)==len(dropout_df)
 
     Provide either cluster_df or labels. Cluster df must be df with 'cluster_id' and 'cell_specimen_id' columns,
