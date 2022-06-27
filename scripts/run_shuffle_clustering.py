@@ -104,7 +104,8 @@ if __name__ == '__main__':
 
 
             # 3. Plot clusters
-            sort_order = clustered_df.value_counts('cluster_id').index.values # this might b
+            sort_order = clustered_df.value_counts('cluster_id').index.values # this might need upgrade in pandas package
+            print(sort_order)
             fig, ax = vba_clust.plot_clusters_row(clustered_df, shuffled_feature_matrix, cre_line,
                                     sort_order=sort_order, save_dir=save_dir, folder='plots',
                                     suffix = nb_filename+'_clusters')
