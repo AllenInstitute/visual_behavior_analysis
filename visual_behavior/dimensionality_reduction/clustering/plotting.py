@@ -1573,7 +1573,7 @@ def plot_clusters_row(cluster_meta, feature_matrix, cre_line,
     :param cluster_meta: table of metadata for each cell_specimen_id (rows), including cluster_id for each cell_specimen_id
     :param feature_matrix: dropout scores for matched cells with experience levels x features as cols, cells as rows
     :param cre_line: cre line to plot for
-    :param sort_order: dictionary with cre_lines as keys, sorted cluster_ids as values
+    :param sort_order: dictionary with cre_lines as keys, sorted cluster_ids as values, or an array of sorted cluster ids values for one cre line
     :param save_dir: directory to save plot to
     :param folder: folder within save_dir to save plot to
     :param suffix: string to be appended to end of filename
@@ -1582,8 +1582,11 @@ def plot_clusters_row(cluster_meta, feature_matrix, cre_line,
 
     cluster_ids = np.sort(cluster_meta[cluster_meta.cre_line == cre_line].cluster_id.unique())
     # if order to sort clusters is provided, use it
-    if sort_order:
-        cluster_ids = sort_order[cre_line]
+    if sort_order is not None:
+        if type(sort_order) is dict:
+            cluster_ids = sort_order[cre_line]
+        else:
+            cluster_ids = sort_order
     n_clusters = len(cluster_ids)
 
     n_rows = 1
