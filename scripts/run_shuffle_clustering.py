@@ -113,7 +113,7 @@ if __name__ == '__main__':
                                                   sort_order=sort_order,
                                                   save_dir=save_dir,
                                                   folder='plots',
-                                                  suffix=nb_filename)
+                                                  suffix=f'{shuffle_type}_nb{n_boot}')
 
 
 
