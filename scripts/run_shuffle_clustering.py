@@ -56,7 +56,7 @@ if __name__ == '__main__':
 
             # create file name for this shuffle
             nb_filename ='{}_{}_nb{}'.format(cre_line, shuffle_type, n_boot) # nb shuffled dataset
-            nb_full_name = os.path.join(save_dir, nb_filename+'.h5')
+            nb_full_name = os.path.join(save_dir, 'files', nb_filename+'.h5')
 
             # 1.shuffle feature matrix
             # if that shuffle already exist, load it
@@ -83,7 +83,7 @@ if __name__ == '__main__':
 
             # 3. Plot coclustering matrix
             fig = sns.clustermap(coclust_matrix , cmap='Blues')
-            fig_name = nb_full_name + '_coClustering_Matrix'
+            fig_name = nb_filename + '_coClustering_Matrix'
             fig.fig.suptitle(fig_name)
             utils.save_figure(fig.fig, figsize=(25, 20), save_dir=save_dir, folder='plots',
                           fig_title=fig_name, formats=['.png'])
@@ -104,7 +104,7 @@ if __name__ == '__main__':
 
 
             # 3. Plot clusters
-            sort_order = clustered_df.value_counts('cluster_id').index.values
+            sort_order = clustered_df.value_counts('cluster_id').index.values # this might b
             fig, ax = vba_clust.plot_clusters_row(clustered_df, shuffled_feature_matrix, cre_line,
                                     sort_order=sort_order, save_dir=save_dir, folder='plots',
                                     suffix = nb_filename+'_clusters')
