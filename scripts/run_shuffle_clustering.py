@@ -49,7 +49,7 @@ if __name__ == '__main__':
 
     for cre_line in cre_lines:
         feature_matrix = cre_line_dfs[cre_line]
-        for n_boot in range(n_boots):
+        for n_boot in range(1,n_boots):
 
             # create clustering object
             sc = SpectralClustering()
@@ -113,7 +113,8 @@ if __name__ == '__main__':
                                                   sort_order=sort_order,
                                                   save_dir=save_dir,
                                                   folder='plots',
-                                                  suffix=f'{shuffle_type}_nb{n_boot}')
+                                                  suffix=f'{shuffle_type}_nb{n_boot}',
+                                                  formats=[.png])
 
 
 
