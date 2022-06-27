@@ -114,7 +114,7 @@ if __name__ == '__main__':
                                                   save_dir=save_dir,
                                                   folder='plots',
                                                   suffix=f'{shuffle_type}_nb{n_boot}',
-                                                  formats=[.png])
+                                                  formats=['.png'])
 
 
 
