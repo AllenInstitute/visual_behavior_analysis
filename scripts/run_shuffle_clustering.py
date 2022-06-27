@@ -32,6 +32,7 @@ if __name__ == '__main__':
     df_meta = pd.read_hdf(os.path.join(save_dir, 'files', meta_filename), key='df')
     cre_lines = np.sort(df_meta.cre_line.unique())
     shuffle_type = args.shuffle_type
+    n_boots = args.n_boots
 
     # create a dictionary of splitting cre lines
     cre_line_dfs = {}
