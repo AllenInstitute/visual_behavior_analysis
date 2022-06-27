@@ -39,7 +39,7 @@ shuffle_types = ['experience', 'experience_within_cell', 'regressors', 'all']
 n_boots = int(10)
 
 for shuffle_type in shuffle_types:
-    print('running ' + method + ' ' + str(n_cluster))
+    print('running ' + shuffle_type + ' ' + str(n_boots))
     slurm.sbatch('{} ../scripts/run_shuffle_clustering.py --shuffle_type {}  --n_boots {}'.format(
                 python_path,
                 shuffle_type,
