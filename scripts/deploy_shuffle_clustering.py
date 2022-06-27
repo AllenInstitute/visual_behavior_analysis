@@ -36,13 +36,14 @@ slurm = Slurm(
 )
 
 shuffle_types = ['experience', 'experience_within_cell', 'regressors', 'all']
-n_boots = int(10)
+n_boots = np.arange(10)
 
 for shuffle_type in shuffle_types:
     print('running ' + shuffle_type + ' ' + str(n_boots))
-    slurm.sbatch('{} ../scripts/run_shuffle_clustering.py --shuffle_type {}  --n_boots {}'.format(
+    for n_boot in n_boots:
+        slurm.sbatch('{} ../scripts/run_shuffle_clustering.py --shuffle_type {}  --n_boot {}'.format(
                 python_path,
                 shuffle_type,
-                n_boots,
+                n_boot,
                 )
             )
