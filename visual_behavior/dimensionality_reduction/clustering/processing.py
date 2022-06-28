@@ -2029,3 +2029,14 @@ def get_cluster_fractions_per_location(cluster_meta, cluster_metrics):
     colors = [cmap(int(np.round(i)))[:3] for i in exp_mod_normed]
     location_fractions['exp_mod_color'] = colors
     return location_fractions
+
+def get_sorted_cluster_ids(cluster_df):
+    '''
+    Maybe a reduntant function, but used to quickly get cluster ids that are sorted by size
+    inputs:
+    cluster_df (pd.DataFrame) dataframe with column 'cluster_id' of rows = cells
+    returns:
+    sorted_cluster_ids (np.array) of cluster ids sorted by size for plotting
+    '''
+    sorted_cluster_ids = cluster_df.value_counts('cluster_id').index.values
+    return sorted_cluster_ids
