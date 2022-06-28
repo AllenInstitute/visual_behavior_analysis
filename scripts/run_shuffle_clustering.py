@@ -99,15 +99,15 @@ if __name__ == '__main__':
             cluster_ids = labels +1
             data = {'cell_specimen_id': ids, 'cre_line': [cre_line] * len(ids),
                     'cluster_id': cluster_ids, 'labels': labels}
-            clustered_df = pd.DataFrame(data=data)
-            clustered_df.to_hdf(nb_full_name, key='clustered_df')
+            cluster_df = pd.DataFrame(data=data)
+            cluster_df.to_hdf(nb_full_name, key='cluster_df')
 
 
         # 3. Plot clusters
-        sort_order_array = clustered_df.value_counts('cluster_id').index.values # this might need upgrade in pandas package if you get an arror
+        sort_order_array = cluster_df.value_counts('cluster_id').index.values # this might need upgrade in pandas package if you get an arror
         sort_order = {cre_line: sort_order_array} # sort order must be a dictionary with cre line as a key
         # make sure that clustered_df (or meta dataframe) in indexed with cell specimen ids
-        vba_clust.plot_clusters_row(clustered_df.set_index('cell_specimen_id'),
+        vba_clust.plot_clusters_row(cluster_df.set_index('cell_specimen_id'),
                                               shuffled_feature_matrix,
                                               cre_line,
                                               sort_order=sort_order,
