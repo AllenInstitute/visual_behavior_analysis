@@ -36,7 +36,7 @@ slurm = Slurm(
 )
 
 shuffle_types = ['experience', 'experience_within_cell', 'regressors', 'all']
-n_boots = np.arange(10)
+n_boots = np.arange(150)
 
 for shuffle_type in shuffle_types:
     print('running ' + shuffle_type + ' ' + str(n_boots))
