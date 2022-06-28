@@ -76,7 +76,7 @@ if __name__ == '__main__':
                 print('done loading coclust matrix..')
         else:
 
-            coclust_matrix = vba_clust.get_coClust_matrix(X, model=sc, n_clusters=n_clusters_cre_dict[cre_line])
+            coclust_matrix = vba_clust.get_coClust_matrix(X , model=sc, n_clusters=n_clusters_cre_dict[cre_line])
             vba_clust.save_clustering_results(coclust_matrix, nb_full_name)
             print('saved coclustering matrix..')
 
@@ -88,13 +88,14 @@ if __name__ == '__main__':
                           fig_title=fig_name, formats=['.png'])
 
         # fit
+
         nb_full_name = os.path.join(save_dir, 'files', nb_filename+'_cluster_labels.h5')
         if os.path.exists(nb_full_name):
             clustered_df = pd.read_hdf(nb_full_name, key='clustered_df')
         else:
             ids = feature_matrix.index.values
             cluster = ac(n_clusters=n_clusters_cre_dict[cre_line], affinity='euclidean', linkage='average')
-            labels = cluster.fit_predict(X)
+            labels = cluster.fit_predict(coclust_matrix)
             cluster_ids = labels +1
             data = {'cell_specimen_id': ids, 'cre_line': [cre_line] * len(ids),
                     'cluster_id': cluster_ids, 'labels': labels}
