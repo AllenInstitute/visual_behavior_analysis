@@ -200,7 +200,7 @@ def plot_valid_segmentation_mask_outlines_per_cell_for_experiment(ophys_experime
         save_figure = False
     # plot max or average image
     # ax = plot_max_intensity_projection_for_experiment(ophys_experiment_id, ax=ax)
-    ax = ep.plot_average_image_for_experiment(ophys_experiment_id, ax=ax)
+    ax = plot_average_image_for_experiment(ophys_experiment_id, ax=ax)
     # plot mask outlines
     dataset = loading.get_ophys_dataset(ophys_experiment_id)
     cell_specimen_table = dataset.cell_specimen_table.copy()
