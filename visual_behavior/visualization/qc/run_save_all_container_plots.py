@@ -25,7 +25,7 @@ cache = VisualBehaviorOphysProjectCache.from_lims()
 experiments_table = cache.get_ophys_experiment_table(passed_only=False)
 experiments = experiments_table[experiments_table.project_code=='LearningmFISHTask1A']
 # experiments = experiments[experiments.mouse_id=='612764']
-experiments = experiments[experiments.mouse_id=='603892']
+experiments = experiments[experiments.mouse_id.isin(['603892', '612764'])]
 container_ids = experiments.ophys_container_id.unique()
 
 if __name__ == "__main__":
