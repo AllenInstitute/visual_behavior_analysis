@@ -198,13 +198,16 @@ def plot_valid_segmentation_mask_outlines_per_cell_for_experiment(ophys_experime
         save_figure = True
     else:
         save_figure = False
-    ax = plot_max_intensity_projection_for_experiment(ophys_experiment_id, ax=ax)
+    # plot max or average image
+    # ax = plot_max_intensity_projection_for_experiment(ophys_experiment_id, ax=ax)
+    ax = ep.plot_average_image_for_experiment(ophys_experiment_id, ax=ax)
+    # plot mask outlines
     dataset = loading.get_ophys_dataset(ophys_experiment_id)
     cell_specimen_table = dataset.cell_specimen_table.copy()
     if len(cell_specimen_table) > 0:
         for cell_roi_id in cell_specimen_table.cell_roi_id.values:
             mask = cell_specimen_table[cell_specimen_table.cell_roi_id == cell_roi_id].roi_mask.values[0]
-            ax.contour(mask, levels=0, colors=['red'], linewidths=[0.6])
+            ax.contour(mask, levels=0, colors=['red'], linewidths=[0.4])
     ax.set_title(str(ophys_experiment_id)+'\nn valid ROIs = ' + str(len(cell_specimen_table.cell_roi_id.values)))
     ax.axis('off')
     if save_figure:
