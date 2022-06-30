@@ -60,6 +60,7 @@ def plot_max_intensity_projection_for_experiment(ophys_experiment_id, ax=None):
     ax.set_title(str(ophys_experiment_id))
     ax.axis('off')
     if save_figure:
+        print('plotting max intensity projection for ', ophys_experiment_id)
         utils.save_figure(fig, figsize, loading.get_experiment_plots_dir(), 'max_intensity_projection',
                        get_file_name_for_experiment(ophys_experiment_id))
     return ax

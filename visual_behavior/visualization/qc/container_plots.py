@@ -131,9 +131,11 @@ def plot_sdk_max_projection_images_for_container(ophys_container_id, save_figure
     ax = ax_to_array(ax)
     for i, ophys_experiment_id in enumerate(ophys_experiment_ids):
         try:
+            print('plotting max intensity projection for ',ophys_experiment_id)
             ax[i] = ep.plot_max_intensity_projection_for_experiment(ophys_experiment_id, ax=ax[i])
             # plot and save to experiment_plots dir when ax=None
             ep.plot_max_intensity_projection_for_experiment(ophys_experiment_id, ax=None)
+            print('done')
         except:
             pass
         session_type = loading.get_session_type_for_ophys_experiment_id(ophys_experiment_id, experiments_table)
@@ -141,10 +143,12 @@ def plot_sdk_max_projection_images_for_container(ophys_container_id, save_figure
         ax[i].set_title(str(ophys_experiment_id) + '\n' + session_type)
 
     if save_figure:
+        print('saving plot for container', ophys_container_id)
         ut.save_figure(fig, figsize, loading.get_container_plots_dir(), 'max_intensity_projection',
                        get_file_name_for_container(ophys_container_id))
         ut.save_figure(fig, figsize, loading.get_container_plots_dir(), 'all',
                        get_file_name_for_container(ophys_container_id) + '_max_intensity_projection')
+        print('done')
 
 
 def plot_movie_max_projection_images_for_container(ophys_container_id, save_figure=True):
