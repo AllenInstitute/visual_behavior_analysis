@@ -137,7 +137,7 @@ def plot_valid_segmentation_mask_overlay_for_experiment(ophys_experiment_id, ax=
         save_figure = False
     ax = plot_max_intensity_projection_for_experiment(ophys_experiment_id, ax=ax)
     try:
-        dataset = loading.get_ophys_dataset(ophys_experiment_id, include_invalid_rois=False)
+        dataset = loading.get_ophys_dataset(ophys_experiment_id, exclude_invalid_rois=True)
         segmentation_mask = dataset.segmentation_mask_image  # i am not sure if this is correct, check relevant SDK issue to see what they did
         mask = np.zeros(segmentation_mask[0].shape)
         mask[:] = np.nan
@@ -179,7 +179,7 @@ def plot_valid_segmentation_mask_outlines_for_experiment(ophys_experiment_id, ax
     else:
         save_figure = False
     ax = plot_max_intensity_projection_for_experiment(ophys_experiment_id, ax=ax)
-    dataset = loading.get_ophys_dataset(ophys_experiment_id, include_invalid_rois=False)
+    dataset = loading.get_ophys_dataset(ophys_experiment_id, exclude_invalid_rois=True)
     segmentation_mask = dataset.segmentation_mask_image  # i am not sure if this is correct, check relevant SDK issue to see what they did
     mask = np.zeros(segmentation_mask[0].shape)
     mask[segmentation_mask[0] == 1] = 1
@@ -261,7 +261,6 @@ def plot_traces_heatmap_for_experiment(ophys_experiment_id, ax=None):
         save_figure = True
     else:
         save_figure = False
-    # ax.pcolormesh(dff_traces, cmap='magma', vmin=0, vmax=0.5)
     ax = sns.heatmap(dff_traces, cmap='magma', vmin=0, vmax=0.5, cbar_kws={'label': 'dF/F'}, ax=ax)
     ax.set_ylim(-0.5, dff_traces.shape[0] + 0.5)
     ax.set_ylabel('cells')
@@ -357,21 +356,24 @@ def plot_motion_correction_xy_shift_for_experiment(ophys_experiment_id, ax=None)
     ax.set_xlabel('time (sec)')
     ax.set_ylabel('pixels')
     # get metrics from saved file and add to plot title
-    save_dir = r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/motion_correction'
-    # motion_df = pd.read_csv(os.path.join(save_dir, 'motion_correction_values_passing_experiments.csv'))
-    motion_df = pd.read_hdf(os.path.join(save_dir, 'motion_correction_values_all_experiments.h5'), key='df')
-    motion_df = motion_df.set_index('ophys_experiment_id')
-    cols_to_plot = ['x_mean', 'x_min', 'x_max', 'x_range', 'x_std',
-                    'y_mean', 'y_min', 'y_max', 'y_range', 'y_std']
-    row_data = motion_df.loc[ophys_experiment_id]
-    title = str(ophys_experiment_id) + ' - '
-    for col in cols_to_plot:  # plot all metric values
-        title = title + col + ': ' + str(np.round(row_data[col], 2)) + ', '
-    if len(row_data.values_over_threshold) > 0:
-        title = title + '\n outlier for: '
-        for col in row_data.values_over_threshold:
-            title = title + col + ', '
-    ax.set_title(title)
+    try:
+        save_dir = r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/motion_correction'
+        # motion_df = pd.read_csv(os.path.join(save_dir, 'motion_correction_values_passing_experiments.csv'))
+        motion_df = pd.read_hdf(os.path.join(save_dir, 'motion_correction_values_all_experiments.h5'), key='df')
+        motion_df = motion_df.set_index('ophys_experiment_id')
+        cols_to_plot = ['x_mean', 'x_min', 'x_max', 'x_range', 'x_std',
+                        'y_mean', 'y_min', 'y_max', 'y_range', 'y_std']
+        row_data = motion_df.loc[ophys_experiment_id]
+        title = str(ophys_experiment_id) + ' - '
+        for col in cols_to_plot:  # plot all metric values
+            title = title + col + ': ' + str(np.round(row_data[col], 2)) + ', '
+        if len(row_data.values_over_threshold) > 0:
+            title = title + '\n outlier for: '
+            for col in row_data.values_over_threshold:
+                title = title + col + ', '
+        ax.set_title(title)
+    except:
+        print('cant get motion metrics from file in', save_dir)
     if save_figure:
         utils.save_figure(fig, figsize, loading.get_experiment_plots_dir(), 'motion_correction_xy_shift', get_metadata_string(dataset))
     return ax
@@ -596,12 +598,11 @@ def plot_behavior_timeseries_for_experiment(ophys_experiment_id, xlim_seconds=No
     if save_figure:
         utils.save_figure(fig, figsize, utils.get_experiment_plots_dir(), 'population_activity_and_behavior',
                           get_metadata_string(dataset) + '_population_activity_and_behavior')
-        plt.close()
     return ax
 
 
 def plot_high_low_snr_trace_examples(experiment_id, xlim_seconds=None, plot_stimuli=False, ax=None):
-    dataset = loading.get_ophys_dataset(experiment_id, include_invalid_rois=False)
+    dataset = loading.get_ophys_dataset(experiment_id)
     if xlim_seconds is None:
         xlim_seconds = [dataset.ophys_timestamps[0], dataset.ophys_timestamps[-1]]
     #     inds = [0, len(dataset.ophys_timestamps) - 1]
@@ -687,7 +688,7 @@ def plot_motion_correction_and_population_average(experiment_id, ax=None):
 
 
 def plot_remaining_decrosstalk_masks_for_experiment(experiment_id, ax=None):
-    dataset = loading.get_ophys_dataset(experiment_id, include_invalid_rois=True)
+    dataset = loading.get_ophys_dataset(experiment_id, exclude_invalid_rois=False)
     remaining_crosstalk_dict = loading.get_remaining_crosstalk_amount_dict(experiment_id)
     decrosstalk_rois = [int(cell_roi_id) for cell_roi_id in list(remaining_crosstalk_dict.keys())]
     roi_masks = {k: dataset.roi_masks[k] for k in decrosstalk_rois}
@@ -910,7 +911,7 @@ def plot_classifier_validation_for_experiment(ophys_experiment_id, save_figure=T
     cell_table = get_suite2p_rois(segmentation_output_file)
     cell_table['experiment_id'] = expt
     # move suite2P masks to the proper place
-    dataset = loading.get_ophys_dataset(expt, include_invalid_rois=True)
+    dataset = loading.get_ophys_dataset(expt, exclude_invalid_rois=False)
     # cell_table = place_masks_in_full_image(cell_table, dataset.max_projection.data)
     # merge with classifier results
     cell_table = cell_table.merge(data, on=['experiment_id', 'id'])
@@ -922,7 +923,7 @@ def plot_classifier_validation_for_experiment(ophys_experiment_id, save_figure=T
     # limit to classifier results for this experiment
     expt_data = data[data.experiment_id == expt].copy()
     # get production segmentation & classification from SDK
-    # dataset = loading.get_ophys_dataset(expt, include_invalid_rois=True)
+    # dataset = loading.get_ophys_dataset(expt, exclude_invalid_rois=False)
     ct = dataset.cell_specimen_table.copy()
     roi_masks = dataset.roi_masks.copy()
     max_projection = dataset.max_projection.data
@@ -1093,8 +1094,8 @@ def plot_metrics_mask(roi_mask_dict, metrics_dict, metric_name, max_projection=N
     return ax
 
 
-def plot_metrics_mask_for_experiment(ophys_experiment_id, metric, include_invalid_rois=True, ax=None):
-    dataset = loading.get_ophys_dataset(ophys_experiment_id, include_invalid_rois=include_invalid_rois)
+def plot_metrics_mask_for_experiment(ophys_experiment_id, metric, exclude_invalid_rois=True, ax=None):
+    dataset = loading.get_ophys_dataset(ophys_experiment_id, exclude_invalid_rois=exnclude_invalid_rois)
     cell_table = dataset.cell_specimen_table.copy()
     metrics_df = loading.get_metrics_df(ophys_experiment_id)
 
@@ -1121,8 +1122,8 @@ def plot_metrics_mask_for_experiment(ophys_experiment_id, metric, include_invali
     return ax
 
 
-def plot_filtered_masks_for_experiment(ophys_experiment_id, include_invalid_rois=True, ax=None):
-    dataset = loading.get_ophys_dataset(ophys_experiment_id, include_invalid_rois=include_invalid_rois)
+def plot_filtered_masks_for_experiment(ophys_experiment_id, exclude_invalid_rois=False, ax=None):
+    dataset = loading.get_ophys_dataset(ophys_experiment_id, exclude_invalid_rois=exclude_invalid_rois)
     max_projection = dataset.max_projection.data
     cell_table = dataset.cell_specimen_table.copy()
     metrics_df = loading.get_metrics_df(ophys_experiment_id)

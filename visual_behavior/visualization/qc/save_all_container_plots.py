@@ -7,6 +7,7 @@ def main():
         # "ophys_session_sequence": cp.plot_container_session_sequence,
         # "max_projection_images": cp.plot_sdk_max_projection_images_for_container,
         # "average_images": cp.plot_sdk_average_images_for_container,
+        "experiment_summary": cp.plot_experiment_summary_figure_for_container,
         "segmentation_masks": cp.plot_segmentation_masks_for_container,
         "cell_roi_and_dff_traces": cp.plot_cell_rois_and_dff_traces_for_container,
         # "max_projection_images_movies": cp.plot_movie_max_projection_images_for_container,
