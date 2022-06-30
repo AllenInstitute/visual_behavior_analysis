@@ -813,7 +813,7 @@ def get_ophys_dataset(ophys_experiment_id, exclude_invalid_rois=True, load_from_
 
     if load_from_lims:
         print('loading from lims, exclude_invalid_rois =', exclude_invalid_rois)
-        cache = bpc.from_lims()
+        # cache = bpc.from_lims()
         # dataset = cache.get_behavior_ophys_experiment(int(ophys_experiment_id))
         dataset = BehaviorOphysExperiment.from_lims(int(ophys_experiment_id), exclude_invalid_rois=exclude_invalid_rois)
     elif load_from_nwb:
