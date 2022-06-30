@@ -185,6 +185,7 @@ def plot_single_cell_activity_and_behavior(dataset, cell_specimen_id, save_figur
 
 def plot_cell_roi_mask_and_dff_trace(dataset, cell_roi_id, save_figure=True):
     dff_traces = dataset.dff_traces.copy()
+    corrected_fluorescence = dataset.corrected_fluorescence_traces.copy()
     roi_masks = dataset.roi_masks.copy()
     max_projection = dataset.max_projection.data.copy()
     average_image = dataset.average_projection.data.copy()
@@ -194,15 +195,31 @@ def plot_cell_roi_mask_and_dff_trace(dataset, cell_roi_id, save_figure=True):
     fig, ax = plt.subplots(2, 2, figsize=figsize, gridspec_kw={'width_ratios':[1,3]})
     ax = ax.ravel()
     ax[0] = sf.plot_cell_zoom(roi_masks, average_image, cell_roi_id, spacex=40, spacey=40, show_mask=True, ax=ax[0])
-    ax[1].plot(dataset.ophys_timestamps, dff_traces[dff_traces.cell_roi_id==cell_roi_id].dff.values[0])
-    ax[1].set_xlim(500, 560)
-    ax[1].set_xlabel('time (sec)')
-    ax[1].set_ylabel('dF/F')
+    # create twinax
+    ax1 = ax[1].twinx()
+    # dff traces
+    ax1.plot(dataset.ophys_timestamps, dff_traces[dff_traces.cell_roi_id == cell_roi_id].dff.values[0], label='dF/F', color='purple')
+    ax1.set_xlim(500, 680)
+    ax1.set_xlabel('time (sec)')
+    ax1.set_ylabel('dF/F')
+    ax1.legend()
+    # show corrected fluorescence as well
+    ax[1].plot(dataset.ophys_timestamps, corrected_fluorescence[corrected_fluorescence.cell_roi_id==cell_roi_id].corrected_fluorescence.values[0], color='g', label='fluor')
+    ax[1].set_ylabel('corrected fluorescence')
+    ax[1].legend()
+
 
     ax[2] = sf.plot_cell_zoom(roi_masks, average_image, cell_roi_id, show_mask=True, alpha=1, full_image=True, ax=ax[2])
-    ax[3].plot(dataset.ophys_timestamps, dff_traces[dff_traces.cell_roi_id==cell_roi_id].dff.values[0])
-    ax[3].set_xlabel('time (sec)')
-    ax[3].set_ylabel('dF/F')
+    # create twinx
+    ax3 = ax[3].twinx()
+    ax3.plot(dataset.ophys_timestamps, dff_traces[dff_traces.cell_roi_id==cell_roi_id].dff.values[0], label='dF/F', color='purple')
+    ax3.set_xlabel('time (sec)')
+    ax3.set_ylabel('dF/F')
+    ax3.legend()
+    # show corrected fluorescence as well
+    ax[3].plot(dataset.ophys_timestamps, corrected_fluorescence[corrected_fluorescence.cell_roi_id==cell_roi_id].corrected_fluorescence.values[0], color='g', label='fluor')
+    ax[3].set_ylabel('corrected fluorescence')
+    ax[3].legend()
 
     filename = utils.get_metadata_string(metadata)
     filename = filename+'_'+str(cell_roi_id)
