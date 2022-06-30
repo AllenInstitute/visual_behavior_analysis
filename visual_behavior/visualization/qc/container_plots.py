@@ -102,6 +102,7 @@ def plot_container_session_sequence(ophys_container_id, save_figure=True):
     fig.subplots_adjust(right=0.1)
     fig.subplots_adjust(top=0.9)
     if save_figure:
+        print('saving ophys_session_sequence for', ophys_container_id)
         ut.save_figure(fig, figsize, loading.get_container_plots_dir(), 'ophys_session_sequence',
                        get_file_name_for_container(ophys_container_id))
         ut.save_figure(fig, figsize, loading.get_container_plots_dir(), 'all',
