@@ -73,7 +73,6 @@ def get_platform_analysis_cache_dir():
 
 def get_production_cache_dir():
     """Get directory containing a manifest file that includes all VB production data, including failed experiments"""
-    # cache_dir = r'/allen/programs/braintv/workgroups/nc-ophys/learning_mFISH/learning_project_cache'
     cache_dir = r'/allen/programs/mindscope/workgroups/learning/ophys/learning_project_cache'
     # cache_dir = r'\\allen\programs\mindscope\workgroups\learning\ophys\learning_project_cache'
     return cache_dir
@@ -81,6 +80,7 @@ def get_production_cache_dir():
 
 def get_qc_plots_dir():
     return r'/allen/programs/mindscope/workgroups/learning/ophys/qc_plots'
+    # return r'\\allen\programs\mindscope\workgroups\learning\ophys\qc_plots'
 
 
 def get_super_container_plots_dir():
