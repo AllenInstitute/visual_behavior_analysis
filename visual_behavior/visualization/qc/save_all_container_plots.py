@@ -4,17 +4,17 @@ import argparse
 
 def main():
     possible_plots = {
-        # "ophys_session_sequence": cp.plot_container_session_sequence,
-        # "max_projection_images": cp.plot_sdk_max_projection_images_for_container,
-        # "average_images": cp.plot_sdk_average_images_for_container,
+        "ophys_session_sequence": cp.plot_container_session_sequence,
+        "max_projection_images": cp.plot_sdk_max_projection_images_for_container,
+        "average_images": cp.plot_sdk_average_images_for_container,
         "experiment_summary": cp.plot_experiment_summary_figure_for_container,
-        # "segmentation_masks": cp.plot_segmentation_masks_for_container,
-        # "cell_roi_and_dff_traces": cp.plot_cell_rois_and_dff_traces_for_container,
+        "segmentation_masks": cp.plot_segmentation_masks_for_container,
+        "cell_roi_and_dff_traces": cp.plot_cell_rois_and_dff_traces_for_container,
         # "max_projection_images_movies": cp.plot_movie_max_projection_images_for_container,
         # "average_images_movies": cp.plot_movie_average_images_for_container,
         # "segmented_rois_by_experiment": cp.plot_number_segmented_rois_for_container,
         # "segmentation_mask_overlays": cp.plot_segmentation_mask_overlays_for_container,
-        # "dff_traces_heatmaps": cp.plot_dff_traces_heatmaps_for_container,
+        "dff_traces_heatmaps": cp.plot_dff_traces_heatmaps_for_container,
         # "motion_correction_xy_shift": cp.plot_motion_correction_xy_shift_for_container,
         # "nway_match_fraction": cp.plot_nway_match_fraction,
         # "nway_warp_overlay": cp.plot_nway_warp_overlay,
