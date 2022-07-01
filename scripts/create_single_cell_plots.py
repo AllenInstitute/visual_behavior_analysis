@@ -102,7 +102,7 @@ if __name__ == '__main__':
     # results_pivoted = results_pivoted[results_pivoted.cell_specimen_id.isin(matched_cells)]
 
     # set features to use in plots
-    dropout_features = ['variance_explained_full', 'all-images', 'omissions', 'behavioral', 'task']
+    dropout_features = ['all-images', 'omissions', 'behavioral', 'task']
     # dropout_features = ['all-images', 'omissions', 'behavioral', 'task']
 
     # features to use for weights_df
