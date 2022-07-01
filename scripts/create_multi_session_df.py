@@ -20,7 +20,7 @@ if __name__ == '__main__':
     print(project_code, session_number)
 
     # params for stim response df creation
-    time_window = [-3, 3.1]
+    time_window = [-2, 2.1]
     interpolate = True
     output_sampling_rate = 30
     # response_window_duration_seconds = 0.5
@@ -30,34 +30,39 @@ if __name__ == '__main__':
     physio_data_types = ['filtered_events', 'events', 'dff']
     behavior_data_types = ['pupil_width', 'running_speed', 'lick_rate']
 
-    physio_conditions = [['cell_specimen_id', 'omitted'],
-                         ['cell_specimen_id', 'omitted', 'epoch'],
-                         ['cell_specimen_id', 'is_change'],
-                         ['cell_specimen_id', 'is_change', 'epoch'],
-                         ['cell_specimen_id', 'is_change', 'image_name'],
-                         ['cell_specimen_id', 'is_change', 'image_name', 'epoch'],
-                         ['cell_specimen_id', 'is_change', 'hit'],
-                         ['cell_specimen_id', 'pre_change', 'epoch'],
-                         ['cell_specimen_id', 'is_change', 'hit', 'epoch'],
-                         ['cell_specimen_id', 'omitted', 'pre_omitted'],]
+    physio_conditions = [['cell_specimen_id', 'is_change'], # all stim presentations, change vs. not a change
+                         ['cell_specimen_id', 'is_change', 'epoch'], # all stim presentations, change vs no change, 10 min epochs
+                         ['cell_specimen_id', 'is_change', 'image_name'], # all stim presentations, change vs no change, each image identity
+                         ['cell_specimen_id', 'omitted'], # all omissions
+                         ['cell_specimen_id', 'omitted', 'epoch'], # omissions in 10 min epochs
+                         # ['cell_specimen_id', 'is_change'], # only changes
+                         # ['cell_specimen_id', 'is_change', 'epoch'], # only changes, 10 min epochs
+                         # ['cell_specimen_id', 'is_change', 'image_name'], # only changes, each image identity
+                         ['cell_specimen_id', 'is_change', 'hit', 'epoch'], # only changes, hit vs. miss, 10 min epochs
+                         ['cell_specimen_id', 'is_change', 'hit'], # only changes, hit vs. miss
+                         ['cell_specimen_id', 'pre_change', 'epoch'], # all stim presentations, pre-change, 10 min epochs
+                         ['cell_specimen_id', 'omitted', 'pre_omitted'],] # all stim presentations, omission or not, pre-omitted or not
 
-    behavior_conditions = [['ophys_experiment_id', 'omitted'],
-                            ['ophys_experiment_id', 'omitted', 'epoch'],
-                            ['ophys_experiment_id', 'is_change'],
+    behavior_conditions = [['ophys_experiment_id', 'is_change'],
                             ['ophys_experiment_id', 'is_change', 'epoch'],
                             ['ophys_experiment_id', 'is_change', 'image_name'],
-                            ['ophys_experiment_id', 'is_change', 'image_name', 'epoch'],
-                            ['ophys_experiment_id', 'is_change', 'hit'],
-                            ['ophys_experiment_id', 'is_change', 'pre_change', 'epoch'],
+                            ['ophys_experiment_id', 'omitted'],
+                            ['ophys_experiment_id', 'omitted', 'epoch'],
+                            # ['ophys_experiment_id', 'is_change'],
+                            # ['ophys_experiment_id', 'is_change', 'epoch'],
+                            # ['ophys_experiment_id', 'is_change', 'image_name'],
                             ['ophys_experiment_id', 'is_change', 'hit', 'epoch'],
+                            ['ophys_experiment_id', 'is_change', 'hit'],
+                            ['ophys_experiment_id', 'pre_change', 'epoch'],
                             ['cell_specimen_id', 'omitted', 'pre_omitted'],]
 
 
     # event types corresponding to the above physio and behavior conditions - must be in same sequential order
-    event_types_for_conditions = ['omissions', 'omissions',
+    event_types_for_conditions = ['all', 'all', 'all',
+                                  'omissions', 'omissions',
+                                  # 'changes', 'changes', 'changes',
                                   'changes', 'changes',
-                                  'changes', 'changes', 'changes',
-                                  'all', 'all', 'all']
+                                  'all', 'all']
 
     # add engagement state to all conditions
     # for i in range(len(physio_conditions)):
@@ -80,7 +85,7 @@ if __name__ == '__main__':
                                              time_window=time_window, interpolate=interpolate, output_sampling_rate=output_sampling_rate,
                                              response_window_duration=response_window_duration,
                                              use_extended_stimulus_presentations=use_extended_stimulus_presentations,
-                                             overwrite=False)
+                                             overwrite=True)
             except Exception as e:
                 print('failed to create multi_session_df for', data_type, event_type, conditions)
                 print(e)
