@@ -2290,7 +2290,7 @@ def plot_number_clusters_per_mouse(cluster_meta, save_dir=None, folder=None):
         data = n_clusters[n_clusters.cre_line==cre_line]
         order = np.sort(data.mouse_id.unique())
         ax[i] = sns.barplot(data=data, x='mouse_id', y='n_clusters', order=order,
-                            ax=ax[i], hue='equipment_name', hue_order=rigs)
+                            ax=ax[i],) #hue='equipment_name', hue_order=rigs)
         ax[i].set_title(get_cell_type_for_cre_line(cre_line, cluster_meta))
         ax[i].set_xticklabels(order, rotation=90, fontsize=12)
         ax[i].legend(bbox_to_anchor=(1,1), fontsize='xx-small')
