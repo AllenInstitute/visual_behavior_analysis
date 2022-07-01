@@ -117,7 +117,7 @@ def plot_experiment_summary_figure(experiment_id, save_figure=True):
     ax['4_3:'] = ep.plot_behavior_timeseries_for_experiment(experiment_id, xlim_seconds=xlim_seconds, ax=ax['4_3:'])
 
     fig.tight_layout()
-    title = dataset.metadata_string
+    title = ep.get_metadata_string(dataset)
     plt.suptitle(title, x=0.5, y=.91, fontsize=20)
     if save_figure:
         # save_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\qc_plots\experiment_plots'
