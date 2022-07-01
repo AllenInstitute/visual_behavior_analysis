@@ -9,7 +9,7 @@ from visual_behavior.data_access import loading
 def get_multi_session_df(project_code, session_number, conditions, data_type, event_type,
                          time_window=[-3, 3.1], interpolate=True, output_sampling_rate=30,
                          response_window_duration=0.5, use_extended_stimulus_presentations=False, overwrite=False):
-       """
+    """
 
     For a given session_number (i.e. 1 for OPHYS_1, 2 for OPHYS_2) within a given project_code, loop through all ophys_experiment_ids, load the SDK dataset object,
     create stimulus_response_df with event aligned traces for provided data_type (ex: 'dff', 'events', 'pupil_width', etc),
@@ -58,6 +58,7 @@ def get_multi_session_df(project_code, session_number, conditions, data_type, ev
                                 concatenated over all ophys_experiment_ids for the given mouse_id and project_code
 
     """
+
     # cant get prefered stimulus if images are not in the set of conditions
     if ('image_name' in conditions) or ('change_image_name' in conditions):
         get_pref_stim = True
