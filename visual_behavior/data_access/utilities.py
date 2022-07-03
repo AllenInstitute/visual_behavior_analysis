@@ -1288,6 +1288,76 @@ def add_project_code_to_behavior_sessions(behavior_sessions_table, ophys_experim
     return behavior_sessions
 
 
+def add_training_stage_info_to_behavior_sessions(behavior_sessions):
+    """
+    Adds a column to behavior_sessions called `training_stage` that is the first two elements of `session_type`,
+    i.e. 'TRAINING_2', or 'OPHYS_3',
+    as well as Boolean columns indicating whether a given session was the first or last day of each `training_stage`
+    """
+    # create training_stage column as abbreviation of session_type
+    behavior_sessions['training_stage'] = [stage.split('_')[0] + '_' + stage.split('_')[1] for stage in
+                                           behavior_sessions.session_type.values]
+
+    # add first day of stage based on acquisition date
+    behavior_sessions['first_day_of_stage'] = False
+    stage_start = behavior_sessions.sort_values(by=['mouse_id', 'date_of_acquisition'])
+    stage_start = stage_start.drop_duplicates(subset=['mouse_id', 'training_stage'])
+    behavior_sessions.at[stage_start.index.values, 'first_day_of_stage'] = True
+
+    # add last day of stage based on acquisition date
+    behavior_sessions['last_day_of_stage'] = False
+    stage_end = behavior_sessions.sort_values(by=['mouse_id', 'date_of_acquisition'], ascending=False)
+    stage_end = stage_end.drop_duplicates(subset=['mouse_id', 'training_stage'])
+    behavior_sessions.at[stage_end.index.values, 'last_day_of_stage'] = True
+
+    return behavior_sessions
+
+
+def add_experience_level_to_behavior_sessions(behavior_sessions):
+    """
+    adds a column to behavior_sessions table that contains a string indicating whether a session had
+    exposure level of Familiar, Novel 1, or Novel >1, based on session number and prior_exposure_to_image_set for ophys sessions,
+    then assign all TRAINING sessions with images as 'Familiar',
+    and any TRAINING sessions with gratings as 'Gratings'
+
+    input df must have 'session_number' column which can be added / update using the add_session_number_to_experiments_table function
+    """
+    # add experience_level column with strings indicating relevant conditions
+    behavior_sessions['experience_level'] = 'None'
+
+    # ophys sessions 1,2,3 = Familiar
+    indices = behavior_sessions[behavior_sessions.session_number.isin([1, 2, 3])].index.values
+    behavior_sessions.loc[indices, 'experience_level'] = 'Familiar'
+
+    # ophys session 4 with no prior exposures to image set = Novel
+    indices = behavior_sessions[(behavior_sessions.session_number == 4) &
+                                (behavior_sessions.prior_exposures_to_image_set == 0)].index.values
+    behavior_sessions.loc[indices, 'experience_level'] = 'Novel 1'
+
+    # ophys sessions 4,5,6 with at least one exposure to image set = Novel>1
+    indices = behavior_sessions[(behavior_sessions.session_number.isin([4, 5, 6])) &
+                                (behavior_sessions.prior_exposures_to_image_set != 0)].index.values
+    behavior_sessions.loc[indices, 'experience_level'] = 'Novel >1'
+
+    # training sessions with images = Familiar Training
+    indices = behavior_sessions[(behavior_sessions.session_type.str.contains('TRAINING')) &
+                                (behavior_sessions.session_type.str.contains('images'))].index.values
+    behavior_sessions.at[indices, 'experience_level'] = 'Familiar Training'
+
+    # first training session with images = Novel Training
+    indices = behavior_sessions[(behavior_sessions.session_type.str.contains('TRAINING')) &
+                                (behavior_sessions.session_type.str.contains('images')) &
+                                (behavior_sessions.prior_exposures_to_image_set == 0)].index.values
+    behavior_sessions.at[indices, 'experience_level'] = 'Novel Training'
+
+    # training sessions with gratings = Gratings
+    indices = behavior_sessions[(behavior_sessions.session_type.str.contains('TRAINING')) & (
+    behavior_sessions.session_type.str.contains('gratings'))].index.values
+    behavior_sessions.at[indices, 'experience_level'] = 'Gratings'
+
+    return behavior_sessions
+
+
 def add_session_number_to_experiment_table(experiments):
     # add session number column, extracted frrom session_type
     experiments['session_number'] = [int(session_type[6]) if 'OPHYS' in session_type else None for session_type in
