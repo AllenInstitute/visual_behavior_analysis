@@ -304,6 +304,10 @@ def get_platform_paper_behavior_session_table(include_4x2_data=False):
     behavior_sessions = utilities.add_experience_level_to_behavior_sessions(behavior_sessions)
     print(len(behavior_sessions), 'sessions after adding experience_level column')
 
+    # add training_stage info
+    behavior_sessions = utilities.add_training_stage_info_to_behavior_sessions(behavior_sessions)
+    print(len(behavior_sessions), 'sessions after adding training_stage columns')
+
     # reset the index to behavior_session_id
     behavior_sessions = behavior_sessions.set_index('behavior_session_id')
 

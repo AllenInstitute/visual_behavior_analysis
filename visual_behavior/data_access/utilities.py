@@ -1288,33 +1288,29 @@ def add_project_code_to_behavior_sessions(behavior_sessions_table, ophys_experim
     return behavior_sessions
 
 
-def add_session_number_to_experiment_table(experiments):
-    # add session number column, extracted frrom session_type
-    experiments['session_number'] = [int(session_type[6]) if 'OPHYS' in session_type else None for session_type in
-                                     experiments.session_type.values]
-    return experiments
-
-
-def add_experience_level_to_experiment_table(experiments):
+def add_training_stage_info_to_behavior_sessions(behavior_sessions):
     """
-    adds a column to ophys_experiment_table that contains a string indicating whether a session had
-    exposure level of Familiar, Novel 1, or Novel >1, based on session number and prior_exposure_to_image_set
+    Adds a column to behavior_sessions called `training_stage` that is the first two elements of `session_type`,
+    i.e. 'TRAINING_2', or 'OPHYS_3',
+    as well as Boolean columns indicating whether a given session was the first or last day of each `training_stage`
     """
-    # add experience_level column with strings indicating relevant conditions
-    experiments['experience_level'] = 'None'
+    # create training_stage column as abbreviation of session_type
+    behavior_sessions['training_stage'] = [stage.split('_')[0] + '_' + stage.split('_')[1] for stage in
+                                           behavior_sessions.session_type.values]
 
-    familiar_indices = experiments[experiments.session_number.isin([1, 2, 3])].index.values
-    experiments.loc[familiar_indices, 'experience_level'] = 'Familiar'
+    # add first day of stage based on acquisition date
+    behavior_sessions['first_day_of_stage'] = False
+    stage_start = behavior_sessions.sort_values(by=['mouse_id', 'date_of_acquisition'])
+    stage_start = stage_start.drop_duplicates(subset=['mouse_id', 'training_stage'])
+    behavior_sessions.at[stage_start.index.values, 'first_day_of_stage'] = True
 
-    novel_indices = experiments[(experiments.session_number == 4) &
-                                (experiments.prior_exposures_to_image_set == 0)].index.values
-    experiments.loc[novel_indices, 'experience_level'] = 'Novel 1'
+    # add last day of stage based on acquisition date
+    behavior_sessions['last_day_of_stage'] = False
+    stage_end = behavior_sessions.sort_values(by=['mouse_id', 'date_of_acquisition'], ascending=False)
+    stage_end = stage_end.drop_duplicates(subset=['mouse_id', 'training_stage'])
+    behavior_sessions.at[stage_end.index.values, 'last_day_of_stage'] = True
 
-    novel_greater_than_1_indices = experiments[(experiments.session_number.isin([4, 5, 6])) &
-                                               (experiments.prior_exposures_to_image_set != 0)].index.values
-    experiments.loc[novel_greater_than_1_indices, 'experience_level'] = 'Novel >1'
-
-    return experiments
+    return behavior_sessions
 
 
 def add_experience_level_to_behavior_sessions(behavior_sessions):
@@ -1360,6 +1356,35 @@ def add_experience_level_to_behavior_sessions(behavior_sessions):
     behavior_sessions.at[indices, 'experience_level'] = 'Gratings'
 
     return behavior_sessions
+
+
+def add_session_number_to_experiment_table(experiments):
+    # add session number column, extracted frrom session_type
+    experiments['session_number'] = [int(session_type[6]) if 'OPHYS' in session_type else None for session_type in
+                                     experiments.session_type.values]
+    return experiments
+
+
+def add_experience_level_to_experiment_table(experiments):
+    """
+    adds a column to ophys_experiment_table that contains a string indicating whether a session had
+    exposure level of Familiar, Novel 1, or Novel >1, based on session number and prior_exposure_to_image_set
+    """
+    # add experience_level column with strings indicating relevant conditions
+    experiments['experience_level'] = 'None'
+
+    familiar_indices = experiments[experiments.session_number.isin([1, 2, 3])].index.values
+    experiments.loc[familiar_indices, 'experience_level'] = 'Familiar'
+
+    novel_indices = experiments[(experiments.session_number == 4) &
+                                (experiments.prior_exposures_to_image_set == 0)].index.values
+    experiments.loc[novel_indices, 'experience_level'] = 'Novel 1'
+
+    novel_greater_than_1_indices = experiments[(experiments.session_number.isin([4, 5, 6])) &
+                                               (experiments.prior_exposures_to_image_set != 0)].index.values
+    experiments.loc[novel_greater_than_1_indices, 'experience_level'] = 'Novel >1'
+
+    return experiments
 
 
 def add_experience_exposure_column(experiments_table):
