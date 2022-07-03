@@ -264,7 +264,7 @@ def get_platform_paper_experiment_table(add_extra_columns=True, limit_to_closest
 def get_platform_paper_behavior_session_table(include_4x2_data=False):
     """
     loads the behavior sessions table that was downloaded from AWS and saved to the the platform paper cache dir.
-    Then filter out VisualBehaviorMultiscope4areasx2d and Ai94 data.
+    Then optionally filter out VisualBehaviorMultiscope4areasx2d and remove Ai94 data.
     And add cell_type column (values = ['Excitatory', 'Sst Inhibitory', 'Vip Inhibitory']
 
     include_4x2_data (bool), if True, include Multiscope 4areas x 2 depth data
@@ -273,21 +273,30 @@ def get_platform_paper_behavior_session_table(include_4x2_data=False):
     cache = bpc.from_s3_cache(cache_dir=cache_dir)
     behavior_sessions = cache.get_behavior_session_table()
 
+    # add project codes to behavior sessions
+    experiments_table = cache.get_ophys_experiment_table()
+    behavior_sessions = utilities.add_project_code_to_behavior_sessions(behavior_sessions, experiments_table)
+
     # get rid of NaNs, documented in SDK#2218
     behavior_sessions = behavior_sessions[behavior_sessions.session_type.isnull() == False]
+    print(len(behavior_sessions), 'sessions after removing NaN session types')
 
     # remove 4x2 and Ai94 data
     if include_4x2_data:
         behavior_sessions = behavior_sessions[(behavior_sessions.reporter_line != 'Ai94(TITL-GCaMP6s)')].copy()
+        print(len(behavior_sessions), 'sessions after removing Ai94')
     else:
         behavior_sessions = behavior_sessions[(behavior_sessions.project_code != 'VisualBehaviorMultiscope4areasx2d') &
                                               (behavior_sessions.reporter_line != 'Ai94(TITL-GCaMP6s)')].copy()
+        print(len(behavior_sessions), 'sessions after removing VisualBehaviorMultiscope4areasx2d and Ai94')
+
 
     # overwrite session number and passive columns to patch for bug flagged in this SDK issue:
     # https://github.com/AllenInstitute/AllenSDK/issues/2251
     behavior_sessions = utilities.add_session_number_to_experiment_table(behavior_sessions)
     behavior_sessions = utilities.add_passive_flag_to_ophys_experiment_table(behavior_sessions)
     behavior_sessions = utilities.add_cell_type_column(behavior_sessions)
+    print(len(behavior_sessions), 'sessions after adding session number, passive flag, and cell type columns')
 
     return behavior_sessions
 

@@ -1268,6 +1268,26 @@ def correct_dataframe_filepath(dataframe, column_string):
 
 # functions to annotate experiments table with conditions to use for platform paper analysis ######
 
+
+def add_project_code_to_behavior_sessions(behavior_sessions_table, ophys_experiments_table):
+    """
+    Because only ophys sessions have a project_code associated with them, we need to get a table of the project_codes
+    for each mouse_id from the ophys_experiments_table and merge that into the behavior_sessions table so that we can
+    filter the behavior_sessions by project_code
+    """
+    # get project codes for each mouse from experiments table
+    mouse_projects = ophys_experiments_table.drop_duplicates(subset=['mouse_id', 'project_code'])
+    mouse_projects = mouse_projects[['mouse_id', 'project_code']]
+
+    # merge into behavior sessions
+    print(len(behavior_sessions_table), 'behavior sessions in original behavior_sessions table')
+    behavior_sessions = behavior_sessions_table.drop(columns='project_code').merge(mouse_projects, on='mouse_id',
+                                                                                   how='left')
+    print(len(behavior_sessions), 'behavior sessions after merging with project codes')
+
+    return behavior_sessions
+
+
 def add_session_number_to_experiment_table(experiments):
     # add session number column, extracted frrom session_type
     experiments['session_number'] = [int(session_type[6]) if 'OPHYS' in session_type else None for session_type in
