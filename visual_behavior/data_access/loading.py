@@ -272,6 +272,8 @@ def get_platform_paper_behavior_session_table(include_4x2_data=False):
     cache_dir = get_platform_analysis_cache_dir()
     cache = bpc.from_s3_cache(cache_dir=cache_dir)
     behavior_sessions = cache.get_behavior_session_table()
+    # reset index to retain behavior_session_id during the below transformations
+    behavior_sessions = behavior_sessions.reset_index()
 
     # add project codes to behavior sessions
     experiments_table = cache.get_ophys_experiment_table()
@@ -297,6 +299,13 @@ def get_platform_paper_behavior_session_table(include_4x2_data=False):
     behavior_sessions = utilities.add_passive_flag_to_ophys_experiment_table(behavior_sessions)
     behavior_sessions = utilities.add_cell_type_column(behavior_sessions)
     print(len(behavior_sessions), 'sessions after adding session number, passive flag, and cell type columns')
+
+    # add experience_level column
+    behavior_sessions = utilities.add_experience_level_to_behavior_sessions(behavior_sessions)
+    print(len(behavior_sessions), 'sessions after adding experience_level column')
+
+    # reset the index to behavior_session_id
+    behavior_sessions = behavior_sessions.set_index('behavior_session_id')
 
     return behavior_sessions
 

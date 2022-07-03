@@ -1317,6 +1317,51 @@ def add_experience_level_to_experiment_table(experiments):
     return experiments
 
 
+def add_experience_level_to_behavior_sessions(behavior_sessions):
+    """
+    adds a column to behavior_sessions table that contains a string indicating whether a session had
+    exposure level of Familiar, Novel 1, or Novel >1, based on session number and prior_exposure_to_image_set for ophys sessions,
+    then assign all TRAINING sessions with images as 'Familiar',
+    and any TRAINING sessions with gratings as 'Gratings'
+
+    input df must have 'session_number' column which can be added / update using the add_session_number_to_experiments_table function
+    """
+    # add experience_level column with strings indicating relevant conditions
+    behavior_sessions['experience_level'] = 'None'
+
+    # ophys sessions 1,2,3 = Familiar
+    indices = behavior_sessions[behavior_sessions.session_number.isin([1, 2, 3])].index.values
+    behavior_sessions.loc[indices, 'experience_level'] = 'Familiar'
+
+    # ophys session 4 with no prior exposures to image set = Novel
+    indices = behavior_sessions[(behavior_sessions.session_number == 4) &
+                                (behavior_sessions.prior_exposures_to_image_set == 0)].index.values
+    behavior_sessions.loc[indices, 'experience_level'] = 'Novel 1'
+
+    # ophys sessions 4,5,6 with at least one exposure to image set = Novel>1
+    indices = behavior_sessions[(behavior_sessions.session_number.isin([4, 5, 6])) &
+                                (behavior_sessions.prior_exposures_to_image_set != 0)].index.values
+    behavior_sessions.loc[indices, 'experience_level'] = 'Novel >1'
+
+    # training sessions with images = Familiar Training
+    indices = behavior_sessions[(behavior_sessions.session_type.str.contains('TRAINING')) &
+                                (behavior_sessions.session_type.str.contains('images'))].index.values
+    behavior_sessions.at[indices, 'experience_level'] = 'Familiar Training'
+
+    # first training session with images = Novel Training
+    indices = behavior_sessions[(behavior_sessions.session_type.str.contains('TRAINING')) &
+                                (behavior_sessions.session_type.str.contains('images')) &
+                                (behavior_sessions.prior_exposures_to_image_set == 0)].index.values
+    behavior_sessions.at[indices, 'experience_level'] = 'Novel Training'
+
+    # training sessions with gratings = Gratings
+    indices = behavior_sessions[(behavior_sessions.session_type.str.contains('TRAINING')) & (
+    behavior_sessions.session_type.str.contains('gratings'))].index.values
+    behavior_sessions.at[indices, 'experience_level'] = 'Gratings'
+
+    return behavior_sessions
+
+
 def add_experience_exposure_column(experiments_table):
     """
     adds a column to ophys_experiment_table that contains a string indicating the experience level and
