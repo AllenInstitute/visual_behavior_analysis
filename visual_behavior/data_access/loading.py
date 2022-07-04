@@ -555,8 +555,12 @@ def get_extended_stimulus_presentations_table(stimulus_presentations, licks, rew
     stimulus_presentations['reward_rate'] = stimulus_presentations['rewarded'].rolling(window=320, min_periods=1, win_type='triang').mean() * (60 / .75)  # units of rewards/min
 
     reward_threshold = 2 / 3  # 2/3 rewards per minute = 1/90 rewards/second
+
+    # NOTE: This method of calculating reward rate only works for sessions with flashes,
+    # i.e. it will give incorrect results for TRAINING_0 because there is not 1 stimulus per 0.75s
+
     stimulus_presentations['engaged'] = [x > reward_threshold for x in stimulus_presentations['reward_rate']]
-    stimulus_presentations['engagement_state'] = ['engaged' if True else 'disengaged' for engaged in stimulus_presentations['engaged'].values]
+    stimulus_presentations['engagement_state'] = ['engaged' if engaged==True else 'disengaged' for engaged in stimulus_presentations['engaged'].values]
     stimulus_presentations = reformat.add_response_latency(stimulus_presentations)
     stimulus_presentations = reformat.add_image_contrast_to_stimulus_presentations(stimulus_presentations)
     stimulus_presentations = reformat.add_time_from_last_lick(stimulus_presentations, licks)
