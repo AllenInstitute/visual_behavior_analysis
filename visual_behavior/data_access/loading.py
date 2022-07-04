@@ -986,7 +986,7 @@ def get_behavior_dataset(behavior_session_id, from_lims=False, from_nwb=True,
     elif from_nwb:
         cache_dir = get_platform_analysis_cache_dir()
         cache = bpc.from_s3_cache(cache_dir=cache_dir)
-        dataset = cache.get_behavior_session(behavior_session_id)
+        dataset = cache.get_behavior_session(behavior_session_id, skip_eye_tracking=True)
     else:
         raise Exception('Set load_from_lims or load_from_nwb to True')
 
@@ -997,7 +997,7 @@ def get_behavior_dataset(behavior_session_id, from_lims=False, from_nwb=True,
             dataset.licks, dataset.rewards,
             dataset.running_speed, behavior_session_id=dataset.metadata['behavior_session_id'])
 
-    if get_extended_trials and get_extended_stimulus_presentations is False:
+    if (get_extended_trials ==True) and (get_extended_stimulus_presentations == False):
         dataset.extended_stimulus_presentations = get_extended_stimulus_presentations_table(
             dataset.stimulus_presentations.copy(),
             dataset.licks, dataset.rewards,
