@@ -533,7 +533,7 @@ def get_extended_stimulus_presentations_table(stimulus_presentations, licks, rew
     stimulus_presentations['pre_change'] = stimulus_presentations['change'].shift(-1)
     stimulus_presentations['pre_omitted'] = stimulus_presentations['omitted'].shift(-1)
     stimulus_presentations = reformat.add_epoch_times(stimulus_presentations)
-    stimulus_presentations = reformat.add_mean_running_speed(stimulus_presentations, running_speed)
+    # stimulus_presentations = reformat.add_mean_running_speed(stimulus_presentations, running_speed)
     if eye_tracking is not None:
         try:  # if eye tracking data is not present or cant be loaded
             stimulus_presentations = reformat.add_mean_pupil_area(stimulus_presentations, eye_tracking)
