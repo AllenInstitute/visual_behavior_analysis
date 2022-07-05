@@ -1278,6 +1278,8 @@ def cache_behavior_stats(behavior_session_id, method='stimulus_based', engaged_o
     behavior_stats_df.to_hdf(filepath, key='data')
     print('behavior stats cached for', behavior_session_id, method)
 
+    return behavior_stats_df
+
 
 def get_cached_behavior_stats(behavior_session_id, engaged_only=True, method='stimulus_based', per_image=False):
     cache_dir = get_behavior_stats_cache_dir(method, per_image)

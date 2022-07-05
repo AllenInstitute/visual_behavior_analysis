@@ -26,8 +26,12 @@ def deploy_get_behavior_summary_for_all_sessions():
     )
 
     import visual_behavior.data_access.loading as loading
-    behavior_sessions = loading.get_platform_paper_behavior_session_table(include_4x2_data=True)
-    behavior_session_ids = behavior_sessions.index.values
+    # behavior_sessions = loading.get_platform_paper_behavior_session_table(include_4x2_data=True)
+    # behavior_session_ids = behavior_sessions.index.values
+
+    save_dir = loading.get_platform_analysis_cache_dir()
+    problem_sessions = pd.read_csv(os.path.join(save_dir, 'problem_behavior_sessions.csv'))
+    behavior_session_ids = problem_sessions.behavior_session_id.values
 
     methods = ['stimulus_based', 'trial_based', 'sdk']
     for method in methods:

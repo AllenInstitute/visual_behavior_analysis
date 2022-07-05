@@ -12,5 +12,5 @@ if __name__ == "__main__":
     behavior_session_id = args.behavior_session_id
     method = args.method
     print(behavior_session_id, method)
-    vbu.cache_behavior_stats(behavior_session_id=behavior_session_id, method=method, per_image=True)
     vbu.cache_behavior_stats(behavior_session_id=behavior_session_id, method=method, per_image=False)
+    vbu.cache_behavior_stats(behavior_session_id=behavior_session_id, method=method, per_image=True)
