@@ -1666,7 +1666,7 @@ def add_last_familiar_active_column(df):
     Adds a column 'last_familiar_active' that indicates (with a Boolean) whether
     a session is the last active familiar image session prior to the first novel session in each container
     If a container has no truly first novel session, all sessions are labeled as NaN
-    input df must have 'experience_level' and 'n_relative_to_first_novel' and 'date'
+    input df must have 'experience_level' and 'n_relative_to_first_novel' and 'date' and 'ophys_container_id'
     """
     df = df.sort_values(by=['ophys_container_id', 'date'])
     values = df.groupby('ophys_container_id').apply(get_last_familiar_active)

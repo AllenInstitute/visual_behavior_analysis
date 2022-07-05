@@ -1098,12 +1098,18 @@ def get_behavior_stats(behavior_session_id, method='stimulus_based', engaged_onl
     try:
         if method == 'trial_based':
 
-            trials = session.extended_trials
+            trials = session.extended_trials.copy()
+            print(len(trials), 'total trials')
+
+            if engaged_only:
+                trials = trials[trials.engagement_state=='engaged']
+                print(len(trials), 'engaged trials')
 
             if per_image: # creates a dictionary of dictionaries with key for each image name, values as metrics for that image
                 output_dict = {} # create top level dictionary
                 for change_image_name in trials.change_image_name.unique():
                     image_trials = trials[trials.change_image_name == change_image_name]
+                    print(len(image_trials), change_image_name, 'trials')
 
                     # each image is its own dictionary
                     img_dict = {'behavior_session_id': behavior_session_id}
@@ -1145,14 +1151,24 @@ def get_behavior_stats(behavior_session_id, method='stimulus_based', engaged_onl
         elif method == 'stimulus_based':
 
             stimulus_presentations = annotate_stimuli(session, inplace=False)
+            print(len(stimulus_presentations), 'total stimulus presentations')
+
+            if engaged_only == True:
+                stimulus_presentations = stimulus_presentations[stimulus_presentations.engagement_state=='engaged']
+                print(len(stimulus_presentations), 'engaged stimulus presentations')
 
             if per_image == True:
                 output_dict = {}  # create top level dictionary
                 for image_name in stimulus_presentations.image_name.unique():
-                    go_trials = stimulus_presentations.query(
-                        'image_name == image_name and auto_rewarded == False and could_change == True and is_change == True and engagement_state == "engaged"')
-                    catch_trials = stimulus_presentations.query(
-                        'image_name == image_name and auto_rewarded == False and could_change == True and is_change == False and engagement_state == "engaged"')
+                    go_trials = stimulus_presentations[(stimulus_presentations.image_name==image_name) &
+                                                       (stimulus_presentations.auto_rewarded==False) &
+                                                       (stimulus_presentations.could_change==True) &
+                                                       (stimulus_presentations.is_change==True)]
+                    print(len(go_trials), image_name, 'go stimulus presentations')
+                    catch_trials = stimulus_presentations[(stimulus_presentations.image_name == image_name) &
+                                      (stimulus_presentations.auto_rewarded == False) &
+                                      (stimulus_presentations.could_change == True) &
+                                      (stimulus_presentations.is_change == False)]
 
                     img_dict = {'behavior_session_id': behavior_session_id}
                     img_dict['image_name'] = image_name
@@ -1175,11 +1191,15 @@ def get_behavior_stats(behavior_session_id, method='stimulus_based', engaged_onl
                                                                        limits=False)
                     output_dict[image_name] = img_dict
             else:
-                go_trials = stimulus_presentations.query('auto_rewarded == False and could_change == True and is_change == True and engagement_state == "engaged"')
-                catch_trials = stimulus_presentations.query('auto_rewarded == False and could_change == True and is_change == False and engagement_state == "engaged"')
+                go_trials = stimulus_presentations[(stimulus_presentations.auto_rewarded == False) &
+                                                   (stimulus_presentations.could_change == True) &
+                                                   (stimulus_presentations.is_change == True)]
+                print(len(go_trials), 'go stimulus presentations')
+                catch_trials = stimulus_presentations[(stimulus_presentations.auto_rewarded == False) &
+                                                      (stimulus_presentations.could_change == True) &
+                                                      (stimulus_presentations.is_change == False)]
 
                 output_dict.update({'response_latency_{}'.format(key): value for key, value in go_trials.query('response_lick')['response_lick_latency'].astype(float).describe().to_dict().items()})
-
                 output_dict['hit_rate'] = go_trials['response_lick'].mean()
                 output_dict['fa_rate'] = catch_trials['response_lick'].mean()
                 output_dict['number_of_engaged_go_trials'] = len(go_trials)
@@ -1202,7 +1222,7 @@ def get_behavior_stats(behavior_session_id, method='stimulus_based', engaged_onl
         return {'behavior_session_id': behavior_session_id, 'error': e}
 
 
-def get_behavior_stats_cache_dir(method='stimulus_based', per_image=False):
+def get_behavior_stats_cache_dir(method='stimulus_based', engaged_only=True, per_image=False):
     """
     method can be 'stimulus_based' or 'trial_based'
     if per_image is True, directory will have '_per_image' apended to the end
@@ -1212,19 +1232,25 @@ def get_behavior_stats_cache_dir(method='stimulus_based', per_image=False):
     """
     import visual_behavior.data_access.loading as loading
     base_dir = loading.get_platform_analysis_cache_dir()
+
+    if engaged_only:
+        suffix ='_engaged_only'
+    else:
+        suffix=''
+
     if method == 'trial_based':
         if per_image == True:
-            cache_dir = os.path.join(base_dir, 'behavior_performance', 'behavior_performance_summary_trial_based_per_image')
+            cache_dir = os.path.join(base_dir, 'behavior_performance', 'behavior_metrics_trial_based_per_image'+suffix)
         else:
-            cache_dir = os.path.join(base_dir, 'behavior_performance', 'behavior_performance_summary_trial_based')
+            cache_dir = os.path.join(base_dir, 'behavior_performance', 'behavior_metrics_trial_based'+suffix)
     elif method == 'stimulus_based':
         if per_image == True:
-            cache_dir = os.path.join(base_dir, 'behavior_performance', 'behavior_performance_summary_stimulus_based_per_image')
+            cache_dir = os.path.join(base_dir, 'behavior_performance', 'behavior_metrics_stimulus_based_per_image'+suffix)
         else:
-            cache_dir = os.path.join(base_dir, 'behavior_performance', 'behavior_performance_summary_stimulus_based')
+            cache_dir = os.path.join(base_dir, 'behavior_performance', 'behavior_metrics_stimulus_based'+suffix)
     elif method == 'sdk':
         per_image = False
-        cache_dir = os.path.join(base_dir, 'behavior_performance', 'behavior_performance_metrics_sdk')
+        cache_dir = os.path.join(base_dir, 'behavior_performance', 'behavior_metrics_sdk'+suffix)
 
     if not os.path.exists(cache_dir):
         os.mkdir(cache_dir)
@@ -1260,7 +1286,7 @@ def cache_behavior_stats(behavior_session_id, method='stimulus_based', engaged_o
     None
     '''
     print('behavior_session_id:', behavior_session_id)
-    cache_dir = get_behavior_stats_cache_dir(method, per_image)
+    cache_dir = get_behavior_stats_cache_dir(method=method, engaged_only=engaged_only, per_image=per_image)
     behavior_stats = get_behavior_stats(behavior_session_id, method=method, engaged_only=engaged_only, per_image=per_image)
     if per_image==True:
         behavior_stats_df = pd.DataFrame()
@@ -1282,7 +1308,7 @@ def cache_behavior_stats(behavior_session_id, method='stimulus_based', engaged_o
 
 
 def get_cached_behavior_stats(behavior_session_id, engaged_only=True, method='stimulus_based', per_image=False):
-    cache_dir = get_behavior_stats_cache_dir(method, per_image)
+    cache_dir = get_behavior_stats_cache_dir(method=method, engaged_only=engaged_only, per_image=per_image)
 
     fn = os.path.join(cache_dir, 'behavior_session_id={}.h5'.format(behavior_session_id))
 
