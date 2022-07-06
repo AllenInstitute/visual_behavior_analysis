@@ -1240,17 +1240,17 @@ def get_behavior_stats_cache_dir(method='stimulus_based', engaged_only=True, per
 
     if method == 'trial_based':
         if per_image == True:
-            cache_dir = os.path.join(base_dir, 'behavior_performance', 'behavior_metrics_trial_based_per_image'+suffix)
+            cache_dir = os.path.join(base_dir, 'behavior_performance', 'behavior_metrics_trial_based_per_image')
         else:
-            cache_dir = os.path.join(base_dir, 'behavior_performance', 'behavior_metrics_trial_based'+suffix)
+            cache_dir = os.path.join(base_dir, 'behavior_performance', 'behavior_metrics_trial_based')
     elif method == 'stimulus_based':
         if per_image == True:
-            cache_dir = os.path.join(base_dir, 'behavior_performance', 'behavior_metrics_stimulus_based_per_image'+suffix)
+            cache_dir = os.path.join(base_dir, 'behavior_performance', 'behavior_metrics_stimulus_based_per_image')
         else:
-            cache_dir = os.path.join(base_dir, 'behavior_performance', 'behavior_metrics_stimulus_based'+suffix)
+            cache_dir = os.path.join(base_dir, 'behavior_performance', 'behavior_metrics_stimulus_based')
     elif method == 'sdk':
         per_image = False
-        cache_dir = os.path.join(base_dir, 'behavior_performance', 'behavior_metrics_sdk'+suffix)
+        cache_dir = os.path.join(base_dir, 'behavior_performance', 'behavior_metrics_sdk')
 
     if not os.path.exists(cache_dir):
         os.mkdir(cache_dir)
@@ -1302,7 +1302,7 @@ def cache_behavior_stats(behavior_session_id, method='stimulus_based', engaged_o
     if os.path.exists(filepath):
         os.remove(filepath)
     behavior_stats_df.to_hdf(filepath, key='data')
-    print('behavior stats cached for', behavior_session_id, method, 'per_image:', per_image,'engaged_only:', engaged_only)
+    print('behavior stats cached for', behavior_session_id, method, 'per_image: ', per_image,'engaged_only: ', engaged_only)
     print('saved to', filepath)
 
     return behavior_stats_df
