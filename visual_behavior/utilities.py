@@ -1233,11 +1233,6 @@ def get_behavior_stats_cache_dir(method='stimulus_based', engaged_only=True, per
     import visual_behavior.data_access.loading as loading
     base_dir = loading.get_platform_analysis_cache_dir()
 
-    if engaged_only:
-        suffix ='_engaged_only'
-    else:
-        suffix=''
-
     if method == 'trial_based':
         if per_image == True:
             cache_dir = os.path.join(base_dir, 'behavior_performance', 'behavior_metrics_trial_based_per_image')
@@ -1251,6 +1246,9 @@ def get_behavior_stats_cache_dir(method='stimulus_based', engaged_only=True, per
     elif method == 'sdk':
         per_image = False
         cache_dir = os.path.join(base_dir, 'behavior_performance', 'behavior_metrics_sdk')
+
+    if engaged_only:
+        cache_dir = cache_dir+'_engaged_only'
 
     if not os.path.exists(cache_dir):
         os.mkdir(cache_dir)
