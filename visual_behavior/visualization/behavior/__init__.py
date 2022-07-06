@@ -31,9 +31,10 @@ def calculate_response_matrix(stimuli, aggfunc=np.mean, sort_by_column=True, eng
 
     '''
 
-    stimuli_to_analyze = stimuli.query('auto_rewarded == False and could_change == True and image_name != "omitted" and previous_image_name != "omitted"')
+    stimuli_to_analyze = stimuli[(stimuli.auto_rewarded==False) & (stimuli.could_change==True) &
+                                 (stimuli.image_name!='omitted') & (stimuli.previous_image_name!='omitted')]
     if engaged_only:
-        stimuli_to_analyze = stimuli_to_analyze.query('engagement_state == "engaged"')
+        stimuli_to_analyze = stimuli_to_analyze[stimuli_to_analyze.engagement_state=='engaged']
 
     response_matrix = pd.pivot_table(
         stimuli_to_analyze,
