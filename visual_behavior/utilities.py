@@ -16,6 +16,7 @@ from . import database as db
 
 from visual_behavior.ophys.sync.sync_dataset import Dataset
 from visual_behavior.data_access import loading
+import visual_behavior.visualization.behavior as behavior
 
 
 def flatten_list(in_list):
@@ -1235,17 +1236,20 @@ def get_behavior_stats_cache_dir(method='stimulus_based', engaged_only=True, per
 
     if method == 'trial_based':
         if per_image == True:
-            cache_dir = os.path.join(base_dir, 'behavior_performance', 'behavior_metrics_trial_based_per_image')
+            cache_dir = os.path.join(base_dir, 'behavior_performance', 'behavior_metrics', 'trial_based_per_image')
         else:
-            cache_dir = os.path.join(base_dir, 'behavior_performance', 'behavior_metrics_trial_based')
+            cache_dir = os.path.join(base_dir, 'behavior_performance', 'behavior_metrics', 'trial_based')
     elif method == 'stimulus_based':
         if per_image == True:
-            cache_dir = os.path.join(base_dir, 'behavior_performance', 'behavior_metrics_stimulus_based_per_image')
+            cache_dir = os.path.join(base_dir, 'behavior_performance', 'behavior_metrics', 'stimulus_based_per_image')
         else:
-            cache_dir = os.path.join(base_dir, 'behavior_performance', 'behavior_metrics_stimulus_based')
+            cache_dir = os.path.join(base_dir, 'behavior_performance', 'behavior_metrics', 'stimulus_based')
     elif method == 'sdk':
         per_image = False
-        cache_dir = os.path.join(base_dir, 'behavior_performance', 'behavior_metrics_sdk')
+        cache_dir = os.path.join(base_dir, 'behavior_performance', 'behavior_metrics', 'sdk')
+    elif method == 'response_probability':
+        per_image = False
+        cache_dir = os.path.join(base_dir, 'behavior_performance', 'response_probability', 'response_probability_matrix')
 
     if engaged_only:
         cache_dir = cache_dir+'_engaged_only'
@@ -1259,7 +1263,7 @@ def get_behavior_stats_cache_dir(method='stimulus_based', engaged_only=True, per
 def cache_behavior_stats(behavior_session_id, method='stimulus_based', engaged_only=True, per_image=False):
     '''
     calculates behavior stats for a given session, saves to file
-    file format is behavior_summary_behavior_session_id={behavior_session_id}.h5 with key = 'data'
+    file format is behavior_session_id={behavior_session_id}.h5 with key = 'data'
     file can be opened with df = pd.read_hdf(filename, key='data')
 
     if per_image is True, will compute each metric for each image
@@ -1276,12 +1280,10 @@ def cache_behavior_stats(behavior_session_id, method='stimulus_based', engaged_o
     per_image : boolean
         default = False
         If True, will compute each metric for each image and save to unique directory
-    cache_dir : string
-        directory in which to save h5 file
 
     Returns:
     --------
-    None
+    behavior_stats: dataframe with stats that were cached
     '''
     print('behavior_session_id:', behavior_session_id)
     cache_dir = get_behavior_stats_cache_dir(method=method, engaged_only=engaged_only, per_image=per_image)
@@ -1304,6 +1306,50 @@ def cache_behavior_stats(behavior_session_id, method='stimulus_based', engaged_o
     print('saved to', filepath)
 
     return behavior_stats_df
+
+
+
+def cache_response_probability(behavior_session_id, engaged_only=True):
+    '''
+    calculates response probability matrix for all image transitions and saves to file
+    file format is behavior_session_id={behavior_session_id}.h5 with key = 'data'
+    file can be opened with df = pd.read_hdf(filename, key='data')
+
+    Parameters:
+    -----------
+    behavior_session_id : int
+        behavior session ID of interest
+    engaged_only : boolean
+        If True (default), calculates response probability only on engaged trials
+
+    Returns:
+    --------
+    response_matrix: matrix of response probability for all image transitions
+    '''
+    print('behavior_session_id:', behavior_session_id)
+    cache_dir = get_behavior_stats_cache_dir(method='response_probability', engaged_only=engaged_only)
+
+    # get stimulus presentations and annotate
+    dataset = loading.get_behavior_dataset(behavior_session_id)
+    stimulus_presentations = annotate_stimuli(dataset)
+
+    if engaged_only:
+        stimulus_presentations = stimulus_presentations[stimulus_presentations.engagement_state == 'engaged']
+
+    # compute response probability
+    response_matrix = behavior.calculate_response_matrix(stimulus_presentations, aggfunc=np.mean, sort_by_column=True,
+                                                         engaged_only=engaged_only)
+
+    filename = 'behavior_session_id={}.h5'.format(behavior_session_id)
+    filepath = os.path.join(cache_dir, filename)
+    if os.path.exists(filepath):
+        os.remove(filepath)
+    response_matrix.to_hdf(filepath, key='data')
+    print('response probability matrix cached for', behavior_session_id, 'response_probability', 'engaged_only: ',
+          engaged_only)
+    print('saved to', filepath)
+
+    return response_matrix
 
 
 def get_cached_behavior_stats(behavior_session_id, engaged_only=True, method='stimulus_based', per_image=False):
