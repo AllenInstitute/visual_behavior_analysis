@@ -1302,7 +1302,8 @@ def cache_behavior_stats(behavior_session_id, method='stimulus_based', engaged_o
     if os.path.exists(filepath):
         os.remove(filepath)
     behavior_stats_df.to_hdf(filepath, key='data')
-    print('behavior stats cached for', behavior_session_id, method)
+    print('behavior stats cached for', behavior_session_id, method, 'per_image:', per_image,'engaged_only:', engaged_only)
+    print('saved to', filepath)
 
     return behavior_stats_df
 

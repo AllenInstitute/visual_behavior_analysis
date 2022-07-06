@@ -20,8 +20,8 @@ def deploy_get_behavior_summary_for_all_sessions():
         job_name='cache_performance',
         partition='braintv', 
         cpus_per_task=1, 
-        mem='60g',
-        time='01:00:00',
+        mem='80g',
+        time='05:00:00',
         output=f'{stdout_location}/{Slurm.JOB_ARRAY_MASTER_ID}_{Slurm.JOB_ARRAY_ID}.out',
     )
 
@@ -33,8 +33,7 @@ def deploy_get_behavior_summary_for_all_sessions():
     # problem_sessions = pd.read_csv(os.path.join(save_dir, 'problem_behavior_sessions.csv'))
     # behavior_session_ids = problem_sessions.behavior_session_id.values
 
-    # methods = ['stimulus_based', 'trial_based', 'sdk']
-    methods = ['stimulus_based']
+    methods = ['stimulus_based', 'trial_based', 'sdk']
     for method in methods:
         for behavior_session_id in behavior_session_ids:
             print('deploying job for bsid {}'.format(behavior_session_id))
