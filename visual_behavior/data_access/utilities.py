@@ -1388,6 +1388,24 @@ def add_experiment_phase_to_behavior_sessions(behavior_sessions):
     return behavior_sessions
 
 
+def add_stimulus_phase_to_behavior_sessions(behavior_sessions):
+    """
+    adds a column to behavior_sessions that is the concatenation of the stimulus and experiment_phase for each session
+    ex: 'gratings_flashed_training', 'images_A_training', 'images_A_ophys'
+    'stimulus' and 'experiment_phase' columns will be added if they do not exist
+    """
+    if 'stimulus' not in behavior_sessions.keys():
+        behavior_sessions = add_stimulus_to_table(behavior_sessions)
+    if 'experiment_phase' not in behavior_sessions.keys():
+        behavior_sessions = add_experiment_phase_to_behavior_sessions(behavior_sessions)
+
+    behavior_sessions['stimulus_phase'] = [
+        behavior_sessions.loc[row].stimulus + '_' + behavior_sessions.loc[row].experiment_phase.lower() for row in
+        behavior_sessions.index.values]
+
+    return behavior_sessions
+
+
 def add_experience_level_to_behavior_sessions(behavior_sessions):
     """
     adds a column to behavior_sessions table that contains a string indicating whether a session had

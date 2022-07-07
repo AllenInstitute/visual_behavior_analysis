@@ -312,6 +312,8 @@ def get_platform_paper_behavior_session_table(include_4x2_data=False, add_extra_
         behavior_sessions = utilities.add_experiment_phase_to_behavior_sessions(behavior_sessions)
         behavior_sessions = utilities.add_stimulus_to_table(behavior_sessions)
         behavior_sessions = utilities.add_first_last_day_of_stimulus_to_behavior_sessions(behavior_sessions)
+        # add stimulus phase column (ex: 'gratings_flashed_training', 'images_A_training', 'images_A_ophys')
+        behavior_sessions = utilities.add_stimulus_phase_to_behavior_sessions(behavior_sessions)
         # verify that nothing has been accidentally removed
         print(len(behavior_sessions), 'sessions after adding extra columns')
 
