@@ -68,7 +68,9 @@ def get_platform_analysis_cache_dir():
     This is the cache directory to use for all platform paper analysis
     This cache contains NWB files downloaded directly from AWS
     """
-    return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/platform_paper_cache'
+    # return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/platform_paper_cache'
+    return r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\platform_paper_cache'
+
 
 
 def get_production_cache_dir():
@@ -261,13 +263,15 @@ def get_platform_paper_experiment_table(add_extra_columns=True, limit_to_closest
     return experiment_table
 
 
-def get_platform_paper_behavior_session_table(include_4x2_data=False):
+def get_platform_paper_behavior_session_table(include_4x2_data=False, add_extra_columns=True):
     """
     loads the behavior sessions table that was downloaded from AWS and saved to the the platform paper cache dir.
     Then optionally filter out VisualBehaviorMultiscope4areasx2d and remove Ai94 data.
     And add cell_type column (values = ['Excitatory', 'Sst Inhibitory', 'Vip Inhibitory']
 
     include_4x2_data (bool), if True, include Multiscope 4areas x 2 depth data
+    add_extra_columns(bool), whether or not to add a bunch of useful columns to sort behavior sessions by
+                                such as whether a session has ophys, the abbreviated stimulus name, cell type, etc.
     """
     cache_dir = get_platform_analysis_cache_dir()
     cache = bpc.from_s3_cache(cache_dir=cache_dir)
@@ -293,20 +297,23 @@ def get_platform_paper_behavior_session_table(include_4x2_data=False):
         print(len(behavior_sessions), 'sessions after removing VisualBehaviorMultiscope4areasx2d and Ai94')
 
 
-    # overwrite session number and passive columns to patch for bug flagged in this SDK issue:
-    # https://github.com/AllenInstitute/AllenSDK/issues/2251
-    behavior_sessions = utilities.add_session_number_to_experiment_table(behavior_sessions)
-    behavior_sessions = utilities.add_passive_flag_to_ophys_experiment_table(behavior_sessions)
-    behavior_sessions = utilities.add_cell_type_column(behavior_sessions)
-    print(len(behavior_sessions), 'sessions after adding session number, passive flag, and cell type columns')
-
-    # add experience_level column
-    behavior_sessions = utilities.add_experience_level_to_behavior_sessions(behavior_sessions)
-    print(len(behavior_sessions), 'sessions after adding experience_level column')
-
-    # add training_stage info
-    behavior_sessions = utilities.add_training_stage_info_to_behavior_sessions(behavior_sessions)
-    print(len(behavior_sessions), 'sessions after adding training_stage columns')
+    if add_extra_columns:
+        # overwrite session number and passive columns to patch for bug flagged in this SDK issue:
+        # https://github.com/AllenInstitute/AllenSDK/issues/2251
+        behavior_sessions = utilities.add_session_number_to_experiment_table(behavior_sessions)
+        behavior_sessions = utilities.add_passive_flag_to_ophys_experiment_table(behavior_sessions)
+        behavior_sessions = utilities.add_cell_type_column(behavior_sessions)
+        # add experience_level column
+        behavior_sessions = utilities.add_experience_level_to_behavior_sessions(behavior_sessions)
+        # add training stage (abbreviated session type) and first and last day of training stage
+        behavior_sessions = utilities.add_first_last_day_of_stage_to_behavior_sessions(behavior_sessions)
+        # add experiment phase (OPHYS vs TRAINING), and stimulus type (gratings_static, images_A, etc)
+        behavior_sessions = utilities.add_has_ophys_column_to_behavior_sessions(behavior_sessions)
+        behavior_sessions = utilities.add_experiment_phase_to_behavior_sessions(behavior_sessions)
+        behavior_sessions = utilities.add_stimulus_to_table(behavior_sessions)
+        behavior_sessions = utilities.add_first_last_day_of_stimulus_to_behavior_sessions(behavior_sessions)
+        # verify that nothing has been accidentally removed
+        print(len(behavior_sessions), 'sessions after adding extra columns')
 
     # reset the index to behavior_session_id
     behavior_sessions = behavior_sessions.set_index('behavior_session_id')
@@ -832,7 +839,7 @@ class BehaviorOphysDataset(BehaviorOphysExperiment):
 
 
 def get_ophys_dataset(ophys_experiment_id, include_invalid_rois=False, load_from_lims=False, load_from_nwb=True,
-                      get_extended_stimulus_presentations=True, get_behavior_movie_timestamps=False):
+                      get_extended_stimulus_presentations=False, get_behavior_movie_timestamps=False):
     """
     Gets behavior + ophys data for one experiment (single imaging plane), either using the SDK LIMS API,
     SDK NWB API, or using BehaviorOphysDataset wrapper which inherits the LIMS API BehaviorOphysSession object,

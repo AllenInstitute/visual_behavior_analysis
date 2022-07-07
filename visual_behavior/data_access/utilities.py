@@ -1288,7 +1288,7 @@ def add_project_code_to_behavior_sessions(behavior_sessions_table, ophys_experim
     return behavior_sessions
 
 
-def add_training_stage_info_to_behavior_sessions(behavior_sessions):
+def add_first_last_day_of_stage_to_behavior_sessions(behavior_sessions):
     """
     Adds a column to behavior_sessions called `training_stage` that is the first two elements of `session_type`,
     i.e. 'TRAINING_2', or 'OPHYS_3',
@@ -1310,6 +1310,81 @@ def add_training_stage_info_to_behavior_sessions(behavior_sessions):
     stage_end = stage_end.drop_duplicates(subset=['mouse_id', 'training_stage'])
     behavior_sessions.at[stage_end.index.values, 'last_day_of_stage'] = True
 
+    return behavior_sessions
+
+
+def add_first_last_day_of_stimulus_to_behavior_sessions(behavior_sessions):
+    """
+    Adds a column to behavior_sessions called `training_stage` that is the first two elements of `session_type`,
+    i.e. 'TRAINING_2', or 'OPHYS_3',
+    as well as Boolean columns indicating whether a given session was the first or last day of each `training_stage`
+    """
+    # create training_stage column as abbreviation of session_type
+    if 'stimulus' not in behavior_sessions.keys():
+        behavior_sessions = add_stimulus_to_table(behavior_sessions)
+
+    # add first day of stimulus based on acquisition date
+    behavior_sessions['first_day_of_stimulus'] = False
+    stage_start = behavior_sessions.sort_values(by=['mouse_id', 'date_of_acquisition'])
+    stage_start = stage_start.drop_duplicates(subset=['mouse_id', 'stimulus'])
+    behavior_sessions.at[stage_start.index.values, 'first_day_of_stimulus'] = True
+
+    # add last day of stage based on acquisition date
+    behavior_sessions['first_day_of_stimulus'] = False
+    stage_end = behavior_sessions.sort_values(by=['mouse_id', 'date_of_acquisition'], ascending=False)
+    stage_end = stage_end.drop_duplicates(subset=['mouse_id', 'stimulus'])
+    behavior_sessions.at[stage_end.index.values, 'last_day_of_stimulus'] = True
+
+    return behavior_sessions
+
+
+def add_stimulus_to_table(df):
+    """
+    adds column to dataframe (such as behavior_sessions table or ophys_experiment_table) indicating the stimulus
+    that was shown during each session, using the session_type column to infer the stimulus identity
+    stimuli will be 'gratings_static', 'gratings_flashed', 'images_A', 'images_A_passive', etc
+
+    """
+    # create stimulus column based on session_type values
+    df['stimulus'] = 'None'
+    for row in df.index.values: # index should be a non-redundant value, such as the relevant ID for the table, i.e. behavior_session_id or ophys_experiment_id
+        session_type = df.loc[row].session_type
+        session_type_split = session_type.split('_')
+        if ('TRAINING_0' in session_type) or ('TRAINING_1' in session_type):
+            stimulus = session_type_split[2] + '_static'
+        elif ('TRAINING_2' in session_type) or ('TRAINING_3' in session_type) or ('TRAINING_4' in session_type) or (
+            'TRAINING_5' in session_type):
+            stimulus = session_type_split[2] + '_' + session_type_split[3]
+        elif ('OPHYS' in session_type) and ('passive' in session_type):
+            stimulus = session_type_split[2] + '_' + session_type_split[3] + '_' + session_type_split[4]
+        elif ('OPHYS' in session_type) and ('passive' not in session_type):
+            stimulus = session_type_split[2] + '_' + session_type_split[3]
+        else:
+            stimulus = 'unknown'
+        df.at[row, 'stimulus'] = stimulus
+    return df
+
+
+def add_has_ophys_column_to_behavior_sessions(behavior_sessions):
+    """
+    add a column to the behavior_sessions table indicating whether that session has ophys data or not,
+    based on whether there are ophys_experiment_ids assigned to that session.
+    if ophys_experiment_id value for a given behavior_session is NaN, there is no released ophys data.
+    if a behavior_session has 'OPHYS' in the session_type, but ophys_experiment_id is NaN,
+    that means that the ophys data for that session did not pass QC and thus was not released,
+    with the exception of OPHYS_0 session types, which are habituation sessions where the mouse did the task on the ophys rig with no physiology recording
+    """
+    behavior_sessions['has_ophys'] = True
+    indices = behavior_sessions[behavior_sessions.ophys_experiment_id.isnull()].index.values
+    behavior_sessions.at[indices, 'has_ophys'] = False
+    return behavior_sessions
+
+
+def add_experiment_phase_to_behavior_sessions(behavior_sessions):
+    """
+    add column to df indicating whether a session was 'TRAINING' or 'OPHYS', using session_type to get the phase of the experiment
+    """
+    behavior_sessions['experiment_phase'] = [session_type.split('_')[0] for session_type in behavior_sessions.session_type.values]
     return behavior_sessions
 
 
