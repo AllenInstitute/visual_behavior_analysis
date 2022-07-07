@@ -2064,7 +2064,8 @@ def get_cluster_size_variance(SSE_mapping, cluster_df_shuffled, normalize=False)
     all_cluster_sizes = {}
     for cluster_id in cluster_ids:
         for n_boot in n_boots:
-            shuffled_cluster_size = cluster_df_shuffled[n_boot].value_counts('cluster_id')
+            shuffled_cluster_size = cluster_df_shuffled[n_boot].value_counts('cluster_id',
+                                                                             normalize=normalize)
 
         cluster_size = []
         for matched_id in matched_ids[cluster_id]:
