@@ -2040,3 +2040,63 @@ def get_sorted_cluster_ids(cluster_df):
     '''
     sorted_cluster_ids = cluster_df.value_counts('cluster_id').index.values
     return sorted_cluster_ids
+
+### needs documentation ###
+def get_matched_cluster_labels(SSE_mapping):
+    cluster_ids = SSE_mapping[0].keys()
+    n_boots = SSE_mapping.keys()
+    matched_clusters = {}
+
+    for cluster_id in cluster_ids:
+        matched_ids = []
+        for n_boot in n_boots:
+            matched_id = SSE_mapping[n_boot][cluster_id]
+            matched_ids.append(matched_id)
+        matched_clusters[cluster_id] = matched_ids
+    return matched_clusters
+
+
+def get_cluster_size_variance(SSE_mapping, cluster_df_shuffled, normalize=False):
+    cluster_ids = SSE_mapping[0].keys()
+    matched_ids = get_matched_cluster_labels(SSE_mapping)
+
+    n_boots = cluster_df_shuffled.keys()
+    all_cluster_sizes = {}
+    for cluster_id in cluster_ids:
+        for n_boot in n_boots:
+            shuffled_cluster_size = cluster_df_shuffled[n_boot].value_counts('cluster_id')
+
+        cluster_size = []
+        for matched_id in matched_ids[cluster_id]:
+
+            if matched_id != -1:
+                cluster_size.append(shuffled_cluster_size[matched_id])
+            else:
+                cluster_size.append(np.nan)
+
+        all_cluster_sizes[cluster_id] = cluster_size
+    return all_cluster_sizes
+
+def compute_probabilities(SSE_mapping):
+    labels = SSE_mapping[0].keys()
+    cluster_count = count_cluster_frequency(SSE_mapping)
+    cluster_probabilities = {}
+    for label in labels:
+        cluster_probabilities[label] = np.sum(cluster_count[label])/len(cluster_count[label])
+    return cluster_probabilities
+
+def count_cluster_frequency(SSE_mapping):
+    cluster_ids = SSE_mapping[0].keys()
+    n_boots = SSE_mapping.keys()
+    cluster_count = {}
+    for cluster_id in cluster_ids:
+        boolean_count = []
+        for n_boot in n_boots:
+            matched_id = SSE_mapping[n_boot][cluster_id]
+            if matched_id != -1:
+                boolean_count.append(True)
+            else:
+                boolean_count.append(False)
+        cluster_count[cluster_id] = boolean_count
+    return cluster_count
+
