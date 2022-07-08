@@ -1793,20 +1793,16 @@ def get_mean_dropout_scores_per_cluster(dropout_df, cluster_df=None, labels=None
         cluster_df = pd.DataFrame(data={'cluster_id': labels, 'cell_specimen_id': dropout_df.index.values})
         cluster_ids = cluster_df['cluster_id'].value_counts().index.values  # sort cluster ids by size
 
-    if min(cluster_ids) == 0:  # if cluster ids start with 0, add 1 to return cluster labels starting with 1
-        err = 1
-    else:
-        err = 0
-
+    # new cluster ids will start with 1, and they will be sorted by cluster size
     mean_cluster = {}
     for i, cluster_id in enumerate(cluster_ids):
         this_cluster_ids = cluster_df[cluster_df['cluster_id'] == cluster_id]['cell_specimen_id'].unique()
         if stacked is True:
             mean_dropout_df = dropout_df.loc[this_cluster_ids].mean()
-            mean_cluster[i + err] = mean_dropout_df.values
+            mean_cluster[i + 1] = mean_dropout_df.values
         elif stacked is False:
             mean_dropout_df = dropout_df.loc[this_cluster_ids].mean().unstack()
-            mean_cluster[i + err] = mean_dropout_df
+            mean_cluster[i + 1] = mean_dropout_df
 
     if stacked is True:
         return (pd.DataFrame(mean_cluster))
