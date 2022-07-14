@@ -1355,6 +1355,8 @@ def add_stimulus_to_table(df):
         elif ('TRAINING_2' in session_type) or ('TRAINING_3' in session_type) or ('TRAINING_4' in session_type) or (
             'TRAINING_5' in session_type):
             stimulus = session_type_split[2] + '_' + session_type_split[3]
+        elif ('OPHYS_0' in session_type):
+            stimulus = session_type_split[2] + '_' + session_type_split[3] + '_' + session_type_split[4]
         elif ('OPHYS' in session_type) and ('passive' in session_type):
             stimulus = session_type_split[2] + '_' + session_type_split[3] + '_' + session_type_split[4]
         elif ('OPHYS' in session_type) and ('passive' not in session_type):

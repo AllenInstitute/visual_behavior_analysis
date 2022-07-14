@@ -765,6 +765,142 @@ def plot_behavior_timeseries_stacked(dataset, start_time, duration_seconds=20,
     return ax
 
 
+def sort_trace_csids_by_max_in_window(dff_traces, ophys_timestamps, xlim_seconds):
+    traces = dff_traces.copy()
+    traces['max'] = np.nan
+    for cell_index, cell_specimen_id in enumerate(traces.index.values):
+        trace = traces.loc[cell_specimen_id]['dff']
+        # limit cell trace to window so yaxes scale properly
+        start_ind = np.where(ophys_timestamps<xlim_seconds[0])[0][-1]
+        stop_ind = np.where(ophys_timestamps>xlim_seconds[1])[0][0]
+        trace = trace[start_ind:stop_ind]
+        traces.at[cell_specimen_id, 'dff'] = trace
+        traces.at[cell_specimen_id, 'max'] = np.amax(trace)
+    traces = traces.sort_values(by='max', ascending=False)
+    return traces.index.values
+
+
+def plot_behavior_and_physio_timeseries_stacked(dataset, start_time, duration_seconds=20,
+                                                label_changes=True, label_omissions=True,
+                                                save_dir=None, ax=None):
+    """
+    Plots licking behavior, rewards, running speed, pupil area, and dff traces for a defined window of time.
+    Each timeseries gets its own row. If label_changes=True, all flashes are gray, changes are blue.
+    If label_changes=False, unique colors are given to each image.
+    If label_omissions=True, a dotted line will be plotted at the time of omissions.
+    Selects the top 6 cell traces with highest SNR to plot
+    """
+
+    if label_changes:
+        suffix = '_changes'
+    else:
+        suffix = '_colors'
+
+    xlim_seconds = [start_time - (duration_seconds / 4.), start_time + duration_seconds * 2]
+
+    lick_timestamps = dataset.licks.timestamps.values
+    licks = np.ones(len(lick_timestamps))
+    licks[:] = -2
+
+    reward_timestamps = dataset.rewards.timestamps.values
+    rewards = np.zeros(len(reward_timestamps))
+    rewards[:] = -4
+
+    # get run speed trace and timestamps
+    running_speed = dataset.running_speed.speed.values
+    running_timestamps = dataset.running_speed.timestamps.values
+    # limit running trace to window so yaxes scale properly
+    start_ind = np.where(running_timestamps < xlim_seconds[0])[0][-1]
+    stop_ind = np.where(running_timestamps > xlim_seconds[1])[0][0]
+    running_speed = running_speed[start_ind:stop_ind]
+    running_timestamps = running_timestamps[start_ind:stop_ind]
+
+    # get pupil width trace and timestamps
+    eye_tracking = dataset.eye_tracking.copy()
+    pupil_diameter = eye_tracking.pupil_width.values
+    pupil_diameter[eye_tracking.likely_blink == True] = np.nan
+    pupil_timestamps = eye_tracking.timestamps.values
+    # smooth pupil diameter
+    from scipy.signal import medfilt
+    pupil_diameter = medfilt(pupil_diameter, kernel_size=5)
+    # limit pupil trace to window so yaxes scale properly
+    start_ind = np.where(pupil_timestamps < xlim_seconds[0])[0][-1]
+    stop_ind = np.where(pupil_timestamps > xlim_seconds[1])[0][0]
+    pupil_diameter = pupil_diameter[start_ind:stop_ind]
+    pupil_timestamps = pupil_timestamps[start_ind:stop_ind]
+
+    # get cell traces and events
+    ophys_timestamps = dataset.ophys_timestamps.copy()
+    dff_traces = dataset.dff_traces.copy()
+    events = dataset.events.copy()
+    events = events.loc[dff_traces.index.values]
+
+    if ax is None:
+        figsize = (15, 8)
+        fig, ax = plt.subplots(10, 1, figsize=figsize, sharex=True,
+                               gridspec_kw={'height_ratios': [1, 1, 1, 1, 1, 1, 1.5, 1.5, 1, 1, ]})
+        ax = ax.ravel()
+
+    colors = sns.color_palette()
+
+    ax[8].plot(lick_timestamps, licks, '|', label='licks', color='gray', markersize=10)
+    ax[8].set_yticklabels([])
+    ax[8].set_ylabel('licks', rotation=0, horizontalalignment='right', verticalalignment='center')
+
+    ax[9].plot(reward_timestamps, rewards, 'o', label='rewards', color='gray', markersize=10)
+    ax[9].set_yticklabels([])
+    ax[9].set_ylabel('rewards', rotation=0, horizontalalignment='right', verticalalignment='center')
+
+    ax[6].plot(running_timestamps, running_speed, label='running_speed', color='gray', zorder=100)
+    ax[6].set_ylabel('running\nspeed\n(cm/s)', rotation=0, horizontalalignment='right', verticalalignment='center')
+    ax[6].set_ylim(ymin=-8)
+
+    ax[7].plot(pupil_timestamps, pupil_diameter, label='pupil_diameter', color='gray', zorder=0)
+    ax[7].set_ylabel('pupil\ndiameter\n(pixels)', rotation=0, horizontalalignment='right', verticalalignment='center')
+
+    #     for experiment_id = 807753334
+    #     indices = [277, 84, 183, 236, 73, 142]
+    #     cell_specimen_ids = dff_traces.iloc[indices].index.values
+    cell_specimen_ids = sort_trace_csids_by_max_in_window(dff_traces, ophys_timestamps, xlim_seconds)
+    for cell_index, cell_specimen_id in enumerate(cell_specimen_ids[:6]):
+        dff_trace = dff_traces.loc[cell_specimen_id]['dff']
+        events_trace = events.loc[cell_specimen_id]['events']
+        events_trace[events_trace == 0]
+        # limit cell trace to window so yaxes scale properly
+        start_ind = np.where(ophys_timestamps < xlim_seconds[0])[0][-1]
+        stop_ind = np.where(ophys_timestamps > xlim_seconds[1])[0][0]
+        dff_trace = dff_trace[start_ind:stop_ind]
+        events_trace = events_trace[start_ind:stop_ind]
+        timestamps = ophys_timestamps[start_ind:stop_ind]
+        ax[cell_index].plot(timestamps, dff_trace, label=str(cell_specimen_id), color='gray')
+        for timepoint in np.where(events_trace != 0)[0]:
+            ax[cell_index].axvline(x=timestamps[timepoint], ymin=0, ymax=events_trace[timepoint], color=colors[6])
+            ax[cell_index].set_yticks((0,2))
+
+    for i in range(10):
+        ax[i] = add_stim_color_span(dataset, ax[i], xlim=xlim_seconds, label_changes=label_changes,
+                                    label_omissions=label_omissions)
+        ax[i].set_xlim(xlim_seconds)
+        ax[i].tick_params(which='both', bottom=False, top=False, right=False, left=True,
+                          labelbottom=False, labeltop=False, labelright=False, labelleft=True)
+
+    # label bottom row of plot
+    ax[i].set_xlabel('time in session (seconds)')
+    ax[i].tick_params(which='both', bottom=True, top=False, right=False, left=True,
+                      labelbottom=True, labeltop=False, labelright=False, labelleft=True)
+    # add title to top row
+    metadata_string = utils.get_metadata_string(dataset.metadata)
+    ax[0].set_title(metadata_string)
+
+    plt.subplots_adjust(hspace=0)
+    if save_dir:
+        print('saving')
+        folder = 'behavior_physio_timeseries_stacked'
+        utils.save_figure(fig, figsize, save_dir, folder, metadata_string + '_' + str(int(start_time)) + '_' + suffix,
+                          formats=['.png', '.pdf'])
+    return ax
+
+
 def plot_matched_roi_and_trace(ophys_container_id, cell_specimen_id, limit_to_last_familiar_second_novel=True,
                                use_events=False, filter_events=False, save_figure=True):
     """

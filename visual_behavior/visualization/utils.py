@@ -38,6 +38,12 @@ def get_colors_for_session_numbers():
     return reds + blues
 
 
+def get_colors_for_session_numbers_GH():
+    purples = sns.color_palette('Purples_r', 6)[:5][::2]
+    greens = sns.color_palette('Greens_r', 6)[:5][::2]
+    return purples + greens
+
+
 def get_experience_levels():
     experience_levels = ['Familiar', 'Novel 1', 'Novel >1']
     return experience_levels
@@ -86,6 +92,70 @@ def get_cre_line_color_dict():
               'Sst-IRES-Cre':(158 / 255, 218 / 255, 229 / 255),
               'Vip-IRES-Cre':(197 / 255, 176 / 255, 213 / 255)}
     return colors
+
+
+def get_stimulus_color_map(as_rgb=False):
+    session_number_colors = get_colors_for_session_numbers()
+    session_number_colors_GH = get_colors_for_session_numbers_GH()
+    black = np.array([0, 0, 0]).astype(np.uint8)
+
+    stimulus_color_map = {
+        'gratings_static': (0.25, 0.25, 0.25),
+        'gratings_flashed': (0.5, 0.5, 0.5),
+        'images_A': session_number_colors[0],
+        'images_A_passive': session_number_colors[2],
+        'images_A_habituation': session_number_colors[0],
+        'images_B': session_number_colors[3],
+        'images_B_passive': session_number_colors[5],
+        'images_B_habituation': session_number_colors[3],
+        'images_G': session_number_colors_GH[0],
+        'images_G_passive': session_number_colors_GH[2],
+        'images_G_habituation': session_number_colors_GH[0],
+        'images_H': session_number_colors_GH[3],
+        'images_H_passive': session_number_colors_GH[5],
+    }
+
+    if as_rgb:
+        for key in list(stimulus_color_map.keys()):
+            stimulus_color_map[key] = np.floor(np.array([x for x in list(stimulus_color_map[key])]) * 255).astype(
+                np.uint8)
+
+    return stimulus_color_map
+
+
+def get_stimulus_phase_color_map(as_rgb=False):
+    session_number_colors = get_colors_for_session_numbers()
+    session_number_colors_GH = get_colors_for_session_numbers_GH()
+    white = np.array([1, 1, 1]).astype(np.uint8)
+
+    training_scale = 0.7
+    passive_scale = 0.4
+
+    stimulus_phase_color_map = {
+        'gratings_static_training': (0.4, 0.4, 0.4),
+        'gratings_flashed_training': (0.7, 0.7, 0.7),
+        'images_A_training': (session_number_colors[0] + (white-session_number_colors[0]) * training_scale),
+        'images_A_habituation_ophys': (session_number_colors[0] + (white-session_number_colors[0]) * training_scale),
+        'images_A_ophys': session_number_colors[0],
+        'images_A_passive_ophys': (session_number_colors[0] + (white-session_number_colors[0]) * passive_scale),
+        'images_B_training': (session_number_colors[3] + (white-session_number_colors[3]) * training_scale),
+        'images_B_habituation_ophys': (session_number_colors[3] + (white - session_number_colors[3]) * training_scale),
+        'images_B_ophys': session_number_colors[3],
+        'images_B_passive_ophys': (session_number_colors[3] + (white-session_number_colors[3]) * passive_scale),
+        'images_G_training': (session_number_colors_GH[0] + (white-session_number_colors_GH[0]) * training_scale),
+        'images_G_habituation_ophys': (session_number_colors_GH[0] + (white - session_number_colors_GH[0]) * training_scale),
+        'images_G_ophys': session_number_colors_GH[0],
+        'images_G_passive_ophys': (session_number_colors_GH[0] + (white-session_number_colors_GH[0]) * passive_scale),
+        'images_H_ophys': session_number_colors_GH[3],
+        'images_H_passive_ophys': (session_number_colors_GH[3] + (white-session_number_colors_GH[3]) * passive_scale),
+    }
+
+    if as_rgb:
+        for key in list(stimulus_phase_color_map.keys()):
+            stimulus_phase_color_map[key] = np.floor(
+                np.array([x for x in list(stimulus_phase_color_map[key])]) * 255).astype(np.uint8)
+
+    return stimulus_phase_color_map
 
 
 def get_session_type_color_map():
