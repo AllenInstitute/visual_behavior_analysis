@@ -74,15 +74,16 @@ def get_multi_session_df(project_code, session_number, conditions, data_type, ev
     # experiments_table = experiments_table[(experiments_table.reporter_line != 'Ai94(TITL-GCaMP6s)')]
 
     ##### limit to platform paper experiments
-    import visual_behavior.data_access.loading as loading
     experiments_table = loading.get_platform_paper_experiment_table(add_extra_columns=True,
                                                                     limit_to_closest_active=True,
                                                                     include_4x2_data=False)
 
-    session_number = float(session_number)
+    # session_number = float(session_number)
     experiments = experiments_table[(experiments_table.project_code == project_code) &
                                     (experiments_table.session_number == session_number)].copy()
-    print('session_types:', experiments.session_type.unique(),
+
+    print('session_number:', experiments.session_number.unique(),
+          'session_types:', experiments.session_type.unique(),
           ' - there should only be one session_type per session_number')
     session_type = experiments.session_type.unique()[0]
 

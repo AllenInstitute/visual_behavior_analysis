@@ -15,7 +15,12 @@ if __name__ == '__main__':
     parser.add_argument('--session_number', type=str, help='session number to use')
     args = parser.parse_args()
     project_code = args.project_code
-    session_number = float(args.session_number)
+    # session_number = float(args.session_number)
+    session_number = args.session_number
+
+
+    # project_code = 'VisualBehaviorMultiscope'
+    # session_number = 3
 
     print(project_code, session_number)
 
