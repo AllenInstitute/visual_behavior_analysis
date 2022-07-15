@@ -66,12 +66,18 @@ def get_multi_session_df(project_code, session_number, conditions, data_type, ev
         get_pref_stim = False
     print('get_pref_stim', get_pref_stim)
 
-    cache_dir = loading.get_platform_analysis_cache_dir()
-    cache = VisualBehaviorOphysProjectCache.from_s3_cache(cache_dir=cache_dir)
-    print(cache_dir)
-    experiments_table = cache.get_ophys_experiment_table()
+    # cache_dir = loading.get_platform_analysis_cache_dir()
+    # cache = VisualBehaviorOphysProjectCache.from_s3_cache(cache_dir=cache_dir)
+    # print(cache_dir)
+    # experiments_table = cache.get_ophys_experiment_table()
     # dont include Ai94 experiments because they makes things too slow
-    experiments_table = experiments_table[(experiments_table.reporter_line != 'Ai94(TITL-GCaMP6s)')]
+    # experiments_table = experiments_table[(experiments_table.reporter_line != 'Ai94(TITL-GCaMP6s)')]
+
+    ##### limit to platform paper experiments
+    import visual_behavior.data_access.loading as loading
+    experiments_table = loading.get_platform_paper_experiment_table(add_extra_columns=True,
+                                                                    limit_to_closest_active=True,
+                                                                    include_4x2_data=False)
 
     session_number = float(session_number)
     experiments = experiments_table[(experiments_table.project_code == project_code) &
