@@ -78,9 +78,13 @@ def get_multi_session_df(project_code, session_number, conditions, data_type, ev
                                                                     limit_to_closest_active=True,
                                                                     include_4x2_data=False)
 
+    print(len(experiments_table), 'platform expts')
+
     # session_number = float(session_number)
     experiments = experiments_table[(experiments_table.project_code == project_code) &
                                     (experiments_table.session_number == session_number)].copy()
+
+    print(len(experiments), 'expts after filtering for project code and session number')
 
     print('session_number:', experiments.session_number.unique(),
           'session_types:', experiments.session_type.unique(),
