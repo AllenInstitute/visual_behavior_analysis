@@ -80,8 +80,9 @@ def get_multi_session_df(project_code, session_number, conditions, data_type, ev
 
     print(len(experiments_table), 'platform expts')
 
-    session_number = int(session_number)
-    # session_number = float(session_number)
+    print(experiments_table.session_number.unique(), 'session numbers')
+    # session_number = int(session_number)
+    session_number = float(session_number)
     experiments = experiments_table[(experiments_table.project_code == project_code) &
                                     (experiments_table.session_number == session_number)].copy()
 
