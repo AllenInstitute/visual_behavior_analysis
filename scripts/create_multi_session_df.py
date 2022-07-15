@@ -77,7 +77,7 @@ if __name__ == '__main__':
     # create dfs for all data types and conditions for physio data
     for data_type in physio_data_types:
     # data_type = 'events'
-        conditions = ['cell_specimen_id', 'epoch', 'image_name']
+        conditions = ['cell_specimen_id', 'omitted', 'epoch']
     # for i, conditions in enumerate(physio_conditions):
         print(conditions)
         # event_type = event_types_for_conditions[i]
