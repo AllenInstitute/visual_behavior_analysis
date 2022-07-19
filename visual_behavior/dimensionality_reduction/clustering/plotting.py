@@ -2602,3 +2602,74 @@ def plot_cluster_proportions_treemaps(location_fractions, cluster_meta, color_co
 
         if save_dir:
             utils.save_figure(fig, figsize, save_dir, folder, 'cluster_proportions_treemap' + cre_line[:3] + '_' + color_column)
+
+
+## plot cluster sizes
+
+def plot_cluster_size_and_probability(cluster_size_df, shuffle_probability_df, cre_line=None, shuffle_type=None,
+                                      ax=None):
+    if cre_line is not None:
+        if type(cre_line) is str:
+            cluster_size_df = cluster_size_df[cluster_size_df.cre_line == cre_line]
+            shuffle_probability_df = shuffle_probability_df[shuffle_probability_df.cre_line == cre_line]
+
+    # select which shuffle type to plot
+    if shuffle_type is not None:
+        cluster_size_df = cluster_size_df[cluster_size_df.shuffle_type == shuffle_type]
+        shuffle_probability_df = shuffle_probability_df[shuffle_probability_df.shuffle_type == shuffle_type]
+
+    if ax is None:
+        fig, ax = plt.subplots(1, 1, figsize=(15, 4))
+
+    color1 = 'dimgray'
+    color2 = 'steelblue'
+    # plot cluster size first
+    ax = sns.barplot(data=cluster_size_df, x='cluster_id', y='cluster_size_diff', color=color1)
+    ax.axhline(0, color='gray')
+    ax.set_yticklabels(np.round(ax.get_yticks(), 1), color=color1)
+    ax.set_ylabel('normalized difference \n in cluster size', color=color1)
+
+    # plot probability second
+    ax2 = ax.twinx()
+    sns.pointplot(data=shuffle_probability_df, x='cluster_id', y='probability', ax=ax2, color=color2, linestyles='')
+    ax2.set_yticklabels(np.round(ax2.get_yticks(), 1), color=color2)
+    ax2.set_ylabel('cluster probability', color=color2)
+
+    ax.set_xlabel('Cluster ID')
+
+    return ax
+
+
+def plot_matched_clusters_heatmap(SSE_mapping, mean_dropout_scores_unstacked, metric='mean', shuffle_type=None,
+                                  cre_line=None,
+                                  save_dir=None, folder=None,figsize=None):
+    ''' This function can plot mean (or other metric like std, median, or custom function) of matched shuffle clusters. This is helpful to see
+    how well matching worked but it does not show clusters that were not matched with any original clusters.
+    INPUT:
+    SSE_mapping: dictionary for each n_boot, original cluster_id: matched shuffled cluster_id
+    mean_dropout_scores_unstacked: dictionary ofmean unstacked dropout scores  cluster_id: unstached pd.Data'''
+
+    all_clusters_means_dict = processing.get_matched_clusters_means_dict(SSE_mapping,
+                                                                         mean_dropout_scores_unstacked,
+                                                                         metric=metric, shuffle_type=shuffle_type,
+                                                                         cre_line=cre_line)
+    cluster_ids = all_clusters_means_dict.keys()
+    if figsize is None:
+        figsize = (2 * len(cluster_ids), 3)
+    fig, ax = plt.subplots(1, len(cluster_ids), figsize = figsize, sharex = 'row', sharey = 'row')
+
+    for cluster_id in cluster_ids:
+        try:
+            ax[cluster_id - 1] = sns.heatmap(all_clusters_means_dict[cluster_id], ax=ax[cluster_id - 1], cmap='Blues', vmin=0,
+                                             vmax=1)
+            ax[cluster_id - 1].set_xlabel('')
+            ax[cluster_id - 1].set_ylabel('')
+        except:
+            print('no matched clusters')
+    plt.suptitle(cre_line + '_' + shuffle_type)
+
+    plt.tight_layout()
+
+    if save_dir:
+        utils.save_figure(fig, figsize, save_dir, folder,
+                          'mean_dropout_matched_clusters' + cre_line[:3]  )
