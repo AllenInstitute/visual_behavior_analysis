@@ -606,7 +606,7 @@ def get_stimulus_response_df_filepath_for_experiment(ophys_experiment_id, data_t
 
 
 def get_stimulus_response_df(dataset, time_window=[-3, 3.1], interpolate=True, output_sampling_rate=30,
-                             data_type='filtered_events', event_type='all', load_from_file=True):
+                             data_type='filtered_events', event_type='all', load_from_file=True, epoch_duration_mins=10):
     """
     Load a dataframe with stimulus aligned traces for all cells (or for a given behavior timeseries) using mindscope_utilities
     and merges with annotated stimulus_presentations table that includes behavior metadata
@@ -624,6 +624,8 @@ def get_stimulus_response_df(dataset, time_window=[-3, 3.1], interpolate=True, o
         output_sampling_rate: sampling rate for interpolation, only used if interpolate is True
         data_type: which timeseries to get event triggered responses for
                     options: 'filtered_events', 'events', 'dff', 'running_speed', 'pupil_diameter', 'lick_rate'
+        epoch_duration_mins: duration in minutes to use when creating 'epoch' column in the annotated stimulus_presentations table
+                                'epoch' column provides an integer value of the epoch # to which each stimulus presentation belongs
     output:
         stimulus_response_df: pandas dataframe
                                 if data_type is 'filtered_events', 'events', or 'dff', table will be formatted such that:
@@ -682,7 +684,7 @@ def get_stimulus_response_df(dataset, time_window=[-3, 3.1], interpolate=True, o
     if 'extended_stimulus_presentations' in dir(dataset):
         stimulus_presentations = dataset.extended_stimulus_presentations.copy()
     else:
-        stimulus_presentations = vb_ophys.get_annotated_stimulus_presentations(dataset, epoch_duration_mins=1)
+        stimulus_presentations = vb_ophys.get_annotated_stimulus_presentations(dataset, epoch_duration_mins=epoch_duration_mins)
     sdf = sdf.merge(stimulus_presentations, on='stimulus_presentations_id')
 
     return sdf

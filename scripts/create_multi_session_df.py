@@ -35,39 +35,41 @@ if __name__ == '__main__':
     physio_data_types = ['filtered_events', 'events', 'dff']
     behavior_data_types = ['pupil_width', 'running_speed', 'lick_rate']
 
-    physio_conditions = [['cell_specimen_id', 'is_change'], # all stim presentations, change vs. not a change
+    physio_conditions = [#'cell_specimen_id', 'is_change'], # all stim presentations, change vs. not a change
                          ['cell_specimen_id', 'is_change', 'epoch'], # all stim presentations, change vs no change, 10 min epochs
-                         ['cell_specimen_id', 'is_change', 'image_name'], # all stim presentations, change vs no change, each image identity
-                         ['cell_specimen_id', 'omitted'], # all omissions
-                         ['cell_specimen_id', 'omitted', 'epoch'], # omissions in 10 min epochs
-                         ['cell_specimen_id', 'is_change'], # only changes
-                         ['cell_specimen_id', 'is_change', 'epoch'], # only changes, 10 min epochs
-                         ['cell_specimen_id', 'is_change', 'image_name'], # only changes, each image identity
+                         # ['cell_specimen_id', 'is_change', 'image_name'], # all stim presentations, change vs no change, each image identity
+                         # ['cell_specimen_id', 'omitted'], # all omissions
+                         # ['cell_specimen_id', 'omitted', 'epoch'], # omissions in 10 min epochs
+                         # ['cell_specimen_id', 'is_change'], # only changes
+                         # ['cell_specimen_id', 'is_change', 'epoch'], # only changes, 10 min epochs
+                         # ['cell_specimen_id', 'is_change', 'image_name'], # only changes, each image identity
                          ['cell_specimen_id', 'is_change', 'hit', 'epoch'], # only changes, hit vs. miss, 10 min epochs
-                         ['cell_specimen_id', 'is_change', 'hit'], # only changes, hit vs. miss
+                         # ['cell_specimen_id', 'is_change', 'hit'], # only changes, hit vs. miss
                          ['cell_specimen_id', 'pre_change', 'epoch'], # all stim presentations, pre-change, 10 min epochs
-                         ['cell_specimen_id', 'omitted', 'pre_omitted'],] # all stim presentations, omission or not, pre-omitted or not
+                         # ['cell_specimen_id', 'omitted', 'pre_omitted'],] # all stim presentations, omission or not, pre-omitted or not
+                            ]
 
-    behavior_conditions = [['ophys_experiment_id', 'is_change'],
+
+    behavior_conditions = [#['ophys_experiment_id', 'is_change'],
                             ['ophys_experiment_id', 'is_change', 'epoch'],
-                            ['ophys_experiment_id', 'is_change', 'image_name'],
-                            ['ophys_experiment_id', 'omitted'],
+                            # ['ophys_experiment_id', 'is_change', 'image_name'],
+                            # ['ophys_experiment_id', 'omitted'],
                             ['ophys_experiment_id', 'omitted', 'epoch'],
-                            ['ophys_experiment_id', 'is_change'],
+                            # ['ophys_experiment_id', 'is_change'],
                             ['ophys_experiment_id', 'is_change', 'epoch'],
-                            ['ophys_experiment_id', 'is_change', 'image_name'],
+                            # ['ophys_experiment_id', 'is_change', 'image_name'],
                             ['ophys_experiment_id', 'is_change', 'hit', 'epoch'],
-                            ['ophys_experiment_id', 'is_change', 'hit'],
+                            # ['ophys_experiment_id', 'is_change', 'hit'],
                             ['ophys_experiment_id', 'pre_change', 'epoch'],
-                            ['ophys_experiment_id', 'omitted', 'pre_omitted'],]
+                            # ['ophys_experiment_id', 'omitted', 'pre_omitted'],]
 
 
     # event types corresponding to the above physio and behavior conditions - must be in same sequential order
-    event_types_for_conditions = ['all', 'all', 'all',
-                                  'omissions', 'omissions',
-                                  'changes', 'changes', 'changes',
-                                  'changes', 'changes',
-                                  'all', 'all']
+    event_types_for_conditions = ['all', 'all', 'all',]
+                                  # 'omissions', 'omissions',
+                                  # 'changes', 'changes', 'changes',
+                                  # 'changes', 'changes',
+                                  # 'all', 'all']
 
     # add engagement state to all conditions
     # for i in range(len(physio_conditions)):
@@ -77,11 +79,12 @@ if __name__ == '__main__':
     # create dfs for all data types and conditions for physio data
     for data_type in physio_data_types:
     # data_type = 'events'
-        conditions = ['cell_specimen_id', 'omitted', 'epoch']
-    # for i, conditions in enumerate(physio_conditions):
+    #     conditions = ['cell_specimen_id', 'omitted', 'epoch']
+    for i, conditions in enumerate(physio_conditions):
         print(conditions)
-        # event_type = event_types_for_conditions[i]
-        event_type = 'all'
+        event_type = event_types_for_conditions[i]
+        print(event_type)
+        # event_type = 'all'
         if event_type == 'omissions':
             response_window_duration = 0.75
         else:
