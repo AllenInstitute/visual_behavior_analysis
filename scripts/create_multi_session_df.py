@@ -83,25 +83,25 @@ if __name__ == '__main__':
     for data_type in physio_data_types:
     # data_type = 'events'
     #     conditions = ['cell_specimen_id', 'omitted', 'epoch']
-    for i, conditions in enumerate(physio_conditions):
-        print(conditions)
-        event_type = event_types_for_conditions[i]
-        print(event_type)
-        # event_type = 'all'
-        if 'omitted' in conditions:
-            response_window_duration = 0.75
-        else:
-            response_window_duration = 0.5
-        print('creating multi_session_df for', data_type, event_type, conditions)
-        try: # use try except so that it skips over any conditions that fail to generate for some reason
-            df = io.get_multi_session_df(project_code, session_number, conditions, data_type, event_type,
-                                         time_window=time_window, interpolate=interpolate, output_sampling_rate=output_sampling_rate,
-                                         response_window_duration=response_window_duration,
-                                         use_extended_stimulus_presentations=use_extended_stimulus_presentations,
-                                         overwrite=True)
-        except Exception as e:
-            print('failed to create multi_session_df for', data_type, event_type, conditions)
-            print(e)
+        for i, conditions in enumerate(physio_conditions):
+            print(conditions)
+            event_type = event_types_for_conditions[i]
+            print(event_type)
+            # event_type = 'all'
+            if 'omitted' in conditions:
+                response_window_duration = 0.75
+            else:
+                response_window_duration = 0.5
+            print('creating multi_session_df for', data_type, event_type, conditions)
+            try: # use try except so that it skips over any conditions that fail to generate for some reason
+                df = io.get_multi_session_df(project_code, session_number, conditions, data_type, event_type,
+                                             time_window=time_window, interpolate=interpolate, output_sampling_rate=output_sampling_rate,
+                                             response_window_duration=response_window_duration,
+                                             use_extended_stimulus_presentations=use_extended_stimulus_presentations,
+                                             overwrite=True)
+            except Exception as e:
+                print('failed to create multi_session_df for', data_type, event_type, conditions)
+                print(e)
 
 
     # # create dfs for all data types and conditions for behavior data
