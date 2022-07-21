@@ -75,8 +75,8 @@ def get_multi_session_df(project_code, session_number, conditions, data_type, ev
 
     ##### limit to platform paper experiments
     experiments_table = loading.get_platform_paper_experiment_table(add_extra_columns=True,
-                                                                    limit_to_closest_active=True,
-                                                                    include_4x2_data=False)
+                                                                    limit_to_closest_active=False,
+                                                                    include_4x2_data=True)
 
     print(len(experiments_table), 'platform expts')
 
