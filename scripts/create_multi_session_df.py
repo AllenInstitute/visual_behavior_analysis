@@ -33,7 +33,7 @@ if __name__ == '__main__':
 
     # epoch duration that will be used is coded in io\create_multi_session_df.py
 
-    physio_conditions = ['cell_specimen_id', 'is_change'], # all stim presentations, change vs. not a change
+    physio_conditions = [['cell_specimen_id', 'is_change'], # all stim presentations, change vs. not a change
                         ['cell_specimen_id', 'omitted'], # all omissions
                         ['cell_specimen_id', 'pre_change'], # all omissions
                         ['cell_specimen_id', 'is_change', 'image_name'], # all stim presentations, change vs no change, each image identity
