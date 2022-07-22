@@ -25,7 +25,7 @@ if __name__ == '__main__':
     interpolate = True
     output_sampling_rate = 30
     # response_window_duration_seconds = 0.5
-    use_extended_stimulus_presentations = True
+    use_extended_stimulus_presentations = False
 
     # set up conditions to make multi session dfs for
     physio_data_types = ['events', 'filtered_events', 'dff']
@@ -33,16 +33,16 @@ if __name__ == '__main__':
 
     # epoch duration that will be used is coded in io\create_multi_session_df.py
 
-    physio_conditions = [['cell_specimen_id', 'is_change'], # all stim presentations, change vs. not a change
-                        ['cell_specimen_id', 'omitted'], # all omissions
-                        ['cell_specimen_id', 'pre_change'], # all omissions
-                        ['cell_specimen_id', 'is_change', 'image_name'], # all stim presentations, change vs no change, each image identity
-                        ['cell_specimen_id', 'is_change', 'hit'], # only changes, hit vs. miss
-                        # ['cell_specimen_id', 'is_change', 'epoch'], # all stim presentations, change vs no change, x min epochs
-                        #  ['cell_specimen_id', 'omitted', 'epoch'], # omissions in x min epochs
-                        #  ['cell_specimen_id', 'image_name', 'epoch'], # each image, x min epochs
-                        #  ['cell_specimen_id', 'is_change', 'hit', 'epoch'], # only changes, hit vs. miss, x min epochs
-                        #  ['cell_specimen_id', 'pre_change', 'epoch'], # all stim presentations, pre-change, x min epochs
+    physio_conditions = [#['cell_specimen_id', 'is_change'], # all stim presentations, change vs. not a change
+                        # ['cell_specimen_id', 'omitted'], # all omissions
+                        # ['cell_specimen_id', 'pre_change'], # all omissions
+                        # ['cell_specimen_id', 'is_change', 'image_name'], # all stim presentations, change vs no change, each image identity
+                        # ['cell_specimen_id', 'is_change', 'hit'], # only changes, hit vs. miss
+                        ['cell_specimen_id', 'is_change', 'epoch'], # all stim presentations, change vs no change, x min epochs
+                         ['cell_specimen_id', 'omitted', 'epoch'], # omissions in x min epochs
+                         ['cell_specimen_id', 'pre_change', 'epoch'],  # all stim presentations, pre-change, x min epochs
+                         ['cell_specimen_id', 'image_name', 'epoch'], # each image, x min epochs
+                         ['cell_specimen_id', 'is_change', 'hit', 'epoch'], # only changes, hit vs. miss, x min epochs
                          # ['cell_specimen_id', 'omitted', 'pre_omitted'], # all stim presentations, omission or not, pre-omitted or not
                             ]
 
@@ -71,11 +71,34 @@ if __name__ == '__main__':
     #     physio_conditions[i].insert(1, 'engagement_state')
     #     behavior_conditions[i].insert(1, 'engagement_state')
 
-    # # create dfs for all data types and conditions for physio data
+    # create dfs for all data types and conditions for physio data
     # for data_type in physio_data_types:
-    # # data_type = 'events'
-    # #     conditions = ['cell_specimen_id', 'omitted', 'epoch']
-    #     for i, conditions in enumerate(physio_conditions):
+    data_type = 'filtered_events'
+    #     conditions = ['cell_specimen_id', 'omitted', 'epoch']
+    for i, conditions in enumerate(physio_conditions):
+        print(conditions)
+        # event_type = event_types_for_conditions[i]
+        event_type = 'all'
+        print(event_type)
+        if 'omitted' in conditions:
+            response_window_duration = 0.75
+        else:
+            response_window_duration = 0.5
+        print('creating multi_session_df for', data_type, event_type, conditions)
+        try: # use try except so that it skips over any conditions that fail to generate for some reason
+            df = io.get_multi_session_df(project_code, session_number, conditions, data_type, event_type,
+                                         time_window=time_window, interpolate=interpolate, output_sampling_rate=output_sampling_rate,
+                                         response_window_duration=response_window_duration,
+                                         use_extended_stimulus_presentations=use_extended_stimulus_presentations,
+                                         overwrite=True)
+        except Exception as e:
+            print('failed to create multi_session_df for', data_type, event_type, conditions)
+            print(e)
+
+
+    # # create dfs for all data types and conditions for behavior data
+    # for data_type in behavior_data_types:
+    #     for i, conditions in enumerate(behavior_conditions):
     #         print(conditions)
     #         # event_type = event_types_for_conditions[i]
     #         event_type = 'all'
@@ -87,34 +110,11 @@ if __name__ == '__main__':
     #         print('creating multi_session_df for', data_type, event_type, conditions)
     #         try: # use try except so that it skips over any conditions that fail to generate for some reason
     #             df = io.get_multi_session_df(project_code, session_number, conditions, data_type, event_type,
-    #                                          time_window=time_window, interpolate=interpolate, output_sampling_rate=output_sampling_rate,
+    #                                          time_window=time_window, interpolate=interpolate,
+    #                                          output_sampling_rate=output_sampling_rate,
     #                                          response_window_duration=response_window_duration,
     #                                          use_extended_stimulus_presentations=use_extended_stimulus_presentations,
     #                                          overwrite=True)
     #         except Exception as e:
     #             print('failed to create multi_session_df for', data_type, event_type, conditions)
     #             print(e)
-
-
-    # create dfs for all data types and conditions for behavior data
-    for data_type in behavior_data_types:
-        for i, conditions in enumerate(behavior_conditions):
-            print(conditions)
-            # event_type = event_types_for_conditions[i]
-            event_type = 'all'
-            print(event_type)
-            if 'omitted' in conditions:
-                response_window_duration = 0.75
-            else:
-                response_window_duration = 0.5
-            print('creating multi_session_df for', data_type, event_type, conditions)
-            try: # use try except so that it skips over any conditions that fail to generate for some reason
-                df = io.get_multi_session_df(project_code, session_number, conditions, data_type, event_type,
-                                             time_window=time_window, interpolate=interpolate,
-                                             output_sampling_rate=output_sampling_rate,
-                                             response_window_duration=response_window_duration,
-                                             use_extended_stimulus_presentations=use_extended_stimulus_presentations,
-                                             overwrite=True)
-            except Exception as e:
-                print('failed to create multi_session_df for', data_type, event_type, conditions)
-                print(e)
