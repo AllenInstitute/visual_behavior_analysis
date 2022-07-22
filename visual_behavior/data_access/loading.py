@@ -3329,27 +3329,33 @@ def check_whether_multi_session_df_has_all_platform_experiments(multi_session_df
     return missing_expts
 
 
-def get_multi_session_df_for_conditions(data_type, event_type, conditions, inclusion_criteria='full_dataset'):
+
+def get_multi_session_df_for_conditions(data_type, event_type, conditions, inclusion_criteria='platform_experiment_table'):
     # params for stim_response_df to use
+    time_window = [-3, 3.1]
     interpolate = True
     output_sampling_rate = 30
+    response_window_duration_seconds = 0.5
+    use_extended_stimulus_presentations = False
 
     multi_session_df = load_multi_session_df(data_type=data_type, event_type=event_type, conditions=conditions,
-                                             interpolate=interpolate, output_sampling_rate=output_sampling_rate)
+                                                     interpolate=interpolate, output_sampling_rate=output_sampling_rate)
     print('there are', len(multi_session_df.ophys_experiment_id.unique()), 'experiments in the full multi_session_df')
 
+    #     missing_expts = loading.check_whether_multi_session_df_has_all_platform_experiments(multi_session_df)
+
     # limit to platform expts
-    platform_experiments = get_platform_paper_experiment_table()
-    multi_session_df = multi_session_df[multi_session_df.ophys_experiment_id.isin(platform_experiments.index.values)]
-    print('there are', len(multi_session_df.ophys_experiment_id.unique()),
-          'experiments in the multi_session_df after limiting to platform experiments')
+    if inclusion_criteria == 'platform_experiment_table':
+        experiments_table = get_platform_paper_experiment_table(limit_to_closest_active=True)
+        multi_session_df = multi_session_df[multi_session_df.ophys_experiment_id.isin(experiments_table.index.values)]
+        print('there are', len(multi_session_df.ophys_experiment_id.unique()), 'experiments in the multi_session_df after limiting to platform experiments')
+    else:
+        experiments_table = get_filtered_ophys_experiment_table()
 
     # merge with metadata
-    multi_session_df = multi_session_df.merge(platform_experiments, on='ophys_experiment_id')
+    multi_session_df = multi_session_df.merge(experiments_table, on='ophys_experiment_id')
 
     multi_session_df = multi_session_df.reset_index(drop=True)
-
-    #     missing_expts = loading.check_whether_multi_session_df_has_all_platform_experiments(multi_session_df)
 
     # need to filter for active first so that subsequent criteria area applied to that set
     if 'active_only' in inclusion_criteria:
