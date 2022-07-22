@@ -1564,7 +1564,7 @@ def plot_population_average_response_for_cluster(cluster_mdf, cre_line, cluster_
 
 
 def plot_clusters_row(cluster_meta, feature_matrix, cre_line,
-                               sort_order=None, save_dir=None, folder=None, suffix=''):
+                               sort_order=None, save_dir=None, folder=None, suffix='', formats=['.png', '.pdf']):
     """
     For each cluster in a given cre_line, plots dropout heatmaps, fraction cells per area/depth relative to chance,
     fraction cells per cluster per area/depth, and population average omission response.
@@ -1607,7 +1607,7 @@ def plot_clusters_row(cluster_meta, feature_matrix, cre_line,
     # fig.suptitle(get_cell_type_for_cre_line(cre_line, cluster_meta), x=0.52, y=1.1, fontsize=16)
     # fig.tight_layout()
     if save_dir:
-        utils.save_figure(fig, figsize, save_dir, folder, 'clusters_row_' + cre_line.split('-')[0] + suffix)
+        utils.save_figure(fig, figsize, save_dir, folder, 'clusters_row_' + cre_line.split('-')[0] + suffix, formats = formats)
 
 
 def plot_clusters_stats_pop_avg_rows(cluster_meta, feature_matrix, multi_session_df, cre_line, columns_to_groupby=['targeted_structure', 'layer'],
@@ -1882,28 +1882,31 @@ def plot_clusters_stats_pop_avg_cols(cluster_meta, feature_matrix, multi_session
         utils.save_figure(fig, figsize, save_dir, folder, 'cluster_stats_cols_' + cre_line.split('-')[0] + suffix)
 
 
-def plot_gap_statistic(gap_statistic, cre_lines, n_clusters_cre=None, save_dir=None, folder=None):
+def plot_gap_statistic(gap_statistic, cre_lines = None, n_clusters_cre=None, tag='', save_dir=None, folder=None):
 
     if n_clusters_cre is None:
         n_clusters_cre = processing.get_n_clusters_cre()
 
+    if cre_lines is None:
+        cre_lines = gap_statistic.keys()
+
     for cre_line in cre_lines:
 
-        suffix = cre_line
+        suffix = cre_line + '_' + tag
         n_clusters = n_clusters_cre[cre_line]
-        x = len(gap_statistic[cre_line][0])
+        x = len(gap_statistic[cre_line]['gap'])
 
         figsize = (10, 4)
         fig, ax = plt.subplots(1, 2, figsize=figsize)
 
-        ax[0].plot(np.arange(1, x + 1), gap_statistic[cre_line][1], 'o-')
-        ax[0].plot(np.arange(1, x + 1), gap_statistic[cre_line][2], 'o-')
+        ax[0].plot(np.arange(1, x + 1), gap_statistic[cre_line]['reference_inertia'], 'o-')
+        ax[0].plot(np.arange(1, x + 1), gap_statistic[cre_line]['ondata_inertia'], 'o-')
         ax[0].legend(['reference inertia', 'ondata intertia'])
         ax[0].set_ylabel('Natural log of euclidean \ndistance values')
         ax[0].set_xlabel('Number of clusters')
         ax[0].axvline(x=n_clusters, ymin=0, ymax=1, linestyle='--', color='gray')
 
-        ax[1].plot(np.arange(1, x + 1), gap_statistic[cre_line][0], 'o-')
+        ax[1].plot(np.arange(1, x + 1), gap_statistic[cre_line]['gap'], 'o-')
         ax[1].set_ylabel('Gap statistic')
         ax[1].set_xlabel('Number of clusters')
         ax[1].axvline(x=n_clusters, ymin=0, ymax=1, linestyle='--', color='gray')
@@ -1913,8 +1916,52 @@ def plot_gap_statistic(gap_statistic, cre_lines, n_clusters_cre=None, save_dir=N
         plt.tight_layout()
 
         if save_dir:
-            utils.save_figure(fig, figsize, save_dir, folder, 'Gap_euclidean_all_' + suffix)
+            utils.save_figure(fig, figsize, save_dir, folder, 'Gap_' + suffix )
 
+
+def plot_gap_statistic_with_sem(gap_statistics, cre_lines = None, n_clusters_cre=None, tag='', save_dir=None, folder=None):
+
+    if n_clusters_cre is None:
+        n_clusters_cre = processing.get_n_clusters_cre()
+
+    if cre_lines is None:
+        cre_lines = gap_statistics.keys()
+
+    for cre_line in cre_lines:
+
+        suffix = cre_line + '_' + tag
+        n_clusters = n_clusters_cre[cre_line]
+        x = len(gap_statistics[cre_line]['gap'])
+
+        figsize = (10, 4)
+        fig, ax = plt.subplots(1, 2, figsize=figsize)
+
+        ax[0].errorbar(x = np.arange(1, x + 1),
+                   y = gap_statistics[cre_line]['reference_inertia'],
+                   yerr = gap_statistics[cre_line]['reference_sem'],
+                   label = 'reference inertia')
+        ax[0].errorbar(x = np.arange(1, x + 1),
+                   y = gap_statistics[cre_line]['ondata_inertia'],
+                   yerr = gap_statistics[cre_line]['ondata_sem'],
+                    label = 'ondata inertia')
+        ax[0].set_ylabel('Natural log of euclidean \ndistance values')
+        ax[0].set_xlabel('Number of clusters')
+        ax[0].axvline(x=n_clusters, ymin=0, ymax=1, linestyle='--', color='gray')
+
+        ax[1].errorbar(x = np.arange(1, x + 1),
+                       y = gap_statistics[cre_line]['gap_mean'],
+                       yerr = gap_statistics[cre_line]['gap_sem'],
+                       )
+        ax[1].set_ylabel('Gap statistic')
+        ax[1].set_xlabel('Number of clusters')
+        ax[1].axvline(x=n_clusters, ymin=0, ymax=1, linestyle='--', color='gray')
+
+        title = processing.get_cre_line_map(cre_line)  # get a more interpretable cell type name
+        plt.suptitle(title)
+        plt.tight_layout()
+
+        if save_dir:
+            utils.save_figure(fig, figsize, save_dir, folder, 'Gap_' + suffix )
 
 def plot_eigengap_values(eigenvalues_cre, cre_lines, n_clusters_cre=None, save_dir=None, folder=None):
 
@@ -2555,3 +2602,74 @@ def plot_cluster_proportions_treemaps(location_fractions, cluster_meta, color_co
 
         if save_dir:
             utils.save_figure(fig, figsize, save_dir, folder, 'cluster_proportions_treemap' + cre_line[:3] + '_' + color_column)
+
+
+## plot cluster sizes
+
+def plot_cluster_size_and_probability(cluster_size_df, shuffle_probability_df, cre_line=None, shuffle_type=None,
+                                      ax=None):
+    if cre_line is not None:
+        if type(cre_line) is str:
+            cluster_size_df = cluster_size_df[cluster_size_df.cre_line == cre_line]
+            shuffle_probability_df = shuffle_probability_df[shuffle_probability_df.cre_line == cre_line]
+
+    # select which shuffle type to plot
+    if shuffle_type is not None:
+        cluster_size_df = cluster_size_df[cluster_size_df.shuffle_type == shuffle_type]
+        shuffle_probability_df = shuffle_probability_df[shuffle_probability_df.shuffle_type == shuffle_type]
+
+    if ax is None:
+        fig, ax = plt.subplots(1, 1, figsize=(15, 4))
+
+    color1 = 'dimgray'
+    color2 = 'steelblue'
+    # plot cluster size first
+    ax = sns.barplot(data=cluster_size_df, x='cluster_id', y='cluster_size_diff', color=color1)
+    ax.axhline(0, color='gray')
+    ax.set_yticklabels(np.round(ax.get_yticks(), 1), color=color1)
+    ax.set_ylabel('normalized difference \n in cluster size', color=color1)
+
+    # plot probability second
+    ax2 = ax.twinx()
+    sns.pointplot(data=shuffle_probability_df, x='cluster_id', y='probability', ax=ax2, color=color2, linestyles='')
+    ax2.set_yticklabels(np.round(ax2.get_yticks(), 1), color=color2)
+    ax2.set_ylabel('cluster probability', color=color2)
+
+    ax.set_xlabel('Cluster ID')
+
+    return ax
+
+
+def plot_matched_clusters_heatmap(SSE_mapping, mean_dropout_scores_unstacked, metric='mean', shuffle_type=None,
+                                  cre_line=None,
+                                  save_dir=None, folder=None,figsize=None):
+    ''' This function can plot mean (or other metric like std, median, or custom function) of matched shuffle clusters. This is helpful to see
+    how well matching worked but it does not show clusters that were not matched with any original clusters.
+    INPUT:
+    SSE_mapping: dictionary for each n_boot, original cluster_id: matched shuffled cluster_id
+    mean_dropout_scores_unstacked: dictionary ofmean unstacked dropout scores  cluster_id: unstached pd.Data'''
+
+    all_clusters_means_dict = processing.get_matched_clusters_means_dict(SSE_mapping,
+                                                                         mean_dropout_scores_unstacked,
+                                                                         metric=metric, shuffle_type=shuffle_type,
+                                                                         cre_line=cre_line)
+    cluster_ids = all_clusters_means_dict.keys()
+    if figsize is None:
+        figsize = (2 * len(cluster_ids), 3)
+    fig, ax = plt.subplots(1, len(cluster_ids), figsize = figsize, sharex = 'row', sharey = 'row')
+
+    for cluster_id in cluster_ids:
+        try:
+            ax[cluster_id - 1] = sns.heatmap(all_clusters_means_dict[cluster_id], ax=ax[cluster_id - 1], cmap='Blues', vmin=0,
+                                             vmax=1)
+            ax[cluster_id - 1].set_xlabel('')
+            ax[cluster_id - 1].set_ylabel('')
+        except:
+            print('no matched clusters')
+    plt.suptitle(cre_line + '_' + shuffle_type)
+
+    plt.tight_layout()
+
+    if save_dir:
+        utils.save_figure(fig, figsize, save_dir, folder,
+                          'mean_dropout_matched_clusters' + cre_line[:3]  )

@@ -9,6 +9,7 @@ from numpy import linalg as linalg
 from scipy.stats import spearmanr
 from scipy.stats import kruskal
 from scipy.stats import ttest_ind
+from scipy.stats import sem
 from scipy.sparse import csgraph
 
 from sklearn.metrics import silhouette_score
@@ -497,7 +498,7 @@ def compute_inertia(a, X, metric='euclidean'):
     return np.mean(W)
 
 
-def compute_gap(clustering, data, k_max=5, n_boots=20, reference=None, metric='euclidean'):
+def compute_gap(clustering, data, k_max=5, n_boots=20, reference_shuffle='all', metric='euclidean'):
     '''
     Computes gap statistic between clustered data (ondata inertia) and null hypothesis (reference intertia).
 
@@ -505,7 +506,8 @@ def compute_gap(clustering, data, k_max=5, n_boots=20, reference=None, metric='e
     :param data: an array of data to be clustered (n samples by n features)
     :param k_max: (int) maximum number of clusters to test, starts at 1
     :param n_boots: (int) number of repetitions for computing mean inertias
-    :param reference: an array of data to cluster as a null hypothesis (shuffled data)
+    :param reference: (str) what type of shuffle to use, shuffle_dropout_scores,
+            None is use random normal distribution
     :param metric: (str) type of distance to use, default = 'euclidean'
     :return:
     gap: array of gap values that are the difference between two inertias
@@ -515,29 +517,61 @@ def compute_gap(clustering, data, k_max=5, n_boots=20, reference=None, metric='e
 
     if len(data.shape) == 1:
         data = data.reshape(-1, 1)
-    if reference is None:
-        reference = np.random.rand(*data.shape) * -1
+
+    if type(data) == pd.core.frame.DataFrame:
+        data_array = data.values
+    else:
+        data_array = data
+
+    gap_statistics = {}
     reference_inertia = []
+    reference_sem = []
+    gap_mean = []
+    gap_sem = []
     for k in range(1, k_max ):
-        local_inertia = []
+        local_ref_inertia = []
         for _ in range(n_boots):
+            # draw random dist or shuffle for every nboot
+            if reference_shuffle is None:
+                reference = np.random.rand(*data.shape) * -1
+            else:
+                reference_df = shuffle_dropout_score(data, shuffle_type=reference_shuffle)
+                reference = reference_df.values
+
             clustering.n_clusters = k
             assignments = clustering.fit_predict(reference)
-            local_inertia.append(compute_inertia(assignments, reference, metric=metric))
-        reference_inertia.append(np.mean(local_inertia))
+            local_ref_inertia.append(compute_inertia(assignments, reference, metric=metric))
+        reference_inertia.append(np.mean(local_ref_inertia))
+        reference_sem.append(sem(local_ref_inertia))
 
     ondata_inertia = []
+    ondata_sem =  []
     for k in range(1, k_max ):
-        local_inertia = []
+        local_ondata_inertia = []
         for _ in range(n_boots):
             clustering.n_clusters = k
-            assignments = clustering.fit_predict(data)
-            local_inertia.append(compute_inertia(assignments, data, metric=metric))
-        ondata_inertia.append(np.mean(local_inertia))
+            assignments = clustering.fit_predict(data_array)
+            local_ondata_inertia.append(compute_inertia(assignments, data_array, metric=metric))
+        ondata_inertia.append(np.mean(local_ondata_inertia))
+        ondata_sem.append(sem(local_ondata_inertia))
+
+        # compute difference before mean
+        gap_mean.append(np.mean(np.subtract(np.log(local_ondata_inertia),np.log(local_ref_inertia))))
+        gap_sem.append(sem(np.subtract(np.log(local_ondata_inertia), np.log(local_ref_inertia))))
 
     # maybe plotting error bars with this metric would be helpful but for now I'll leave it
     gap = np.log(reference_inertia) - np.log(ondata_inertia)
-    return gap, np.log(reference_inertia), np.log(ondata_inertia)
+
+    # we potentially do not need all of this info but saving it to plot it for now
+    gap_statistics['gap'] = gap
+    gap_statistics['reference_inertia'] = np.log(reference_inertia)
+    gap_statistics['ondata_inertia'] = np.log(ondata_inertia)
+    gap_statistics['reference_sem'] = reference_sem
+    gap_statistics['ondata_sem'] = ondata_sem
+    gap_statistics['gap_mean'] = gap_mean
+    gap_statistics['gap_sem'] = gap_sem
+
+    return gap_statistics
 
 
 def get_eigenDecomposition(A, max_n_clusters=25):
@@ -1521,7 +1555,7 @@ def shuffle_dropout_score(df_dropout, shuffle_type='all'):
             randomized_cids = df_dropout.sample(frac=1).index.values
             for i, cid in enumerate(randomized_cids):
                 for regressor in regressors:
-                    df_shuffled.iloc[i][regressor][experience_level] = df_dropout.loc[cid][regressor][experience_level]
+                    df_shuffled.iloc[i][(regressor, experience_level)] = df_dropout.loc[cid][(regressor, experience_level)]
 
     elif shuffle_type == 'regressors':
         print('shuffling data across regressors')
@@ -1531,7 +1565,7 @@ def shuffle_dropout_score(df_dropout, shuffle_type='all'):
             randomized_cids = df_dropout.sample(frac=1).index.values
             for i, cid in enumerate(randomized_cids):
                 for experience_level in experience_levels:
-                    df_shuffled.iloc[i][regressor][experience_level] = df_dropout.loc[cid][regressor][experience_level]
+                    df_shuffled.iloc[i][(regressor, experience_level)] = df_dropout.loc[cid][(regressor, experience_level)]
 
     elif shuffle_type == 'experience_within_cell':
         print('shuffling data across experience within each cell')
@@ -1541,8 +1575,8 @@ def shuffle_dropout_score(df_dropout, shuffle_type='all'):
             np.random.shuffle(experience_level_shuffled)
             for j, experience_level in enumerate(experience_level_shuffled):
                 for regressor in regressors:
-                    df_shuffled.loc[cid][regressor][experience_levels[j]] = df_dropout.loc[cid][regressor][
-                        experience_level]
+                    df_shuffled.loc[cid][(regressor, experience_levels[j])] = df_dropout.loc[cid][(regressor,
+                        experience_level)]
     else:
         print('no such shuffle type..')
         df_shuffled = None
@@ -1740,8 +1774,8 @@ def get_mean_dropout_scores_per_cluster(dropout_df, cluster_df=None, labels=None
     '''
     INPUT:
     dropout_df: (pd.DataFrame) of GLM dropout scores (cell_specimen_ids by regressors x experience)
-    cluster_df: (pd.DataFrame), must contain columns 'cluster_id', 'cell_specimen_id'
-    labels: (list, np.array) list or array of int indicating cells' cluster ids,
+    cluster_df: (pd.DataFrame), either provide this df, must contain columns 'cluster_id', 'cell_specimen_id'
+    labels: (list, np.array) or provide this array, list or array of int indicating cells' cluster ids,
                             if provided, len(labels)==len(dropout_df)
 
     Provide either cluster_df or labels. Cluster df must be df with 'cluster_id' and 'cell_specimen_id' columns,
@@ -1759,20 +1793,16 @@ def get_mean_dropout_scores_per_cluster(dropout_df, cluster_df=None, labels=None
         cluster_df = pd.DataFrame(data={'cluster_id': labels, 'cell_specimen_id': dropout_df.index.values})
         cluster_ids = cluster_df['cluster_id'].value_counts().index.values  # sort cluster ids by size
 
-    if min(cluster_ids) == 0:  # if cluster ids start with 0, add 1 to return cluster labels starting with 1
-        err = 1
-    else:
-        err = 0
-
+    # new cluster ids will start with 1, and they will be sorted by cluster size
     mean_cluster = {}
     for i, cluster_id in enumerate(cluster_ids):
         this_cluster_ids = cluster_df[cluster_df['cluster_id'] == cluster_id]['cell_specimen_id'].unique()
         if stacked is True:
             mean_dropout_df = dropout_df.loc[this_cluster_ids].mean()
-            mean_cluster[i + err] = mean_dropout_df.values
+            mean_cluster[i + 1] = mean_dropout_df.values
         elif stacked is False:
             mean_dropout_df = dropout_df.loc[this_cluster_ids].mean().unstack()
-            mean_cluster[i + err] = mean_dropout_df
+            mean_cluster[i + 1] = mean_dropout_df
 
     if stacked is True:
         return (pd.DataFrame(mean_cluster))
@@ -1995,3 +2025,203 @@ def get_cluster_fractions_per_location(cluster_meta, cluster_metrics):
     colors = [cmap(int(np.round(i)))[:3] for i in exp_mod_normed]
     location_fractions['exp_mod_color'] = colors
     return location_fractions
+
+def get_sorted_cluster_ids(cluster_df):
+    '''
+    Maybe a reduntant function, but used to quickly get cluster ids that are sorted by size
+    inputs:
+    cluster_df (pd.DataFrame) dataframe with column 'cluster_id' of rows = cells
+    returns:
+    sorted_cluster_ids (np.array) of cluster ids sorted by size for plotting
+    '''
+    sorted_cluster_ids = cluster_df.value_counts('cluster_id').index.values
+    return sorted_cluster_ids
+
+
+# compute difference between original cluster sizes and shuffled cluster sizes. Create a df.
+
+def get_cluster_size_differece_df(cre_original_cluster_sizes, shuffle_type_cluster_sizes, cre_line=None,
+                                  columns=['cre_line', 'cluster_id', 'shuffle_type', 'n_boot', 'cluster_size_diff'],
+                                  normalize=True):
+    ''' in long format, either normalized or not normalized difference of shuffled clusters and original clusters.
+    This function is not finished but it works for now.
+
+    INPUT:
+    cre_original_cluster_sizes: dictionary cre_line: cluter_id: size
+    shuffle_type_cluster_sizes: dictionary shuffle_type: cre_line: cluster_id: n_boot: cluster size
+    cre_line: str of cre line if you wish to use only one
+    columns: list of str/columns for output df
+    normalize: boolean, wether to  normalize cluster size (og-shuffled)/(og+shuffled) or just use raw diff
+
+    OUTPUT:
+    cluster_size_difference_df: pd.DataFrame with specified columns
+
+    '''
+    if cre_line is None:
+        cre_lines = cre_original_cluster_sizes.keys()
+    else:
+        cre_lines = [cre_line]
+    shuffle_types = shuffle_type_cluster_sizes.keys()
+    # create empty df with columns to collect
+    cluster_size_difference_df = pd.DataFrame(columns=columns)
+
+    for shuffle_type in shuffle_types:
+        for cre_line in cre_lines:
+
+            # number of clusters to iterate over in this cre line
+            cluster_ids = shuffle_type_cluster_sizes[shuffle_type][cre_line].keys()
+
+            for cluster_id in cluster_ids:
+                og_size = cre_original_cluster_sizes[cre_line][cluster_id]
+                shuffled_sizes = shuffle_type_cluster_sizes[shuffle_type][cre_line][cluster_id]
+
+                if normalize is True:
+                    cluster_size_diff = np.subtract(og_size, shuffled_sizes) / np.add(og_size, shuffled_sizes)
+                else:
+                    cluster_size_diff = np.subtract(og_size, shuffled_sizes)
+
+                # this part needs to be optimized. There should be a better way of adding values to dictionary without iteration
+                data = []
+                for n_boot, value in enumerate(cluster_size_diff):
+                    data.append([cre_line, cluster_id, shuffle_type, n_boot, value])
+                nb_df = pd.DataFrame(data, columns=columns)
+                cluster_size_difference_df = cluster_size_difference_df.append(nb_df, ignore_index=True)
+
+    return cluster_size_difference_df
+
+def get_cluster_probability_df(shuffle_type_probabilities,
+                               columns=['cre_line', 'cluster_id', 'shuffle_type', 'probability']):
+    ''' in long format, probabilities of shuffled clusters.
+    This function is not finished but it works for now.'''
+
+    shuffle_types = shuffle_type_probabilities.keys()
+    # create empty df with columns to collect
+    shuffle_type_probability_df = pd.DataFrame(columns=columns)
+
+    for shuffle_type in shuffle_types:
+        cre_lines = shuffle_type_probabilities[shuffle_type].keys()
+        for cre_line in cre_lines:
+
+            # number of clusters to iterate over in this cre line
+            cluster_ids = shuffle_type_probabilities[shuffle_type][cre_line].keys()
+            for cluster_id in cluster_ids:
+                value = shuffle_type_probabilities[shuffle_type][cre_line][cluster_id]
+                # cluster_df = pd.DataFrame(data=[cre_line, cluster_id, shuffle_type, value], columns = columns)
+                cluster_df = pd.DataFrame({'cre_line': cre_line, 'cluster_id': cluster_id, 'shuffle_type': shuffle_type,
+                                           'probability': value},
+                                          index=[0])
+
+                shuffle_type_probability_df = shuffle_type_probability_df.append(cluster_df, ignore_index=True)
+
+    return shuffle_type_probability_df
+
+
+def get_matched_cluster_labels(SSE_mapping):
+    cluster_ids = SSE_mapping[0].keys()
+    n_boots = SSE_mapping.keys()
+    matched_clusters = {}
+
+    for cluster_id in cluster_ids:
+        matched_ids = []
+        for n_boot in n_boots:
+            matched_id = SSE_mapping[n_boot][cluster_id]
+            matched_ids.append(matched_id)
+        matched_clusters[cluster_id] = matched_ids
+    return matched_clusters
+
+
+def get_cluster_size_variance(SSE_mapping, cluster_df_shuffled, normalize=False):
+    cluster_ids = SSE_mapping[0].keys()
+    matched_ids = get_matched_cluster_labels(SSE_mapping)
+
+    n_boots = cluster_df_shuffled.keys()
+    all_cluster_sizes = {}
+    for cluster_id in cluster_ids:
+        for n_boot in n_boots:
+            shuffled_cluster_size = cluster_df_shuffled[n_boot].value_counts('cluster_id',
+                                                                             normalize=normalize)
+
+        cluster_size = []
+        for matched_id in matched_ids[cluster_id]:
+
+            if matched_id != -1:
+                cluster_size.append(shuffled_cluster_size[matched_id])
+            else:
+                cluster_size.append(np.nan)
+
+        all_cluster_sizes[cluster_id] = cluster_size
+    return all_cluster_sizes
+
+def compute_probabilities(SSE_mapping):
+    labels = SSE_mapping[0].keys()
+    cluster_count = count_cluster_frequency(SSE_mapping)
+    cluster_probabilities = {}
+    for label in labels:
+        cluster_probabilities[label] = np.sum(cluster_count[label])/len(cluster_count[label])
+    return cluster_probabilities
+
+def count_cluster_frequency(SSE_mapping):
+    cluster_ids = SSE_mapping[0].keys()
+    n_boots = SSE_mapping.keys()
+    cluster_count = {}
+    for cluster_id in cluster_ids:
+        boolean_count = []
+        for n_boot in n_boots:
+            matched_id = SSE_mapping[n_boot][cluster_id]
+            if matched_id != -1:
+                boolean_count.append(True)
+            else:
+                boolean_count.append(False)
+        cluster_count[cluster_id] = boolean_count
+    return cluster_count
+
+
+def get_matched_clusters_means_dict(SSE_mapping, mean_dropout_scores_unstacked, metric='mean', shuffle_type=None,
+                                   cre_line=None):
+    ''' This function can plot mean (or other metric like std, median, or custom function) of matched shuffle clusters. This is helpful to see
+    how well matching worked but it does not show clusters that were not matched with any original clusters.
+    INPUT:
+    SSE_mapping: dictionary for each n_boot, original cluster_id: matched shuffled cluster_id
+    mean_dropout_scores_unstacked: dictionary ofmean unstacked dropout scores  cluster_id: unstached pd.Data'''
+
+    if shuffle_type is not None:
+        SSE_mapping = SSE_mapping[shuffle_type]
+        mean_dropout_scores_unstacked = mean_dropout_scores_unstacked[shuffle_type]
+
+    if cre_line is not None:
+        SSE_mapping = SSE_mapping[cre_line]
+        mean_dropout_scores_unstacked = mean_dropout_scores_unstacked[cre_line]
+
+    # set up variables
+    n_boots = SSE_mapping.keys()
+    cluster_ids = SSE_mapping[0].keys()
+    columns = mean_dropout_scores_unstacked[0][1].columns
+
+    all_clusters_means_dict = {}
+    for cluster_id in cluster_ids:
+        all_matched_cluster_df = pd.DataFrame(columns=columns)
+        for n_boot in n_boots:
+            matched_cluster_id = SSE_mapping[n_boot][cluster_id]
+            if matched_cluster_id != -1:
+                all_matched_cluster_df = all_matched_cluster_df.append(
+                    mean_dropout_scores_unstacked[n_boot][matched_cluster_id])
+
+        all_matched_cluster_df = all_matched_cluster_df.reset_index().rename(columns={'index': 'regressor'})
+
+        if len(all_matched_cluster_df) > 1:
+            if metric == 'mean':
+                all_clusters_means_dict[cluster_id] = all_matched_cluster_df.groupby('regressor').mean()
+            elif metric == 'std':
+                all_clusters_means_dict[cluster_id] = all_matched_cluster_df.groupby('regressor').std()
+            elif metric == 'median':
+                all_clusters_means_dict[cluster_id] = all_matched_cluster_df.groupby('regressor').median()
+            else:
+                all_clusters_means_dict[cluster_id] = all_matched_cluster_df.groupby('regressor').apply(metric)
+        else:
+            all_clusters_means_dict[cluster_id] = all_matched_cluster_df
+
+    return all_clusters_means_dict
+
+
+
+
