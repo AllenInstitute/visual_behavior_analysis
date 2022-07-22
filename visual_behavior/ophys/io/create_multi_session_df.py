@@ -8,7 +8,7 @@ from visual_behavior.data_access import loading
 
 def get_multi_session_df(project_code, session_number, conditions, data_type, event_type,
                          time_window=[-3, 3.1], interpolate=True, output_sampling_rate=30,
-                         response_window_duration=0.5, use_extended_stimulus_presentations=False, overwrite=False):
+                         response_window_duration=0.5, use_extended_stimulus_presentations=False, overwrite=True):
     """
 
     For a given session_number (i.e. 1 for OPHYS_1, 2 for OPHYS_2) within a given project_code, loop through all ophys_experiment_ids, load the SDK dataset object,
