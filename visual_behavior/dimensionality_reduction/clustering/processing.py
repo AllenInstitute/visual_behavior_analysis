@@ -2208,7 +2208,12 @@ def get_matched_clusters_means_dict(SSE_mapping, mean_dropout_scores_unstacked, 
 
         all_matched_cluster_df = all_matched_cluster_df.reset_index().rename(columns={'index': 'regressor'})
 
-        if len(all_matched_cluster_df) > 1:
+        # create dummy df for unmatched clusters
+        if cluster_id == 1:
+            dummy_df = all_matched_cluster_df.groupby('regressor').mean().copy()
+            dummy_df[dummy_df>0]=0
+        # compute metrics
+        if len(all_matched_cluster_df) >= 4:
             if metric == 'mean':
                 all_clusters_means_dict[cluster_id] = all_matched_cluster_df.groupby('regressor').mean()
             elif metric == 'std':
@@ -2217,8 +2222,11 @@ def get_matched_clusters_means_dict(SSE_mapping, mean_dropout_scores_unstacked, 
                 all_clusters_means_dict[cluster_id] = all_matched_cluster_df.groupby('regressor').median()
             else:
                 all_clusters_means_dict[cluster_id] = all_matched_cluster_df.groupby('regressor').apply(metric)
+        #elif all_matched_cluster_df.shape[0] == 4:
+        #    all_clusters_means_dict[cluster_id] = all_matched_cluster_df
         else:
-            all_clusters_means_dict[cluster_id] = all_matched_cluster_df
+            all_clusters_means_dict[cluster_id] = dummy_df
+
 
     return all_clusters_means_dict
 
