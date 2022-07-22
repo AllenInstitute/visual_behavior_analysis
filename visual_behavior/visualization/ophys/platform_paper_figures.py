@@ -373,58 +373,67 @@ def plot_mean_response_by_epoch(df, metric='mean_response', horizontal=True, ymi
     """
 
     # get rid of short 7th epoch (just a few mins at end of session)
-    df = df[df.epoch != 6]
+    max_epoch = np.max(df.epoch.unique())
+    if max_epoch==7:
+        df = df[df.epoch != 6]
+        interval = 1
+    elif max_epoch>=61:
+        df = df[df.epoch <=60]
+        interval = 5
+    max_epoch = np.max(df.epoch.unique())
+    max_n_sessions = np.max(df.epoch.unique())
 
-    # add experience epoch column in case it doesnt already exist
+    # add experience epoch column if it doesnt already exist
     if 'experience_epoch' not in df.keys():
-        def merge_experience_epoch(row):
-            return row.experience_level + ' epoch ' + str(int(row.epoch) + 1)
-        df['experience_epoch'] = df[['experience_level', 'epoch']].apply(axis=1, func=merge_experience_epoch)
-
-    xticks = [experience_epoch.split(' ')[-1] for experience_epoch in np.sort(df.experience_epoch.unique())]
+        df = utilities.annotate_epoch_df(df)
 
     cell_types = np.sort(df.cell_type.unique())[::-1]
     experience_epoch = np.sort(df.experience_epoch.unique())
     experience_levels = np.sort(df.experience_level.unique())
+    interval = 1
+    xticks = np.arange(0, len(experience_epoch), interval)
+    xticklabels = [experience_epoch.split(' ')[-1] for experience_epoch in experience_epoch]#[::interval]
 
     palette = utils.get_experience_level_colors()
     if ax is None:
         format_fig = True
         if horizontal:
             figsize = (13, 3.5)
-            fig, ax = plt.subplots(1, 3, figsize=figsize, sharex=False, sharey=True)
+            fig, ax = plt.subplots(1, 3, figsize=figsize, sharex=False, sharey=False)
         else:
-            figsize = (5, 10)
-            fig, ax = plt.subplots(3, 1, figsize=figsize, sharex=True, sharey=True)
+            figsize = (15, 10)
+            fig, ax = plt.subplots(3, 1, figsize=figsize, sharex=True, sharey=False)
     else:
         format_fig = False
 
     for i, cell_type in enumerate(cell_types):
         try:
+            print(cell_type)
             data = df[df.cell_type == cell_type]
             ax[i] = sns.pointplot(data=data, x='experience_epoch', y=metric, hue='experience_level', hue_order=experience_levels,
                                   order=experience_epoch, palette=palette, ax=ax[i], estimator=estimator)
+
             if ymin is not None:
                 ax[i].set_ylim(ymin=ymin)
-            ax[i].set_title('')
+            ax[i].set_title(cell_type)
             ax[i].set_ylabel(ylabel)
-            # ax[i].set_xlabel('')
             ax[i].get_legend().remove()
-            ax[i].set_xticklabels(xticks, fontsize=13)
-            # ax[i].vlines(x=5.5, ymin=0, ymax=1, color='gray', linestyle='--')
-            # ax[i].vlines(x=11.5, ymin=0, ymax=1, color='gray', linestyle='--')
+            ax[i].set_xticks(xticks)
+            ax[i].set_xticklabels(xticklabels, fontsize=12)
+            ax[i].vlines(x=max_n_sessions, ymin=0, ymax=1, color='gray', linestyle='--')
+            ax[i].vlines(x=max_n_sessions * 2, ymin=0, ymax=1, color='gray', linestyle='--')
             if horizontal:
-                ax[i].set_xlabel('10 min epoch within session', fontsize=14)
+                ax[i].set_xlabel('epoch within session', fontsize=14)
             else:
                 ax[i].set_xlabel('')
         except Exception as e:
             print(e)
-    ax[i].set_xlabel('10 min epoch within session', fontsize=14)
+    ax[i].set_xlabel('epoch within session', fontsize=14)
     if format_fig:
         # plt.suptitle(metric + ' over time', x=0.52, y=1.03, fontsize=18)
         fig.tight_layout()
     if save_dir:
-        fig_title = metric + '_epochs' + suffix
+        fig_title = metric + suffix
         utils.save_figure(fig, figsize, save_dir, folder, fig_title)
     return ax
 

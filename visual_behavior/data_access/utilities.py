@@ -1953,3 +1953,17 @@ def count_mice_expts_containers(df):
     counts = mice.merge(experiments, on=['cell_type', 'experience_level'])
     counts = counts.merge(containers, on=['cell_type', 'experience_level'])
     return counts
+
+
+def annotate_epoch_df(epoch_df):
+    """
+    adds 'experience_epoch' column which is a conjunction of experience level and epoch #
+    """
+
+    # add experience epoch column
+    def merge_experience_epoch(row):
+        return row.experience_level + ' epoch ' + str(int(row.epoch) + 1)
+
+    epoch_df['experience_epoch'] = epoch_df[['experience_level', 'epoch']].apply(axis=1, func=merge_experience_epoch)
+
+    return epoch_df
