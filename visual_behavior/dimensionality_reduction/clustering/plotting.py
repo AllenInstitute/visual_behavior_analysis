@@ -2607,7 +2607,7 @@ def plot_cluster_proportions_treemaps(location_fractions, cluster_meta, color_co
 ## plot cluster sizes
 
 def plot_cluster_size_and_probability(cluster_size_df, shuffle_probability_df, cre_line=None, shuffle_type=None,
-                                      ax=None):
+                                      ax=None, figsize=None, save_dir=None, folder=None):
     if cre_line is not None:
         if type(cre_line) is str:
             cluster_size_df = cluster_size_df[cluster_size_df.cre_line == cre_line]
@@ -2617,9 +2617,10 @@ def plot_cluster_size_and_probability(cluster_size_df, shuffle_probability_df, c
     if shuffle_type is not None:
         cluster_size_df = cluster_size_df[cluster_size_df.shuffle_type == shuffle_type]
         shuffle_probability_df = shuffle_probability_df[shuffle_probability_df.shuffle_type == shuffle_type]
-
+    if figsize is None:
+        figsize = (3*len(cluster_size_df.cluster_id.unique()),3)
     if ax is None:
-        fig, ax = plt.subplots(1, 1, figsize=(15, 4))
+        fig, ax = plt.subplots(1, 1, figsize=figsize)
 
     color1 = 'dimgray'
     color2 = 'steelblue'
@@ -2636,6 +2637,11 @@ def plot_cluster_size_and_probability(cluster_size_df, shuffle_probability_df, c
     ax2.set_ylabel('cluster probability', color=color2)
 
     ax.set_xlabel('Cluster ID')
+    plt.tight_layout()
+    if save_dir:
+        utils.save_figure(fig, figsize, save_dir, folder,
+                          f'{shuffle_type}_prob_size' + cre_line[:3]  )
+
 
     return ax
 
@@ -2655,21 +2661,32 @@ def plot_matched_clusters_heatmap(SSE_mapping, mean_dropout_scores_unstacked, me
                                                                          cre_line=cre_line)
     cluster_ids = all_clusters_means_dict.keys()
     if figsize is None:
-        figsize = (2 * len(cluster_ids), 3)
+        figsize = (3 * len(cluster_ids), 4)
     fig, ax = plt.subplots(1, len(cluster_ids), figsize = figsize, sharex = 'row', sharey = 'row')
 
     for cluster_id in cluster_ids:
+        if all_clusters_means_dict[cluster_id].sum().sum()==0:
+            hm_color = 'Greys'
+        else:
+            hm_color='Blues'
+
         try:
-            ax[cluster_id - 1] = sns.heatmap(all_clusters_means_dict[cluster_id], ax=ax[cluster_id - 1], cmap='Blues', vmin=0,
-                                             vmax=1)
+            ax[cluster_id - 1] = sns.heatmap(all_clusters_means_dict[cluster_id],
+                                             ax=ax[cluster_id - 1], cmap=hm_color, vmin=0,
+                                             vmax=0.1)
+
             ax[cluster_id - 1].set_xlabel('')
             ax[cluster_id - 1].set_ylabel('')
         except:
-            print('no matched clusters')
-    plt.suptitle(cre_line + '_' + shuffle_type)
+            print('could not plot matched cluster')
+
+    shuffle_type_dict = {'experience':'cell id shuffle',
+                         'experience_within_cell':'exp label shuffle'}
+
+    plt.suptitle(cre_line + ' ' + shuffle_type_dict[shuffle_type])
 
     plt.tight_layout()
 
     if save_dir:
         utils.save_figure(fig, figsize, save_dir, folder,
-                          'mean_dropout_matched_clusters' + cre_line[:3]  )
+                          f'{metric}_{shuffle_type}dropout_matched_clusters' + cre_line[:3]  )
