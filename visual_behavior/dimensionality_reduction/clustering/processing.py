@@ -877,7 +877,7 @@ def get_cluster_labels(coclustering_matrices, cell_metadata, n_clusters_cre, sav
     return cluster_labels
 
 
-def get_cluster_density(df_dropouts, labels_df, label_col='cluster_id', use_spearmanr=False):
+def get_cluster_density(df_dropouts, labels_df, label_col='cluster_id', use_spearmanr=True):
     '''
     Computes correlation coefficients for clusters computed on glm dropouts
     df_dropouts: dataframe where rows are unique cell_specimen_ids and columns are dropout scores across experience levels
