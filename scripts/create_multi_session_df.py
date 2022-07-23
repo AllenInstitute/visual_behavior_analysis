@@ -26,6 +26,7 @@ if __name__ == '__main__':
     output_sampling_rate = 30
     # response_window_duration_seconds = 0.5
     use_extended_stimulus_presentations = False
+    epoch_duration_mins = 2
 
     # set up conditions to make multi session dfs for
     physio_data_types = ['events', 'filtered_events', 'dff']
@@ -90,7 +91,7 @@ if __name__ == '__main__':
                                          time_window=time_window, interpolate=interpolate, output_sampling_rate=output_sampling_rate,
                                          response_window_duration=response_window_duration,
                                          use_extended_stimulus_presentations=use_extended_stimulus_presentations,
-                                         overwrite=True)
+                                         epoch_duration_mins=epoch_duration_mins, overwrite=True)
         except Exception as e:
             print('failed to create multi_session_df for', data_type, event_type, conditions)
             print(e)

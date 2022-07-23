@@ -598,15 +598,17 @@ def get_extended_stimulus_presentations_table(stimulus_presentations, licks, rew
     return stimulus_presentations
 
 
-def get_stimulus_response_df_filepath_for_experiment(ophys_experiment_id, data_type, event_type, interpolate=True, output_sampling_rate=30):
+def get_stimulus_response_df_filepath_for_experiment(ophys_experiment_id, data_type, event_type,
+                                                     interpolate=True, output_sampling_rate=30,
+                                                     epoch_duration_mins=5):
 
     filepath = os.path.join(get_stimulus_response_df_dir(interpolate, int(output_sampling_rate), event_type),
-                            str(ophys_experiment_id) + '_' + data_type + '_' + event_type + '.h5')
+                            str(ophys_experiment_id) + '_' + data_type + '_' + event_type + '_epoch_dur_' + str(epoch_duration_mins) + '.h5')
     return filepath
 
 
 def get_stimulus_response_df(dataset, time_window=[-3, 3.1], interpolate=True, output_sampling_rate=30,
-                             data_type='filtered_events', event_type='all', load_from_file=True, epoch_duration_mins=10):
+                             data_type='filtered_events', event_type='all', load_from_file=True, epoch_duration_mins=5):
     """
     Load a dataframe with stimulus aligned traces for all cells (or for a given behavior timeseries) using mindscope_utilities
     and merges with annotated stimulus_presentations table that includes behavior metadata

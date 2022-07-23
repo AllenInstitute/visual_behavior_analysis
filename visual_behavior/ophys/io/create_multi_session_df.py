@@ -8,7 +8,8 @@ from visual_behavior.data_access import loading
 
 def get_multi_session_df(project_code, session_number, conditions, data_type, event_type,
                          time_window=[-3, 3.1], interpolate=True, output_sampling_rate=30,
-                         response_window_duration=0.5, use_extended_stimulus_presentations=False, overwrite=True):
+                         response_window_duration=0.5, epoch_duration_mins=5,
+                         use_extended_stimulus_presentations=False, overwrite=True):
     """
 
     For a given session_number (i.e. 1 for OPHYS_1, 2 for OPHYS_2) within a given project_code, loop through all ophys_experiment_ids, load the SDK dataset object,
@@ -50,7 +51,11 @@ def get_multi_session_df(project_code, session_number, conditions, data_type, ev
     :param use_extended_stimulus_presentations: Boolean, whether or not to call loading.extended_stimulus_presentations_table() when loading the dataset object,
                                         setting to True will result in many additional columns being added to the stimulus_presentations_table that can be used as
                                         conditions to group by when computing averaged responses, such as engagement state, time from last lick / change / omission
-                                        or an index breaking the session up into 10 minute epochs
+                                        If False, will include the set of additional stimulus presentation columns that comes by default from
+                                        mindscope_utilities.visual_behavior_ophys.data_formatting.get_annotated_stimulus_presentations(dataset, epoch_duration_mins=epoch_duration_mins)
+                                        which includes epoch, hit, miss, time_from_last_change etc.
+    :param epoch_duration_mins: int, period of time, in minutes, for which to split up session when creating 'epoch' column of stimulus_response_df,
+                                        which is an integer value indicating the epoch within session each stimulus presentation belongs to
     :param overwrite: Boolean, if False, will search for existing files for the provided project_code and mouse_id and
                             will not save output if file exists. If True, will overwrite any existing files.
 
@@ -94,6 +99,8 @@ def get_multi_session_df(project_code, session_number, conditions, data_type, ev
     session_type = experiments.session_type.unique()[0]
 
     filename = loading.get_file_name_for_multi_session_df(data_type, event_type, project_code, session_type, conditions)
+    if 'epoch' in conditions:
+        filename = filename+'_epoch_dur_'+str(epoch_duration_mins)
     mega_mdf_write_dir = loading.get_multi_session_df_dir(interpolate=interpolate, output_sampling_rate=output_sampling_rate,
                                                           event_type=event_type)
     filepath = os.path.join(mega_mdf_write_dir, filename)
@@ -121,7 +128,7 @@ def get_multi_session_df(project_code, session_number, conditions, data_type, ev
                 # get stimulus_response_df
                 df = loading.get_stimulus_response_df(dataset, data_type=data_type, event_type=event_type, time_window=time_window,
                                                       interpolate=interpolate, output_sampling_rate=output_sampling_rate,
-                                                      load_from_file=True, epoch_duration_mins=2)
+                                                      load_from_file=True, epoch_duration_mins=epoch_duration_mins)
                 # use response_window duration from stim response df if it exists
                 if response_window_duration in df.keys():
                     response_window_duration = df.response_window_duration.values[0]
