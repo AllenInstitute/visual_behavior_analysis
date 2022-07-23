@@ -1962,7 +1962,10 @@ def annotate_epoch_df(epoch_df):
 
     # add experience epoch column
     def merge_experience_epoch(row):
-        return row.experience_level + ' epoch ' + str(int(row.epoch) + 1)
+        epoch_num = str(int(row.epoch + 1)) # index at 1 not 0
+        if len(epoch_num) == 1:
+            epoch_num = '0'+str(epoch_num)
+        return row.experience_level + ' epoch ' + epoch_num
 
     epoch_df['experience_epoch'] = epoch_df[['experience_level', 'epoch']].apply(axis=1, func=merge_experience_epoch)
 
