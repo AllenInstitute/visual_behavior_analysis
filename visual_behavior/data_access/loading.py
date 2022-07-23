@@ -124,11 +124,11 @@ def get_ophys_glm_dir():
 
 
 def get_stimulus_response_df_dir(interpolate=True, output_sampling_rate=30, event_type='all'):
-    base_dir = r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/platform_paper_cache/stimulus_response_dfs'
+    base_dir = get_platform_analysis_cache_dir()
     if interpolate:
-        save_dir = os.path.join(base_dir, event_type, 'interpolate_' + str(output_sampling_rate) + 'Hz')
+        save_dir = os.path.join(base_dir, 'stimulus_response_dfs', 'interpolate_' + str(output_sampling_rate) + 'Hz')
     else:
-        save_dir = os.path.join(base_dir, event_type, 'original_frame_rate')
+        save_dir = os.path.join(base_dir, 'stimulus_response_dfs', 'original_frame_rate')
     if not os.path.exists(save_dir):
         os.mkdir(save_dir)
     return save_dir

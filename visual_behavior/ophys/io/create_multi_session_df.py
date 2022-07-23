@@ -127,8 +127,8 @@ def get_multi_session_df(project_code, session_number, conditions, data_type, ev
                     response_window_duration = df.response_window_duration.values[0]
                 df['ophys_experiment_id'] = experiment_id
                 # if using omissions, only include omissions where time from last change is more than 3 seconds
-                if event_type == 'omissions':
-                    df = df[df.time_from_last_change > 3]
+                # if event_type == 'omissions':
+                #     df = df[df.time_from_last_change > 3]
                 # modify columns for specific conditions
                 if 'passive' in dataset.metadata['session_type']:
                     df['lick_on_next_flash'] = False
