@@ -2806,16 +2806,17 @@ def get_file_name_for_multi_session_df(data_type, event_type, project_code, sess
     return filename
 
 
-def load_multi_session_df(data_type, event_type, conditions, interpolate=True, output_sampling_rate=30):
+def load_multi_session_df(data_type, event_type, conditions, interpolate=True, output_sampling_rate=30, epoch_duration_mins=None):
     """
     Loops through all experiments in the provided experiments_table and loads pre-generated dataframes containing
     trial averaged responses for each cell in each session, for the provided set of conditions, data_type, and event_type.
 
-    :param data_type:
-    :param event_type:
-    :param conditions:
-    :param interpolate:
-    :param output_sampling_rate:
+    :param data_type: 'dff', 'events', 'filtered_events', 'running_speed', 'lick_rate', 'pupil_width'
+    :param event_type: 'all', 'omissions', 'changes'
+    :param conditions: ex: ['cell_specimen_id', 'omitted', 'epoch']
+    :param interpolate: Bool
+    :param output_sampling_rate: frame rate for resampling traces
+    :param epoch_duration_mins: epoch duration used when creating stim response df 'epoch' column
     :return:
     """
     cache_dir = get_platform_analysis_cache_dir()
@@ -2830,7 +2831,8 @@ def load_multi_session_df(data_type, event_type, conditions, interpolate=True, o
             experiments = experiments[experiments.session_type != 'OPHYS_2_images_B_passive']
         for session_type in np.sort(experiments.session_type.unique()):
             try:
-                filename = get_file_name_for_multi_session_df(data_type, event_type, project_code, session_type, conditions)
+                filename = get_file_name_for_multi_session_df(data_type, event_type, project_code, session_type, conditions,
+                                                              epoch_duration_mins)
                 multi_session_df_dir = get_multi_session_df_dir(interpolate=interpolate,
                                                                 output_sampling_rate=output_sampling_rate, event_type=event_type)
                 df = pd.read_hdf(os.path.join(multi_session_df_dir, filename), key='df')
@@ -3338,16 +3340,12 @@ def check_whether_multi_session_df_has_all_platform_experiments(multi_session_df
 
 
 
-def get_multi_session_df_for_conditions(data_type, event_type, conditions, inclusion_criteria='platform_experiment_table'):
-    # params for stim_response_df to use
-    time_window = [-3, 3.1]
-    interpolate = True
-    output_sampling_rate = 30
-    response_window_duration_seconds = 0.5
-    use_extended_stimulus_presentations = False
+def get_multi_session_df_for_conditions(data_type, event_type, conditions, inclusion_criteria='platform_experiment_table',
+                                        interpolate=True, output_sampling_rate=30, epoch_duration_mins=None):
 
     multi_session_df = load_multi_session_df(data_type=data_type, event_type=event_type, conditions=conditions,
-                                                     interpolate=interpolate, output_sampling_rate=output_sampling_rate)
+                                                interpolate=interpolate, output_sampling_rate=output_sampling_rate,
+                                                epoch_duration_mins=epoch_duration_mins)
     print('there are', len(multi_session_df.ophys_experiment_id.unique()), 'experiments in the full multi_session_df')
 
     #     missing_expts = loading.check_whether_multi_session_df_has_all_platform_experiments(multi_session_df)
