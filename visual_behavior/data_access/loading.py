@@ -643,7 +643,8 @@ def get_stimulus_response_df(dataset, time_window=[-3, 3.1], interpolate=True, o
     # load stimulus response df from file if it exists otherwise generate it
     ophys_experiment_id = dataset.ophys_experiment_id
     filepath = get_stimulus_response_df_filepath_for_experiment(ophys_experiment_id, data_type, event_type,
-                                                                interpolate=interpolate, output_sampling_rate=output_sampling_rate)
+                                                                interpolate=interpolate, output_sampling_rate=output_sampling_rate,
+                                                                epoch_duration_mins=epoch_duration_mins)
 
     if event_type == 'omissions':
         response_window_duration = 0.75
@@ -2782,20 +2783,25 @@ def add_superficial_deep_to_experiments_table(experiments_table):
     return experiments_table
 
 
-def get_file_name_for_multi_session_df(data_type, event_type, project_code, session_type, conditions):
+def get_file_name_for_multi_session_df(data_type, event_type, project_code, session_type, conditions, epoch_duration_mins):
 
     if len(conditions) == 6:
-        filename = 'mean_response_df_' + data_type + '_' + event_type + '_' + project_code + '_' + session_type + '_' + conditions[1] + '_' + conditions[2] + '_' + conditions[3] + '_' + conditions[4] + '_' + conditions[5] + '.h5'
+        filename = 'mean_response_df_' + data_type + '_' + event_type + '_' + project_code + '_' + session_type + '_' + conditions[1] + '_' + conditions[2] + '_' + conditions[3] + '_' + conditions[4] + '_' + conditions[5]
     elif len(conditions) == 5:
-        filename = 'mean_response_df_' + data_type + '_' + event_type + '_' + project_code + '_' + session_type + '_' + conditions[1] + '_' + conditions[2] + '_' + conditions[3] + '_' + conditions[4] + '.h5'
+        filename = 'mean_response_df_' + data_type + '_' + event_type + '_' + project_code + '_' + session_type + '_' + conditions[1] + '_' + conditions[2] + '_' + conditions[3] + '_' + conditions[4]
     elif len(conditions) == 4:
-        filename = 'mean_response_df_' + data_type + '_' + event_type + '_' + project_code + '_' + session_type + '_' + conditions[1] + '_' + conditions[2] + '_' + conditions[3] + '.h5'
+        filename = 'mean_response_df_' + data_type + '_' + event_type + '_' + project_code + '_' + session_type + '_' + conditions[1] + '_' + conditions[2] + '_' + conditions[3]
     elif len(conditions) == 3:
-        filename = 'mean_response_df_' + data_type + '_' + event_type + '_' + project_code + '_' + session_type + '_' + conditions[1] + '_' + conditions[2] + '.h5'
+        filename = 'mean_response_df_' + data_type + '_' + event_type + '_' + project_code + '_' + session_type + '_' + conditions[1] + '_' + conditions[2]
     elif len(conditions) == 2:
-        filename = 'mean_response_df_' + data_type + '_' + event_type + '_' + project_code + '_' + session_type + '_' + conditions[1] + '.h5'
+        filename = 'mean_response_df_' + data_type + '_' + event_type + '_' + project_code + '_' + session_type + '_' + conditions[1]
     elif len(conditions) == 1:
-        filename = 'mean_response_df_' + data_type + '_' + event_type + '_' + project_code + '_' + session_type + '_' + conditions[0] + '.h5'
+        filename = 'mean_response_df_' + data_type + '_' + event_type + '_' + project_code + '_' + session_type + '_' + conditions[0]
+
+    if epoch_duration_mins is not None:
+        filename = filename + '_epoch_dur_' + str(epoch_duration_mins) + '.h5'
+    else:
+        filename = filename + '.h5'
 
     return filename
 
