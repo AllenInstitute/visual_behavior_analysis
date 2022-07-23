@@ -43,6 +43,7 @@ if __name__ == '__main__':
                          ['cell_specimen_id', 'omitted', 'epoch'], # omissions in x min epochs
                          ['cell_specimen_id', 'pre_change', 'epoch'],  # all stim presentations, pre-change, x min epochs
                          ['cell_specimen_id', 'image_name', 'epoch'], # each image, x min epochs
+                         ['cell_specimen_id', 'is_change', 'omitted', 'epoch'],  # each image, x min epochs
                          # ['cell_specimen_id', 'is_change', 'hit', 'epoch'], # only changes, hit vs. miss, x min epochs
                          # ['cell_specimen_id', 'omitted', 'pre_omitted'], # all stim presentations, omission or not, pre-omitted or not
                             ]
@@ -61,7 +62,7 @@ if __name__ == '__main__':
 
 
     # event types corresponding to the above physio and behavior conditions - must be in same sequential order
-    event_types_for_conditions = ['changes', 'omissions', 'all', 'all']
+    event_types_for_conditions = ['changes', 'omissions', 'all', 'all', 'all']
                                   # 'omissions', 'omissions',
                                   # 'changes', 'changes', 'changes',
                                   # 'changes', 'changes',
@@ -74,7 +75,7 @@ if __name__ == '__main__':
 
     # create dfs for all data types and conditions for physio data
     # for data_type in physio_data_types:
-    data_type = 'filtered_events'
+    data_type = 'events'
 #     conditions = ['cell_specimen_id', 'omitted', 'epoch']
     for i, conditions in enumerate(physio_conditions):
         print(conditions)
