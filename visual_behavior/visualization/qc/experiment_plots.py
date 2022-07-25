@@ -24,7 +24,7 @@ bitdepth_16 = 65536
 def plot_max_intensity_projection_for_experiment(ophys_experiment_id, ax=None):
     if ax is None:
         fig, ax = plt.subplots()
-    dataset = loading.get_ophys_dataset(ophys_experiment_id)
+    dataset = loading.get_ophys_dataset(ophys_experiment_id,load_from_lims=True)
     max_projection = dataset.max_projection.data
     ax.imshow(max_projection, cmap='gray', vmax=np.percentile(max_projection, 99))
     ax.axis('off')
@@ -34,7 +34,7 @@ def plot_max_intensity_projection_for_experiment(ophys_experiment_id, ax=None):
 def plot_average_image_for_experiment(ophys_experiment_id, ax=None):
     if ax is None:
         fig, ax = plt.subplots()
-    dataset = loading.get_ophys_dataset(ophys_experiment_id)
+    dataset = loading.get_ophys_dataset(ophys_experiment_id,load_from_lims=True)
     average_projection = dataset.average_projection.data
     ax.imshow(average_projection, cmap='gray', vmax=np.amax(average_projection))
     ax.axis('off')
@@ -90,7 +90,7 @@ def plot_all_segmentation_mask_overlay_for_experiment(ophys_experiment_id, ax=No
     if ax is None:
         fig, ax = plt.subplots()
     ax = plot_max_intensity_projection_for_experiment(ophys_experiment_id, ax=ax)
-    dataset = loading.get_ophys_dataset(ophys_experiment_id)
+    dataset = loading.get_ophys_dataset(ophys_experiment_id, load_from_lims=True)
     segmentation_mask = dataset.segmentation_mask_image  # i am not sure if this is correct, check relevant SDK issue to see what they did
     mask = np.zeros(segmentation_mask[0].shape)
     mask[:] = np.nan
@@ -117,7 +117,7 @@ def plot_valid_segmentation_mask_outlines_per_cell_for_experiment(ophys_experime
     if ax is None:
         fig, ax = plt.subplots()
     ax = plot_max_intensity_projection_for_experiment(ophys_experiment_id, ax=ax)
-    dataset = loading.get_ophys_dataset(ophys_experiment_id)
+    dataset = loading.get_ophys_dataset(ophys_experiment_id,load_from_lims=True)
     cell_specimen_table = dataset.cell_specimen_table.copy()
     if len(cell_specimen_table) > 0:
         for cell_roi_id in cell_specimen_table.cell_roi_id.values:

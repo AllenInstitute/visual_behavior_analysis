@@ -804,9 +804,9 @@ class BehaviorOphysDataset(BehaviorOphysExperiment):
         cell_specimen_id = cell_specimen_table[cell_specimen_table.cell_roi_id == cell_roi_id].index.values[0]
         return cell_specimen_id
 
-
-def get_ophys_dataset(ophys_experiment_id, include_invalid_rois=False, load_from_lims=False, load_from_nwb=True,
-                      get_extended_stimulus_presentations=True, get_behavior_movie_timestamps=False):
+#MJD EDIT
+def get_ophys_dataset(ophys_experiment_id, include_invalid_rois=False, load_from_lims=True, load_from_nwb=True,
+                      get_extended_stimulus_presentations=False, get_behavior_movie_timestamps=False):
     """
     Gets behavior + ophys data for one experiment (single imaging plane), either using the SDK LIMS API,
     SDK NWB API, or using BehaviorOphysDataset wrapper which inherits the LIMS API BehaviorOphysSession object,
@@ -832,7 +832,7 @@ def get_ophys_dataset(ophys_experiment_id, include_invalid_rois=False, load_from
     assert id_type == 'ophys_experiment_id', "The passed ID type is {}. It must be an ophys_experiment_id".format(id_type)
 
     if load_from_lims:
-        dataset = BehaviorOphysExperiment.from_lims(int(ophys_experiment_id))
+        dataset = BehaviorOphysExperiment.from_lims(int(ophys_experiment_id),skip_eye_tracking=True)
     elif load_from_nwb:
         cache_dir = get_platform_analysis_cache_dir()
         cache = bpc.from_s3_cache(cache_dir=cache_dir)

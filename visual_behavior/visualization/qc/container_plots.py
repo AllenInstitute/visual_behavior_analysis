@@ -220,8 +220,9 @@ def plot_eye_tracking_sample_frames(ophys_container_id, save_figure=True):
     return fig, axes
 
 
-def plot_segmentation_masks_for_container(ophys_container_id, save_figure=True):
-    ophys_experiment_ids = loading.get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id)
+#def plot_segmentation_masks_for_container(ophys_container_id, save_figure=True):
+def plot_segmentation_masks_for_container(ophys_experiment_ids, save_figure=True):
+    #ophys_experiment_ids = loading.get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id)
 
     figsize = (25, 5)
     fig, ax = plt.subplots(1, len(ophys_experiment_ids), figsize=figsize)
@@ -236,7 +237,7 @@ def plot_segmentation_masks_for_container(ophys_container_id, save_figure=True):
                        'container_' + str(ophys_container_id))
 
 
-def plot_segmentation_mask_overlays_for_container(ophys_container_id, save_figure=True):
+def plot_segmentation_mask_overlays_for_container(ophys_container_id, save_figure=True,):
     ophys_experiment_ids = loading.get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id)
 
     figsize = (25, 18)
