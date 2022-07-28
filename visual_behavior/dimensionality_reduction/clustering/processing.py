@@ -1481,6 +1481,7 @@ def kruskal_by_experience_level(df_pivoted, posthoc=True):
 
 
 def build_stats_table(metrics_df, metrics_columns=None, dropna=True, pivot=False):
+    '''needs doc string'''
     # check for cre lines
     if 'cre_line' in metrics_df.keys():
         cre_lines = metrics_df['cre_line'].unique()
@@ -1538,6 +1539,9 @@ def shuffle_dropout_score(df_dropout, shuffle_type='all'):
     '''
     Shuffles dataframe with dropout scores from GLM.
     shuffle_type: str, default='all', other options= 'experience', 'regressors', 'experience_within_cell'
+
+    Returns:
+        df_shuffled (pd. Dataframe) of shuffled dropout scores
     '''
     df_shuffled = df_dropout.copy()
     regressors = df_dropout.columns.levels[0].values
@@ -2153,11 +2157,21 @@ def get_cluster_size_variance(SSE_mapping, cluster_df_shuffled, normalize=False)
     return all_cluster_sizes
 
 def compute_probabilities(SSE_mapping):
-    labels = SSE_mapping[0].keys()
+    ''' Computes probability of shuffle clusters to be mapped to an original cluster for N repetitions.
+    INPUT:
+    SSE_mapping (dict), nested dictionary of matched clusters. Keys = cluster ids, values = dictionary where keys
+        are n_boot (shuffle number) and values are orignal cluster id: matched cluster id.
+
+    Returns:
+        cluster_probabilities (dict), where keys are cluster ids and values are probabilities of matching this cluster
+        during N number of shuffled (or nboots) from 0 to 1.
+
+    '''
+    cluster_ids= SSE_mapping[0].keys()
     cluster_count = count_cluster_frequency(SSE_mapping)
     cluster_probabilities = {}
-    for label in labels:
-        cluster_probabilities[label] = np.sum(cluster_count[label])/len(cluster_count[label])
+    for cluster_id in cluster_ids:
+        cluster_probabilities[cluster_id] = np.sum(cluster_count[cluster_id])/len(cluster_count[cluster_id])
     return cluster_probabilities
 
 def count_cluster_frequency(SSE_mapping):
