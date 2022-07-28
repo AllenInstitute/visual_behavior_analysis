@@ -5,7 +5,6 @@ import numpy as np
 import pandas as pd
 from pathlib import Path
 
-from visual_behavior.data_access import loading
 from visual_behavior.ophys.io.lims_database import LimsDatabase
 from visual_behavior.ophys.sync.sync_dataset import Dataset as SyncDataset
 from visual_behavior.ophys.sync.process_sync import filter_digital, calculate_delay
@@ -45,16 +44,14 @@ class LazyLoadable(object):
         self.calculate = calculate
 
 
-def check_for_model_outputs(behavior_session_id):
+def get_cell_types_dict(cre_lines, experiments_table):
     """
-    Checks whether model output file with omission regressors exists (does not say '_training' at end of filename)
-    :param behavior_session_id:
-    :return:
+    gets dictionary where keys are cre lines and values are cell types
     """
-    model_output_dir = loading.get_behavior_model_outputs_dir()
-    model_output_file = [file for file in os.listdir(model_output_dir) if
-                         (str(behavior_session_id) in file) and ('training' not in file)]
-    return len(model_output_file) > 0
+    cell_types = {}
+    for cre_line in cre_lines:
+        cell_types[cre_line] = experiments_table[experiments_table.cre_line == cre_line].cell_type.unique()[0]
+    return cell_types
 
 
 def get_all_session_ids(ophys_experiment_id=None, ophys_session_id=None, behavior_session_id=None, foraging_id=None):
@@ -330,32 +327,6 @@ def get_donor_id_from_specimen_id(specimen_id, cache=None):
             where specimens.id = '{}'
         '''
         return db.lims_query(lims_query_string.format(specimen_id)).astype(int)
-
-
-def model_outputs_available_for_behavior_session(behavior_session_id):
-    """
-    Check whether behavior model outputs are available in the default directory
-
-    :param behavior_session_id: 9-digit behavior session ID
-    :return: Boolean, True if outputs are available, False if not
-    """
-    model_output_dir = loading.get_behavior_model_outputs_dir()
-    model_output_file = [file for file in os.listdir(model_output_dir) if str(behavior_session_id) in file]
-    if len(model_output_file) > 0:
-        return True
-    else:
-        return False
-
-
-# def get_cell_matching_output_dir_for_container(container_id, experiments_table):
-#     container_expts = experiments_table[experiments_table.container_id==container_id]
-#     ophys_experiment_id = container_expts.index[0]
-#     lims_data = get_lims_data(ophys_experiment_id)
-#     session_dir = lims_data.ophys_session_dir.values[0]
-#     cell_matching_dir = os.path.join(session_dir[:-23], 'experiment_container_'+str(container_id), 'OphysNwayCellMatchingStrategy')
-#     cell_matching_output_dir = os.path.join(cell_matching_dir, np.sort(os.listdir(cell_matching_dir))[-1])
-#     return cell_matching_output_dir
-#
 
 
 def get_cell_matching_output_dir_for_container(experiment_id):
@@ -1489,6 +1460,24 @@ def add_binned_depth_column(df):
     return df
 
 
+def add_layer_column(df):
+    """
+    Adds a column called 'layer' that is based on the 'imaging_depth' for each experiment.
+    if imaging_depth is <250um, layer is 'upper, if >250um, layer is 'lower'
+    :param df:
+    :return:
+    """
+    df.loc[:, 'layer'] = None
+
+    indices = df[(df.depth < 250)].index.values
+    df.loc[indices, 'layer'] = 'upper'
+
+    indices = df[(df.depth > 250)].index.values
+    df.loc[indices, 'layer'] = 'lower'
+
+    return df
+
+
 def dateformat(exp_date):
     """
     reformat date of acquisition for accurate sorting by date
@@ -1740,17 +1729,42 @@ def value_counts(df, conditions=['cell_type', 'experience_level', 'mouse_id']):
     return counts
 
 
-def count_mice_expts_containers_cells(df):
+def count_mice_expts_containers_cells(df, conditions_to_group=['cell_type', 'experience_level']):
     """
-    count the number of mice, experiments, containers, and cells in input dataframe
+    count the number of mice, sessions, experiments, containers, and cells in input dataframe
     input dataframe is typically ophys_cells_table merged with ophys_experiment_table
+
+    conditions_to_group: list of columns in df to use to groupby before counting number of experiments, cells etc
+
+    """
+    mice = value_counts(df, conditions=conditions_to_group + ['mouse_id'])
+    sessions = value_counts(df, conditions=conditions_to_group + ['ophys_session_id'])
+    experiments = value_counts(df, conditions=conditions_to_group + ['ophys_experiment_id'])
+    containers = value_counts(df, conditions=conditions_to_group + ['ophys_container_id'])
+    cells = value_counts(df, conditions=conditions_to_group + ['cell_specimen_id'])
+
+    matched_cells = limit_to_last_familiar_second_novel_active(df)
+    matched_cells = limit_to_cell_specimen_ids_matched_in_all_experience_levels(matched_cells)
+    matched_cells = value_counts(matched_cells, conditions=conditions_to_group + ['cell_specimen_id'])
+    matched_cells = matched_cells.rename(columns={'n_cell_specimen_id': 'n_matched_cells'})
+
+    counts = mice.merge(sessions, on=conditions_to_group)
+    counts = counts.merge(experiments, on=conditions_to_group)
+    counts = counts.merge(containers, on=conditions_to_group)
+    counts = counts.merge(cells, on=conditions_to_group)
+    counts = counts.merge(matched_cells, on=conditions_to_group)
+    return counts
+
+
+def count_mice_expts_containers(df):
+    """
+    count the number of mice, experiments, containers in input dataframe
+    input dataframe is typically experiments_table
     """
     mice = value_counts(df, conditions=['cell_type', 'experience_level', 'mouse_id'])
     experiments = value_counts(df, conditions=['cell_type', 'experience_level', 'ophys_experiment_id'])
     containers = value_counts(df, conditions=['cell_type', 'experience_level', 'ophys_container_id'])
-    cells = value_counts(df, conditions=['cell_type', 'experience_level', 'cell_specimen_id'])
 
     counts = mice.merge(experiments, on=['cell_type', 'experience_level'])
     counts = counts.merge(containers, on=['cell_type', 'experience_level'])
-    counts = counts.merge(cells, on=['cell_type', 'experience_level'])
     return counts

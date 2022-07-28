@@ -10,7 +10,6 @@ from visual_behavior.data_access import from_lims
 import visual_behavior.database as db
 
 import os
-import sys
 import glob
 import h5py  # for loading motion corrected movie
 import numpy as np
@@ -151,6 +150,39 @@ def get_ophys_glm_dir():
     return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/ophys_glm'
 
 
+def get_stimulus_response_df_dir(interpolate=True, output_sampling_rate=30, event_type='all'):
+    base_dir = r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/platform_paper_cache/stimulus_response_dfs'
+    if interpolate:
+        save_dir = os.path.join(base_dir, event_type, 'interpolate_' + str(output_sampling_rate) + 'Hz')
+    else:
+        save_dir = os.path.join(base_dir, event_type, 'original_frame_rate')
+    if not os.path.exists(save_dir):
+        os.mkdir(save_dir)
+    return save_dir
+
+
+def get_multi_session_df_dir(interpolate=True, output_sampling_rate=30, event_type='all'):
+    base_dir = get_platform_analysis_cache_dir()
+    if interpolate:
+        save_dir = os.path.join(base_dir, 'multi_session_mean_response_dfs', 'interpolate_' + str(output_sampling_rate) + 'Hz')
+    else:
+        save_dir = os.path.join(base_dir, 'multi_session_mean_response_dfs', 'original_frame_rate')
+    if not os.path.exists(save_dir):
+        os.mkdir(save_dir)
+    return save_dir
+
+
+# def get_multi_session_df_dir(interpolate=True, output_sampling_rate=30, event_type='all'):
+#     base_dir = get_platform_analysis_cache_dir()
+#     if interpolate:
+#         save_dir = os.path.join(base_dir, 'multi_session_mean_response_dfs', event_type, 'interpolate_' + str(output_sampling_rate) + 'Hz')
+#     else:
+#         save_dir = os.path.join(base_dir, 'multi_session_mean_response_dfs', event_type, 'original_frame_rate')
+#     if not os.path.exists(save_dir):
+#         os.mkdir(save_dir)
+#     return save_dir
+
+
 def get_manifest_path():
     """
     Get path to default manifest file for analysis
@@ -184,7 +216,7 @@ def get_visual_behavior_cache(from_s3=True, release_data_only=True, cache_dir=No
 
 def get_released_ophys_experiment_table(exclude_ai94=True):
     '''
-    gets the released ophys experiment table from AWS
+    gets the released ophys experiment table from lims
 
     Keyword Arguments:
         exclude_ai94 {bool} -- If True, exclude data from mice with Ai94(GCaMP6s) as the reporter line. (default: {True})
@@ -204,22 +236,32 @@ def get_released_ophys_experiment_table(exclude_ai94=True):
     return experiment_table
 
 
-def get_platform_paper_experiment_table(add_extra_columns=True, remove_flagged=True):
+
+def get_platform_paper_experiment_table(add_extra_columns=True, limit_to_closest_active=False, include_4x2_data=False, remove_flagged=True):
     """
     loads the experiment table that was downloaded from AWS and saved to the the platform paper cache dir.
     Then filter out VisualBehaviorMultiscope4areasx2d and Ai94 data.
     And add cell_type column (values = ['Excitatory', 'Sst Inhibitory', 'Vip Inhibitory']
     Set add_extra_columns to False if you dont need things like 'cell_type', 'binned_depth', or 'add_last_familiar'
-    Set remove_flagged to False if you want to include experiments that are current in the release dataset,
+        with only the closest familiar and novel active sessions to the first novel session to be included (i.e. only one session of each type per container)
+    Set limit_to_closest_active to True if you want to limit to experiments that are matched in all experience levels,
+        with only the closest familiar and novel active sessions to the first novel session to be included (i.e. only one session of each type per container)
+    include_4x2_data (bool), if True, then includes VisualBehaviorMultiscope4areasx2d data
+    remove_flagged (bool),  set remove_flagged to False if you want to include experiments that are current in the release dataset,
         but have been flagged for removal
+           
+
     """
     cache_dir = get_platform_analysis_cache_dir()
     cache = bpc.from_s3_cache(cache_dir=cache_dir)
     experiment_table = cache.get_ophys_experiment_table()
 
     # remove 4x2 and Ai94 data
-    experiment_table = experiment_table[(experiment_table.project_code != 'VisualBehaviorMultiscope4areasx2d') &
-                                        (experiment_table.reporter_line != 'Ai94(TITL-GCaMP6s)')].copy()
+    if include_4x2_data:
+        experiment_table = experiment_table[(experiment_table.reporter_line != 'Ai94(TITL-GCaMP6s)')].copy()
+    else:
+        experiment_table = experiment_table[(experiment_table.project_code != 'VisualBehaviorMultiscope4areasx2d') &
+                                            (experiment_table.reporter_line != 'Ai94(TITL-GCaMP6s)')].copy()
 
     # overwrite session number and passive columns to patch for bug flagged in this SDK issue:
     # https://github.com/AllenInstitute/AllenSDK/issues/2251
@@ -232,6 +274,7 @@ def get_platform_paper_experiment_table(add_extra_columns=True, remove_flagged=T
         experiment_table = utilities.add_average_depth_across_container(experiment_table)
         experiment_table = utilities.add_binned_depth_column(experiment_table)
         experiment_table = utilities.add_area_depth_column(experiment_table)
+        experiment_table = utilities.add_layer_column(experiment_table)
         # add other columns indicating whether a session was the last familiar before the first novel session,
         # or the second passing novel session after the first truly novel one
         experiment_table = utilities.add_date_string(experiment_table)  # add simplified date string for sorting
@@ -245,18 +288,52 @@ def get_platform_paper_experiment_table(add_extra_columns=True, remove_flagged=T
         # or exposure to image set for novel sessions
         experiment_table = utilities.add_experience_exposure_column(experiment_table)
 
+
     if remove_flagged:
         # Remove flagged ophys experiment ids
         flagged_oeids = get_flagged_ophys_experiment_ids()
         experiment_table = experiment_table.drop(flagged_oeids, axis=0)
 
+    if limit_to_closest_active:
+        experiment_table = utilities.limit_to_last_familiar_second_novel_active(experiment_table)
+        experiment_table = utilities.limit_to_containers_with_all_experience_levels(experiment_table)
+
     return experiment_table
 
-#
+
+def get_platform_paper_behavior_session_table(include_4x2_data=False):
+    """
+    loads the behavior sessions table that was downloaded from AWS and saved to the the platform paper cache dir.
+    Then filter out VisualBehaviorMultiscope4areasx2d and Ai94 data.
+    And add cell_type column (values = ['Excitatory', 'Sst Inhibitory', 'Vip Inhibitory']
+
+    include_4x2_data (bool), if True, include Multiscope 4areas x 2 depth data
+    """
+    cache_dir = get_platform_analysis_cache_dir()
+    cache = bpc.from_s3_cache(cache_dir=cache_dir)
+    behavior_sessions = cache.get_behavior_session_table()
+
+    # get rid of NaNs, documented in SDK#2218
+    behavior_sessions = behavior_sessions[behavior_sessions.session_type.isnull() == False]
+
+    # remove 4x2 and Ai94 data
+    if include_4x2_data:
+        behavior_sessions = behavior_sessions[(behavior_sessions.reporter_line != 'Ai94(TITL-GCaMP6s)')].copy()
+    else:
+        behavior_sessions = behavior_sessions[(behavior_sessions.project_code != 'VisualBehaviorMultiscope4areasx2d') &
+                                              (behavior_sessions.reporter_line != 'Ai94(TITL-GCaMP6s)')].copy()
+
+    # overwrite session number and passive columns to patch for bug flagged in this SDK issue:
+    # https://github.com/AllenInstitute/AllenSDK/issues/2251
+    behavior_sessions = utilities.add_session_number_to_experiment_table(behavior_sessions)
+    behavior_sessions = utilities.add_passive_flag_to_ophys_experiment_table(behavior_sessions)
+    behavior_sessions = utilities.add_cell_type_column(behavior_sessions)
+
+    return behavior_sessions
 
 
 def get_filtered_ophys_experiment_table(include_failed_data=False, release_data_only=True, exclude_ai94=True,
-                                        add_extra_columns=True, from_cached_file=False, overwrite_cached_file=False):
+                                        add_extra_columns=False, from_cached_file=False, overwrite_cached_file=False):
     """
     Loads a list of available ophys experiments FROM LIMS (not S3 cache) and adds additional useful columns to the table.
     By default, loads from a saved cached file.
@@ -266,7 +343,7 @@ def get_filtered_ophys_experiment_table(include_failed_data=False, release_data_
 
         include_failed_data {bool} -- If True, return all experiments including those from failed containers and receptive field mapping experiments.
                                       If False, returns only experiments that have passed experiment level QC.
-                                      If "release_data_only" is True, failed experiments will not be retruned
+                                      Setting include_failed_data to True will automatically set release_data_only to False
                                       There is no guarantee on data quality or reprocessing for these experiments.
         release_data_only {bool} -- If True, return only experiments that were released on March 25th, 2021 and August 12, 2021.
                                     Fail tags and other extra columns will not be added if this is set to True.
@@ -281,6 +358,8 @@ def get_filtered_ophys_experiment_table(include_failed_data=False, release_data_
     Returns:
         experiment_table -- returns a dataframe with ophys_experiment_id as the index and metadata as columns.
     """
+    if include_failed_data is True:
+        release_data_only = False
     if release_data_only:
         # get cache from lims for data released on March 25th
         print('getting experiment table for March and August releases from lims')
@@ -302,7 +381,7 @@ def get_filtered_ophys_experiment_table(include_failed_data=False, release_data_
             print('getting up-to-date experiment_table from lims')
             # get everything in lims
             cache = bpc.from_lims()
-            experiments = cache.get_ophys_experiment_table()
+            experiments = cache.get_ophys_experiment_table(passed_only=False)
             # limit to the 4 VisualBehavior project codes
             experiments = filtering.limit_to_production_project_codes(experiments)
             if add_extra_columns:
@@ -452,13 +531,16 @@ def get_second_release_candidates():
     return release_candidates
 
 
-def get_extened_stimulus_presentations(stimulus_presentations, licks, rewards, running_speed, eye_tracking):
+def get_extended_stimulus_presentations_table(stimulus_presentations, licks, rewards, running_speed, eye_tracking=None, behavior_session_id=None):
     """
     Takes SDK stimulus presentations table and adds a bunch of useful columns by incorporating data from other tables
     and reformatting existing column data
     Additional columns include epoch #s for 10 minute bins in the session, whether a flash was a pre or post change or omission,
     the mean running speed per flash, mean pupil area per flash, licks per flash, rewards per flash, lick rate, reward rate,
     time since last change, time since last omission, time since last lick
+
+    Set eye_tracking to None by default so that things still run for behavior only sessions
+    If behavior_session_id is provided, will load metrics from behavior model outputs file
     """
     if 'time' in licks.keys():
         licks = licks.rename(columns={'time': 'timestamps'})
@@ -470,28 +552,39 @@ def get_extened_stimulus_presentations(stimulus_presentations, licks, rewards, r
     stimulus_presentations['pre_omitted'] = stimulus_presentations['omitted'].shift(-1)
     stimulus_presentations = reformat.add_epoch_times(stimulus_presentations)
     stimulus_presentations = reformat.add_mean_running_speed(stimulus_presentations, running_speed)
-    try:  # if eye tracking data is not present or cant be loaded
-        stimulus_presentations = reformat.add_mean_pupil_area(stimulus_presentations, eye_tracking)
-    except BaseException:  # set to NaN
-        stimulus_presentations['mean_pupil_area'] = np.nan
+    if eye_tracking is not None:
+        try:  # if eye tracking data is not present or cant be loaded
+            stimulus_presentations = reformat.add_mean_pupil_area(stimulus_presentations, eye_tracking)
+        except BaseException:  # set to NaN
+            stimulus_presentations['mean_pupil_area'] = np.nan
     stimulus_presentations = reformat.add_licks_each_flash(stimulus_presentations, licks)
     stimulus_presentations = reformat.add_response_latency(stimulus_presentations)
     stimulus_presentations = reformat.add_rewards_each_flash(stimulus_presentations, rewards)
     stimulus_presentations['licked'] = [True if len(licks) > 0 else False for licks in
                                         stimulus_presentations.licks.values]
+    # lick rate per second
     stimulus_presentations['lick_rate'] = stimulus_presentations['licked'].rolling(window=320, min_periods=1,
                                                                                    win_type='triang').mean() / .75
-    stimulus_presentations['rewarded'] = [True if len(rewards) > 0 else False for rewards in
-                                          stimulus_presentations.rewards.values]
-    stimulus_presentations['reward_rate'] = stimulus_presentations['rewarded'].rolling(window=320, min_periods=1,
-                                                                                       win_type='triang').mean()
+    stimulus_presentations['rewarded'] = [True if len(rewards) > 0 else False for rewards in stimulus_presentations.rewards.values]
+    # (rewards/stimulus)*(1 stimulus/.750s) = rewards/second
+    stimulus_presentations['reward_rate_per_second'] = stimulus_presentations['rewarded'].rolling(window=320, min_periods=1,
+                                                                                                  win_type='triang').mean() / .75  # units of rewards per second
+    # (rewards/stimulus)*(1 stimulus/.750s)*(60s/min) = rewards/min
+    stimulus_presentations['reward_rate'] = stimulus_presentations['rewarded'].rolling(window=320, min_periods=1, win_type='triang').mean() * (60 / .75)  # units of rewards/min
+
+    reward_threshold = 2 / 3  # 2/3 rewards per minute = 1/90 rewards/second
+    stimulus_presentations['engaged'] = [x > reward_threshold for x in stimulus_presentations['reward_rate']]
+    stimulus_presentations['engagement_state'] = ['engaged' if True else 'disengaged' for engaged in stimulus_presentations['engaged'].values]
     stimulus_presentations = reformat.add_response_latency(stimulus_presentations)
     stimulus_presentations = reformat.add_image_contrast_to_stimulus_presentations(stimulus_presentations)
     stimulus_presentations = reformat.add_time_from_last_lick(stimulus_presentations, licks)
     stimulus_presentations = reformat.add_time_from_last_reward(stimulus_presentations, rewards)
     stimulus_presentations = reformat.add_time_from_last_change(stimulus_presentations)
-    stimulus_presentations = reformat.add_time_from_last_omission(stimulus_presentations)
-    stimulus_presentations['flash_after_omitted'] = stimulus_presentations['omitted'].shift(1)
+    try:  # behavior only sessions dont have omissions
+        stimulus_presentations = reformat.add_time_from_last_omission(stimulus_presentations)
+        stimulus_presentations['flash_after_omitted'] = stimulus_presentations['omitted'].shift(1)
+    except BaseException:
+        pass
     stimulus_presentations['flash_after_change'] = stimulus_presentations['change'].shift(1)
     stimulus_presentations['image_name_next_flash'] = stimulus_presentations['image_name'].shift(-1)
     stimulus_presentations['image_index_next_flash'] = stimulus_presentations['image_index'].shift(-1)
@@ -501,7 +594,104 @@ def get_extened_stimulus_presentations(stimulus_presentations, licks, rewards, r
     stimulus_presentations['lick_rate_next_flash'] = stimulus_presentations['lick_rate'].shift(-1)
     stimulus_presentations['lick_on_previous_flash'] = stimulus_presentations['licked'].shift(1)
     stimulus_presentations['lick_rate_previous_flash'] = stimulus_presentations['lick_rate'].shift(1)
+    # if behavior_session_id:
+    #     if check_if_model_output_available(behavior_session_id):
+    #         stimulus_presentations = add_model_outputs_to_stimulus_presentations(
+    #             stimulus_presentations, behavior_session_id)
+    #     else:
+    #         print('model outputs not available')
     return stimulus_presentations
+
+
+def get_stimulus_response_df_filepath_for_experiment(ophys_experiment_id, data_type, event_type, interpolate=True, output_sampling_rate=30):
+
+    filepath = os.path.join(get_stimulus_response_df_dir(interpolate, int(output_sampling_rate), event_type),
+                            str(ophys_experiment_id) + '_' + data_type + '_' + event_type + '.h5')
+    return filepath
+
+
+def get_stimulus_response_df(dataset, time_window=[-3, 3.1], interpolate=True, output_sampling_rate=30,
+                             data_type='filtered_events', event_type='all', load_from_file=True):
+    """
+    Load a dataframe with stimulus aligned traces for all cells (or for a given behavior timeseries) using mindscope_utilities
+    and merges with annotated stimulus_presentations table that includes behavior metadata
+    Will interpolate traces to desired output_sampling_rate if interpolate = True
+    Works for cell traces (dF/F, events, filtered_events) or behavioral timeseries (running, pupil, lick rate)
+    dataframe can include all stimulus_presentations in the session (event_type='all')
+    or it can be limited to just changes (event_type='changes') or omissions (event_type='omissions) to make loading faster
+    If the response_df has been pre-generated and saved to the default cache directory, this function will load the pre-existing file if load_from_file=True
+    otherwise, will generate dataframe and save it
+
+    inputs:
+        dataset: BehaviorOphysExperiment instance
+        time_window: window over which to extract the event triggered response around each stimulus presentation time
+        interpolate: Boolean, whether or not to interpolate traces
+        output_sampling_rate: sampling rate for interpolation, only used if interpolate is True
+        data_type: which timeseries to get event triggered responses for
+                    options: 'filtered_events', 'events', 'dff', 'running_speed', 'pupil_diameter', 'lick_rate'
+    output:
+        stimulus_response_df: pandas dataframe
+                                if data_type is 'filtered_events', 'events', or 'dff', table will be formatted such that:
+                                    each row is one cell's response to one stimulus_presentation
+                                    total length of dataframe should be n_cells x n_stimulus_presentations
+                                if data_type is 'running_speed', 'pupil_diameter', or 'lick_rate', table will be formatted such that:
+                                    each row is one the stimulus aligned timeseries for each stimulus_presentation
+                                    total length of dataframe should be n_stimulus_presentations
+                                columns include stimulus and behavior metadata
+     """
+
+    import mindscope_utilities.visual_behavior_ophys.data_formatting as vb_ophys
+    # load stimulus response df from file if it exists otherwise generate it
+    ophys_experiment_id = dataset.ophys_experiment_id
+    filepath = get_stimulus_response_df_filepath_for_experiment(ophys_experiment_id, data_type, event_type,
+                                                                interpolate=interpolate, output_sampling_rate=output_sampling_rate)
+
+    if event_type == 'omissions':
+        response_window_duration = 0.75
+    else:
+        response_window_duration = 0.5
+
+    if load_from_file:
+        if os.path.exists(filepath):
+            try:  # attempt to load from file
+                print('file exists:', )
+                print('loading response df from file for', ophys_experiment_id, data_type, event_type)
+                sdf = pd.read_hdf(filepath, key='df')
+            except Exception as e:  # if it cant be loaded for whatever reason, create it and save it
+                print('stimulus_response_df does not exist or could not be loaded for', filepath)
+                print(e)
+                print('generating response df')
+                sdf = vb_ophys.get_stimulus_response_df(dataset, data_type=data_type, event_type=event_type,
+                                                        time_window=time_window, interpolate=interpolate,
+                                                        output_sampling_rate=output_sampling_rate,
+                                                        response_window_duration=response_window_duration)
+                try:  # some experiments with lots of neurons cant save
+                    sdf.to_hdf(filepath, key='df')
+                    print('saved response df to', filepath)
+                except BaseException:
+                    print('could not save', filepath)
+        else:  # if file does not exist, generate response df
+            print('generating response df')
+            sdf = vb_ophys.get_stimulus_response_df(dataset, data_type=data_type, event_type=event_type,
+                                                    time_window=time_window, interpolate=interpolate,
+                                                    output_sampling_rate=output_sampling_rate,
+                                                    response_window_duration=response_window_duration)
+    else:  # if load_from_file is False, generate response df
+        print('generating response df')
+        sdf = vb_ophys.get_stimulus_response_df(dataset, data_type=data_type, event_type=event_type,
+                                                time_window=time_window, interpolate=interpolate,
+                                                output_sampling_rate=output_sampling_rate,
+                                                response_window_duration=response_window_duration)
+
+    # if extended_stimulus_presentations is an attribute of the dataset object, use it, otherwise get regular stimulus_presentations
+    if 'extended_stimulus_presentations' in dir(dataset):
+        stimulus_presentations = dataset.extended_stimulus_presentations.copy()
+    else:
+        stimulus_presentations = vb_ophys.get_annotated_stimulus_presentations(dataset)
+    sdf = sdf.merge(stimulus_presentations, on='stimulus_presentations_id')
+
+    return sdf
+
 
 # LOAD OPHYS DATA FROM SDK AND EDIT OR ADD METHODS/ATTRIBUTES WITH BUGS OR INCOMPLETE FEATURES #
 
@@ -595,8 +785,8 @@ class BehaviorOphysDataset(BehaviorOphysExperiment):
 
     @property
     def extended_stimulus_presentations(self):
-        extended_stimulus_presentations = get_extened_stimulus_presentations(self.stimulus_presentations.copy(),
-                                                                             self.licks, self.rewards, self.running_speed, self.eye_tracking)
+        extended_stimulus_presentations = get_extended_stimulus_presentations_table(self.stimulus_presentations.copy(),
+                                                                                    self.licks, self.rewards, self.running_speed, self.eye_tracking)
         self._extended_stimulus_presentations = extended_stimulus_presentations
         return self._extended_stimulus_presentations
 
@@ -605,7 +795,7 @@ class BehaviorOphysDataset(BehaviorOphysExperiment):
         trials = super().trials.copy()
         trials = reformat.add_epoch_times(trials)
         trials = reformat.add_trial_type_to_trials_table(trials)
-        trials = reformat.add_reward_rate_to_trials_table(trials)
+        trials = reformat.add_reward_rate_to_trials_table(trials, self.extended_stimulus_presentations)
         trials = reformat.add_engagement_state_to_trials_table(trials, self.extended_stimulus_presentations)
         self._extended_trials = trials
         return self._extended_trials
@@ -692,7 +882,7 @@ def get_ophys_dataset(ophys_experiment_id, include_invalid_rois=False, load_from
 
     if get_extended_stimulus_presentations:
         # add extended stimulus presentations
-        dataset.extended_stimulus_presentations = get_extened_stimulus_presentations(
+        dataset.extended_stimulus_presentations = get_extended_stimulus_presentations_table(
             dataset.stimulus_presentations.copy(),
             dataset.licks, dataset.rewards,
             dataset.running_speed, dataset.eye_tracking)
@@ -754,7 +944,7 @@ class BehaviorDataset(BehaviorSession):
         stimulus_presentations['reward_rate'] = stimulus_presentations['rewarded'].rolling(window=320, min_periods=1,
                                                                                            win_type='triang').mean()
         stimulus_presentations = reformat.add_response_latency(stimulus_presentations)
-        stimulus_presentations = reformat.add_image_contrast_to_stimulus_presentations(stimulus_presentations)
+        # stimulus_presentations = reformat.add_image_contrast_to_stimulus_presentations(stimulus_presentations)
         stimulus_presentations = reformat.add_time_from_last_lick(stimulus_presentations, self.licks)
         stimulus_presentations = reformat.add_time_from_last_reward(stimulus_presentations, self.rewards)
         stimulus_presentations = reformat.add_time_from_last_change(stimulus_presentations)
@@ -780,13 +970,22 @@ class BehaviorDataset(BehaviorSession):
         trials = super().trials.copy()
         trials = reformat.add_epoch_times(trials)
         trials = reformat.add_trial_type_to_trials_table(trials)
-        trials = reformat.add_reward_rate_to_trials_table(trials)
+        trials = reformat.add_reward_rate_to_trials_table(trials, self.extended_stimulus_presentations)
         trials = reformat.add_engagement_state_to_trials_table(trials, self.extended_stimulus_presentations)
         self._extended_trials = trials
         return self._extended_trials
 
 
-def get_behavior_dataset(behavior_session_id, from_lims=False, from_nwb=False):
+def get_extended_trials_table(trials, extended_stimulus_presentations):
+    extended_trials = reformat.add_epoch_times(trials)
+    extended_trials = reformat.add_trial_type_to_trials_table(extended_trials)
+    extended_trials = reformat.add_reward_rate_to_trials_table(extended_trials, extended_stimulus_presentations)
+    extended_trials = reformat.add_engagement_state_to_trials_table(extended_trials, extended_stimulus_presentations)
+    return extended_trials
+
+
+def get_behavior_dataset(behavior_session_id, from_lims=False, from_nwb=True,
+                         get_extended_stimulus_presentations=False, get_extended_trials=True):
     """
     Gets behavior data for one session, either using the SDK LIMS API, SDK NWB API, or using BehaviorDataset wrapper which inherits the LIMS API BehaviorSession object, and adds access to extended stimulus_presentations and trials.
 
@@ -803,16 +1002,28 @@ def get_behavior_dataset(behavior_session_id, from_lims=False, from_nwb=False):
     if from_lims:
         dataset = BehaviorSession.from_lims(behavior_session_id)
     elif from_nwb:
-        nwb_file = get_release_behavior_nwb_file_path(behavior_session_id).values[0]
-        if len(nwb_file) > 0:
-            nwb_path = nwb_file[0]
-            if 'win' in sys.platform:
-                nwb_path = '\\' + os.path.abspath(nwb_path)[2:]
-            dataset = BehaviorSession.from_nwb_path(nwb_path)
-        else:
-            print('no NWB file path found for', behavior_session_id)
+        cache_dir = get_platform_analysis_cache_dir()
+        cache = bpc.from_s3_cache(cache_dir=cache_dir)
+        dataset = cache.get_behavior_session(behavior_session_id)
     else:
         raise Exception('Set load_from_lims or load_from_nwb to True')
+
+    if get_extended_stimulus_presentations:
+        # add extended stimulus presentations
+        dataset.extended_stimulus_presentations = get_extended_stimulus_presentations_table(
+            dataset.stimulus_presentations.copy(),
+            dataset.licks, dataset.rewards,
+            dataset.running_speed, behavior_session_id=dataset.metadata['behavior_session_id'])
+
+    if get_extended_trials and get_extended_stimulus_presentations is False:
+        dataset.extended_stimulus_presentations = get_extended_stimulus_presentations_table(
+            dataset.stimulus_presentations.copy(),
+            dataset.licks, dataset.rewards,
+            dataset.running_speed, behavior_session_id=dataset.metadata['behavior_session_id'])
+        dataset.extended_trials = get_extended_trials_table(dataset.trials, dataset.extended_stimulus_presentations)
+    elif get_extended_trials:
+        dataset.extended_trials = get_extended_trials_table(dataset.trials, dataset.extended_stimulus_presentations)
+
     return dataset
 
 #
@@ -834,7 +1045,7 @@ def get_ophys_container_ids(platform_paper_only=False, add_extra_columns=True):
     if platform_paper_only:
         experiments = get_platform_paper_experiment_table(add_extra_columns=add_extra_columns)
     else:
-        cache_dir = get_platform_analysis_cache_dir
+        cache_dir = get_platform_analysis_cache_dir()
         cache = bpc.from_s3_cache(cache_dir)
         experiments = cache.get_ophys_experiment_table()
     container_ids = np.sort(experiments.ophys_container_id.unique())
@@ -2569,78 +2780,36 @@ def add_superficial_deep_to_experiments_table(experiments_table):
     return experiments_table
 
 
-def get_file_name_for_multi_session_df_no_session_type(df_name, project_code, conditions, use_events, filter_events):
-    if use_events:
-        if filter_events:
-            suffix = '_filtered_events'
-        else:
-            suffix = '_events'
-    else:
-        suffix = ''
-
-    if len(conditions) == 5:
-        filename = 'mean_' + df_name + '_' + project_code + '_' + conditions[1] + '_' + conditions[
-            2] + '_' + conditions[3] + '_' + conditions[4] + suffix + '.h5'
-    elif len(conditions) == 4:
-        filename = 'mean_' + df_name + '_' + project_code + '_' + conditions[1] + '_' + conditions[
-            2] + '_' + conditions[3] + suffix + '.h5'
-    elif len(conditions) == 3:
-        filename = 'mean_' + df_name + '_' + project_code + '_' + conditions[1] + '_' + conditions[
-            2] + suffix + '.h5'
-    elif len(conditions) == 2:
-        filename = 'mean_' + df_name + '_' + project_code + '_' + conditions[1] + suffix + '.h5'
-    elif len(conditions) == 1:
-        filename = 'mean_' + df_name + '_' + project_code + '_' + conditions[0] + suffix + '.h5'
-
-    return filename
-
-
-def get_file_name_for_multi_session_df(df_name, project_code, session_type, conditions, use_events, filter_events):
-    if use_events:
-        if filter_events:
-            suffix = '_filtered_events'
-        else:
-            suffix = '_events'
-    else:
-        suffix = ''
+def get_file_name_for_multi_session_df(data_type, event_type, project_code, session_type, conditions):
 
     if len(conditions) == 6:
-        filename = 'mean_' + df_name + '_' + project_code + '_' + session_type + '_' + conditions[1] + '_' + conditions[2] + '_' + conditions[3] + '_' + conditions[4] + '_' + conditions[5] + suffix + '.h5'
+        filename = 'mean_response_df_' + data_type + '_' + event_type + '_' + project_code + '_' + session_type + '_' + conditions[1] + '_' + conditions[2] + '_' + conditions[3] + '_' + conditions[4] + '_' + conditions[5] + '.h5'
     elif len(conditions) == 5:
-        filename = 'mean_' + df_name + '_' + project_code + '_' + session_type + '_' + conditions[1] + '_' + conditions[2] + '_' + conditions[3] + '_' + conditions[4] + suffix + '.h5'
+        filename = 'mean_response_df_' + data_type + '_' + event_type + '_' + project_code + '_' + session_type + '_' + conditions[1] + '_' + conditions[2] + '_' + conditions[3] + '_' + conditions[4] + '.h5'
     elif len(conditions) == 4:
-        filename = 'mean_' + df_name + '_' + project_code + '_' + session_type + '_' + conditions[1] + '_' + conditions[2] + '_' + conditions[
-            3] + suffix + '.h5'
+        filename = 'mean_response_df_' + data_type + '_' + event_type + '_' + project_code + '_' + session_type + '_' + conditions[1] + '_' + conditions[2] + '_' + conditions[3] + '.h5'
     elif len(conditions) == 3:
-        filename = 'mean_' + df_name + '_' + project_code + '_' + session_type + '_' + conditions[1] + '_' + conditions[2] + suffix + '.h5'
+        filename = 'mean_response_df_' + data_type + '_' + event_type + '_' + project_code + '_' + session_type + '_' + conditions[1] + '_' + conditions[2] + '.h5'
     elif len(conditions) == 2:
-        filename = 'mean_' + df_name + '_' + project_code + '_' + session_type + '_' + conditions[1] + suffix + '.h5'
+        filename = 'mean_response_df_' + data_type + '_' + event_type + '_' + project_code + '_' + session_type + '_' + conditions[1] + '.h5'
     elif len(conditions) == 1:
-        filename = 'mean_' + df_name + '_' + project_code + '_' + session_type + '_' + conditions[0] + suffix + '.h5'
+        filename = 'mean_response_df_' + data_type + '_' + event_type + '_' + project_code + '_' + session_type + '_' + conditions[0] + '.h5'
 
     return filename
 
 
-def get_multi_session_df(cache_dir, df_name, conditions, experiments_table, remove_outliers=False, use_session_type=True,
-                         use_events=False, filter_events=True):
+def load_multi_session_df(data_type, event_type, conditions, interpolate=True, output_sampling_rate=30):
     """
-    Loops through all experiments in the provided experiments_table, creates a response dataframe indicated by df_name,
-    creates a mean response dataframe for a given set of conditions, and concatenates across all experiments to create
-    one large multi session dataframe with trial averaged responses and other relevant metrics. Saves multi_session_df
-    to the cache dir as a separate .h5 file per project_code and session_type combination present in the provided
-    experiments_table.
-    :param cache_dir: to level directory directory to save resulting dataframes, must contain folder called 'multi_session_summary_dfs'
-    :param df_name: the name of the response dataframe to be created using the ResponseAnalysis class, such as 'stimulus_response_df'
-    :param conditions: the set of conditions over which to group and average cell responses using the get_mean_df()
-                        function in response_analysis.utilities, such as ['cell_specimen_id', 'engagement_state', 'image_name']
-    :param experiments_table: full or subset of experiments_table from loading.get_filtered_ophys_experiments_table()
-    :param remove_outliers: Boolean, whether to remove cells with a max average dF/F > 5 (not a principled way of doing this)
-    :param use_session_type: Boolean for whether or not to save resulting dataframes by session type or to aggregate across session types.
-                        Grouping and saving by session type is typically necessary given the large size of these dataframes.
-    :param use_events: Boolean, whether to use events instead of dF/F when creating response dataframes
-    :return: multi_session_df for conditions specified above
-    """
+    Loops through all experiments in the provided experiments_table and loads pre-generated dataframes containing
+    trial averaged responses for each cell in each session, for the provided set of conditions, data_type, and event_type.
 
+    :param data_type:
+    :param event_type:
+    :param conditions:
+    :param interpolate:
+    :param output_sampling_rate:
+    :return:
+    """
     cache_dir = get_platform_analysis_cache_dir()
     cache = bpc.from_s3_cache(cache_dir=cache_dir)
     experiments_table = cache.get_ophys_experiment_table()
@@ -2651,32 +2820,15 @@ def get_multi_session_df(cache_dir, df_name, conditions, experiments_table, remo
         experiments = experiments_table[(experiments_table.project_code == project_code)]
         if project_code == 'VisualBehaviorMultiscope':
             experiments = experiments[experiments.session_type != 'OPHYS_2_images_B_passive']
-        # expts = experiments_table.reset_index()
-        if use_session_type:
-            for session_type in np.sort(experiments.session_type.unique()):
-                try:
-                    filename = get_file_name_for_multi_session_df(df_name, project_code, session_type, conditions,
-                                                                  use_events, filter_events)
-                    filepath = os.path.join(get_platform_analysis_cache_dir(), 'multi_session_summary_dfs', filename)
-                    # print('reading file at', filepath)
-                    df = pd.read_hdf(filepath, key='df')
-                    # df = df.merge(expts, on='ophys_experiment_id')
-                    if remove_outliers:
-                        outlier_cells = df[df.mean_response > 5].cell_specimen_id.unique()
-                        df = df[df.cell_specimen_id.isin(outlier_cells) == False]
-                    multi_session_df = pd.concat([multi_session_df, df])
-                except BaseException:
-                    print('no multi_session_df for', project_code, session_type)
-        else:
-            filename = get_file_name_for_multi_session_df_no_session_type(df_name, project_code, conditions, use_events, filter_events)
-            filepath = os.path.join(cache_dir, 'multi_session_summary_dfs', filename)
-            df = pd.read_hdf(filepath, key='df')
-            # df = df.merge(expts[['ophys_experiment_id', 'cre_line', 'location', 'location_layer',
-            #                      'layer', 'ophys_session_id', 'project_code', 'session_type',
-            #                      'specimen_id', 'depth', 'exposure_number', 'ophys_container_id']], on='ophys_experiment_id')
-            if remove_outliers:
-                outlier_cells = df[df.mean_response > 5].cell_specimen_id.unique()
-            df = df[df.cell_specimen_id.isin(outlier_cells) == False]
+        for session_type in np.sort(experiments.session_type.unique()):
+            try:
+                filename = get_file_name_for_multi_session_df(data_type, event_type, project_code, session_type, conditions)
+                multi_session_df_dir = get_multi_session_df_dir(interpolate=interpolate,
+                                                                output_sampling_rate=output_sampling_rate, event_type=event_type)
+                df = pd.read_hdf(os.path.join(multi_session_df_dir, filename), key='df')
+                multi_session_df = pd.concat([multi_session_df, df])
+            except BaseException:
+                print('no multi_session_df for', project_code, session_type)
     return multi_session_df
 
 
@@ -3064,10 +3216,14 @@ def get_cell_table_from_lims(ophys_experiment_ids=None, columns_to_return='*', v
     return lims_rois
 
 
-def get_cell_table(platform_paper_only=True, add_extra_columns=True):
+def get_cell_table(platform_paper_only=True, add_extra_columns=True, limit_to_closest_active=False, limit_to_matched_cells=False, include_4x2_data=False):
     """
     loads ophys_cells_table from the SDK using platform paper analysis cache and merges with experiment_table to get metadata
     if 'platform_paper_only' is True, will filter out Ai94 and VisuaBehaviorMultiscope4areasx2d and add extra columns
+    if `include_4x2_data` is True, then `platform_paper_only` will NOT filter out 4areasx2d data
+    if 'limit_to_closest_active' is True, will limit to containers with all 3 experience levels, only including the closest (in time)
+        familiar and novel active sessions to the first novel session
+    if 'limit_to_matched_cells' is True, will only return cells that are matched in all 3 experience levels
     :return:
     """
     cache_dir = get_platform_analysis_cache_dir()
@@ -3077,13 +3233,135 @@ def get_cell_table(platform_paper_only=True, add_extra_columns=True):
     # optionally filter to limit to platform paper datasets
     if platform_paper_only:
         # load experiments table and merge
-        experiment_table = get_platform_paper_experiment_table(add_extra_columns=add_extra_columns)
+        experiment_table = get_platform_paper_experiment_table(add_extra_columns=add_extra_columns, include_4x2_data=include_4x2_data)
         cell_table = cell_table.reset_index().merge(experiment_table, on='ophys_experiment_id')
-        cell_table = cell_table[(cell_table.reporter_line != 'Ai94(TITL-GCaMP6s)') & (cell_table.project_code != 'VisualBehaviorMultiscope4areasx2d')]
+        if include_4x2_data:
+            cell_table = cell_table[(cell_table.reporter_line != 'Ai94(TITL-GCaMP6s)')]
+        else:
+            cell_table = cell_table[(cell_table.reporter_line != 'Ai94(TITL-GCaMP6s)') & (cell_table.project_code != 'VisualBehaviorMultiscope4areasx2d')]
         cell_table = cell_table.set_index('cell_roi_id')
     else:
         # load platform experiments table and merge
         experiment_table = cache.get_ophys_experiment_table()
         cell_table = cell_table.reset_index().merge(experiment_table, on='ophys_experiment_id')
         cell_table = cell_table.set_index('cell_roi_id')
+    if limit_to_closest_active:
+        cell_table = utilities.limit_to_last_familiar_second_novel_active(cell_table)
+        cell_table = utilities.limit_to_containers_with_all_experience_levels(cell_table)
+    if limit_to_matched_cells:
+        cell_table = utilities.limit_to_cell_specimen_ids_matched_in_all_experience_levels(cell_table)
     return cell_table
+
+
+def get_matched_cells_table(cells_table):
+    """
+    takes cells_table from sdk and limits to last familiar and second novel active sessions,
+    container and cells matched in all experience levels
+    """
+    # limit to cells matched in closest familiar and novel active
+    cells_table = utilities.limit_to_last_familiar_second_novel_active(cells_table)
+    cells_table = utilities.limit_to_containers_with_all_experience_levels(cells_table)
+    cells_table = utilities.limit_to_cell_specimen_ids_matched_in_all_experience_levels(cells_table)
+    print(len(cells_table.cell_specimen_id.unique()), 'cells in matched cells table')
+    return cells_table
+
+
+def get_data_dict(ophys_experiment_ids, data_types=None):
+    """
+    create dictionary of stimulus_response_dfs for all data types for a set of ophys_experiment_ids
+    data types include [filtered_events, events, dff, running_speed, pupil_diameter, lick_rate]
+    If stimulus_response_df files have been pre-computed, load from file, otherwise generate new response df
+    """
+    if data_types is None:
+        data_types = ['filtered_events', 'running_speed', 'pupil_width', 'lick_rate']
+    # get cache
+    from allensdk.brain_observatory.behavior.behavior_project_cache import VisualBehaviorOphysProjectCache
+    cache_dir = get_platform_analysis_cache_dir()
+    cache = VisualBehaviorOphysProjectCache.from_s3_cache(cache_dir)
+    # define params
+    time_window = [-3, 3.1]
+    interpolate = True
+    output_sampling_rate = 30
+    # set up dict to collect data in
+    data_dict = {}
+    for ophys_experiment_id in ophys_experiment_ids:
+        data_dict[ophys_experiment_id] = {}
+        data_dict[ophys_experiment_id]['dataset'] = {}
+        for data_type in data_types:
+            data_dict[ophys_experiment_id][data_type] = {}
+
+    # aggregate data
+    for ophys_experiment_id in ophys_experiment_ids:
+
+        # dataset = get_ophys_dataset(ophys_experiment_id)
+        dataset = cache.get_behavior_ophys_experiment(ophys_experiment_id)
+        data_dict[ophys_experiment_id]['dataset']['dataset'] = dataset
+
+        for data_type in data_types:
+            try:
+                sdf = get_stimulus_response_df(dataset, data_type=data_type, event_type='all',
+                                               time_window=time_window, interpolate=interpolate,
+                                               output_sampling_rate=output_sampling_rate,
+                                               load_from_file=True)
+                data_dict[ophys_experiment_id][data_type]['stimulus_response_df'] = sdf
+            except BaseException:
+                print('could not get response df for', ophys_experiment_id, data_type)
+
+    return data_dict
+
+
+def check_whether_multi_session_df_has_all_platform_experiments(multi_session_df):
+    """
+    Prints the number of experiments in the input dataframe compared to the platform paper experiments table
+    :param multi_session_df:
+    :return:
+    """
+    mdf = multi_session_df.copy()
+    platform_experiments_table = get_platform_paper_experiment_table()
+    platform_experiments_table = platform_experiments_table.reset_index()
+    platform_experiment_ids = platform_experiments_table.ophys_experiment_id.unique()
+    print('there are', len(platform_experiment_ids), 'experiments in the platform paper experiments table')
+    platform_mdf = mdf[mdf.ophys_experiment_id.isin(platform_experiment_ids)]
+    platform_mdf_experiment_ids = platform_mdf.ophys_experiment_id.unique()
+    print('there are', len(platform_mdf_experiment_ids), 'experiments in the multi_session_df')
+    missing_expts = platform_experiments_table[platform_experiments_table.ophys_experiment_id.isin(platform_mdf_experiment_ids) == False].ophys_experiment_id.unique()
+    print('there are', len(missing_expts), 'missing experiments')
+    return missing_expts
+
+
+def get_multi_session_df_for_conditions(data_type, event_type, conditions, inclusion_criteria='full_dataset'):
+    # params for stim_response_df to use
+    interpolate = True
+    output_sampling_rate = 30
+
+    multi_session_df = load_multi_session_df(data_type=data_type, event_type=event_type, conditions=conditions,
+                                             interpolate=interpolate, output_sampling_rate=output_sampling_rate)
+    print('there are', len(multi_session_df.ophys_experiment_id.unique()), 'experiments in the full multi_session_df')
+
+    # limit to platform expts
+    platform_experiments = get_platform_paper_experiment_table()
+    multi_session_df = multi_session_df[multi_session_df.ophys_experiment_id.isin(platform_experiments.index.values)]
+    print('there are', len(multi_session_df.ophys_experiment_id.unique()),
+          'experiments in the multi_session_df after limiting to platform experiments')
+
+    # merge with metadata
+    multi_session_df = multi_session_df.merge(platform_experiments, on='ophys_experiment_id')
+
+    multi_session_df = multi_session_df.reset_index(drop=True)
+
+    #     missing_expts = loading.check_whether_multi_session_df_has_all_platform_experiments(multi_session_df)
+
+    # need to filter for active first so that subsequent criteria area applied to that set
+    if 'active_only' in inclusion_criteria:
+        multi_session_df = multi_session_df[multi_session_df.passive == False]
+
+    if 'closest_familiar_and_novel' in inclusion_criteria:
+        multi_session_df = utilities.limit_to_last_familiar_second_novel_active(multi_session_df)
+
+    if 'containers_with_all_levels' in inclusion_criteria:
+        multi_session_df = utilities.limit_to_containers_with_all_experience_levels(multi_session_df)
+
+    print('there are', len(multi_session_df.ophys_experiment_id.unique()),
+          'experiments after filtering for inclusion criteria - ', inclusion_criteria)
+
+    return multi_session_df
