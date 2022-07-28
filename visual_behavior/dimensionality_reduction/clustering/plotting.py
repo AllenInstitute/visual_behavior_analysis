@@ -603,6 +603,8 @@ def plot_dropout_heatmap(cluster_meta, feature_matrix, cre_line, cluster_id, cba
     this_cluster_csids = this_cluster_meta.index.values
     feature_matrix_cre = processing.get_feature_matrix_for_cre_line(feature_matrix, cluster_meta, cre_line)
     mean_dropout_df = feature_matrix_cre.loc[this_cluster_csids].mean().unstack()
+    features = processing.get_features_for_clustering()
+    mean_dropout_df = mean_dropout_df.loc[features] # order regressors in a specific order
 
     if ax is None:
         fig, ax = plt.subplots()
