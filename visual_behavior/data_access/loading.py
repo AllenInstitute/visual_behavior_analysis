@@ -236,7 +236,6 @@ def get_released_ophys_experiment_table(exclude_ai94=True):
     return experiment_table
 
 
-
 def get_platform_paper_experiment_table(add_extra_columns=True, limit_to_closest_active=False, include_4x2_data=False, remove_flagged=True):
     """
     loads the experiment table that was downloaded from AWS and saved to the the platform paper cache dir.
@@ -249,7 +248,7 @@ def get_platform_paper_experiment_table(add_extra_columns=True, limit_to_closest
     include_4x2_data (bool), if True, then includes VisualBehaviorMultiscope4areasx2d data
     remove_flagged (bool),  set remove_flagged to False if you want to include experiments that are current in the release dataset,
         but have been flagged for removal
-           
+
 
     """
     cache_dir = get_platform_analysis_cache_dir()
@@ -287,7 +286,6 @@ def get_platform_paper_experiment_table(add_extra_columns=True, limit_to_closest
         # add column that has a combination of experience level and exposure to omissions for familiar sessions,
         # or exposure to image set for novel sessions
         experiment_table = utilities.add_experience_exposure_column(experiment_table)
-
 
     if remove_flagged:
         # Remove flagged ophys experiment ids
