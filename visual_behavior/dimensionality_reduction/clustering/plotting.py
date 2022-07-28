@@ -1850,7 +1850,6 @@ def plot_clusters_stats_pop_avg_cols(cluster_meta, feature_matrix, multi_session
     fig, ax = plt.subplots(len(cluster_ids), n_cols, figsize=figsize, sharex='col',
                            gridspec_kw={'width_ratios': [1, 1.25, 1.25]})
     ax = ax.ravel()
-    i = 0
     for c, cluster_id in enumerate(cluster_ids):
         ax[c * 3:(c * 3) + 3] = plot_cluster_data(cluster_meta, feature_matrix, cre_line, cluster_id,
                                                   multi_session_df=multi_session_df,
@@ -2108,7 +2107,7 @@ def plot_proportion_cells_area_depth_pie_chart(cluster_meta, save_dir=None, fold
         utils.save_figure(fig, figsize, save_dir, folder, 'proportion_cells_pie_chart')
 
 
-def plot_cluster_percent_pie_legends(save_dir=None, folder=None):
+def plot_cluster_proportion_pie_legends(save_dir=None, folder=None):
     # cluster types
     cluster_types = processing.get_cluster_types()
 
@@ -2163,7 +2162,7 @@ def plot_cluster_proportions_for_location(location_fractions, cre_line, location
                            wedgeprops=dict(width=0.3, edgecolor='w'))
     ax.set_title(get_abbreviated_location(location, abbrev_layer=False))
     if save_dir:
-        utils.save_figure(fig, figsize, plot_save_dir, folder, cre_line[:3] + '_' + location)
+        utils.save_figure(fig, figsize, save_dir, folder, cre_line[:3] + '_' + location)
 
 #
 # def plot_cluster_proportions_for_location(location_fractions, cre_line, location, ax=None, save_dir=None, folder=None):
@@ -2232,7 +2231,7 @@ def plot_cluster_proportion_donut_for_location(location_fractions, cre_line, loc
 
     ax.set_title(get_abbreviated_location(location, abbrev_layer=False))
     if save_dir:
-        utils.save_figure(fig, figsize, plot_save_dir, folder, cre_line[:3] + '_' + location)
+        utils.save_figure(fig, figsize, save_dir, folder, cre_line[:3] + '_' + location)
 
 
 def plot_cluster_proportion_donuts_all_locations(location_fractions, cluster_metrics, use_exp_mod_continuous=False,
@@ -2328,7 +2327,7 @@ def plot_number_clusters_per_mouse(cluster_meta, save_dir=None, folder=None):
     n_clusters = n_clusters.reset_index()
     cre_lines = processing.get_cre_lines(cluster_meta)
 
-    rigs = np.sort(n_clusters.equipment_name.unique())
+    # rigs = np.sort(n_clusters.equipment_name.unique())
     figsize = (20, 4)
     fig, ax = plt.subplots(1, 3, figsize=figsize)
     for i, cre_line in enumerate(cre_lines[::-1]):
@@ -2412,8 +2411,6 @@ def plot_cluster_percent_pie_legends(save_dir=None, folder=None):
     wedges, texts = ax[0].pie(fake_data.fraction.values, radius=1, wedgeprops=dict(width=0.4, edgecolor='w'),
                               colors=fake_data.cluster_type_color.values, labels=fake_data.cluster_type.values)
     ax[0].legend(bbox_to_anchor=(1.5, 1), fontsize='small')
-    #     if save_dir:
-    #         utils.save_figure(fig, figsize, save_dir, folder, 'cluster_proportions_cluster_types_legend')
 
     # experience_levels
     experience_levels = utils.get_experience_levels()

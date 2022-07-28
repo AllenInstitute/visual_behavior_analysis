@@ -201,7 +201,6 @@ def plot_population_averages_for_cell_types_across_experience(multi_session_df, 
                                                               save_dir=None, folder=None, suffix=None, ax=None):
     # get important information
     experiments_table = loading.get_platform_paper_experiment_table()
-    experience_levels = np.sort(experiments_table.experience_level.unique())
     cell_types = np.sort(experiments_table.cell_type.unique())
     palette = utilities.get_experience_level_colors()
 
@@ -252,9 +251,6 @@ def plot_population_averages_for_cell_types_across_experience(multi_session_df, 
         for i in np.arange(0, 2):
             for x in range(3):
                 ax[i][x].set_xlabel('')
-                #         for i in np.arange(0,3):
-                #             for x in [0]:
-                #                 ax[i][x].set_yticklabels('')
 
     if save_dir:
         fig_title = 'population_average_cell_types_exp_levels' + suffix
@@ -366,7 +362,6 @@ def plot_mean_response_by_epoch_for_multiple_conditions(response_df_dict, metric
     # get info to plot
     axes_conditions = np.sort(df[axes_condition].unique())[::-1]
     experience_epoch = np.sort(df.experience_epoch.unique())
-    palette = utils.get_experience_level_colors()
 
     if horizontal:
         figsize = (4 * len(axes_conditions), 3.5)
@@ -385,9 +380,6 @@ def plot_mean_response_by_epoch_for_multiple_conditions(response_df_dict, metric
         ax[i].set_title(axis_value)
         ax[i].vlines(x=n_epochs - 0.5, ymin=0, ymax=1, color='gray', linestyle='--')
         ax[i].vlines(x=(n_epochs * 2) + 1.5, ymin=0, ymax=1, color='gray', linestyle='--')
-
-    # labels = [df_name.split('_')[0] for df_name in df_names]
-    #     ax[i].legend(labels=labels, fontsize=14, loc='upper right')
 
     image = mlines.Line2D([], [], color=colors[0], label='non-change')
     change = mlines.Line2D([], [], color=colors[1], label='change')
@@ -489,21 +481,12 @@ def plot_fraction_responsive_cells(multi_session_df, responsiveness_threshold=0.
                               hue_order=experience_levels, palette=palette, dodge=0, join=False, ax=ax[i])
         ax[i].set_xticklabels(experience_levels, rotation=45, ha='right')
         ax[i].set_ylabel('fraction\nresponsive')
-    #     ax[i].legend(fontsize='xx-small', title='')
         ax[i].get_legend().remove()
         ax[i].set_title(cell_type)
         ax[i].set_xlabel('')
         if ylim is not None:
             ax[i].set_ylim(0, 1)
 
-    # if format_fig and not save_dir:
-    #     # fig.tight_layout()
-    #     fig_title = 'fraction_responsive_cells' + suffix
-    #     # plt.suptitle(fig_title, x=0.52, y=1.02, fontsize=16)
-    # elif save_dir and format_fig:
-    #     fig_title = 'fraction_responsive_cells' + suffix
-    #     utils.save_figure(fig, figsize, save_dir, folder, fig_title)
-    # else:
     if save_dir:
         fig.subplots_adjust(hspace=0.5)
         fig_title = 'fraction_responsive_cells_' + suffix
@@ -685,20 +668,20 @@ def plot_metric_distribution_by_experience(metrics_table, metric, event_type, hu
         ylims = (-1.1, 1.1)
         ymin = ylims[0]
         ymax = ylims[1]
-        loc = 'lower right'
+        # loc = 'lower right'
     elif (ylims is None) and (metric == 'mean_response'):
         ymin = 0
         ymax = None
-        loc = 'upper left'
+        # loc = 'upper left'
     elif ylims is None:
         print('please provide ylims')
         ymin = 0
         ymax = None
-        loc = 'upper left'
+        # loc = 'upper left'
     else:
         ymin = ylims[0]
         ymax = ylims[1]
-        loc = 'upper left'
+        # loc = 'upper left'
     order = np.sort(metrics_table['experience_level'].unique())
     colors = utils.get_experience_level_colors()
     if ax is None:
@@ -847,7 +830,7 @@ def plot_experience_modulation_index(metric_data, event_type, save_dir=None):
 
     cell_types = np.sort(data.cell_type.unique())
 
-    colors = utils.get_experience_level_colors()
+    # colors = utils.get_experience_level_colors()
     figsize = (1.5, 10)
     fig, ax = plt.subplots(3, 1, figsize=figsize, sharex=True, sharey=True)
     for i, cell_type in enumerate(cell_types):
@@ -875,7 +858,6 @@ def change_width(ax, new_value):
     locs = ax.get_xticks()
     for i, patch in enumerate(ax.patches):
         current_width = patch.get_width()
-        diff = current_width - new_value
 
         # change the bar width
         patch.set_width(new_value)

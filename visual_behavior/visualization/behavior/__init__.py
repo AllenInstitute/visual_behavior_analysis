@@ -31,10 +31,10 @@ def calculate_response_matrix(stimuli, aggfunc=np.mean, sort_by_column=True, eng
 
     '''
 
-    stimuli_to_analyze = stimuli[(stimuli.auto_rewarded==False) & (stimuli.could_change==True) &
-                                 (stimuli.image_name!='omitted') & (stimuli.previous_image_name!='omitted')]
+    stimuli_to_analyze = stimuli[(stimuli.auto_rewarded == False) & (stimuli.could_change == True) &
+                                 (stimuli.image_name != 'omitted') & (stimuli.previous_image_name != 'omitted')]
     if engaged_only:
-        stimuli_to_analyze = stimuli_to_analyze[stimuli_to_analyze.engagement_state=='engaged']
+        stimuli_to_analyze = stimuli_to_analyze[stimuli_to_analyze.engagement_state == 'engaged']
 
     response_matrix = pd.pivot_table(
         stimuli_to_analyze,
@@ -106,7 +106,7 @@ def get_response_probabilities_dict(behavior_session_ids, engaged_only=False):
         try:  # try to load from saved file
             response_probability = vbu.get_cached_behavior_stats(behavior_session_id, engaged_only=engaged_only,
                                                                  method='response_probability')
-        except:  # if it doesnt exist, create it
+        except BaseException:  # if it doesnt exist, create it
             response_probability = vbu.cache_response_probability(behavior_session_id, engaged_only=engaged_only)
         response_probabilities[behavior_session_id] = response_probability
     return response_probabilities
@@ -125,7 +125,7 @@ def aggregate_response_probability_across_sessions(behavior_session_ids, engaged
         # get the response matrix for this session
         response_probability = response_probabilities_dict[behavior_session_id]
         # unstack it and turn it into a tidy df
-        if len(response_probability.keys()) == 8: # dont include anything that doesnt have 8 columns i.e. images
+        if len(response_probability.keys()) == 8:  # dont include anything that doesnt have 8 columns i.e. images
             tmp = pd.DataFrame(response_probability.unstack(), columns=['response_probability'])
             tmp = tmp.reset_index()
             # add behavior session id and concatenate with other sessions

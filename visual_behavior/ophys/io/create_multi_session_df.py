@@ -1,7 +1,7 @@
 import os
 import pandas as pd
 
-from allensdk.brain_observatory.behavior.behavior_project_cache import VisualBehaviorOphysProjectCache
+# from allensdk.brain_observatory.behavior.behavior_project_cache import VisualBehaviorOphysProjectCache
 import visual_behavior.ophys.response_analysis.utilities as ut
 from visual_behavior.data_access import loading
 
@@ -78,7 +78,7 @@ def get_multi_session_df(project_code, session_number, conditions, data_type, ev
     # dont include Ai94 experiments because they makes things too slow
     # experiments_table = experiments_table[(experiments_table.reporter_line != 'Ai94(TITL-GCaMP6s)')]
 
-    ##### limit to platform paper experiments
+    # limit to platform paper experiments
     experiments_table = loading.get_platform_paper_experiment_table(add_extra_columns=True,
                                                                     limit_to_closest_active=True,
                                                                     include_4x2_data=False)
@@ -98,10 +98,10 @@ def get_multi_session_df(project_code, session_number, conditions, data_type, ev
           ' - there should only be one session_type per session_number')
     session_type = experiments.session_type.unique()[0]
 
-    if 'epoch' not in conditions: # if epoch isnt one of the conditions, dont put epoch duration into filename
+    if 'epoch' not in conditions:  # if epoch isnt one of the conditions, dont put epoch duration into filename
         filename = loading.get_file_name_for_multi_session_df(data_type, event_type, project_code, session_type, conditions,
-                                                          epoch_duration_mins=None)
-    else: # otherwise, include it
+                                                              epoch_duration_mins=None)
+    else:  # otherwise, include it
         filename = loading.get_file_name_for_multi_session_df(data_type, event_type, project_code, session_type,
                                                               conditions, epoch_duration_mins=epoch_duration_mins)
     mega_mdf_write_dir = loading.get_multi_session_df_dir(interpolate=interpolate, output_sampling_rate=output_sampling_rate,

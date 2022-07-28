@@ -45,7 +45,6 @@ def get_multi_session_df_for_omissions():
     loads multi-session omission response dataframe for events, only closest familiar and novel active
     """
     # load multi session dataframe with response traces
-    df_name = 'omission_response_df'
     conditions = ['cell_specimen_id', 'omitted']
 
     data_type = 'events'
@@ -1484,7 +1483,7 @@ def build_stats_table(metrics_df, metrics_columns=None, dropna=True, pivot=False
     # check for cre lines
     if 'cre_line' in metrics_df.keys():
         cre_lines = metrics_df['cre_line'].unique()
-        cre_line_ids = get_cre_line_cell_specimen_ids(metrics_df, metrics_df[m])
+        cre_line_ids = get_cre_line_cell_specimen_ids(metrics_df, metrics_df[cre_line])
     else:
         cre_lines = ['all']
         cre_line_ids = metrics_df['cell_specimen_id'].unique()
@@ -1680,7 +1679,7 @@ def get_CI_for_clusters(cluster_meta, columns_to_groupby=['targeted_structure', 
                     try:
                         n_cluster = df_groupedby_per_cluster.loc[(location, cluster_id)].values[0]
                     except:  # noqa E501 # used to have KeyError here but sometimes its a TypeError when there are no cells in a cluster
-                       # print(f'{cre_line, location, cluster_id} no cells in this cluster')
+                        # print(f'{cre_line, location, cluster_id} no cells in this cluster')
                         n_cluster = 0
                     N.append(n_cluster)
                 # compute CIs for this location
@@ -1949,45 +1948,6 @@ def get_experience_level_color_df():
     exp_level_color_df['experience_level'] = experience_levels
     exp_level_color_df['exp_level_color'] = exp_colors
     return exp_level_color_df
-
-
-def define_cluster_types(cluster_metrics):
-    """
-    defines clusters as non-coding, mixed coding, image, behavioral, omission or task depending on
-    max dropout score, degree of selectivity across sessions, and max feature category
-    adds column 'cluster_types' to cluster_metrics
-    """
-    cluster_types = []
-    for i in range(len(cluster_metrics)):
-        row = cluster_metrics.iloc[i]
-        if row.abs_max < 0.1:
-            cluster_type = 'non-coding'
-        elif row.feature_sel_across_sessions < 0.2:
-            cluster_type = 'mixed coding'
-        else:
-            cluster_type = row.dominant_feature
-        cluster_types.append(cluster_type)
-    cluster_metrics['cluster_type'] = cluster_types
-    return cluster_metrics
-
-
-def add_cluster_types(location_fractions, cluster_metrics):
-    """
-    add column to location_fractions indicating the cluster type for each cluster
-    cluster_types include ['all-images', 'omissions', 'behavioral', 'task', 'mixed coding', 'non-coding']
-    """
-    cluster_metrics = define_cluster_types(cluster_metrics)
-
-    # merge location fractions with metrics per cluster
-    cs = cluster_metrics[['cre_line', 'cluster_id', 'cluster_type',
-                          'dominant_feature', 'dominant_experience_level',
-                          'experience_modulation', 'exp_mod_direction', 'exp_mod_persistence']]
-    location_fractions = location_fractions.merge(cs, on=['cre_line', 'cluster_id'])
-    return location_fractions
-
-
-def get_cluster_types():
-    return ['all-images', 'omissions', 'behavioral', 'task', 'mixed coding', 'non-coding']
 
 
 def get_cluster_fractions_per_location(cluster_meta, cluster_metrics):
