@@ -2135,11 +2135,11 @@ def compute_probabilities(SSE_mapping):
         during N number of shuffled (or nboots) from 0 to 1.
 
     '''
-    cluster_ids= SSE_mapping[0].keys()
+    cluster_ids = SSE_mapping[0].keys()
     cluster_count = count_cluster_frequency(SSE_mapping)
     cluster_probabilities = {}
     for cluster_id in cluster_ids:
-        cluster_probabilities[cluster_id] = np.sum(cluster_count[cluster_id])/len(cluster_count[cluster_id])
+        cluster_probabilities[cluster_id] = np.sum(cluster_count[cluster_id]) / len(cluster_count[cluster_id])
     return cluster_probabilities
 
 
@@ -2194,7 +2194,7 @@ def get_matched_clusters_means_dict(SSE_mapping, mean_dropout_scores_unstacked, 
         # create dummy df for unmatched clusters
         if cluster_id == 1:
             dummy_df = all_matched_cluster_df.groupby('regressor').mean().copy()
-            dummy_df[dummy_df>0]=0
+            dummy_df[dummy_df > 0] = 0
         # compute metrics
         if len(all_matched_cluster_df) >= 4:
             if metric == 'mean':
@@ -2205,10 +2205,9 @@ def get_matched_clusters_means_dict(SSE_mapping, mean_dropout_scores_unstacked, 
                 all_clusters_means_dict[cluster_id] = all_matched_cluster_df.groupby('regressor').median()
             else:
                 all_clusters_means_dict[cluster_id] = all_matched_cluster_df.groupby('regressor').apply(metric)
-        #elif all_matched_cluster_df.shape[0] == 4:
+        # elif all_matched_cluster_df.shape[0] == 4:
         #    all_clusters_means_dict[cluster_id] = all_matched_cluster_df
         else:
             all_clusters_means_dict[cluster_id] = dummy_df
-
 
     return all_clusters_means_dict

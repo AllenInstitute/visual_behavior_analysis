@@ -2613,7 +2613,7 @@ def plot_cluster_size_and_probability(cluster_size_df, shuffle_probability_df, c
         cluster_size_df = cluster_size_df[cluster_size_df.shuffle_type == shuffle_type]
         shuffle_probability_df = shuffle_probability_df[shuffle_probability_df.shuffle_type == shuffle_type]
     if figsize is None:
-        figsize = (3*len(cluster_size_df.cluster_id.unique()),3)
+        figsize = (3 * len(cluster_size_df.cluster_id.unique()), 3)
     if ax is None:
         fig, ax = plt.subplots(1, 1, figsize=figsize)
 
@@ -2637,7 +2637,6 @@ def plot_cluster_size_and_probability(cluster_size_df, shuffle_probability_df, c
         utils.save_figure(fig, figsize, save_dir, folder,
                           f'{shuffle_type}_prob_size' + cre_line[:3]  )
 
-
     return ax
 
 
@@ -2660,10 +2659,10 @@ def plot_matched_clusters_heatmap(SSE_mapping, mean_dropout_scores_unstacked, me
     fig, ax = plt.subplots(1, len(cluster_ids), figsize=figsize, sharex='row', sharey='row')
 
     for cluster_id in cluster_ids:
-        if all_clusters_means_dict[cluster_id].sum().sum()==0:
+        if all_clusters_means_dict[cluster_id].sum().sum() == 0:
             hm_color = 'Greys'
         else:
-            hm_color='Blues'
+            hm_color = 'Blues'
 
         try:
             ax[cluster_id - 1] = sns.heatmap(all_clusters_means_dict[cluster_id],
@@ -2676,8 +2675,8 @@ def plot_matched_clusters_heatmap(SSE_mapping, mean_dropout_scores_unstacked, me
             print('no matched clusters')
     plt.suptitle(cre_line + '_' + shuffle_type)
 
-    shuffle_type_dict = {'experience':'cell id shuffle',
-                         'experience_within_cell':'exp label shuffle'}
+    shuffle_type_dict = {'experience': 'cell id shuffle',
+                         'experience_within_cell': 'exp label shuffle'}
 
     plt.suptitle(cre_line + ' ' + shuffle_type_dict[shuffle_type])
 
@@ -2721,13 +2720,13 @@ def plot_unraveled_clusters(feature_matrix, cluster_df, sort_order, cre_line=Non
     ax.set_title(cell_type)
     ax.set_ylabel('cells')
     ax.set_ylim(0, data.shape[0])
-    ax.set_yticks([0, data.shape[0]]);
-    ax.set_yticklabels((0, data.shape[0]), fontsize=14);
+    ax.set_yticks([0, data.shape[0]])
+    ax.set_yticklabels((0, data.shape[0]), fontsize=14)
     ax.set_ylim(ax.get_ylim()[::-1])  # flip y axes so larger clusters are on top
     ax.set_xlabel('')
     ax.set_xlim(0, data.shape[1])
     ax.set_xticks(np.arange(0, data.shape[1]) + 0.5)
-    ax.set_xticklabels([key[1] + ' -  ' + key[0] for key in list(data.keys())], rotation=90, fontsize=14);
+    ax.set_xticklabels([key[1] + ' -  ' + key[0] for key in list(data.keys())], rotation=90, fontsize=14)
 
     cluster_divisions = np.where(np.diff(label_values) == 1)[0]
     for y in cluster_divisions:
