@@ -2690,3 +2690,53 @@ def plot_matched_clusters_heatmap(SSE_mapping, mean_dropout_scores_unstacked, me
     if save_dir:
         utils.save_figure(fig, figsize, save_dir, folder,
                           f'{metric}_{shuffle_type}dropout_matched_clusters' + cre_line[:3]  )
+
+
+def plot_unraveled_clusters(feature_matrix, cluster_df, sort_order, cre_line=None, save_dir=None, folder='', tag='',
+                            ax=None, rename_columns=False):
+    figsize = (4, 7)
+    fig, ax = plt.subplots(1, 1, figsize=figsize)
+
+    if cre_line is not None:
+        sort_order = sort_order[cre_line]
+        cluster_df = cluster_df[cluster_df.cre_line == cre_line]
+
+    # re name clusters after sorting by cluster size
+    sorted_cluster_ids = {}
+    for i, j in enumerate(sort_order):
+        sorted_cluster_ids[j] = i + 1
+
+    cluster_df = cluster_df.replace({'cluster_id': sorted_cluster_ids})
+
+    if 'cell_specimen_id' in cluster_df.columns:
+        cluster_df = cluster_df.set_index('cell_specimen_id')
+
+    if rename_columns is True:
+        feature_matrix = feature_matrix.rename(columns={'Novel 1': 'Novel', 'Novel >1': 'Novel+'}, level=1)
+
+    cell_order = cluster_df.sort_values(by=['cluster_id']).index.values
+    label_values = cluster_df.sort_values(by=['cluster_id']).cluster_id.values
+
+    data = feature_matrix.loc[cell_order]
+    ax = sns.heatmap(data.values, cmap='Blues', ax=ax, vmin=0, vmax=1,
+                     robust=True, cbar_kws={"drawedges": False, "shrink": 0.7, "label": 'coding score'})
+
+    cell_type = get_cell_type_for_cre_line(cre_line)
+    ax.set_title(cell_type)
+    ax.set_ylabel('cells')
+    ax.set_ylim(0, data.shape[0])
+    ax.set_yticks([0, data.shape[0]]);
+    ax.set_yticklabels((0, data.shape[0]), fontsize=14);
+    ax.set_ylim(ax.get_ylim()[::-1])  # flip y axes so larger clusters are on top
+    ax.set_xlabel('')
+    ax.set_xlim(0, data.shape[1])
+    ax.set_xticks(np.arange(0, data.shape[1]) + 0.5)
+    ax.set_xticklabels([key[1] + ' -  ' + key[0] for key in list(data.keys())], rotation=90, fontsize=14);
+
+    cluster_divisions = np.where(np.diff(label_values) == 1)[0]
+    for y in cluster_divisions:
+        ax.hlines(y, xmin=0, xmax=feature_matrix.shape[1], color='k')
+
+    fig.subplots_adjust(wspace=0.5)
+    if save_dir is not None:
+        utils.save_figure(fig, figsize, save_dir, '', f'feature_matrix_sorted_by_cluster_id_{tag}')
