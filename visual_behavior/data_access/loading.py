@@ -944,7 +944,7 @@ class BehaviorDataset(BehaviorSession):
         stimulus_presentations['reward_rate'] = stimulus_presentations['rewarded'].rolling(window=320, min_periods=1,
                                                                                            win_type='triang').mean()
         stimulus_presentations = reformat.add_response_latency(stimulus_presentations)
-        stimulus_presentations = reformat.add_image_contrast_to_stimulus_presentations(stimulus_presentations)
+        # stimulus_presentations = reformat.add_image_contrast_to_stimulus_presentations(stimulus_presentations)
         stimulus_presentations = reformat.add_time_from_last_lick(stimulus_presentations, self.licks)
         stimulus_presentations = reformat.add_time_from_last_reward(stimulus_presentations, self.rewards)
         stimulus_presentations = reformat.add_time_from_last_change(stimulus_presentations)
