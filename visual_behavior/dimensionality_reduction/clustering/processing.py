@@ -1483,7 +1483,7 @@ def build_stats_table(metrics_df, metrics_columns=None, dropna=True, pivot=False
     # check for cre lines
     if 'cre_line' in metrics_df.keys():
         cre_lines = metrics_df['cre_line'].unique()
-        if len(cre_lines) == 1
+        if len(cre_lines) == 1:
             cre_line_ids = get_cre_line_cell_specimen_ids(metrics_df, metrics_df[cre_lines[0]])
         else:
             print('DOUBLE CHECK THAT THE CRE LINE SELECTION IS CORRECT IN THE CODE')
