@@ -152,7 +152,7 @@ plotting.plot_std_dropout_heatmap_for_cre_lines(results_pivoted, cluster_meta, s
 
 for cre in cre_lines:
     plotting.plot_clusters_row(cluster_meta, feature_matrix, cre_line,
-                                   sort_order=None, save_dir=base_dir, folder=folder, suffix='')
+                               sort_order=None, save_dir=base_dir, folder=folder, suffix='')
 
 # # plot 100 cells per cluster to examine within cluster variability
 # dropouts = results_pivoted.merge(cells_table[['cell_specimen_id', 'experience_level', 'ophys_experiment_id']], on=['cell_specimen_id', 'experience_level'])
@@ -256,17 +256,17 @@ for cre_line in cre_lines:
 # plot as columns
 for cre_line in cre_lines:
     plotting.plot_clusters_stats_pop_avg_cols(cluster_meta, feature_matrix, multi_session_df, cre_line,
-                                     columns_to_groupby=['targeted_structure', 'layer'],
-                                     sort_order=None, save_dir=base_dir, folder=folder, suffix='_pop_avg')
+                                              columns_to_groupby=['targeted_structure', 'layer'],
+                                              sort_order=None, save_dir=base_dir, folder=folder, suffix='_pop_avg')
 
 
 # plot each cluster as its own panel with abbreviated axes names
 for cre_line in cre_lines:
-    cluster_ids = np.sort(cluster_meta[cluster_meta.cre_line==cre_line].cluster_id.unique())
+    cluster_ids = np.sort(cluster_meta[cluster_meta.cre_line == cre_line].cluster_id.unique())
     for cluster_id in cluster_ids:
         # with pie chart
         plotting.plot_cluster_data(cluster_meta, feature_matrix, cre_line, cluster_id,
-                              columns_to_groupby=['targeted_structure', 'layer'], save_dir=save_dir)
+                                   columns_to_groupby=['targeted_structure', 'layer'], save_dir=save_dir)
         # also with pop avg instead of pie chart
         plotting.plot_cluster_data(cluster_meta, feature_matrix, cre_line, cluster_id,
                                    multi_session_df=multi_session_df,
@@ -274,26 +274,26 @@ for cre_line in cre_lines:
 
 # same thing for mouse_id to see if clusters are biased (however this is confounded as some mice only have some areas or depths)
 for cre_line in cre_lines:
-    cluster_ids = np.sort(cluster_meta[cluster_meta.cre_line==cre_line].cluster_id.unique())
+    cluster_ids = np.sort(cluster_meta[cluster_meta.cre_line == cre_line].cluster_id.unique())
     for cluster_id in cluster_ids:
         plotting.plot_cluster_data(cluster_meta, feature_matrix, cre_line, cluster_id,
-                              columns_to_groupby=['mouse_id'], save_dir=save_dir)
+                                   columns_to_groupby=['mouse_id'], save_dir=save_dir)
 
 
 # cell counts per location
 plotting.plot_cell_counts_per_location(cluster_meta, save_dir=base_dir, folder=folder, ax=None)
 
 # plot n mice per cluster
-plot_number_mice_per_cluster(cluster_meta, save_dir=base_dir, folder=folder)
-plot_number_clusters_per_mouse(cluster_meta, save_dir=base_dir, folder=folder)
+plotting.plot_number_mice_per_cluster(cluster_meta, save_dir=base_dir, folder=folder)
+plotting.plot_number_clusters_per_mouse(cluster_meta, save_dir=base_dir, folder=folder)
 
+
+# get cell metrics to plot values per cluster & location
+cluster_metrics = processing.get_cluster_metrics(cluster_meta, feature_matrix, results_pivoted)
 
 # plot pref feature & exp level
 plotting.plot_feature_preference_barplot(cluster_metrics, save_dir=base_dir, folder=folder)
 plotting.plot_exp_level_preference_barplot(cluster_metrics, save_dir=base_dir, folder=folder)
-
-# get cell metrics to plot values per cluster & location
-cluster_metrics = processing.get_cluster_metrics(cluster_meta, feature_matrix, results_pivoted)
 
 # get cluster proportions per location along with metrics for each cluster
 location_fractions = processing.get_cluster_fractions_per_location(cluster_meta, cluster_metrics)
@@ -304,19 +304,19 @@ plotting.plot_cluster_percent_pie_legends(save_dir=base_dir, folder=folder)
 # plot donut plots with fraction cells per cluster in each depth and area, colorized by feature and experience preference
 # using dominant experience level
 plotting.plot_cluster_proportion_donuts_all_locations(location_fractions, cluster_metrics, use_exp_mod_continuous=False,
-                                       save_dir=base_dir, folder=folder)
+                                                      save_dir=base_dir, folder=folder)
 # using continuous meausre of experience modulation
 plotting.plot_cluster_proportion_donuts_all_locations(location_fractions, cluster_metrics, use_exp_mod_continuous=True,
-                                       save_dir=base_dir, folder=folder)
+                                                      save_dir=base_dir, folder=folder)
 
 # plot as horizontal barplots instead of donuts
 # by feature preference / cluster type
 plotting.plot_cluster_proportions_horizontal_barplots(location_fractions, color_column='cluster_type_color', sort_by='cluster_type',
-                                             save_dir=base_dir, folder=folder)
+                                                      save_dir=base_dir, folder=folder)
 
 # by experience modulation
 plotting.plot_cluster_proportions_horizontal_barplots(location_fractions, color_column='exp_mod_color', sort_by='experience_modulation',
-                                             save_dir=base_dir, folder=folder)
+                                                      save_dir=base_dir, folder=folder)
 
 # plot fraction cells per location as treemap
 # by feature preference / cluster type
@@ -330,6 +330,3 @@ plotting.plot_cluster_proportions_treemap(location_fractions, cluster_meta, colo
 # by dominant experience leevl
 plotting.plot_cluster_proportions_treemap(location_fractions, cluster_meta, color_column='exp_level_color',
                                           sort_by='dominant_experience_level', save_dir=base_dir, folder=folder)
-
-
-

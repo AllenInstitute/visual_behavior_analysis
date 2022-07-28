@@ -1074,24 +1074,27 @@ def get_cell_metrics_for_conditions(data_type, condition, stimuli, session_subse
     interpolate = True
     output_sampling_rate = 30
 
-    platform_experiments = loading.get_platform_paper_experiment_table()
-    selected_experiments = platform_experiments.copy()
+    # limit to platform expts
+    if inclusion_criteria == 'platform_experiment_table':
+        experiments_table = loading.get_platform_paper_experiment_table(limit_to_closest_active=True)
+    else:
+        experiments_table = loading.get_filtered_ophys_experiment_table()
 
     # need to filter for active first so that subsequent criteria area applied to that set
     if 'active_only' in inclusion_criteria:
-        selected_experiments = selected_experiments[selected_experiments.passive == False]
+        experiments_table = experiments_table[experiments_table.passive == False]
 
     if 'closest_familiar_and_novel' in inclusion_criteria:
-        selected_experiments = utilities.limit_to_last_familiar_second_novel_active(selected_experiments)
+        experiments_table = utilities.limit_to_last_familiar_second_novel_active(experiments_table)
 
     if 'containers_with_all_levels' in inclusion_criteria:
-        selected_experiments = utilities.limit_to_containers_with_all_experience_levels(selected_experiments)
+        experiments_table = utilities.limit_to_containers_with_all_experience_levels(experiments_table)
 
-    print('there are', len(selected_experiments.index.values),
+    print('there are', len(experiments_table.index.values),
           'experiments after filtering for inclusion criteria - ', inclusion_criteria)
 
     # only load selected experiments
-    ophys_experiment_ids = selected_experiments.index.values
+    ophys_experiment_ids = experiments_table.index.values
 
     metrics_table = load_metrics_table_for_experiments(ophys_experiment_ids, condition, stimuli, session_subset,
                                                        data_type=data_type, interpolate=interpolate,
@@ -1114,6 +1117,106 @@ def get_cell_metrics_for_conditions(data_type, condition, stimuli, session_subse
         metrics_table = metrics_table.drop(columns=['level_0', 'index'])
 
     return metrics_table
+
+
+def get_metrics_descriptive_stats_filename(conditions, data_type, condition, stimuli, session_subset, inclusion_criteria):
+    """
+    generates filename to save descriptive statistics computed for a set of conditions from cell metrics table
+    input params are defined in cell_metrics.get_cell_metrics_for_conditions()
+    """
+    if len(conditions) == 6:
+        filename = 'metrics_stats_' + conditions[0] + '_' + conditions[1] + '_' + conditions[2] + '_' + conditions[3] + '_' + conditions[4] + '_' + conditions[5] + '_' + data_type + '_' + condition + '_' + stimuli + '_' + session_subset + '_' + inclusion_criteria
+    elif len(conditions) == 5:
+        filename = 'metrics_stats_' + conditions[0] + '_' + conditions[1] + '_' + conditions[2] + '_' + conditions[3] + '_' + conditions[4] + '_' + data_type + '_' + condition + '_' + stimuli + '_' + session_subset + '_' + inclusion_criteria
+    elif len(conditions) == 4:
+        filename = 'metrics_stats_' + conditions[0] + '_' + conditions[1] + '_' + conditions[2] + '_' + conditions[3] + '_' + data_type + '_' + condition + '_' + stimuli + '_' + session_subset + '_' + inclusion_criteria
+    elif len(conditions) == 3:
+        filename = 'metrics_stats_' + conditions[0] + '_' + conditions[1] + '_' + conditions[2] + '_' + data_type + '_' + condition + '_' + stimuli + '_' + session_subset + '_' + inclusion_criteria
+    elif len(conditions) == 2:
+        filename = 'metrics_stats_' + conditions[0] + '_' + conditions[1] + '_' + data_type + '_' + condition + '_' + stimuli + '_' + session_subset + '_' + inclusion_criteria
+    elif len(conditions) == 1:
+        filename = 'metrics_stats_' + conditions[0] + '_' + data_type + '_' + condition + '_' + stimuli + '_' + session_subset + '_' + inclusion_criteria
+    return filename
+
+
+def get_descriptive_stats_for_conditions(metrics_table, condition, conditions=['cell_type', 'experience_level'], save_dir=None, filename=None):
+    """
+    compute and save descriptive statistics for cell metrics for a set of conditions (ex: ['cell_type', 'experience_level'])
+    condition must be 'changes' or 'omissions
+    """
+    if condition == 'changes':
+        metrics = ['cell_specimen_id', 'mouse_id', 'ophys_session_id', 'ophys_container_id', 'ophys_experiment_id',
+                   'image_selectivity_index', 'image_selectivity_index_one_vs_all',
+                   'lifetime_sparseness', 'mean_response',
+                   'fraction_significant_p_value_gray_screen', 'fano_factor',
+                   'reliability', 'running_modulation_index', 'hit_miss_index',
+                   'change_response', 'pre_change', 'pre_change_response',
+                   'change_modulation_index']
+    elif condition == 'omissions':
+        metrics = ['cell_specimen_id', 'mouse_id', 'ophys_session_id', 'ophys_container_id', 'ophys_experiment_id',
+                   'mean_response', 'fraction_significant_p_value_gray_screen', 'fano_factor',
+                   'reliability', 'running_modulation_index', 'omitted',
+                   'omission_response', 'pre_omitted', 'pre_omission_response',
+                   'omission_modulation_index', ]
+
+    metrics_stats = metrics_table[metrics + conditions].groupby(conditions).describe()
+    stats_dir = os.path.join(save_dir, 'descriptive_statistics')
+    if not os.path.exists(stats_dir):
+        os.mkdir(stats_dir)
+    metrics_stats.to_hdf(os.path.join(stats_dir, filename + '.h5'), key='df')
+    return metrics_stats
+
+
+def load_descriptive_stats_for_conditions(conditions, save_dir, filename):
+    stats_dir = os.path.join(save_dir, 'descriptive_statistics')
+    metrics_stats = pd.read_hdf(os.path.join(stats_dir, filename + '.h5'), key='df')
+    return metrics_stats
+
+
+def compute_experience_modulation_index(metrics_table, metric, cells_table):
+    """
+    computes the difference over the sum of metric value between Novel 1 and Familiar, and Novel >1 and Familiar
+
+    metrics_table: table of cell metrics, each row is one cell_specimen_id in one ophys_experiment,
+                    metrics_table is the output of get_cell_metrics_for_conditions()
+    metric: column in metrics table to compute index with
+    cells_table: cells metadata table
+    """
+
+    # get subset of data of interest
+    metric_data = metrics_table[['cell_specimen_id', 'ophys_experiment_id', metric]]
+
+    # merge in metadata for sessions to compare
+    metric_data = metric_data.merge(cells_table.reset_index()[['cell_specimen_id', 'ophys_experiment_id', 'experience_level']],
+                                    on=['cell_specimen_id', 'ophys_experiment_id'])
+    print(len(metric_data.ophys_experiment_id.unique()), 'experiments in metric_data after merging with cells_table')
+
+    # groupby cell and session number then average across multiple sessions of the same type for each cell
+    metric_data = metric_data.groupby(['cell_specimen_id', 'experience_level']).mean()[[metric]]
+    # unstack to get metric for each session number
+    metric_data = metric_data.unstack()
+    # get rid of multi index column name
+    metric_data.columns = metric_data.columns.droplevel(0)
+
+    # compute modulation indices
+    exp_level_1 = 'Familiar'
+
+    exp_level_2 = 'Novel 1'
+    metric_data[exp_level_2 + ' vs. ' + exp_level_1] = (metric_data[exp_level_2] - metric_data[exp_level_1]) / (
+        metric_data[exp_level_2] + metric_data[exp_level_1])
+    exp_level_2 = 'Novel >1'
+    metric_data[exp_level_2 + ' vs. ' + exp_level_1] = (metric_data[exp_level_2] - metric_data[exp_level_1]) / (
+        metric_data[exp_level_2] + metric_data[exp_level_1])
+
+    exp_level_2 = 'Novel 1'
+    metric_data[exp_level_2 + ' % of ' + exp_level_1] = (metric_data[exp_level_2]) / (metric_data[exp_level_1])
+    exp_level_2 = 'Novel >1'
+    metric_data[exp_level_2 + ' % of ' + exp_level_1] = (metric_data[exp_level_2]) / (metric_data[exp_level_1])
+
+    # add cell type
+    metric_data = metric_data.merge(cells_table[['cell_specimen_id', 'cell_type']], on='cell_specimen_id')
+
+    return metric_data
 
 
 if __name__ == '__main__':

@@ -62,10 +62,15 @@ def add_reward_rate_to_trials_table(trials, extended_stimulus_presentations):
     # for each trial, find the stimulus index that is closest to the trial start
     # add to a new column called 'first_stim_presentation_index'
     for idx, trial in trials.iterrows():
-        start_time = trial['start_time']
-        query_string = 'start_time > @start_time - 1 and start_time < @start_time + 1'
-        first_stim_presentation_index = (np.abs(start_time - extended_stimulus_presentations.query(query_string)['start_time'])).idxmin()
-        trials.at[idx, 'first_stim_presentation_index'] = first_stim_presentation_index
+        trial_start_time = trial['start_time']
+        query_string = 'start_time > @trial_start_time'
+        stim_start_time = extended_stimulus_presentations.query(query_string)['start_time']
+        first_stim_presentation = (np.abs(trial_start_time - stim_start_time))
+        if len(first_stim_presentation) > 0:
+            first_stim_presentation_index = first_stim_presentation.idxmin()
+            trials.at[idx, 'first_stim_presentation_index'] = first_stim_presentation_index
+        else:  # if it cant find a subsequent stim presentation (i.e. at end of session), just use the last one
+            trials.at[idx, 'first_stim_presentation_index'] = first_stim_presentation_index
 
     # define the columns from extended_stimulus_presentations that we want to merge into trials
     cols_to_merge = [
@@ -92,10 +97,15 @@ def add_engagement_state_to_trials_table(trials, extended_stimulus_presentations
     # for each trial, find the stimulus index that is closest to the trial start
     # add to a new column called 'first_stim_presentation_index'
     for idx, trial in trials.iterrows():
-        start_time = trial['start_time']
-        query_string = 'start_time > @start_time - 1 and start_time < @start_time + 1'
-        first_stim_presentation_index = (np.abs(start_time - extended_stimulus_presentations.query(query_string)['start_time'])).idxmin()
-        trials.at[idx, 'first_stim_presentation_index'] = first_stim_presentation_index
+        trial_start_time = trial['start_time']
+        query_string = 'start_time > @trial_start_time'
+        stim_start_time = extended_stimulus_presentations.query(query_string)['start_time']
+        first_stim_presentation = (np.abs(trial_start_time - stim_start_time))
+        if len(first_stim_presentation) > 0:
+            first_stim_presentation_index = first_stim_presentation.idxmin()
+            trials.at[idx, 'first_stim_presentation_index'] = first_stim_presentation_index
+        else:  # if it cant find a subsequent stim presentation (i.e. at end of session), just use the last one
+            trials.at[idx, 'first_stim_presentation_index'] = first_stim_presentation_index
 
     # define the columns from extended_stimulus_presentations that we want to merge into trials
     cols_to_merge = [
@@ -296,6 +306,7 @@ def add_container_workflow_state_to_ophys_session_table(session_table, experimen
 
 def add_trial_type_to_trials_table(trials):
     trials['trial_type'] = None
+    trials.loc[trials[trials.aborted].index, 'trial_type'] = 'aborted'
     trials.loc[trials[trials.auto_rewarded].index, 'trial_type'] = 'auto_rewarded'
     trials.loc[trials[trials.hit].index, 'trial_type'] = 'hit'
     trials.loc[trials[trials.miss].index, 'trial_type'] = 'miss'

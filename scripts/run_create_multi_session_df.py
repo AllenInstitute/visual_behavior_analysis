@@ -29,6 +29,7 @@ cache = bpc.from_s3_cache(cache_dir=cache_dir)
 print(cache_dir)
 
 experiments_table = cache.get_ophys_experiment_table()
+# experiments_table = experiments_table[(experiments_table.session_number==4)&(experiments_table.project_code=='VisualBehaviorMultiscope')]
 
 # call the `sbatch` command to run the jobs.
 for project_code in experiments_table.project_code.unique():
@@ -37,9 +38,9 @@ for project_code in experiments_table.project_code.unique():
 
         # instantiate a Slurm object
         slurm = Slurm(
-            mem='120g',  # '24g'
+            mem='200g',  # '24g'
             cpus_per_task=1,
-            time='60:00:00',
+            time='120:00:00',
             partition='braintv',
             job_name='multi_session_df_'+project_code+'_'+str(session_number),
             output=f'{stdout_location}/{Slurm.JOB_ARRAY_MASTER_ID}_{Slurm.JOB_ARRAY_ID}.out',

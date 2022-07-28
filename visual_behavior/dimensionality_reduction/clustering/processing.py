@@ -45,7 +45,6 @@ def get_multi_session_df_for_omissions():
     loads multi-session omission response dataframe for events, only closest familiar and novel active
     """
     # load multi session dataframe with response traces
-    df_name = 'omission_response_df'
     conditions = ['cell_specimen_id', 'omitted']
 
     data_type = 'events'
@@ -102,8 +101,8 @@ def get_cell_type_for_cre_line(cre_line, cell_metadata=None):
         cell_type = cell_metadata[cell_metadata.cre_line == cre_line].cell_type.values[0]
     else:
         cell_type_dict = {'Slc17a7-IRES2-Cre': 'Excitatory',
-                      'Vip-IRES-Cre': 'Vip Inhibitory',
-                      'Sst-IRES-Cre': 'Sst Inhibitory'}
+                          'Vip-IRES-Cre': 'Vip Inhibitory',
+                          'Sst-IRES-Cre': 'Sst Inhibitory'}
         cell_type = cell_type_dict[cre_line]
     return cell_type
 
@@ -518,7 +517,7 @@ def compute_gap(clustering, data, k_max=5, n_boots=20, reference_shuffle='all', 
     if len(data.shape) == 1:
         data = data.reshape(-1, 1)
 
-    if type(data) == pd.core.frame.DataFrame:
+    if isinstance(data, pd.core.frame.DataFrame):
         data_array = data.values
     else:
         data_array = data
@@ -545,7 +544,7 @@ def compute_gap(clustering, data, k_max=5, n_boots=20, reference_shuffle='all', 
         reference_sem.append(sem(local_ref_inertia))
 
     ondata_inertia = []
-    ondata_sem =  []
+    ondata_sem = []
     for k in range(1, k_max ):
         local_ondata_inertia = []
         for _ in range(n_boots):
@@ -556,7 +555,7 @@ def compute_gap(clustering, data, k_max=5, n_boots=20, reference_shuffle='all', 
         ondata_sem.append(sem(local_ondata_inertia))
 
         # compute difference before mean
-        gap_mean.append(np.mean(np.subtract(np.log(local_ondata_inertia),np.log(local_ref_inertia))))
+        gap_mean.append(np.mean(np.subtract(np.log(local_ondata_inertia), np.log(local_ref_inertia))))
         gap_sem.append(sem(np.subtract(np.log(local_ondata_inertia), np.log(local_ref_inertia))))
 
     # maybe plotting error bars with this metric would be helpful but for now I'll leave it
@@ -1412,7 +1411,7 @@ def get_cell_metrics(cluster_meta, results_pivoted):
     """
     cell_metrics = pd.DataFrame()
     for i, cell_specimen_id in enumerate(cluster_meta.index.values):
-        cell_dropouts = results_pivoted[results_pivoted.cell_specimen_id==cell_specimen_id].groupby('experience_level').mean()[get_features_for_clustering()]
+        cell_dropouts = results_pivoted[results_pivoted.cell_specimen_id == cell_specimen_id].groupby('experience_level').mean()[get_features_for_clustering()]
         stats = get_coding_metrics(index_dropouts=cell_dropouts, index_value=cell_specimen_id, index_name='cell_specimen_id')
         cell_metrics = pd.concat([cell_metrics, stats], sort=False)
     cell_metrics = cell_metrics.merge(cluster_meta, on='cell_specimen_id')
@@ -1443,7 +1442,7 @@ def get_cluster_metrics(cluster_meta, feature_matrix, results_pivoted):
             # get dropout scores for cells in this cluster in this cre line
             mean_dropout_df = np.abs(feature_matrix_cre.loc[this_cluster_csids].mean().unstack())
             stats = get_coding_metrics(index_dropouts=mean_dropout_df.T, index_value=cluster_id,
-                                                  index_name='cluster_id')
+                                       index_name='cluster_id')
             fraction_cre = len(this_cluster_csids) / float(len(cre_cell_specimen_ids))
             stats['fraction_cre'] = fraction_cre
             stats['cre_line'] = cre_line
@@ -1485,7 +1484,11 @@ def build_stats_table(metrics_df, metrics_columns=None, dropna=True, pivot=False
     # check for cre lines
     if 'cre_line' in metrics_df.keys():
         cre_lines = metrics_df['cre_line'].unique()
-        cre_line_ids = get_cre_line_cell_specimen_ids(metrics_df, metrics_df[m])
+        if len(cre_lines) == 1:
+            cre_line_ids = get_cre_line_cell_specimen_ids(metrics_df, metrics_df[cre_lines[0]])
+        else:
+            print('DOUBLE CHECK THAT THE CRE LINE SELECTION IS CORRECT IN THE CODE')
+            cre_line_ids = metrics_df['cell_specimen_id'].unique()
     else:
         cre_lines = ['all']
         cre_line_ids = metrics_df['cell_specimen_id'].unique()
@@ -1580,7 +1583,7 @@ def shuffle_dropout_score(df_dropout, shuffle_type='all'):
             for j, experience_level in enumerate(experience_level_shuffled):
                 for regressor in regressors:
                     df_shuffled.loc[cid][(regressor, experience_levels[j])] = df_dropout.loc[cid][(regressor,
-                        experience_level)]
+                                                                                                   experience_level)]
     else:
         print('no such shuffle type..')
         df_shuffled = None
@@ -1684,7 +1687,7 @@ def get_CI_for_clusters(cluster_meta, columns_to_groupby=['targeted_structure', 
                     try:
                         n_cluster = df_groupedby_per_cluster.loc[(location, cluster_id)].values[0]
                     except:  # noqa E501 # used to have KeyError here but sometimes its a TypeError when there are no cells in a cluster
-                       # print(f'{cre_line, location, cluster_id} no cells in this cluster')
+                        # print(f'{cre_line, location, cluster_id} no cells in this cluster')
                         n_cluster = 0
                     N.append(n_cluster)
                 # compute CIs for this location
@@ -1886,7 +1889,7 @@ def define_cluster_types(cluster_metrics):
         row = cluster_metrics.iloc[i]
         if row.abs_max < 0.1:
             cluster_type = 'non-coding'
-        elif row.feature_sel_across_sessions<0.2:
+        elif row.feature_sel_across_sessions < 0.2:
             cluster_type = 'mixed coding'
         else:
             cluster_type = row.dominant_feature
@@ -1904,8 +1907,8 @@ def add_cluster_types(location_fractions, cluster_metrics):
 
     # merge location fractions with metrics per cluster
     cs = cluster_metrics[['cre_line', 'cluster_id', 'cluster_type',
-                        'dominant_feature', 'dominant_experience_level',
-                        'experience_modulation', 'exp_mod_direction', 'exp_mod_persistence']]
+                          'dominant_feature', 'dominant_experience_level',
+                          'experience_modulation', 'exp_mod_direction', 'exp_mod_persistence']]
     location_fractions = location_fractions.merge(cs, on=['cre_line', 'cluster_id'])
     return location_fractions
 
@@ -1955,44 +1958,6 @@ def get_experience_level_color_df():
     return exp_level_color_df
 
 
-def define_cluster_types(cluster_metrics):
-    """
-    defines clusters as non-coding, mixed coding, image, behavioral, omission or task depending on
-    max dropout score, degree of selectivity across sessions, and max feature category
-    adds column 'cluster_types' to cluster_metrics
-    """
-    cluster_types = []
-    for i in range(len(cluster_metrics)):
-        row = cluster_metrics.iloc[i]
-        if row.abs_max < 0.1:
-            cluster_type = 'non-coding'
-        elif row.feature_sel_across_sessions<0.2:
-            cluster_type = 'mixed coding'
-        else:
-            cluster_type = row.dominant_feature
-        cluster_types.append(cluster_type)
-    cluster_metrics['cluster_type'] = cluster_types
-    return cluster_metrics
-
-
-def add_cluster_types(location_fractions, cluster_metrics):
-    """
-    add column to location_fractions indicating the cluster type for each cluster
-    cluster_types include ['all-images', 'omissions', 'behavioral', 'task', 'mixed coding', 'non-coding']
-    """
-    cluster_metrics = define_cluster_types(cluster_metrics)
-
-    # merge location fractions with metrics per cluster
-    cs = cluster_metrics[['cre_line', 'cluster_id', 'cluster_type',
-                        'dominant_feature', 'dominant_experience_level',
-                        'experience_modulation', 'exp_mod_direction', 'exp_mod_persistence']]
-    location_fractions = location_fractions.merge(cs, on=['cre_line', 'cluster_id'])
-    return location_fractions
-
-def get_cluster_types():
-    return ['all-images', 'omissions', 'behavioral', 'task', 'mixed coding', 'non-coding']
-
-
 def get_cluster_fractions_per_location(cluster_meta, cluster_metrics):
     """
     Compute the fraction of cells in each location that belong to each cluster
@@ -2006,7 +1971,7 @@ def get_cluster_fractions_per_location(cluster_meta, cluster_metrics):
     """
     if 'location' not in cluster_meta.keys():
         cluster_meta = add_location_column(cluster_meta, columns_to_groupby=['targeted_structure', 'layer'])
-    cre_lines = np.sort(cluster_meta.cre_line.unique())
+    # cre_lines = np.sort(cluster_meta.cre_line.unique())
     # get fraction cells per location belonging to each cluster
     location_fractions = get_location_fractions(cluster_meta)
     # add cluster types
@@ -2016,19 +1981,20 @@ def get_cluster_fractions_per_location(cluster_meta, cluster_metrics):
     location_fractions = location_fractions.merge(cluster_type_color_df, on='cluster_type')
     # merge with experience level colors
     exp_level_color_df = get_experience_level_color_df()
-    exp_level_color_df = exp_level_color_df.rename(columns={'experience_level':'dominant_experience_level'})
+    exp_level_color_df = exp_level_color_df.rename(columns={'experience_level': 'dominant_experience_level'})
     location_fractions = location_fractions.merge(exp_level_color_df, on='dominant_experience_level')
     # make exp level color gray for non-coding clusters
-    non_coding_inds = location_fractions[location_fractions.cluster_type=='non-coding'].index
+    non_coding_inds = location_fractions[location_fractions.cluster_type == 'non-coding'].index
     location_fractions.at[non_coding_inds, 'exp_level_color'] = location_fractions.loc[non_coding_inds, 'cluster_type_color']
     # add experience modulation index with color values in a continuous colormap
     import matplotlib.pyplot as plt
     cmap = plt.get_cmap('RdBu')
     exp_mod = location_fractions.experience_modulation.values
-    exp_mod_normed = ((exp_mod+1)/2)*256
+    exp_mod_normed = ((exp_mod + 1) / 2) * 256
     colors = [cmap(int(np.round(i)))[:3] for i in exp_mod_normed]
     location_fractions['exp_mod_color'] = colors
     return location_fractions
+
 
 def get_sorted_cluster_ids(cluster_df):
     '''
@@ -2093,6 +2059,7 @@ def get_cluster_size_differece_df(cre_original_cluster_sizes, shuffle_type_clust
 
     return cluster_size_difference_df
 
+
 def get_cluster_probability_df(shuffle_type_probabilities,
                                columns=['cre_line', 'cluster_id', 'shuffle_type', 'probability']):
     ''' in long format, probabilities of shuffled clusters.
@@ -2156,6 +2123,7 @@ def get_cluster_size_variance(SSE_mapping, cluster_df_shuffled, normalize=False)
         all_cluster_sizes[cluster_id] = cluster_size
     return all_cluster_sizes
 
+
 def compute_probabilities(SSE_mapping):
     ''' Computes probability of shuffle clusters to be mapped to an original cluster for N repetitions.
     INPUT:
@@ -2174,6 +2142,7 @@ def compute_probabilities(SSE_mapping):
         cluster_probabilities[cluster_id] = np.sum(cluster_count[cluster_id])/len(cluster_count[cluster_id])
     return cluster_probabilities
 
+
 def count_cluster_frequency(SSE_mapping):
     cluster_ids = SSE_mapping[0].keys()
     n_boots = SSE_mapping.keys()
@@ -2191,7 +2160,7 @@ def count_cluster_frequency(SSE_mapping):
 
 
 def get_matched_clusters_means_dict(SSE_mapping, mean_dropout_scores_unstacked, metric='mean', shuffle_type=None,
-                                   cre_line=None):
+                                    cre_line=None):
     ''' This function can plot mean (or other metric like std, median, or custom function) of matched shuffle clusters. This is helpful to see
     how well matching worked but it does not show clusters that were not matched with any original clusters.
     INPUT:
@@ -2243,7 +2212,3 @@ def get_matched_clusters_means_dict(SSE_mapping, mean_dropout_scores_unstacked, 
 
 
     return all_clusters_means_dict
-
-
-
-
