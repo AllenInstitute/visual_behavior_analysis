@@ -97,9 +97,8 @@ def get_platform_analysis_cache_dir():
     This is the cache directory to use for all platform paper analysis
     This cache contains NWB files downloaded directly from AWS
     """
-    return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/platform_paper_cache'
-    # return r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\platform_paper_cache'
-
+    # return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/platform_paper_cache'
+    return r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\platform_paper_cache'
 
 
 def get_production_cache_dir():
@@ -334,7 +333,6 @@ def get_platform_paper_behavior_session_table(include_4x2_data=False, add_extra_
         behavior_sessions = behavior_sessions[(behavior_sessions.project_code != 'VisualBehaviorMultiscope4areasx2d') &
                                               (behavior_sessions.reporter_line != 'Ai94(TITL-GCaMP6s)')].copy()
         print(len(behavior_sessions), 'sessions after removing VisualBehaviorMultiscope4areasx2d and Ai94')
-
 
     if add_extra_columns:
         # overwrite session number and passive columns to patch for bug flagged in this SDK issue:
@@ -608,7 +606,7 @@ def get_extended_stimulus_presentations_table(stimulus_presentations, licks, rew
     # i.e. it will give incorrect results for TRAINING_0 because there is not 1 stimulus per 0.75s
 
     stimulus_presentations['engaged'] = [x > reward_threshold for x in stimulus_presentations['reward_rate']]
-    stimulus_presentations['engagement_state'] = ['engaged' if engaged==True else 'disengaged' for engaged in stimulus_presentations['engaged'].values]
+    stimulus_presentations['engagement_state'] = ['engaged' if engaged == True else 'disengaged' for engaged in stimulus_presentations['engaged'].values]
     stimulus_presentations = reformat.add_response_latency(stimulus_presentations)
     stimulus_presentations = reformat.add_image_contrast_to_stimulus_presentations(stimulus_presentations)
     stimulus_presentations = reformat.add_time_from_last_lick(stimulus_presentations, licks)
@@ -1054,7 +1052,7 @@ def get_behavior_dataset(behavior_session_id, from_lims=False, from_nwb=True,
             dataset.licks, dataset.rewards,
             dataset.running_speed, behavior_session_id=dataset.metadata['behavior_session_id'])
 
-    if (get_extended_trials ==True) and (get_extended_stimulus_presentations == False):
+    if (get_extended_trials == True) and (get_extended_stimulus_presentations == False):
         dataset.extended_stimulus_presentations = get_extended_stimulus_presentations_table(
             dataset.stimulus_presentations.copy(),
             dataset.licks, dataset.rewards,
@@ -3375,13 +3373,12 @@ def check_whether_multi_session_df_has_all_platform_experiments(multi_session_df
     return missing_expts
 
 
-
 def get_multi_session_df_for_conditions(data_type, event_type, conditions, inclusion_criteria='platform_experiment_table',
                                         interpolate=True, output_sampling_rate=30, epoch_duration_mins=None):
 
     multi_session_df = load_multi_session_df(data_type=data_type, event_type=event_type, conditions=conditions,
-                                                interpolate=interpolate, output_sampling_rate=output_sampling_rate,
-                                                epoch_duration_mins=epoch_duration_mins)
+                                             interpolate=interpolate, output_sampling_rate=output_sampling_rate,
+                                             epoch_duration_mins=epoch_duration_mins)
     print('there are', len(multi_session_df.ophys_experiment_id.unique()), 'experiments in the full multi_session_df')
 
     #     missing_expts = loading.check_whether_multi_session_df_has_all_platform_experiments(multi_session_df)

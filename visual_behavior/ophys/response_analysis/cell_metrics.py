@@ -1080,7 +1080,6 @@ def get_cell_metrics_for_conditions(data_type, condition, stimuli, session_subse
     else:
         experiments_table = loading.get_filtered_ophys_experiment_table()
 
-
     # need to filter for active first so that subsequent criteria area applied to that set
     if 'active_only' in inclusion_criteria:
         experiments_table = experiments_table[experiments_table.passive == False]
@@ -1126,17 +1125,17 @@ def get_metrics_descriptive_stats_filename(conditions, data_type, condition, sti
     input params are defined in cell_metrics.get_cell_metrics_for_conditions()
     """
     if len(conditions) == 6:
-        filename = 'metrics_stats_'+conditions[0]+'_'+conditions[1]+'_'+conditions[2]+'_'+conditions[3]+'_'+conditions[4]+'_'+conditions[5]+'_'+data_type+'_'+condition+'_'+stimuli+'_'+session_subset+'_'+inclusion_criteria
+        filename = 'metrics_stats_' + conditions[0] + '_' + conditions[1] + '_' + conditions[2] + '_' + conditions[3] + '_' + conditions[4] + '_' + conditions[5] + '_' + data_type + '_' + condition + '_' + stimuli + '_' + session_subset + '_' + inclusion_criteria
     elif len(conditions) == 5:
-        filename = 'metrics_stats_'+conditions[0]+'_'+conditions[1]+'_'+conditions[2]+'_'+conditions[3]+'_'+conditions[4]+'_'+data_type+'_'+condition+'_'+stimuli+'_'+session_subset+'_'+inclusion_criteria
+        filename = 'metrics_stats_' + conditions[0] + '_' + conditions[1] + '_' + conditions[2] + '_' + conditions[3] + '_' + conditions[4] + '_' + data_type + '_' + condition + '_' + stimuli + '_' + session_subset + '_' + inclusion_criteria
     elif len(conditions) == 4:
-        filename = 'metrics_stats_'+conditions[0]+'_'+conditions[1]+'_'+conditions[2]+'_'+conditions[3]+'_'+data_type+'_'+condition+'_'+stimuli+'_'+session_subset+'_'+inclusion_criteria
+        filename = 'metrics_stats_' + conditions[0] + '_' + conditions[1] + '_' + conditions[2] + '_' + conditions[3] + '_' + data_type + '_' + condition + '_' + stimuli + '_' + session_subset + '_' + inclusion_criteria
     elif len(conditions) == 3:
-        filename = 'metrics_stats_'+conditions[0]+'_'+conditions[1]+'_'+conditions[2]+'_'+data_type+'_'+condition+'_'+stimuli+'_'+session_subset+'_'+inclusion_criteria
+        filename = 'metrics_stats_' + conditions[0] + '_' + conditions[1] + '_' + conditions[2] + '_' + data_type + '_' + condition + '_' + stimuli + '_' + session_subset + '_' + inclusion_criteria
     elif len(conditions) == 2:
-        filename = 'metrics_stats_'+conditions[0]+'_'+conditions[1]+'_'+data_type+'_'+condition+'_'+stimuli+'_'+session_subset+'_'+inclusion_criteria
+        filename = 'metrics_stats_' + conditions[0] + '_' + conditions[1] + '_' + data_type + '_' + condition + '_' + stimuli + '_' + session_subset + '_' + inclusion_criteria
     elif len(conditions) == 1:
-        filename = 'metrics_stats_'+conditions[0]+'_'+data_type+'_'+condition+'_'+stimuli+'_'+session_subset+'_'+inclusion_criteria
+        filename = 'metrics_stats_' + conditions[0] + '_' + data_type + '_' + condition + '_' + stimuli + '_' + session_subset + '_' + inclusion_criteria
     return filename
 
 
@@ -1158,19 +1157,19 @@ def get_descriptive_stats_for_conditions(metrics_table, condition, conditions=['
                    'mean_response', 'fraction_significant_p_value_gray_screen', 'fano_factor',
                    'reliability', 'running_modulation_index', 'omitted',
                    'omission_response', 'pre_omitted', 'pre_omission_response',
-                   'omission_modulation_index',]
+                   'omission_modulation_index', ]
 
-    metrics_stats = metrics_table[metrics+conditions].groupby(conditions).describe()
+    metrics_stats = metrics_table[metrics + conditions].groupby(conditions).describe()
     stats_dir = os.path.join(save_dir, 'descriptive_statistics')
     if not os.path.exists(stats_dir):
         os.mkdir(stats_dir)
-    metrics_stats.to_hdf(os.path.join(stats_dir, filename+'.h5'), key='df')
+    metrics_stats.to_hdf(os.path.join(stats_dir, filename + '.h5'), key='df')
     return metrics_stats
 
 
 def load_descriptive_stats_for_conditions(conditions, save_dir, filename):
     stats_dir = os.path.join(save_dir, 'descriptive_statistics')
-    metrics_stats = pd.read_hdf(os.path.join(stats_dir, filename+'.h5'), key='df')
+    metrics_stats = pd.read_hdf(os.path.join(stats_dir, filename + '.h5'), key='df')
     return metrics_stats
 
 
@@ -1192,7 +1191,6 @@ def compute_experience_modulation_index(metrics_table, metric, cells_table):
                                     on=['cell_specimen_id', 'ophys_experiment_id'])
     print(len(metric_data.ophys_experiment_id.unique()), 'experiments in metric_data after merging with cells_table')
 
-
     # groupby cell and session number then average across multiple sessions of the same type for each cell
     metric_data = metric_data.groupby(['cell_specimen_id', 'experience_level']).mean()[[metric]]
     # unstack to get metric for each session number
@@ -1205,10 +1203,10 @@ def compute_experience_modulation_index(metrics_table, metric, cells_table):
 
     exp_level_2 = 'Novel 1'
     metric_data[exp_level_2 + ' vs. ' + exp_level_1] = (metric_data[exp_level_2] - metric_data[exp_level_1]) / (
-    metric_data[exp_level_2] + metric_data[exp_level_1])
+        metric_data[exp_level_2] + metric_data[exp_level_1])
     exp_level_2 = 'Novel >1'
     metric_data[exp_level_2 + ' vs. ' + exp_level_1] = (metric_data[exp_level_2] - metric_data[exp_level_1]) / (
-    metric_data[exp_level_2] + metric_data[exp_level_1])
+        metric_data[exp_level_2] + metric_data[exp_level_1])
 
     exp_level_2 = 'Novel 1'
     metric_data[exp_level_2 + ' % of ' + exp_level_1] = (metric_data[exp_level_2]) / (metric_data[exp_level_1])

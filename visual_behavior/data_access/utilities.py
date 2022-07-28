@@ -1347,13 +1347,13 @@ def add_stimulus_to_table(df):
     """
     # create stimulus column based on session_type values
     df['stimulus'] = 'None'
-    for row in df.index.values: # index should be a non-redundant value, such as the relevant ID for the table, i.e. behavior_session_id or ophys_experiment_id
+    for row in df.index.values:  # index should be a non-redundant value, such as the relevant ID for the table, i.e. behavior_session_id or ophys_experiment_id
         session_type = df.loc[row].session_type
         session_type_split = session_type.split('_')
         if ('TRAINING_0' in session_type) or ('TRAINING_1' in session_type):
             stimulus = session_type_split[2] + '_static'
         elif ('TRAINING_2' in session_type) or ('TRAINING_3' in session_type) or ('TRAINING_4' in session_type) or (
-            'TRAINING_5' in session_type):
+                'TRAINING_5' in session_type):
             stimulus = session_type_split[2] + '_' + session_type_split[3]
         elif ('OPHYS_0' in session_type):
             stimulus = session_type_split[2] + '_' + session_type_split[3] + '_' + session_type_split[4]
@@ -1447,7 +1447,7 @@ def add_experience_level_to_behavior_sessions(behavior_sessions):
 
     # training sessions with gratings = Gratings
     indices = behavior_sessions[(behavior_sessions.session_type.str.contains('TRAINING')) & (
-    behavior_sessions.session_type.str.contains('gratings'))].index.values
+        behavior_sessions.session_type.str.contains('gratings'))].index.values
     behavior_sessions.at[indices, 'experience_level'] = 'Gratings'
 
     return behavior_sessions
@@ -1976,9 +1976,9 @@ def annotate_epoch_df(epoch_df):
 
     # add experience epoch column
     def merge_experience_epoch(row):
-        epoch_num = str(int(row.epoch + 1)) # index at 1 not 0
+        epoch_num = str(int(row.epoch + 1))  # index at 1 not 0
         if len(epoch_num) == 1:
-            epoch_num = '0'+str(epoch_num)
+            epoch_num = '0' + str(epoch_num)
         return row.experience_level + ' epoch ' + epoch_num
 
     epoch_df['experience_epoch'] = epoch_df[['experience_level', 'epoch']].apply(axis=1, func=merge_experience_epoch)

@@ -21,7 +21,7 @@ def get_single_cell_plots_dir():
     return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/single_cell_plots'
 
 
-def save_figure(fig, figsize, save_dir, folder, fig_title, formats=['.png',]):
+def save_figure(fig, figsize, save_dir, folder, fig_title, formats=['.png', ]):
     fig_dir = os.path.join(save_dir, folder)
     if not os.path.exists(fig_dir):
         os.mkdir(fig_dir)
@@ -88,9 +88,9 @@ def get_cre_line_color_dict():
     """
     returns colors as a dict with cre line as key and color as value
     """
-    colors = {'Slc17a7-IRES2-Cre':(255 / 255, 152 / 255, 150 / 255),
-              'Sst-IRES-Cre':(158 / 255, 218 / 255, 229 / 255),
-              'Vip-IRES-Cre':(197 / 255, 176 / 255, 213 / 255)}
+    colors = {'Slc17a7-IRES2-Cre': (255 / 255, 152 / 255, 150 / 255),
+              'Sst-IRES-Cre': (158 / 255, 218 / 255, 229 / 255),
+              'Vip-IRES-Cre': (197 / 255, 176 / 255, 213 / 255)}
     return colors
 
 
@@ -134,20 +134,20 @@ def get_stimulus_phase_color_map(as_rgb=False):
     stimulus_phase_color_map = {
         'gratings_static_training': (0.4, 0.4, 0.4),
         'gratings_flashed_training': (0.7, 0.7, 0.7),
-        'images_A_training': (session_number_colors[0] + (white-session_number_colors[0]) * training_scale),
-        'images_A_habituation_ophys': (session_number_colors[0] + (white-session_number_colors[0]) * training_scale),
+        'images_A_training': (session_number_colors[0] + (white - session_number_colors[0]) * training_scale),
+        'images_A_habituation_ophys': (session_number_colors[0] + (white - session_number_colors[0]) * training_scale),
         'images_A_ophys': session_number_colors[0],
-        'images_A_passive_ophys': (session_number_colors[0] + (white-session_number_colors[0]) * passive_scale),
-        'images_B_training': (session_number_colors[3] + (white-session_number_colors[3]) * training_scale),
+        'images_A_passive_ophys': (session_number_colors[0] + (white - session_number_colors[0]) * passive_scale),
+        'images_B_training': (session_number_colors[3] + (white - session_number_colors[3]) * training_scale),
         'images_B_habituation_ophys': (session_number_colors[3] + (white - session_number_colors[3]) * training_scale),
         'images_B_ophys': session_number_colors[3],
-        'images_B_passive_ophys': (session_number_colors[3] + (white-session_number_colors[3]) * passive_scale),
-        'images_G_training': (session_number_colors_GH[0] + (white-session_number_colors_GH[0]) * training_scale),
+        'images_B_passive_ophys': (session_number_colors[3] + (white - session_number_colors[3]) * passive_scale),
+        'images_G_training': (session_number_colors_GH[0] + (white - session_number_colors_GH[0]) * training_scale),
         'images_G_habituation_ophys': (session_number_colors_GH[0] + (white - session_number_colors_GH[0]) * training_scale),
         'images_G_ophys': session_number_colors_GH[0],
-        'images_G_passive_ophys': (session_number_colors_GH[0] + (white-session_number_colors_GH[0]) * passive_scale),
+        'images_G_passive_ophys': (session_number_colors_GH[0] + (white - session_number_colors_GH[0]) * passive_scale),
         'images_H_ophys': session_number_colors_GH[3],
-        'images_H_passive_ophys': (session_number_colors_GH[3] + (white-session_number_colors_GH[3]) * passive_scale),
+        'images_H_passive_ophys': (session_number_colors_GH[3] + (white - session_number_colors_GH[3]) * passive_scale),
     }
 
     if as_rgb:
@@ -161,7 +161,6 @@ def get_stimulus_phase_color_map(as_rgb=False):
 def get_session_type_color_map():
     colors = np.floor(np.array([list(x) for x in get_colors_for_session_numbers()]) * 255).astype(np.uint8)
     black = np.array([0, 0, 0]).astype(np.uint8)
-
 
     session_type_color_map = {
         'TRAINING_0_gratings_autorewards_15min': black,
@@ -323,7 +322,7 @@ def plot_flashes_on_trace(ax, timestamps, change=None, omitted=False, alpha=0.07
     interval = (blank_duration + stim_duration)
     # after time 0
     if omitted:
-        array = np.arange((change_time + interval), end_time, interval) # image array starts at the next interval
+        array = np.arange((change_time + interval), end_time, interval)  # image array starts at the next interval
         # plot a dashed line where the stimulus time would have been
         ax.axvline(x=change_time, ymin=0, ymax=1, linestyle='--', color=sns.color_palette()[9], linewidth=1.5)
     else:
@@ -333,7 +332,7 @@ def plot_flashes_on_trace(ax, timestamps, change=None, omitted=False, alpha=0.07
         amax = array[i] + stim_duration
         if change and (i == 0):
             change_color = sns.color_palette()[0]
-            ax.axvspan(amin, amax, facecolor=change_color, edgecolor='none', alpha=alpha*1.5, linewidth=0, zorder=1)
+            ax.axvspan(amin, amax, facecolor=change_color, edgecolor='none', alpha=alpha * 1.5, linewidth=0, zorder=1)
         else:
             ax.axvspan(amin, amax, facecolor=facecolor, edgecolor='none', alpha=alpha, linewidth=0, zorder=1)
     # if change == True:
@@ -447,10 +446,10 @@ def get_conditions_string(data_type, conditions):
 
     if len(conditions) == 6:
         conditions_string = data_type + '_' + conditions[1] + '_' + conditions[2] + '_' + conditions[3] + '_' + \
-                            conditions[4] + '_' + conditions[5]
+            conditions[4] + '_' + conditions[5]
     elif len(conditions) == 5:
         conditions_string = data_type + '_' + conditions[1] + '_' + conditions[2] + '_' + conditions[3] + '_' + \
-                            conditions[4]
+            conditions[4]
     elif len(conditions) == 4:
         conditions_string = data_type + '_' + conditions[1] + '_' + conditions[2] + '_' + conditions[3]
     elif len(conditions) == 3:
