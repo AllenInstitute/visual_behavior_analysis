@@ -1663,6 +1663,20 @@ def add_layer_column(df):
     return df
 
 
+def add_area_layer_column(df):
+    """
+    creates columns called 'area_layer' and that contains the conjunction of 'targeted_area' and 'layer'
+    input df must have 'layer' and 'targeted_structure' columns, the former created with the utilities.add_layer_column() function
+    """
+    df['area_layer'] = None
+    for row in df.index.values:
+        row_data = df.loc[row]
+        layer = row_data.layer
+        area = row_data.targeted_structure
+        df.loc[row, 'area_layer'] = area + '_' + layer
+    return df
+
+
 def dateformat(exp_date):
     """
     reformat date of acquisition for accurate sorting by date
