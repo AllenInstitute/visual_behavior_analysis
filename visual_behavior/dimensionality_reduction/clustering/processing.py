@@ -1483,7 +1483,11 @@ def build_stats_table(metrics_df, metrics_columns=None, dropna=True, pivot=False
     # check for cre lines
     if 'cre_line' in metrics_df.keys():
         cre_lines = metrics_df['cre_line'].unique()
-        cre_line_ids = get_cre_line_cell_specimen_ids(metrics_df, metrics_df[cre_line])
+        if len(cre_lines) == 1
+            cre_line_ids = get_cre_line_cell_specimen_ids(metrics_df, metrics_df[cre_lines[0]])
+        else:
+            print('DOUBLE CHECK THAT THE CRE LINE SELECTION IS CORRECT IN THE CODE')
+            cre_line_ids = metrics_df['cell_specimen_id'].unique()
     else:
         cre_lines = ['all']
         cre_line_ids = metrics_df['cell_specimen_id'].unique()
@@ -1963,7 +1967,7 @@ def get_cluster_fractions_per_location(cluster_meta, cluster_metrics):
     """
     if 'location' not in cluster_meta.keys():
         cluster_meta = add_location_column(cluster_meta, columns_to_groupby=['targeted_structure', 'layer'])
-    cre_lines = np.sort(cluster_meta.cre_line.unique())
+    # cre_lines = np.sort(cluster_meta.cre_line.unique())
     # get fraction cells per location belonging to each cluster
     location_fractions = get_location_fractions(cluster_meta)
     # add cluster types

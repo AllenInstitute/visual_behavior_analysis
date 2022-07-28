@@ -284,16 +284,16 @@ for cre_line in cre_lines:
 plotting.plot_cell_counts_per_location(cluster_meta, save_dir=base_dir, folder=folder, ax=None)
 
 # plot n mice per cluster
-plot_number_mice_per_cluster(cluster_meta, save_dir=base_dir, folder=folder)
-plot_number_clusters_per_mouse(cluster_meta, save_dir=base_dir, folder=folder)
+plotting.plot_number_mice_per_cluster(cluster_meta, save_dir=base_dir, folder=folder)
+plotting.plot_number_clusters_per_mouse(cluster_meta, save_dir=base_dir, folder=folder)
 
+
+# get cell metrics to plot values per cluster & location
+cluster_metrics = processing.get_cluster_metrics(cluster_meta, feature_matrix, results_pivoted)
 
 # plot pref feature & exp level
 plotting.plot_feature_preference_barplot(cluster_metrics, save_dir=base_dir, folder=folder)
 plotting.plot_exp_level_preference_barplot(cluster_metrics, save_dir=base_dir, folder=folder)
-
-# get cell metrics to plot values per cluster & location
-cluster_metrics = processing.get_cluster_metrics(cluster_meta, feature_matrix, results_pivoted)
 
 # get cluster proportions per location along with metrics for each cluster
 location_fractions = processing.get_cluster_fractions_per_location(cluster_meta, cluster_metrics)

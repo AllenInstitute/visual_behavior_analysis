@@ -1103,11 +1103,11 @@ def get_behavior_stats(behavior_session_id, method='stimulus_based', engaged_onl
             print(len(trials), 'total trials')
 
             if engaged_only:
-                trials = trials[trials.engagement_state=='engaged']
+                trials = trials[trials.engagement_state == 'engaged']
                 print(len(trials), 'engaged trials')
 
-            if per_image: # creates a dictionary of dictionaries with key for each image name, values as metrics for that image
-                output_dict = {} # create top level dictionary
+            if per_image:  # creates a dictionary of dictionaries with key for each image name, values as metrics for that image
+                output_dict = {}  # create top level dictionary
                 for change_image_name in trials.change_image_name.unique():
                     image_trials = trials[trials.change_image_name == change_image_name]
                     print(len(image_trials), change_image_name, 'trials')
@@ -1126,11 +1126,11 @@ def get_behavior_stats(behavior_session_id, method='stimulus_based', engaged_onl
                     img_dict['number_of_engaged_false_alarms'] = image_trials.query('catch and engaged')['false_alarm'].sum()
                     img_dict['fraction_engaged'] = image_trials.query('go or catch')['engaged'].mean()
                     img_dict['dprime_trial_corrected'] = dprime(go_trials=image_trials.query('go and engaged')['hit'],
-                                                                   catch_trials=image_trials.query('catch and engaged')[
-                                                                       'false_alarm'], limits=True)
+                                                                catch_trials=image_trials.query('catch and engaged')[
+                        'false_alarm'], limits=True)
                     img_dict['dprime_non_trial_corrected'] = dprime(go_trials=image_trials.query('go and engaged')['hit'],
-                                                                       catch_trials=image_trials.query('catch and engaged')[
-                                                                           'false_alarm'], limits=False)
+                                                                    catch_trials=image_trials.query('catch and engaged')[
+                        'false_alarm'], limits=False)
                     # save metrics for each image to top level dictionary
                     output_dict[change_image_name] = img_dict
             else:
@@ -1155,21 +1155,21 @@ def get_behavior_stats(behavior_session_id, method='stimulus_based', engaged_onl
             print(len(stimulus_presentations), 'total stimulus presentations')
 
             if engaged_only == True:
-                stimulus_presentations = stimulus_presentations[stimulus_presentations.engagement_state=='engaged']
+                stimulus_presentations = stimulus_presentations[stimulus_presentations.engagement_state == 'engaged']
                 print(len(stimulus_presentations), 'engaged stimulus presentations')
 
             if per_image == True:
                 output_dict = {}  # create top level dictionary
                 for image_name in stimulus_presentations.image_name.unique():
-                    go_trials = stimulus_presentations[(stimulus_presentations.image_name==image_name) &
-                                                       (stimulus_presentations.auto_rewarded==False) &
-                                                       (stimulus_presentations.could_change==True) &
-                                                       (stimulus_presentations.is_change==True)]
+                    go_trials = stimulus_presentations[(stimulus_presentations.image_name == image_name) &
+                                                       (stimulus_presentations.auto_rewarded == False) &
+                                                       (stimulus_presentations.could_change == True) &
+                                                       (stimulus_presentations.is_change == True)]
                     print(len(go_trials), image_name, 'go stimulus presentations')
                     catch_trials = stimulus_presentations[(stimulus_presentations.image_name == image_name) &
-                                      (stimulus_presentations.auto_rewarded == False) &
-                                      (stimulus_presentations.could_change == True) &
-                                      (stimulus_presentations.is_change == False)]
+                                                          (stimulus_presentations.auto_rewarded == False) &
+                                                          (stimulus_presentations.could_change == True) &
+                                                          (stimulus_presentations.is_change == False)]
 
                     img_dict = {'behavior_session_id': behavior_session_id}
                     img_dict['image_name'] = image_name
@@ -1183,13 +1183,13 @@ def get_behavior_stats(behavior_session_id, method='stimulus_based', engaged_onl
                     img_dict['number_of_engaged_catch_trials'] = len(catch_trials)
                     img_dict['number_of_engaged_false_alarms'] = catch_trials['response_lick'].sum()
                     img_dict['fraction_engaged'] = (
-                    stimulus_presentations.query('auto_rewarded == False and could_change == True')[
-                        'engagement_state'] == 'engaged').mean()
+                        stimulus_presentations.query('auto_rewarded == False and could_change == True')[
+                            'engagement_state'] == 'engaged').mean()
                     img_dict['dprime_trial_corrected'] = dprime(go_trials=go_trials['response_lick'],
-                                                                   catch_trials=catch_trials['response_lick'], limits=True)
+                                                                catch_trials=catch_trials['response_lick'], limits=True)
                     img_dict['dprime_non_trial_corrected'] = dprime(go_trials=go_trials['response_lick'],
-                                                                       catch_trials=catch_trials['response_lick'],
-                                                                       limits=False)
+                                                                    catch_trials=catch_trials['response_lick'],
+                                                                    limits=False)
                     output_dict[image_name] = img_dict
             else:
                 go_trials = stimulus_presentations[(stimulus_presentations.auto_rewarded == False) &
@@ -1252,7 +1252,7 @@ def get_behavior_stats_cache_dir(method='stimulus_based', engaged_only=True, per
         cache_dir = os.path.join(base_dir, 'behavior_performance', 'response_probability', 'response_probability_matrix')
 
     if engaged_only:
-        cache_dir = cache_dir+'_engaged_only'
+        cache_dir = cache_dir + '_engaged_only'
 
     if not os.path.exists(cache_dir):
         os.mkdir(cache_dir)
@@ -1288,7 +1288,7 @@ def cache_behavior_stats(behavior_session_id, method='stimulus_based', engaged_o
     print('behavior_session_id:', behavior_session_id)
     cache_dir = get_behavior_stats_cache_dir(method=method, engaged_only=engaged_only, per_image=per_image)
     behavior_stats = get_behavior_stats(behavior_session_id, method=method, engaged_only=engaged_only, per_image=per_image)
-    if per_image==True:
+    if per_image == True:
         behavior_stats_df = pd.DataFrame()
         for image_name in list(behavior_stats.keys()):
             tmp = pd.DataFrame(behavior_stats[image_name], index=[image_name])
@@ -1302,11 +1302,10 @@ def cache_behavior_stats(behavior_session_id, method='stimulus_based', engaged_o
     if os.path.exists(filepath):
         os.remove(filepath)
     behavior_stats_df.to_hdf(filepath, key='data')
-    print('behavior stats cached for', behavior_session_id, method, 'per_image: ', per_image,'engaged_only: ', engaged_only)
+    print('behavior stats cached for', behavior_session_id, method, 'per_image: ', per_image, 'engaged_only: ', engaged_only)
     print('saved to', filepath)
 
     return behavior_stats_df
-
 
 
 def cache_response_probability(behavior_session_id, engaged_only=True):

@@ -857,7 +857,8 @@ def plot_experience_modulation_index(metric_data, event_type, save_dir=None):
 def change_width(ax, new_value):
     locs = ax.get_xticks()
     for i, patch in enumerate(ax.patches):
-        current_width = patch.get_width()
+        # current_width = patch.get_width()
+        # diff = current_width - new_value
 
         # change the bar width
         patch.set_width(new_value)
