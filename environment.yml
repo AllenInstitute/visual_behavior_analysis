@@ -101,4 +101,6 @@ dependencies:
   - pygraphviz==1.3.1
   - tables==3.3.0
   - transitions==0.4.2
+  - figrid
+  - squarify
 
