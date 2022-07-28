@@ -59,6 +59,35 @@ except Exception as e:
 # behavior_session_id
 # ophys_container_id
 
+def get_flagged_ophys_experiment_ids():
+    '''
+        The following ophys_experiment_ids are currently in the release dataset, but have been flagged for removal
+
+        Before adding an experiment, make an SDK github issue, and include the number here. So we can
+        more easily track what things are being filtered out
+    '''
+    # 856938751, SDK#794, extreme variability in image timing
+    oeids = [856938751]
+
+    # Multiscope sessions with 9Hz frame rate, list from: https://github.com/AllenInstitute/visual_behavior_glm/blob/fd805ab59b81c1b60021604eb12246667aab0941/visual_behavior_glm/GLM_visualization_tools.py#L122
+    # ophys_session_ids = [873720614, 962045676, 1048363441, 1049240847, 1050231786, 1050597678, 1051107431, 1051319542, 1052096166,
+    #  1052330675, 1052512524, 1056065360, 1056238781, 1052752249, 1049240847, 1050929040, 1052330675]
+
+    # Marina's notes on problematic experiments
+
+    # ophys_session_id = 919888953, SDK#2216, OPHYS_3 listed but novel image set susepcted to have been shown based on activity profile
+    # ophys_experiment_ids for 919888953
+    # [920288855, 920288849, 920288853, 920288851, 920288845, 920288843]
+
+    # ophys_session_id = 931326814, # SDK#2215 and 2202 report mouse was shown image set B for session 2 when it should have been A
+    # this will also affect the novelty of the first novel session for this mouse (453988), but that has not been added here yet
+    # expt ids for 931326814:
+    # [932372699, 932372701, 932372707, 932372711, 932372705]
+
+    # ophys_session_id = 875259383 # SDK#2202 incorrectly shown OPHYS_6_images_A, but
+    # this session no longer shows up in the ophys experiment table for some reason
+
+    return oeids
 
 #  RELEVANT DIRECTORIES
 
@@ -207,7 +236,7 @@ def get_released_ophys_experiment_table(exclude_ai94=True):
     return experiment_table
 
 
-def get_platform_paper_experiment_table(add_extra_columns=True, limit_to_closest_active=False, include_4x2_data=False):
+def get_platform_paper_experiment_table(add_extra_columns=True, limit_to_closest_active=False, include_4x2_data=False, remove_flagged=True):
     """
     loads the experiment table that was downloaded from AWS and saved to the the platform paper cache dir.
     Then filter out VisualBehaviorMultiscope4areasx2d and Ai94 data.
@@ -217,6 +246,10 @@ def get_platform_paper_experiment_table(add_extra_columns=True, limit_to_closest
     Set limit_to_closest_active to True if you want to limit to experiments that are matched in all experience levels,
         with only the closest familiar and novel active sessions to the first novel session to be included (i.e. only one session of each type per container)
     include_4x2_data (bool), if True, then includes VisualBehaviorMultiscope4areasx2d data
+    remove_flagged (bool),  set remove_flagged to False if you want to include experiments that are current in the release dataset,
+        but have been flagged for removal
+
+
     """
     cache_dir = get_platform_analysis_cache_dir()
     cache = bpc.from_s3_cache(cache_dir=cache_dir)
@@ -234,7 +267,7 @@ def get_platform_paper_experiment_table(add_extra_columns=True, limit_to_closest
     experiment_table = utilities.add_session_number_to_experiment_table(experiment_table)
     experiment_table = utilities.add_passive_flag_to_ophys_experiment_table(experiment_table)
 
-    if add_extra_columns == True:
+    if add_extra_columns:
         # add cell type and binned depth columms for plot labels
         experiment_table = utilities.add_cell_type_column(experiment_table)
         experiment_table = utilities.add_average_depth_across_container(experiment_table)
@@ -253,6 +286,11 @@ def get_platform_paper_experiment_table(add_extra_columns=True, limit_to_closest
         # add column that has a combination of experience level and exposure to omissions for familiar sessions,
         # or exposure to image set for novel sessions
         experiment_table = utilities.add_experience_exposure_column(experiment_table)
+
+    if remove_flagged:
+        # Remove flagged ophys experiment ids
+        flagged_oeids = get_flagged_ophys_experiment_ids()
+        experiment_table = experiment_table.drop(flagged_oeids, axis=0)
 
     if limit_to_closest_active:
         experiment_table = utilities.limit_to_last_familiar_second_novel_active(experiment_table)
@@ -326,7 +364,7 @@ def get_filtered_ophys_experiment_table(include_failed_data=False, release_data_
         cache = bpc.from_lims(data_release_date=['2021-03-25', '2021-08-12'])
         experiments = cache.get_ophys_experiment_table()
     if not release_data_only:
-        if from_cached_file == True:
+        if from_cached_file:
             if 'filtered_ophys_experiment_table.csv' in os.listdir(get_production_cache_dir()):
                 filepath = os.path.join(get_production_cache_dir(), 'filtered_ophys_experiment_table.csv')
                 print('loading cached experiment_table')
@@ -415,7 +453,7 @@ def get_filtered_ophys_session_table(release_data_only=True, include_failed_data
     """
     cache = bpc.from_lims()
     sessions = cache.get_ophys_session_table()
-    if release_data_only == False:
+    if not release_data_only:
         from_cached_file = True
     else:
         from_cached_file = False
@@ -685,14 +723,14 @@ class BehaviorOphysDataset(BehaviorOphysExperiment):
     @property
     def cell_specimen_table(self):
         cell_specimen_table = super().cell_specimen_table.copy()
-        if self._include_invalid_rois == False:
+        if not self._include_invalid_rois:
             cell_specimen_table = cell_specimen_table[cell_specimen_table.valid_roi == True]
         self._cell_specimen_table = cell_specimen_table
         return self._cell_specimen_table
 
     @property
     def corrected_fluorescence_traces(self):
-        if self._include_invalid_rois == False:
+        if not self._include_invalid_rois:
             corrected_fluorescence_traces = super().corrected_fluorescence_traces
             cell_specimen_table = super().cell_specimen_table[super().cell_specimen_table.valid_roi == True]
             valid_cells = cell_specimen_table.cell_roi_id.values
@@ -704,7 +742,7 @@ class BehaviorOphysDataset(BehaviorOphysExperiment):
 
     @property
     def dff_traces(self):
-        if self._include_invalid_rois == False:
+        if not self._include_invalid_rois:
             dff_traces = super().dff_traces
             cell_specimen_table = super().cell_specimen_table[super().cell_specimen_table.valid_roi == True]
             valid_cells = cell_specimen_table.cell_roi_id.values
@@ -715,7 +753,7 @@ class BehaviorOphysDataset(BehaviorOphysExperiment):
 
     @property
     def events(self):
-        if self._include_invalid_rois == False:
+        if not self._include_invalid_rois:
             events = super().events
             cell_specimen_table = super().cell_specimen_table[super().cell_specimen_table.valid_roi == True]
             valid_cells = cell_specimen_table.cell_roi_id.values
@@ -1125,10 +1163,7 @@ def get_model_output_file(behavior_session_id):
 
 def check_if_model_output_available(behavior_session_id):
     model_output_file = get_model_output_file(behavior_session_id)
-    if len(model_output_file) > 0:
-        return True
-    else:
-        return False
+    return len(model_output_file) > 0
 
 
 def load_behavior_model_outputs(behavior_session_id):
@@ -1312,7 +1347,7 @@ def get_sdk_roi_masks(cell_specimen_table):
 def get_segmentation_mask(ophys_experiment_id, valid_only=True):
     dataset = get_ophys_dataset(ophys_experiment_id, include_invalid_rois=True)
     cell_specimen_table = dataset.cell_specimen_table.copy()
-    if valid_only == True:
+    if valid_only:
         roi_masks = get_sdk_roi_masks(cell_specimen_table[cell_specimen_table.valid_roi == True])
     else:
         roi_masks = get_sdk_roi_masks(cell_specimen_table)
@@ -3194,7 +3229,7 @@ def get_cell_table(platform_paper_only=True, add_extra_columns=True, limit_to_cl
     # load cell table
     cell_table = cache.get_ophys_cells_table()
     # optionally filter to limit to platform paper datasets
-    if platform_paper_only == True:
+    if platform_paper_only:
         # load experiments table and merge
         experiment_table = get_platform_paper_experiment_table(add_extra_columns=add_extra_columns, include_4x2_data=include_4x2_data)
         cell_table = cell_table.reset_index().merge(experiment_table, on='ophys_experiment_id')
