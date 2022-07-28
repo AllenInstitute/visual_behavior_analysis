@@ -1439,12 +1439,6 @@ def add_experience_level_to_behavior_sessions(behavior_sessions):
                                 (behavior_sessions.session_type.str.contains('images'))].index.values
     behavior_sessions.at[indices, 'experience_level'] = 'Familiar Training'
 
-    # first training session with images = Novel Training
-    indices = behavior_sessions[(behavior_sessions.session_type.str.contains('TRAINING')) &
-                                (behavior_sessions.session_type.str.contains('images')) &
-                                (behavior_sessions.prior_exposures_to_image_set == 0)].index.values
-    behavior_sessions.at[indices, 'experience_level'] = 'Novel Training'
-
     # training sessions with gratings = Gratings
     indices = behavior_sessions[(behavior_sessions.session_type.str.contains('TRAINING')) & (
         behavior_sessions.session_type.str.contains('gratings'))].index.values
