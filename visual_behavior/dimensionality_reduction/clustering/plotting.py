@@ -27,7 +27,8 @@ def get_abbreviated_experience_levels(experience_levels):
     converts experience level names (ex: 'Novel >1') into short hand versions (ex: 'N>1')
     abbreviated names are returned in the same order as provided in experience_levels
     """
-    exp_level_abbreviations = [exp_level.split(' ')[0][0] if len(exp_level.split(' ')) == 1 else exp_level.split(' ')[0][0] + exp_level.split(' ')[1][:2] for exp_level in experience_levels]
+    # exp_level_abbreviations = [exp_level.split(' ')[0][0] if len(exp_level.split(' ')) == 1 else exp_level.split(' ')[0][0] + exp_level.split(' ')[1][:2] for exp_level in experience_levels]
+    exp_level_abbreviations = ['F', 'N', 'N+']
     return exp_level_abbreviations
 
 
@@ -604,7 +605,7 @@ def plot_dropout_heatmap(cluster_meta, feature_matrix, cre_line, cluster_id, cba
     feature_matrix_cre = processing.get_feature_matrix_for_cre_line(feature_matrix, cluster_meta, cre_line)
     mean_dropout_df = feature_matrix_cre.loc[this_cluster_csids].mean().unstack()
     features = processing.get_features_for_clustering()
-    mean_dropout_df = mean_dropout_df.loc[features] # order regressors in a specific order
+    mean_dropout_df = mean_dropout_df.loc[features]  # order regressors in a specific order
 
     if ax is None:
         fig, ax = plt.subplots()
@@ -1609,6 +1610,53 @@ def plot_clusters_row(cluster_meta, feature_matrix, cre_line,
     # fig.tight_layout()
     if save_dir:
         utils.save_figure(fig, figsize, save_dir, folder, 'clusters_row_' + cre_line.split('-')[0] + suffix, formats=formats)
+
+
+def plot_clusters_column(cluster_meta, feature_matrix, cre_line,
+                         sort_order=None, save_dir=None, folder=None, suffix='', formats=['.png', '.pdf']):
+    """
+    For each cluster in a given cre_line, plots dropout heatmaps, fraction cells per area/depth relative to chance,
+    fraction cells per cluster per area/depth, and population average omission response.
+    Will sort clusters according to sort_order dict if provided
+
+    :param cluster_meta: table of metadata for each cell_specimen_id (rows), including cluster_id for each cell_specimen_id
+    :param feature_matrix: dropout scores for matched cells with experience levels x features as cols, cells as rows
+    :param cre_line: cre line to plot for
+    :param sort_order: dictionary with cre_lines as keys, sorted cluster_ids as values
+    :param save_dir: directory to save plot to
+    :param folder: folder within save_dir to save plot to
+    :param suffix: string to be appended to end of filename
+    :return:
+    """
+
+    cluster_ids = np.sort(cluster_meta[cluster_meta.cre_line == cre_line].cluster_id.unique())
+    # if order to sort clusters is provided, use it
+    if sort_order:
+        cluster_ids = sort_order[cre_line]
+    n_clusters = len(cluster_ids)
+
+    n_rows = 1
+    figsize = ( n_rows * 2, n_clusters * 3.5)
+    fig, ax = plt.subplots(n_clusters, n_rows, figsize=figsize, sharex='row', sharey='row')
+    # gridspec_kw={'height_ratios': [1, 0.75]})
+    ax = ax.ravel()
+    for i, cluster_id in enumerate(cluster_ids):
+        # plot mean dropout heatmap for this cluster
+        ax[i] = plot_dropout_heatmap(cluster_meta, feature_matrix, cre_line, cluster_id,
+                                     abbreviate_experience=True, abbreviate_features=True, ax=ax[i])
+
+        # # population average for this cluster
+        # ax[i + (n_clusters * 1)] = plot_population_average_response_for_cluster(cluster_mdf, cre_line, cluster_id,
+        #                                                                         ax=ax[i + (n_clusters * 1)])
+        # ax[i + (n_clusters * 1)].set_xlabel('time (s)')
+        # if i > 0:
+        #     ax[i + (n_clusters * 1)].set_ylabel('')
+
+    fig.subplots_adjust(hspace=1.2, wspace=0.6)
+    # fig.suptitle(get_cell_type_for_cre_line(cre_line, cluster_meta), x=0.52, y=1.1, fontsize=16)
+    # fig.tight_layout()
+    if save_dir:
+        utils.save_figure(fig, figsize, save_dir, folder, 'clusters_column_' + cre_line.split('-')[0] + suffix, formats=formats)
 
 
 def plot_clusters_stats_pop_avg_rows(cluster_meta, feature_matrix, multi_session_df, cre_line, columns_to_groupby=['targeted_structure', 'layer'],
@@ -2689,10 +2737,33 @@ def plot_matched_clusters_heatmap(SSE_mapping, mean_dropout_scores_unstacked, me
                           f'{metric}_{shuffle_type}dropout_matched_clusters' + cre_line[:3]  )
 
 
-def plot_unraveled_clusters(feature_matrix, cluster_df, sort_order, cre_line=None, save_dir=None, folder='', tag='',
-                            ax=None, rename_columns=False):
-    figsize = (4, 7)
-    fig, ax = plt.subplots(1, 1, figsize=figsize)
+def plot_unraveled_clusters(feature_matrix, cluster_df, sort_order=None, cre_line=None, save_dir=None, folder='', tag='',
+                            ax=None, figsize=(4, 7), rename_columns=False):
+    '''function to plot unraveled clusters (not means).
+    INPUT:
+    feature_matrix: (pd.DataFrame) dataframe of dropout scores with cell_specimen_id as index
+    cluster_df: (pd.DataFrame) dataframe with cre_line, cell_specimen_id and cluster_id as columns
+    sort_order: either dictionary with cre_line as keys (then provide cre_line) or list/np.array of sorted clusters
+                default is None, then uses get_sorted_cluster_ids function to get clusters in descending size order
+                from cluster_df
+    cre_line: (str) if cluster_df and sort_order contain all cre_lines, you can select which one to plot, default=None
+    save_dir: (str) if you wish to save figure, default=None
+    save_dir: (str) if you wish to save figure, you can add a folder to the path, default=''
+    tag: (str) when saving figure, this is a unique tag that will be added to figure name, default=''
+    ax: (obj) if you want to provide axis to plot on, default=None
+    figsize: (tuple), if you want to change figsize, default=(4,7)
+    rename_columns: (boolean), change experience level columns from Novel 1 and Novel >1 to Novel and Novel+,
+                default=False
+
+
+    Returns:
+        '''
+    if ax is None:
+        figsize = figsize
+        fig, ax = plt.subplots(1, 1, figsize=figsize)
+
+    if sort_order is None:
+        sort_order = processing.get_sorted_cluster_ids(cluster_df)
 
     if cre_line is not None:
         sort_order = sort_order[cre_line]
@@ -2736,4 +2807,4 @@ def plot_unraveled_clusters(feature_matrix, cluster_df, sort_order, cre_line=Non
 
     fig.subplots_adjust(wspace=0.5)
     if save_dir is not None:
-        utils.save_figure(fig, figsize, save_dir, '', f'feature_matrix_sorted_by_cluster_id_{tag}')
+        utils.save_figure(fig, figsize, save_dir, folder, f'feature_matrix_sorted_by_cluster_id_{tag}')
