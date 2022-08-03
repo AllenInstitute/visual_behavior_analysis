@@ -2691,8 +2691,8 @@ def plot_cluster_size_and_probability(cluster_size_df, shuffle_probability_df, c
 
 
 def plot_matched_clusters_heatmap(SSE_mapping, mean_dropout_scores_unstacked, metric='mean', shuffle_type=None,
-                                  cre_line=None,
-                                  save_dir=None, folder=None, figsize=None):
+                                  cre_line=None, abbreviate_features=True, abbreviate_experience =True, small_fontsize=False,
+                                  cbar=False,save_dir=None, folder=None, figsize=None):
     ''' This function can plot mean (or other metric like std, median, or custom function) of matched shuffle clusters. This is helpful to see
     how well matching worked but it does not show clusters that were not matched with any original clusters.
     INPUT:
@@ -2705,31 +2705,49 @@ def plot_matched_clusters_heatmap(SSE_mapping, mean_dropout_scores_unstacked, me
                                                                          cre_line=cre_line)
     cluster_ids = all_clusters_means_dict.keys()
     if figsize is None:
-        figsize = (2 * len(cluster_ids), 3)
-    fig, ax = plt.subplots(1, len(cluster_ids), figsize=figsize, sharex='row', sharey='row')
+        figsize = (2.5 * len(cluster_ids), 3)
 
-    for cluster_id in cluster_ids:
+    fig, ax = plt.subplots(1, len(cluster_ids), figsize=figsize, sharex='row', sharey='row')
+    ax = ax.ravel()
+
+    for i,cluster_id in enumerate(cluster_ids):
         if all_clusters_means_dict[cluster_id].sum().sum() == 0:
             hm_color = 'Greys'
         else:
             hm_color = 'Blues'
+        features = processing.get_features_for_clustering()
+        mean_dropout_df = all_clusters_means_dict[cluster_id].loc[features]  # order regressors in a specific order
+        ax[i] = sns.heatmap(mean_dropout_df, cmap=hm_color, vmin=0, vmax=1,
+                         ax=ax[i], cbar=cbar, cbar_kws={'label': 'coding score'})
 
-        try:
-            ax[cluster_id - 1] = sns.heatmap(all_clusters_means_dict[cluster_id],
-                                             ax=ax[cluster_id - 1], cmap=hm_color, vmin=0,
-                                             vmax=0.1)
+        if abbreviate_features:
+            # set yticks to abbreviated feature labels
+            feature_abbreviations = get_abbreviated_features(mean_dropout_df.index.values)
+            ax[i].set_yticklabels(feature_abbreviations, rotation=0)
+        else:
+            ax[i].set_yticklabels(mean_dropout_df.index.values, rotation=0, fontsize=14)
+        if abbreviate_experience:
+            # set xticks to abbreviated experience level labels
+            exp_level_abbreviations = get_abbreviated_experience_levels(mean_dropout_df.columns.values)
+            ax[i].set_xticklabels(exp_level_abbreviations, rotation=90)
+        else:
+            ax[i].set_xticklabels(mean_dropout_df.columns.values, rotation=90, fontsize=14)
+        ax[i].set_ylim(0,mean_dropout_df.shape[0])
+        # invert y axis so images is always on top
+        ax[i].invert_yaxis()
+        ax[i].set_xlabel('')
+        ax[i].set_ylabel('')
+        if small_fontsize:
+            ax[i] = standardize_axes_fontsize(ax[i])
 
-            ax[cluster_id - 1].set_xlabel('')
-            ax[cluster_id - 1].set_ylabel('')
-        except BaseException:
-            print('no matched clusters')
+
     plt.suptitle(cre_line + '_' + shuffle_type)
 
     shuffle_type_dict = {'experience': 'cell id shuffle',
                          'experience_within_cell': 'exp label shuffle'}
 
     plt.suptitle(cre_line + ' ' + shuffle_type_dict[shuffle_type])
-
+    #fig.subplots_adjust(hspace=1.2, wspace=0.6)
     plt.tight_layout()
 
     if save_dir:
