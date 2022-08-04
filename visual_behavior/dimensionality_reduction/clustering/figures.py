@@ -150,7 +150,7 @@ plotting.plot_std_dropout_heatmap_for_cre_lines(results_pivoted, cluster_meta, s
 
 # plot clusters as rows
 
-for cre in cre_lines:
+for cre_line in cre_lines:
     plotting.plot_clusters_row(cluster_meta, feature_matrix, cre_line,
                                sort_order=None, save_dir=base_dir, folder=folder, suffix='')
 

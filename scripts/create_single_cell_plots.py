@@ -115,7 +115,7 @@ if __name__ == '__main__':
     # add ophys_container from metadata
     cells_table = loading.get_cell_table()
     # get metadata for this container
-    tmp = cluster_ids.merge(cells_table, on=['cre_line', 'cell_specimen_id'], how='right').drop_duplicates(subset='cell_specimen_id')
+    tmp = cluster_ids.merge(cells_table, on=['cre_line', 'cell_specimen_id'], how='left').drop_duplicates(subset='cell_specimen_id')
     container_data = tmp[tmp.ophys_container_id == ophys_container_id]
 
     # make cre and cluster ID specific folders if they dont already exist
