@@ -2662,27 +2662,54 @@ def plot_cluster_size_and_probability(cluster_size_df, shuffle_probability_df, c
     if shuffle_type is not None:
         cluster_size_df = cluster_size_df[cluster_size_df.shuffle_type == shuffle_type]
         shuffle_probability_df = shuffle_probability_df[shuffle_probability_df.shuffle_type == shuffle_type]
+    cluster_ids = cluster_size_df.cluster_id.unique()
     if figsize is None:
-        figsize = (3 * len(cluster_size_df.cluster_id.unique()), 3)
+        figsize = (3.5 * len(cluster_ids), 2)
     if ax is None:
-        fig, ax = plt.subplots(1, 1, figsize=figsize)
+        fig, ax = plt.subplots(1, len(cluster_ids), figsize=figsize, sharey = 'row')
+        ax = ax.ravel()
 
     color1 = 'dimgray'
     color2 = 'steelblue'
     # plot cluster size first
-    ax = sns.barplot(data=cluster_size_df, x='cluster_id', y='cluster_size_diff', color=color1)
-    ax.axhline(0, color='gray')
-    ax.set_yticklabels(np.round(ax.get_yticks(), 1), color=color1)
-    ax.set_ylabel('normalized difference \n in cluster size', color=color1)
+    for i, cluster_id in enumerate(cluster_ids):
+        ax[i] = sns.barplot(data=cluster_size_df[cluster_size_df['cluster_id'] == cluster_id], x='cluster_id',
+                            y='cluster_size_diff', color=color1, ax = ax[i])
+        ax[i].axhline(0, color='gray')
+        ax[i].set_ylabel('')
+        ax[i].set_xlabel('')
+        ax[i].set_ylim([-0.5, 0.6])
+        ax[i].set_xlim([-1, 1])
+        ax[i].set_xticklabels('')
+        ax[i].set_title(f'cluster {cluster_id}')
+        #ax[i].spines['top'].set_visible(False)
+        #ax[i].spines['bottom'].set_visible(False)
 
-    # plot probability second
-    ax2 = ax.twinx()
-    sns.pointplot(data=shuffle_probability_df, x='cluster_id', y='probability', ax=ax2, color=color2, linestyles='')
-    ax2.set_yticklabels(np.round(ax2.get_yticks(), 1), color=color2)
-    ax2.set_ylabel('cluster probability', color=color2)
+        if i == 0:
+            ax[i].set_ylabel('normalized difference \n in cluster size', color=color1, fontsize = 10)
 
-    ax.set_xlabel('Cluster ID')
-    plt.tight_layout()
+            ax[i].set_yticklabels(np.round(ax[i].get_yticks(), 1), color=color1)
+
+        # plot probability second
+        ax2 = ax[i].twinx()
+        ax2 = sns.pointplot(data=shuffle_probability_df[shuffle_probability_df['cluster_id'] == cluster_id],
+                        x='cluster_id', y='probability', ax=ax2, color=color2, linestyles='', markersize=20)
+        ax2.set_xlabel('')
+        ax2.set_ylabel('')
+        ax2.set_yticklabels('')
+        ax2.set_ylim([-0.1, 1.1])
+        ax2.set_xlim([- 1, 1])
+        ax2.set_xticklabels('')
+        ax2.spines['top'].set_visible(False)
+        ax2.spines['bottom'].set_visible(False)
+
+        if i == len(cluster_ids)-1:
+            ax2.set_yticklabels(np.round(ax2.get_yticks(), 1), color=color2)
+            ax2.set_ylabel('cluster probability', color=color2, fontsize = 10)
+        # else:
+        #     ax2.set_yticklabels('')
+
+    fig.subplots_adjust(hspace=1.2, wspace=0.6)
     if save_dir:
         utils.save_figure(fig, figsize, save_dir, folder,
                           f'{shuffle_type}_prob_size' + cre_line[:3]  )
@@ -2705,7 +2732,7 @@ def plot_matched_clusters_heatmap(SSE_mapping, mean_dropout_scores_unstacked, me
                                                                          cre_line=cre_line)
     cluster_ids = all_clusters_means_dict.keys()
     if figsize is None:
-        figsize = (2.5 * len(cluster_ids), 3)
+        figsize = (3.5 * len(cluster_ids), 2)
 
     fig, ax = plt.subplots(1, len(cluster_ids), figsize=figsize, sharex='row', sharey='row')
     ax = ax.ravel()
@@ -2737,18 +2764,17 @@ def plot_matched_clusters_heatmap(SSE_mapping, mean_dropout_scores_unstacked, me
         ax[i].invert_yaxis()
         ax[i].set_xlabel('')
         ax[i].set_ylabel('')
+        ax[i].set_title(f'cluster {cluster_id}')
         if small_fontsize:
             ax[i] = standardize_axes_fontsize(ax[i])
 
 
-    plt.suptitle(cre_line + '_' + shuffle_type)
+    #shuffle_type_dict = {'experience': 'cell id shuffle',
+    #                     'experience_within_cell': 'exp label shuffle'}
 
-    shuffle_type_dict = {'experience': 'cell id shuffle',
-                         'experience_within_cell': 'exp label shuffle'}
-
-    plt.suptitle(cre_line + ' ' + shuffle_type_dict[shuffle_type])
-    #fig.subplots_adjust(hspace=1.2, wspace=0.6)
-    plt.tight_layout()
+    #plt.suptitle(cre_line + ' ' + shuffle_type_dict[shuffle_type])
+    fig.subplots_adjust(hspace=1.2, wspace=0.6)
+    #plt.tight_layout()
 
     if save_dir:
         utils.save_figure(fig, figsize, save_dir, folder,

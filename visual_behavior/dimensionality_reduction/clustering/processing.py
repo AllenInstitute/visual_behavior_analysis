@@ -900,7 +900,7 @@ def get_cluster_density(df_dropouts, labels_df, label_col='cluster_id', use_spea
     return cluster_corrs
 
 
-def add_within_cluster_corr_to_cluster_meta(feature_matrix, cluster_meta, use_spearmanr=False):
+def add_within_cluster_corr_to_cluster_meta(feature_matrix, cluster_meta, use_spearmanr=True):
     '''
     Computes correlation coefficient of each cell's dropout scores with the average dropout score for it's cluster
 
@@ -958,7 +958,7 @@ def get_cluster_meta(cluster_labels, cell_metadata, feature_matrix, n_clusters_c
         # annotate & clean cluster metadata
         cluster_meta = clean_cluster_meta(cluster_meta)  # drop cluster IDs with fewer than 5 cells in them
         cluster_meta['original_cluster_id'] = cluster_meta.cluster_id
-        cluster_meta = add_within_cluster_corr_to_cluster_meta(feature_matrix, cluster_meta, use_spearmanr=False)
+        cluster_meta = add_within_cluster_corr_to_cluster_meta(feature_matrix, cluster_meta, use_spearmanr=True)
         # save
         print('saving cluster_meta to', cluster_meta_filepath)
         cluster_meta.to_hdf(cluster_meta_filepath, key='df')
