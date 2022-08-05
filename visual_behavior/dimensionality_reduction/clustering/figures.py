@@ -318,15 +318,15 @@ plotting.plot_cluster_proportions_horizontal_barplots(location_fractions, color_
 plotting.plot_cluster_proportions_horizontal_barplots(location_fractions, color_column='exp_mod_color', sort_by='experience_modulation',
                                                       save_dir=base_dir, folder=folder)
 
-# plot fraction cells per location as treemap
-# by feature preference / cluster type
-plotting.plot_cluster_proportions_treemap(location_fractions, cluster_meta, color_column='cluster_type_color',
-                                          sort_by='cluster_type', save_dir=base_dir, folder=folder)
-
-# by experience modulation
-plotting.plot_cluster_proportions_treemap(location_fractions, cluster_meta, color_column='exp_mod_color',
-                                          sort_by='experience_modulation', save_dir=base_dir, folder=folder)
-
-# by dominant experience leevl
-plotting.plot_cluster_proportions_treemap(location_fractions, cluster_meta, color_column='exp_level_color',
-                                          sort_by='dominant_experience_level', save_dir=base_dir, folder=folder)
+# # plot fraction cells per location as treemap
+# # by feature preference / cluster type
+# plotting.plot_cluster_proportions_treemap(location_fractions, cluster_meta, color_column='cluster_type_color',
+#                                           sort_by='cluster_type', save_dir=base_dir, folder=folder)
+#
+# # by experience modulation
+# plotting.plot_cluster_proportions_treemap(location_fractions, cluster_meta, color_column='exp_mod_color',
+#                                           sort_by='experience_modulation', save_dir=base_dir, folder=folder)
+#
+# # by dominant experience leevl
+# plotting.plot_cluster_proportions_treemap(location_fractions, cluster_meta, color_column='exp_level_color',
+#                                           sort_by='dominant_experience_level', save_dir=base_dir, folder=folder)

@@ -456,7 +456,7 @@ def plot_coclustering_matrix_sorted_by_cluster_size(coclustering_matrices, clust
     sns.despine(ax=ax, bottom=False, top=False, left=False, right=False)
     if save_dir:
         filename = 'coclustering_matrix_sorted_by_cluster_size_' + cre_line.split('-')[0]
-        utils.save_figure(fig, figsize, save_dir, folder, filename, formats=['.png'])  # saving to PDF is super slow)
+        utils.save_figure(fig, figsize, save_dir, folder, filename, formats=['.png', '.pdf'])  # saving to PDF is super slow)
     return ax
 
 
@@ -2589,11 +2589,13 @@ def plot_cluster_proportions_horizontal_barplots(location_fractions, color_colum
                 if c == 0:
                     this_value = data[data.cluster_id == cluster_id].fraction.values[0]
                     color = data[data.cluster_id == cluster_id][color_column].values[0]
-                    ax[i].barh(x_pos, this_value, left=next_bar_start, color=color, edgecolor='w')
+                    ax[i].barh(y=x_pos, width=this_value, left=next_bar_start, color=color, edgecolor='w', height=0.6)
+                    ax[i].text(s=str(cluster_id), x=next_bar_start, y=x_pos, color='gray', fontsize=12)
                 else:
                     this_value = data[data.cluster_id == cluster_id].fraction.values[0]
                     color = data[data.cluster_id == cluster_id][color_column].values[0]
-                    ax[i].barh(x_pos, this_value, left=next_bar_start, color=color, edgecolor='w')
+                    ax[i].barh(y=x_pos, width=this_value, left=next_bar_start, color=color, edgecolor='w', height=0.6)
+                    ax[i].text(s=str(cluster_id), x=next_bar_start, y=x_pos, color='gray', fontsize=12)
                 next_bar_start = next_bar_start + this_value
         ax[i].set_yticks(np.arange(len(locations)))
         ax[i].set_yticklabels(
@@ -2604,7 +2606,7 @@ def plot_cluster_proportions_horizontal_barplots(location_fractions, color_colum
         ax[i].spines['left'].set_visible(False)
         ax[i].spines['bottom'].set_visible(False)
         ax[i].set_xlabel('proportion of cells')
-        ax[i].invert_yaxis()
+        # ax[i].invert_yaxis()
     fig.subplots_adjust(wspace=0.6)
     if save_dir:
         utils.save_figure(fig, figsize, save_dir, folder, 'cluster_proportions_horiz_barplot_' + color_column)
