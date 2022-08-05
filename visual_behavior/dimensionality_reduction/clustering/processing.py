@@ -88,7 +88,7 @@ def get_cre_lines(cell_metadata):
     get list of cre lines in cell_metadata and sort in reverse order so that Vip is first
     cell_metadata is a table similar to ophys_cells_table from SDK but can have additional columns based on clustering results
     """
-    cre_lines = np.sort(cell_metadata.cre_line.unique())[::-1]
+    cre_lines = np.sort(cell_metadata.cre_line.unique())
     return cre_lines
 
 
