@@ -1604,7 +1604,7 @@ def shuffle_dropout_score(df_dropout, shuffle_type='all'):
             np.random.shuffle(experience_level_shuffled)
             for j, experience_level in enumerate(experience_level_shuffled):
                 for regressor in regressors:
-                    df_shuffled_again.loc[cid][(regressor, experience_levels[j])] = df_dropout.loc[cid][(regressor,
+                    df_shuffled_again.loc[cid][(regressor, experience_levels[j])] = df_shuffled.loc[cid][(regressor,
                                                                                                    experience_level)]
 
         df_shuffled = df_shuffled_again.copy()
