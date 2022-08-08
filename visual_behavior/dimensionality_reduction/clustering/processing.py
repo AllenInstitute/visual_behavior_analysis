@@ -1541,7 +1541,8 @@ def build_stats_table(metrics_df, metrics_columns=None, dropna=True, pivot=False
 def shuffle_dropout_score(df_dropout, shuffle_type='all'):
     '''
     Shuffles dataframe with dropout scores from GLM.
-    shuffle_type: str, default='all', other options= 'experience', 'regressors', 'experience_within_cell'
+    shuffle_type: str, default='all', other options= 'experience', 'regressors', 'experience_within_cell',
+                        'full_experience'
 
     Returns:
         df_shuffled (pd. Dataframe) of shuffled dropout scores
@@ -1584,6 +1585,30 @@ def shuffle_dropout_score(df_dropout, shuffle_type='all'):
                 for regressor in regressors:
                     df_shuffled.loc[cid][(regressor, experience_levels[j])] = df_dropout.loc[cid][(regressor,
                                                                                                    experience_level)]
+    elif shuffle_type == 'full_experience':
+        print('shuffling data across experience fully (cell id and experience level)')
+        assert np.shape(df_dropout.columns.levels)[
+                   0] == 2, 'df should have two level column structure, 1 - regressors, 2 - experience'
+        # Shuffle cell ids first
+        for experience_level in experience_levels:
+            randomized_cids = df_dropout.sample(frac=1).index.values
+            for i, cid in enumerate(randomized_cids):
+                for regressor in regressors:
+                    df_shuffled.iloc[i][(regressor, experience_level)] = df_dropout.loc[cid][
+                        (regressor, experience_level)]
+        # Shuffle experience labels
+        df_shuffled_again = df_shuffled.deepcopy()
+        cids = df_shuffled.index.values
+        experience_level_shuffled = experience_levels.copy()
+        for cid in cids:
+            np.random.shuffle(experience_level_shuffled)
+            for j, experience_level in enumerate(experience_level_shuffled):
+                for regressor in regressors:
+                    df_shuffled_again.loc[cid][(regressor, experience_levels[j])] = df_dropout.loc[cid][(regressor,
+                                                                                                   experience_level)]
+
+        df_shuffled = df_shuffled_again.copy()
+
     else:
         print('no such shuffle type..')
         df_shuffled = None

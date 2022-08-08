@@ -35,7 +35,7 @@ slurm = Slurm(
     output=f'{job_dir}/{Slurm.JOB_ARRAY_MASTER_ID}_{Slurm.JOB_ARRAY_ID}.out',
 )
 
-shuffle_types = ['experience', 'experience_within_cell', 'regressors', 'all']
+shuffle_types = ['full_experience']#'experience', 'experience_within_cell', 'regressors', 'all']
 n_boots = np.arange(150)
 
 for shuffle_type in shuffle_types:
