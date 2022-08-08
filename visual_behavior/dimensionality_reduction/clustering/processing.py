@@ -1547,7 +1547,7 @@ def shuffle_dropout_score(df_dropout, shuffle_type='all'):
     Returns:
         df_shuffled (pd. Dataframe) of shuffled dropout scores
     '''
-    df_shuffled = df_dropout.copy()
+    df_shuffled = df_dropout.copy(deep=True)
     regressors = df_dropout.columns.levels[0].values
     experience_levels = df_dropout.columns.levels[1].values
     if shuffle_type == 'all':
@@ -1597,7 +1597,7 @@ def shuffle_dropout_score(df_dropout, shuffle_type='all'):
                     df_shuffled.iloc[i][(regressor, experience_level)] = df_dropout.loc[cid][
                         (regressor, experience_level)]
         # Shuffle experience labels
-        df_shuffled_again = df_shuffled.deepcopy()
+        df_shuffled_again = df_shuffled.copy(deep=True)
         cids = df_shuffled.index.values
         experience_level_shuffled = experience_levels.copy()
         for cid in cids:
