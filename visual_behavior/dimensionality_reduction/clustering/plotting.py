@@ -2668,7 +2668,7 @@ def plot_cluster_size_and_probability(cluster_size_df, shuffle_probability_df, c
     if figsize is None:
         figsize = (3.5 * len(cluster_ids), 2)
     if ax is None:
-        fig, ax = plt.subplots(1, len(cluster_ids), figsize=figsize, sharey = 'row')
+        fig, ax = plt.subplots(1, len(cluster_ids), figsize=figsize, sharey='row')
         ax = ax.ravel()
 
     color1 = 'dimgray'
@@ -2676,7 +2676,7 @@ def plot_cluster_size_and_probability(cluster_size_df, shuffle_probability_df, c
     # plot cluster size first
     for i, cluster_id in enumerate(cluster_ids):
         ax[i] = sns.barplot(data=cluster_size_df[cluster_size_df['cluster_id'] == cluster_id], x='cluster_id',
-                            y='cluster_size_diff', color=color1, ax = ax[i])
+                            y='cluster_size_diff', color=color1, ax=ax[i])
         ax[i].axhline(0, color='gray')
         ax[i].set_ylabel('')
         ax[i].set_xlabel('')
@@ -2684,18 +2684,18 @@ def plot_cluster_size_and_probability(cluster_size_df, shuffle_probability_df, c
         ax[i].set_xlim([-1, 1])
         ax[i].set_xticklabels('')
         ax[i].set_title(f'cluster {cluster_id}')
-        #ax[i].spines['top'].set_visible(False)
-        #ax[i].spines['bottom'].set_visible(False)
+        # ax[i].spines['top'].set_visible(False)
+        # ax[i].spines['bottom'].set_visible(False)
 
         if i == 0:
-            ax[i].set_ylabel('normalized difference \n in cluster size', color=color1, fontsize = 10)
+            ax[i].set_ylabel('normalized difference \n in cluster size', color=color1, fontsize=10)
 
             ax[i].set_yticklabels(np.round(ax[i].get_yticks(), 1), color=color1)
 
         # plot probability second
         ax2 = ax[i].twinx()
         ax2 = sns.pointplot(data=shuffle_probability_df[shuffle_probability_df['cluster_id'] == cluster_id],
-                        x='cluster_id', y='probability', ax=ax2, color=color2, linestyles='', markersize=20)
+                            x='cluster_id', y='probability', ax=ax2, color=color2, linestyles='', markersize=20)
         ax2.set_xlabel('')
         ax2.set_ylabel('')
         ax2.set_yticklabels('')
@@ -2705,9 +2705,9 @@ def plot_cluster_size_and_probability(cluster_size_df, shuffle_probability_df, c
         ax2.spines['top'].set_visible(False)
         ax2.spines['bottom'].set_visible(False)
 
-        if i == len(cluster_ids)-1:
+        if i == len(cluster_ids) - 1:
             ax2.set_yticklabels(np.round(ax2.get_yticks(), 1), color=color2)
-            ax2.set_ylabel('cluster probability', color=color2, fontsize = 10)
+            ax2.set_ylabel('cluster probability', color=color2, fontsize=10)
         # else:
         #     ax2.set_yticklabels('')
 
@@ -2720,8 +2720,8 @@ def plot_cluster_size_and_probability(cluster_size_df, shuffle_probability_df, c
 
 
 def plot_matched_clusters_heatmap(SSE_mapping, mean_dropout_scores_unstacked, metric='mean', shuffle_type=None,
-                                  cre_line=None, abbreviate_features=True, abbreviate_experience =True, small_fontsize=False,
-                                  cbar=False,save_dir=None, folder=None, figsize=None):
+                                  cre_line=None, abbreviate_features=True, abbreviate_experience=True, small_fontsize=False,
+                                  cbar=False, save_dir=None, folder=None, figsize=None):
     ''' This function can plot mean (or other metric like std, median, or custom function) of matched shuffle clusters. This is helpful to see
     how well matching worked but it does not show clusters that were not matched with any original clusters.
     INPUT:
@@ -2739,7 +2739,7 @@ def plot_matched_clusters_heatmap(SSE_mapping, mean_dropout_scores_unstacked, me
     fig, ax = plt.subplots(1, len(cluster_ids), figsize=figsize, sharex='row', sharey='row')
     ax = ax.ravel()
 
-    for i,cluster_id in enumerate(cluster_ids):
+    for i, cluster_id in enumerate(cluster_ids):
         if all_clusters_means_dict[cluster_id].sum().sum() == 0:
             hm_color = 'Greys'
         else:
@@ -2747,7 +2747,7 @@ def plot_matched_clusters_heatmap(SSE_mapping, mean_dropout_scores_unstacked, me
         features = processing.get_features_for_clustering()
         mean_dropout_df = all_clusters_means_dict[cluster_id].loc[features]  # order regressors in a specific order
         ax[i] = sns.heatmap(mean_dropout_df, cmap=hm_color, vmin=0, vmax=1,
-                         ax=ax[i], cbar=cbar, cbar_kws={'label': 'coding score'})
+                            ax=ax[i], cbar=cbar, cbar_kws={'label': 'coding score'})
 
         if abbreviate_features:
             # set yticks to abbreviated feature labels
@@ -2761,7 +2761,7 @@ def plot_matched_clusters_heatmap(SSE_mapping, mean_dropout_scores_unstacked, me
             ax[i].set_xticklabels(exp_level_abbreviations, rotation=90)
         else:
             ax[i].set_xticklabels(mean_dropout_df.columns.values, rotation=90, fontsize=14)
-        ax[i].set_ylim(0,mean_dropout_df.shape[0])
+        ax[i].set_ylim(0, mean_dropout_df.shape[0])
         # invert y axis so images is always on top
         ax[i].invert_yaxis()
         ax[i].set_xlabel('')
@@ -2770,13 +2770,12 @@ def plot_matched_clusters_heatmap(SSE_mapping, mean_dropout_scores_unstacked, me
         if small_fontsize:
             ax[i] = standardize_axes_fontsize(ax[i])
 
-
-    #shuffle_type_dict = {'experience': 'cell id shuffle',
+    # shuffle_type_dict = {'experience': 'cell id shuffle',
     #                     'experience_within_cell': 'exp label shuffle'}
 
-    #plt.suptitle(cre_line + ' ' + shuffle_type_dict[shuffle_type])
+    # plt.suptitle(cre_line + ' ' + shuffle_type_dict[shuffle_type])
     fig.subplots_adjust(hspace=1.2, wspace=0.6)
-    #plt.tight_layout()
+    # plt.tight_layout()
 
     if save_dir:
         utils.save_figure(fig, figsize, save_dir, folder,

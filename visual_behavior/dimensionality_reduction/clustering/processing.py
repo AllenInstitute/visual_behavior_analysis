@@ -1588,7 +1588,7 @@ def shuffle_dropout_score(df_dropout, shuffle_type='all'):
     elif shuffle_type == 'full_experience':
         print('shuffling data across experience fully (cell id and experience level)')
         assert np.shape(df_dropout.columns.levels)[
-                   0] == 2, 'df should have two level column structure, 1 - regressors, 2 - experience'
+            0] == 2, 'df should have two level column structure, 1 - regressors, 2 - experience'
         # Shuffle cell ids first
         for experience_level in experience_levels:
             randomized_cids = df_dropout.sample(frac=1).index.values
@@ -1605,7 +1605,7 @@ def shuffle_dropout_score(df_dropout, shuffle_type='all'):
             for j, experience_level in enumerate(experience_level_shuffled):
                 for regressor in regressors:
                     df_shuffled_again.loc[cid][(regressor, experience_levels[j])] = df_shuffled.loc[cid][(regressor,
-                                                                                                   experience_level)]
+                                                                                                          experience_level)]
 
         df_shuffled = df_shuffled_again.copy()
 
@@ -2236,3 +2236,83 @@ def get_matched_clusters_means_dict(SSE_mapping, mean_dropout_scores_unstacked, 
             all_clusters_means_dict[cluster_id] = dummy_df
 
     return all_clusters_means_dict
+
+
+def get_corr_for_matched_clusters_dict(SSE_mapping, mean_shuffled_dropout_scores,
+                                       mean_original_dropout_scores=None,
+                                       cre_line=None, shuffle_type=None,
+                                       use_spearman=True, ):
+    ''' function to create a dictionary of within cluster correlations between original clusters
+    and shuffled clusters. If mean_original_dropout_scores = None (default), computes correlation among the shuffles only.
+     defaults to spearman r.'''
+    # set up the variables
+    if shuffle_type is not None:
+        SSE_mapping = SSE_mapping[shuffle_type]
+        mean_shuffled_dropout_scores = mean_shuffled_dropout_scores[shuffle_type]
+
+    if cre_line is not None:
+        SSE_mapping = SSE_mapping[cre_line]
+        mean_shuffled_dropout_scores = mean_shuffled_dropout_scores[cre_line]
+        if mean_original_dropout_scores is not None:
+            mean_original_dropout_scores = mean_original_dropout_scores[cre_line]
+
+    n_boots = SSE_mapping.keys()
+    cluster_ids = SSE_mapping[0].keys()
+
+    cluster_corr_dict = {}
+    for cluster_id in cluster_ids:
+        # X is a list of mean dropout scores of matched cluster per shuffle
+        X = []
+
+        if mean_original_dropout_scores is not None:
+            Y = mean_original_dropout_scores[cluster_id].values
+
+        print(f'finding matched clusters for cluster id {cluster_id}')
+        for n_boot in n_boots:
+            matched_cluster_id = SSE_mapping[n_boot][cluster_id]
+            if matched_cluster_id != -1:
+                X.append(mean_shuffled_dropout_scores[n_boot][matched_cluster_id].values)
+
+        # corr is a np.array of corr rs for all matched clusters (with original or one another)
+        corr = np.array([])
+        # compute corr values just for shuffled clusters
+        if mean_original_dropout_scores is None and np.size(X) != 0:
+            if use_spearman is True:
+                print(f'computing spearman r between {len(X)} matched clusters')
+                if len(X) > 1:
+                    corr = spearmanr(X, axis=1)[0]
+                else:
+                    corr = spearmanr(X)[0]
+            else:
+                print(f'computing pearson r between {len(X)} matched clusters')
+                corr = np.corrcoef(X)
+
+            # use half of identity matrix only
+            if np.shape(X)[0] > 1 and np.size(corr) > 1:
+                indices = np.triu_indices_from(corr, k=1)
+                corr = corr[indices]
+
+        # compute correlation values of original with shuffled clusters
+        elif np.size(X) != 0:
+            if use_spearman is True:
+                print(f'computing spearman r between original and {len(X)} matched clusters')
+                # use only one row of X corr with Y, exclude autocorr
+                if np.size(X) > 12:
+                    corr = spearmanr(X, Y, axis=1)[0][-1][:-1]
+                else:  # if only one cluster is matched
+                    corr = spearmanr(X, Y, axis=1)[0]
+            else:
+                print(f'computing pearson r between original and {len(X)} matched clusters')
+                if np.size(X) > 12:
+                    corr = np.corrcoef(X, Y)[-1][:-1]
+                else:  # if only one cluster is matched
+                    corr = np.corrcoef(X, Y)
+
+        # add mean and std values to cluster_corr_dict
+        if np.size(corr) != 0:
+            cluster_corr_dict[cluster_id] = [np.mean(corr), np.std(corr)]
+        else:
+            print(f'did not find any matched clusters for cluster id {cluster_id}')
+            cluster_corr_dict[cluster_id] = [np.nan, np.nan]
+
+    return cluster_corr_dict
