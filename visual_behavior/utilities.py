@@ -16,7 +16,7 @@ from . import database as db
 
 from visual_behavior.ophys.sync.sync_dataset import Dataset
 from visual_behavior.data_access import loading
-import visual_behavior.visualization.behavior as behavior
+# import visual_behavior.visualization.behavior as behavior
 
 
 def flatten_list(in_list):
