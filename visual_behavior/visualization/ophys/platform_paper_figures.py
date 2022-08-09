@@ -210,7 +210,7 @@ def plot_population_averages_for_cell_types_across_experience(multi_session_df, 
 
     if ax is None:
         format_fig = True
-        figsize = (10, 8)
+        figsize = (10, 9)
         fig, ax = plt.subplots(3, 3, figsize=figsize, sharey='row', sharex='col')
         ax = ax.ravel()
     else:

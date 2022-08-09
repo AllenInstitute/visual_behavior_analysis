@@ -57,6 +57,8 @@ if __name__ == '__main__':
 
     # directory and folders to save plots to
     base_dir = r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/platform_paper_plots/figure_4'
+    # base_dir = r'\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\platform_paper_plots\figure_4'
+
     glm_version = '24_events_all_L2_optimize_by_session'
 
     # set data_type for cell response plots, can be 'dff', 'events', 'filtered_events'

@@ -318,7 +318,7 @@ if __name__ == '__main__':
 
     import sys
 
-    save_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\visual_behavior_pilot_analysis'
+    # save_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\visual_behavior_pilot_analysis'
 
     experiment_id = sys.argv[1]
     # experiment_id = 696136550
