@@ -100,7 +100,7 @@ if __name__ == '__main__':
             data = {'cell_specimen_id': ids, 'cre_line': [cre_line] * len(ids),
                     'cluster_id': cluster_ids, 'labels': labels}
             cluster_df = pd.DataFrame(data=data)
-            cluster_df.to_hdf(nb_full_name, key='cluster_df')
+            cluster_df.to_hdf(nb_full_name, key='clustered_df')
 
 
         # 3. Plot clusters
