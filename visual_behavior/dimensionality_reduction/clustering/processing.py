@@ -88,7 +88,7 @@ def get_cre_lines(cell_metadata):
     get list of cre lines in cell_metadata and sort in reverse order so that Vip is first
     cell_metadata is a table similar to ophys_cells_table from SDK but can have additional columns based on clustering results
     """
-    cre_lines = np.sort(cell_metadata.cre_line.unique())
+    cre_lines = np.sort(cell_metadata.cre_line.unique())[::-1]
     return cre_lines
 
 
@@ -1765,120 +1765,6 @@ def add_location_column(cluster_meta, columns_to_groupby=['targeted_structure', 
     return cluster_meta_copy
 
 
-def get_cluster_mapping(matrix, threshold=1, ):
-    '''
-    find clusters with most similar SSE, create a dictionaty of cluster maps.
-
-    Input:
-    matrix: (np.array) SSE matrix (n clusters by n clusters), can be any other matrix (correlation, etc)
-    threshold: (int) a value, abov which the matrix will not find an optimally similar cluster
-
-    Returns:
-    cluster_mapping_comparisons: (dict) {original cluster id: matched cluster id}
-
-    '''
-    comparisons = matrix.keys()
-
-    # comparison dictionary
-    cluster_mapping_comparisons = {}
-    for i, comparison in enumerate(comparisons):
-        tmp_matrix = matrix[comparison]
-
-        # cluster
-        cluster_mapping = {}
-        for k in range(0, len(tmp_matrix)):
-
-            # if min less than threshold
-            if min(tmp_matrix[k]) < threshold:
-                cluster_id = tmp_matrix[k].index(min(tmp_matrix[k])) + 1
-                cluster_mapping[k + 1] = cluster_id
-
-            # else there is no cluster
-            else:
-                cluster_mapping[k + 1] = -1
-
-        cluster_mapping_comparisons[comparison] = cluster_mapping
-
-    return cluster_mapping_comparisons
-
-
-def get_mean_dropout_scores_per_cluster(dropout_df, cluster_df=None, labels=None, stacked=True):
-    '''
-    INPUT:
-    dropout_df: (pd.DataFrame) of GLM dropout scores (cell_specimen_ids by regressors x experience)
-    cluster_df: (pd.DataFrame), either provide this df, must contain columns 'cluster_id', 'cell_specimen_id'
-    labels: (list, np.array) or provide this array, list or array of int indicating cells' cluster ids,
-                            if provided, len(labels)==len(dropout_df)
-
-    Provide either cluster_df or labels. Cluster df must be df with 'cluster_id' and 'cell_specimen_id' columns,
-    labels can be np array or list of cluster ids
-
-    if unstacked, returns dictionary of DataFrames for each cluster. This version is helpful for plotting
-    if stacked, returns a DataFrame of mean dropout scores per cluster, this version is great for computing corr or SSE
-    (rows are droopout scores, columns are cluster ids)
-
-    Clusters are sorted by size.
-    '''
-    if isinstance(cluster_df, pd.core.frame.DataFrame):
-        cluster_ids = cluster_df['cluster_id'].value_counts().index.values  # sort cluster ids by size
-    elif labels is not None:
-        cluster_df = pd.DataFrame(data={'cluster_id': labels, 'cell_specimen_id': dropout_df.index.values})
-        cluster_ids = cluster_df['cluster_id'].value_counts().index.values  # sort cluster ids by size
-
-    # new cluster ids will start with 1, and they will be sorted by cluster size
-    mean_cluster = {}
-    for i, cluster_id in enumerate(cluster_ids):
-        this_cluster_ids = cluster_df[cluster_df['cluster_id'] == cluster_id]['cell_specimen_id'].unique()
-        if stacked is True:
-            mean_dropout_df = dropout_df.loc[this_cluster_ids].mean()
-            mean_cluster[i + 1] = mean_dropout_df.values
-        elif stacked is False:
-            mean_dropout_df = dropout_df.loc[this_cluster_ids].mean().unstack()
-            mean_cluster[i + 1] = mean_dropout_df
-
-    if stacked is True:
-        return (pd.DataFrame(mean_cluster))
-    elif stacked is False:
-        return (mean_cluster)
-
-
-def compute_SSE(mean_dropout_df_original, mean_dropout_df_compare):
-    '''
-    mean dropout_df should be computed with get_mean_dropout_scores_per_cluste function, stacked=True
-    returns:
-    SSE_matrix, rows are original clusters, columns are compared clusters
-    '''
-    SSE_matrix = []
-    for cluster_original in mean_dropout_df_original.keys():  # cluster ids are columns
-        x = mean_dropout_df_original[cluster_original].values
-        row = []
-        for cluster_compare in mean_dropout_df_compare.keys():
-            y = mean_dropout_df_compare[cluster_compare].values
-            sse = np.sum((np.abs(x) - np.abs(y)) ** 2)
-            row.append(sse)
-        SSE_matrix.append(row)
-
-    return SSE_matrix
-
-
-def get_cre_line_map(cre_line):
-
-    cre_line_dict = {'Slc17a7-IRES2-Cre': 'Excitatory',
-                     'Sst-IRES-Cre': 'SST inhibitory',
-                     'Vip-IRES-Cre': 'VIP inhibitory'}
-
-    mapped_cre_line = cre_line_dict[cre_line]
-    return mapped_cre_line
-
-
-def get_n_clusters_cre():
-    ''' Number of clusters used in clustering per cre line'''
-    n_clusters_cre = {'Slc17a7-IRES2-Cre': 10,
-                      'Sst-IRES-Cre': 5,
-                      'Vip-IRES-Cre': 10}
-    return n_clusters_cre
-
-
 def get_location_fractions(cluster_meta):
     """
     for each location, compute percent of cells belonging to each cluster
@@ -2020,6 +1906,125 @@ def get_cluster_fractions_per_location(cluster_meta, cluster_metrics):
     location_fractions['exp_mod_color'] = colors
     return location_fractions
 
+def get_cre_line_map(cre_line):
+
+    cre_line_dict = {'Slc17a7-IRES2-Cre': 'Excitatory',
+                     'Sst-IRES-Cre': 'SST inhibitory',
+                     'Vip-IRES-Cre': 'VIP inhibitory'}
+
+    mapped_cre_line = cre_line_dict[cre_line]
+    return mapped_cre_line
+
+
+def get_n_clusters_cre():
+    ''' Number of clusters used in clustering per cre line'''
+    n_clusters_cre = {'Slc17a7-IRES2-Cre': 10,
+                      'Sst-IRES-Cre': 5,
+                      'Vip-IRES-Cre': 10}
+    return n_clusters_cre
+
+# shuffle control functions #############
+
+def get_cluster_mapping(matrix, threshold=1, ):
+    '''
+    find clusters with most similar SSE, create a dictionaty of cluster maps.
+
+    Input:
+    matrix: (np.array) SSE matrix (n clusters by n clusters), can be any other matrix (correlation, etc)
+    threshold: (int) a value, abov which the matrix will not find an optimally similar cluster
+
+    Returns:
+    cluster_mapping_comparisons: (dict) {original cluster id: matched cluster id}
+
+    '''
+    comparisons = matrix.keys()
+
+    # comparison dictionary
+    cluster_mapping_comparisons = {}
+    for i, comparison in enumerate(comparisons):
+        tmp_matrix = matrix[comparison]
+
+        # cluster
+        cluster_mapping = {}
+        # tmp_matrix is n_clusters x n_clusters with SSE values saying how well matched clusters are to shuffled clusters
+        # index is original cluster id, column is matched cluster id
+        for original_cluster_index in range(0, len(tmp_matrix)):
+
+            # if min less than threshold
+            if min(tmp_matrix[original_cluster_index]) < threshold:
+                # the matched cluster is the one with the lowest SSE value
+                matched_cluster_index = tmp_matrix[original_cluster_index].index(min(tmp_matrix[original_cluster_index])) + 1
+                # add one because this is an index and cluster IDs start at 1
+                cluster_mapping[original_cluster_index + 1] = matched_cluster_index
+
+            # else there is no cluster, set matched cluster ID to -1
+            else:
+                cluster_mapping[original_cluster_index + 1] = -1
+
+        cluster_mapping_comparisons[comparison] = cluster_mapping
+
+    return cluster_mapping_comparisons
+
+
+def get_mean_dropout_scores_per_cluster(dropout_df, cluster_df=None, labels=None, stacked=True):
+    '''
+    INPUT:
+    dropout_df: (pd.DataFrame) of GLM dropout scores (cell_specimen_ids by regressors x experience)
+    cluster_df: (pd.DataFrame), either provide this df, must contain columns 'cluster_id', 'cell_specimen_id'
+    labels: (list, np.array) or provide this array, list or array of int indicating cells' cluster ids,
+                            if provided, len(labels)==len(dropout_df)
+
+    Provide either cluster_df or labels. Cluster df must be df with 'cluster_id' and 'cell_specimen_id' columns,
+    labels can be np array or list of cluster ids
+
+    if unstacked, returns dictionary of DataFrames for each cluster. This version is helpful for plotting
+    if stacked, returns a DataFrame of mean dropout scores per cluster, this version is great for computing corr or SSE
+    (rows are droopout scores, columns are cluster ids)
+
+    Clusters are sorted by size.
+    '''
+    if isinstance(cluster_df, pd.core.frame.DataFrame):
+        cluster_ids = cluster_df['cluster_id'].value_counts().index.values  # sort cluster ids by size
+    elif labels is not None:
+        cluster_df = pd.DataFrame(data={'cluster_id': labels, 'cell_specimen_id': dropout_df.index.values})
+        cluster_ids = cluster_df['cluster_id'].value_counts().index.values  # sort cluster ids by size
+
+    # new cluster ids will start with 1, and they will be sorted by cluster size
+    mean_cluster = {}
+    for i, cluster_id in enumerate(cluster_ids):
+        this_cluster_ids = cluster_df[cluster_df['cluster_id'] == cluster_id]['cell_specimen_id'].unique()
+        if stacked is True:
+            mean_dropout_df = dropout_df.loc[this_cluster_ids].mean()
+            mean_cluster[i + 1] = mean_dropout_df.values
+        elif stacked is False:
+            mean_dropout_df = dropout_df.loc[this_cluster_ids].mean().unstack()
+            mean_cluster[i + 1] = mean_dropout_df
+
+    if stacked is True:
+        return (pd.DataFrame(mean_cluster))
+    elif stacked is False:
+        return (mean_cluster)
+
+
+def compute_SSE(mean_dropout_df_original, mean_dropout_df_compare):
+    '''
+    mean dropout_df should be computed with get_mean_dropout_scores_per_cluste function, stacked=True
+    returns:
+    SSE_matrix, rows are original clusters, columns are compared clusters
+    '''
+    SSE_matrix = []
+    for cluster_original in mean_dropout_df_original.keys():  # cluster ids are columns
+        x = mean_dropout_df_original[cluster_original].values
+        row = []
+        for cluster_compare in mean_dropout_df_compare.keys():
+            y = mean_dropout_df_compare[cluster_compare].values
+            sse = np.sum((np.abs(x) - np.abs(y)) ** 2)
+            row.append(sse)
+        SSE_matrix.append(row)
+
+    return SSE_matrix
+
+
 
 def get_sorted_cluster_ids(cluster_df):
     '''
@@ -2113,39 +2118,70 @@ def get_cluster_probability_df(shuffle_type_probabilities,
 
 
 def get_matched_cluster_labels(SSE_mapping):
-    cluster_ids = SSE_mapping[0].keys()
+    cluster_ids = SSE_mapping[0].keys() # is this just using the first set of mappings to get original cluster IDs?
     n_boots = SSE_mapping.keys()
     matched_clusters = {}
 
     for cluster_id in cluster_ids:
         matched_ids = []
-        for n_boot in n_boots:
+        for n_boot in n_boots: # for every shuffle iteration, collect the matched ID for each original cluster id
             matched_id = SSE_mapping[n_boot][cluster_id]
             matched_ids.append(matched_id)
-        matched_clusters[cluster_id] = matched_ids
+        matched_clusters[cluster_id] = matched_ids # list of all matched IDs for each original cluster
     return matched_clusters
 
 
 def get_cluster_size_variance(SSE_mapping, cluster_df_shuffled, normalize=False):
     cluster_ids = SSE_mapping[0].keys()
-    matched_ids = get_matched_cluster_labels(SSE_mapping)
+    matched_ids = get_matched_cluster_labels(SSE_mapping) # gets list of all matched IDs across shuffle iterations for each original cluster
 
+    # cluster_df_shuffled is a dictionary with the cluster labels for each shuffle iteration
     n_boots = cluster_df_shuffled.keys()
     all_cluster_sizes = {}
-    for cluster_id in cluster_ids:
+    for original_cluster_id in cluster_ids:
+        cluster_sizes = []
         for n_boot in n_boots:
-            shuffled_cluster_size = cluster_df_shuffled[n_boot].value_counts('cluster_id',
-                                                                             normalize=normalize)
+            # count how many cells there are in each cluster for each shuffle iteration
+            shuffled_cluster_sizes_this_boot = cluster_df_shuffled[n_boot].value_counts('cluster_id', normalize=normalize)
+            # this will be a list of cluster IDs and their sizes for a single shuffle iteration
+            # are these sizes being aggregated somehow???
 
-        cluster_size = []
-        for matched_id in matched_ids[cluster_id]:
-
-            if matched_id != -1:
-                cluster_size.append(shuffled_cluster_size[matched_id])
+            matched_id_this_boot = matched_ids[original_cluster_id][n_boot]
+            # now get the size of the matched cluster in this iteration
+            if matched_id_this_boot != -1:
+                # get number of cells per cluster for the cluster IDs in the shuffles using the matched ID for THIS shuffle iteration
+                cluster_sizes.append(shuffled_cluster_sizes_this_boot[matched_id_this_boot])
             else:
-                cluster_size.append(np.nan)
+                cluster_sizes.append(np.nan)
 
-        all_cluster_sizes[cluster_id] = cluster_size
+        # aggregate matched cluster sizes acoss iterations for each original cluster ID
+        all_cluster_sizes[original_cluster_id] = cluster_sizes
+
+    # # this code had a bug in it because it was only collecting cluster sizes from a single iteration
+    # for original_cluster_id in cluster_ids:
+    #     cluster_sizes = []
+    #     for n_boot in n_boots:
+    #         # count how many cells there are in each cluster for each shuffle iteration
+    #         shuffled_cluster_sizes_this_boot = cluster_df_shuffled[n_boot].value_counts('cluster_id', normalize=normalize)
+    #         # this will be a list of cluster IDs and their sizes for a single shuffle iteration
+    #         # are these sizes being aggregated somehow???
+    #
+    #     # now need to map shuffled cluster IDs for each iteration to their matched cluster IDs
+    #     cluster_size = []
+    #     # matched IDs for one cluster is dict of original:matched for all shuffle iterations
+    #     for matched_id in matched_ids[original_cluster_id]: # here we are getting all the matched IDs for one original cluster ID
+    #     # for each matched ID, get the size of that cluster across
+    #         if matched_id != -1:
+    #             # get number of cells per cluster for the cluster IDs in the shuffles using the matched ID for each shuffle iteration
+    #             cluster_size.append(shuffled_cluster_size[matched_id]) # this is only getting the cluster sizes from one iteration
+    #             # but is looping over all matched IDs, so it is only pulling cluster sizes from one iteration of shuffle
+    #             # so if the matched_id in shuffle is always the same as the original, as is the case for non-coding cluster 1 in Slc,
+    #             # then you will pull the same number repeatedly. If the matching alternates between a few options, youll get a few values
+    #             # but this is NOT getting the cluster sizes across iterations
+    #         else:
+    #             cluster_size.append(np.nan)
+    #     all_cluster_sizes[cluster_id] = cluster_size
+
     return all_cluster_sizes
 
 
@@ -2207,6 +2243,7 @@ def get_matched_clusters_means_dict(SSE_mapping, mean_dropout_scores_unstacked, 
 
     all_clusters_means_dict = {}
     for cluster_id in cluster_ids:
+        # get dropout scores for matched clusters across each shuffle iteration
         all_matched_cluster_df = pd.DataFrame(columns=columns)
         for n_boot in n_boots:
             matched_cluster_id = SSE_mapping[n_boot][cluster_id]
@@ -2217,11 +2254,11 @@ def get_matched_clusters_means_dict(SSE_mapping, mean_dropout_scores_unstacked, 
         all_matched_cluster_df = all_matched_cluster_df.reset_index().rename(columns={'index': 'regressor'})
 
         # create dummy df for unmatched clusters
-        if cluster_id == 1:
+        if cluster_id == 1: # is this a typo? should it be -1 for unmatched clusters?
             dummy_df = all_matched_cluster_df.groupby('regressor').mean().copy()
             dummy_df[dummy_df > 0] = 0
         # compute metrics
-        if len(all_matched_cluster_df) >= 4:
+        if len(all_matched_cluster_df) >= 4: # must be at least 4 matched clusters
             if metric == 'mean':
                 all_clusters_means_dict[cluster_id] = all_matched_cluster_df.groupby('regressor').mean()
             elif metric == 'std':
