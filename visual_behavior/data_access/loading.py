@@ -3383,18 +3383,16 @@ def get_multi_session_df_for_conditions(data_type, event_type, conditions, inclu
 
     #     missing_expts = loading.check_whether_multi_session_df_has_all_platform_experiments(multi_session_df)
 
+    # merge with metadata
+    experiments_table = get_filtered_ophys_experiment_table()
+    multi_session_df = multi_session_df.merge(experiments_table, on='ophys_experiment_id')
+    multi_session_df = multi_session_df.reset_index(drop=True)
+
     # limit to platform expts
     if inclusion_criteria == 'platform_experiment_table':
         experiments_table = get_platform_paper_experiment_table(limit_to_closest_active=True)
         multi_session_df = multi_session_df[multi_session_df.ophys_experiment_id.isin(experiments_table.index.values)]
         print('there are', len(multi_session_df.ophys_experiment_id.unique()), 'experiments in the multi_session_df after limiting to platform experiments')
-    else:
-        experiments_table = get_filtered_ophys_experiment_table()
-
-    # merge with metadata
-    multi_session_df = multi_session_df.merge(experiments_table, on='ophys_experiment_id')
-
-    multi_session_df = multi_session_df.reset_index(drop=True)
 
     # need to filter for active first so that subsequent criteria area applied to that set
     if 'active_only' in inclusion_criteria:
