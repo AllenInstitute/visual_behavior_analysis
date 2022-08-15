@@ -27,8 +27,8 @@ def get_abbreviated_experience_levels(experience_levels):
     converts experience level names (ex: 'Novel >1') into short hand versions (ex: 'N>1')
     abbreviated names are returned in the same order as provided in experience_levels
     """
-    # exp_level_abbreviations = [exp_level.split(' ')[0][0] if len(exp_level.split(' ')) == 1 else exp_level.split(' ')[0][0] + exp_level.split(' ')[1][:2] for exp_level in experience_levels]
-    exp_level_abbreviations = ['F', 'N', 'N+']
+    exp_level_abbreviations = [exp_level.split(' ')[0][0] if len(exp_level.split(' ')) == 1 else exp_level.split(' ')[0][0] + exp_level.split(' ')[1][:2] for exp_level in experience_levels]
+    # exp_level_abbreviations = ['F', 'N', 'N+']
     return exp_level_abbreviations
 
 
@@ -621,6 +621,7 @@ def plot_dropout_heatmap(cluster_meta, feature_matrix, cre_line, cluster_id, cba
         cell_type = processing.get_cell_type_for_cre_line(cre_line, cluster_meta)
         cell_type_abbreviation = cell_type[:3]
         ax.set_title(cell_type_abbreviation + ' cluster ' + str(cluster_id))
+    ax.set_yticks(np.arange(0.5, len(mean_dropout_df.index.values) + 0.5))
     if abbreviate_features:
         # set yticks to abbreviated feature labels
         feature_abbreviations = get_abbreviated_features(mean_dropout_df.index.values)
@@ -706,7 +707,7 @@ def plot_dropout_heatmaps_for_clusters(cluster_meta, feature_matrix, sort_col='c
                               'cluster_heatmaps_' + sort_col + '_' + cre_line.split('-')[0])
 
 
-def plot_average_dropout_heatmap_for_cre_lines(dropouts, cluster_meta, save_dir=None, folder=None):
+def plot_average_dropout_heatmap_for_cre_lines(dropouts, cluster_meta, save_dir=None, folder=None, suffix='', suptitle=None):
     """
     plot average dropout score for each cre line
     """
@@ -723,8 +724,10 @@ def plot_average_dropout_heatmap_for_cre_lines(dropouts, cluster_meta, save_dir=
         ax[i].set_xlabel('')
         ax[i].invert_yaxis()
     plt.subplots_adjust(wspace=1.2)
+    if suptitle is not None:
+        plt.suptitle(suptitle, x=0.5, y=1.3)
     if save_dir:
-        utils.save_figure(fig, figsize, save_dir, folder, 'average_dropout_heatmaps')
+        utils.save_figure(fig, figsize, save_dir, folder, 'average_dropout_heatmaps'+suffix)
 
 
 def plot_std_dropout_heatmap_for_cre_lines(dropouts, cluster_meta, save_dir=None, folder=None):
@@ -1536,7 +1539,7 @@ def plot_fraction_cells_per_area_depth(cre_fraction, cluster_id, ax=None):
 
 
 def plot_population_average_response_for_cluster(cluster_mdf, cre_line, cluster_id, change=False, omitted=True,
-                                                 small_fontsize=True, ax=None):
+                                                 small_fontsize=True, alpha=0.1, ax=None):
     """
     Plots the population average response across experience levels for a give cluster from a given cre line
 
@@ -1547,7 +1550,12 @@ def plot_population_average_response_for_cluster(cluster_mdf, cre_line, cluster_
     hue_column = 'experience_level'
     hue_conditions = np.sort(cluster_mdf[hue_column].unique())
     timestamps = cluster_mdf['trace_timestamps'][0]
-    xlim_seconds = [-1, 1.5]
+    if change:
+        xlim_seconds = [-1, 0.75]
+    elif omitted:
+        xlim_seconds = [-1, 1.5]
+    else:
+        xlim_seconds = [0.5, 0.75]
     colors = utils.get_experience_level_colors()
 
     if ax is None:
@@ -1558,7 +1566,7 @@ def plot_population_average_response_for_cluster(cluster_mdf, cre_line, cluster_
         ax = utils.plot_mean_trace(np.asarray(traces), timestamps, ylabel='response',
                                    legend_label=hue, color=colors[c], interval_sec=1,
                                    plot_sem=False, xlim_seconds=xlim_seconds, ax=ax)
-    ax = utils.plot_flashes_on_trace(ax, timestamps, change=change, omitted=omitted)
+    ax = utils.plot_flashes_on_trace(ax, timestamps, change=change, omitted=omitted, alpha=alpha)
     ax.set_xlabel('time (s)')
     if small_fontsize:
         ax = standardize_axes_fontsize(ax)
@@ -1659,7 +1667,8 @@ def plot_clusters_column(cluster_meta, feature_matrix, cre_line,
         utils.save_figure(fig, figsize, save_dir, folder, 'clusters_column_' + cre_line.split('-')[0] + suffix, formats=formats)
 
 
-def plot_clusters_stats_pop_avg_rows(cluster_meta, feature_matrix, multi_session_df, cre_line, columns_to_groupby=['targeted_structure', 'layer'],
+def plot_clusters_stats_pop_avg_rows(cluster_meta, feature_matrix, multi_session_df, cre_line,
+                                     columns_to_groupby=['targeted_structure', 'layer'], change=False, omitted=True,
                                      sort_order=None, save_dir=None, folder=None, suffix='', alpha=0.05):
     """
     For each cluster in a given cre_line, plots dropout heatmaps, fraction cells per location (area and/or depth) relative to the cluster average,
@@ -1728,7 +1737,7 @@ def plot_clusters_stats_pop_avg_rows(cluster_meta, feature_matrix, multi_session
         ax[i] = plot_dropout_heatmap(cluster_meta_cre, feature_matrix, cre_line, cluster_id, small_fontsize=True, ax=ax[i])
 
         # plot population averages per cluster
-        ax[i + (n_clusters * 1)] = plot_population_average_response_for_cluster(cluster_mdf, cre_line, cluster_id,
+        ax[i + (n_clusters * 1)] = plot_population_average_response_for_cluster(cluster_mdf, cre_line, cluster_id, change, omitted,
                                                                                 ax=ax[i + (n_clusters * 1)])
         ax[i + (n_clusters * 1)].set_xlabel('time (s)')
         if i > 0:
@@ -1770,7 +1779,7 @@ def plot_clusters_stats_pop_avg_rows(cluster_meta, feature_matrix, multi_session
 
 
 def plot_cluster_data(cluster_meta, feature_matrix, cre_line, cluster_id, multi_session_df=None,
-                      columns_to_groupby=['targeted_structure', 'layer'],
+                      columns_to_groupby=['targeted_structure', 'layer'], change=False, omitted=True,
                       abbreviate_features=True, abbreviate_experience=True,
                       save_dir=None, ax=None):
     """
@@ -1808,7 +1817,7 @@ def plot_cluster_data(cluster_meta, feature_matrix, cre_line, cluster_id, multi_
     if multi_session_df is not None:
         cluster_mdf = multi_session_df.merge(cluster_meta.reset_index()[['cell_specimen_id', 'cluster_id']],
                                              on='cell_specimen_id', how='inner')
-        ax[i] = plot_population_average_response_for_cluster(cluster_mdf, cre_line, cluster_id,
+        ax[i] = plot_population_average_response_for_cluster(cluster_mdf, cre_line, cluster_id, change, omitted,
                                                              small_fontsize=False, ax=ax[i])
     else:
         # pie chart of overall cluster size
@@ -2653,6 +2662,51 @@ def plot_cluster_proportions_treemaps(location_fractions, cluster_meta, color_co
 
 # plot cluster sizes
 
+def plot_cluster_size_and_probability_for_cluster(cluster_size_df, shuffle_probability_df, cluster_id, ax=None):
+
+    if ax is None:
+        fig, ax = plt.subplots()
+
+    # color1 = 'dimgray'
+    color1 = 'gray'
+    color2 = 'steelblue'
+
+    ax = sns.barplot(data=cluster_size_df[cluster_size_df['cluster_id'] == cluster_id], x='cluster_id',
+                        y='cluster_size_diff', color=color1, ax=ax)
+    ax.axhline(0, color='gray')
+    ax.set_xlabel('')
+    ax.set_ylim([-0.5, 0.5])
+    ax.set_xlim([-1, 1])
+    ax.set_xticklabels('', fontsize=12)
+    ax.set_yticklabels(ax.get_yticklabels(), fontsize=12)
+    ax.set_title(f'cluster {cluster_id}')
+    ax.spines['top'].set_visible(False)
+    ax.spines['bottom'].set_visible(False)
+    ax.spines['left'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+
+    ax.set_ylabel('size diff.', color=color1, fontsize=12)
+    ax.set_yticklabels(np.round(ax.get_yticks(), 1), color=color1, fontsize=12)
+
+    # plot probability second
+    ax2 = ax.twinx()
+    ax2 = sns.pointplot(data=shuffle_probability_df[shuffle_probability_df['cluster_id'] == cluster_id],
+                        x='cluster_id', y='probability', ax=ax2, color=color2, linestyles='', fontsize=12)
+    ax2.set_xlabel('')
+    ax2.set_ylabel('')
+    ax2.set_yticklabels('')
+    ax2.set_ylim([-0.1, 1.1])
+    ax2.set_xlim([- 1, 1])
+    ax2.set_xticklabels('')
+    ax2.spines['top'].set_visible(False)
+    ax2.spines['bottom'].set_visible(False)
+
+    ax2.set_yticklabels(np.round(ax2.get_yticks(), 1), color=color2, fontsize=12)
+    ax2.set_ylabel('probability', color=color2, fontsize=12)
+
+    return ax
+
+
 def plot_cluster_size_and_probability(cluster_size_df, shuffle_probability_df, cre_line=None, shuffle_type=None,
                                       ax=None, figsize=None, save_dir=None, folder=None):
     if cre_line is not None:
@@ -2671,45 +2725,9 @@ def plot_cluster_size_and_probability(cluster_size_df, shuffle_probability_df, c
         fig, ax = plt.subplots(1, len(cluster_ids), figsize=figsize, sharey='row')
         ax = ax.ravel()
 
-    color1 = 'dimgray'
-    color2 = 'steelblue'
     # plot cluster size first
     for i, cluster_id in enumerate(cluster_ids):
-        ax[i] = sns.barplot(data=cluster_size_df[cluster_size_df['cluster_id'] == cluster_id], x='cluster_id',
-                            y='cluster_size_diff', color=color1, ax=ax[i])
-        ax[i].axhline(0, color='gray')
-        ax[i].set_ylabel('')
-        ax[i].set_xlabel('')
-        ax[i].set_ylim([-0.5, 0.6])
-        ax[i].set_xlim([-1, 1])
-        ax[i].set_xticklabels('')
-        ax[i].set_title(f'cluster {cluster_id}')
-        # ax[i].spines['top'].set_visible(False)
-        # ax[i].spines['bottom'].set_visible(False)
-
-        if i == 0:
-            ax[i].set_ylabel('normalized difference \n in cluster size', color=color1, fontsize=10)
-
-            ax[i].set_yticklabels(np.round(ax[i].get_yticks(), 1), color=color1)
-
-        # plot probability second
-        ax2 = ax[i].twinx()
-        ax2 = sns.pointplot(data=shuffle_probability_df[shuffle_probability_df['cluster_id'] == cluster_id],
-                            x='cluster_id', y='probability', ax=ax2, color=color2, linestyles='', markersize=20)
-        ax2.set_xlabel('')
-        ax2.set_ylabel('')
-        ax2.set_yticklabels('')
-        ax2.set_ylim([-0.1, 1.1])
-        ax2.set_xlim([- 1, 1])
-        ax2.set_xticklabels('')
-        ax2.spines['top'].set_visible(False)
-        ax2.spines['bottom'].set_visible(False)
-
-        if i == len(cluster_ids) - 1:
-            ax2.set_yticklabels(np.round(ax2.get_yticks(), 1), color=color2)
-            ax2.set_ylabel('cluster probability', color=color2, fontsize=10)
-        # else:
-        #     ax2.set_yticklabels('')
+        ax[i] = plot_cluster_size_and_probability_for_cluster(cluster_size_df, shuffle_probability_df, cluster_id, ax=ax[i])
 
     fig.subplots_adjust(hspace=1.2, wspace=0.6)
     if save_dir:
