@@ -220,6 +220,8 @@ plotting.plot_fraction_cells_per_cluster_per_location_vert(cluster_meta, save_di
 
 # load multi session dataframe with response traces
 multi_session_df = processing.get_multi_session_df_for_omissions()
+multi_session_df = multi_session_df[multi_session_df.omitted==True]
+
 
 cluster_mdf = multi_session_df.merge(cluster_meta[['cluster_id']],
                                      on='cell_specimen_id', how='inner')
