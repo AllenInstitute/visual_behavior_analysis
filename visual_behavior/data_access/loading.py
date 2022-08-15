@@ -3388,6 +3388,10 @@ def get_multi_session_df_for_conditions(data_type, event_type, conditions, inclu
         experiments_table = get_platform_paper_experiment_table(limit_to_closest_active=True)
         multi_session_df = multi_session_df[multi_session_df.ophys_experiment_id.isin(experiments_table.index.values)]
         print('there are', len(multi_session_df.ophys_experiment_id.unique()), 'experiments in the multi_session_df after limiting to platform experiments')
+    elif 'strategy_paper' in inclusion_criteria:
+        experiments_table = get_platform_paper_experiment_table(limit_to_closest_active=False)
+        multi_session_df = multi_session_df[multi_session_df.ophys_experiment_id.isin(experiments_table.index.values)]
+        print('there are', len(multi_session_df.ophys_experiment_id.unique()), 'experiments in the multi_session_df after limiting to strategy paper')
     else:
         experiments_table = get_filtered_ophys_experiment_table()
 
