@@ -68,7 +68,7 @@ if __name__ == '__main__':
         X = shuffled_feature_matrix.values
 
         # 2. Compute coclustering matrix
-        nb_full_name = os.path.join(save_dir, 'files', nb_filename+'_coClustering_matrix')
+        nb_full_name = os.path.join(save_dir, 'files', nb_filename+'_coClustering_matrix.pkl')
         if os.path.exists(nb_full_name):
             with open(nb_full_name, 'rb') as f:
                 coclust_matrix = pkl.load(f)
