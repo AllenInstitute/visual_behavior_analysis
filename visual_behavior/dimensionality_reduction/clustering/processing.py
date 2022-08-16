@@ -1966,6 +1966,38 @@ def get_cluster_mapping(matrix, threshold=1, ):
     return cluster_mapping_comparisons
 
 
+def get_mapped_SSE_values(matrix, threshold=1, ):
+    '''
+    collect SSE values for plotting for each cluster id
+    Input:
+    matrix: (np.array) SSE matrix (n clusters by n clusters), can be any other matrix (correlation, etc)
+    threshold: (int) a value, abov which the matrix will not find an optimally similar cluster
+
+    Returns:
+    cluster_mapping_SSE,  (dict)
+
+    '''
+    n_boots = matrix.keys()
+    cluster_mapping_SSE = {}
+    for cluster_id in range(0, len(matrix[0])):
+        sse_nb = []
+        sse_else = []
+        for i, n_boot in enumerate(n_boots):
+            tmp_matrix = matrix[n_boot]
+            # if min less than threshold
+            if min(tmp_matrix[cluster_id]) < threshold:
+                # the matched cluster is the one with the lowest SSE value
+                min_SSE = min(tmp_matrix[cluster_id])
+                # add one because this is an index and cluster IDs start at 1
+                sse_nb.append(min_SSE)
+            else:
+                sse_nb.append(np.nan)
+
+        cluster_mapping_SSE[cluster_id + 1] = sse_nb
+
+    return cluster_mapping_SSE
+
+
 def get_mean_dropout_scores_per_cluster(dropout_df, cluster_df=None, labels=None, stacked=True):
     '''
     INPUT:
