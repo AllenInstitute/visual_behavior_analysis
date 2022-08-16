@@ -1906,6 +1906,7 @@ def get_cluster_fractions_per_location(cluster_meta, cluster_metrics):
     location_fractions['exp_mod_color'] = colors
     return location_fractions
 
+
 def get_cre_line_map(cre_line):
 
     cre_line_dict = {'Slc17a7-IRES2-Cre': 'Excitatory',
@@ -1924,6 +1925,7 @@ def get_n_clusters_cre():
     return n_clusters_cre
 
 # shuffle control functions #############
+
 
 def get_cluster_mapping(matrix, threshold=1, ):
     '''
@@ -1981,14 +1983,12 @@ def get_mapped_SSE_values(matrix, threshold=1, ):
     cluster_mapping_SSE = {}
     for cluster_id in range(0, len(matrix[0])):
         sse_nb = []
-        sse_else = []
         for i, n_boot in enumerate(n_boots):
             tmp_matrix = matrix[n_boot]
             # if min less than threshold
             if min(tmp_matrix[cluster_id]) < threshold:
                 # the matched cluster is the one with the lowest SSE value
                 min_SSE = min(tmp_matrix[cluster_id])
-                # add one because this is an index and cluster IDs start at 1
                 sse_nb.append(min_SSE)
             else:
                 sse_nb.append(np.nan)
@@ -2055,7 +2055,6 @@ def compute_SSE(mean_dropout_df_original, mean_dropout_df_compare):
         SSE_matrix.append(row)
 
     return SSE_matrix
-
 
 
 def get_sorted_cluster_ids(cluster_df):
@@ -2150,22 +2149,22 @@ def get_cluster_probability_df(shuffle_type_probabilities,
 
 
 def get_matched_cluster_labels(SSE_mapping):
-    cluster_ids = SSE_mapping[0].keys() # is this just using the first set of mappings to get original cluster IDs?
+    cluster_ids = SSE_mapping[0].keys()  # is this just using the first set of mappings to get original cluster IDs?
     n_boots = SSE_mapping.keys()
     matched_clusters = {}
 
     for cluster_id in cluster_ids:
         matched_ids = []
-        for n_boot in n_boots: # for every shuffle iteration, collect the matched ID for each original cluster id
+        for n_boot in n_boots:  # for every shuffle iteration, collect the matched ID for each original cluster id
             matched_id = SSE_mapping[n_boot][cluster_id]
             matched_ids.append(matched_id)
-        matched_clusters[cluster_id] = matched_ids # list of all matched IDs for each original cluster
+        matched_clusters[cluster_id] = matched_ids  # list of all matched IDs for each original cluster
     return matched_clusters
 
 
 def get_cluster_size_variance(SSE_mapping, cluster_df_shuffled, normalize=False):
     cluster_ids = SSE_mapping[0].keys()
-    matched_ids = get_matched_cluster_labels(SSE_mapping) # gets list of all matched IDs across shuffle iterations for each original cluster
+    matched_ids = get_matched_cluster_labels(SSE_mapping)  # gets list of all matched IDs across shuffle iterations for each original cluster
 
     # cluster_df_shuffled is a dictionary with the cluster labels for each shuffle iteration
     n_boots = cluster_df_shuffled.keys()
@@ -2286,11 +2285,11 @@ def get_matched_clusters_means_dict(SSE_mapping, mean_dropout_scores_unstacked, 
         all_matched_cluster_df = all_matched_cluster_df.reset_index().rename(columns={'index': 'regressor'})
 
         # create dummy df for unmatched clusters
-        if cluster_id == 1: # is this a typo? should it be -1 for unmatched clusters?
+        if cluster_id == 1:  # is this a typo? should it be -1 for unmatched clusters?
             dummy_df = all_matched_cluster_df.groupby('regressor').mean().copy()
             dummy_df[dummy_df > 0] = 0
         # compute metrics
-        if len(all_matched_cluster_df) >= 4: # must be at least 4 matched clusters
+        if len(all_matched_cluster_df) >= 4:  # must be at least 4 matched clusters
             if metric == 'mean':
                 all_clusters_means_dict[cluster_id] = all_matched_cluster_df.groupby('regressor').mean()
             elif metric == 'std':
