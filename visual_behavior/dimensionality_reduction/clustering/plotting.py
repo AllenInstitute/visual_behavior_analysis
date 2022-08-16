@@ -727,7 +727,7 @@ def plot_average_dropout_heatmap_for_cre_lines(dropouts, cluster_meta, save_dir=
     if suptitle is not None:
         plt.suptitle(suptitle, x=0.5, y=1.3)
     if save_dir:
-        utils.save_figure(fig, figsize, save_dir, folder, 'average_dropout_heatmaps'+suffix)
+        utils.save_figure(fig, figsize, save_dir, folder, 'average_dropout_heatmaps' + suffix)
 
 
 def plot_std_dropout_heatmap_for_cre_lines(dropouts, cluster_meta, save_dir=None, folder=None):
@@ -1574,7 +1574,7 @@ def plot_population_average_response_for_cluster(cluster_mdf, cre_line, cluster_
 
 
 def plot_clusters_row(cluster_meta, feature_matrix, cre_line,
-                      sort_order=None, save_dir=None, folder=None, suffix='', formats=['.png', '.pdf']):
+                      sort_order=None, rename_clusters=False, save_dir=None, folder=None, suffix='', formats=['.png', '.pdf']):
     """
     For each cluster in a given cre_line, plots dropout heatmaps, fraction cells per area/depth relative to chance,
     fraction cells per cluster per area/depth, and population average omission response.
@@ -1584,6 +1584,7 @@ def plot_clusters_row(cluster_meta, feature_matrix, cre_line,
     :param feature_matrix: dropout scores for matched cells with experience levels x features as cols, cells as rows
     :param cre_line: cre line to plot for
     :param sort_order: dictionary with cre_lines as keys, sorted cluster_ids as values
+    :param rename_clusters: bool, if clusters ids are not sorted by their size, use sort order to rename cluster ids
     :param save_dir: directory to save plot to
     :param folder: folder within save_dir to save plot to
     :param suffix: string to be appended to end of filename
@@ -1593,7 +1594,14 @@ def plot_clusters_row(cluster_meta, feature_matrix, cre_line,
     cluster_ids = np.sort(cluster_meta[cluster_meta.cre_line == cre_line].cluster_id.unique())
     # if order to sort clusters is provided, use it
     if sort_order:
-        cluster_ids = sort_order[cre_line]
+        if rename_clusters is False:
+            cluster_ids = sort_order[cre_line]
+        else:
+            cluster_remap = {}
+            for new_id, old_id in enumerate(sort_order[cre_line]):
+                cluster_remap[old_id] = new_id + 1
+            cluster_meta['cluster_id'].replace(cluster_remap, inplace=True)
+
     n_clusters = len(cluster_ids)
 
     n_rows = 1
@@ -2672,7 +2680,7 @@ def plot_cluster_size_and_probability_for_cluster(cluster_size_df, shuffle_proba
     color2 = 'steelblue'
 
     ax = sns.barplot(data=cluster_size_df[cluster_size_df['cluster_id'] == cluster_id], x='cluster_id',
-                        y='cluster_size_diff', color=color1, ax=ax)
+                     y='cluster_size_diff', color=color1, ax=ax)
     ax.axhline(0, color='gray')
     ax.set_xlabel('')
     ax.set_ylim([-0.5, 0.5])
