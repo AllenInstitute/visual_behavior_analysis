@@ -2688,10 +2688,10 @@ def plot_cluster_size_and_probability_for_cluster(cluster_size_df, shuffle_proba
     ax.set_xticklabels('', fontsize=12)
     ax.set_yticklabels(ax.get_yticklabels(), fontsize=12)
     ax.set_title(f'cluster {cluster_id}')
-    ax.spines['top'].set_visible(False)
-    ax.spines['bottom'].set_visible(False)
-    ax.spines['left'].set_visible(False)
-    ax.spines['right'].set_visible(False)
+    # ax.spines['top'].set_visible(False)
+    # ax.spines['bottom'].set_visible(False)
+    # ax.spines['left'].set_visible(False)
+    # ax.spines['right'].set_visible(False)
 
     ax.set_ylabel('size diff.', color=color1, fontsize=12)
     ax.set_yticklabels(np.round(ax.get_yticks(), 1), color=color1, fontsize=12)
@@ -2738,6 +2738,7 @@ def plot_cluster_size_and_probability(cluster_size_df, shuffle_probability_df, c
         ax[i] = plot_cluster_size_and_probability_for_cluster(cluster_size_df, shuffle_probability_df, cluster_id, ax=ax[i])
 
     fig.subplots_adjust(hspace=1.2, wspace=0.6)
+    plt.suptitle(cre_line, x=0.52, y=1.15)
     if save_dir:
         utils.save_figure(fig, figsize, save_dir, folder,
                           f'{shuffle_type}_prob_size' + cre_line[:3]  )
