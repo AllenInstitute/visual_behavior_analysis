@@ -1924,8 +1924,8 @@ def get_n_clusters_cre():
                       'Vip-IRES-Cre': 10}
     return n_clusters_cre
 
-# shuffle control functions #############
 
+# shuffle control functions #############
 
 def get_cluster_mapping(matrix, threshold=1, ):
     '''
