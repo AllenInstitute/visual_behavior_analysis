@@ -49,6 +49,41 @@ def get_experience_levels():
     return experience_levels
 
 
+def get_new_experience_levels():
+    experience_levels = ['Familiar', 'Novel', 'Novel +']
+    return experience_levels
+
+
+def convert_experience_level(experience_level):
+    if experience_level == 'Novel 1':
+        new_experience_level = 'Novel'
+    elif experience_level == 'Novel >1':
+        new_experience_level = 'Novel +'
+    elif experience_level == 'Familiar':
+        new_experience_level = experience_level
+    return new_experience_level
+
+
+def get_cre_lines():
+    cre_lines = ['Slc17a7-IRES2-Cre', 'Sst-IRES-Cre', 'Vip-IRES-Cre']
+    return cre_lines
+
+
+def get_cell_types():
+    cell_types = ['Excitatory', 'Sst Inhibitory', 'Vip Inhibitory']
+    return cell_types
+
+
+def convert_cre_line_to_cell_type(cre_line):
+    if cre_line == 'Slc17a7-IRES2-Cre':
+        cell_type = 'Excitatory'
+    elif cre_line == 'Sst-IRES-Cre':
+        cell_type = 'Sst Inhibitory'
+    elif cre_line == 'Vip-IRES-Cre':
+        cell_type = 'Vip Inhibitory'
+    return cell_type
+
+
 def get_experience_level_colors():
     """
     get color map corresponding to Familiar, Novel 1 and Novel >1
@@ -193,6 +228,7 @@ def get_session_type_color_map():
         'OPHYS_5_images_B_passive': colors[4, :],
         'OPHYS_6_images_B': colors[5, :],
 
+        'OPHYS_0_images_B_habituation': lighter(colors[0, :], 0.8),
         'OPHYS_1_images_B': colors[3, :],
         'OPHYS_2_images_B_passive': colors[4, :],
         'OPHYS_3_images_B': colors[5, :],

@@ -17,7 +17,7 @@ from visual_behavior.ophys.response_analysis.response_analysis import ResponseAn
 
 # formatting
 sns.set_context('notebook', font_scale=1.5, rc={'lines.markeredgewidth': 2})
-sns.set_style('white', {'axes.spines.right': False, 'axes.spines.top': False})
+sns.set_style('white', {'axes.spines.top': False, 'axes.spines.right': False}) # ticks or white
 sns.set_palette('deep')
 
 
@@ -119,11 +119,13 @@ def plot_population_averages_for_conditions(multi_session_df, data_type, event_t
         xlabel = 'time (s)'
 
     if hue_column == 'experience_level':
-        hue_conditions = ['Familiar', 'Novel 1', 'Novel >1']
+        # hue_conditions = ['Familiar', 'Novel 1', 'Novel >1']
+        hue_conditions = np.sort(sdf[hue_column].unique())
     else:
         hue_conditions = np.sort(sdf[hue_column].unique())
     if axes_column == 'experience_level':
-        axes_conditions = ['Familiar', 'Novel 1', 'Novel >1']
+        # axes_conditions = ['Familiar', 'Novel 1', 'Novel >1']
+        axes_conditions = np.sort(sdf[axes_column].unique())
     else:
         axes_conditions = np.sort(sdf[axes_column].unique())[::-1]
     # if there is only one axis condition, set n conditions for plotting to 2 so it can still iterate
@@ -196,7 +198,8 @@ def plot_population_averages_for_conditions(multi_session_df, data_type, event_t
     return ax
 
 
-def plot_population_averages_for_cell_types_across_experience(multi_session_df, xlim_seconds=[-1.25, 1.5], xlabel='time (s)', ylabel='population\nresponse',
+def plot_population_averages_for_cell_types_across_experience(multi_session_df, xlim_seconds=[-1.25, 1.5], xlabel='time (s)',
+                                                              ylabel='population average',
                                                               data_type='events', event_type='changes', interval_sec=1,
                                                               save_dir=None, folder=None, suffix=None, ax=None):
     # get important information
@@ -254,6 +257,37 @@ def plot_population_averages_for_cell_types_across_experience(multi_session_df, 
 
     if save_dir:
         fig_title = 'population_average_cell_types_exp_levels' + suffix
+        utils.save_figure(fig, figsize, save_dir, folder, fig_title, formats=['.png', '.pdf'])
+
+    return ax
+
+
+def plot_population_averages_across_experience(multi_session_df, xlim_seconds=[-1.25, 1.5], xlabel='time (s)', ylabel='population\nresponse',
+                                                              data_type='events', event_type='changes', interval_sec=1,
+                                                              save_dir=None, folder=None, suffix=None, ax=None):
+    # get important information
+    experiments_table = loading.get_platform_paper_experiment_table()
+    cell_types = np.sort(experiments_table.cell_type.unique())
+    palette = utilities.get_experience_level_colors()
+
+    # define plot axes
+    axes_column = 'experience_level'
+    hue_column = 'experience_level'
+
+    if ax is None:
+        figsize = (12, 3)
+        fig, ax = plt.subplots(1, 3, figsize=figsize, sharey=True, sharex=True)
+        ax = ax.ravel()
+
+    df = multi_session_df.copy()
+    ax = plot_population_averages_for_conditions(df, data_type, event_type,
+                                                        axes_column, hue_column, horizontal=True,
+                                                        xlim_seconds=xlim_seconds, interval_sec=interval_sec,
+                                                        palette=palette, ax=ax)
+    ax[0].set_ylabel(ylabel)
+
+    if save_dir:
+        fig_title = 'population_average_exp_levels' + suffix
         utils.save_figure(fig, figsize, save_dir, folder, fig_title, formats=['.png', '.pdf'])
 
     return ax
@@ -568,20 +602,26 @@ def test_significant_dropout_averages(data, metric):
     import statsmodels.stats.multicomp as mc
 
     data = data[~data[metric].isnull()].copy()
-    anova = stats.f_oneway(
-        data.query('experience_level == "Familiar"')[metric],
-        data.query('experience_level == "Novel >1"')[metric],
-        data.query('experience_level == "Novel 1"')[metric]
-    )
+    if 'Novel +' in data.experience_level.unique():
+        anova = stats.f_oneway(
+            data.query('experience_level == "Familiar"')[metric],
+            data.query('experience_level == "Novel"')[metric],
+            data.query('experience_level == "Novel +"')[metric])
+        mapper = {'Familiar': 0, 'Novel': 1, 'Novel +': 2, }
+
+
+    else:
+        anova = stats.f_oneway(
+            data.query('experience_level == "Familiar"')[metric],
+            data.query('experience_level == "Novel >1"')[metric],
+            data.query('experience_level == "Novel 1"')[metric])
+        mapper = {'Familiar': 0, 'Novel 1': 1, 'Novel >1': 2,}
+
     comp = mc.MultiComparison(data[metric], data['experience_level'])
     post_hoc_res = comp.tukeyhsd()
     tukey_table = pd.read_html(post_hoc_res.summary().as_html(), header=0, index_col=0)[0]
     tukey_table = tukey_table.reset_index()
-    mapper = {
-        'Familiar': 0,
-        'Novel 1': 1,
-        'Novel >1': 2,
-    }
+
     tukey_table['x1'] = [mapper[str(x)] for x in tukey_table['group1']]
     tukey_table['x2'] = [mapper[str(x)] for x in tukey_table['group2']]
     tukey_table['one_way_anova_p_val'] = anova[1]
@@ -634,6 +674,123 @@ def add_experience_level_stats(data, metric, colors, ax, ymax=None):
     return ax, tukey
 
 
+def plot_metric_distribution_by_experience_no_cell_type(metrics_table, metric, event_type, hue=None, stripplot=False, pointplot=False,
+                                           add_zero_line=False, ylabel=None, ylims=None, save_dir=None, ax=None, suffix=''):
+    """
+    plot metric distribution across experience levels in metrics_table, with stats across experience levels
+    if hue is provided, plots will be split by hue column and stats will be done on hue column differences instead of across experience levels
+    plots boxplot by default, can add stripplot (if no hue is provided) or use pointplot instead
+
+    metrics_table: cell metrics table, each row is one cell_specimen_id in one ophys_experiment_id
+    metric: column in metrics_table containing metric values, metrics will be plotted using experience level colors unless a hue is provided
+    hue: column in metrics_table to split metric values by for plotting (ex: 'targeted_structure')
+                plots using hue will have 'gray' as palette
+    stripplot: Bool, if True, plots each individual cell as swarmplot along with boxplot
+                only works when no hue is provided
+                if cell_type is 'Excitatory', only shows 25% of cells due to high density
+    pointplot: Bool, if True, will use pointplot instead of boxplot and/or stripplot
+    ylims: yaxis limits to use; if None, will use +/-1
+    save_dir: directory to save to. if None, plot will not be saved
+    ax: axes to plot figures on
+    """
+    data = metrics_table.copy()
+    experience_levels = utils.get_experience_levels()
+    new_experience_levels = utils.get_new_experience_levels()
+
+    if hue:
+        if hue == 'targeted_structure':
+            hue_order = np.sort(metrics_table[hue].unique())[::-1]
+        else:
+            hue_order = np.sort(metrics_table[hue].unique())[::-1]
+        suffix = '_' + hue + '_' + suffix
+    else:
+        suffix = '_experience_level' + '_' + suffix
+    if (ylims is None) and ('modulation_index' in metric):
+        ylims = (-1.1, 1.1)
+        ymin = ylims[0]
+        ymax = ylims[1]
+        # loc = 'lower right'
+    elif (ylims is None) and ('response' in metric):
+        ymin = 0
+        ymax = None
+        # loc = 'upper left'
+    elif ylims is None:
+        print('please provide ylims')
+        ymin = 0
+        ymax = None
+        # loc = 'upper left'
+    else:
+        ymin = ylims[0]
+        ymax = ylims[1]
+        # loc = 'upper left'
+    order = np.sort(metrics_table['experience_level'].unique())
+    colors = utils.get_experience_level_colors()
+    if ax is None:
+        figsize = (2, 3)
+        fig, ax = plt.subplots(1, 1, figsize=figsize)
+    # stats dataframe to save
+    tukey = pd.DataFrame()
+    ct_data = data.copy()
+    if hue:
+        if pointplot:
+            ax = sns.pointplot(data=ct_data, y=metric, x='experience_level', order=order, dodge=0.3, join=False,
+                                  hue=hue, hue_order=hue_order, palette='gray', ax=ax, zorder=10 ** 10)
+        else:
+            ax = sns.boxplot(data=ct_data, y=metric, x='experience_level', order=order,
+                                width=0.4, hue=hue, hue_order=hue_order, palette='gray', ax=ax, zorder=10 ** 10)
+        ax.legend(fontsize='xx-small', title='')  # , loc=loc)  # bbox_to_anchor=(1,1))
+        if ylims:
+            ax.set_ylim(ylims)
+            # TBD add area or depth comparison stats / stats across hue variable
+    else:
+        if pointplot:
+            ax = sns.pointplot(data=ct_data, x='experience_level', y=metric,
+                                  palette=colors, ax=ax, zorder=10 ** 10)
+        else:
+            ax = sns.boxplot(data=ct_data, x='experience_level', y=metric, width=0.4,
+                                palette=colors, ax=ax, zorder=10 ** 10)
+        if stripplot:
+            ax = sns.boxplot(data=ct_data, x='experience_level', y=metric, width=0.4,
+                                color='white', ax=ax, zorder=10 ** 10)
+            # format to have black lines and transparent box face
+            plt.setp(ax.artists, edgecolor='k', facecolor=[0, 0, 0, 0], zorder=10 ** 10)
+            plt.setp(ax.lines, color='k', zorder=10 ** 10)
+            # add strip plot
+            ax = sns.stripplot(data=ct_data, size=3 , alpha=0.5, jitter=0.2,
+                                  x='experience_level', y=metric, palette=colors, ax=ax)
+        # add stats to plot if only looking at experience levels
+        ax, tukey_table = add_experience_level_stats(ct_data, metric, 'white', ax, ymax=ymax)
+        # aggregate stats
+        tukey_table['metric'] = metric
+        tukey = pd.concat([tukey, tukey_table])
+        ax.set_ylim(ymin=ymin)
+        ax.set_xlim(-0.5, len(order) - 0.5)
+
+        # add line at y=0
+        if add_zero_line:
+            ax.axhline(y=0, xmin=0, xmax=1, color='gray', linestyle='--')
+        ax.set_title('')
+        ax.set_xlabel('')
+        ax.set_xticklabels(new_experience_levels, rotation=90,)# ha='right')
+        if ylabel:
+            ax.set_ylabel(ylabel)
+        else:
+            ax.set_ylabel(metric)
+
+    fig.subplots_adjust(hspace=0.3)
+    if save_dir:
+        folder = 'metric_distributions'
+        filename = event_type + '_' + metric + '_distribution' + suffix
+        stats_filename = event_type + '_' + metric + '_stats' + suffix + '.csv'
+        utils.save_figure(fig, figsize, save_dir, folder, filename)
+        try:
+            print('saving_stats')
+            tukey.to_csv(os.path.join(save_dir, folder, stats_filename))
+        except BaseException:
+            print('STATS DID NOT SAVE FOR', metric, hue)
+    return ax
+
+
 def plot_metric_distribution_by_experience(metrics_table, metric, event_type, hue=None, stripplot=False, pointplot=False,
                                            add_zero_line=False, ylabel=None, ylims=None, save_dir=None, ax=None, suffix=''):
     """
@@ -654,7 +811,8 @@ def plot_metric_distribution_by_experience(metrics_table, metric, event_type, hu
     ax: axes to plot figures on
     """
     data = metrics_table.copy()
-    experience_levels = metrics_table.experience_level.unique()
+    experience_levels = utils.get_experience_levels()
+    new_experience_levels = utils.get_new_experience_levels()
 
     if hue:
         if hue == 'targeted_structure':
@@ -669,7 +827,7 @@ def plot_metric_distribution_by_experience(metrics_table, metric, event_type, hu
         ymin = ylims[0]
         ymax = ylims[1]
         # loc = 'lower right'
-    elif (ylims is None) and (metric == 'mean_response'):
+    elif (ylims is None) and ('response' in metric):
         ymin = 0
         ymax = None
         # loc = 'upper left'
@@ -689,7 +847,7 @@ def plot_metric_distribution_by_experience(metrics_table, metric, event_type, hu
         fig, ax = plt.subplots(3, 1, figsize=figsize, sharex=True, sharey=False)
     # stats dataframe to save
     tukey = pd.DataFrame()
-    cell_types = np.sort(metrics_table['cell_type'].unique())
+    cell_types = utils.get_cell_types()
     for i, cell_type in enumerate(cell_types):
         ct_data = data[data.cell_type == cell_type]
         if hue:
@@ -740,9 +898,10 @@ def plot_metric_distribution_by_experience(metrics_table, metric, event_type, hu
         # add line at y=0
         if add_zero_line:
             ax[i].axhline(y=0, xmin=0, xmax=1, color='gray', linestyle='--')
-        ax[i].set_title(cell_type)
+        # ax[i].set_title(cell_type)
+        ax[i].set_title('')
         ax[i].set_xlabel('')
-        ax[i].set_xticklabels(experience_levels, rotation=45, ha='right')
+        ax[i].set_xticklabels(new_experience_levels, rotation=90,)# ha='right')
         if ylabel:
             ax[i].set_ylabel(ylabel)
         else:
@@ -788,24 +947,30 @@ def plot_metric_distribution_all_conditions(metrics_table, metric, event_type, y
                                                ylabel=ylabel, ylims=ylims, save_dir=save_dir, ax=None)
 
     # full dataset, for each area and depth
-    plot_metric_distribution_by_experience(metrics_table, metric, stripplot=False, pointplot=True, add_zero_line=add_zero_line,
-                                           event_type=event_type, hue='targeted_structure', ylabel=ylabel, ylims=ylims, save_dir=save_dir, ax=None)
+    if ('running' in event_type) or ('pupil' in event_type) or ('lick' in event_type):
+        # doesnt make sense to look across area and depth for behavior metrics which are only for one session
+        pass
+    else:
+        # only look at VisualBehaviorMultiscope for area depth comparisons
+        data = metrics_table[metrics_table.project_code=='VisualBehaviorMultiscope']
+        plot_metric_distribution_by_experience(data, metric, stripplot=False, pointplot=True, add_zero_line=add_zero_line,
+                                               event_type=event_type, hue='targeted_structure', ylabel=ylabel, ylims=ylims, save_dir=save_dir, ax=None)
 
-    plot_metric_distribution_by_experience(metrics_table, metric, stripplot=False, pointplot=True, add_zero_line=add_zero_line,
-                                           event_type=event_type, hue='layer', ylabel=ylabel, ylims=ylims, save_dir=save_dir, ax=None)
+        plot_metric_distribution_by_experience(data, metric, stripplot=False, pointplot=True, add_zero_line=add_zero_line,
+                                               event_type=event_type, hue='layer', ylabel=ylabel, ylims=ylims, save_dir=save_dir, ax=None)
 
-    # per project code, for each area and depth
-    for project_code in metrics_table.project_code.unique():
-        df = metrics_table[metrics_table.project_code == project_code]
+        # per project code, for each area and depth
+        for project_code in metrics_table.project_code.unique():
+            df = metrics_table[metrics_table.project_code == project_code]
 
-        plot_metric_distribution_by_experience(df, metric, stripplot=False, pointplot=True, event_type=event_type,
-                                               suffix=project_code, add_zero_line=add_zero_line,
-                                               hue='targeted_structure', ylabel=ylabel, ylims=ylims,
-                                               save_dir=save_dir, ax=None)
+            plot_metric_distribution_by_experience(df, metric, stripplot=False, pointplot=True, event_type=event_type,
+                                                   suffix=project_code, add_zero_line=add_zero_line,
+                                                   hue='targeted_structure', ylabel=ylabel, ylims=ylims,
+                                                   save_dir=save_dir, ax=None)
 
-        plot_metric_distribution_by_experience(df, metric, stripplot=False, pointplot=True, event_type=event_type,
-                                               suffix=project_code, add_zero_line=add_zero_line,
-                                               hue='layer', ylabel=ylabel, ylims=ylims, save_dir=save_dir, ax=None)
+            plot_metric_distribution_by_experience(df, metric, stripplot=False, pointplot=True, event_type=event_type,
+                                                   suffix=project_code, add_zero_line=add_zero_line,
+                                                   hue='layer', ylabel=ylabel, ylims=ylims, save_dir=save_dir, ax=None)
 
 
 def plot_experience_modulation_index(metric_data, event_type, save_dir=None):
@@ -1471,7 +1636,7 @@ def plot_matched_roi_and_traces_example(cell_metadata, include_omissions=True,
     else:
         n_cols = n_expts + 1
 
-    experience_levels = ['Familiar', 'Novel 1', 'Novel >1']
+    experience_levels = utils.get_experience_levels()
     colors = utils.get_experience_level_colors()
 
     figsize = (3 * n_cols, 3)

@@ -460,6 +460,42 @@ def plot_coclustering_matrix_sorted_by_cluster_size(coclustering_matrices, clust
     return ax
 
 
+def plot_affinity_matrix(feature_matrix, cluster_meta, cre_line, n_clusters_cre, save_dir=None, folder=None, ax=None):
+    """
+    plot affinity matrix from spectral clustering of dropout scores
+    """
+
+    from sklearn.cluster import SpectralClustering
+
+    sc = SpectralClustering()
+
+    n_clusters = n_clusters_cre[cre_line]
+    cell_specimen_ids = cluster_meta[cluster_meta.cre_line==cre_line].index.unique()
+    X = feature_matrix.loc[cell_specimen_ids].copy()
+
+    sc.n_clusters = n_clusters
+    x = sc.fit(X.values)
+
+    sort_order = np.argsort(x.labels_)
+    affinity = pd.DataFrame(x.affinity_matrix_)
+    affinity = affinity.loc[sort_order]
+    affinity = affinity[sort_order]
+
+    if ax is None:
+        fig, ax = plt.subplots(figsize=(5,5))
+    ax = sns.heatmap(affinity, square=True, cmap='Greys', vmin=0, vmax=1, cbar_kws={'label':'similarity', 'shrink':0.7}, ax=ax)
+    ax.set_xticks((0, len(affinity)))
+    ax.set_xticklabels([])
+    ax.set_yticks((0, len(affinity)))
+    ax.set_yticklabels((0, len(affinity)))
+    ax.set_ylabel('cells')
+    ax.set_title(processing.get_cell_type_for_cre_line(cre_line, cluster_meta)+'\naffinity matrix')
+
+    if save_dir:
+        utils.save_figure(fig, figsize, save_dir, folder, 'affinity_matrix_' + cre_line)
+    return ax
+
+
 def plot_umap_for_clusters(cluster_meta, feature_matrix, label_col='cluster_id', save_dir=None, folder=None):
     """
     plots umap for each cre line, colorized by metadata column provided as label_col
@@ -720,6 +756,7 @@ def plot_average_dropout_heatmap_for_cre_lines(dropouts, cluster_meta, save_dir=
         mean_dropouts = dropouts_meta[dropouts_meta.cre_line == cre_line].groupby('experience_level').mean()[processing.get_features_for_clustering()]
         ax[i] = sns.heatmap(mean_dropouts.T, cmap='Blues', vmin=0, vmax=0.5, ax=ax[i], cbar_kws={'shrink': 0.7, 'label': 'coding score'})
         ax[i].set_title(get_cell_type_for_cre_line(cre_line, cluster_meta))
+        ax[i].set_ylim(0, 4)
         ax[i].set_ylim(0, 4)
         ax[i].set_xlabel('')
         ax[i].invert_yaxis()
@@ -2679,38 +2716,43 @@ def plot_cluster_size_and_probability_for_cluster(cluster_size_df, shuffle_proba
     color1 = 'gray'
     color2 = 'steelblue'
 
-    ax = sns.barplot(data=cluster_size_df[cluster_size_df['cluster_id'] == cluster_id], x='cluster_id',
-                     y='cluster_size_diff', color=color1, ax=ax)
-    ax.axhline(0, color='gray')
+    # plot probability first
+
+    ax = sns.pointplot(data=shuffle_probability_df[shuffle_probability_df['cluster_id'] == cluster_id],
+                        x='cluster_id', y='probability', ax=ax, color=color2, linestyles='', fontsize=12)
     ax.set_xlabel('')
-    ax.set_ylim([-0.5, 0.5])
-    ax.set_xlim([-1, 1])
-    ax.set_xticklabels('', fontsize=12)
-    ax.set_yticklabels(ax.get_yticklabels(), fontsize=12)
-    ax.set_title(f'cluster {cluster_id}')
-    # ax.spines['top'].set_visible(False)
-    # ax.spines['bottom'].set_visible(False)
-    # ax.spines['left'].set_visible(False)
-    # ax.spines['right'].set_visible(False)
+    ax.set_ylabel('')
+    ax.set_yticklabels('')
+    ax.set_ylim([-0.1, 1.1])
+    # ax.set_xticks([0.5, 0])
+    ax.set_xlim([-1,1])
+    ax.set_xticklabels('')
+    ax.spines['top'].set_visible(False)
+    ax.spines['bottom'].set_visible(False)
+    ax.set_yticklabels(np.round(ax.get_yticks(), 1), color=color2, fontsize=12)
+    ax.set_ylabel('probability', color=color2, fontsize=12)
 
-    ax.set_ylabel('size diff.', color=color1, fontsize=12)
-    ax.set_yticklabels(np.round(ax.get_yticks(), 1), color=color1, fontsize=12)
-
-    # plot probability second
+    # plot size diff
     ax2 = ax.twinx()
-    ax2 = sns.pointplot(data=shuffle_probability_df[shuffle_probability_df['cluster_id'] == cluster_id],
-                        x='cluster_id', y='probability', ax=ax2, color=color2, linestyles='', fontsize=12)
+    ax2 = sns.barplot(data=cluster_size_df[cluster_size_df['cluster_id'] == cluster_id], x='cluster_id',
+                     y='cluster_size_diff', color=color1, ax=ax2)
+    ax2.axhline(0, color='gray')
     ax2.set_xlabel('')
-    ax2.set_ylabel('')
-    ax2.set_yticklabels('')
-    ax2.set_ylim([-0.1, 1.1])
-    ax2.set_xlim([- 1, 1])
-    ax2.set_xticklabels('')
+    ax2.set_ylim([-0.5, 0.5])
+    ax2.set_xlim([-1, 1])
+    # ax2.set_xticks([1, 0])
+    ax2.set_xticklabels('', fontsize=12)
+    ax2.set_yticklabels(ax.get_yticklabels(), fontsize=12)
+    # ax2.set_title(f'cluster {cluster_id}', fontsize=12)
     ax2.spines['top'].set_visible(False)
     ax2.spines['bottom'].set_visible(False)
+    # ax.spines['left'].set_visible(False)
+    # ax.spines['right'].set_visible(False)
+    ax2.set_ylabel('size vs. shuffle', color=color1, fontsize=12)
+    ax2.set_yticklabels(np.round(ax2.get_yticks(), 1), color=color1, fontsize=12)
 
-    ax2.set_yticklabels(np.round(ax2.get_yticks(), 1), color=color2, fontsize=12)
-    ax2.set_ylabel('probability', color=color2, fontsize=12)
+    ax.set_zorder(ax.get_zorder() + 1)
+    ax.patch.set_visible(False)
 
     return ax
 
