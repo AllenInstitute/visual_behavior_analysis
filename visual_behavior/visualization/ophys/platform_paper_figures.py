@@ -148,6 +148,7 @@ def plot_population_averages_for_conditions(multi_session_df, data_type, event_t
             # try:
             cdf = sdf[(sdf[axes_column] == axis) & (sdf[hue_column] == hue)]
             traces = cdf.mean_trace.values
+
             ax[i] = utils.plot_mean_trace(np.asarray(traces), timestamps, ylabel=ylabel,
                                           legend_label=hue, color=palette[c], interval_sec=interval_sec,
                                           xlim_seconds=xlim_seconds, ax=ax[i])
