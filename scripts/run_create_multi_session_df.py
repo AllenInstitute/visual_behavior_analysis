@@ -49,9 +49,8 @@ for project_code in experiments_table.project_code.unique():
             cpus_per_task=1,
             time='20:00:00',
             partition='braintv',
-            job_name='multi_session_df_'+project_code+'_'+mouse_id,
-            output=f'{stdout_location}/{Slurm.JOB_ARRAY_MASTER_ID}_{Slurm.JOB_ARRAY_ID}.out',
-        )
+            job_name='multi_session_df_'+project_code+'_'+str(mouse_id),
+            output=f'{stdout_location}/{Slurm.JOB_ARRAY_MASTER_ID}_{Slurm.JOB_ARRAY_ID}.out')
 
         slurm.sbatch(python_executable+' '+python_file+' --project_code '+str(project_code)+' --mouse_id'+' '+str(mouse_id))
 
