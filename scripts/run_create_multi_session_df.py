@@ -28,13 +28,15 @@ python_executable = "{}/anaconda2/envs/{}/bin/python".format(os.path.expanduser(
 stdout_location = r"/allen/programs/mindscope/workgroups/learning/ophys/cluster_jobs/multi_session_dfs"
 
 
-# cache = VisualBehaviorOphysProjectCache.from_lims()
-# experiments_table = cache.get_ophys_experiment_table(passed_only=False)
-# experiments_table = experiments_table[experiments_table.project_code=='LearningmFISHDevelopment']
-# experiments_table = experiments_table[experiments_table.session_type!='OPHYS_7_receptive_field_mapping']
+cache = VisualBehaviorOphysProjectCache.from_lims()
+experiments_table = cache.get_ophys_experiment_table(passed_only=False)
+experiments_table = experiments_table[experiments_table.project_code.isin(['LearningmFISHTask1A', 'LearningmFISHDevelopment',
+                                                                           'omFISHGad2Meso'])]
+experiments_table = experiments_table[experiments_table.session_type.isin(['STAGE_0', 'STAGE_1',
+                                                                           'OPHYS_7_receptive_field_mapping'])==False]
 
-experiments_table = loading.get_filtered_ophys_experiment_table()
-experiments_table = experiments_table[experiments_table.project_code=='LearningmFISHTask1A']
+# experiments_table = loading.get_filtered_ophys_experiment_table()
+# experiments_table = experiments_table[experiments_table.project_code=='LearningmFISHTask1A']
 
 # call the `sbatch` command to run the jobs.
 for project_code in experiments_table.project_code.unique():
