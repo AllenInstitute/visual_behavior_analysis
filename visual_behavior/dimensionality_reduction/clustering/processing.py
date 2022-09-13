@@ -2162,7 +2162,7 @@ def get_matched_cluster_labels(SSE_mapping):
     return matched_clusters
 
 
-def get_cluster_size_variance(SSE_mapping, cluster_df_shuffled, normalize=False):
+def get_cluster_size_variance(SSE_mapping, cluster_df_shuffled, normalize=False, use_nan=False):
     cluster_ids = SSE_mapping[0].keys()
     matched_ids = get_matched_cluster_labels(SSE_mapping)  # gets list of all matched IDs across shuffle iterations for each original cluster
 
@@ -2183,7 +2183,10 @@ def get_cluster_size_variance(SSE_mapping, cluster_df_shuffled, normalize=False)
                 # get number of cells per cluster for the cluster IDs in the shuffles using the matched ID for THIS shuffle iteration
                 cluster_sizes.append(shuffled_cluster_sizes_this_boot[matched_id_this_boot])
             else:
-                cluster_sizes.append(np.nan)
+                if use_nan is True:
+                    cluster_sizes.append(np.nan)
+                elif use_nan is False:
+                    cluster_sizes.append(0)
 
         # aggregate matched cluster sizes acoss iterations for each original cluster ID
         all_cluster_sizes[original_cluster_id] = cluster_sizes
