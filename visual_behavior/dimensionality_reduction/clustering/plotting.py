@@ -2706,6 +2706,64 @@ def plot_cluster_proportions_treemaps(location_fractions, cluster_meta, color_co
 
 
 # plot cluster sizes
+def plot_cluster_size_for_cluster(cluster_size_df,  cluster_id, ax=None):
+    if ax is None:
+        fig, ax = plt.subplots()
+
+    color1 = 'gray'
+
+    ax.spines['top'].set_visible(False)
+    ax.spines['bottom'].set_visible(False)
+    ax.spines['left'].set_visible(False)
+    # plot size diff
+    ax = sns.barplot(data=cluster_size_df[cluster_size_df['cluster_id'] == cluster_id], x='cluster_id',
+                      y='cluster_size_diff', color=color1, ax=ax)
+    ax.axhline(0, color='gray')
+    ax.set_xlabel('')
+    ax.set_ylim([-0.4, 1])
+    ax.set_xlim([-1, 1])
+    ax.set_xticklabels('', fontsize=12)
+    ax.set_yticklabels(ax.get_yticklabels(), fontsize=12)
+    # ax.set_title(f'cluster {cluster_id}', fontsize=12)
+    ax.spines['top'].set_visible(False)
+    ax.spines['bottom'].set_visible(False)
+    ax.set_ylabel('size vs. shuffle', color=color1, fontsize=12)
+    ax.set_yticklabels(np.round(ax.get_yticks(), 1), color=color1, fontsize=12)
+
+    ax.set_zorder(ax.get_zorder() + 1)
+    ax.patch.set_visible(False)
+
+    return ax
+
+
+def plot_cluster_size(cluster_size_df,  cre_line=None, shuffle_type=None,
+                                      ax=None, figsize=None, save_dir=None, folder=None):
+    if cre_line is not None:
+        if isinstance(cre_line, str):
+            cluster_size_df = cluster_size_df[cluster_size_df.cre_line == cre_line]
+
+    # select which shuffle type to plot
+    if shuffle_type is not None:
+        cluster_size_df = cluster_size_df[cluster_size_df.shuffle_type == shuffle_type]
+    cluster_ids = cluster_size_df.cluster_id.unique()
+    if figsize is None:
+        figsize = (3.5 * len(cluster_ids), 2)
+    if ax is None:
+        fig, ax = plt.subplots(1, len(cluster_ids), figsize=figsize, sharey='row')
+        ax = ax.ravel()
+
+    # plot cluster size first
+    for i, cluster_id in enumerate(cluster_ids):
+        ax[i] = plot_cluster_size_for_cluster(cluster_size_df, cluster_id, ax=ax[i])
+
+    fig.subplots_adjust(hspace=1.2, wspace=0.6)
+    plt.suptitle(cre_line, x=0.52, y=1.15)
+    if save_dir:
+        utils.save_figure(fig, figsize, save_dir, folder,
+                          f'{shuffle_type}_size_barplot' + cre_line[:3]  )
+
+    return ax
+
 
 def plot_cluster_size_and_probability_for_cluster(cluster_size_df, shuffle_probability_df, cluster_id, ax=None):
 
@@ -2729,6 +2787,7 @@ def plot_cluster_size_and_probability_for_cluster(cluster_size_df, shuffle_proba
     ax.set_xticklabels('')
     ax.spines['top'].set_visible(False)
     ax.spines['bottom'].set_visible(False)
+
     ax.set_yticklabels(np.round(ax.get_yticks(), 1), color=color2, fontsize=12)
     ax.set_ylabel('probability', color=color2, fontsize=12)
 
@@ -2738,7 +2797,7 @@ def plot_cluster_size_and_probability_for_cluster(cluster_size_df, shuffle_proba
                      y='cluster_size_diff', color=color1, ax=ax2)
     ax2.axhline(0, color='gray')
     ax2.set_xlabel('')
-    ax2.set_ylim([-0.5, 0.5])
+    ax2.set_ylim([-0.4, 1])
     ax2.set_xlim([-1, 1])
     # ax2.set_xticks([1, 0])
     ax2.set_xticklabels('', fontsize=12)
@@ -2922,3 +2981,8 @@ def plot_unraveled_clusters(feature_matrix, cluster_df, sort_order=None, cre_lin
     fig.subplots_adjust(wspace=0.5)
     if save_dir is not None:
         utils.save_figure(fig, figsize, save_dir, folder, f'feature_matrix_sorted_by_cluster_id_{tag}')
+
+# statistics plots
+
+def plot_cluster_size_statistics():
+    return 10
