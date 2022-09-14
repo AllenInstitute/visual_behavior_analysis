@@ -2073,7 +2073,7 @@ def get_sorted_cluster_ids(cluster_df):
 
 def get_cluster_size_differece_df(cre_original_cluster_sizes, shuffle_type_cluster_sizes, cre_line=None,
                                   columns=['cre_line', 'cluster_id', 'shuffle_type', 'n_boot', 'cluster_size_diff'],
-                                  normalize=True):
+                                  normalize=True,):
     ''' in long format, either normalized or not normalized difference of shuffled clusters and original clusters.
     This function is not finished but it works for now.
 
@@ -2162,7 +2162,7 @@ def get_matched_cluster_labels(SSE_mapping):
     return matched_clusters
 
 
-def get_cluster_size_variance(SSE_mapping, cluster_df_shuffled, normalize=False, use_nan=False):
+def get_cluster_size_variance(SSE_mapping, cluster_df_shuffled, normalize=False, use_nan=False, adjust_to_observed_N = False):
     cluster_ids = SSE_mapping[0].keys()
     matched_ids = get_matched_cluster_labels(SSE_mapping)  # gets list of all matched IDs across shuffle iterations for each original cluster
 
@@ -2176,9 +2176,19 @@ def get_cluster_size_variance(SSE_mapping, cluster_df_shuffled, normalize=False,
             shuffled_cluster_sizes_this_boot = cluster_df_shuffled[n_boot].value_counts('cluster_id', normalize=normalize)
             # this will be a list of cluster IDs and their sizes for a single shuffle iteration
             # are these sizes being aggregated somehow???
-
+            #print(shuffled_cluster_sizes_this_boot)
             matched_id_this_boot = matched_ids[original_cluster_id][n_boot]
             # now get the size of the matched cluster in this iteration
+            if adjust_to_observed_N is True:
+                expected_N = shuffled_cluster_sizes_this_boot.sum()  # total number of cells used for clustering
+                matched_cluster_ids = np.array(list(SSE_mapping[n_boot].values())) # which ids where matched on this nboot
+                matched_cluster_ids = matched_cluster_ids[matched_cluster_ids>0] # exclude -1
+                observed_N = shuffled_cluster_sizes_this_boot.loc[matched_cluster_ids].sum() # compute sum of matched cluster sizes as observed N
+                cluster_proportions = shuffled_cluster_sizes_this_boot/ observed_N   # proportion of cells that ended up being matched
+                #print(observed_N)
+                shuffled_cluster_sizes_this_boot = cluster_proportions * expected_N  # adjust values to make sure sum observed = sum expected
+
+                #print(shuffled_cluster_sizes_this_boot)
             if matched_id_this_boot != -1:
                 # get number of cells per cluster for the cluster IDs in the shuffles using the matched ID for THIS shuffle iteration
                 cluster_sizes.append(shuffled_cluster_sizes_this_boot[matched_id_this_boot])
@@ -2187,6 +2197,7 @@ def get_cluster_size_variance(SSE_mapping, cluster_df_shuffled, normalize=False,
                     cluster_sizes.append(np.nan)
                 elif use_nan is False:
                     cluster_sizes.append(0)
+
 
         # aggregate matched cluster sizes acoss iterations for each original cluster ID
         all_cluster_sizes[original_cluster_id] = cluster_sizes
@@ -2387,3 +2398,7 @@ def get_corr_for_matched_clusters_dict(SSE_mapping, mean_shuffled_dropout_scores
             cluster_corr_dict[cluster_id] = [np.nan, np.nan]
 
     return cluster_corr_dict
+
+
+def get_cluster_size_statistics_df():
+    return 10
