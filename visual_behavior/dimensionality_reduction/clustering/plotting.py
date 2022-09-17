@@ -470,7 +470,7 @@ def plot_affinity_matrix(feature_matrix, cluster_meta, cre_line, n_clusters_cre,
     sc = SpectralClustering()
 
     n_clusters = n_clusters_cre[cre_line]
-    cell_specimen_ids = cluster_meta[cluster_meta.cre_line==cre_line].index.unique()
+    cell_specimen_ids = cluster_meta[cluster_meta.cre_line == cre_line].index.unique()
     X = feature_matrix.loc[cell_specimen_ids].copy()
 
     sc.n_clusters = n_clusters
@@ -480,16 +480,16 @@ def plot_affinity_matrix(feature_matrix, cluster_meta, cre_line, n_clusters_cre,
     affinity = pd.DataFrame(x.affinity_matrix_)
     affinity = affinity.loc[sort_order]
     affinity = affinity[sort_order]
-
+    figsize = (5, 5)
     if ax is None:
-        fig, ax = plt.subplots(figsize=(5,5))
-    ax = sns.heatmap(affinity, square=True, cmap='Greys', vmin=0, vmax=1, cbar_kws={'label':'similarity', 'shrink':0.7}, ax=ax)
+        fig, ax = plt.subplots(figsize=figsize)
+    ax = sns.heatmap(affinity, square=True, cmap='Greys', vmin=0, vmax=1, cbar_kws={'label': 'similarity', 'shrink': 0.7}, ax=ax)
     ax.set_xticks((0, len(affinity)))
     ax.set_xticklabels([])
     ax.set_yticks((0, len(affinity)))
     ax.set_yticklabels((0, len(affinity)))
     ax.set_ylabel('cells')
-    ax.set_title(processing.get_cell_type_for_cre_line(cre_line, cluster_meta)+'\naffinity matrix')
+    ax.set_title(processing.get_cell_type_for_cre_line(cre_line, cluster_meta) + '\naffinity matrix')
 
     if save_dir:
         utils.save_figure(fig, figsize, save_dir, folder, 'affinity_matrix_' + cre_line)
@@ -2706,18 +2706,39 @@ def plot_cluster_proportions_treemaps(location_fractions, cluster_meta, color_co
 
 
 # plot cluster sizes
-def plot_cluster_size_for_cluster(cluster_size_df,  cluster_id, ax=None):
+def plot_cluster_size_for_cluster(cluster_size_df, cluster_id, stats_table, ax=None):
     if ax is None:
         fig, ax = plt.subplots()
 
     color1 = 'gray'
 
     ax.spines['top'].set_visible(False)
-    ax.spines['bottom'].set_visible(False)
-    ax.spines['left'].set_visible(False)
+    ax.spines['right'].set_visible(False)
     # plot size diff
     ax = sns.barplot(data=cluster_size_df[cluster_size_df['cluster_id'] == cluster_id], x='cluster_id',
-                      y='cluster_size_diff', color=color1, ax=ax)
+                     y='cluster_size_diff', color=color1, ax=ax)
+    if stats_table is not None:
+        y = 1
+        if stats_table[stats_table.cluster_id == cluster_id]['significant'].values[0] == True:
+            color = 'DarkRed'
+            pvalue = round(stats_table[stats_table.cluster_id == cluster_id]['imq'].values[0], 4)
+            if pvalue < 0.001:
+                marker = r'***'
+                x = -0.25
+            elif pvalue < 0.01:
+                marker = r'**'
+                x = -0.2
+            elif pvalue <= 0.05:
+                marker = r'*'
+                x = -0.1
+
+        else:
+            x = -0.25
+            marker = r'n.s.'
+            color = 'Black'
+
+        ax.text(x, y, s=marker, fontsize=24, color=color )
+
     ax.axhline(0, color='gray')
     ax.set_xlabel('')
     ax.set_ylim([-0.4, 1])
@@ -2736,15 +2757,19 @@ def plot_cluster_size_for_cluster(cluster_size_df,  cluster_id, ax=None):
     return ax
 
 
-def plot_cluster_size(cluster_size_df,  cre_line=None, shuffle_type=None,
-                                      ax=None, figsize=None, save_dir=None, folder=None):
+def plot_cluster_size(cluster_size_df, cre_line=None, shuffle_type=None, stats_table=None,
+                      ax=None, figsize=None, save_dir=None, folder=None):
     if cre_line is not None:
         if isinstance(cre_line, str):
             cluster_size_df = cluster_size_df[cluster_size_df.cre_line == cre_line]
+        if stats_table is not None:
+            stats_table = stats_table[stats_table.cre_line == cre_line]
 
     # select which shuffle type to plot
     if shuffle_type is not None:
         cluster_size_df = cluster_size_df[cluster_size_df.shuffle_type == shuffle_type]
+        if stats_table is not None:
+            stats_table = stats_table[stats_table.shuffle_type == shuffle_type]
     cluster_ids = cluster_size_df.cluster_id.unique()
     if figsize is None:
         figsize = (3.5 * len(cluster_ids), 2)
@@ -2754,10 +2779,11 @@ def plot_cluster_size(cluster_size_df,  cre_line=None, shuffle_type=None,
 
     # plot cluster size first
     for i, cluster_id in enumerate(cluster_ids):
-        ax[i] = plot_cluster_size_for_cluster(cluster_size_df, cluster_id, ax=ax[i])
+        ax[i] = plot_cluster_size_for_cluster(cluster_size_df, cluster_id, stats_table=stats_table, ax=ax[i])
 
     fig.subplots_adjust(hspace=1.2, wspace=0.6)
-    plt.suptitle(cre_line, x=0.52, y=1.15)
+    plt.suptitle(processing.get_shuffle_label(shuffle_type), x=0.52, y=1.15)
+
     if save_dir:
         utils.save_figure(fig, figsize, save_dir, folder,
                           f'{shuffle_type}_size_barplot' + cre_line[:3]  )
@@ -2777,13 +2803,13 @@ def plot_cluster_size_and_probability_for_cluster(cluster_size_df, shuffle_proba
     # plot probability first
 
     ax = sns.pointplot(data=shuffle_probability_df[shuffle_probability_df['cluster_id'] == cluster_id],
-                        x='cluster_id', y='probability', ax=ax, color=color2, linestyles='', fontsize=12)
+                       x='cluster_id', y='probability', ax=ax, color=color2, linestyles='', fontsize=12)
     ax.set_xlabel('')
     ax.set_ylabel('')
     ax.set_yticklabels('')
     ax.set_ylim([-0.1, 1.1])
     # ax.set_xticks([0.5, 0])
-    ax.set_xlim([-1,1])
+    ax.set_xlim([-1, 1])
     ax.set_xticklabels('')
     ax.spines['top'].set_visible(False)
     ax.spines['bottom'].set_visible(False)
@@ -2794,7 +2820,7 @@ def plot_cluster_size_and_probability_for_cluster(cluster_size_df, shuffle_proba
     # plot size diff
     ax2 = ax.twinx()
     ax2 = sns.barplot(data=cluster_size_df[cluster_size_df['cluster_id'] == cluster_id], x='cluster_id',
-                     y='cluster_size_diff', color=color1, ax=ax2)
+                      y='cluster_size_diff', color=color1, ax=ax2)
     ax2.axhline(0, color='gray')
     ax2.set_xlabel('')
     ax2.set_ylim([-0.4, 1])
@@ -2983,6 +3009,7 @@ def plot_unraveled_clusters(feature_matrix, cluster_df, sort_order=None, cre_lin
         utils.save_figure(fig, figsize, save_dir, folder, f'feature_matrix_sorted_by_cluster_id_{tag}')
 
 # statistics plots
+
 
 def plot_cluster_size_statistics():
     return 10
