@@ -11,6 +11,7 @@ from scipy.stats import kruskal
 from scipy.stats import ttest_ind
 from scipy.stats import sem
 from scipy.sparse import csgraph
+from scipy.stats import chisquare
 
 from sklearn.metrics import silhouette_score
 from sklearn.metrics import pairwise_distances
@@ -20,6 +21,7 @@ import visual_behavior.data_access.loading as loading
 import visual_behavior.data_access.utilities as utilities
 
 import visual_behavior_glm.GLM_analysis_tools as gat
+import visual_behavior_glm.GLM_clustering as glm_clust
 import visual_behavior_glm.GLM_params as glm_params
 from statsmodels.stats.proportion import proportion_confint
 from statsmodels.stats.proportion import multinomial_proportions_confint
@@ -1136,6 +1138,45 @@ def get_cell_count_stats(cluster_meta, conditions_to_groupby=['targeted_structur
     return cell_count_stats
 
 
+# chi_squared test
+def get_stats_table(cre_original_cluster_sizes, shuffle_type_cluster_sizes, cre_lines=None,
+                    shuffle_types=None, test='chi_squared', add_hochberg_correction=True):
+    columns = ['shuffle_type', 'cre_line', 'cluster_id', 'cluster_size',
+               'shuffle_mean', test + '_pvalue', 'significant']
+    # create dataframe to collect stats
+    cluster_statistics_df = pd.DataFrame(columns=columns)
+
+    if shuffle_types is None:
+        shuffle_types = shuffle_type_cluster_sizes.keys()
+    if cre_lines is None:
+        cre_lines = shuffle_type_cluster_sizes[shuffle_types[0]].keys()
+
+    index = 0
+    for shuffle_type in shuffle_types:
+        for cre_line in cre_lines:
+            shuffle_clusters_df = pd.DataFrame(shuffle_type_cluster_sizes[shuffle_type][cre_line]).mean(axis=0)
+            # original cluster sizes
+            original_df = cre_original_cluster_sizes[cre_line]
+
+            for cluster_id in original_df.index:
+                f_observed = [shuffle_clusters_df.loc[cluster_id], original_df.sum() - shuffle_clusters_df.loc[cluster_id]]
+                f_expected = [original_df.loc[cluster_id], original_df.sum() - original_df.loc[cluster_id]]
+
+                out = chisquare(f_observed, f_expected)
+
+                data = [shuffle_type, cre_line, cluster_id, original_df.loc[cluster_id],
+                        shuffle_clusters_df.loc[cluster_id], out.pvalue, out.pvalue <= 0.05]
+
+                for c, column in columns:
+                    cluster_statistics_df.at[index, column] = data[c]
+                    index = index + 1
+
+    if add_hochberg_correction is True:
+        cluster_statistics_df = glm_clust.add_hochberg_correction(cluster_statistics_df, test=test)
+
+    return cluster_statistics_df
+
+
 def get_cluster_proportions(df, cre):
     '''
         Returns two tables
@@ -2165,7 +2206,7 @@ def get_matched_cluster_labels(SSE_mapping):
 def get_cluster_size_variance(SSE_mapping, cluster_df_shuffled, normalize=False, use_nan=False, adjust_to_expected_N=False):
     cluster_ids = SSE_mapping[0].keys()
     matched_ids = get_matched_cluster_labels(SSE_mapping)  # gets list of all matched IDs across shuffle iterations for
-                                                            # each original cluster
+    # each original cluster
 
     # cluster_df_shuffled is a dictionary with the cluster labels for each shuffle iteration
     n_boots = cluster_df_shuffled.keys()
