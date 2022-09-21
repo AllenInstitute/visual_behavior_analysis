@@ -3007,9 +3007,3 @@ def plot_unraveled_clusters(feature_matrix, cluster_df, sort_order=None, cre_lin
     fig.subplots_adjust(wspace=0.5)
     if save_dir is not None:
         utils.save_figure(fig, figsize, save_dir, folder, f'feature_matrix_sorted_by_cluster_id_{tag}')
-
-# statistics plots
-
-
-def plot_cluster_size_statistics():
-    return 10
