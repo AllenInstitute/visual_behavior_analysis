@@ -1611,7 +1611,7 @@ def plot_population_average_response_for_cluster(cluster_mdf, cre_line, cluster_
 
 
 def plot_clusters_row(cluster_meta, feature_matrix, cre_line,
-                      sort_order=None, rename_clusters=False, save_dir=None, folder=None, suffix='', formats=['.png', '.pdf']):
+                      sort_order=None, rename_clusters=False, save_dir=None, folder=None, suffix='', abbreviate_experience=True, formats=['.png', '.pdf']):
     """
     For each cluster in a given cre_line, plots dropout heatmaps, fraction cells per area/depth relative to chance,
     fraction cells per cluster per area/depth, and population average omission response.
@@ -1649,7 +1649,7 @@ def plot_clusters_row(cluster_meta, feature_matrix, cre_line,
     for i, cluster_id in enumerate(cluster_ids):
         # plot mean dropout heatmap for this cluster
         ax[i] = plot_dropout_heatmap(cluster_meta, feature_matrix, cre_line, cluster_id,
-                                     abbreviate_experience=True, abbreviate_features=True, ax=ax[i])
+                                     abbreviate_experience=abbreviate_experience, abbreviate_features=True, ax=ax[i])
 
         # # population average for this cluster
         # ax[i + (n_clusters * 1)] = plot_population_average_response_for_cluster(cluster_mdf, cre_line, cluster_id,
