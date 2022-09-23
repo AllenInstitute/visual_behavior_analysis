@@ -748,6 +748,8 @@ def get_labels_for_coclust_matrix(X, model=SpectralClustering, nboot=np.arange(1
     ___________
     :return: labels: matrix of labels, n repeats by n observations
     '''
+    if model is SpectralClustering:
+        model = model()
     labels = []
     if n_clusters is not None:
         model.n_clusters = n_clusters
@@ -767,6 +769,7 @@ def get_coClust_matrix(X, model=SpectralClustering, nboot=np.arange(150), n_clus
     ______________
     returns: coClust_matrix: (ndarray) probability matrix of co-clustering together.
     '''
+    model = model()
     labels = get_labels_for_coclust_matrix(X=X,
                                            model=model,
                                            nboot=nboot,
@@ -1588,7 +1591,7 @@ def shuffle_dropout_score(df_dropout, shuffle_type='all'):
     Returns:
         df_shuffled (pd. Dataframe) of shuffled dropout scores
     '''
-    df_shuffled = df_dropout.copy(deep=True)
+    df_shuffled = df_dropout.copy()
     regressors = df_dropout.columns.levels[0].values
     experience_levels = df_dropout.columns.levels[1].values
     if shuffle_type == 'all':
