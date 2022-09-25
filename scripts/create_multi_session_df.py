@@ -20,43 +20,45 @@ if __name__ == '__main__':
     print(project_code, mouse_id)
 
     # params for stim response df creation
-    time_window = [-3, 3.1]
+    time_window = [-2, 2.1]
     interpolate = True
     output_sampling_rate = 30
     use_extended_stimulus_presentations = False
 
     # set up conditions to make multi session dfs for
-    physio_data_types = ['dff', 'filtered_events', 'events']
+    physio_data_types = ['dff',]# 'filtered_events', 'events']
     behavior_data_types = ['pupil_width', 'running_speed', 'lick_rate']
 
-    physio_conditions = [['cell_specimen_id', 'is_change'],
+    physio_conditions = [['cell_specimen_id', 'is_change', 'omitted'],
+                         ['cell_specimen_id', 'is_change'],
                          ['cell_specimen_id', 'omitted'],
-                         ['cell_specimen_id', 'is_change', 'epoch'],
-                         ['cell_specimen_id', 'omitted', 'epoch'],
+                         # ['cell_specimen_id', 'is_change', 'epoch'],
+                         # ['cell_specimen_id', 'omitted', 'epoch'],
                          ['cell_specimen_id', 'is_change', 'image_name'],
-                         ['cell_specimen_id', 'is_change', 'image_name', 'epoch'],
-                         ['cell_specimen_id', 'is_change', 'hit'],
-                         ['cell_specimen_id', 'pre_change', 'epoch'],
-                         ['cell_specimen_id', 'is_change', 'hit', 'epoch'],
-                         ['cell_specimen_id', 'omitted', 'pre_omitted'],]
+                         # ['cell_specimen_id', 'is_change', 'image_name', 'epoch'],
+                         ['cell_specimen_id', 'is_change', 'hit'],]
+                         # ['cell_specimen_id', 'pre_change', 'epoch'],
+                         # ['cell_specimen_id', 'is_change', 'hit', 'epoch'],
+                         # ['cell_specimen_id', 'omitted', 'pre_omitted'],]
 
-    behavior_conditions = [['ophys_experiment_id', 'is_change'],
+    behavior_conditions = [['cell_specimen_id', 'is_change', 'omitted'],
+                           ['ophys_experiment_id', 'is_change'],
                            ['ophys_experiment_id', 'omitted'],
-                           ['ophys_experiment_id', 'is_change', 'epoch'],
-                            ['ophys_experiment_id', 'omitted', 'epoch'],
+                           # ['ophys_experiment_id', 'is_change', 'epoch'],
+                           #  ['ophys_experiment_id', 'omitted', 'epoch'],
                             ['ophys_experiment_id', 'is_change', 'image_name'],
-                            ['ophys_experiment_id', 'is_change', 'image_name', 'epoch'],
-                            ['ophys_experiment_id', 'is_change', 'hit'],
-                            ['ophys_experiment_id', 'is_change', 'pre_change', 'epoch'],
-                            ['ophys_experiment_id', 'is_change', 'hit', 'epoch'],
-                            ['cell_specimen_id', 'omitted', 'pre_omitted'],]
+                            # ['ophys_experiment_id', 'is_change', 'image_name', 'epoch'],
+                            ['ophys_experiment_id', 'is_change', 'hit'],]
+                            # ['ophys_experiment_id', 'is_change', 'pre_change', 'epoch'],
+                            # ['ophys_experiment_id', 'is_change', 'hit', 'epoch'],
+                            # ['cell_specimen_id', 'omitted', 'pre_omitted'],]
 
 
     # event types corresponding to the above physio and behavior conditions - must be in same sequential order!!
-    event_types_for_conditions = ['changes', 'omissions',
-                                  'changes', 'omissions',
-                                  'changes', 'changes', 'changes',
-                                  'all', 'all', 'all']
+    event_types_for_conditions = ['all', 'changes', 'omissions',
+                                  # 'changes', 'omissions',
+                                  'changes', 'changes',] #'changes',
+                                  # 'all', 'all', 'all']
 
     # add engagement state to all conditions
     # for i in range(len(physio_conditions)):

@@ -61,8 +61,13 @@ def get_multi_session_df(project_code, mouse_id, conditions, data_type, event_ty
         get_pref_stim = False
     print('get_pref_stim', get_pref_stim)
 
-    experiments_table = loading.get_filtered_ophys_experiment_table()
-    experiments_table = experiments_table[experiments_table.project_code == 'LearningmFISHTask1A']
+    # experiments_table = loading.get_filtered_ophys_experiment_table()
+    # experiments_table = experiments_table[experiments_table.project_code == 'LearningmFISHTask1A']
+
+    save_dir = r'/allen/programs/mindscope/workgroups/learning/ophys/learning_project_cache'
+    experiments_table = pd.read_csv(os.path.join(save_dir, 'mFISH_project_expts.csv'))
+    print(len(experiments_table))
+
     print(len(experiments_table), 'expts in experiments table')
 
     # session_type = float(session_type)
