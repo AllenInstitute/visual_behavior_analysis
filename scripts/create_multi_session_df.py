@@ -41,7 +41,7 @@ if __name__ == '__main__':
                          # ['cell_specimen_id', 'is_change', 'hit', 'epoch'],
                          # ['cell_specimen_id', 'omitted', 'pre_omitted'],]
 
-    behavior_conditions = [['cell_specimen_id', 'is_change', 'omitted'],
+    behavior_conditions = [['ophys_experiment_id', 'is_change', 'omitted'],
                            ['ophys_experiment_id', 'is_change'],
                            ['ophys_experiment_id', 'omitted'],
                            # ['ophys_experiment_id', 'is_change', 'epoch'],

@@ -71,6 +71,7 @@ def get_multi_session_df(project_code, mouse_id, conditions, data_type, event_ty
     print(len(experiments_table), 'expts in experiments table')
 
     # session_type = float(session_type)
+    print(project_code, mouse_id)
     experiments = experiments_table[(experiments_table.project_code == project_code) &
                                     (experiments_table.mouse_id == str(mouse_id))].copy()
 
