@@ -92,15 +92,15 @@ if __name__ == '__main__':
         for i, conditions in enumerate(behavior_conditions):
             event_type = event_types_for_conditions[i]
             if event_type == 'omissions':
-                response_window_duration_seconds = 0.75
+                response_window_duration = 0.75
             else:
-                response_window_duration_seconds = 0.5
+                response_window_duration = 0.5
             print('creating multi_session_df for', data_type, event_type, conditions)
             try: # use try except so that it skips over any conditions that fail to generate for some reason
                 df = io.get_multi_session_df(project_code, mouse_id, conditions, data_type, event_type,
                                              time_window=time_window, interpolate=interpolate,
                                              output_sampling_rate=output_sampling_rate,
-                                             response_window_duration_seconds=response_window_duration_seconds,
+                                             response_window_duration=response_window_duration,
                                              use_extended_stimulus_presentations=use_extended_stimulus_presentations,
                                              overwrite=True)
             except Exception as e:
