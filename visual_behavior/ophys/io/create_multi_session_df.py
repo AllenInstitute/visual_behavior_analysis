@@ -73,9 +73,10 @@ def get_multi_session_df(project_code, mouse_id, conditions, data_type, event_ty
     # session_type = float(session_type)
     print(project_code, mouse_id)
     experiments = experiments_table[(experiments_table.project_code == project_code) &
-                                    (experiments_table.mouse_id == str(mouse_id))].copy()
+                                    (experiments_table.mouse_id == int(mouse_id))]
+    print(len(experiments))
 
-    mouse_id = experiments.mouse_id.unique()[0]
+    # mouse_id = experiments.mouse_id.unique()[0]
     print(mouse_id)
 
     filename = loading.get_file_name_for_multi_session_df(data_type, event_type, project_code, mouse_id, conditions)

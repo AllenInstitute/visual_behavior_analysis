@@ -46,7 +46,8 @@ print(len(experiments_table))
 # call the `sbatch` command to run the jobs.
 for project_code in experiments_table.project_code.unique():
     print(project_code)
-    for mouse_id in experiments_table.mouse_id.unique():
+    mouse_ids = experiments_table[experiments_table.project_code==project_code].mouse_id.unique()
+    for mouse_id in mouse_ids:
         print(mouse_id)
         # instantiate a Slurm object
         slurm = Slurm(mem='120g',  # '24g'
