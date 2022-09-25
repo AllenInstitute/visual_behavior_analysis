@@ -66,6 +66,7 @@ def get_multi_session_df(project_code, mouse_id, conditions, data_type, event_ty
 
     save_dir = r'/allen/programs/mindscope/workgroups/learning/ophys/learning_project_cache'
     experiments_table = pd.read_csv(os.path.join(save_dir, 'mFISH_project_expts.csv'))
+    experiments_table = experiments_table.set_index('ophys_experiment_id')
     print(len(experiments_table))
 
     print(len(experiments_table), 'expts in experiments table')
