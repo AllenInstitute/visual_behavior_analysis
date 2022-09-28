@@ -2706,7 +2706,7 @@ def plot_cluster_proportions_treemaps(location_fractions, cluster_meta, color_co
 
 
 # plot cluster sizes
-def plot_cluster_size_for_cluster(cluster_size_df, cluster_id, stats_table, ax=None):
+def plot_cluster_size_for_cluster(cluster_size_df, cluster_id, stats_table, diff_column, ax=None):
     if ax is None:
         fig, ax = plt.subplots()
 
@@ -2716,9 +2716,9 @@ def plot_cluster_size_for_cluster(cluster_size_df, cluster_id, stats_table, ax=N
     ax.spines['right'].set_visible(False)
     # plot size diff
     ax = sns.barplot(data=cluster_size_df[cluster_size_df['cluster_id'] == cluster_id], x='cluster_id',
-                     y='cluster_size_diff', color=color1, ax=ax)
+                     y=diff_column, color=color1, ax=ax)
     if stats_table is not None:
-        y = 1
+        y = cluster_size_df[[diff_column, 'cluster_id']].groupby('cluster_id').mean().max()
         if stats_table[stats_table.cluster_id == cluster_id]['significant'].values[0] == True:
             color = 'DarkRed'
             pvalue = round(stats_table[stats_table.cluster_id == cluster_id]['imq'].values[0], 4)
@@ -2741,7 +2741,7 @@ def plot_cluster_size_for_cluster(cluster_size_df, cluster_id, stats_table, ax=N
 
     ax.axhline(0, color='gray')
     ax.set_xlabel('')
-    ax.set_ylim([-0.4, 1])
+    # ax.set_ylim([-0.4, 1])
     ax.set_xlim([-1, 1])
     ax.set_xticklabels('', fontsize=12)
     ax.set_yticklabels(ax.get_yticklabels(), fontsize=12)
@@ -2757,7 +2757,7 @@ def plot_cluster_size_for_cluster(cluster_size_df, cluster_id, stats_table, ax=N
     return ax
 
 
-def plot_cluster_size(cluster_size_df, cre_line=None, shuffle_type=None, stats_table=None,
+def plot_cluster_size(cluster_size_df, cre_line=None, shuffle_type=None, stats_table=None, diff_column = 'cluster_size_diff',
                       ax=None, figsize=None, save_dir=None, folder=None):
     if cre_line is not None:
         if isinstance(cre_line, str):
@@ -2779,7 +2779,7 @@ def plot_cluster_size(cluster_size_df, cre_line=None, shuffle_type=None, stats_t
 
     # plot cluster size first
     for i, cluster_id in enumerate(cluster_ids):
-        ax[i] = plot_cluster_size_for_cluster(cluster_size_df, cluster_id, stats_table=stats_table, ax=ax[i])
+        ax[i] = plot_cluster_size_for_cluster(cluster_size_df, cluster_id, stats_table=stats_table, diff_column = diff_column, ax=ax[i])
 
     fig.subplots_adjust(hspace=1.2, wspace=0.6)
     plt.suptitle(processing.get_shuffle_label(shuffle_type), x=0.52, y=1.15)
