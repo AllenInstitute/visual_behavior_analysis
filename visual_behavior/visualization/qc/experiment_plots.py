@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
+from visual_behavior.ophys.dataset.visual_behavior_ophys_dataset import VisualBehaviorOphysDataset
 
 import visual_behavior.visualization.utils as utils
 import visual_behavior.visualization.qc.plotting_utils as pu
@@ -31,12 +32,17 @@ def plot_max_intensity_projection_for_experiment(ophys_experiment_id, ax=None):
     return ax
 
 
-def plot_average_image_for_experiment(ophys_experiment_id, ax=None):
+def plot_average_image_for_experiment(experiment, ax=None):
+    if isinstance(experiment, int):
+        dataset = loading.get_ophys_dataset(experiment, load_from_lims=True)
+    else:
+        dataset = experiment # rename to keep concept consistent with legacy
+
     if ax is None:
         fig, ax = plt.subplots()
-    dataset = loading.get_ophys_dataset(ophys_experiment_id,load_from_lims=True)
     average_projection = dataset.average_projection.data
-    ax.imshow(average_projection, cmap='gray', vmax=np.amax(average_projection))
+    #ax.imshow(average_projection, cmap='gray', vmax=np.amax(average_projection))
+    ax.imshow(average_projection, cmap='gray', vmax=np.percentile(average_projection.flatten(),99.5))
     ax.axis('off')
     return ax
 
@@ -112,12 +118,18 @@ def plot_valid_segmentation_mask_outlines_for_experiment(ophys_experiment_id, ax
     ax.axis('off')
     return ax
 
+from typing import Union
+def plot_valid_segmentation_mask_outlines_per_cell_for_experiment(experiment: Union[int, VisualBehaviorOphysDataset], ax=None):
+    if isinstance(experiment, int):
+        dataset = loading.get_ophys_dataset(experiment, load_from_lims=True)
+    else:
+        dataset = experiment # rename to keep concept consistent with legacy
 
-def plot_valid_segmentation_mask_outlines_per_cell_for_experiment(ophys_experiment_id, ax=None):
     if ax is None:
         fig, ax = plt.subplots()
-    ax = plot_max_intensity_projection_for_experiment(ophys_experiment_id, ax=ax)
-    dataset = loading.get_ophys_dataset(ophys_experiment_id,load_from_lims=True)
+    #ax = plot_max_intensity_projection_for_experiment(ophys_experiment_id, ax=ax)
+    ax = plot_average_image_for_experiment(experiment, ax)
+    
     cell_specimen_table = dataset.cell_specimen_table.copy()
     if len(cell_specimen_table) > 0:
         for cell_roi_id in cell_specimen_table.cell_roi_id.values:

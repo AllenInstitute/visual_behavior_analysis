@@ -533,6 +533,22 @@ def get_lick_frames(trials, licks):
     return local_licks
 
 
+# HACK MJD
+def get_lick_bout_times(trials, licks):
+    
+    # TODO ASSERT has annotation bouts
+    #bout_times = licks.query("bout_start == True").time.to_numpy()
+    bout_times = licks.query("bout_start == True").time.reset_index(drop=True)
+
+    trial_bouts = []
+    for idx, row in trials.iterrows():
+        bouts = bout_times[np.logical_and(bout_times > row['starttime'],
+                   bout_times <= row['endtime'])].dropna()
+
+        trial_bouts.append(list(bouts.values))
+
+    return trial_bouts
+
 @inplace
 def calculate_latency(trials):
     # For each trial, calculate the difference between each stimulus change and the next lick (response lick)

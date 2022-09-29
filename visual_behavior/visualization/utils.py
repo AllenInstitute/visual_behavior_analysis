@@ -282,6 +282,34 @@ def plot_mean_trace(traces, timestamps, ylabel='dF/F', legend_label=None, color=
     sns.despine(ax=ax)
     return ax
 
+#MJD HACK
+def plot_stim_response_traces(stimulus_response_df, timestamps, ylabel='dF/F', 
+                              legend_label=None, color='k', interval_sec=1, 
+                              xlim_seconds=[-2, 2],
+                              plot_sem=False, ax=None):
+
+    traces = np.vstack(stimulus_response_df.trace.values)
+    if ax is None:
+        fig, ax = plt.subplots()
+    if len(traces) > 0:
+        trace = np.mean(traces, axis=0)
+        sem = (np.std(traces)) / np.sqrt(float(len(traces)))
+        ax.plot(timestamps, trace, label=legend_label, linewidth=4, color=color)
+        if plot_sem:
+            ax.fill_between(timestamps, trace + sem, trace - sem, alpha=0.5, color=color)
+        ax.set_xticks(np.arange(int(timestamps[0]), int(timestamps[-1]) + 1, interval_sec))
+        ax.set_xlim(xlim_seconds)
+        ax.set_xlabel('time (sec)')
+        ax.set_ylabel(ylabel)
+
+    for _, row in stimulus_response_df.iterrows():
+        ax.plot(timestamps, row.trace, label=legend_label, 
+                linewidth=2, color='grey',alpha=.5)
+
+    
+    sns.despine(ax=ax)
+    return ax
+
 
 def plot_stimulus_response_df_trace(stimulus_response_df, time_window=[-1, 1], change=True, omitted=False,
                                     ylabel=None, legend_label=None, title=None, color='k', ax=None):
@@ -306,6 +334,9 @@ def plot_stimulus_response_df_trace(stimulus_response_df, time_window=[-1, 1], c
         fig, ax = plt.subplots(figsize=(6, 4))
     ax = plot_mean_trace(traces, timestamps, ylabel=ylabel, legend_label=legend_label, color=color,
                          interval_sec=1, xlim_seconds=time_window, plot_sem=True, ax=ax)
+
+    #ax = plot_stim_response_traces(stimulus_response_df, timestamps, ylabel=ylabel, legend_label=legend_label, color=color,
+    #                     interval_sec=1, xlim_seconds=time_window, plot_sem=False, ax=ax)
 
     ax = plot_flashes_on_trace(ax, timestamps, change=change, omitted=omitted, alpha=0.15, facecolor='gray')
 
