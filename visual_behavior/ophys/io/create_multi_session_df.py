@@ -6,11 +6,11 @@ import visual_behavior.ophys.response_analysis.utilities as ut
 from visual_behavior.data_access import loading
 
 
-def get_multi_session_df(project_code, mouse_id, conditions, data_type, event_type,
+def get_multi_session_df(mouse_id, ophys_container_id, conditions, data_type, event_type, ophys_experiment_ids=None,
                          time_window=[-3, 3.1], interpolate=True, output_sampling_rate=30,
                          response_window_duration=0.5, use_extended_stimulus_presentations=False, overwrite=False):
     """
-    For a given mouse_id within a given project_code, loop through all ophys_experiment_ids, load the SDK dataset object,
+    For a given mouse_id and container, loop through all ophys_experiment_ids, load the SDK dataset object,
     create stimulus_response_df with event aligned traces for provided data_type (ex: 'dff', 'events', 'pupil_width', etc),
     then average across a given set of conditions to get a trial averaged trace for those conditions.
 
@@ -27,7 +27,7 @@ def get_multi_session_df(project_code, mouse_id, conditions, data_type, event_ty
     Function can be run for multiple mouse_ids and/or project_codes using /scripts/run_create_multi_session_df.py
 
 
-    :param project_code: lims project code to use when identifying what experiment_ids to include in the multi_session_df
+    :param ophys_container_id: ophys_container_id to use when identifying what experiment_ids to include in the multi_session_df
     :param mouse_id: mouse_id to use when identifying what experiment_ids to include in the multi_session_df
     :param conditions: columns in stimulus_response_df to group by when averaging across trials / stimulus presentations
                         if use_extended_stimulus_presentations is True, columns available include the set of columns provided in that table (ex: engagement_state)
@@ -64,20 +64,28 @@ def get_multi_session_df(project_code, mouse_id, conditions, data_type, event_ty
     # experiments_table = loading.get_filtered_ophys_experiment_table()
     # experiments_table = experiments_table[experiments_table.project_code == 'LearningmFISHTask1A']
 
-    save_dir = r'/allen/programs/mindscope/workgroups/learning/ophys/learning_project_cache'
+    # save_dir = r'/allen/programs/mindscope/workgroups/learning/ophys/learning_project_cache'
+    save_dir = r'\\allen\programs\mindscope\workgroups\learning\ophys\learning_project_cache'
     experiments_table = pd.read_csv(os.path.join(save_dir, 'mFISH_project_expts.csv'))
     experiments_table = experiments_table.set_index('ophys_experiment_id')
     print(len(experiments_table), 'experiments in experiments table')
 
-    # session_type = float(session_type)
-    print('project_code:', project_code, ', mouse_id:', mouse_id)
-    experiments = experiments_table[(experiments_table.project_code == project_code) &
-                                    (experiments_table.mouse_id == int(mouse_id))]
-    print(len(experiments), 'experiments for this mouse_id and project_code')
+    if ophys_experiment_ids is None:
+        print('mouse_id:', mouse_id, ', ophys_container_id:', ophys_container_id)
+        experiments = experiments_table[(experiments_table.ophys_container_id == ophys_container_id) &
+                                        (experiments_table.mouse_id == int(mouse_id))]
+        ophys_experiment_ids = experiments.index.unique()
+        print(len(ophys_experiment_ids), 'experiments for this mouse_id and project_code')
+        save_mega_mdf = True
+    else:
+        print('ophys_experiment_ids provided, ignoring mouse_id and ophys_container_id')
+        print('generating multi_session_df for provided list of ophys_experiment_ids')
+        print(len(ophys_experiment_ids), 'experiments are in the provided list')
+        print('multi_session_df will not be automatically saved')
+        save_mega_mdf = False
 
-    filename = loading.get_file_name_for_multi_session_df(data_type, event_type, project_code, mouse_id, conditions)
-    mega_mdf_write_dir = loading.get_multi_session_df_dir(interpolate=interpolate, output_sampling_rate=output_sampling_rate,
-                                                          event_type=event_type)
+    filename = loading.get_file_name_for_multi_session_df(data_type, event_type, ophys_container_id, mouse_id, conditions)
+    mega_mdf_write_dir = loading.get_multi_session_df_dir(interpolate=interpolate, output_sampling_rate=output_sampling_rate, event_type=event_type)
     filepath = os.path.join(mega_mdf_write_dir, filename)
     print('saving to', filepath)
 
@@ -95,57 +103,46 @@ def get_multi_session_df(project_code, mouse_id, conditions, data_type, event_ty
 
     if process_data:
         mega_mdf = pd.DataFrame()
-        for experiment_id in experiments.index.unique():
-            # try:
-            print(experiment_id)
-            # get dataset
-            dataset = loading.get_ophys_dataset(experiment_id,
-                                                get_extended_stimulus_presentations=use_extended_stimulus_presentations)
-            # get stimulus_response_df
-            df = loading.get_stimulus_response_df(dataset, data_type=data_type, event_type=event_type, time_window=time_window,
-                                                  interpolate=interpolate, output_sampling_rate=output_sampling_rate,
-                                                  load_from_file=False)
-            print('stim response df loaded')
-            # use response_window duration from stim response df if it exists
-            if response_window_duration in df.keys():
-                response_window_duration = df.response_window_duration.values[0]
-            df['ophys_experiment_id'] = experiment_id
-            # if using omissions, only include omissions where time from last change is more than 3 seconds
-            # if event_type == 'omissions':
-            #     df = df[df.time_from_last_change>3]
-            # modify columns for specific conditions
-            if 'passive' in dataset.metadata['session_type']:
-                df['lick_on_next_flash'] = False
-                df['engaged'] = False
-                df['engagement_state'] = 'disengaged'
-            if 'running_state' in conditions:  # create 'running_state' Boolean column based on threshold on mean_running_speed
-                df['running'] = [True if mean_running_speed > 2 else False for mean_running_speed in
-                                 df.mean_running_speed.values]
-            if 'pupil_state' in conditions:  # create 'pupil_state' Boolean column based on threshold on mean_pupil_
-                if 'mean_pupil_area' in df.keys():
-                    df = df[df.mean_pupil_area.isnull() == False]
-                    if len(df) > 100:
-                        median_pupil_area = df.mean_pupil_area.median()
-                        df['large_pupil'] = [True if mean_pupil_area > median_pupil_area else False for mean_pupil_area in
-                                             df.mean_pupil_area.values]
-            if 'pre_change' in conditions:
-                df = df[df.pre_change.isnull() == False]
-            # get params for mean df creation from stimulus_response_df
-            output_sampling_rate = df.frame_rate.unique()[0]
-            timestamps = df.trace_timestamps.values[0]
-            window_around_timepoint_seconds = [timestamps[0], timestamps[-1]]
-
-            mdf = ut.get_mean_df(df, conditions=conditions, frame_rate=output_sampling_rate,
-                                 time_window=time_window, response_window_duration=response_window_duration,
-                                 get_pref_stim=get_pref_stim, exclude_omitted_from_pref_stim=True)
-            if 'correlation_values' in mdf.keys():
-                mdf = mdf.drop(columns=['correlation_values'])
-            mdf['ophys_experiment_id'] = experiment_id
-            print('mean df created for', experiment_id)
-            mega_mdf = pd.concat([mega_mdf, mdf])
-            # except Exception as e:  # flake8: noqa: E722
-            #     print(e)
-            #     print('problem for', experiment_id)
+        for experiment_id in ophys_experiment_ids:
+            try:
+                print(experiment_id)
+                # get dataset
+                dataset = loading.get_ophys_dataset(experiment_id, get_extended_stimulus_presentations=use_extended_stimulus_presentations)
+                # get stimulus_response_df
+                df = loading.get_stimulus_response_df(dataset, data_type=data_type, event_type=event_type, time_window=time_window,
+                                                      interpolate=interpolate, output_sampling_rate=output_sampling_rate,
+                                                      load_from_file=True)
+                print('stim response df loaded')
+                # use response_window duration from stim response df if it exists
+                if response_window_duration in df.keys():
+                    response_window_duration = df.response_window_duration.values[0]
+                df['ophys_experiment_id'] = experiment_id
+                # modify columns for specific conditions
+                if 'passive' in dataset.metadata['session_type']:
+                    df['lick_on_next_flash'] = False
+                    df['engaged'] = False
+                    df['engagement_state'] = 'disengaged'
+                if 'running_state' in conditions:  # create 'running_state' Boolean column based on threshold on mean_running_speed
+                    df['running'] = [True if mean_running_speed > 2 else False for mean_running_speed in
+                                     df.mean_running_speed.values]
+                if 'pre_change' in conditions:
+                    df = df[df.pre_change.isnull() == False]
+                # get params for mean df creation from stimulus_response_df
+                output_sampling_rate = df.frame_rate.unique()[0]
+                timestamps = df.trace_timestamps.values[0]
+                window_around_timepoint_seconds = [timestamps[0], timestamps[-1]]
+                # compute trial average and other metrics
+                mdf = ut.get_mean_df(df, conditions=conditions, frame_rate=output_sampling_rate,
+                                     time_window=time_window, response_window_duration=response_window_duration,
+                                     get_pref_stim=get_pref_stim, exclude_omitted_from_pref_stim=True)
+                if 'correlation_values' in mdf.keys():
+                    mdf = mdf.drop(columns=['correlation_values'])
+                mdf['ophys_experiment_id'] = experiment_id
+                print('mean df created for', experiment_id)
+                mega_mdf = pd.concat([mega_mdf, mdf])
+            except Exception as e:  # flake8: noqa: E722
+                print(e)
+                print('problem for', experiment_id)
 
         if 'level_0' in mega_mdf.keys():
             mega_mdf = mega_mdf.drop(columns='level_0')
@@ -154,11 +151,12 @@ def get_multi_session_df(project_code, mouse_id, conditions, data_type, event_ty
 
 
         # if file of the same name exists, delete & overwrite to prevent files from getting huge
-        if os.path.exists(filepath):
-            os.remove(filepath)
-        print('saving multi session mean df as ', filename)
-        mega_mdf.to_hdf(filepath, key='df')
-        print('saved to', mega_mdf_write_dir)
+        if save_mega_mdf:
+            if os.path.exists(filepath):
+                os.remove(filepath)
+            print('saving multi session mean df as ', filename)
+            mega_mdf.to_hdf(filepath, key='df')
+            print('saved to', mega_mdf_write_dir)
 
         return mega_mdf
 

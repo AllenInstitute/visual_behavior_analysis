@@ -2753,21 +2753,22 @@ def add_superficial_deep_to_experiments_table(experiments_table):
     return experiments_table
 
 
-def get_file_name_for_multi_session_df(data_type, event_type, project_code, mouse_id, conditions):
+def get_file_name_for_multi_session_df(data_type, event_type, ophys_container_id, mouse_id, conditions):
 
     mouse_id = str(mouse_id)
+    ophys_container_id = str(ophys_container_id)
     if len(conditions) == 6:
-        filename = 'mean_response_df_' + data_type + '_' + event_type + '_' + project_code + '_' + mouse_id + '_' + conditions[1] + '_' + conditions[2] + '_' + conditions[3] + '_' + conditions[4] + '_' + conditions[5] + '.h5'
+        filename = 'mean_response_df_' + data_type + '_' + event_type + '_' + ophys_container_id + '_' + mouse_id + '_' + conditions[1] + '_' + conditions[2] + '_' + conditions[3] + '_' + conditions[4] + '_' + conditions[5] + '.h5'
     elif len(conditions) == 5:
-        filename = 'mean_response_df_' + data_type + '_' + event_type + '_' + project_code + '_' + mouse_id + '_' + conditions[1] + '_' + conditions[2] + '_' + conditions[3] + '_' + conditions[4] + '.h5'
+        filename = 'mean_response_df_' + data_type + '_' + event_type + '_' + ophys_container_id + '_' + mouse_id + '_' + conditions[1] + '_' + conditions[2] + '_' + conditions[3] + '_' + conditions[4] + '.h5'
     elif len(conditions) == 4:
-        filename = 'mean_response_df_' + data_type + '_' + event_type + '_' + project_code + '_' + mouse_id + '_' + conditions[1] + '_' + conditions[2] + '_' + conditions[3] + '.h5'
+        filename = 'mean_response_df_' + data_type + '_' + event_type + '_' + ophys_container_id + '_' + mouse_id + '_' + conditions[1] + '_' + conditions[2] + '_' + conditions[3] + '.h5'
     elif len(conditions) == 3:
-        filename = 'mean_response_df_' + data_type + '_' + event_type + '_' + project_code + '_' + mouse_id + '_' + conditions[1] + '_' + conditions[2] + '.h5'
+        filename = 'mean_response_df_' + data_type + '_' + event_type + '_' + ophys_container_id + '_' + mouse_id + '_' + conditions[1] + '_' + conditions[2] + '.h5'
     elif len(conditions) == 2:
-        filename = 'mean_response_df_' + data_type + '_' + event_type + '_' + project_code + '_' + mouse_id + '_' + conditions[1] + '.h5'
+        filename = 'mean_response_df_' + data_type + '_' + event_type + '_' + ophys_container_id + '_' + mouse_id + '_' + conditions[1] + '.h5'
     elif len(conditions) == 1:
-        filename = 'mean_response_df_' + data_type + '_' + event_type + '_' + project_code + '_' + mouse_id + '_' + conditions[0] + '.h5'
+        filename = 'mean_response_df_' + data_type + '_' + event_type + '_' + ophys_container_id + '_' + mouse_id + '_' + conditions[0] + '.h5'
 
     return filename
 

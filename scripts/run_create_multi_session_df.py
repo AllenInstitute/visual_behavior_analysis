@@ -38,27 +38,27 @@ stdout_location = r"/allen/programs/mindscope/workgroups/learning/ophys/cluster_
 save_dir = r'/allen/programs/mindscope/workgroups/learning/ophys/learning_project_cache'
 import pandas as pd
 experiments_table = pd.read_csv(os.path.join(save_dir, 'mFISH_project_expts.csv'))
-print(len(experiments_table))
+print(len(experiments_table), 'experiments')
 
 # experiments_table = loading.get_filtered_ophys_experiment_table()
 # experiments_table = experiments_table[experiments_table.project_code=='LearningmFISHTask1A']
 
 # call the `sbatch` command to run the jobs.
-for project_code in experiments_table.project_code.unique():
-    print(project_code)
-    mouse_ids = experiments_table[experiments_table.project_code==project_code].mouse_id.unique()
-    for mouse_id in mouse_ids:
-        print(mouse_id)
+for mouse_id in experiments_table.mouse_id.unique():
+    print('mouse_id:', mouse_id)
+    ophys_container_id = experiments_table[experiments_table.mouse_id==mouse_id].ophys_container_id.unique()
+    for ophys_container_id in ophys_container_id:
+        print('ophys_container_id:', ophys_container_id)
         # instantiate a Slurm object
         slurm = Slurm(mem='120g',  # '24g'
                       cpus_per_task=1,
                       time='20:00:00',
                       partition='braintv',
-                      job_name='multi_session_df_'+project_code+'_'+str(mouse_id),
+                      job_name='multi_session_df_'+str(mouse_id)+'_'+str(ophys_container_id),
                       output=f'{stdout_location}/{Slurm.JOB_ARRAY_MASTER_ID}_{Slurm.JOB_ARRAY_ID}.out',
                       )
 
 
-        slurm.sbatch(python_executable+' '+python_file+' --project_code '+str(project_code)+' --mouse_id'+' '+str(mouse_id))
+        slurm.sbatch(python_executable+' '+python_file+' --mouse_id '+str(mouse_id)+' --ophys_container_id'+' '+str(ophys_container_id))
 
 
