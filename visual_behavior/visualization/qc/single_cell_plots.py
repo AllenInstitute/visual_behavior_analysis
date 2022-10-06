@@ -71,7 +71,7 @@ def plot_across_session_responses(ophys_container_id, cell_specimen_id, use_even
 
                 # running vs not-running
                 try:
-                    tmp = sdf.cpoy()
+                    tmp = sdf.copy()
                     tmp['running'] = [True if run_speed > 2 else False for run_speed in tmp.mean_running_speed.values]
                     sdf = ut.get_mean_df(tmp, analysis=analysis,
                                          conditions=['cell_specimen_id', 'is_change', 'image_name', 'running'], flashes=True, omitted=False,
