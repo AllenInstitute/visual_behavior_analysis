@@ -406,7 +406,7 @@ def get_mean_df(response_df, conditions=['cell', 'change_image_name'], frame_rat
 
     import visual_behavior.ophys.response_analysis.response_processing as rp
 
-    window = time_window
+    window = time_window.copy()
 
     rdf = response_df.copy()
 

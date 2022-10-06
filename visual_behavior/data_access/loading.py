@@ -617,6 +617,12 @@ def get_stimulus_response_df(dataset, time_window=[-2, 2.1], interpolate=True, o
                                                 output_sampling_rate=output_sampling_rate,
                                                 response_window_duration=response_window_duration,
                                                 exclude_invalid_rois=exclude_invalid_rois)
+        # save
+        try:  # some experiments with lots of neurons cant save
+            sdf.to_hdf(filepath, key='df')
+            print('saved response df to', filepath)
+        except:
+            print('could not save', filepath)
 
     # if extended_stimulus_presentations is an attribute of the dataset object, use it, otherwise get regular stimulus_presentations
     if 'extended_stimulus_presentations' in dir(dataset):

@@ -7,19 +7,19 @@ import seaborn as sns
 sns.set_context('notebook', font_scale=1.5, rc={'lines.markeredgewidth': 2})
 
 def get_container_plots_dir():
-    return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/container_plots'
+    return r'/allen/programs/mindscope/workgroups/learning/ophys/qc_plots/container_plots'
 
 
 def get_session_plots_dir():
-    return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/session_plots'
+    return r'//allen/programs/mindscope/workgroups/learning/ophys/qc_plots/session_plots'
 
 
 def get_experiment_plots_dir():
-    return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/experiment_plots'
+    return r'//allen/programs/mindscope/workgroups/learning/ophys/qc_plots/experiment_plots'
 
 
 def get_single_cell_plots_dir():
-    return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/single_cell_plots'
+    return r'//allen/programs/mindscope/workgroups/learning/ophys/qc_plots/single_cell_plots'
 
 
 def save_figure(fig, figsize, save_dir, folder, fig_title, formats=['.png']):
@@ -407,7 +407,10 @@ def plot_mean_trace_from_mean_df(cell_data, frame_rate=31., ylabel='dF/F', legen
     if plot_sem:
         ax.fill_between(timestamps, trace + sem, trace - sem, alpha=0.5, color=color)
     ax.set_xticks(np.arange(int(timestamps[0]), int(timestamps[-1]) + 1, interval_sec))
-    ax.set_xlim([timestamps[0], timestamps[-1]])
+    if xlims:
+        ax.set_xlim(xlims)
+    else:
+        ax.set_xlim([timestamps[0], timestamps[-1]])
     ax.set_xlabel('time (s)')
     ax.set_ylabel(ylabel)
     sns.despine(ax=ax)

@@ -67,24 +67,19 @@ def get_multi_session_df(project_code, mouse_id, conditions, data_type, event_ty
     save_dir = r'/allen/programs/mindscope/workgroups/learning/ophys/learning_project_cache'
     experiments_table = pd.read_csv(os.path.join(save_dir, 'mFISH_project_expts.csv'))
     experiments_table = experiments_table.set_index('ophys_experiment_id')
-    print(len(experiments_table))
-
-    print(len(experiments_table), 'expts in experiments table')
+    print(len(experiments_table), 'experiments in experiments table')
 
     # session_type = float(session_type)
-    print(project_code, mouse_id)
+    print('project_code:', project_code, ', mouse_id:', mouse_id)
     experiments = experiments_table[(experiments_table.project_code == project_code) &
                                     (experiments_table.mouse_id == int(mouse_id))]
-    print(len(experiments))
-
-    # mouse_id = experiments.mouse_id.unique()[0]
-    print(mouse_id)
+    print(len(experiments), 'experiments for this mouse_id and project_code')
 
     filename = loading.get_file_name_for_multi_session_df(data_type, event_type, project_code, mouse_id, conditions)
     mega_mdf_write_dir = loading.get_multi_session_df_dir(interpolate=interpolate, output_sampling_rate=output_sampling_rate,
                                                           event_type=event_type)
     filepath = os.path.join(mega_mdf_write_dir, filename)
-    print(filepath)
+    print('saving to', filepath)
 
     if not overwrite: # if we dont want to overwrite
         if os.path.exists(filepath): # and file exists, dont regenerate
