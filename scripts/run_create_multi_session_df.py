@@ -22,7 +22,7 @@ conda_environment = 'visual_behavior_sdk'
 #     'python'
 # )
 
-python_executable = "{}/anaconda2/envs/{}/bin/python".format(os.path.expanduser('~'), conda_environment)
+python_executable = "{}/anaconda3/envs/{}/bin/python".format(os.path.expanduser('~'), conda_environment)
 
 # define the job record output folder
 stdout_location = r"/allen/programs/mindscope/workgroups/learning/ophys/cluster_jobs/multi_session_dfs"
