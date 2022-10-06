@@ -291,6 +291,7 @@ def get_filtered_ophys_experiment_table(include_failed_data=True, release_data_o
     Returns:
         experiment_table -- returns a dataframe with ophys_experiment_id as the index and metadata as columns.
     """
+
     if include_failed_data is True:
         release_data_only = False
     if release_data_only:
@@ -315,6 +316,7 @@ def get_filtered_ophys_experiment_table(include_failed_data=True, release_data_o
             # get everything in lims
             cache = bpc.from_lims()
             experiments = cache.get_ophys_experiment_table(passed_only=False)
+            print(len(experiments), 'experiments in ophys_experiment_table')
             # limit to the 4 VisualBehavior project codes
             # experiments = filtering.limit_to_production_project_codes(experiments)
             if add_extra_columns:
@@ -2786,8 +2788,6 @@ def load_multi_session_df(data_type, event_type, conditions, interpolate=True, o
     multi_session_df = pd.DataFrame()
     for project_code in project_codes:
         experiments = experiments_table[(experiments_table.project_code == project_code)]
-        if project_code == 'VisualBehaviorMultiscope':
-            experiments = experiments[experiments.session_type != 'OPHYS_2_images_B_passive']
         for mouse_id in np.sort(experiments.mouse_id.unique()):
             try:
                 filename = get_file_name_for_multi_session_df(data_type, event_type, project_code, mouse_id, conditions)
@@ -3229,10 +3229,11 @@ def get_data_dict(ophys_experiment_ids, data_types=None):
         data_types = ['filtered_events', 'running_speed', 'pupil_width', 'lick_rate']
     # get cache
     from allensdk.brain_observatory.behavior.behavior_project_cache import VisualBehaviorOphysProjectCache
-    cache_dir = get_platform_analysis_cache_dir()
-    cache = VisualBehaviorOphysProjectCache.from_s3_cache(cache_dir)
+    # cache_dir = get_platform_analysis_cache_dir()
+    # cache = VisualBehaviorOphysProjectCache.from_s3_cache(cache_dir)
+    cache = VisualBehaviorOphysProjectCache.from_lims()
     # define params
-    time_window = [-3, 3.1]
+    time_window = [-2, 2.1]
     interpolate = True
     output_sampling_rate = 30
     # set up dict to collect data in
@@ -3245,20 +3246,26 @@ def get_data_dict(ophys_experiment_ids, data_types=None):
 
     # aggregate data
     for ophys_experiment_id in ophys_experiment_ids:
-
+        print('loading dataset for', ophys_experiment_id)
         # dataset = get_ophys_dataset(ophys_experiment_id)
-        dataset = cache.get_behavior_ophys_experiment(ophys_experiment_id)
-        data_dict[ophys_experiment_id]['dataset']['dataset'] = dataset
+        try:
+            dataset = cache.get_behavior_ophys_experiment(ophys_experiment_id)
+            data_dict[ophys_experiment_id]['dataset']['dataset'] = dataset
 
-        for data_type in data_types:
-            try:
-                sdf = get_stimulus_response_df(dataset, data_type=data_type, event_type='all',
-                                               time_window=time_window, interpolate=interpolate,
-                                               output_sampling_rate=output_sampling_rate,
-                                               load_from_file=True)
-                data_dict[ophys_experiment_id][data_type]['stimulus_response_df'] = sdf
-            except BaseException:
-                print('could not get response df for', ophys_experiment_id, data_type)
+            for data_type in data_types:
+                try:
+                    print('creating stimulus_response_df for', ophys_experiment_id)
+                    sdf = get_stimulus_response_df(dataset, data_type=data_type, event_type='all',
+                                                   time_window=time_window, interpolate=interpolate,
+                                                   output_sampling_rate=output_sampling_rate,
+                                                   load_from_file=True)
+                    data_dict[ophys_experiment_id][data_type]['stimulus_response_df'] = sdf
+                except Exception as e:
+                    print(e)
+                    print('could not get response df for', ophys_experiment_id, data_type)
+        except Exception as e:
+            print(e)
+            print('could not get response df for', ophys_experiment_id, data_type)
 
     return data_dict
 
