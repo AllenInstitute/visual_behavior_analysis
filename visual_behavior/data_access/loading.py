@@ -549,7 +549,7 @@ def get_stimulus_response_df_filepath_for_experiment(ophys_experiment_id, data_t
     return filepath
 
 
-def get_stimulus_response_df(dataset, time_window=[-3, 3.1], interpolate=True, output_sampling_rate=30,
+def get_stimulus_response_df(dataset, time_window=[-2, 2.1], interpolate=True, output_sampling_rate=30,
                              data_type='filtered_events', event_type='all', load_from_file=False, exclude_invalid_rois=True):
     """
     load stimulus response df using mindscope_utilities and merge with stimulus_presentations that has trials metadata added
