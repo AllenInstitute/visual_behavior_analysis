@@ -1,6 +1,7 @@
 import os
 import sys
 import argparse
+import pandas as pd
 from visual_behavior.data_access import loading as loading
 from visual_behavior.data_access import utilities as utilities
 
@@ -12,7 +13,6 @@ parser.add_argument('--scriptname', type=str, default='create_single_cell_plots.
 
 
 save_dir = r'/allen/programs/mindscope/workgroups/learning/ophys/learning_project_cache'
-import pandas as pd
 experiments_table = pd.read_csv(os.path.join(save_dir, 'mFISH_project_expts.csv'))
 experiments_table = experiments_table[experiments_table.project_code=='LearningmFISHTask1A']
 print(len(experiments_table))
