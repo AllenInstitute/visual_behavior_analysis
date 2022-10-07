@@ -110,6 +110,7 @@ def get_multi_session_df(mouse_id, ophys_container_id, conditions, data_type, ev
                 # get dataset
                 dataset = loading.get_ophys_dataset(experiment_id, get_extended_stimulus_presentations=use_extended_stimulus_presentations)
                 # get stimulus_response_df
+                print('loading stimulus response df')
                 df = loading.get_stimulus_response_df(dataset, data_type=data_type, event_type=event_type, time_window=time_window,
                                                       interpolate=interpolate, output_sampling_rate=output_sampling_rate,
                                                       load_from_file=False)

@@ -575,6 +575,7 @@ def get_stimulus_response_df(dataset, time_window=[-2, 2.1], interpolate=True, o
     ophys_experiment_id = dataset.ophys_experiment_id
     filepath = get_stimulus_response_df_filepath_for_experiment(ophys_experiment_id, data_type, event_type,
                                                                 interpolate=interpolate, output_sampling_rate=output_sampling_rate)
+    print('stimulus_response_df filepath:', filepath)
 
     if event_type == 'omissions':
         response_window_duration = 0.75
