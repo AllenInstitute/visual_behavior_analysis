@@ -47,6 +47,7 @@ print(len(experiments_table), 'experiments')
 for mouse_id in experiments_table.mouse_id.unique():
     print('mouse_id:', mouse_id)
     ophys_container_ids = experiments_table[experiments_table.mouse_id==mouse_id].ophys_container_id.unique()
+    print('there are', len(ophys_container_ids),'ophys_container_ids for this mouse')
     for ophys_container_id in ophys_container_ids:
         print('ophys_container_id:', ophys_container_id)
         # instantiate a Slurm object
