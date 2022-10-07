@@ -127,7 +127,7 @@ def plot_across_session_responses(ophys_container_id, cell_specimen_id, use_even
         plt.close()
 
 
-def plot_across_session_responses_from_dataset_dict(data_dit, ophys_container_id, cell_specimen_id, experiments_table,
+def plot_across_session_responses_from_dataset_dict(data_dict, ophys_container_id, cell_specimen_id, experiments_table,
                                                     data_type='dff', save_figure=True):
     """
     Generates plots characterizing single cell activity across sessions, in response to stimulus, omissions, and changes.
