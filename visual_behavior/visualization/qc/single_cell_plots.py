@@ -186,13 +186,13 @@ def plot_across_session_responses_from_dataset_dict(data_dict, ophys_container_i
                                      frame_rate=output_sampling_rate, time_window=window,
                                      response_window_duration=response_window_duration,
                                      get_pref_stim=True)
-                colors = sns.color_palette('hls', 8) + [(0.5, 0.5, 0.5)]
+                colors = sns.color_palette()
                 cell_data = cdf[(cdf.cell_specimen_id == cell_specimen_id) & (cdf.is_change == True)]
                 for c, image_name in enumerate(np.sort(cell_data.image_name.unique())):
                     ax[i + n] = utils.plot_mean_trace_from_mean_df(cell_data[cell_data.image_name == image_name],
                                                                 frame_rate=output_sampling_rate, ylabel=ylabel,
                                                                 legend_label=image_name, color=colors[c], interval_sec=0.5,
-                                                                xlims=[-0.5, 0.75], ax=ax[i + n])
+                                                                xlims=[-1, 2], ax=ax[i + n])
                     ax[i + n].legend(loc='lower right', fontsize='xx-small')
                 ax[i + n] = utils.plot_flashes_on_trace(ax[i + n], timestamps, change=True, omitted=False, alpha=0.15, facecolor='gray')
                 ax[i + n].set_title('oeid: '+str(ophys_experiment_id))
