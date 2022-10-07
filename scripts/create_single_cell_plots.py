@@ -3,7 +3,7 @@ import argparse
 import visual_behavior.data_access.loading as loading
 import visual_behavior.data_access.utilities as utilities
 import visual_behavior.visualization.ophys.platform_paper_figures as ppf
-import visual_behavior.visualization.ophys.qc as scp
+import visual_behavior.visualization.qc.single_cell_plots as scp
 
 
 if __name__ == '__main__':
