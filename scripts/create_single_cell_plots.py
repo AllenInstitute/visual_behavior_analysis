@@ -32,10 +32,16 @@ if __name__ == '__main__':
     # get just the matched cells for this container
     matched_cell_specimen_ids = matched_cells_df[matched_cells_df.ophys_container_id==ophys_container_id].cell_specimen_id.unique()
 
+    ophys_experiment_ids = experiments_table[experiments_table.ophys_container_id==ophys_container_id].index.values
+    # create dictionary of all datasets and stimulus_response_dfs
+    print('generating data dictionary')
+    data_dict = loading.get_data_dict(ophys_experiment_ids, data_types=['dff'])
+    print('data dictionary created')
+
     for cell_specimen_id in matched_cell_specimen_ids:
         try:
-            scp.plot_across_session_responses_from_dataset_dict(ophys_container_id, cell_specimen_id, experiments_table,
-                                                            data_type='dff', save_figure=True)
+            scp.plot_across_session_responses_from_dataset_dict(data_dict, ophys_container_id, cell_specimen_id,
+                                                                experiments_table, data_type='dff', save_figure=True)
 
             # ppf.plot_matched_roi_and_trace(ophys_container_id, cell_specimen_id, limit_to_last_familiar_second_novel=True,
             #                                use_events=use_events, filter_events=filter_events, save_figure=True)

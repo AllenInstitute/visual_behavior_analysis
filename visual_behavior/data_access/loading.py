@@ -2797,23 +2797,24 @@ def load_multi_session_df(data_type, event_type, conditions, interpolate=True, o
     :return:
     """
     cache = bpc.from_lims()
-    experiments_table = cache.get_ophys_experiment_table()
+    experiments_table = cache.get_ophys_experiment_table(passed_only=False)
     experiments_table = experiments_table[experiments_table.project_code.isin(['LearningmFISHTask1A', 'LearningmFISHDevelopment'])]
 
+    print(len(experiments_table), 'expts in expt table')
     mouse_ids = experiments_table.mouse_id.unique()
     multi_session_df = pd.DataFrame()
     for mouse_id in mouse_ids:
+        print('mouse_id:', mouse_id)
         experiments = experiments_table[(experiments_table.mouse_id == mouse_id)]
         for ophys_container_id in np.sort(experiments.ophys_container_id.unique()):
             try:
                 filename = get_file_name_for_multi_session_df(data_type, event_type, mouse_id, ophys_container_id, conditions)
                 multi_session_df_dir = get_multi_session_df_dir(interpolate=interpolate, output_sampling_rate=output_sampling_rate, event_type=event_type)
                 filepath = os.path.join(multi_session_df_dir, filename)
-                print(filepath)
                 df = pd.read_hdf(filepath, key='df')
                 multi_session_df = pd.concat([multi_session_df, df])
-                print(multi_session_df.mouse_id.unique())
-            except BaseException:
+            except Exception as e:
+                # print(e)
                 print('no multi_session_df for', mouse_id, ophys_container_id)
     return multi_session_df
 

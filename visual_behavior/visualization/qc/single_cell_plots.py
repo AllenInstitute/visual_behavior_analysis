@@ -127,7 +127,7 @@ def plot_across_session_responses(ophys_container_id, cell_specimen_id, use_even
         plt.close()
 
 
-def plot_across_session_responses_from_dataset_dict(ophys_container_id, cell_specimen_id, experiments_table,
+def plot_across_session_responses_from_dataset_dict(data_dit, ophys_container_id, cell_specimen_id, experiments_table,
                                                     data_type='dff', save_figure=True):
     """
     Generates plots characterizing single cell activity across sessions, in response to stimulus, omissions, and changes.
@@ -140,16 +140,13 @@ def plot_across_session_responses_from_dataset_dict(ophys_container_id, cell_spe
     container_expts = experiments_table[experiments_table.ophys_container_id == ophys_container_id].sort_values(by=['date_of_acquisition'])
     ophys_experiment_ids = container_expts.index.values
     print('mouse_id:', container_expts.mouse_id.unique())
+    print('ophys_container_id:', ophys_container_id)
+    print('there are', len(ophys_experiment_ids), 'in this container')
     suffix = '_'+data_type
     if data_type == 'dff':
         ylabel = 'dF/F'
     else:
         ylabel = 'response'
-
-    # create dictionary of all datasets and stimulus_response_dfs
-    print('generating data dictionary')
-    data_dict = loading.get_data_dict(ophys_experiment_ids, data_types=['dff'])
-    print('data dictionary created')
 
     window = [-0.5, 1.5]
     n = len(ophys_experiment_ids)
