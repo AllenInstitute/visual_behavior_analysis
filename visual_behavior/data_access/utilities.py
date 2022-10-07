@@ -1869,8 +1869,13 @@ def get_max_matched_cells_for_learning_mFISH():
 
     print(len(experiments), 'experiments')
 
-    cache = bpc.from_lims()
-    ophys_cells_table = cache.get_ophys_cells_table()
+    # cache = bpc.from_lims()
+    # ophys_cells_table = cache.get_ophys_cells_table()
+
+    save_dir = r'/allen/programs/mindscope/workgroups/learning/ophys/learning_project_cache'
+    ophys_cells_table = pd.read_csv(os.path.join(save_dir, 'ophys_cells_table.csv'))
+
+    print(len(ophys_cells_table), 'length of ophys cells table')
     ophys_cells_table = ophys_cells_table.merge(experiments, on='ophys_experiment_id')
     print(len(ophys_cells_table.cell_specimen_id.unique()), 'unique cells')
 
