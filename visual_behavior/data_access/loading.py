@@ -126,9 +126,9 @@ def get_ophys_glm_dir():
 def get_stimulus_response_df_dir(interpolate=True, output_sampling_rate=30, event_type='all'):
     base_dir = os.path.join(get_production_cache_dir(), 'stimulus_response_dfs')
     if interpolate:
-        save_dir = os.path.join(base_dir, event_type, 'interpolate_' + str(output_sampling_rate) + 'Hz')
+        save_dir = os.path.join(base_dir, 'interpolated_to_' + str(output_sampling_rate) + 'Hz', event_type)
     else:
-        save_dir = os.path.join(base_dir, event_type, 'original_frame_rate')
+        save_dir = os.path.join(base_dir, 'original_frame_rate', event_type)
     if not os.path.exists(save_dir):
         os.mkdir(save_dir)
     return save_dir
@@ -137,9 +137,9 @@ def get_stimulus_response_df_dir(interpolate=True, output_sampling_rate=30, even
 def get_multi_session_df_dir(interpolate=True, output_sampling_rate=30, event_type='all'):
     base_dir = get_production_cache_dir()
     if interpolate:
-        save_dir = os.path.join(base_dir, 'multi_session_mean_response_dfs', event_type, 'interpolate_' + str(output_sampling_rate) + 'Hz')
+        save_dir = os.path.join(base_dir, 'multi_session_mean_response_dfs', 'interpolated_to_' + str(output_sampling_rate) + 'Hz', event_type)
     else:
-        save_dir = os.path.join(base_dir, 'multi_session_mean_response_dfs', event_type, 'original_frame_rate')
+        save_dir = os.path.join(base_dir, 'multi_session_mean_response_dfs', 'original_frame_rate', event_type)
     if not os.path.exists(save_dir):
         os.mkdir(save_dir)
     return save_dir
@@ -553,6 +553,10 @@ def get_stimulus_response_df(dataset, time_window=[-2, 2.1], interpolate=True, o
                              data_type='filtered_events', event_type='all', load_from_file=False, exclude_invalid_rois=True):
     """
     load stimulus response df using mindscope_utilities and merge with stimulus_presentations that has trials metadata added
+    if load_from_file is False, the dataframe will be generated and saved
+    if load_from_file is True, the dataframe will be loaded from pre-existing file if it exists, otherwise it will generate it and save it
+    Note of caution: It is a good idea to select load_from_file = False if you are unsure whether all existing saved response dfs
+                        were generated with the same input parameters or not (particularly the time_window value)
     inputs:
         dataset: BehaviorOphysExperiment instance
         time_window: window over which to extract the event triggered response around each stimulus presentation time
@@ -571,7 +575,6 @@ def get_stimulus_response_df(dataset, time_window=[-2, 2.1], interpolate=True, o
     ophys_experiment_id = dataset.ophys_experiment_id
     filepath = get_stimulus_response_df_filepath_for_experiment(ophys_experiment_id, data_type, event_type,
                                                                 interpolate=interpolate, output_sampling_rate=output_sampling_rate)
-
 
     if event_type == 'omissions':
         response_window_duration = 0.75
@@ -605,6 +608,7 @@ def get_stimulus_response_df(dataset, time_window=[-2, 2.1], interpolate=True, o
                                                     output_sampling_rate=output_sampling_rate,
                                                     response_window_duration=response_window_duration,
                                                     exclude_invalid_rois=exclude_invalid_rois)
+            # since it did not exist, save it
             try:  # some experiments with lots of neurons cant save
                 sdf.to_hdf(filepath, key='df')
                 print('saved response df to', filepath)
@@ -617,19 +621,21 @@ def get_stimulus_response_df(dataset, time_window=[-2, 2.1], interpolate=True, o
                                                 output_sampling_rate=output_sampling_rate,
                                                 response_window_duration=response_window_duration,
                                                 exclude_invalid_rois=exclude_invalid_rois)
-        # save
+
         try:  # some experiments with lots of neurons cant save
             sdf.to_hdf(filepath, key='df')
             print('saved response df to', filepath)
         except:
             print('could not save', filepath)
 
+    print(len(sdf), 'length of stimulus response df')
     # if extended_stimulus_presentations is an attribute of the dataset object, use it, otherwise get regular stimulus_presentations
     if 'extended_stimulus_presentations' in dir(dataset):
         stimulus_presentations = dataset.extended_stimulus_presentations.copy()
     else:
         stimulus_presentations = vb_ophys.get_annotated_stimulus_presentations(dataset)
     sdf = sdf.merge(stimulus_presentations, on='stimulus_presentations_id')
+    print(len(sdf), 'length of stimulus response df after merging with stimulus presentations')
 
     # add run params
     sdf['interpolate'] = interpolate
@@ -2753,30 +2759,31 @@ def add_superficial_deep_to_experiments_table(experiments_table):
     return experiments_table
 
 
-def get_file_name_for_multi_session_df(data_type, event_type, ophys_container_id, mouse_id, conditions):
+def get_file_name_for_multi_session_df(data_type, event_type, mouse_id, ophys_container_id, conditions):
 
     mouse_id = str(mouse_id)
     ophys_container_id = str(ophys_container_id)
     if len(conditions) == 6:
-        filename = 'mean_response_df_' + data_type + '_' + event_type + '_' + ophys_container_id + '_' + mouse_id + '_' + conditions[1] + '_' + conditions[2] + '_' + conditions[3] + '_' + conditions[4] + '_' + conditions[5] + '.h5'
+        filename = 'mean_response_df_' + data_type + '_' + event_type + '_' + mouse_id + '_' + ophys_container_id + '_' + conditions[1] + '_' + conditions[2] + '_' + conditions[3] + '_' + conditions[4] + '_' + conditions[5] + '.h5'
     elif len(conditions) == 5:
-        filename = 'mean_response_df_' + data_type + '_' + event_type + '_' + ophys_container_id + '_' + mouse_id + '_' + conditions[1] + '_' + conditions[2] + '_' + conditions[3] + '_' + conditions[4] + '.h5'
+        filename = 'mean_response_df_' + data_type + '_' + event_type + '_' + mouse_id + '_' + ophys_container_id + '_' + conditions[1] + '_' + conditions[2] + '_' + conditions[3] + '_' + conditions[4] + '.h5'
     elif len(conditions) == 4:
-        filename = 'mean_response_df_' + data_type + '_' + event_type + '_' + ophys_container_id + '_' + mouse_id + '_' + conditions[1] + '_' + conditions[2] + '_' + conditions[3] + '.h5'
+        filename = 'mean_response_df_' + data_type + '_' + event_type + '_' + mouse_id + '_' + ophys_container_id + '_' + conditions[1] + '_' + conditions[2] + '_' + conditions[3] + '.h5'
     elif len(conditions) == 3:
-        filename = 'mean_response_df_' + data_type + '_' + event_type + '_' + ophys_container_id + '_' + mouse_id + '_' + conditions[1] + '_' + conditions[2] + '.h5'
+        filename = 'mean_response_df_' + data_type + '_' + event_type + '_' + mouse_id + '_' + ophys_container_id + '_' + conditions[1] + '_' + conditions[2] + '.h5'
     elif len(conditions) == 2:
-        filename = 'mean_response_df_' + data_type + '_' + event_type + '_' + ophys_container_id + '_' + mouse_id + '_' + conditions[1] + '.h5'
+        filename = 'mean_response_df_' + data_type + '_' + event_type + '_' + mouse_id + '_' + ophys_container_id + '_' + conditions[1] + '.h5'
     elif len(conditions) == 1:
-        filename = 'mean_response_df_' + data_type + '_' + event_type + '_' + ophys_container_id + '_' + mouse_id + '_' + conditions[0] + '.h5'
+        filename = 'mean_response_df_' + data_type + '_' + event_type + '_' + mouse_id + '_' + ophys_container_id + '_' + conditions[0] + '.h5'
 
     return filename
 
 
 def load_multi_session_df(data_type, event_type, conditions, interpolate=True, output_sampling_rate=30):
     """
-    Loops through all experiments in the provided experiments_table and loads pre-generated dataframes containing
-    trial averaged responses for each cell in each session, for the provided set of conditions, data_type, and event_type.
+    Loads pre-generated dataframes containing trial averaged responses for each cell in each session,
+    for the provided set of conditions, data_type, and event_type.
+    Limited to LearningmFISHTask1A and LearningmFISHDevelopment project codes
 
     :param data_type:
     :param event_type:
@@ -2785,28 +2792,25 @@ def load_multi_session_df(data_type, event_type, conditions, interpolate=True, o
     :param output_sampling_rate:
     :return:
     """
-    cache_dir = get_platform_analysis_cache_dir()
-    # cache = bpc.from_s3_cache(cache_dir=cache_dir)
-    # experiments_table = cache.get_ophys_experiment_table()
-    experiments_table = get_filtered_ophys_experiment_table()
-    experiments_table = experiments_table[experiments_table.project_code == 'LearningmFISHTask1A']
+    cache = bpc.from_lims()
+    experiments_table = cache.get_ophys_experiment_table()
+    experiments_table = experiments_table[experiments_table.project_code.isin(['LearningmFISHTask1A', 'LearningmFISHDevelopment'])
 
-    project_codes = experiments_table.project_code.unique()
+    mouse_ids = experiments_table.mouse_id.unique()
     multi_session_df = pd.DataFrame()
-    for project_code in project_codes:
-        experiments = experiments_table[(experiments_table.project_code == project_code)]
-        for mouse_id in np.sort(experiments.mouse_id.unique()):
+    for mouse_id in mouse_ids:
+        experiments = experiments_table[(experiments_table.mouse_id == mouse_id)]
+        for ophys_container_id in np.sort(experiments.ophys_container_id.unique()):
             try:
-                filename = get_file_name_for_multi_session_df(data_type, event_type, project_code, mouse_id, conditions)
-                multi_session_df_dir = get_multi_session_df_dir(interpolate=interpolate,
-                                                                   output_sampling_rate=output_sampling_rate, event_type=event_type)
+                filename = get_file_name_for_multi_session_df(data_type, event_type, mouse_id, ophys_container_id, conditions)
+                multi_session_df_dir = get_multi_session_df_dir(interpolate=interpolate, output_sampling_rate=output_sampling_rate, event_type=event_type)
                 filepath = os.path.join(multi_session_df_dir, filename)
                 print(filepath)
                 df = pd.read_hdf(filepath, key='df')
                 multi_session_df = pd.concat([multi_session_df, df])
                 print(multi_session_df.mouse_id.unique())
             except BaseException:
-                print('no multi_session_df for', project_code, mouse_id)
+                print('no multi_session_df for', mouse_id, ophys_container_id)
     return multi_session_df
 
 

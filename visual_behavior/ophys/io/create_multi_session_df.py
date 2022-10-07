@@ -111,7 +111,7 @@ def get_multi_session_df(mouse_id, ophys_container_id, conditions, data_type, ev
                 # get stimulus_response_df
                 df = loading.get_stimulus_response_df(dataset, data_type=data_type, event_type=event_type, time_window=time_window,
                                                       interpolate=interpolate, output_sampling_rate=output_sampling_rate,
-                                                      load_from_file=True)
+                                                      load_from_file=False)
                 print('stim response df loaded')
                 # use response_window duration from stim response df if it exists
                 if response_window_duration in df.keys():
@@ -161,7 +161,7 @@ def get_multi_session_df(mouse_id, ophys_container_id, conditions, data_type, ev
         return mega_mdf
 
     else:
-        print('multi_session_df not created')
+        print('multi_session_df not created because it already exists')
 
 
 
