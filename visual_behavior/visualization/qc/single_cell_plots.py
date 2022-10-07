@@ -151,7 +151,7 @@ def plot_across_session_responses_from_dataset_dict(ophys_container_id, cell_spe
     fig, ax = plt.subplots(5, n, figsize=figsize, sharey='row')
     ax = ax.ravel()
     print('ophys_container_id:', ophys_container_id)
-    for i, ophys_experiment_id in enumerate(ophys_experiment_ids[:3]):
+    for i, ophys_experiment_id in enumerate(ophys_experiment_ids):
         print('ophys_experiment_id:', ophys_experiment_id)
         try:
             dataset = data_dict[ophys_experiment_id]['dataset']['dataset']

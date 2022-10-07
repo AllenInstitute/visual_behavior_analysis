@@ -27,7 +27,7 @@ if __name__ == '__main__':
     print(len(experiments_table))
 
     # get cells that are matched in all sessions
-    matched_cells_df = utilities.get_matched_cells_for_learning_mFISH()
+    matched_cells_df = utilities.get_max_matched_cells_for_learning_mFISH()
     # get just the matched cells for this container
     matched_cell_specimen_ids = matched_cells_df[matched_cells_df.ophys_container_id==ophys_container_id].cell_specimen_id.unique()
 
