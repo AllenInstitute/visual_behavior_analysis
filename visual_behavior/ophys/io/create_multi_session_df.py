@@ -74,17 +74,18 @@ def get_multi_session_df(mouse_id, ophys_container_id, conditions, data_type, ev
         print('mouse_id:', mouse_id, ', ophys_container_id:', ophys_container_id)
         experiments = experiments_table[(experiments_table.ophys_container_id == int(ophys_container_id)) &
                                         (experiments_table.mouse_id == int(mouse_id))]
-        ophys_experiment_ids = experiments.index.values
+        experiment_ids = experiments.index.values
         print(len(ophys_experiment_ids), 'experiments for this mouse_id and ophys_container_id')
         save_mega_mdf = True
     else:
+        experiment_ids = ophys_experiment_ids.copy()
         print('ophys_experiment_ids provided, ignoring mouse_id and ophys_container_id')
         print('generating multi_session_df for provided list of ophys_experiment_ids')
-        print(len(ophys_experiment_ids), 'experiments are in the provided list')
+        print(len(experiment_ids), 'experiments are in the provided list')
         print('multi_session_df will not be automatically saved')
         save_mega_mdf = False
 
-    filename = loading.get_file_name_for_multi_session_df(data_type, event_type, ophys_container_id, mouse_id, conditions)
+    filename = loading.get_file_name_for_multi_session_df(data_type, event_type, mouse_id, ophys_container_id, conditions)
     mega_mdf_write_dir = loading.get_multi_session_df_dir(interpolate=interpolate, output_sampling_rate=output_sampling_rate, event_type=event_type)
     filepath = os.path.join(mega_mdf_write_dir, filename)
     print('saving to', filepath)
@@ -103,7 +104,7 @@ def get_multi_session_df(mouse_id, ophys_container_id, conditions, data_type, ev
 
     if process_data:
         mega_mdf = pd.DataFrame()
-        for experiment_id in ophys_experiment_ids:
+        for experiment_id in experiment_ids:
             try:
                 print(experiment_id)
                 # get dataset
@@ -140,6 +141,7 @@ def get_multi_session_df(mouse_id, ophys_container_id, conditions, data_type, ev
                 mdf['ophys_experiment_id'] = experiment_id
                 print('mean df created for', experiment_id)
                 mega_mdf = pd.concat([mega_mdf, mdf])
+                print('length of multi_session_df:', len(mega_mdf))
             except Exception as e:  # flake8: noqa: E722
                 print(e)
                 print('problem for', experiment_id)
