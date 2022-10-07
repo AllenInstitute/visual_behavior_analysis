@@ -629,12 +629,15 @@ def get_stimulus_response_df(dataset, time_window=[-2, 2.1], interpolate=True, o
         except:
             print('could not save', filepath)
 
+    # merge with stimulus presentations to get relevant metadata columns
     print(len(sdf), 'length of stimulus response df')
     # if extended_stimulus_presentations is an attribute of the dataset object, use it, otherwise get regular stimulus_presentations
-    if 'extended_stimulus_presentations' in dir(dataset):
-        stimulus_presentations = dataset.extended_stimulus_presentations.copy()
-    else:
-        stimulus_presentations = vb_ophys.get_annotated_stimulus_presentations(dataset)
+    # if 'extended_stimulus_presentations' in dir(dataset):
+    #     print('getting extended stim presentations')
+    #     stimulus_presentations = dataset.extended_stimulus_presentations.copy()
+    # else:
+    print('loading annotated stimulus presentations using mindscope_utilities')
+    stimulus_presentations = vb_ophys.get_annotated_stimulus_presentations(dataset)
     sdf = sdf.merge(stimulus_presentations, on='stimulus_presentations_id')
     print(len(sdf), 'length of stimulus response df after merging with stimulus presentations')
 
