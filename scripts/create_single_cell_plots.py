@@ -1,4 +1,6 @@
+import os
 import argparse
+import pandas as pd
 
 import visual_behavior.data_access.loading as loading
 import visual_behavior.data_access.utilities as utilities
@@ -21,7 +23,6 @@ if __name__ == '__main__':
     # save_dir = r'/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/platform_paper_plots/cell_matching'
 
     save_dir = r'/allen/programs/mindscope/workgroups/learning/ophys/learning_project_cache'
-    import pandas as pd
     experiments_table = pd.read_csv(os.path.join(save_dir, 'mFISH_project_expts.csv'))
     print(len(experiments_table))
 
