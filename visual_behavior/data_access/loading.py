@@ -2761,8 +2761,8 @@ def add_superficial_deep_to_experiments_table(experiments_table):
 
 def get_file_name_for_multi_session_df(data_type, event_type, mouse_id, ophys_container_id, conditions):
 
-    mouse_id = str(mouse_id)
-    ophys_container_id = str(ophys_container_id)
+    mouse_id = 'mouse_id_'+str(mouse_id)
+    ophys_container_id = 'container_id_'+str(ophys_container_id)
     if len(conditions) == 6:
         filename = 'mean_response_df_' + data_type + '_' + event_type + '_' + mouse_id + '_' + ophys_container_id + '_' + conditions[1] + '_' + conditions[2] + '_' + conditions[3] + '_' + conditions[4] + '_' + conditions[5] + '.h5'
     elif len(conditions) == 5:
