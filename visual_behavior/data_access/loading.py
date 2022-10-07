@@ -2794,7 +2794,7 @@ def load_multi_session_df(data_type, event_type, conditions, interpolate=True, o
     """
     cache = bpc.from_lims()
     experiments_table = cache.get_ophys_experiment_table()
-    experiments_table = experiments_table[experiments_table.project_code.isin(['LearningmFISHTask1A', 'LearningmFISHDevelopment'])
+    experiments_table = experiments_table[experiments_table.project_code.isin(['LearningmFISHTask1A', 'LearningmFISHDevelopment'])]
 
     mouse_ids = experiments_table.mouse_id.unique()
     multi_session_df = pd.DataFrame()
