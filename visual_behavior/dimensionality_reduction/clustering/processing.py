@@ -2425,5 +2425,70 @@ def get_shuffle_label(shuffle_type):
     return shuffle_type_dict[shuffle_type]
 
 
-def get_cluster_size_statistics_df():
-    return 10
+def compute_sse(feature_matrix):
+    '''
+    Computes Sum of Squared Error between each cell in feature matrix and the mean.
+
+    INPUT:
+    feature_matrix (pd.DataFrame) dropout scores, rows are cell specimen ids
+
+    Returns:
+    SSE (list) of sse values between each cell and their mean.
+    '''
+
+    mean_values = feature_matrix.mean().values
+
+    SSE = np.sum(np.subtract(feature_matrix.values, mean_values) ** 2, axis=1)
+
+    return SSE
+
+def get_variability_df(feature_matrix, cluster_df, columns=['cluster_id', 'cre_line', 'clustered'], metric='sse'):
+    '''
+    INPUT:
+    feature_matrix:
+    cluster_df: (pd.DataFrame) dataframe with columns ['cre_line', 'cluster_id'] and cell specimen id as an index
+    metric: (string)
+
+    Returns:
+    variability_df
+    '''
+
+    variability_df = pd.DataFrame(columns=columns)
+    cre_lines = np.sort(vba_clust.get_cre_lines(cluster_df))
+
+    columns = [*columns, metric]
+
+    if 'cell_specimen_id' in cluster_df.keys():
+        cluster_df.set_index('cell_specimen_id', inplace=True)
+
+    for cre_line in cre_lines:
+        print(cre_line)
+        cre_cluster_df = cluster_df[cluster_df.cre_line == cre_line]
+        cre_cell_ids = cre_cluster_df.index.values
+        cre_feature_matrix = feature_matrix.loc[cre_cell_ids]
+
+        cluster_ids = np.sort(cre_cluster_df['cluster_id'].values)
+        # compute values for each cluster id
+        for cluster_id in cluster_ids:
+            cluster_cids = cre_cluster_df[cre_cluster_df.cluster_id == cluster_id].index.values
+            cluster_feature_matrix = cre_feature_matrix.loc[cluster_cids]
+            if metric is 'sse':
+                values = compute_sse(cluster_feature_matrix)
+
+            variability_df = variability_df.append(pd.DataFrame({'cre_line': [cre_line] * len(values),
+                                                                 'cluster_id': [cluster_id] * len(values),
+                                                                 'clustered': [True] * len(values),
+                                                                 metric: values}, index=np.arange(len(values))),
+                                                   ignore_index=True)
+
+        if metric is 'sse':
+            values = compute_sse(cre_feature_matrix)
+        variability_df = variability_df.append(pd.DataFrame({'cre_line': [cre_line] * len(values),
+                                                             'cluster_id': [np.nan] * len(values),
+                                                             'clustered': [False] * len(values),
+                                                             metric: values}, index=np.arange(len(values))),
+                                               ignore_index=True)
+
+    return variability_df
+
+
