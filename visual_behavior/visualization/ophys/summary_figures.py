@@ -63,7 +63,7 @@ def plot_cell_zoom(roi_masks, max_projection, cell_roi_id, spacex=10, spacey=10,
         ax.imshow(mask, cmap='jet', alpha=alpha, vmin=0, vmax=1)
     if not full_image:
         ax.set_xlim(xmin - spacex, xmax + spacex)
-        ax.set_ylim(ymin + spacey, ymax - spacey)
+        ax.set_ylim(ymax + spacey, ymin - spacey)
     ax.set_title('cell_roi_id ' + str(cell_roi_id))
     ax.grid(False)
     ax.axis('off')
