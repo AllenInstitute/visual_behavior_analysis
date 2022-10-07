@@ -40,6 +40,7 @@ if __name__ == '__main__':
 
     for cell_specimen_id in matched_cell_specimen_ids:
         try:
+            cell_specimen_id = int(cell_specimen_id)
             print('plotting cell_specimen_id', cell_specimen_id)
             scp.plot_across_session_responses_from_dataset_dict(data_dict, ophys_container_id, cell_specimen_id,
                                                                 experiments_table, data_type='dff', save_figure=True)

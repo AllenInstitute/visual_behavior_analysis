@@ -176,9 +176,8 @@ def plot_across_session_responses_from_dataset_dict(data_dict, ophys_container_i
                 ax[i] = sf.plot_cell_zoom(dataset.roi_masks, dataset.average_projection, cell_roi_id,
                                           spacex=40, spacey=40, show_mask=True, ax=ax[i])
 
-                ax[i].set_title(container_expts.loc[ophys_experiment_id].session_type+'\n'+
-                                str(container_expts.loc[ophys_experiment_id].date_of_acquisition)[:10])
-
+                ax[i].set_title(str(container_expts.loc[ophys_experiment_id].date_of_acquisition)[:10]+'\n'+
+                container_expts.loc[ophys_experiment_id].session_type)
 
                 # plot average response for each image (for all non-change image presentations)
                 # get trial averaged responses for various conditions
@@ -188,14 +187,15 @@ def plot_across_session_responses_from_dataset_dict(data_dict, ophys_container_i
                                      response_window_duration=response_window_duration,
                                      get_pref_stim=True)
                 colors = sns.color_palette('hls', 8) + [(0.5, 0.5, 0.5)]
-                cell_data = cdf[(cdf.cell_specimen_id == cell_specimen_id) & (cdf.is_change == False)]
+                cell_data = cdf[(cdf.cell_specimen_id == cell_specimen_id) & (cdf.is_change == True)]
                 for c, image_name in enumerate(np.sort(cell_data.image_name.unique())):
                     ax[i + n] = utils.plot_mean_trace_from_mean_df(cell_data[cell_data.image_name == image_name],
                                                                 frame_rate=output_sampling_rate, ylabel=ylabel,
                                                                 legend_label=image_name, color=colors[c], interval_sec=0.5,
                                                                 xlims=[-0.5, 0.75], ax=ax[i + n])
+                    ax[i + n].legend(loc='lower right', fontsize='xx-small')
                 ax[i + n] = utils.plot_flashes_on_trace(ax[i + n], timestamps, change=True, omitted=False, alpha=0.15, facecolor='gray')
-                ax[i + n].set_title(container_expts.loc[ophys_experiment_id].session_type + '\n image response')
+                ax[i + n].set_title('oeid: '+str(ophys_experiment_id))
 
                 # plot mean omission response
                 print('plotting omissions')
@@ -210,7 +210,7 @@ def plot_across_session_responses_from_dataset_dict(data_dict, ophys_container_i
                                                                       legend_label=image_name, color='gray', interval_sec=1,
                                                                       xlims=[-1, 2], ax=ax[i + (n * 2)])
                     ax[i + (n * 2)] = utils.plot_flashes_on_trace(ax[i + (n * 2)], timstamps, change=False, omitted=True, alpha=0.15, facecolor='gray')
-                    ax[i + (n * 2)].set_title(container_expts.loc[ophys_experiment_id].session_type[6:] + '\n omission response')
+                    ax[i + (n * 2)].set_title('osid: '+str(container_expts.loc[ophys_experiment_id].ophys_session_id))
                 except:
                     print('couldnt plot omissions')
 
@@ -230,14 +230,14 @@ def plot_across_session_responses_from_dataset_dict(data_dict, ophys_container_i
                     run_colors = [sns.color_palette()[3], sns.color_palette()[2]]
                     # loop through running conditions and plot
                     for c, running in enumerate(np.sort(cell_data.running.unique())):
-                        if len(cell_data[cell_data.running == running]) > 5: # must be at least 5 trials per condition
+                        if len(cell_data[cell_data.running == running]) > 0: # only plot if there is data for this condition
                             ax[i + (n * 3)] = utils.plot_mean_trace_from_mean_df(cell_data[cell_data.running == running],
                                                                               frame_rate=output_sampling_rate, ylabel=ylabel,
                                                                               legend_label=running, color=run_colors[c], interval_sec=0.5,
                                                                               xlims=[-1, 2], ax=ax[i + (n * 3)])
                     ax[i + (n * 3)].legend(fontsize='xx-small', title='running', title_fontsize='xx-small')
                     ax[i + (n * 3)] = utils.plot_flashes_on_trace(ax[i + (n * 3)], timestamps, change=True, omitted=False, alpha=0.15, facecolor='gray')
-                    ax[i + (n * 3)].set_title(container_expts.loc[ophys_experiment_id].session_type + '\n image response')
+                    ax[i + (n * 3)].set_title('running vs stationary')
                 except:
                     print('couldnt plot running / not-running panel')
 
@@ -260,21 +260,22 @@ def plot_across_session_responses_from_dataset_dict(data_dict, ophys_container_i
                                                                               xlims=[-1, 2], ax=ax[i + (n * 4)])
                     ax[i + (n * 4)].legend(fontsize='xx-small', title='hit', title_fontsize='xx-small')
                     ax[i + (n * 4)] = utils.plot_flashes_on_trace(ax[i + (n * 4)], timestamps, change=True, omitted=False, alpha=0.15, facecolor='gray')
-                    ax[i + (n * 4)].set_title(container_expts.loc[ophys_experiment_id].session_type[6:] + '\n change response')
+                    ax[i + (n * 4)].set_title('hit vs miss')
                 except:
                     print('couldnt plot hit vs. miss')
 
-                # overall plot title
-                fig.tight_layout()
-                metadata_string = utils.get_container_metadata_string(dataset.metadata)
-                fig.suptitle(str(cell_specimen_id) + '_' + metadata_string, x=0.5, y=1.01, horizontalalignment='center')
         except Exception as e:
             print('problem for cell_specimen_id:', cell_specimen_id, ', ophys_experiment_id:', ophys_experiment_id)
             print(e)
+
+    # overall plot title
+    fig.tight_layout()
+    metadata_string = utils.get_container_metadata_string(dataset.metadata)
+    fig.suptitle(metadata_string + '_' + str(cell_specimen_id), x=0.5, y=1.01, horizontalalignment='center')
     if save_figure:
         save_dir = utils.get_single_cell_plots_dir()
-        utils.save_figure(fig, figsize, save_dir, 'matched_cell_across_session_responses', str(
-            cell_specimen_id) + '_' + metadata_string + suffix)
+        utils.save_figure(fig, figsize, save_dir, 'matched_cell_across_session_responses',
+                          metadata_string + '_' + str(cell_specimen_id)  + suffix)
 
 
 
