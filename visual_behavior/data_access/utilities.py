@@ -1860,22 +1860,19 @@ def get_max_matched_cells_for_learning_mFISH():
     Returns a dataframe with cell_specimen_id and metadata for matched cells.
     """
 
-    # experiments_table = cache.get_ophys_experiment_table(passed_only=False)
-    # experiments = experiments_table[experiments_table.project_code.isin(['LearningmFISHTask1A', 'LearningmFISHDevelopment'])]
+    cache = bpc.from_lims()
+    experiments_table = cache.get_ophys_experiment_table(passed_only=False)
+    experiments = experiments_table[experiments_table.project_code.isin(['LearningmFISHTask1A', 'LearningmFISHDevelopment'])]
+    ophys_cells_table = cache.get_ophys_cells_table()
 
-    save_dir = r'/allen/programs/mindscope/workgroups/learning/ophys/learning_project_cache'
-    experiments_table = pd.read_csv(os.path.join(save_dir, 'mFISH_project_expts.csv'))
-    experiments = experiments_table[experiments_table.project_code == 'LearningmFISHTask1A']
+    # save_dir = r'/allen/programs/mindscope/workgroups/learning/ophys/learning_project_cache'
+    # experiments_table = pd.read_csv(os.path.join(save_dir, 'mFISH_project_expts.csv'))
+    # experiments = experiments_table[experiments_table.project_code == 'LearningmFISHTask1A']
+    # ophys_cells_table = pd.read_csv(os.path.join(save_dir, 'ophys_cells_table.csv'))
 
     print(len(experiments), 'experiments')
-
-    # cache = bpc.from_lims()
-    # ophys_cells_table = cache.get_ophys_cells_table()
-
-    save_dir = r'/allen/programs/mindscope/workgroups/learning/ophys/learning_project_cache'
-    ophys_cells_table = pd.read_csv(os.path.join(save_dir, 'ophys_cells_table.csv'))
-
     print(len(ophys_cells_table), 'length of ophys cells table')
+
     ophys_cells_table = ophys_cells_table.merge(experiments, on='ophys_experiment_id')
     print(len(ophys_cells_table.cell_specimen_id.unique()), 'unique cells')
 
@@ -1895,3 +1892,30 @@ def get_max_matched_cells_for_learning_mFISH():
     matched_cells_df = matched_cells_df.drop_duplicates(subset=['cell_specimen_id'])
     print(len(matched_cells_df), 'cells matched across all sessions in their container')
     return matched_cells_df
+
+
+def get_simple_genotype(full_genotype):
+    """
+    Create simple genotype as reporter gene + Ai reporter line
+    """
+    # gene of driver line is always the first element of full genotype
+    driver = full_genotype.split('-')[0]
+    try: # need try except for cases where reporter is atypical or doesnt include 'Ai'
+        # pull out the reporter based on location of 'Ai' in the genotype string
+        reporter = full_genotype[full_genotype.index('Ai'):full_genotype.index('Ai')+5]
+        #get rid of parentheses for reporters that only have 2 numbers
+        reporter = reporter.split('(')[0]
+    except:
+        reporter = 'unknown'
+    # combine driver and reporter to get simple genotype
+    genotype = driver+';'+reporter
+    return genotype
+
+
+def add_simple_genotype(df):
+    """
+    Function to add a column 'genotype' to any dataframe containing 'full_genotype'
+    the 'genotype' column will be the gene of the driver line and the Ai# of the reporter line
+    """
+    df['genotype'] = [get_simple_genotype(full_genotype) for full_genotype in df.full_genotype.values]
+    return df
