@@ -1849,3 +1849,38 @@ def get_nan_trace_csids(traces):
         else:
             csids_to_keep.append(csid)
     return nan_csids, csids_to_keep
+
+
+def get_max_matched_cells_for_learning_mFISH():
+    """
+    Function to identify cell_specimen_ids that are matched in the maximum possible number of sessions for a given container
+    (i.e. cells that are matched in all sessions for that mouse)
+    Limited to LearningmFISHTask1A and LearningmFISHDevelopment
+
+    Returns a dataframe with cell_specimen_id and metadata for matched cells.
+    """
+    cache = bpc.from_lims()
+    experiments_table = cache.get_ophys_experiment_table(passed_only=False)
+    experiments = experiments_table[experiments_table.project_code.isin(['LearningmFISHTask1A', 'LearningmFISHDevelopment'])]
+    print(len(experiments), 'experiments')
+
+    ophys_cells_table = cache.get_ophys_cells_table()
+    ophys_cells_table = ophys_cells_table.merge(experiments, on='ophys_experiment_id')
+    print(len(ophys_cells_table.cell_specimen_id.unique()), 'unique cells')
+
+    counts = ophys_cells_table.value_counts(['mouse_id', 'cell_specimen_id'])
+    counts = pd.DataFrame(counts, columns=['session_count'])
+    counts = counts.reset_index()
+
+    matched_cells_list = []
+    for mouse_id in counts.mouse_id.unique():
+        tmp = counts[counts.mouse_id == mouse_id]
+        max_matched_sessions = tmp.session_count.max()
+        cells_with_max_num_matched_sessions = tmp[tmp.session_count == max_matched_sessions].cell_specimen_id.values
+        matched_cells_list = np.hstack((matched_cells_list, cells_with_max_num_matched_sessions))
+    matched_cells_list = [int(cell) for cell in matched_cells_list]
+    matched_cells_df = ophys_cells_table[ophys_cells_table.cell_specimen_id.isin(matched_cells_list)]
+
+    matched_cells_df = matched_cells_df.drop_duplicates(subset=['cell_specimen_id'])
+    print(len(matched_cells_df), 'cells matched across all sessions in their container')
+    return matched_cells_df
