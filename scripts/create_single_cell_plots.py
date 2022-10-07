@@ -13,7 +13,7 @@ if __name__ == '__main__':
     parser.add_argument("--ophys_container_id", type=int,
                         help="Container ID to process")
     args = parser.parse_args()
-    ophys_container_id = args.ophys_container_id
+    ophys_container_id = int(args.ophys_container_id)
     print('ophys_container_id:', ophys_container_id)
 
     # use_events = False

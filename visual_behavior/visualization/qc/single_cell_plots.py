@@ -173,8 +173,8 @@ def plot_across_session_responses_from_dataset_dict(data_dict, ophys_container_i
                 print('plotting ROI mask')
                 ct = dataset.cell_specimen_table.copy()
                 cell_roi_id = ct.loc[cell_specimen_id].cell_roi_id
-                ax[i] = sf.plot_cell_zoom(dataset.roi_masks, dataset.max_projection, cell_roi_id,
-                                          spacex=20, spacey=20, show_mask=True, ax=ax[i])
+                ax[i] = sf.plot_cell_zoom(dataset.roi_masks, dataset.average_projection, cell_roi_id,
+                                          spacex=40, spacey=40, show_mask=True, ax=ax[i])
 
                 ax[i].set_title(container_expts.loc[ophys_experiment_id].session_type+'\n'+
                                 str(container_expts.loc[ophys_experiment_id].date_of_acquisition)[:10])
