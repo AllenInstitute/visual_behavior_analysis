@@ -1859,7 +1859,7 @@ def get_max_matched_cells_for_learning_mFISH():
 
     Returns a dataframe with cell_specimen_id and metadata for matched cells.
     """
-    cache = bpc.from_lims()
+
     # experiments_table = cache.get_ophys_experiment_table(passed_only=False)
     # experiments = experiments_table[experiments_table.project_code.isin(['LearningmFISHTask1A', 'LearningmFISHDevelopment'])]
 
@@ -1869,6 +1869,7 @@ def get_max_matched_cells_for_learning_mFISH():
 
     print(len(experiments), 'experiments')
 
+    cache = bpc.from_lims()
     ophys_cells_table = cache.get_ophys_cells_table()
     ophys_cells_table = ophys_cells_table.merge(experiments, on='ophys_experiment_id')
     print(len(ophys_cells_table.cell_specimen_id.unique()), 'unique cells')
