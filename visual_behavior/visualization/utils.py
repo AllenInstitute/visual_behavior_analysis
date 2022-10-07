@@ -19,7 +19,9 @@ def get_experiment_plots_dir():
 
 
 def get_single_cell_plots_dir():
-    return r'//allen/programs/mindscope/workgroups/learning/ophys/qc_plots/single_cell_plots'
+    # return r'//allen/programs/mindscope/workgroups/learning/ophys/qc_plots/single_cell_plots'
+    return r'\allen\programs\mindscope\workgroups\learning\ophys\qc_plots\single_cell_plots'
+
 
 
 def save_figure(fig, figsize, save_dir, folder, fig_title, formats=['.png']):
