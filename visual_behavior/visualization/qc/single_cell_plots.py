@@ -136,6 +136,7 @@ def plot_across_session_responses_from_dataset_dict(ophys_container_id, cell_spe
     Useful to validate cell matching as well as examine changes in activity profiles over days.
     """
 
+    # get info for this container
     container_expts = experiments_table[experiments_table.ophys_container_id == ophys_container_id].sort_values(by=['date_of_acquisition'])
     ophys_experiment_ids = container_expts.index.values
     suffix = '_'+data_type
@@ -144,8 +145,10 @@ def plot_across_session_responses_from_dataset_dict(ophys_container_id, cell_spe
     else:
         ylabel = 'response'
 
-    window = [-0.5, 1.5]
+    # create dictionary of all datasets and stimulus_response_dfs
+    data_dict = loading.get_data_dict(ophys_experiment_ids, data_types=['dff'])
 
+    window = [-0.5, 1.5]
     n = len(ophys_experiment_ids)
     figsize = (4*n, 20)
     fig, ax = plt.subplots(5, n, figsize=figsize, sharey='row')
