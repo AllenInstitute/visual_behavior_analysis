@@ -14,8 +14,8 @@ if __name__ == '__main__':
     parser.add_argument('--ophys_container_id', type=str, help='ophys_container_id to use')
     parser.add_argument('--mouse_id', type=str, help='mouse_id to use')
     args = parser.parse_args()
-    ophys_container_id = args.ophys_container_id
-    mouse_id = args.mouse_id
+    ophys_container_id = int(args.ophys_container_id)
+    mouse_id = int(args.mouse_id)
 
     print('mouse_id:', mouse_id, 'ophys_container_id:', ophys_container_id)
 
@@ -77,7 +77,7 @@ if __name__ == '__main__':
                 response_window_duration = 0.5
             print('creating multi_session_df for', data_type, event_type, conditions)
             try: # use try except so that it skips over any conditions that fail to generate for some reason
-                df = io.get_multi_session_df(mouse_id, ophys_container_id, conditions, data_type, event_type,
+                df = io.get_multi_session_df(mouse_id, ophys_container_id, conditions, data_type, event_type, ophys_experiment_ids=None,
                                              time_window=time_window, interpolate=interpolate, output_sampling_rate=output_sampling_rate,
                                              response_window_duration=response_window_duration,
                                              use_extended_stimulus_presentations=use_extended_stimulus_presentations,

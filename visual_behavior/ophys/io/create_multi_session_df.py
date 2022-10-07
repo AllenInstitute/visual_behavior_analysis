@@ -72,9 +72,9 @@ def get_multi_session_df(mouse_id, ophys_container_id, conditions, data_type, ev
 
     if ophys_experiment_ids is None:
         print('mouse_id:', mouse_id, ', ophys_container_id:', ophys_container_id)
-        experiments = experiments_table[(experiments_table.ophys_container_id == ophys_container_id) &
+        experiments = experiments_table[(experiments_table.ophys_container_id == int(ophys_container_id)) &
                                         (experiments_table.mouse_id == int(mouse_id))]
-        ophys_experiment_ids = experiments.index.unique()
+        ophys_experiment_ids = experiments.index.values
         print(len(ophys_experiment_ids), 'experiments for this mouse_id and ophys_container_id')
         save_mega_mdf = True
     else:
