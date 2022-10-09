@@ -38,7 +38,11 @@ stdout_location = r"/allen/programs/mindscope/workgroups/learning/ophys/cluster_
 save_dir = r'/allen/programs/mindscope/workgroups/learning/ophys/learning_project_cache'
 import pandas as pd
 experiments_table = pd.read_csv(os.path.join(save_dir, 'mFISH_project_expts.csv'))
-experiments_table = experiments_table[experiments_table.project_code.isin(['LearningmFISHTask1S','LearningmFISHDevelopment'])]
+# experiments_table = experiments_table[experiments_table.project_code.isin(['LearningmFISHTask1A',
+#                                                                            'LearningmFISHDevelopment',
+#                                                                            'omFISHGad2Meso'])]
+experiments_table = experiments_table[(experiments_table.project_code.isin(['omFISHGad2Meso']))&
+                                      (experiments_table.session_type=='OPHYS_2_images_A_passive')]
 print(len(experiments_table), 'experiments')
 
 # experiments_table = loading.get_filtered_ophys_experiment_table()
