@@ -29,7 +29,7 @@ if __name__ == '__main__':
     physio_data_types = ['dff', 'events']# 'filtered_events', 'events']
     behavior_data_types = ['pupil_width', 'running_speed', 'lick_rate']
 
-    physio_conditions = [['cell_specimen_id', 'image_name'],
+    physio_conditions = [['cell_specimen_id', 'image_name'],]
                          # ['cell_specimen_id', 'is_change'],
                          # ['cell_specimen_id', 'omitted'],
                          # ['cell_specimen_id', 'is_change', 'epoch'],
@@ -42,7 +42,7 @@ if __name__ == '__main__':
                          # ['cell_specimen_id', 'is_change', 'hit', 'epoch'],
                          # ['cell_specimen_id', 'omitted', 'pre_omitted'],]
 
-    behavior_conditions = [['ophys_experiment_id', 'image_name'],
+    behavior_conditions = [['ophys_experiment_id', 'image_name'],]
                            # ['ophys_experiment_id', 'is_change'],
                            # ['ophys_experiment_id', 'omitted'],
                            # ['ophys_experiment_id', 'is_change', 'epoch'],
