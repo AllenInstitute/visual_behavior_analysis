@@ -31,7 +31,7 @@ python_file = r"/home/marinag/visual_behavior_analysis/visual_behavior/visualiza
 import pandas as pd
 save_dir = r'/allen/programs/mindscope/workgroups/learning/ophys/learning_project_cache'
 experiments_table = pd.read_csv(os.path.join(save_dir, 'mFISH_project_expts.csv'))
-experiments_table = experiments_table.set_index('ophys_experiment_id')
+experiments = experiments_table.set_index('ophys_experiment_id')
 
 container_ids = experiments.ophys_container_id.unique()
 
