@@ -466,7 +466,7 @@ def plot_cell_roi_mask_and_dff_trace(dataset, cell_roi_id, save_figure=True):
     figsize=(20,10)
     fig, ax = plt.subplots(2, 2, figsize=figsize, gridspec_kw={'width_ratios':[1,3]})
     ax = ax.ravel()
-    ax[0] = sf.plot_cell_zoom(roi_masks, average_image, cell_roi_id, spacex=40, spacey=40, show_mask=True, ax=ax[0])
+    ax[0] = sf.plot_cell_zoom(roi_masks, average_image, cell_roi_id, spacex=50, spacey=50, show_mask=True, ax=ax[0])
     # create twinax
     ax1 = ax[1].twinx()
     # dff traces

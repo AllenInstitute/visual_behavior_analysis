@@ -41,7 +41,13 @@ def get_metadata_string(ophys_container_id):
     ophys_experiment_ids = loading.get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id, experiments_table)
     dataset = loading.get_ophys_dataset(ophys_experiment_ids[0])
     m = dataset.metadata.copy()
-    metadata_string = str(m['mouse_id']) + '_' + str(m['experiment_container_id']) + '_' + m['cre_line'].split('-')[0] + '_' + m['targeted_structure'] + '_' + str(m['imaging_depth']) + '_' + m['session_type']
+    # genotype = m['cre_line'].split('-')[0]
+    genotype = utilities.get_simple_genotype(m['full_genotype'])
+    # add _dox if mouse is a dox mouse
+    dox_mice = utilities.get_list_of_dox_mice()
+    if str(m['mouse_id']) in dox_mice:
+        genotype = genotype + '_dox'
+    metadata_string = str(m['mouse_id']) + '_' + str(m['ophys_container_id']) + '_' + genotype + '_' + m['targeted_structure'] + '_' + str(m['imaging_depth']) + '_' + m['session_type']
     return metadata_string
 
 
@@ -127,7 +133,7 @@ def plot_sdk_max_projection_images_for_container(ophys_container_id, save_figure
     experiments_table = loading.get_filtered_ophys_experiment_table()
     ophys_experiment_ids = loading.get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id, experiments_table)
 
-    figsize = (25, 5)
+    figsize = (5*len(ophys_experiment_ids), 5)
     fig, ax = plt.subplots(1, len(ophys_experiment_ids), figsize=figsize)
     ax = ax_to_array(ax)
     for i, ophys_experiment_id in enumerate(ophys_experiment_ids):
@@ -168,7 +174,7 @@ def plot_movie_max_projection_images_for_container(ophys_container_id, save_figu
     experiments_table = loading.get_filtered_ophys_experiment_table()
     ophys_experiment_ids = loading.get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id, experiments_table)
 
-    figsize = (25, 5)
+    figsize = (5 * len(ophys_experiment_ids), 5)
     fig, ax = plt.subplots(1, len(ophys_experiment_ids), figsize=figsize)
     ax = ax_to_array(ax)
     for i, ophys_experiment_id in enumerate(ophys_experiment_ids):
@@ -204,7 +210,7 @@ def plot_sdk_average_images_for_container(ophys_container_id, save_figure=True):
     experiments_table = loading.get_filtered_ophys_experiment_table()
     ophys_experiment_ids = loading.get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id, experiments_table)
 
-    figsize = (25, 5)
+    figsize = (5 * len(ophys_experiment_ids), 5)
     fig, ax = plt.subplots(1, len(ophys_experiment_ids), figsize=figsize)
     ax = ax_to_array(ax)
     for i, ophys_experiment_id in enumerate(ophys_experiment_ids):
@@ -240,7 +246,7 @@ def plot_movie_average_images_for_container(ophys_container_id, save_figure=True
     experiments_table = loading.get_filtered_ophys_experiment_table()
     ophys_experiment_ids = loading.get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id, experiments_table)
 
-    figsize = (25, 5)
+    figsize = (5 * len(ophys_experiment_ids), 5)
     fig, ax = plt.subplots(1, len(ophys_experiment_ids), figsize=figsize)
     ax = ax_to_array(ax)
     for i, ophys_experiment_id in enumerate(ophys_experiment_ids):
@@ -291,7 +297,7 @@ def plot_segmentation_masks_for_container(ophys_container_id, save_figure=True):
     experiments_table = loading.get_filtered_ophys_experiment_table()
     ophys_experiment_ids = loading.get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id, experiments_table)
 
-    figsize = (25, 5)
+    figsize = (5 * len(ophys_experiment_ids), 5)
     fig, ax = plt.subplots(1, len(ophys_experiment_ids), figsize=figsize)
     ax = ax_to_array(ax)
     for i, ophys_experiment_id in enumerate(ophys_experiment_ids):
@@ -314,7 +320,7 @@ def plot_segmentation_mask_overlays_for_container(ophys_container_id, save_figur
     experiments_table = loading.get_filtered_ophys_experiment_table()
     ophys_experiment_ids = loading.get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id, experiments_table)
 
-    figsize = (25, 18)
+    figsize = (5 * len(ophys_experiment_ids), 20)
     n = len(ophys_experiment_ids)
     fig, ax = plt.subplots(4, n, figsize=figsize)
     ax = ax.ravel()
@@ -459,7 +465,7 @@ def plot_dff_traces_heatmaps_for_container(ophys_container_id, save_figure=True)
     experiments_table = loading.get_filtered_ophys_experiment_table()
     ophys_experiment_ids = loading.get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id, experiments_table)
 
-    figsize = (25, 20)
+    figsize = (20, 5 * len(ophys_experiment_ids))
     fig, ax = plt.subplots(len(ophys_experiment_ids), 1, figsize=figsize)
     ax = ax_to_array(ax)
     for i, ophys_experiment_id in enumerate(ophys_experiment_ids):
@@ -951,7 +957,7 @@ def plot_motion_correction_xy_shift_for_container(ophys_container_id, save_figur
     experiments_table = loading.get_filtered_ophys_experiment_table()
     ophys_experiment_ids = loading.get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id, experiments_table)
 
-    figsize = (25, 20)
+    figsize = (20, 5 * len(ophys_experiment_ids))
     fig, ax = plt.subplots(len(ophys_experiment_ids), 1, figsize=figsize)
     ax = ax_to_array(ax)
     for i, ophys_experiment_id in enumerate(ophys_experiment_ids):
@@ -1011,17 +1017,18 @@ def plot_population_average_across_sessions(container_df, ophys_container_id, da
     :param save_figure: Boolean, whether or not to save figure to default QC plots directory
     :return:
     """
-    dataset = loading.get_ophys_dataset(container_df.ophys_experiment_id.unique()[0])
+    # dataset = loading.get_ophys_dataset(container_df.ophys_experiment_id.unique()[0])
     # title = dataset.metadata_string
     title = get_metadata_string(ophys_container_id)
     # frame_rate = dataset.metadata['ophys_frame_rate']
     if event_type == 'omissions':
         figsize = (12, 5)
+        container_df = container_df[container_df.omitted == True]
         m = title.split('_')  # dataset.analysis_folder.split('_')
         title = str(ophys_container_id) + '_' + m[1] + '_' + m[2] + '_' + m[3] + '_' + m[4] + '_' + m[5] + '_' + m[6]
     elif event_type == 'changes':
         figsize = (12, 5)
-        container_df = container_df[container_df.go == True]
+        container_df = container_df[container_df.is_change == True]
         m = title.split('_')  # dataset.analysis_folder.split('_')
         title = str(ophys_container_id) + '_' + m[1] + '_' + m[2] + '_' + m[3] + '_' + m[4] + '_' + m[5] + '_' + m[6]
     else:
@@ -1072,7 +1079,7 @@ def plot_omission_population_average_across_sessions(ophys_container_id, save_fi
     :return:
     """
     container_df = loading.get_container_response_df(ophys_container_id, data_type='dff', event_type='all')
-    plot_population_average_across_sessions(container_df, ophys_container_id, data_type='dff', event_type='all',
+    plot_population_average_across_sessions(container_df, ophys_container_id, data_type='dff', event_type='omissions',
                                             save_figure=save_figure)
 
 
@@ -1107,7 +1114,7 @@ def plot_running_speed_for_container(ophys_container_id, save_figure=True):
     experiments_table = loading.get_filtered_ophys_experiment_table()
     ophys_session_ids = loading.get_ophys_session_ids_for_ophys_container_id(ophys_container_id, experiments_table)
 
-    figsize = (25, 15)
+    figsize = (25, len(ophys_session_ids)*5)
     fig, ax = plt.subplots(len(ophys_session_ids), 1, figsize=figsize)
     ax = ax_to_array(ax)
     for i, ophys_session_id in enumerate(ophys_session_ids):
@@ -1126,7 +1133,7 @@ def plot_lick_rasters_for_container(ophys_container_id, save_figure=True):
     experiments_table = loading.get_filtered_ophys_experiment_table()
     ophys_session_ids = loading.get_ophys_session_ids_for_ophys_container_id(ophys_container_id, experiments_table)
 
-    figsize = (25, 7)
+    figsize = (len(ophys_session_ids)*5, 7)
     fig, ax = plt.subplots(1, len(ophys_session_ids), figsize=figsize)
     ax = ax_to_array(ax)
     for i, ophys_session_id in enumerate(ophys_session_ids):

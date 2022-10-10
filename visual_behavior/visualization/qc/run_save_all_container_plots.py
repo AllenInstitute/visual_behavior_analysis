@@ -7,7 +7,7 @@ from allensdk.brain_observatory.behavior.behavior_project_cache import VisualBeh
 
 
 parser = argparse.ArgumentParser(description='run container qc plot generation functions on the cluster')
-parser.add_argument('--env', type=str, default='visual_behavior_sdk', metavar='name of conda environment to use')
+parser.add_argument('--env', type=str, default='learning_mFISH', metavar='name of conda environment to use')
 parser.add_argument('--scriptname', type=str, default='save_all_container_plots.py', metavar='name of script to run (must be in same folder)')
 parser.add_argument("--plots", type=str, default=None, metavar='plot name to generate')
 
@@ -19,14 +19,19 @@ python_file = r"/home/marinag/visual_behavior_analysis/visual_behavior/visualiza
 
 # container_ids = loading.get_ophys_container_ids()
 
-from allensdk.brain_observatory.behavior.behavior_project_cache import VisualBehaviorOphysProjectCache
-
-cache = VisualBehaviorOphysProjectCache.from_lims()
-experiments_table = cache.get_ophys_experiment_table(passed_only=False)
-experiments = experiments_table[experiments_table.project_code=='LearningmFISHTask1A']
+# from allensdk.brain_observatory.behavior.behavior_project_cache import VisualBehaviorOphysProjectCache
+#
+# cache = VisualBehaviorOphysProjectCache.from_lims()
+# experiments_table = cache.get_ophys_experiment_table(passed_only=False)
+# experiments = experiments_table[experiments_table.project_code=='LearningmFISHTask1A']
 # experiments = experiments[experiments.mouse_id.isin(['603892', '612764', '624942'])]
 # experiments = experiments_table[experiments_table.project_code=='LearningmFISHDevelopment']
 # experiments = experiments[experiments.mouse_id.isin(['582466'])]
+
+save_dir = r'/allen/programs/mindscope/workgroups/learning/ophys/learning_project_cache'
+experiments_table = pd.read_csv(os.path.join(save_dir, 'mFISH_project_expts.csv'))
+experiments_table = experiments_table.set_index('ophys_experiment_id')
+
 container_ids = experiments.ophys_container_id.unique()
 
 if __name__ == "__main__":
