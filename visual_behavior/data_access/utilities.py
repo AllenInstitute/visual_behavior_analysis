@@ -1908,7 +1908,7 @@ def get_simple_genotype(full_genotype):
     except:
         reporter = 'unknown'
     # combine driver and reporter to get simple genotype
-    genotype = driver+';'+reporter
+    genotype = driver+'_'+reporter
     return genotype
 
 
@@ -1919,3 +1919,57 @@ def add_simple_genotype(df):
     """
     df['genotype'] = [get_simple_genotype(full_genotype) for full_genotype in df.full_genotype.values]
     return df
+
+
+def add_dox_to_simple_genotype(df):
+    """
+    function that loops through all rows in df, checks whether the mouse_id for that row is one of the dox mice,
+    then adds '_dox' to the end of the genotype column
+    """
+    # if simple genotype column doesnt exist, create it
+    if 'genotype' not in df.columns:
+        df = utilities.add_simple_genotype(df)
+    # list of mice that have been treated with doxycycline to suppress GCaMP expression during development
+    dox_mice = get_list_of_dox_mice()
+    # loop across rows, check if mouse_id is in dox mice list, if so, add that to the genotype column
+    for i, index in enumerate(df.index.values):
+        if df.iloc[i].mouse_id in dox_mice:
+            df.at[index, 'genotype'] = df.iloc[i]['genotype'] + '_dox'
+    return df
+
+
+def get_list_of_dox_mice():
+    """
+    Function to return a list of hard coded mouse_ids of mice who were treated with doxycycline
+    """
+    dox_mice = ['623975', '623972', '631563', '637848', '637851']
+    return dox_mice
+
+
+def get_omFISH_passive_mice(experiments_table):
+    """
+    Filters experiments table to limit to omFISHGad2Meso project code & session_type OPHYS_2_images_A_passive
+    returns list of mouse_ids
+    """
+    omFISH_mice = experiments_table[(experiments_table.project_code == 'omFISHGad2Meso') & (
+    experiments_table.session_type == 'OPHYS_2_images_A_passive')].mouse_id.unique()
+    return omFISH_mice
+
+
+def get_mFISH_projects_experiments_table():
+    """
+    Load experiments table from cache, limit to learning mFISH and omFISH project codes,
+    and remove session_types that wont load via SDK
+    """
+
+    from allensdk.brain_observatory.behavior.behavior_project_cache import VisualBehaviorOphysProjectCache
+
+    cache = VisualBehaviorOphysProjectCache.from_lims()
+    experiments_table = cache.get_ophys_experiment_table(passed_only=False)
+    experiments = experiments_table[experiments_table.project_code.isin(['LearningmFISHTask1A',
+                                                                         'LearningmFISHDevelopment',
+                                                                         'omFISHGad2Meso'])]
+    experiments = experiments[
+        experiments.session_type.isin(['STAGE_0', 'STAGE_1', 'OPHYS_7_receptive_field_mapping']) == False]
+    return experiments
+
