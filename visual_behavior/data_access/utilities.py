@@ -1860,14 +1860,14 @@ def get_max_matched_cells_for_learning_mFISH():
     Returns a dataframe with cell_specimen_id and metadata for matched cells.
     """
 
-    cache = bpc.from_lims()
-    # experiments_table = cache.get_ophys_experiment_table(passed_only=False)
-    # experiments = experiments_table[experiments_table.project_code.isin(['LearningmFISHTask1A', 'LearningmFISHDevelopment'])]
+    # cache = bpc.from_lims()
+    # experiments = cache.get_ophys_experiment_table(passed_only=False)
+    # # experiments = experiments[experiments_table.project_code.isin(['LearningmFISHTask1A'])]
     # ophys_cells_table = cache.get_ophys_cells_table()
 
     save_dir = r'/allen/programs/mindscope/workgroups/learning/ophys/learning_project_cache'
-    experiments_table = pd.read_csv(os.path.join(save_dir, 'mFISH_project_expts.csv'))
-    experiments = experiments_table[experiments_table.project_code == 'LearningmFISHTask1A']
+    experiments = pd.read_csv(os.path.join(save_dir, 'mFISH_project_expts.csv'))
+    # experiments = experiments[experiments_table.project_code == 'LearningmFISHTask1A']
     ophys_cells_table = pd.read_csv(os.path.join(save_dir, 'ophys_cells_table.csv'))
 
     print(len(experiments), 'experiments')

@@ -14,7 +14,7 @@ parser.add_argument('--scriptname', type=str, default='create_single_cell_plots.
 
 save_dir = r'/allen/programs/mindscope/workgroups/learning/ophys/learning_project_cache'
 experiments_table = pd.read_csv(os.path.join(save_dir, 'mFISH_project_expts.csv'))
-experiments_table = experiments_table[experiments_table.project_code=='LearningmFISHTask1A']
+experiments_table = experiments_table[experiments_table.project_code=='omFISHGad2Meso']
 print(len(experiments_table))
 container_ids = experiments_table.ophys_container_id.unique()
 

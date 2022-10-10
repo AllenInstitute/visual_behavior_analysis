@@ -448,10 +448,10 @@ def plot_single_cell_activity_and_behavior(dataset, cell_specimen_id, save_figur
     #     ax[x].legend(loc='upper left', fontsize='x-small')
     plt.subplots_adjust(wspace=0, hspace=0.1)
     metadata_string = utils.get_metadata_string(dataset.metadata)
-    ax[0].set_title(str(cell_specimen_id) + '_' + metadata_string)
+    ax[0].set_title(metadata_string + '_' + str(cell_specimen_id))
     if save_figure:
         utils.save_figure(fig, figsize, utils.get_single_cell_plots_dir(), 'dff_trace_and_behavior',
-                          str(cell_specimen_id) + '_' + metadata_string + '_dff_trace_and_behavior')
+                          metadata_string + '_' + str(cell_specimen_id) + '_dff_trace_and_behavior')
         plt.close()
 
 
