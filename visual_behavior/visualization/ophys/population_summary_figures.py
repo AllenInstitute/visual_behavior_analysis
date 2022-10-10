@@ -419,7 +419,7 @@ def plot_mean_change_responses(df, vmax=0.3, colorbar=False, ax=None, save_dir=N
                     'change_response_matrix_' + cre_line + '_' + image_set + '_' + suffix)
 
 
-def plot_tuning_curve_heatmap(df, vmax=0.3, sup_title=None, title=None, ax=None, save_dir=None, folder=None, use_events=False,
+def plot_tuning_curve_heatmap(df, cell_list=None, vmax=0.3, sup_title=None, title=None, ax=None, save_dir=None, folder=None, use_events=False,
                               colorbar=True, include_omitted=False):
     if 'image_name' in df.keys():
         image_name = 'image_name'
@@ -437,12 +437,13 @@ def plot_tuning_curve_heatmap(df, vmax=0.3, sup_title=None, title=None, ax=None,
         label = 'mean dF/F'
         suffix = suffix
     images = np.sort(df[image_name].unique())
-    cell_list = []
-    for image in images:
-        tmp = df[(df[image_name] == image) & (df.pref_stim == True)]
-        order = np.argsort(tmp.mean_response.values)[::-1]
-        cell_ids = list(tmp.cell_specimen_id.values[order])
-        cell_list = cell_list + cell_ids
+    if cell_list is None:
+        cell_list = []
+        for image in images:
+            tmp = df[(df[image_name] == image) & (df.pref_stim == True)]
+            order = np.argsort(tmp.mean_response.values)[::-1]
+            cell_ids = list(tmp.cell_specimen_id.values[order])
+            cell_list = cell_list + cell_ids
     response_matrix = np.empty((len(cell_list), len(images)))
     for i, cell in enumerate(cell_list):
         responses = []
