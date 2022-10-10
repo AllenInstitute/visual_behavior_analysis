@@ -30,9 +30,9 @@ if __name__ == "__main__":
 
     # instantiate a Slurm object
     slurm = Slurm(
-        mem='40g',  # '24g'
+        mem='80g',  # '24g'
         cpus_per_task=1,
-        time='10:00:00',
+        time='20:00:00',
         partition='braintv',
         job_name='single_cell_plots',
         output=f'{stdout_location}/{Slurm.JOB_ARRAY_MASTER_ID}_{Slurm.JOB_ARRAY_ID}.out',

@@ -174,10 +174,12 @@ def plot_across_session_responses_from_dataset_dict(data_dict, ophys_container_i
                 ct = dataset.cell_specimen_table.copy()
                 cell_roi_id = ct.loc[cell_specimen_id].cell_roi_id
                 ax[i] = sf.plot_cell_zoom(dataset.roi_masks, dataset.average_projection, cell_roi_id,
-                                          spacex=40, spacey=40, show_mask=True, ax=ax[i])
+                                          spacex=50, spacey=50, show_mask=True, ax=ax[i])
 
-                ax[i].set_title(str(container_expts.loc[ophys_experiment_id].date_of_acquisition)[:10]+'\n'+
-                container_expts.loc[ophys_experiment_id].session_type)
+                session_type = container_expts.loc[ophys_experiment_id].session_type
+                s = session_type.split('_')
+                session_type = s[0] + '_' + s[1] + '_' + s[2]
+                ax[i].set_title(str(container_expts.loc[ophys_experiment_id].date_of_acquisition)[:10]+'\n'+session_type)
 
                 # plot average response for each image (for all non-change image presentations)
                 # get trial averaged responses for various conditions
@@ -193,7 +195,7 @@ def plot_across_session_responses_from_dataset_dict(data_dict, ophys_container_i
                                                                 frame_rate=output_sampling_rate, ylabel=ylabel,
                                                                 legend_label=image_name, color=colors[c], interval_sec=0.5,
                                                                 xlims=[-1, 2], ax=ax[i + n])
-                    ax[i + n].legend(loc='lower right', fontsize='xx-small')
+                    ax[i + n].legend(loc='upper right', fontsize='xx-small')
                 ax[i + n] = utils.plot_flashes_on_trace(ax[i + n], timestamps, change=True, omitted=False, alpha=0.15, facecolor='gray')
                 ax[i + n].set_title('oeid: '+str(ophys_experiment_id))
 
