@@ -440,7 +440,7 @@ def get_container_metadata_string(metadata):
     dox_mice = utilities.get_list_of_dox_mice()
     if str(m['mouse_id']) in dox_mice:
         genotype = genotype+'_dox'
-    metadata_string = str(m['mouse_id']) + '_' + str(m['experiment_container_id']) + '_' + genotype + '_' + m['targeted_structure'] + '_' + str(m['imaging_depth'])
+    metadata_string = str(m['mouse_id']) + '_' + str(m['ophys_container_id']) + '_' + genotype + '_' + m['targeted_structure'] + '_' + str(m['imaging_depth'])
     return metadata_string
 
 
