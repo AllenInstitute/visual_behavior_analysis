@@ -292,70 +292,75 @@ def get_filtered_ophys_experiment_table(include_failed_data=True, release_data_o
         experiment_table -- returns a dataframe with ophys_experiment_id as the index and metadata as columns.
     """
 
-    if include_failed_data is True:
-        release_data_only = False
-    if release_data_only:
-        # get cache from lims for data released on March 25th
-        print('getting experiment table for March and August releases from lims')
-        cache = bpc.from_lims(data_release_date=['2021-03-25', '2021-08-12'])
-        experiments = cache.get_ophys_experiment_table()
-    if not release_data_only:
-        if from_cached_file == True:
-            if 'filtered_ophys_experiment_table.csv' in os.listdir(get_production_cache_dir()):
-                filepath = os.path.join(get_production_cache_dir(), 'filtered_ophys_experiment_table.csv')
-                print('loading cached experiment_table')
-                print('last updated on:')
-                import time
-                print(time.ctime(os.path.getctime(filepath)))
-                # load the cached file
-                experiments = pd.read_csv(filepath)
-            else:
-                print('there is no filtered_ophys_experiment_table.csv', get_production_cache_dir())
-        else:
-            print('getting up-to-date experiment_table from lims')
-            # get everything in lims
-            cache = bpc.from_lims()
-            experiments = cache.get_ophys_experiment_table(passed_only=False)
-            print(len(experiments), 'experiments in ophys_experiment_table')
-            # limit to the 4 VisualBehavior project codes
-            # experiments = filtering.limit_to_production_project_codes(experiments)
-            if add_extra_columns:
-                print('adding extra columns')
-                print('NOTE: this is slow. set from_cached_file to True to load cached version of experiments_table at:')
-                print(get_production_cache_dir())
-                # create cre_line column, set NaN session_types to None, add model output availability and location columns
-                experiments = reformat.reformat_experiments_table(experiments)
-        if include_failed_data:
-            print('including failed data')
-            pass
-        else:
-            print('limiting to passed experiments')
-            experiments = filtering.limit_to_passed_experiments(experiments)
-            experiments = filtering.remove_failed_containers(experiments)  # container_workflow_state can be anything other than 'failed'
-            # limit to sessions that start with OPHYS
-            print('limiting to sessions that start with OPHYS')
-    # experiments = filtering.limit_to_valid_ophys_session_types(experiments)
-    if experiments.index.name != 'ophys_experiment_id':
-        # experiments = experiments.drop_duplicates(subset=['ophys_experiment_id', 'ophys_container_id'])
-        experiments = experiments.set_index('ophys_experiment_id')
-    if exclude_ai94:
-        print('excluding Ai94 data')
-        experiments = experiments[experiments.full_genotype != 'Slc17a7-IRES2-Cre/wt;Camk2a-tTA/wt;Ai94(TITL-GCaMP6s)/wt']
-    if 'cre_line' not in experiments.keys():
-        experiments['cre_line'] = [full_genotype.split('/')[0] for full_genotype in experiments.full_genotype.values]
-    # filter one more time on load to restrict to Visual Behavior project experiments ###
-    # experiments = filtering.limit_to_production_project_codes(experiments)
+    # if include_failed_data is True:
+    #     release_data_only = False
+    # if release_data_only:
+    #     # get cache from lims for data released on March 25th
+    #     print('getting experiment table for March and August releases from lims')
+    #     cache = bpc.from_lims(data_release_date=['2021-03-25', '2021-08-12'])
+    #     experiments = cache.get_ophys_experiment_table()
+    # if not release_data_only:
+    #     if from_cached_file == True:
+    #         if 'filtered_ophys_experiment_table.csv' in os.listdir(get_production_cache_dir()):
+    #             filepath = os.path.join(get_production_cache_dir(), 'filtered_ophys_experiment_table.csv')
+    #             print('loading cached experiment_table')
+    #             print('last updated on:')
+    #             import time
+    #             print(time.ctime(os.path.getctime(filepath)))
+    #             # load the cached file
+    #             experiments = pd.read_csv(filepath)
+    #         else:
+    #             print('there is no filtered_ophys_experiment_table.csv', get_production_cache_dir())
+    #     else:
+    #         print('getting up-to-date experiment_table from lims')
+    #         # get everything in lims
+    #         cache = bpc.from_lims()
+    #         experiments = cache.get_ophys_experiment_table(passed_only=False)
+    #         print(len(experiments), 'experiments in ophys_experiment_table')
+    #         # limit to the 4 VisualBehavior project codes
+    #         # experiments = filtering.limit_to_production_project_codes(experiments)
+    #         if add_extra_columns:
+    #             print('adding extra columns')
+    #             print('NOTE: this is slow. set from_cached_file to True to load cached version of experiments_table at:')
+    #             print(get_production_cache_dir())
+    #             # create cre_line column, set NaN session_types to None, add model output availability and location columns
+    #             experiments = reformat.reformat_experiments_table(experiments)
+    #     if include_failed_data:
+    #         print('including failed data')
+    #         pass
+    #     else:
+    #         print('limiting to passed experiments')
+    #         experiments = filtering.limit_to_passed_experiments(experiments)
+    #         experiments = filtering.remove_failed_containers(experiments)  # container_workflow_state can be anything other than 'failed'
+    #         # limit to sessions that start with OPHYS
+    #         print('limiting to sessions that start with OPHYS')
+    # # experiments = filtering.limit_to_valid_ophys_session_types(experiments)
+    # if experiments.index.name != 'ophys_experiment_id':
+    #     # experiments = experiments.drop_duplicates(subset=['ophys_experiment_id', 'ophys_container_id'])
+    #     experiments = experiments.set_index('ophys_experiment_id')
+    # if exclude_ai94:
+    #     print('excluding Ai94 data')
+    #     experiments = experiments[experiments.full_genotype != 'Slc17a7-IRES2-Cre/wt;Camk2a-tTA/wt;Ai94(TITL-GCaMP6s)/wt']
+    # if 'cre_line' not in experiments.keys():
+    #     experiments['cre_line'] = [full_genotype.split('/')[0] for full_genotype in experiments.full_genotype.values]
+    # # filter one more time on load to restrict to Visual Behavior project experiments ###
+    # # experiments = filtering.limit_to_production_project_codes(experiments)
+    #
+    # # add new columns for conditions to analyze for platform paper ###
+    # # experiments = utilities.add_cell_type_column(experiments)
+    #
+    #
+    # ### hack because of problem container
+    # # experiments = experiments[experiments.ophys_container_id!=1132424700]
+    #
+    # if overwrite_cached_file == True:
+    #     print('overwriting pre-saved experiments table file')
+    #     experiments.to_csv(os.path.join(get_production_cache_dir(), 'filtered_ophys_experiment_table.csv'))
 
-    # add new columns for conditions to analyze for platform paper ###
-    # experiments = utilities.add_cell_type_column(experiments)
+    save_dir = r'/allen/programs/mindscope/workgroups/learning/ophys/learning_project_cache'
+    experiments_table = pd.read_csv(os.path.join(save_dir, 'mFISH_project_expts.csv'))
+    experiments_table = experiments_table.set_index('ophys_experiment_id')
 
-
-    ### hack because of problem container
-    # experiments = experiments[experiments.ophys_container_id!=1132424700]
-
-    if overwrite_cached_file == True:
-        print('overwriting pre-saved experiments table file')
-        experiments.to_csv(os.path.join(get_production_cache_dir(), 'filtered_ophys_experiment_table.csv'))
     return experiments
 
 
@@ -3055,8 +3060,8 @@ def get_container_response_df(ophys_container_id, data_type='dff', event_type='a
         try:
             print('getting stimulus response df for', ophys_experiment_id)
             dataset = get_ophys_dataset(ophys_experiment_id)
-            sdf = get_stimulus_response_df(dataset, time_window=[-3, 3.1], interpolate=True, output_sampling_rate=30,
-                                     data_type=data_type, event_type=event_type, load_from_file=False)
+            sdf = get_stimulus_response_df(dataset, time_window=[-2, 2.1], interpolate=True, output_sampling_rate=30,
+                                     data_type=data_type, event_type=event_type, load_from_file=True)
             sdf['ophys_experiment_id'] = ophys_experiment_id
             sdf['session_type'] = experiments_table.loc[ophys_experiment_id].session_type
             container_df = pd.concat([container_df, sdf])
