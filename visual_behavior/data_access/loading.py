@@ -2801,9 +2801,15 @@ def load_multi_session_df(data_type, event_type, conditions, interpolate=True, o
     :param output_sampling_rate:
     :return:
     """
-    cache = bpc.from_lims()
-    experiments_table = cache.get_ophys_experiment_table(passed_only=False)
-    experiments_table = experiments_table[experiments_table.project_code.isin(['LearningmFISHTask1A', 'LearningmFISHDevelopment'])]
+    # cache = bpc.from_lims()
+    # experiments_table = cache.get_ophys_experiment_table(passed_only=False)
+    # experiments_table = experiments_table[experiments_table.project_code.isin(['LearningmFISHTask1A',
+    #                                                                            'LearningmFISHDevelopment',
+    #                                                                            'omFISHGad2Meso'])]
+    ## This one loads from SDK
+    # experiments_table = utilities.get_mFISH_projects_experiments_table()
+    # This one loads from file as currently configured
+    experiments_table = get_filtered_ophys_experiment_table()
 
     print(len(experiments_table), 'expts in expt table')
     mouse_ids = experiments_table.mouse_id.unique()
