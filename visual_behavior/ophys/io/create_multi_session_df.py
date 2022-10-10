@@ -136,7 +136,7 @@ def get_multi_session_df(mouse_id, ophys_container_id, conditions, data_type, ev
                 # compute trial average and other metrics
                 mdf = ut.get_mean_df(df, conditions=conditions, frame_rate=output_sampling_rate,
                                      time_window=time_window, response_window_duration=response_window_duration,
-                                     get_pref_stim=get_pref_stim, exclude_omitted_from_pref_stim=True)
+                                     get_pref_stim=get_pref_stim, exclude_omitted_from_pref_stim=False)
                 if 'correlation_values' in mdf.keys():
                     mdf = mdf.drop(columns=['correlation_values'])
                 mdf['ophys_experiment_id'] = experiment_id
