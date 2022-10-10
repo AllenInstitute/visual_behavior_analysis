@@ -3,7 +3,8 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 
 from visual_behavior.data_access import loading as loading
-from visual_behavior.visualization import utils as utils
+from visual_behavior.data_access import utilities as utilities
+
 import visual_behavior.visualization.ophys.summary_figures as sf
 
 from visual_behavior.ophys.response_analysis.response_analysis import ResponseAnalysis
@@ -281,59 +282,176 @@ def plot_across_session_responses_from_dataset_dict(data_dict, ophys_container_i
 
 
 
+
+def plot_across_session_responses_from_multi_session_dfs(ophys_container_id, cell_specimen_id, experiments_table,
+                                                        change_image_mdf, omission_mdf, output_sampling_rate=30,
+                                                        data_type='dff', save_figure=True):
+    """
+    Generates plots characterizing single cell activity across sessions for matched cells.
+    Plots the ROI mask across days, as well as the average change response for each image in the session,
+    and the average omission response for sessions where omissions are present.
+    Useful to validate cell matching as well as examine changes in activity profiles over days.
+    """
+
+    # get info for this container
+    container_expts = experiments_table[experiments_table.ophys_container_id == ophys_container_id].sort_values(by=['date_of_acquisition'])
+    ophys_experiment_ids = container_expts.index.values
+    print('mouse_id:', container_expts.mouse_id.unique())
+    print('ophys_container_id:', ophys_container_id)
+    print('there are', len(ophys_experiment_ids), 'experiments in this container')
+    suffix = '_'+data_type
+    if data_type == 'dff':
+        ylabel = 'dF/F'
+    else:
+        ylabel = 'response'
+
+    window = [-1, 2]
+
+    n = len(ophys_experiment_ids)
+    figsize = (4*n, 15)
+    fig, ax = plt.subplots(3, n, figsize=figsize, sharey='row')
+    ax = ax.ravel()
+    print('ophys_container_id:', ophys_container_id)
+    for i, ophys_experiment_id in enumerate(ophys_experiment_ids):
+        print('ophys_experiment_id:', ophys_experiment_id)
+        try:
+            dataset = loading.get_ophys_dataset(ophys_experiment_id)
+
+            # create another plot while we have dataset loaded
+            try:
+                plot_single_cell_activity_and_behavior(dataset, cell_specimen_id, save_figure=True)
+            except:
+                print('couldnt plot single cell activity and behavior')
+
+            # if the selected cell is not in this session (i.e. is not matched), plot it, otherwise skip
+            if cell_specimen_id in dataset.dff_traces.index:
+                print(cell_specimen_id, 'is in', ophys_experiment_id)
+
+                # plot cell mask
+                print('plotting ROI mask')
+                ct = dataset.cell_specimen_table.copy()
+                cell_roi_id = ct.loc[cell_specimen_id].cell_roi_id
+                ax[i] = sf.plot_cell_zoom(dataset.roi_masks, dataset.average_projection, cell_roi_id,
+                                          spacex=50, spacey=50, show_mask=True, ax=ax[i])
+
+                session_type = container_expts.loc[ophys_experiment_id].session_type
+                s = session_type.split('_')
+                session_type = s[0] + '_' + s[1] + '_' + s[2]
+                ax[i].set_title(str(container_expts.loc[ophys_experiment_id].date_of_acquisition)[:10]+'\n'+session_type)
+
+                # plot average response for each image (for all non-change image presentations)
+                # get trial averaged responses for various conditions
+                print('plotting image responses')
+                cdf = change_image_mdf.copy()
+                cdf = cdf[cdf.ophys_experiment_id==ophys_experiment_id]
+                colors = sns.color_palette()
+                cell_data = cdf[(cdf.cell_specimen_id == cell_specimen_id) & (cdf.is_change == True)]
+                timestamps = cell_data.trace_timestamps.values[0]
+                for c, image_name in enumerate(np.sort(cell_data.image_name.unique())):
+                    ax[i + n] = utils.plot_mean_trace_from_mean_df(cell_data[cell_data.image_name == image_name],
+                                                                frame_rate=output_sampling_rate, ylabel=ylabel,
+                                                                legend_label=image_name, color=colors[c], interval_sec=0.5,
+                                                                xlims=[-1, 2], ax=ax[i + n])
+                    ax[i + n].legend(loc='upper right', fontsize='xx-small')
+                ax[i + n] = utils.plot_flashes_on_trace(ax[i + n], timestamps, change=True, omitted=False, alpha=0.15, facecolor='gray')
+                ax[i + n].set_title('oeid: '+str(ophys_experiment_id))
+
+                # plot mean omission response
+                print('plotting omissions')
+                try:
+                    odf = omission_mdf.copy()
+                    odf = odf[odf.ophys_experiment_id==ophys_experiment_id]
+                    cell_data = odf[(odf.cell_specimen_id == cell_specimen_id)]
+                    timestamps = cell_data.trace_timestamps.values[0]
+                    ax[i + (n * 2)] = utils.plot_mean_trace_from_mean_df(cell_data,
+                                                                      frame_rate=output_sampling_rate, ylabel=ylabel,
+                                                                      legend_label=image_name, color='gray', interval_sec=1,
+                                                                      xlims=[-1, 2], ax=ax[i + (n * 2)])
+                    ax[i + (n * 2)] = utils.plot_flashes_on_trace(ax[i + (n * 2)], timstamps, change=False, omitted=True, alpha=0.15, facecolor='gray')
+                    ax[i + (n * 2)].set_title('osid: '+str(container_expts.loc[ophys_experiment_id].ophys_session_id))
+                except:
+                    print('couldnt plot omissions')
+        except:
+            print('problem for', ophys_experiment_id)
+
+
+    # overall plot title
+    fig.tight_layout()
+    metadata_string = utils.get_container_metadata_string(dataset.metadata)
+    fig.suptitle(metadata_string + '_' + str(cell_specimen_id), x=0.5, y=1.01, horizontalalignment='center')
+    if save_figure:
+        save_dir = utils.get_single_cell_plots_dir()
+        utils.save_figure(fig, figsize, save_dir, 'matched_cell_across_session_responses_from_mdf',
+                          metadata_string + '_' + str(cell_specimen_id)  + suffix)
+
+
+
 def plot_single_cell_activity_and_behavior(dataset, cell_specimen_id, save_figure=True):
     """
     Plots the full dFF trace for a cell, along with licking behavior, rewards, running speed, pupil area, and face motion.
     Useful to visualize whether the dFF trace tracks the behavior variables
     """
-    figsize = (20, 10)
-    fig, ax = plt.subplots(5, 1, figsize=figsize, sharex=True)
+    figsize = (20, 12)
+    fig, ax = plt.subplots(6, 1, figsize=figsize, sharex=True)
     colors = sns.color_palette()
 
+
     trace_timestamps = dataset.ophys_timestamps
+    trace = dataset.corrected_fluorescence_traces.loc[cell_specimen_id].corrected_fluorescence
+    ax[0].plot(trace_timestamps, trace, label='corrected fluorescence', color=colors[2])
+    ax[0].set_ylabel('fluorescence')
+
     trace = dataset.dff_traces.loc[cell_specimen_id].dff
-    ax[0].plot(trace_timestamps, trace, label='mean_trace', color=colors[0])
-    ax[0].set_ylabel('dF/F')
+    events = dataset.events.loc[cell_specimen_id].events
+    # events[events==0] = np.nan
+    ax[1].plot(trace_timestamps, trace, label='dF/F', color=colors[0])
+    ax[1].set_ylabel('dF/F')
+    ax2 = ax[1].twinx()
+    ax2.plot(trace_timestamps, events, label='events', color=colors[8])
+    ax2.set_ylabel('events')
+    ax[1].legend(fontsize='xx-small', loc='upper left')
+    ax2.legend(fontsize='xx-small', loc='upper right')
 
     lick_timestamps = dataset.licks.timestamps.values
     licks = np.ones(len(lick_timestamps))
-    ax[1].plot(lick_timestamps, licks, '|', label='licks', color=colors[3])
-    ax[1].set_ylabel('licks')
-    ax[1].set_yticklabels([])
+    ax[2].plot(lick_timestamps, licks, '|', label='licks', color=colors[3])
+    ax[2].set_ylabel('licks')
+    ax[2].set_yticklabels([])
 
     running_speed = dataset.running_speed.speed.values
     running_timestamps = dataset.running_speed.timestamps.values
-    ax[2].plot(running_timestamps, running_speed, label='running_speed', color=colors[4])
-    ax[2].set_ylabel('run speed\n(cm/s)')
+    ax[3].plot(running_timestamps, running_speed, label='running_speed', color=colors[4])
+    ax[3].set_ylabel('run speed\n(cm/s)')
 
     try:
         pupil_area = dataset.eye_tracking.pupil_area.values
         pupil_timestamps = dataset.eye_tracking.timestamps.values
-        ax[3].plot(pupil_timestamps, pupil_area, label='pupil_area', color=colors[9])
+        ax[4].plot(pupil_timestamps, pupil_area, label='pupil_area', color=colors[9])
     except Exception:
         print('no pupil for', dataset.ophys_experiment_id)
-    ax[3].set_ylabel('pupil area\n pixels**2')
-    ax[3].set_ylim(-50, 30000)
+    ax[4].set_ylabel('pupil area\n pixels**2')
+    ax[4].set_ylim(-50, 30000)
 
     try:
         face_motion = dataset.behavior_movie_pc_activations[:, 0]
         face_timestamps = dataset.timestamps['eye_tracking'].timestamps
-        ax[4].plot(face_timestamps, face_motion, label='face_motion_PC0', color=colors[2])
+        ax[5].plot(face_timestamps, face_motion, label='face_motion_PC0', color=colors[2])
     except Exception:
         print('no face motion for', dataset.ophys_experiment_id)
-    ax[4].set_ylabel('face motion\n PC0 activation')
+    ax[5].set_ylabel('face motion\n PC0 activation')
 
-    for x in range(5):
+    for x in range(6):
         ax[x].tick_params(which='both', bottom=False, top=False, right=False, left=True,
                           labelbottom=False, labeltop=False, labelright=False, labelleft=True)
-    ax[4].tick_params(which='both', bottom=False, top=False, right=False, left=True,
+    ax[5].tick_params(which='both', bottom=False, top=False, right=False, left=True,
                       labelbottom=True, labeltop=False, labelright=False, labelleft=True)
     #     ax[x].legend(loc='upper left', fontsize='x-small')
     plt.subplots_adjust(wspace=0, hspace=0.1)
-    ax[0].set_title(str(cell_specimen_id) + '_' + dataset.metadata_string)
+    metadata_string = utils.get_metadata_string(dataset.metadata)
+    ax[0].set_title(str(cell_specimen_id) + '_' + metadata_string)
     if save_figure:
         utils.save_figure(fig, figsize, utils.get_single_cell_plots_dir(), 'dff_trace_and_behavior',
-                          str(cell_specimen_id) + '_' + dataset.metadata_string + '_dff_trace_and_behavior')
+                          str(cell_specimen_id) + '_' + metadata_string + '_dff_trace_and_behavior')
         plt.close()
 
 

@@ -3,8 +3,10 @@ import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import seaborn as sns
-
 sns.set_context('notebook', font_scale=1.5, rc={'lines.markeredgewidth': 2})
+
+import visual_behavior.data_access.utilities as utilities
+
 
 def get_container_plots_dir():
     return r'/allen/programs/mindscope/workgroups/learning/ophys/qc_plots/container_plots'
@@ -427,12 +429,18 @@ def get_metadata_string(metadata):
     :return:
     """
     m = metadata.copy()
-    metadata_string = str(m['mouse_id']) + '_' + str(m['ophys_container_id']) + '_' + m['cre_line'].split('-')[0] + '_' + m['targeted_structure'] + '_' + str(m['imaging_depth']) + '_' + m['session_type']
+    # genotype = m['cre_line'].split('-')[0]
+    # add simple genotype
+    genotype = utilities.get_simple_genotype(m['full_genotype'])
+    # add _dox if mouse is a dox mouse
+    dox_mice = utilities.get_list_of_dox_mice()
+    if str(m['mouse_id']) in dox_mice:
+        genotype = genotype + '_dox'
+    metadata_string = str(m['mouse_id']) + '_' + str(m['ophys_container_id']) + '_' + genotype + '_' + m['targeted_structure'] + '_' + str(m['imaging_depth']) + '_' + m['session_type']
     return metadata_string
 
 
 def get_container_metadata_string(metadata):
-    import visual_behavior.data_access.utilities as utilities
     m = metadata
     # genotype = m['cre_line'].split('-')[0]
     genotype = utilities.get_simple_genotype(m['full_genotype'])
