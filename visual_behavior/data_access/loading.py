@@ -358,7 +358,7 @@ def get_filtered_ophys_experiment_table(include_failed_data=True, release_data_o
     #     experiments.to_csv(os.path.join(get_production_cache_dir(), 'filtered_ophys_experiment_table.csv'))
 
     # experiments_table = experiments.copy()
-    
+
     save_dir = r'/allen/programs/mindscope/workgroups/learning/ophys/learning_project_cache'
     experiments_table = pd.read_csv(os.path.join(save_dir, 'mFISH_project_expts.csv'))
     experiments_table = experiments_table.set_index('ophys_experiment_id')
@@ -2809,9 +2809,9 @@ def load_multi_session_df(data_type, event_type, conditions, interpolate=True, o
     #                                                                            'LearningmFISHDevelopment',
     #                                                                            'omFISHGad2Meso'])]
     ## This one loads from SDK
-    # experiments_table = utilities.get_mFISH_projects_experiments_table()
+    experiments_table = utilities.get_mFISH_projects_experiments_table()
     # This one loads from file as currently configured
-    experiments_table = get_filtered_ophys_experiment_table()
+    # experiments_table = get_filtered_ophys_experiment_table()
 
     print(len(experiments_table), 'expts in expt table')
     mouse_ids = experiments_table.mouse_id.unique()

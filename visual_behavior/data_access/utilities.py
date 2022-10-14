@@ -1807,6 +1807,7 @@ def replace_cell_specimen_id_with_cell_roi_id(df):
         print('the index values of this df are not NaN, this function is not needed')
     return df
 
+
 def get_behavior_session_ids_to_analyze():
     """
     Gets a list of behavior_session_ids by combining the behavior_session_ids present in the platform paper experiments table

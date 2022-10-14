@@ -115,10 +115,10 @@ def plot_population_averages_for_conditions(multi_session_df, data_type, event_t
     if ax is None:
         format_fig = True
         if horizontal:
-            figsize = (3 * n_axes_conditions, 3)
-            fig, ax = plt.subplots(1, n_axes_conditions, figsize=figsize, sharey=False)
+            figsize = (3 * n_axes_conditions, 4)
+            fig, ax = plt.subplots(1, n_axes_conditions, figsize=figsize, sharey=True)
         else:
-            figsize = (5, 3.5 * n_axes_conditions)
+            figsize = (7, 3.5 * n_axes_conditions)
             fig, ax = plt.subplots(n_axes_conditions, 1, figsize=figsize, sharex=True)
     else:
         format_fig = False
@@ -156,6 +156,7 @@ def plot_population_averages_for_conditions(multi_session_df, data_type, event_t
             else:
                 ax[i].set_ylabel(ylabel)
                 ax[i].set_xlabel('')
+            # ax[i].legend(loc='upper left', fontsize='xx-small')
             # except:
             #     print('no data for', axis, hue)
     if format_fig:
@@ -163,7 +164,7 @@ def plot_population_averages_for_conditions(multi_session_df, data_type, event_t
             ax[0].set_ylabel(ylabel)
         else:
             ax[i].set_xlabel(xlabel)
-    # ax[0].legend(loc='upper left', fontsize='xx-small')
+    ax[i].legend(bbox_to_anchor=(1,1), fontsize='xx-small')
 
     if project_code:
         if suptitle is None:
@@ -346,7 +347,6 @@ def plot_n_segmented_cells(multi_session_df, df_name, horizontal=True, save_dir=
     Plots the fraction of responsive cells across cre lines
     :param multi_session_df: dataframe of trial averaged responses for each cell for some set of conditions
     :param df_name: name of the type of response_df used to make multi_session_df, such as 'omission_response_df' or 'stimulus_response_df'
-    :param responsiveness_threshold: threshold on fraction_significant_p_value_gray_screen to determine whether a cell is responsive or not
     :param save_dir: directory to save figures to. if None, will not save.
     :param suffix: string starting with '_' to append to end of filename of saved plot
     :return:
