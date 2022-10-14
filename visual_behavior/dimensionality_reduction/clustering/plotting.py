@@ -1231,11 +1231,14 @@ def get_cluster_color_map(labels):
 
 def plot_N_clusters_by_cre_line(labels_cre, ax=None, palette=None):
     if ax is None:
-        fig, ax = plt.subplots(1, 1, figsize=(7, 7))
+        fig, ax = plt.subplots(1, 1, figsize=(6, 3))
+
     if palette is None:
         palette = [(1.0, 0.596078431372549, 0.5882352941176471),
                    (0.6196078431372549, 0.8549019607843137, 0.8980392156862745),
                    (0.7725490196078432, 0.6901960784313725, 0.8352941176470589)]
+    markersize = [14, 10, 10]
+    linewidth = [4, 2, 2]
     for i, cre_line in enumerate(labels_cre.keys()):
         labels = labels_cre[cre_line]
         (unique, counts) = np.unique(labels, return_counts=True)
@@ -1244,11 +1247,14 @@ def plot_N_clusters_by_cre_line(labels_cre, ax=None, palette=None):
         cumulative_sum = [0]
         for freq in frequencies:
             cumulative_sum.append(cumulative_sum[-1] + freq)
-        ax.grid()
+
         ax.plot(range(0, len(cumulative_sum)), cumulative_sum, 'o-', color=palette[i],
-                linewidth=4, markersize=10)
+                linewidth=linewidth[i], markersize=markersize[i])
+        ax.hlines(y=80, xmin=-0.5, xmax=11, linestyle='--', color='Grey')
+        ax.set_xlim([-0.5, 11])
+        ax.set_xticks(np.arange(0, len(cumulative_sum)))
         ax.set_xlabel('Cluster number')
-        ax.set_ylabel('Cells per cluster (%)')
+        ax.set_ylabel('Cumulative % of all cells')
     ax.legend(['Excitatory', 'SST inhibitory', 'VIP inhibitory'])
 
     return ax
