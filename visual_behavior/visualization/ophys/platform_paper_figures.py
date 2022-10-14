@@ -591,7 +591,7 @@ def plot_average_metric_value_for_experience_levels_across_containers(df, metric
     return ax
 
 
-def test_significant_dropout_averages(data, metric):
+def test_significant_metric_averages(data, metric):
     """
     run one way anova across experience levels for a given metric in data,
     based on Alex's stats across experience levels for GLM figures
@@ -635,7 +635,7 @@ def add_experience_level_stats(data, metric, colors, ax, ymax=None):
     x-axis of plots must be experience_levels
     """
     # do anova across experience levels followed by post-hoc tukey
-    anova, tukey = test_significant_dropout_averages(data, metric)
+    anova, tukey = test_significant_metric_averages(data, metric)
 
     scale = 0.1
     fontsize = 12
