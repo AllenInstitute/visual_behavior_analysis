@@ -769,7 +769,7 @@ def get_coClust_matrix(X, model=SpectralClustering, nboot=np.arange(150), n_clus
     ______________
     returns: coClust_matrix: (ndarray) probability matrix of co-clustering together.
     '''
-    model = model()
+    #model = model()
     labels = get_labels_for_coclust_matrix(X=X,
                                            model=model,
                                            nboot=nboot,
