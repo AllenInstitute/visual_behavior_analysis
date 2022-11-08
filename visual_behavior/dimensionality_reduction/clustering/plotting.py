@@ -2077,7 +2077,10 @@ def plot_eigengap_values(eigenvalues_cre, cre_lines, n_clusters_cre=None, save_d
         n_clusters_cre = processing.get_n_clusters_cre()
 
     for cre_line in cre_lines:
-        eigenvalues = eigenvalues_cre[cre_line][1]
+        if len(eigenvalues_cre[cre_line])<4: # patchwork her. 
+            eigenvalues = eigenvalues_cre[cre_line][1]
+        else:
+            eigenvalues = eigenvalues_cre[cre_line]
         n_clusters = n_clusters_cre[cre_line]
         suffix = cre_line
         title = processing.get_cre_line_map(cre_line)  # get a more interpretable cell type name
