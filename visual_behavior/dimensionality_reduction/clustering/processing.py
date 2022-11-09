@@ -239,7 +239,7 @@ def get_glm_results_pivoted_for_clustering(glm_version='24_events_all_L2_optimiz
         cells_table = utilities.limit_to_containers_with_all_experience_levels(cells_table)
         cells_table = utilities.limit_to_cell_specimen_ids_matched_in_all_experience_levels(cells_table)
         print(len(cells_table.cell_specimen_id.unique()),
-                  'cells in cells_table after limiting to strictly matched cells')
+              'cells in cells_table after limiting to strictly matched cells')
 
         # get matched cells and experiments to limit to
         matched_experiments = cells_table.ophys_experiment_id.unique()
@@ -247,8 +247,8 @@ def get_glm_results_pivoted_for_clustering(glm_version='24_events_all_L2_optimiz
 
         if across_sessions_normalized is False:
             results_pivoted = gat.build_pivoted_results_summary(value_to_use=model_output_type,
-                                                                    results_summary=None,
-                                                                    glm_version=glm_version, cutoff=None)
+                                                                results_summary=None,
+                                                                glm_version=glm_version, cutoff=None)
 
             # get rid of passive sessions
             results_pivoted = results_pivoted[results_pivoted.passive == False]
@@ -259,7 +259,7 @@ def get_glm_results_pivoted_for_clustering(glm_version='24_events_all_L2_optimiz
         results_pivoted = results_pivoted[results_pivoted.ophys_experiment_id.isin(matched_experiments)]
         results_pivoted = results_pivoted[results_pivoted.cell_specimen_id.isin(matched_cells)]
         print(len(results_pivoted.cell_specimen_id.unique()),
-                  'cells in results_pivoted after limiting to strictly matched cells')
+              'cells in results_pivoted after limiting to strictly matched cells')
 
         # if save_dir:
         #     # save filtered results to save_dir
@@ -2453,6 +2453,7 @@ def compute_sse(feature_matrix):
 
     return SSE
 
+
 def get_variability_df(feature_matrix, cluster_df, columns=['cluster_id', 'cre_line', 'clustered'], metric='sse'):
     '''
     INPUT:
@@ -2501,5 +2502,3 @@ def get_variability_df(feature_matrix, cluster_df, columns=['cluster_id', 'cre_l
                                                ignore_index=True)
 
     return variability_df
-
-
