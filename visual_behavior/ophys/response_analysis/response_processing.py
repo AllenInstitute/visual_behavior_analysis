@@ -20,8 +20,8 @@ def get_default_trial_response_params():
         '''
     trial_response_params = {
         "window_around_timepoint_seconds": [-5, 5],
-        "response_window_duration_seconds": 0.25,
-        "baseline_window_duration_seconds": 0.25
+        "response_window_duration_seconds": 0.5,
+        "baseline_window_duration_seconds": 0.5
     }
     return trial_response_params
 
@@ -39,8 +39,8 @@ def get_default_stimulus_response_params():
         '''
     stimulus_response_params = {
         "window_around_timepoint_seconds": [-0.5, 0.75],
-        "response_window_duration_seconds": 0.25,
-        "baseline_window_duration_seconds": 0.25
+        "response_window_duration_seconds": 0.5,
+        "baseline_window_duration_seconds": 0.5
     }
     return stimulus_response_params
 
@@ -59,7 +59,7 @@ def get_default_omission_response_params():
     omission_response_params = {
         "window_around_timepoint_seconds": [-5, 5],
         "response_window_duration_seconds": 0.75,
-        "baseline_window_duration_seconds": 0.25
+        "baseline_window_duration_seconds": 0.5
     }
     return omission_response_params
 
@@ -154,7 +154,7 @@ def get_spontaneous_frames(stimulus_presentations_df, ophys_timestamps):
     # spont_duration_frames = 4 * 60 * 60  # 4 mins * * 60s/min * 60Hz
     spont_duration = 4 * 60  # 4mins * 60sec
 
-    # for spontaneous at beginning of session
+    # for spontaneous at beginning of session, get 4 minutes of gray screen values prior to first stimulus
     behavior_start_time = stimulus_presentations_df.iloc[0].start_time
     spontaneous_start_time_pre = behavior_start_time - spont_duration
     spontaneous_end_time_pre = behavior_start_time
@@ -162,7 +162,7 @@ def get_spontaneous_frames(stimulus_presentations_df, ophys_timestamps):
     spontaneous_end_frame_pre = index_of_nearest_value(ophys_timestamps, spontaneous_end_time_pre)
     spontaneous_frames_pre = np.arange(spontaneous_start_frame_pre, spontaneous_end_frame_pre, 1)
 
-    # for spontaneous epoch at end of session
+    # for spontaneous epoch at end of session, get 4 minutes of gray screen values after the last stimulus
     behavior_end_time = stimulus_presentations_df.iloc[-1].start_time
     spontaneous_start_time_post = behavior_end_time + 0.75
     spontaneous_end_time_post = spontaneous_start_time_post + spont_duration

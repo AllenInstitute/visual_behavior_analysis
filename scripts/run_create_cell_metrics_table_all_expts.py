@@ -13,7 +13,7 @@ if __name__ == "__main__":
     python_file = os.path.join(os.getcwd(), args.scriptname)
 
     # define the job record output folder
-    stdout_location = r"/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/cluster_jobs/vba_qc_plots"
+    stdout_location = r"/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/cluster_jobs/cell_metrics"
 
     # instantiate a Slurm object
     slurm = Slurm(

@@ -10,8 +10,8 @@ import pandas as pd
 from visual_behavior.ophys.io.create_multi_session_mean_df import get_multi_session_mean_df
 
 if __name__ == '__main__':
-    save_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\BehaviorImaging\DoC\n_way_cell_matching_validation\integration_test'
-    cache_dir = r'\\allen\programs\braintv\workgroups\ophysdev\OPhysCore\Analysis\2018-08 - Behavior Integration test'
+    # save_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\BehaviorImaging\DoC\n_way_cell_matching_validation\integration_test'
+    # cache_dir = r'\\allen\programs\braintv\workgroups\ophysdev\OPhysCore\Analysis\2018-08 - Behavior Integration test'
 
     cre_line_dict = {713968361:'Slc17a7',
                     710324788:'Slc17a7',
@@ -39,16 +39,16 @@ if __name__ == '__main__':
                      719239258:None,
                     }
 
-    containers = [
-        r'\\allen\programs\braintv\production\visualbehavior\prod0\specimen_713968361\experiment_container_745083659',
-        r'\\allen\programs\braintv\production\visualbehavior\prod0\specimen_710324788\experiment_container_745084555',
-        r'\\allen\programs\braintv\production\visualbehavior\prod0\specimen_713426167\experiment_container_745083990',
-        r'\\allen\programs\braintv\production\visualbehavior\prod0\specimen_716520611\experiment_container_759756815',
-        r'\\allen\programs\braintv\production\visualbehavior\prod0\specimen_734705403\experiment_container_760842228',
-        r'\\allen\programs\braintv\production\visualbehavior\prod0\specimen_705093670\experiment_container_760838377',
-        r'\\allen\programs\braintv\production\visualbehavior\prod0\specimen_692785818\experiment_container_760838250',
-        r'\\allen\programs\braintv\production\visualbehavior\prod0\specimen_710269829\experiment_container_759199675'
-        ]
+    # containers = [
+    #     r'\\allen\programs\braintv\production\visualbehavior\prod0\specimen_713968361\experiment_container_745083659',
+    #     r'\\allen\programs\braintv\production\visualbehavior\prod0\specimen_710324788\experiment_container_745084555',
+    #     r'\\allen\programs\braintv\production\visualbehavior\prod0\specimen_713426167\experiment_container_745083990',
+    #     r'\\allen\programs\braintv\production\visualbehavior\prod0\specimen_716520611\experiment_container_759756815',
+    #     r'\\allen\programs\braintv\production\visualbehavior\prod0\specimen_734705403\experiment_container_760842228',
+    #     r'\\allen\programs\braintv\production\visualbehavior\prod0\specimen_705093670\experiment_container_760838377',
+    #     r'\\allen\programs\braintv\production\visualbehavior\prod0\specimen_692785818\experiment_container_760838250',
+    #     r'\\allen\programs\braintv\production\visualbehavior\prod0\specimen_710269829\experiment_container_759199675'
+    #     ]
 
     # get df of experiment container metadata
     df_list = []

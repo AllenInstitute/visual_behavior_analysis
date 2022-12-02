@@ -5,7 +5,6 @@ import numpy as np
 import pandas as pd
 from pathlib import Path
 
-from visual_behavior.data_access import loading
 from visual_behavior.ophys.io.lims_database import LimsDatabase
 from visual_behavior.ophys.sync.sync_dataset import Dataset as SyncDataset
 from visual_behavior.ophys.sync.process_sync import filter_digital, calculate_delay
@@ -45,16 +44,14 @@ class LazyLoadable(object):
         self.calculate = calculate
 
 
-def check_for_model_outputs(behavior_session_id):
+def get_cell_types_dict(cre_lines, experiments_table):
     """
-    Checks whether model output file with omission regressors exists (does not say '_training' at end of filename)
-    :param behavior_session_id:
-    :return:
+    gets dictionary where keys are cre lines and values are cell types
     """
-    model_output_dir = loading.get_behavior_model_outputs_dir()
-    model_output_file = [file for file in os.listdir(model_output_dir) if
-                         (str(behavior_session_id) in file) and ('training' not in file)]
-    return len(model_output_file) > 0
+    cell_types = {}
+    for cre_line in cre_lines:
+        cell_types[cre_line] = experiments_table[experiments_table.cre_line == cre_line].cell_type.unique()[0]
+    return cell_types
 
 
 def get_all_session_ids(ophys_experiment_id=None, ophys_session_id=None, behavior_session_id=None, foraging_id=None):
@@ -330,32 +327,6 @@ def get_donor_id_from_specimen_id(specimen_id, cache=None):
             where specimens.id = '{}'
         '''
         return db.lims_query(lims_query_string.format(specimen_id)).astype(int)
-
-
-def model_outputs_available_for_behavior_session(behavior_session_id):
-    """
-    Check whether behavior model outputs are available in the default directory
-
-    :param behavior_session_id: 9-digit behavior session ID
-    :return: Boolean, True if outputs are available, False if not
-    """
-    model_output_dir = loading.get_behavior_model_outputs_dir()
-    model_output_file = [file for file in os.listdir(model_output_dir) if str(behavior_session_id) in file]
-    if len(model_output_file) > 0:
-        return True
-    else:
-        return False
-
-
-# def get_cell_matching_output_dir_for_container(container_id, experiments_table):
-#     container_expts = experiments_table[experiments_table.container_id==container_id]
-#     ophys_experiment_id = container_expts.index[0]
-#     lims_data = get_lims_data(ophys_experiment_id)
-#     session_dir = lims_data.ophys_session_dir.values[0]
-#     cell_matching_dir = os.path.join(session_dir[:-23], 'experiment_container_'+str(container_id), 'OphysNwayCellMatchingStrategy')
-#     cell_matching_output_dir = os.path.join(cell_matching_dir, np.sort(os.listdir(cell_matching_dir))[-1])
-#     return cell_matching_output_dir
-#
 
 
 def get_cell_matching_output_dir_for_container(experiment_id):
@@ -1297,6 +1268,185 @@ def correct_dataframe_filepath(dataframe, column_string):
 
 # functions to annotate experiments table with conditions to use for platform paper analysis ######
 
+
+def add_project_code_to_behavior_sessions(behavior_sessions_table, ophys_experiments_table):
+    """
+    Because only ophys sessions have a project_code associated with them, we need to get a table of the project_codes
+    for each mouse_id from the ophys_experiments_table and merge that into the behavior_sessions table so that we can
+    filter the behavior_sessions by project_code
+    """
+    # get project codes for each mouse from experiments table
+    mouse_projects = ophys_experiments_table.drop_duplicates(subset=['mouse_id', 'project_code'])
+    mouse_projects = mouse_projects[['mouse_id', 'project_code']]
+
+    # merge into behavior sessions
+    print(len(behavior_sessions_table), 'behavior sessions in original behavior_sessions table')
+    behavior_sessions = behavior_sessions_table.drop(columns='project_code').merge(mouse_projects, on='mouse_id',
+                                                                                   how='left')
+    print(len(behavior_sessions), 'behavior sessions after merging with project codes')
+
+    return behavior_sessions
+
+
+def add_first_last_day_of_stage_to_behavior_sessions(behavior_sessions):
+    """
+    Adds a column to behavior_sessions called `training_stage` that is the first two elements of `session_type`,
+    i.e. 'TRAINING_2', or 'OPHYS_3',
+    as well as Boolean columns indicating whether a given session was the first or last day of each `training_stage`
+    """
+    # create training_stage column as abbreviation of session_type
+    behavior_sessions['training_stage'] = [stage.split('_')[0] + '_' + stage.split('_')[1] for stage in
+                                           behavior_sessions.session_type.values]
+
+    # add first day of stage based on acquisition date
+    behavior_sessions['first_day_of_stage'] = False
+    stage_start = behavior_sessions.sort_values(by=['mouse_id', 'date_of_acquisition'])
+    stage_start = stage_start.drop_duplicates(subset=['mouse_id', 'training_stage'])
+    behavior_sessions.at[stage_start.index.values, 'first_day_of_stage'] = True
+
+    # add last day of stage based on acquisition date
+    behavior_sessions['last_day_of_stage'] = False
+    stage_end = behavior_sessions.sort_values(by=['mouse_id', 'date_of_acquisition'], ascending=False)
+    stage_end = stage_end.drop_duplicates(subset=['mouse_id', 'training_stage'])
+    behavior_sessions.at[stage_end.index.values, 'last_day_of_stage'] = True
+
+    return behavior_sessions
+
+
+def add_first_last_day_of_stimulus_to_behavior_sessions(behavior_sessions):
+    """
+    Adds a column to behavior_sessions called `training_stage` that is the first two elements of `session_type`,
+    i.e. 'TRAINING_2', or 'OPHYS_3',
+    as well as Boolean columns indicating whether a given session was the first or last day of each `training_stage`
+    """
+    # create training_stage column as abbreviation of session_type
+    if 'stimulus' not in behavior_sessions.keys():
+        behavior_sessions = add_stimulus_to_table(behavior_sessions)
+
+    # add first day of stimulus based on acquisition date
+    behavior_sessions['first_day_of_stimulus'] = False
+    stage_start = behavior_sessions.sort_values(by=['mouse_id', 'date_of_acquisition'])
+    stage_start = stage_start.drop_duplicates(subset=['mouse_id', 'stimulus'])
+    behavior_sessions.at[stage_start.index.values, 'first_day_of_stimulus'] = True
+
+    # add last day of stage based on acquisition date
+    behavior_sessions['first_day_of_stimulus'] = False
+    stage_end = behavior_sessions.sort_values(by=['mouse_id', 'date_of_acquisition'], ascending=False)
+    stage_end = stage_end.drop_duplicates(subset=['mouse_id', 'stimulus'])
+    behavior_sessions.at[stage_end.index.values, 'last_day_of_stimulus'] = True
+
+    return behavior_sessions
+
+
+def add_stimulus_to_table(df):
+    """
+    adds column to dataframe (such as behavior_sessions table or ophys_experiment_table) indicating the stimulus
+    that was shown during each session, using the session_type column to infer the stimulus identity
+    stimuli will be 'gratings_static', 'gratings_flashed', 'images_A', 'images_A_passive', etc
+
+    """
+    # create stimulus column based on session_type values
+    df['stimulus'] = 'None'
+    for row in df.index.values:  # index should be a non-redundant value, such as the relevant ID for the table, i.e. behavior_session_id or ophys_experiment_id
+        session_type = df.loc[row].session_type
+        session_type_split = session_type.split('_')
+        if ('TRAINING_0' in session_type) or ('TRAINING_1' in session_type):
+            stimulus = session_type_split[2] + '_static'
+        elif ('TRAINING_2' in session_type) or ('TRAINING_3' in session_type) or ('TRAINING_4' in session_type) or (
+                'TRAINING_5' in session_type):
+            stimulus = session_type_split[2] + '_' + session_type_split[3]
+        elif ('OPHYS_0' in session_type):
+            stimulus = session_type_split[2] + '_' + session_type_split[3] + '_' + session_type_split[4]
+        elif ('OPHYS' in session_type) and ('passive' in session_type):
+            stimulus = session_type_split[2] + '_' + session_type_split[3] + '_' + session_type_split[4]
+        elif ('OPHYS' in session_type) and ('passive' not in session_type):
+            stimulus = session_type_split[2] + '_' + session_type_split[3]
+        else:
+            stimulus = 'unknown'
+        df.at[row, 'stimulus'] = stimulus
+    return df
+
+
+def add_has_ophys_column_to_behavior_sessions(behavior_sessions):
+    """
+    add a column to the behavior_sessions table indicating whether that session has ophys data or not,
+    based on whether there are ophys_experiment_ids assigned to that session.
+    if ophys_experiment_id value for a given behavior_session is NaN, there is no released ophys data.
+    if a behavior_session has 'OPHYS' in the session_type, but ophys_experiment_id is NaN,
+    that means that the ophys data for that session did not pass QC and thus was not released,
+    with the exception of OPHYS_0 session types, which are habituation sessions where the mouse did the task on the ophys rig with no physiology recording
+    """
+    behavior_sessions['has_ophys'] = True
+    indices = behavior_sessions[behavior_sessions.ophys_experiment_id.isnull()].index.values
+    behavior_sessions.at[indices, 'has_ophys'] = False
+    return behavior_sessions
+
+
+def add_experiment_phase_to_behavior_sessions(behavior_sessions):
+    """
+    add column to df indicating whether a session was 'TRAINING' or 'OPHYS', using session_type to get the phase of the experiment
+    """
+    behavior_sessions['experiment_phase'] = [session_type.split('_')[0] for session_type in behavior_sessions.session_type.values]
+    return behavior_sessions
+
+
+def add_stimulus_phase_to_behavior_sessions(behavior_sessions):
+    """
+    adds a column to behavior_sessions that is the concatenation of the stimulus and experiment_phase for each session
+    ex: 'gratings_flashed_training', 'images_A_training', 'images_A_ophys'
+    'stimulus' and 'experiment_phase' columns will be added if they do not exist
+    """
+    if 'stimulus' not in behavior_sessions.keys():
+        behavior_sessions = add_stimulus_to_table(behavior_sessions)
+    if 'experiment_phase' not in behavior_sessions.keys():
+        behavior_sessions = add_experiment_phase_to_behavior_sessions(behavior_sessions)
+
+    behavior_sessions['stimulus_phase'] = [
+        behavior_sessions.loc[row].stimulus + '_' + behavior_sessions.loc[row].experiment_phase.lower() for row in
+        behavior_sessions.index.values]
+
+    return behavior_sessions
+
+
+def add_experience_level_to_behavior_sessions(behavior_sessions):
+    """
+    adds a column to behavior_sessions table that contains a string indicating whether a session had
+    exposure level of Familiar, Novel 1, or Novel >1, based on session number and prior_exposure_to_image_set for ophys sessions,
+    then assign all TRAINING sessions with images as 'Familiar',
+    and any TRAINING sessions with gratings as 'Gratings'
+
+    input df must have 'session_number' column which can be added / update using the add_session_number_to_experiments_table function
+    """
+    # add experience_level column with strings indicating relevant conditions
+    behavior_sessions['experience_level'] = 'None'
+
+    # ophys sessions 1,2,3 = Familiar
+    indices = behavior_sessions[behavior_sessions.session_number.isin([1, 2, 3])].index.values
+    behavior_sessions.loc[indices, 'experience_level'] = 'Familiar'
+
+    # ophys session 4 with no prior exposures to image set = Novel
+    indices = behavior_sessions[(behavior_sessions.session_number == 4) &
+                                (behavior_sessions.prior_exposures_to_image_set == 0)].index.values
+    behavior_sessions.loc[indices, 'experience_level'] = 'Novel 1'
+
+    # ophys sessions 4,5,6 with at least one exposure to image set = Novel>1
+    indices = behavior_sessions[(behavior_sessions.session_number.isin([4, 5, 6])) &
+                                (behavior_sessions.prior_exposures_to_image_set != 0)].index.values
+    behavior_sessions.loc[indices, 'experience_level'] = 'Novel >1'
+
+    # training sessions with images = Familiar Training
+    indices = behavior_sessions[(behavior_sessions.session_type.str.contains('TRAINING')) &
+                                (behavior_sessions.session_type.str.contains('images'))].index.values
+    behavior_sessions.at[indices, 'experience_level'] = 'Familiar'
+
+    # training sessions with gratings = Gratings
+    indices = behavior_sessions[(behavior_sessions.session_type.str.contains('TRAINING')) & (
+        behavior_sessions.session_type.str.contains('gratings'))].index.values
+    behavior_sessions.at[indices, 'experience_level'] = 'Gratings'
+
+    return behavior_sessions
+
+
 def add_session_number_to_experiment_table(experiments):
     # add session number column, extracted frrom session_type
     experiments['session_number'] = [int(session_type[6]) if 'OPHYS' in session_type else None for session_type in
@@ -1489,6 +1639,38 @@ def add_binned_depth_column(df):
     return df
 
 
+def add_layer_column(df):
+    """
+    Adds a column called 'layer' that is based on the 'imaging_depth' for each experiment.
+    if imaging_depth is <250um, layer is 'upper, if >250um, layer is 'lower'
+    :param df:
+    :return:
+    """
+    df.loc[:, 'layer'] = None
+
+    indices = df[(df.depth < 250)].index.values
+    df.loc[indices, 'layer'] = 'upper'
+
+    indices = df[(df.depth > 250)].index.values
+    df.loc[indices, 'layer'] = 'lower'
+
+    return df
+
+
+def add_area_layer_column(df):
+    """
+    creates columns called 'area_layer' and that contains the conjunction of 'targeted_area' and 'layer'
+    input df must have 'layer' and 'targeted_structure' columns, the former created with the utilities.add_layer_column() function
+    """
+    df['area_layer'] = None
+    for row in df.index.values:
+        row_data = df.loc[row]
+        layer = row_data.layer
+        area = row_data.targeted_structure
+        df.loc[row, 'area_layer'] = area + '_' + layer
+    return df
+
+
 def dateformat(exp_date):
     """
     reformat date of acquisition for accurate sorting by date
@@ -1587,7 +1769,7 @@ def add_last_familiar_active_column(df):
     Adds a column 'last_familiar_active' that indicates (with a Boolean) whether
     a session is the last active familiar image session prior to the first novel session in each container
     If a container has no truly first novel session, all sessions are labeled as NaN
-    input df must have 'experience_level' and 'n_relative_to_first_novel' and 'date'
+    input df must have 'experience_level' and 'n_relative_to_first_novel' and 'date' and 'ophys_container_id'
     """
     df = df.sort_values(by=['ophys_container_id', 'date'])
     values = df.groupby('ophys_container_id').apply(get_last_familiar_active)
@@ -1740,19 +1922,30 @@ def value_counts(df, conditions=['cell_type', 'experience_level', 'mouse_id']):
     return counts
 
 
-def count_mice_expts_containers_cells(df):
+def count_mice_expts_containers_cells(df, conditions_to_group=['cell_type', 'experience_level']):
     """
-    count the number of mice, experiments, containers, and cells in input dataframe
+    count the number of mice, sessions, experiments, containers, and cells in input dataframe
     input dataframe is typically ophys_cells_table merged with ophys_experiment_table
-    """
-    mice = value_counts(df, conditions=['cell_type', 'experience_level', 'mouse_id'])
-    experiments = value_counts(df, conditions=['cell_type', 'experience_level', 'ophys_experiment_id'])
-    containers = value_counts(df, conditions=['cell_type', 'experience_level', 'ophys_container_id'])
-    cells = value_counts(df, conditions=['cell_type', 'experience_level', 'cell_specimen_id'])
 
-    counts = mice.merge(experiments, on=['cell_type', 'experience_level'])
-    counts = counts.merge(containers, on=['cell_type', 'experience_level'])
-    counts = counts.merge(cells, on=['cell_type', 'experience_level'])
+    conditions_to_group: list of columns in df to use to groupby before counting number of experiments, cells etc
+
+    """
+    mice = value_counts(df, conditions=conditions_to_group + ['mouse_id'])
+    sessions = value_counts(df, conditions=conditions_to_group + ['ophys_session_id'])
+    experiments = value_counts(df, conditions=conditions_to_group + ['ophys_experiment_id'])
+    containers = value_counts(df, conditions=conditions_to_group + ['ophys_container_id'])
+    cells = value_counts(df, conditions=conditions_to_group + ['cell_specimen_id'])
+
+    matched_cells = limit_to_last_familiar_second_novel_active(df)
+    matched_cells = limit_to_cell_specimen_ids_matched_in_all_experience_levels(matched_cells)
+    matched_cells = value_counts(matched_cells, conditions=conditions_to_group + ['cell_specimen_id'])
+    matched_cells = matched_cells.rename(columns={'n_cell_specimen_id': 'n_matched_cells'})
+
+    counts = mice.merge(sessions, on=conditions_to_group)
+    counts = counts.merge(experiments, on=conditions_to_group)
+    counts = counts.merge(containers, on=conditions_to_group)
+    counts = counts.merge(cells, on=conditions_to_group)
+    counts = counts.merge(matched_cells, on=conditions_to_group)
     return counts
 
 
@@ -1770,26 +1963,18 @@ def count_mice_expts_containers(df):
     return counts
 
 
-def get_behavior_session_ids_to_analyze():
+def annotate_epoch_df(epoch_df):
     """
-    Gets a list of behavior_session_ids by combining the behavior_session_ids present in the platform paper experiments table
-    with the behavior_session_ids for non-ophys sessions from the behavior session table,
-    for mice present in the platform paper experiments table
+    adds 'experience_epoch' column which is a conjunction of experience level and epoch #
     """
-    # ophys data
-    experiments_table = loading.get_platform_paper_experiment_table()
-    # skip passive sessions
-    experiments_table = experiments_table[experiments_table.passive == False]
-    ophys_behavior_session_ids = list(experiments_table.behavior_session_id.unique())
 
-    # behavior only data
-    behavior_sessions = loading.get_platform_paper_behavior_session_table()
-    # limit to mice with ophys data going in to the paper
-    behavior_sessions = behavior_sessions[behavior_sessions.mouse_id.isin(experiments_table.mouse_id.unique())]
-    # remove all ophys sessions, use experiments_table to get ophys info
-    behavior_sessions = behavior_sessions[behavior_sessions.session_type.str.contains('OPHYS') == False]
-    behavior_session_session_ids = list(behavior_sessions.index.values)
+    # add experience epoch column
+    def merge_experience_epoch(row):
+        epoch_num = str(int(row.epoch + 1))  # index at 1 not 0
+        if len(epoch_num) == 1:
+            epoch_num = '0' + str(epoch_num)
+        return row.experience_level + ' epoch ' + epoch_num
 
-    behavior_session_ids_to_analyze = ophys_behavior_session_ids + behavior_session_session_ids
+    epoch_df['experience_epoch'] = epoch_df[['experience_level', 'epoch']].apply(axis=1, func=merge_experience_epoch)
 
-    return behavior_session_ids_to_analyze
+    return epoch_df

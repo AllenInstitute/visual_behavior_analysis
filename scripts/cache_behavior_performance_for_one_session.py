@@ -1,8 +1,6 @@
 import visual_behavior.utilities as vbu
 import argparse
 
-# def cache_behavior_performance(behavior_session_id, method):
-#     vbu.cache_behavior_stats(behavior_session_id, method)
 
 if __name__ == "__main__":
     # define args
@@ -11,27 +9,40 @@ if __name__ == "__main__":
     parser.add_argument('--method', type=str)
 
     args = parser.parse_args()
-    # behavior_session_id = args.behavior_session_id
-    # method = args.method
-    # print(behavior_session_id, method)
-    # vbu.cache_behavior_stats(behavior_session_id=behavior_session_id, method=method)
-    # cache_behavior_performance(args.behavior_session_id, args.method)
+    behavior_session_id = args.behavior_session_id
+    method = args.method
 
-    # import pandas as pd
-    # import visual_behavior.data_access.loading as loading
-    #
-    # df = pd.read_csv(os.path.join(loading.get_platform_analysis_cache_dir(), 'behavior_only_sessions_without_nwbs.csv'))
-    # behavior_session_ids = df.behavior_session_id.values
+    # response probability
+    if method == 'response_probability':
 
-    # behavior only data
-    import visual_behavior.data_access.loading as loading
-    behavior_sessions = loading.get_platform_paper_behavior_session_table()
-    # remove all ophys sessions
-    behavior_sessions = behavior_sessions[behavior_sessions.session_type.str.contains('OPHYS') == False]
-    behavior_session_ids = behavior_sessions.index.values
+        # save response probability matrices across image transitions
+        print('generating response probability matrix for', behavior_session_id, method, 'engaged_only: ', False)
+        vbu.cache_response_probability(behavior_session_id, engaged_only=False)
 
-    for behavior_session_id in behavior_session_ids:
-        try:
-            vbu.cache_behavior_stats(behavior_session_id, 'sdk')
-        except:
-            print('problem for behavior_session_id:', behavior_session_id)
+        print('generating response probability matrix for', behavior_session_id, method, 'engaged_only: ', True)
+        vbu.cache_response_probability(behavior_session_id, engaged_only=True)
+
+    elif method == 'sdk':
+
+        # save out performance metrics directly from SDK dataset object (doesnt work with per_image or engaged_only)
+        print('generating behavior metrics for', behavior_session_id, method)
+        vbu.cache_behavior_stats(behavior_session_id=behavior_session_id, method=method, per_image=False, engaged_only=False)
+
+    else:
+
+        ## behavior metrics full session
+        # print('generating behavior metrics for', behavior_session_id, method, 'per_image: ', False, 'engaged_only: ', False)
+        # vbu.cache_behavior_stats(behavior_session_id=behavior_session_id, method=method, per_image=False, engaged_only=False)
+        #
+        # print('generating behavior metrics for', behavior_session_id, method, 'per_image: ', True, 'engaged_only: ', False)
+        # vbu.cache_behavior_stats(behavior_session_id=behavior_session_id, method=method, per_image=True, engaged_only=False)
+
+        ## behavior_metrics engaged only
+
+        print('generating behavior metrics for', behavior_session_id, method, 'per_image:', False,'engaged_only:', True)
+        vbu.cache_behavior_stats(behavior_session_id=behavior_session_id, method=method, per_image=False, engaged_only=True)
+
+        print('generating behavior metrics for', behavior_session_id, method, 'per_image:', True,'engaged_only:', True)
+        vbu.cache_behavior_stats(behavior_session_id=behavior_session_id, method=method, per_image=True, engaged_only=True)
+
+
