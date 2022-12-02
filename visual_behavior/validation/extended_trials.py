@@ -820,7 +820,7 @@ def merge_in_omitted_flashes(visual_stimuli, omitted_stimuli):
         elif six.PY3:
             visual_stimuli = pd.concat((visual_stimuli, omitted_stimuli), sort=True).sort_values(by='frame').reset_index()
         else:
-            raise(RuntimeError)
+            raise (RuntimeError)
 
     # was previous flash omitted?
     visual_stimuli['previous_omitted'] = visual_stimuli['omitted'].shift()
@@ -936,7 +936,7 @@ def validate_initial_blank(trials, visual_stimuli, omitted_stimuli, initial_blan
             elif six.PY3:
                 visual_stimuli = pd.concat((visual_stimuli, omitted_stimuli), sort=True).sort_values(by='frame').reset_index()
             else:
-                raise(RuntimeError)
+                raise (RuntimeError)
 
         # preallocate array
         initial_blank_in_tolerance = np.empty(len(trials))

@@ -3,7 +3,6 @@ import glob
 import numpy as np
 import pandas as pd
 
-from visual_behavior.data_access import utilities
 import visual_behavior.ophys.dataset.extended_stimulus_processing as esp
 
 
@@ -63,10 +62,15 @@ def add_reward_rate_to_trials_table(trials, extended_stimulus_presentations):
     # for each trial, find the stimulus index that is closest to the trial start
     # add to a new column called 'first_stim_presentation_index'
     for idx, trial in trials.iterrows():
-        start_time = trial['start_time']
-        query_string = 'start_time > @start_time - 1 and start_time < @start_time + 1'
-        first_stim_presentation_index = (np.abs(start_time - extended_stimulus_presentations.query(query_string)['start_time'])).idxmin()
-        trials.at[idx, 'first_stim_presentation_index'] = first_stim_presentation_index
+        trial_start_time = trial['start_time']
+        query_string = 'start_time > @trial_start_time'
+        stim_start_time = extended_stimulus_presentations.query(query_string)['start_time']
+        first_stim_presentation = (np.abs(trial_start_time - stim_start_time))
+        if len(first_stim_presentation) > 0:
+            first_stim_presentation_index = first_stim_presentation.idxmin()
+            trials.at[idx, 'first_stim_presentation_index'] = first_stim_presentation_index
+        else:  # if it cant find a subsequent stim presentation (i.e. at end of session), just use the last one
+            trials.at[idx, 'first_stim_presentation_index'] = first_stim_presentation_index
 
     # define the columns from extended_stimulus_presentations that we want to merge into trials
     cols_to_merge = [
@@ -93,10 +97,15 @@ def add_engagement_state_to_trials_table(trials, extended_stimulus_presentations
     # for each trial, find the stimulus index that is closest to the trial start
     # add to a new column called 'first_stim_presentation_index'
     for idx, trial in trials.iterrows():
-        start_time = trial['start_time']
-        query_string = 'start_time > @start_time - 1 and start_time < @start_time + 1'
-        first_stim_presentation_index = (np.abs(start_time - extended_stimulus_presentations.query(query_string)['start_time'])).idxmin()
-        trials.at[idx, 'first_stim_presentation_index'] = first_stim_presentation_index
+        trial_start_time = trial['start_time']
+        query_string = 'start_time > @trial_start_time'
+        stim_start_time = extended_stimulus_presentations.query(query_string)['start_time']
+        first_stim_presentation = (np.abs(trial_start_time - stim_start_time))
+        if len(first_stim_presentation) > 0:
+            first_stim_presentation_index = first_stim_presentation.idxmin()
+            trials.at[idx, 'first_stim_presentation_index'] = first_stim_presentation_index
+        else:  # if it cant find a subsequent stim presentation (i.e. at end of session), just use the last one
+            trials.at[idx, 'first_stim_presentation_index'] = first_stim_presentation_index
 
     # define the columns from extended_stimulus_presentations that we want to merge into trials
     cols_to_merge = [
@@ -112,6 +121,38 @@ def add_engagement_state_to_trials_table(trials, extended_stimulus_presentations
     )
 
     return trials
+
+
+def add_trials_id_to_stimulus_presentations(trials, stimulus_presentations):
+    """
+    Add trials_id to stimulus presentations by finding the closest change time to each stimulus start time
+    If there is no corresponding change time, the trials_id is Nan
+    """
+
+    # for each stimulus_presentation, find the trials_id that is closest to the start time
+    # add to a new column called 'trials_id'
+    for idx, stimulus_presentation in stimulus_presentations.iterrows():
+        start_time = stimulus_presentation['start_time']
+        query_string = 'change_time > @start_time - 1 and change_time < @start_time + 1'
+        trials_id = (np.abs(start_time - trials.query(query_string)['change_time']))
+        if len(trials_id) == 1:
+            trials_id = trials_id.idxmin()
+        else:
+            trials_id = np.nan
+        stimulus_presentations.loc[idx, 'trials_id'] = trials_id
+
+    return stimulus_presentations
+
+
+def add_trials_to_stimulus_presentations_table(stimulus_presentations, trials):
+    """
+    add trials_id to stimulus presentations table then join all trial metrics with stimulus_presentations
+    """
+    # add trials_id and merge to get trial type information
+    stimulus_presentations = add_trials_id_to_stimulus_presentations(trials, stimulus_presentations)
+    stimulus_presentations = stimulus_presentations.reset_index().merge(trials.drop(columns=['start_time', 'stop_time']), on='trials_id')
+    stimulus_presentations = stimulus_presentations.set_index('stimulus_presentations_id')
+    return stimulus_presentations
 
 
 def get_image_set_exposures_for_behavior_session_id(behavior_session_id, behavior_session_table):
@@ -191,18 +232,6 @@ def add_omission_exposure_number_to_experiments_table(experiments, behavior_sess
     return experiments
 
 
-def add_model_outputs_availability_to_table(table):
-    """
-    Evaluates whether model output files are available for each experiment/session in the table
-        Requires that the table has a column 'behavior_session_id' with 9-digit behavior session identifiers
-    :param table: table of experiment or session level metadata (can be experiments_table or ophys_sessions_table)
-    :return: table with added column 'model_outputs_available', values are Boolean
-    """
-    table['model_outputs_available'] = [utilities.model_outputs_available_for_behavior_session(behavior_session_id)
-                                        for behavior_session_id in table.behavior_session_id.values]
-    return table
-
-
 def reformat_experiments_table(experiments):
     """
     adds extra columns to experiments table
@@ -219,7 +248,6 @@ def reformat_experiments_table(experiments):
     # replace session types that are NaN with string None
     experiments.at[experiments[experiments.session_type.isnull()].index.values, 'session_type'] = 'None'
     experiments = add_mouse_seeks_fail_tags_to_experiments_table(experiments)
-    experiments = add_model_outputs_availability_to_table(experiments)
     if 'level_0' in experiments.columns:
         experiments = experiments.drop(columns='level_0')
     if 'index' in experiments.columns:
@@ -278,6 +306,7 @@ def add_container_workflow_state_to_ophys_session_table(session_table, experimen
 
 def add_trial_type_to_trials_table(trials):
     trials['trial_type'] = None
+    trials.loc[trials[trials.aborted].index, 'trial_type'] = 'aborted'
     trials.loc[trials[trials.auto_rewarded].index, 'trial_type'] = 'auto_rewarded'
     trials.loc[trials[trials.hit].index, 'trial_type'] = 'hit'
     trials.loc[trials[trials.miss].index, 'trial_type'] = 'miss'
@@ -510,7 +539,7 @@ def add_time_from_last_change(stimulus_presentations):
         RETURNS: stimulus_presentations
     '''
     flash_times = stimulus_presentations["start_time"].values
-    change_times = stimulus_presentations.query('change')['start_time'].values
+    change_times = stimulus_presentations.query('is_change')['start_time'].values
     time_from_last_change = esp.time_from_last(flash_times, change_times)
     stimulus_presentations["time_from_last_change"] = time_from_last_change
     return stimulus_presentations
@@ -729,7 +758,7 @@ def add_time_from_last_change_inplace(session):
         RETURNS: nothing
     '''
     flash_times = session.stimulus_presentations["start_time"].values
-    change_times = session.stimulus_presentations.query('change')['start_time'].values
+    change_times = session.stimulus_presentations.query('is_change')['start_time'].values
     time_from_last_change = esp.time_from_last(flash_times, change_times)
     session.stimulus_presentations["time_from_last_change"] = time_from_last_change
 

@@ -244,7 +244,7 @@ def populate_id_dict(input_id_dict):
         'ophys_experiment_id': None,
     }
 
-    assert(len(input_id_dict) == 1), "use only one ID type to identify others"
+    assert (len(input_id_dict) == 1), "use only one ID type to identify others"
     for key in input_id_dict:
         assert key in ids.keys(), "input key must be one of {}".format(list(ids.keys()))
         ids[key] = input_id_dict[key]
@@ -559,7 +559,7 @@ def simplify_type(x):
     elif is_uuid(x):
         return str(x)
     elif is_array(x):
-        return[simplify_type(e) for e in x]
+        return [simplify_type(e) for e in x]
     else:
         return x
 

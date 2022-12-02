@@ -12,7 +12,7 @@ from visual_behavior.ophys.container_analysis import utilities as ut
 
 
 if __name__ == '__main__':
-    cache_dir = r'\\allen\programs\braintv\workgroups\ophysdev\OPhysCore\Analysis\2018-08 - Behavior Integration test'
+    # cache_dir = r'\\allen\programs\braintv\workgroups\ophysdev\OPhysCore\Analysis\2018-08 - Behavior Integration test'
 
     container_info = pd.read_csv(os.path.join(cache_dir,'cell_matching_results','container_info.csv'))
     container_id = container_info.container_id.values[3]

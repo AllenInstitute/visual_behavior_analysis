@@ -81,39 +81,42 @@ def placeAxesOnGrid(fig, dim=[1, 1], xspan=[0, 1], yspan=[0, 1], wspace=None, hs
 #         fig.savefig(filename + f, transparent=True, orientation='landscape')
 
 
-def plot_lick_raster(trials, ax=None, save_dir=None):
+def plot_lick_raster(trials, response_window=[0.15, 0.75],ax=None, save_dir=None):
+    from visual_behavior.translator.core.annotate import colormap
+    import visual_behavior.data_access.reformat as reformat
+    trials = reformat.add_trial_type_to_trials_table(trials)
     if ax is None:
         figsize = (5, 10)
         fig, ax = plt.subplots(figsize=figsize)
-    for trial in trials.trials_id.values:
-        trial_data = trials.iloc[trial]
+    for trial, trials_id in enumerate(trials.trials_id.values):
+        trial_data = trials.loc[trials_id]
+        trial_type = trial_data.trial_type
         # get times relative to change time
         trial_start = trial_data.start_time - trial_data.change_time
         lick_times = [(t - trial_data.change_time) for t in trial_data.lick_times]
-        reward_time = [(t - trial_data.change_time) for t in trial_data.reward_times]
+        reward_time = trial_data.reward_time - trial_data.change_time
         # plot trials as colored rows
-        ax.axhspan(trial, trial + 1, -200, 200, color=trial_data.trial_type_color, alpha=.5)
+        ax.axhspan(trial, trial + 1, -200, 200, color=colormap(trial_type, 'trial_types'), alpha=.5)
         # plot reward times
-        if len(reward_time) > 0:
-            ax.plot(reward_time[0], trial + 0.5, '.', color='b', label='reward', markersize=6)
+        if np.isnan(reward_time)==False:
+            ax.plot(reward_time, trial + 0.5, '.', color='b', label='reward', markersize=6)
         ax.vlines(trial_start, trial, trial + 1, color='black', linewidth=1)
         # plot lick times
         ax.vlines(lick_times, trial, trial + 1, color='k', linewidth=1)
         # annotate change time
         ax.vlines(0, trial, trial + 1, color=[.5, .5, .5], linewidth=1)
     # gray bar for response window
-    ax.axvspan(trial_data.response_window[0], trial_data.response_window[1], facecolor='gray', alpha=.4,
-               edgecolor='none')
+    ax.axvspan(response_window[0], response_window[1], facecolor='gray', alpha=.4, edgecolor='none')
     ax.grid(False)
     ax.set_ylim(0, len(trials))
     ax.set_xlim([-1, 4])
     ax.set_ylabel('trials')
     ax.set_xlabel('time (sec)')
     ax.set_title('lick raster')
-    plt.gca().invert_yaxis()
-
+    # plt.gca().invert_yaxis()
     if save_dir:
         save_figure(fig, figsize, save_dir, 'behavior', 'lick_raster')
+    return ax
 
 
 def reorder_traces(original_traces, analysis):
