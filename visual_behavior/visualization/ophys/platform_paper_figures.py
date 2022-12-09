@@ -20,6 +20,8 @@ sns.set_context('notebook', font_scale=1.5, rc={'lines.markeredgewidth': 2})
 sns.set_style('white', {'axes.spines.top': False, 'axes.spines.right': False}) # ticks or white
 sns.set_palette('deep')
 
+plt.rcParams['xtick.bottom'] = True
+plt.rcParams['ytick.left'] = True
 
 # basic characterization #########################
 
@@ -57,7 +59,7 @@ def plot_n_segmented_cells(multi_session_df, df_name, horizontal=True, save_dir=
         data = fraction_responsive[fraction_responsive.cell_type == cell_type]
         for ophys_container_id in data.ophys_container_id.unique():
             ax[i] = sns.pointplot(data=data[data.ophys_container_id == ophys_container_id], x='experience_level', y='total_cells',
-                                  color='gray', join=True, markers='.', scale=0.25, errwidth=0.25, ax=ax[i], zorder=500)
+                                  color='gray', join=True, markers='.', scale=0.25, errwidth=0.25, ax=ax[i])
         plt.setp(ax[i].collections, alpha=.3)  # for the markers
         plt.setp(ax[i].lines, alpha=.3)
         ax[i] = sns.pointplot(data=data, x='experience_level', y='total_cells', hue='experience_level',
@@ -161,7 +163,8 @@ def plot_population_averages_for_conditions(multi_session_df, data_type, event_t
                 ax[i].set_title(metadata_string)
             else:
                 if axes_column == 'experience_level':
-                    ax[i].set_title(axis, color=palette[i], fontsize=20)
+                    title_colors = utilities.get_experience_level_colors()
+                    ax[i].set_title(axis, color=title_colors[i], fontsize=20)
                 else:
                     ax[i].set_title(axis)
             ax[i].set_xlim(xlim_seconds)
@@ -206,7 +209,9 @@ def plot_population_averages_for_cell_types_across_experience(multi_session_df, 
     # get important information
     experiments_table = loading.get_platform_paper_experiment_table()
     cell_types = np.sort(experiments_table.cell_type.unique())
-    palette = utilities.get_experience_level_colors()
+    # palette = utilities.get_experience_level_colors()
+    palette = [(0,0,0),(0,0,0),(0,0,0)]
+    # palette = [(.2, .2, .2), (.2, .2, .2), (.2, .2, .2)]
 
     # define plot axes
     axes_column = 'experience_level'
@@ -509,7 +514,7 @@ def plot_fraction_responsive_cells(multi_session_df, responsiveness_threshold=0.
         data = fraction_responsive[fraction_responsive.cell_type == cell_type]
         for ophys_container_id in data.ophys_container_id.unique():
             ax[i] = sns.pointplot(data=data[data.ophys_container_id == ophys_container_id], x='experience_level', y='fraction_responsive',
-                                  color='gray', join=True, markers='.', scale=0.25, errwidth=0.25, ax=ax[i], zorder=500)
+                                  color='gray', join=True, markers='.', scale=0.25, errwidth=0.25, ax=ax[i])
         plt.setp(ax[i].collections, alpha=.3)  # for the markers
         plt.setp(ax[i].lines, alpha=.3)
         ax[i] = sns.pointplot(data=data, x='experience_level', y='fraction_responsive', hue='experience_level',
@@ -569,7 +574,7 @@ def plot_average_metric_value_for_experience_levels_across_containers(df, metric
         for ophys_container_id in data.ophys_container_id.unique():
             ax[i] = sns.pointplot(data=data[data.ophys_container_id == ophys_container_id], x='experience_level',
                                   y=metric,
-                                  color='gray', join=True, markers='.', scale=0.25, errwidth=0.25, ax=ax[i], zorder=500)
+                                  color='gray', join=True, markers='.', scale=0.25, errwidth=0.25, ax=ax[i])
         plt.setp(ax[i].collections, alpha=.3)  # for the markers
         plt.setp(ax[i].lines, alpha=.3)
         # plot the population average in color
@@ -735,10 +740,10 @@ def plot_metric_distribution_by_experience_no_cell_type(metrics_table, metric, e
     if hue:
         if pointplot:
             ax = sns.pointplot(data=ct_data, y=metric, x='experience_level', order=order, dodge=0.3, join=False,
-                                  hue=hue, hue_order=hue_order, palette='gray', ax=ax, zorder=10 ** 10)
+                                  hue=hue, hue_order=hue_order, palette='gray', ax=ax)
         else:
             ax = sns.boxplot(data=ct_data, y=metric, x='experience_level', order=order,
-                                width=0.4, hue=hue, hue_order=hue_order, palette='gray', ax=ax, zorder=10 ** 10)
+                                width=0.4, hue=hue, hue_order=hue_order, palette='gray', ax=ax)
         ax.legend(fontsize='xx-small', title='')  # , loc=loc)  # bbox_to_anchor=(1,1))
         if ylims:
             ax.set_ylim(ylims)
@@ -746,16 +751,16 @@ def plot_metric_distribution_by_experience_no_cell_type(metrics_table, metric, e
     else:
         if pointplot:
             ax = sns.pointplot(data=ct_data, x='experience_level', y=metric,
-                                  palette=colors, ax=ax, zorder=10 ** 10)
+                                  palette=colors, ax=ax)
         else:
             ax = sns.boxplot(data=ct_data, x='experience_level', y=metric, width=0.4,
-                                palette=colors, ax=ax, zorder=10 ** 10)
+                                palette=colors, ax=ax)
         if stripplot:
             ax = sns.boxplot(data=ct_data, x='experience_level', y=metric, width=0.4,
-                                color='white', ax=ax, zorder=10 ** 10)
+                                color='white', ax=ax)
             # format to have black lines and transparent box face
-            plt.setp(ax.artists, edgecolor='k', facecolor=[0, 0, 0, 0], zorder=10 ** 10)
-            plt.setp(ax.lines, color='k', zorder=10 ** 10)
+            plt.setp(ax.artists, edgecolor='k', facecolor=[0, 0, 0, 0])
+            plt.setp(ax.lines, color='k')
             # add strip plot
             ax = sns.stripplot(data=ct_data, size=3 , alpha=0.5, jitter=0.2,
                                   x='experience_level', y=metric, palette=colors, ax=ax)
@@ -854,10 +859,10 @@ def plot_metric_distribution_by_experience(metrics_table, metric, event_type, hu
         if hue:
             if pointplot:
                 ax[i] = sns.pointplot(data=ct_data, y=metric, x='experience_level', order=order, dodge=0.3, join=False,
-                                      hue=hue, hue_order=hue_order, palette='gray', ax=ax[i], zorder=10 ** 10)
+                                      hue=hue, hue_order=hue_order, palette='gray', ax=ax[i])
             else:
                 ax[i] = sns.boxplot(data=ct_data, y=metric, x='experience_level', order=order,
-                                    width=0.4, hue=hue, hue_order=hue_order, palette='gray', ax=ax[i], zorder=10 ** 10)
+                                    width=0.4, hue=hue, hue_order=hue_order, palette='gray', ax=ax[i])
             ax[i].legend(fontsize='xx-small', title='')  # , loc=loc)  # bbox_to_anchor=(1,1))
             if ylims:
                 ax[i].set_ylim(ylims)
@@ -865,16 +870,16 @@ def plot_metric_distribution_by_experience(metrics_table, metric, event_type, hu
         else:
             if pointplot:
                 ax[i] = sns.pointplot(data=ct_data, x='experience_level', y=metric,
-                                      palette=colors, ax=ax[i], zorder=10 ** 10)
+                                      palette=colors, ax=ax[i])
             else:
                 ax[i] = sns.boxplot(data=ct_data, x='experience_level', y=metric, width=0.4,
-                                    palette=colors, ax=ax[i], zorder=10 ** 10)
+                                    palette=colors, ax=ax[i])
             if stripplot:
                 ax[i] = sns.boxplot(data=ct_data, x='experience_level', y=metric, width=0.4,
-                                    color='white', ax=ax[i], zorder=10 ** 10)
+                                    color='white', ax=ax[i])
                 # format to have black lines and transparent box face
-                plt.setp(ax[i].artists, edgecolor='k', facecolor=[0, 0, 0, 0], zorder=10 ** 10)
-                plt.setp(ax[i].lines, color='k', zorder=10 ** 10)
+                plt.setp(ax[i].artists, edgecolor='k', facecolor=[0, 0, 0, 0])
+                plt.setp(ax[i].lines, color='k')
                 # add strip plot
                 if cell_type == 'Excitatory':
                     ct_data = ct_data.reset_index()
@@ -1003,8 +1008,8 @@ def plot_experience_modulation_index(metric_data, event_type, save_dir=None):
         ct_data = data[data.cell_type == cell_type]
     #     ax[i] = sns.barplot(data=ct_data,  x=x, order=xorder, y=metric, dodge=0.5, ax=ax[i])
     #     change_width(ax[i], 0.3)
-        ax[i] = sns.pointplot(data=ct_data, xorder=xorder, join=False,
-                              x=x, y=metric, color='gray', ax=ax[i], zorder=0)
+        ax[i] = sns.pointplot(data=ct_data, order=xorder, join=False,
+                              x=x, y=metric, color='gray', ax=ax[i])
 
         ax[i].axhline(y=0, xmin=0, xmax=1, color='gray', linestyle='--')
         ax[i].set_title(cell_type)
@@ -1152,14 +1157,14 @@ def plot_response_heatmaps_for_conditions(multi_session_df, timestamps, data_typ
 # timeseries plots #################
 
 
-def addSpan(ax, amin, amax, color='k', alpha=0.3, axtype='x', zorder=1):
+def addSpan(ax, amin, amax, color='k', alpha=0.3, axtype='x'):
     """
     adds a vertical span to an axis
     """
     if axtype == 'x':
-        ax.axvspan(amin, amax, facecolor=color, edgecolor='none', alpha=alpha, linewidth=0, zorder=zorder)
+        ax.axvspan(amin, amax, facecolor=color, edgecolor='none', alpha=alpha, linewidth=0)
     if axtype == 'y':
-        ax.axhspan(amin, amax, facecolor=color, edgecolor='none', alpha=alpha, linewidth=0, zorder=zorder)
+        ax.axhspan(amin, amax, facecolor=color, edgecolor='none', alpha=alpha, linewidth=0)
 
 
 def add_stim_color_span(dataset, ax, xlim=None, color=None, label_changes=False, label_omissions=False):
@@ -1243,12 +1248,12 @@ def plot_behavior_timeseries(dataset, start_time, duration_seconds=20, xlim_seco
     ln0 = ax.plot(lick_timestamps, licks, '|', label='licks', color=colors[3], markersize=10)
     ln1 = ax.plot(reward_timestamps, rewards, 'o', label='rewards', color=colors[9], markersize=10)
 
-    ln2 = ax.plot(running_timestamps, running_speed, label='running_speed', color=colors[2], zorder=100)
+    ln2 = ax.plot(running_timestamps, running_speed, label='running_speed', color=colors[2])
     ax.set_ylabel('running speed\n(cm/s)')
     ax.set_ylim(ymin=-8)
 
     ax2 = ax.twinx()
-    ln3 = ax2.plot(pupil_timestamps, pupil_diameter, label='pupil_diameter', color=colors[4], zorder=0)
+    ln3 = ax2.plot(pupil_timestamps, pupil_diameter, label='pupil_diameter', color=colors[4])
 
     ax2.set_ylabel('pupil diameter \n(pixels)')
     #     ax2.set_ylim(0, 200)
@@ -1342,11 +1347,11 @@ def plot_behavior_timeseries_stacked(dataset, start_time, duration_seconds=20,
     ax[1].tick_params(which='both', bottom=False, top=False, right=False, left=False,
                       labelbottom=False, labeltop=False, labelright=False, labelleft=False)
 
-    ax[2].plot(running_timestamps, running_speed, label='running_speed', color=colors[2], zorder=100)
+    ax[2].plot(running_timestamps, running_speed, label='running_speed', color=colors[2])
     ax[2].set_ylabel('running\nspeed\n(cm/s)', rotation=0, horizontalalignment='right', verticalalignment='center')
     ax[2].set_ylim(ymin=-8)
 
-    ax[3].plot(pupil_timestamps, pupil_diameter, label='pupil_diameter', color=colors[4], zorder=0)
+    ax[3].plot(pupil_timestamps, pupil_diameter, label='pupil_diameter', color=colors[4])
     ax[3].set_ylabel('pupil\ndiameter\n(pixels)', rotation=0, horizontalalignment='right', verticalalignment='center')
 
     for i in range(4):
@@ -1459,11 +1464,11 @@ def plot_behavior_and_physio_timeseries_stacked(dataset, start_time, duration_se
     ax[9].set_yticklabels([])
     ax[9].set_ylabel('rewards', rotation=0, horizontalalignment='right', verticalalignment='center')
 
-    ax[6].plot(running_timestamps, running_speed, label='running_speed', color='gray', zorder=100)
+    ax[6].plot(running_timestamps, running_speed, label='running_speed', color='gray')
     ax[6].set_ylabel('running\nspeed\n(cm/s)', rotation=0, horizontalalignment='right', verticalalignment='center')
     ax[6].set_ylim(ymin=-8)
 
-    ax[7].plot(pupil_timestamps, pupil_diameter, label='pupil_diameter', color='gray', zorder=0)
+    ax[7].plot(pupil_timestamps, pupil_diameter, label='pupil_diameter', color='gray')
     ax[7].set_ylabel('pupil\ndiameter\n(pixels)', rotation=0, horizontalalignment='right', verticalalignment='center')
 
     #     for experiment_id = 807753334
