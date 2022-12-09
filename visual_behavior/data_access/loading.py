@@ -97,8 +97,8 @@ def get_platform_analysis_cache_dir():
     This is the cache directory to use for all platform paper analysis
     This cache contains NWB files downloaded directly from AWS
     """
-    return r'/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/platform_paper_cache'
-    # return r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\platform_paper_cache'
+    # return '/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/platform_paper_cache'
+    return r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\platform_paper_cache'
 
 
 def get_production_cache_dir():
@@ -2870,8 +2870,6 @@ def load_multi_session_df(data_type, event_type, conditions, interpolate=True, o
             try:
                 filename = get_file_name_for_multi_session_df(data_type, event_type, project_code, session_type, conditions,
                                                               epoch_duration_mins)
-                multi_session_df_dir = get_multi_session_df_dir(interpolate=interpolate,
-                                                                output_sampling_rate=output_sampling_rate, event_type=event_type)
                 df = pd.read_hdf(os.path.join(multi_session_df_dir, filename), key='df')
                 multi_session_df = pd.concat([multi_session_df, df])
             except BaseException:
