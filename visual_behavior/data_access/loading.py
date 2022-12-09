@@ -2857,6 +2857,9 @@ def load_multi_session_df(data_type, event_type, conditions, interpolate=True, o
     cache = bpc.from_s3_cache(cache_dir=cache_dir)
     experiments_table = cache.get_ophys_experiment_table()
 
+    multi_session_df_dir = get_multi_session_df_dir(interpolate=interpolate, output_sampling_rate=output_sampling_rate, event_type=event_type)
+    print('loading files from', multi_session_df_dir)
+
     project_codes = experiments_table.project_code.unique()
     multi_session_df = pd.DataFrame()
     for project_code in project_codes:
