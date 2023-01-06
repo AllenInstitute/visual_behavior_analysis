@@ -146,6 +146,8 @@ def make_session_timeline_plot(extended_trials, ax, palette='trial_types', demar
 
 
 def make_lick_raster_plot(extended_trials, ax, reward_window=None, xlims=(-1, 5), show_reward_window=True, y_axis_limit=None, palette='trial_types'):
+    # VBA MOVED
+    warnings.warn("VBA function is deprecated. Find in mindcope_qc or brain_observatory_utilites.", DeprecationWarning)
     if reward_window is None:
         try:
             reward_window = get_reward_window(extended_trials)

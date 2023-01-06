@@ -377,14 +377,23 @@ def get_window(analysis=None, flashes=False, omitted=False):
     return window
 
 
-def get_mean_df(response_df, conditions=['cell', 'change_image_name'], frame_rate=30.,
+def get_mean_df(stim_response_df, conditions=['cell', 'change_image_name'], frame_rate=11.0,
                 window_around_timepoint_seconds=[-3, 3], response_window_duration_seconds=0.5,
                 get_pref_stim=True, exclude_omitted_from_pref_stim=True):
+    """
+    # MJD NOTES
+
+    1) groupby "conditions": "cell" makes sense, "change_image_name" tho?
+    2) apply get_mean_sem_trace()
+    3) "response_window_duration_seconds" in df already
+    4) "frame_rate" in df already
+    5) get_pre_stim: 
+    """
 
     window = window_around_timepoint_seconds
     response_window_duration = response_window_duration_seconds
 
-    rdf = response_df.copy()
+    rdf = stim_response_df.copy()
 
     mdf = rdf.groupby(conditions).apply(get_mean_sem_trace)
     mdf = mdf[['mean_response', 'sem_response', 'mean_trace', 'sem_trace', 'trace_timestamps', 'mean_responses', 'mean_baseline', 'sem_baseline']]

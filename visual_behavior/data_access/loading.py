@@ -505,12 +505,12 @@ def get_extended_stimulus_presentations_table(stimulus_presentations, licks, rew
     if 'time' in licks.keys():
         licks = licks.rename(columns={'time': 'timestamps'})
     if 'orientation' in stimulus_presentations.columns:
-        stimulus_presentations = stimulus_presentations.drop(columns=['orientation', 'image_set', 'index',
-                                                                      'phase', 'spatial_frequency'])
+        stimulus_presentations = stimulus_presentations.drop(columns=['orientation', 'image_set',
+                                                                      'phase','spatial_frequency'])
     stimulus_presentations = reformat.add_change_each_flash(stimulus_presentations)
     stimulus_presentations['pre_change'] = stimulus_presentations['change'].shift(-1)
     stimulus_presentations['pre_omitted'] = stimulus_presentations['omitted'].shift(-1)
-    stimulus_presentations = reformat.add_epoch_times(stimulus_presentations)
+    #stimulus_presentations = reformat.add_epoch_times(stimulus_presentations)
     stimulus_presentations = reformat.add_mean_running_speed(stimulus_presentations, running_speed)
     if eye_tracking is not None:
         try:  # if eye tracking data is not present or cant be loaded
@@ -536,7 +536,7 @@ def get_extended_stimulus_presentations_table(stimulus_presentations, licks, rew
     stimulus_presentations['engaged'] = [x > reward_threshold for x in stimulus_presentations['reward_rate']]
     stimulus_presentations['engagement_state'] = ['engaged' if True else 'disengaged' for engaged in stimulus_presentations['engaged'].values]
     stimulus_presentations = reformat.add_response_latency(stimulus_presentations)
-    stimulus_presentations = reformat.add_image_contrast_to_stimulus_presentations(stimulus_presentations)
+    #stimulus_presentations = reformat.add_image_contrast_to_stimulus_presentations(stimulus_presentations)
     stimulus_presentations = reformat.add_time_from_last_lick(stimulus_presentations, licks)
     stimulus_presentations = reformat.add_time_from_last_reward(stimulus_presentations, rewards)
     stimulus_presentations = reformat.add_time_from_last_change(stimulus_presentations)
@@ -545,15 +545,15 @@ def get_extended_stimulus_presentations_table(stimulus_presentations, licks, rew
         stimulus_presentations['flash_after_omitted'] = stimulus_presentations['omitted'].shift(1)
     except BaseException:
         pass
-    stimulus_presentations['flash_after_change'] = stimulus_presentations['change'].shift(1)
-    stimulus_presentations['image_name_next_flash'] = stimulus_presentations['image_name'].shift(-1)
-    stimulus_presentations['image_index_next_flash'] = stimulus_presentations['image_index'].shift(-1)
-    stimulus_presentations['image_name_previous_flash'] = stimulus_presentations['image_name'].shift(1)
-    stimulus_presentations['image_index_previous_flash'] = stimulus_presentations['image_index'].shift(1)
-    stimulus_presentations['lick_on_next_flash'] = stimulus_presentations['licked'].shift(-1)
-    stimulus_presentations['lick_rate_next_flash'] = stimulus_presentations['lick_rate'].shift(-1)
-    stimulus_presentations['lick_on_previous_flash'] = stimulus_presentations['licked'].shift(1)
-    stimulus_presentations['lick_rate_previous_flash'] = stimulus_presentations['lick_rate'].shift(1)
+    # stimulus_presentations['flash_after_change'] = stimulus_presentations['change'].shift(1)
+    # stimulus_presentations['image_name_next_flash'] = stimulus_presentations['image_name'].shift(-1)
+    # stimulus_presentations['image_index_next_flash'] = stimulus_presentations['image_index'].shift(-1)
+    # stimulus_presentations['image_name_previous_flash'] = stimulus_presentations['image_name'].shift(1)
+    # stimulus_presentations['image_index_previous_flash'] = stimulus_presentations['image_index'].shift(1)
+    # stimulus_presentations['lick_on_next_flash'] = stimulus_presentations['licked'].shift(-1)
+    # stimulus_presentations['lick_rate_next_flash'] = stimulus_presentations['lick_rate'].shift(-1)
+    # stimulus_presentations['lick_on_previous_flash'] = stimulus_presentations['licked'].shift(1)
+    # stimulus_presentations['lick_rate_previous_flash'] = stimulus_presentations['lick_rate'].shift(1)
     # if behavior_session_id:
     #     if check_if_model_output_available(behavior_session_id):
     #         stimulus_presentations = add_model_outputs_to_stimulus_presentations(

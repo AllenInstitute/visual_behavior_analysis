@@ -73,10 +73,12 @@ def create_extended_dataframe(
     trials['trial_type'] = annotate.categorize_trials(trials)
     trials['lick_frames'] = annotate.get_lick_frames(trials, licks)
 
-    # bouts
-    trials["lick_bout_times"] = annotate.get_lick_bout_times(trials,licks)
+  
 
     annotate.update_times(trials, time, inplace=True)
+
+    # bouts MJD (must be after update_times, where lick_times are corrected)
+    trials["lick_bout_times"] = annotate.get_lick_bout_times(trials, licks)
 
     annotate.annotate_lick_vigor(trials, licks, inplace=True)
     annotate.calculate_latency(trials, inplace=True)

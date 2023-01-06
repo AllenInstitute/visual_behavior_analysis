@@ -692,12 +692,20 @@ def colormap(trial_type, palette='trial_types'):
             'correct_reject': '#4c72b0',
         }
     else:
+        # colors = {
+        #     'aborted': 'red',
+        #     'auto_rewarded': 'blue',
+        #     'hit': 'darkgreen',
+        #     'miss': 'lightgreen',
+        #     'false_alarm': 'darkorange',
+        #     'correct_reject': 'yellow',
+        # }
         colors = {
             'aborted': 'red',
             'auto_rewarded': 'blue',
-            'hit': 'darkgreen',
-            'miss': 'lightgreen',
-            'false_alarm': 'darkorange',
+            'hit': 'green',
+            'miss': 'white',
+            'false_alarm': 'orange',
             'correct_reject': 'yellow',
         }
     return colors.get(trial_type, 'white')

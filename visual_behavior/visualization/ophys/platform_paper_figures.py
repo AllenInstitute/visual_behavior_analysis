@@ -433,11 +433,13 @@ def plot_cell_response_heatmap(data, timestamps, xlabel='time after change (s)',
                                microscope='Multiscope', cbar=True, ax=None):
     if ax is None:
         fig, ax = plt.subplots()
-    ax = sns.heatmap(data, cmap='binary', linewidths=0, linecolor='white', square=False,
+    ax = sns.heatmap(data, cmap='viridis', linewidths=0, linecolor='white', square=False,
                      vmin=0, vmax=vmax, robust=True, cbar=cbar,
                      cbar_kws={"drawedges": False, "shrink": 1, "label": 'response'}, ax=ax)
 
-    zero_index = np.where(timestamps == 0)[0][0]
+    #zero_index = np.where(timestamps == 0)[0][0]
+    # better 0 
+    zero_index = np.abs(np.array(timestamps) - 0).argmin()
     ax.vlines(x=zero_index, ymin=0, ymax=len(data), color='gray', linestyle='--')
 
     # if microscope == 'Multiscope':
