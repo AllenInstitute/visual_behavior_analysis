@@ -445,7 +445,7 @@ def plot_coclustering_matrix_sorted_by_cluster_size(coclustering_matrices, clust
         fig, ax = plt.subplots(figsize=figsize)
     ax = sns.heatmap(sorted_coclustering_matrix, cmap="Greys", ax=ax, square=True,
                      cbar=True, cbar_kws={"drawedges": False, "label": 'probability of\nco-clustering', 'shrink': 0.7, },)
-    ax.set_title(get_cell_type_for_cre_line(cre_line, cluster_meta))
+    ax.set_title(processing.get_cre_line_map(cre_line))
     ax.set_title('')
     ax.set_yticks((0, sorted_coclustering_matrix.shape[0]))
     ax.set_yticklabels((0, sorted_coclustering_matrix.shape[0]), fontsize=20)
@@ -502,7 +502,7 @@ def plot_umap_for_clusters(cluster_meta, feature_matrix, label_col='cluster_id',
 
     label_col: column in cluster_meta to colorize points by
     """
-    import umap
+#    import umap
     figsize = (15, 4)
     fig, ax = plt.subplots(1, 3, figsize=figsize)
     for i, cre_line in enumerate(get_cre_lines(cluster_meta)):
@@ -2003,7 +2003,7 @@ def plot_gap_statistic(gap_statistic, cre_lines=None, n_clusters_cre=None, tag='
         n_clusters = n_clusters_cre[cre_line]
         x = len(gap_statistic[cre_line]['gap'])
 
-        figsize = (10, 4)
+        figsize = (8, 4)
         fig, ax = plt.subplots(1, 2, figsize=figsize)
 
         ax[0].plot(np.arange(1, x + 1), gap_statistic[cre_line]['reference_inertia'], 'o-')
@@ -2017,6 +2017,7 @@ def plot_gap_statistic(gap_statistic, cre_lines=None, n_clusters_cre=None, tag='
         ax[1].set_ylabel('Gap statistic')
         ax[1].set_xlabel('Number of clusters')
         ax[1].axvline(x=n_clusters, ymin=0, ymax=1, linestyle='--', color='gray')
+        ax[1].set_ylim([0,0.3])
 
         title = processing.get_cre_line_map(cre_line)  # get a more interpretable cell type name
         plt.suptitle(title)
@@ -2077,7 +2078,7 @@ def plot_eigengap_values(eigenvalues_cre, cre_lines, n_clusters_cre=None, save_d
         n_clusters_cre = processing.get_n_clusters_cre()
 
     for cre_line in cre_lines:
-        if len(eigenvalues_cre[cre_line])<4: # patchwork her. 
+        if len(eigenvalues_cre[cre_line]) < 4:  # patchwork her.
             eigenvalues = eigenvalues_cre[cre_line][1]
         else:
             eigenvalues = eigenvalues_cre[cre_line]
@@ -2766,7 +2767,7 @@ def plot_cluster_size_for_cluster(cluster_size_df, cluster_id, stats_table, diff
     return ax
 
 
-def plot_cluster_size(cluster_size_df, cre_line=None, shuffle_type=None, stats_table=None, diff_column = 'cluster_size_diff',
+def plot_cluster_size(cluster_size_df, cre_line=None, shuffle_type=None, stats_table=None, diff_column='cluster_size_diff',
                       ax=None, figsize=None, save_dir=None, folder=None):
     if cre_line is not None:
         if isinstance(cre_line, str):
@@ -2788,7 +2789,7 @@ def plot_cluster_size(cluster_size_df, cre_line=None, shuffle_type=None, stats_t
 
     # plot cluster size first
     for i, cluster_id in enumerate(cluster_ids):
-        ax[i] = plot_cluster_size_for_cluster(cluster_size_df, cluster_id, stats_table=stats_table, diff_column = diff_column, ax=ax[i])
+        ax[i] = plot_cluster_size_for_cluster(cluster_size_df, cluster_id, stats_table=stats_table, diff_column=diff_column, ax=ax[i])
 
     fig.subplots_adjust(hspace=1.2, wspace=0.6)
     plt.suptitle(processing.get_shuffle_label(shuffle_type), x=0.52, y=1.15)

@@ -1336,7 +1336,10 @@ def cache_response_probability(behavior_session_id, engaged_only=True):
         stimulus_presentations = stimulus_presentations[stimulus_presentations.engagement_state == 'engaged']
 
     # compute response probability
-    response_matrix = behavior.calculate_response_matrix(stimulus_presentations, aggfunc=np.mean, sort_by_column=True,
+    # BEHAVIOR OBJECT IS NOT DEFINED. CHANGED IT TO DATASET, BUT NOT SURE IF THAT'S CORRECT ONE. IRYNA NOV 11,2022
+    # response_matrix = behavior.calculate_response_matrix(stimulus_presentations, aggfunc=np.mean, sort_by_column=True,
+    #                                                     engaged_only=engaged_only)
+    response_matrix = dataset.calculate_response_matrix(stimulus_presentations, aggfunc=np.mean, sort_by_column=True,
                                                          engaged_only=engaged_only)
 
     filename = 'behavior_session_id={}.h5'.format(behavior_session_id)
