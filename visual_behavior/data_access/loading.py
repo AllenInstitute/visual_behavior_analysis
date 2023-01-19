@@ -1080,7 +1080,7 @@ def get_ophys_container_ids(platform_paper_only=False, add_extra_columns=True):
     :return:
     """
     if platform_paper_only:
-        experiments = get_platform_paper_experiment_table(add_extra_columns=add_extra_columns)
+        experiments = get_platform_paper_experiment_table(add_extra_columns=add_extra_columns, limit_to_closest_active=True)
     else:
         cache_dir = get_platform_analysis_cache_dir()
         cache = bpc.from_s3_cache(cache_dir)
@@ -3278,7 +3278,8 @@ def get_cell_table(platform_paper_only=True, add_extra_columns=True, limit_to_cl
     # optionally filter to limit to platform paper datasets
     if platform_paper_only:
         # load experiments table and merge
-        experiment_table = get_platform_paper_experiment_table(add_extra_columns=add_extra_columns, include_4x2_data=include_4x2_data)
+        experiment_table = get_platform_paper_experiment_table(add_extra_columns=add_extra_columns,
+                                                               include_4x2_data=include_4x2_data, limit_to_closest_active=True)
         cell_table = cell_table.reset_index().merge(experiment_table, on='ophys_experiment_id')
         if include_4x2_data:
             cell_table = cell_table[(cell_table.reporter_line != 'Ai94(TITL-GCaMP6s)')]
@@ -3362,7 +3363,7 @@ def check_whether_multi_session_df_has_all_platform_experiments(multi_session_df
     :return:
     """
     mdf = multi_session_df.copy()
-    platform_experiments_table = get_platform_paper_experiment_table()
+    platform_experiments_table = get_platform_paper_experiment_table(limit_to_closest_active=True)
     platform_experiments_table = platform_experiments_table.reset_index()
     platform_experiment_ids = platform_experiments_table.ophys_experiment_id.unique()
     print('there are', len(platform_experiment_ids), 'experiments in the platform paper experiments table')
