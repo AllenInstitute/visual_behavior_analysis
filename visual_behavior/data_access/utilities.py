@@ -1421,7 +1421,7 @@ def add_experience_level_to_behavior_sessions(behavior_sessions):
     behavior_sessions['experience_level'] = 'None'
 
     # ophys sessions 1,2,3 = Familiar
-    indices = behavior_sessions[behavior_sessions.session_number.isin([1, 2, 3])].index.values
+    indices = behavior_sessions[behavior_sessions.session_number.isin([0, 1, 2, 3])].index.values
     behavior_sessions.loc[indices, 'experience_level'] = 'Familiar'
 
     # ophys session 4 with no prior exposures to image set = Novel
@@ -1922,7 +1922,7 @@ def value_counts(df, conditions=['cell_type', 'experience_level', 'mouse_id']):
     return counts
 
 
-def count_mice_expts_containers_cells(df, conditions_to_group=['cell_type', 'experience_level']):
+def count_mice_expts_containers_cells(df, conditions_to_group=['cell_type', 'experience_level'], include_matched_cells=True):
     """
     count the number of mice, sessions, experiments, containers, and cells in input dataframe
     input dataframe is typically ophys_cells_table merged with ophys_experiment_table
@@ -1936,16 +1936,22 @@ def count_mice_expts_containers_cells(df, conditions_to_group=['cell_type', 'exp
     containers = value_counts(df, conditions=conditions_to_group + ['ophys_container_id'])
     cells = value_counts(df, conditions=conditions_to_group + ['cell_specimen_id'])
 
-    matched_cells = limit_to_last_familiar_second_novel_active(df)
-    matched_cells = limit_to_cell_specimen_ids_matched_in_all_experience_levels(matched_cells)
-    matched_cells = value_counts(matched_cells, conditions=conditions_to_group + ['cell_specimen_id'])
-    matched_cells = matched_cells.rename(columns={'n_cell_specimen_id': 'n_matched_cells'})
+    if include_matched_cells:
+        try:
+            matched_cells = limit_to_last_familiar_second_novel_active(df)
+            matched_cells = limit_to_cell_specimen_ids_matched_in_all_experience_levels(matched_cells)
+            matched_cells = value_counts(matched_cells, conditions=conditions_to_group + ['cell_specimen_id'])
+            matched_cells = matched_cells.rename(columns={'n_cell_specimen_id': 'n_matched_cells'})
+        except:
+            include_matched_cells=False
+            print('could not compute matched cells because input dataframe was not limited to platform paper experiments')
 
     counts = mice.merge(sessions, on=conditions_to_group)
     counts = counts.merge(experiments, on=conditions_to_group)
     counts = counts.merge(containers, on=conditions_to_group)
     counts = counts.merge(cells, on=conditions_to_group)
-    counts = counts.merge(matched_cells, on=conditions_to_group)
+    if include_matched_cells:
+        counts = counts.merge(matched_cells, on=conditions_to_group)
     return counts
 
 

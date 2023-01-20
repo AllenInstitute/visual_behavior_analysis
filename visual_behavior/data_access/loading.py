@@ -237,7 +237,7 @@ def get_released_ophys_experiment_table(exclude_ai94=True):
     return experiment_table
 
 
-def get_platform_paper_experiment_table(add_extra_columns=True, limit_to_closest_active=False, include_4x2_data=False, remove_flagged=True):
+def get_platform_paper_experiment_table(add_extra_columns=True, limit_to_closest_active=False, include_4x2_data=False, remove_flagged=True, remove_Ai94=True):
     """
     loads the experiment table that was downloaded from AWS and saved to the the platform paper cache dir.
     Then filter out VisualBehaviorMultiscope4areasx2d and Ai94 data.
@@ -247,6 +247,7 @@ def get_platform_paper_experiment_table(add_extra_columns=True, limit_to_closest
     Set limit_to_closest_active to True if you want to limit to experiments that are matched in all experience levels,
         with only the closest familiar and novel active sessions to the first novel session to be included (i.e. only one session of each type per container)
     include_4x2_data (bool), if True, then includes VisualBehaviorMultiscope4areasx2d data
+    remove_Ai94 (bool), if True, remvoes mice with the Ai94 reporter line expressing GCaMP6s
     remove_flagged (bool),  set remove_flagged to False if you want to include experiments that are current in the release dataset,
         but have been flagged for removal
 
@@ -256,12 +257,13 @@ def get_platform_paper_experiment_table(add_extra_columns=True, limit_to_closest
     cache = bpc.from_s3_cache(cache_dir=cache_dir)
     experiment_table = cache.get_ophys_experiment_table()
 
-    # remove 4x2 and Ai94 data
-    if include_4x2_data:
+    # remove 4x2
+    if not include_4x2_data:
+        experiment_table = experiment_table[(experiment_table.project_code != 'VisualBehaviorMultiscope4areasx2d')].copy()
+
+    # remove Ai94
+    if remove_Ai94:
         experiment_table = experiment_table[(experiment_table.reporter_line != 'Ai94(TITL-GCaMP6s)')].copy()
-    else:
-        experiment_table = experiment_table[(experiment_table.project_code != 'VisualBehaviorMultiscope4areasx2d') &
-                                            (experiment_table.reporter_line != 'Ai94(TITL-GCaMP6s)')].copy()
 
     # overwrite session number and passive columns to patch for bug flagged in this SDK issue:
     # https://github.com/AllenInstitute/AllenSDK/issues/2251
@@ -3261,7 +3263,8 @@ def get_cell_table_from_lims(ophys_experiment_ids=None, columns_to_return='*', v
     return lims_rois
 
 
-def get_cell_table(platform_paper_only=True, add_extra_columns=True, limit_to_closest_active=False, limit_to_matched_cells=False, include_4x2_data=False):
+def get_cell_table(platform_paper_only=True, add_extra_columns=True, limit_to_closest_active=False,
+                   limit_to_matched_cells=False, include_4x2_data=False, remove_Ai94=True):
     """
     loads ophys_cells_table from the SDK using platform paper analysis cache and merges with experiment_table to get metadata
     if 'platform_paper_only' is True, will filter out Ai94 and VisuaBehaviorMultiscope4areasx2d and add extra columns
@@ -3278,24 +3281,32 @@ def get_cell_table(platform_paper_only=True, add_extra_columns=True, limit_to_cl
     # optionally filter to limit to platform paper datasets
     if platform_paper_only:
         # load experiments table and merge
-        experiment_table = get_platform_paper_experiment_table(add_extra_columns=add_extra_columns,
-                                                               include_4x2_data=include_4x2_data, limit_to_closest_active=True)
+        experiment_table = get_platform_paper_experiment_table(add_extra_columns=True, remove_Ai94=True, remove_flagged=True,
+                                                               include_4x2_data=False, limit_to_closest_active=True)
         cell_table = cell_table.reset_index().merge(experiment_table, on='ophys_experiment_id')
-        if include_4x2_data:
-            cell_table = cell_table[(cell_table.reporter_line != 'Ai94(TITL-GCaMP6s)')]
-        else:
-            cell_table = cell_table[(cell_table.reporter_line != 'Ai94(TITL-GCaMP6s)') & (cell_table.project_code != 'VisualBehaviorMultiscope4areasx2d')]
+
         cell_table = cell_table.set_index('cell_roi_id')
     else:
         # load platform experiments table and merge
-        experiment_table = cache.get_ophys_experiment_table()
+        # experiment_table = cache.get_ophys_experiment_table()
+        experiment_table = get_platform_paper_experiment_table(add_extra_columns=True, remove_Ai94=False, remove_flagged=False,
+                                                               include_4x2_data=True, limit_to_closest_active=False)
         cell_table = cell_table.reset_index().merge(experiment_table, on='ophys_experiment_id')
         cell_table = cell_table.set_index('cell_roi_id')
+
+    if not include_4x2_data:
+        cell_table = cell_table[(cell_table.project_code != 'VisualBehaviorMultiscope4areasx2d')]
+
+    if remove_Ai94:
+        cell_table = cell_table[(cell_table.reporter_line != 'Ai94(TITL-GCaMP6s)')]
+
     if limit_to_closest_active:
         cell_table = utilities.limit_to_last_familiar_second_novel_active(cell_table)
         cell_table = utilities.limit_to_containers_with_all_experience_levels(cell_table)
+
     if limit_to_matched_cells:
         cell_table = utilities.limit_to_cell_specimen_ids_matched_in_all_experience_levels(cell_table)
+
     return cell_table
 
 
@@ -3384,23 +3395,35 @@ def get_multi_session_df_for_conditions(data_type, event_type, conditions, inclu
     print('there are', len(multi_session_df.ophys_experiment_id.unique()), 'experiments in the full multi_session_df')
 
     #     missing_expts = loading.check_whether_multi_session_df_has_all_platform_experiments(multi_session_df)
-
-    # merge with metadata
-    experiments_table = get_filtered_ophys_experiment_table()
-    multi_session_df = multi_session_df.merge(experiments_table, on='ophys_experiment_id')
-    multi_session_df = multi_session_df.reset_index(drop=True)
+    #
 
     # limit to platform expts
     if inclusion_criteria == 'platform_experiment_table':
-        experiments_table = get_platform_paper_experiment_table(limit_to_closest_active=True)
+        experiments_table = get_platform_paper_experiment_table(limit_to_closest_active=True,
+                                                                       add_extra_columns=True,
+                                                                       include_4x2_data=False,
+                                                                       remove_Ai94=True,
+                                                                       remove_flagged=True)
         multi_session_df = multi_session_df[multi_session_df.ophys_experiment_id.isin(experiments_table.index.values)]
         print('there are', len(multi_session_df.ophys_experiment_id.unique()), 'experiments in the multi_session_df after limiting to platform experiments')
     elif 'strategy_paper' in inclusion_criteria:
-        experiments_table = get_platform_paper_experiment_table(limit_to_closest_active=False)
+        experiments_table = get_platform_paper_experiment_table(limit_to_closest_active=False,
+                                                                       add_extra_columns=True,
+                                                                       include_4x2_data=False,
+                                                                       remove_Ai94=True,
+                                                                       remove_flagged=True)
         multi_session_df = multi_session_df[multi_session_df.ophys_experiment_id.isin(experiments_table.index.values)]
         print('there are', len(multi_session_df.ophys_experiment_id.unique()), 'experiments in the multi_session_df after limiting to strategy paper')
     else:
-        experiments_table = get_filtered_ophys_experiment_table()
+        experiments_table = get_platform_paper_experiment_table(limit_to_closest_active=False,
+                                                                       add_extra_columns=True,
+                                                                       include_4x2_data=True,
+                                                                       remove_Ai94=True,
+                                                                       remove_flagged=True)
+
+    # merge in metadata
+    multi_session_df = multi_session_df.merge(experiments_table, on='ophys_experiment_id')
+    multi_session_df = multi_session_df.reset_index(drop=True)
 
     # need to filter for active first so that subsequent criteria area applied to that set
     if 'active_only' in inclusion_criteria:
