@@ -29,7 +29,7 @@ def get_nearest_frame(timepoint, timestamps):
         nearest_frame = nearest_frame + 1  # use next frame to ensure nearest (2P) follows input timepoint (stim), 190127
     return nearest_frame
 
-
+# 2023 REFACTOR: moved to brain_observatory_analysis
 def get_successive_frame_list(timepoints_array, timestanps):
     # This is a modification of get_nearest_frame for speedup
     #  This implementation looks for the first 2p frame consecutive to the stim
@@ -37,7 +37,7 @@ def get_successive_frame_list(timepoints_array, timestanps):
 
     return successive_frames
 
-
+# 2023 REFACTOR: moved to brain_observatory_analysis
 def get_trace_around_timepoint(timepoint, trace, timestamps, window, frame_rate):
     #   frame_for_timepoint = get_nearest_frame(timepoint, timestamps)
     frame_for_timepoint = get_successive_frame_list(timepoint, timestamps)
@@ -47,7 +47,7 @@ def get_trace_around_timepoint(timepoint, trace, timestamps, window, frame_rate)
     timepoints = timestamps[int(lower_frame):int(upper_frame)]
     return trace, timepoints
 
-
+# 2023 REFACTOR: moved to brain_observatory_analysis
 def get_responses_around_event_times(trace, timestamps, event_times, frame_rate, window=[-2, 3]):
     responses = []
     for event_time in event_times:
@@ -57,30 +57,30 @@ def get_responses_around_event_times(trace, timestamps, event_times, frame_rate,
     responses = np.asarray(responses)
     return responses
 
-
+# 2023 REFACTOR: moved to brain_observatory_analysis
 def get_mean_in_window(trace, window, frame_rate, use_events=False):
     mean = np.nanmean(trace[int(window[0] * frame_rate): int(window[1] * frame_rate)])
     return mean
 
-
+# 2023 REFACTOR: moved to brain_observatory_analysis
 def get_sd_in_window(trace, window, frame_rate):
     std = np.std(
         trace[int(window[0] * frame_rate): int(window[1] * frame_rate)])
     return std
 
-
+# 2023 REFACTOR: moved to brain_observatory_analysis
 def get_n_nonzero_in_window(trace, window, frame_rate):
     datapoints = trace[int(np.round(window[0] * frame_rate)): int(np.round(window[1] * frame_rate))]
     n_nonzero = len(np.where(datapoints > 0)[0])
     return n_nonzero
 
-
+# 2023 REFACTOR: moved to brain_observatory_analysis
 def get_sd_over_baseline(trace, response_window, baseline_window, frame_rate):
     baseline_std = get_sd_in_window(trace, baseline_window, frame_rate)
     response_mean = get_mean_in_window(trace, response_window, frame_rate)
     return response_mean / (baseline_std)
 
-
+# 2023 REFACTOR: moved to brain_observatory_analysis
 def get_p_val(trace, response_window, frame_rate):
     from scipy import stats
     response_window_duration = response_window[1] - response_window[0]
@@ -90,7 +90,6 @@ def get_p_val(trace, response_window, frame_rate):
     stim_end = int((response_window[0] + response_window_duration) * frame_rate)
     (_, p) = stats.f_oneway(trace[baseline_start:baseline_end], trace[stim_start:stim_end])
     return p
-
 
 def ptest(x, num_conditions):
     ptest = len(np.where(x < (0.05 / num_conditions))[0])
@@ -265,7 +264,7 @@ def get_p_values_from_shuffle_spontaneous(dataset, flash_response_df, response_w
         flash_p_values[str(cell_index)] = p_values
     return flash_p_values
 
-
+# 2023 REFACTOR: moved to brain_observatory_analysis
 def get_mean_sem_trace(group):
     mean_response = np.mean(group['mean_response'])
     mean_baseline = np.mean(group['baseline_response'])
@@ -281,48 +280,48 @@ def get_mean_sem_trace(group):
                       'trace_timestamps': trace_timestamps,
                       'mean_responses': mean_responses})
 
-
+# 2023 REFACTOR: moved to brain_observatory_analysis
 def get_mean_sem(group):
     mean_response = np.mean(group['mean_response'])
     sem_response = np.std(group['mean_response'].values) / np.sqrt(len(group['mean_response'].values))
     return pd.Series({'mean_response': mean_response, 'sem_response': sem_response})
 
-
+# 2023 REFACTOR: moved to brain_observatory_analysis
 def get_fraction_significant_trials(group):
     fraction_significant_trials = len(group[group.p_value < 0.05]) / float(len(group))
     return pd.Series({'fraction_significant_trials': fraction_significant_trials})
 
-
+# 2023 REFACTOR: moved to brain_observatory_analysis
 def get_fraction_significant_p_value_gray_screen(group):
     fraction_significant_p_value_gray_screen = len(group[group.p_value_gray_screen < 0.05]) / float(len(group))
     return pd.Series({'fraction_significant_p_value_gray_screen': fraction_significant_p_value_gray_screen})
 
-
+# 2023 REFACTOR: moved to brain_observatory_analysis
 def get_fraction_significant_p_value_omission(group):
     fraction_significant_p_value_omission = len(group[group.p_value_omission < 0.05]) / float(len(group))
     return pd.Series({'fraction_significant_p_value_omission': fraction_significant_p_value_omission})
 
-
+# 2023 REFACTOR: moved to brain_observatory_analysis
 def get_fraction_significant_p_value_stimulus(group):
     fraction_significant_p_value_stimulus = len(group[group.p_value_stimulus < 0.05]) / float(len(group))
     return pd.Series({'fraction_significant_p_value_stimulus': fraction_significant_p_value_stimulus})
 
-
+# 2023 REFACTOR: moved to brain_observatory_analysis
 def get_fraction_active_trials(group):
     fraction_active_trials = len(group[group.mean_response > 0.05]) / float(len(group))
     return pd.Series({'fraction_active_trials': fraction_active_trials})
 
-
+# 2023 REFACTOR: moved to brain_observatory_analysis
 def get_fraction_responsive_trials(group):
     fraction_responsive_trials = len(group[(group.p_value_baseline < 0.05)]) / float(len(group))
     return pd.Series({'fraction_responsive_trials': fraction_responsive_trials})
 
-
+# 2023 REFACTOR: moved to brain_observatory_analysis
 def get_fraction_nonzero_trials(group):
     fraction_nonzero_trials = len(group[group.n_events > 0]) / float(len(group))
     return pd.Series({'fraction_nonzero_trials': fraction_nonzero_trials})
 
-
+# 2023 REFACTOR: moved to brain_observatory_analysis
 def compute_reliability_vectorized(traces):
     '''
     Compute average pearson correlation between pairs of rows of the input matrix.
@@ -343,7 +342,7 @@ def compute_reliability_vectorized(traces):
     reliability = np.nanmean(correlation_values)
     return reliability, correlation_values
 
-
+# 2023 REFACTOR: moved to brain_observatory_analysis
 def compute_reliability(group, window=[-3, 3], response_window_duration=0.5, frame_rate=30.):
     # computes trial to trial correlation across input traces in group,
     # only for portion of the trace after the change time or flash onset time
@@ -360,7 +359,7 @@ def compute_reliability(group, window=[-3, 3], response_window_duration=0.5, fra
         correlation_values = []
     return pd.Series({'reliability': reliability, 'correlation_values': correlation_values})
 
-
+# UNUSED?
 def get_window(analysis=None, flashes=False, omitted=False):
     if analysis and omitted:
         window = analysis.omitted_flash_window
@@ -376,7 +375,7 @@ def get_window(analysis=None, flashes=False, omitted=False):
         window = [-4, 8]
     return window
 
-
+# 2023 REFACTOR: moved to brain_observatory_analysis
 def get_mean_df(stim_response_df, conditions=['cell', 'change_image_name'], frame_rate=11.0,
                 window_around_timepoint_seconds=[-3, 3], response_window_duration_seconds=0.5,
                 get_pref_stim=True, exclude_omitted_from_pref_stim=True):
@@ -389,7 +388,6 @@ def get_mean_df(stim_response_df, conditions=['cell', 'change_image_name'], fram
     4) "frame_rate" in df already
     5) get_pre_stim: 
     """
-
     window = window_around_timepoint_seconds
     response_window_duration = response_window_duration_seconds
 
@@ -435,7 +433,9 @@ def get_mean_df(stim_response_df, conditions=['cell', 'change_image_name'], fram
         mdf = mdf.drop(columns=['index'])
     return mdf
 
-
+###################################################################################################
+# COLORS AND LABELS: PROB DONT NEED TO MOVE
+###################################################################################################
 def get_cre_lines(mean_df):
     cre_lines = np.sort(mean_df.cre_line.unique())
     return cre_lines
@@ -549,6 +549,11 @@ def add_metadata_to_mean_df(mdf, metadata):
     return mdf
 
 
+###################################################################################################
+# END COLORS AND LABELS: PROB DONT NEED TO MOVE
+###################################################################################################
+
+# 2023 REFACTOR: moved to brain_observatory_analysis
 def get_time_to_peak(trace, window=[-4, 8], frame_rate=30.):
     response_window_duration = 0.75
     response_window = [np.abs(window[0]), np.abs(window[0]) + response_window_duration]
@@ -558,7 +563,7 @@ def get_time_to_peak(trace, window=[-4, 8], frame_rate=30.):
     time_to_peak = peak_frames_from_response_window_start / float(frame_rate)
     return peak_response, time_to_peak
 
-
+# 2023 REFACTOR: moved to brain_observatory_analysis
 def annotate_mean_df_with_time_to_peak(mean_df, window=[-4, 8], frame_rate=30.):
     ttp_list = []
     peak_list = []
@@ -571,7 +576,7 @@ def annotate_mean_df_with_time_to_peak(mean_df, window=[-4, 8], frame_rate=30.):
     mean_df['time_to_peak'] = ttp_list
     return mean_df
 
-
+# 2023 REFACTOR: moved to brain_observatory_analysis
 def annotate_mean_df_with_fano_factor(mean_df):
     ff_list = []
     for idx in mean_df.index:
@@ -583,7 +588,7 @@ def annotate_mean_df_with_fano_factor(mean_df):
     mean_df['fano_factor'] = ff_list
     return mean_df
 
-
+# 2023 REFACTOR: moved to brain_observatory_analysis
 def annotate_mean_df_with_p_value(mean_df, window=[-4, 8], response_window_duration=0.5, frame_rate=30.):
     response_window = [np.abs(window[0]), np.abs(window[0]) + response_window_duration]
     p_val_list = []
@@ -594,7 +599,7 @@ def annotate_mean_df_with_p_value(mean_df, window=[-4, 8], response_window_durat
     mean_df['p_value'] = p_val_list
     return mean_df
 
-
+# 2023 REFACTOR: moved to brain_observatory_analysis
 def annotate_mean_df_with_sd_over_baseline(mean_df, window=[-4, 8], response_window_duration=0.5, frame_rate=30.):
     response_window = [np.abs(window[0]), np.abs(window[0]) + response_window_duration]
     baseline_window = [np.abs(window[0]) - response_window_duration, (np.abs(window[0]))]
@@ -606,7 +611,7 @@ def annotate_mean_df_with_sd_over_baseline(mean_df, window=[-4, 8], response_win
     mean_df['sd_over_baseline'] = sd_list
     return mean_df
 
-
+# 2023 REFACTOR: moved to brain_observatory_analysis
 def annotate_mean_df_with_pref_stim(mean_df, exclude_omitted_from_pref_stim=True):
     if 'prior_image_name' in mean_df.keys():
         image_name = 'prior_image_name'
@@ -630,7 +635,7 @@ def annotate_mean_df_with_pref_stim(mean_df, exclude_omitted_from_pref_stim=True
         mdf.loc[row, 'pref_stim'] = True
     return mdf
 
-
+# 2023 REFACTOR: moved to brain_observatory_analysis
 def annotate_trial_response_df_with_pref_stim(trial_response_df):
     rdf = trial_response_df.copy()
     rdf['pref_stim'] = False
@@ -648,7 +653,7 @@ def annotate_trial_response_df_with_pref_stim(trial_response_df):
             rdf.loc[trial, 'pref_stim'] = True
     return rdf
 
-
+# 2023 REFACTOR: moved to brain_observatory_analysis
 def annotate_flash_response_df_with_pref_stim(fdf):
     fdf = fdf.reset_index()
     if 'cell_specimen_id' in fdf.keys():
@@ -667,7 +672,7 @@ def annotate_flash_response_df_with_pref_stim(fdf):
             fdf.loc[trial, 'pref_stim'] = True
     return fdf
 
-
+# 2023 REFACTOR: moved to brain_observatory_analysis
 def annotate_flashes_with_reward_rate(dataset):
     last_time = 0
     reward_rate_by_frame = []

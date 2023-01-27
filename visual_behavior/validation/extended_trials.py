@@ -97,6 +97,60 @@ def get_first_lick_relative_to_change(row):
         return np.nan
 
 
+def get_first_lick_after_change(row):
+    '''
+    returns first lick after change time, nan if no such lick
+    exists
+    '''
+    licks = np.array(row['lick_times']) - row['change_time']
+    # keep only positive licks
+    licks = licks[licks > 0]
+    if len(licks) > 0:
+        return licks[0]
+    else:
+        return np.nan
+
+
+def get_accumlated_rewards_licks(df):
+    """Calculates how many rewards acculated before the first lick after change time.
+    
+    
+    TODO: produces shorter trial arrays because drop na, consider how to handle"""
+
+    # explode reward times
+    reward_times = df['reward_times'].explode()
+
+    # explode lick times
+    lick_times = df['lick_times'].explode()
+
+
+    # iterate diff_reward_times, check for any licks between the two rewards, if so True, else false
+    # if True, add 1 to the counter
+    accumulated_rewards = 1
+    consumed = False
+    consumed_list = []
+    accumulated_rewards_list = []
+
+    # drop nan
+    reward_times = reward_times.dropna().reset_index(drop=True)
+    for i in range(len(reward_times)-1):
+        if np.any(lick_times.between(reward_times[i], reward_times[i+1])):
+            consumed = True
+            accumulated_rewards = 1
+        else:
+            accumulated_rewards += 1
+            consumed = False
+
+        consumed_list.append(consumed)
+        accumulated_rewards_list.append(accumulated_rewards)
+
+
+    return consumed_list, accumulated_rewards_list
+
+
+
+
+
 def get_first_lick_relative_to_scheduled_change(row):
     '''
     returns first lick relative to scheduled change time, nan if no such lick

@@ -339,7 +339,7 @@ def dprime(hit_rate=None, fa_rate=None, go_trials=None, catch_trials=None, limit
     else:
         return d_prime
 
-
+# 2023 REFACTOR: MOVED TO MINDSCOPE_QC
 def calc_deriv(x, time):
     dx = np.diff(x)
     dt = np.diff(time)
@@ -352,7 +352,7 @@ def calc_deriv(x, time):
 
     return dxdt
 
-
+# 2023 REFACTOR: MOVED TO MINDSCOPE_QC
 def deg_to_dist(speed_deg_per_s):
     '''
     takes speed in degrees per second
@@ -365,7 +365,7 @@ def deg_to_dist(speed_deg_per_s):
     running_speed_cm_per_sec = np.pi * speed_deg_per_s * running_radius / 180.
     return running_speed_cm_per_sec
 
-
+# 2023 REFACTOR: MOVED TO MINDSCOPE_QC
 def local_time(iso_timestamp, timezone=None):
     if isinstance(iso_timestamp, datetime.datetime):
         dt = iso_timestamp
@@ -376,8 +376,9 @@ def local_time(iso_timestamp, timezone=None):
         dt = dt.replace(tzinfo=tz.gettz('America/Los_Angeles'))
     return dt.isoformat()
 
-
+# 2023 REFACTOR: MOVED TO MINDSCOPE_QC
 class ListHandler(logging.Handler):
+
     """docstring for ListHandler."""
 
     def __init__(self, log_list):
@@ -388,12 +389,12 @@ class ListHandler(logging.Handler):
         entry = self.format(record)
         self.log_list.append(entry)
 
-
+# 2023 REFACTOR: MOVED TO MINDSCOPE_QC
 DoubleColonFormatter = logging.Formatter(
     "%(levelname)s::%(name)s::%(message)s",
 )
 
-
+# 2023 REFACTOR: MOVED TO MINDSCOPE_QC
 def inplace(func):
     """ decorator which allows functions that modify a dataframe inplace
     to use a copy instead
