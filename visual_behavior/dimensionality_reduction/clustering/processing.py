@@ -780,7 +780,7 @@ def get_coClust_matrix(X, model=SpectralClustering, nboot=np.arange(150), n_clus
     ______________
     returns: coClust_matrix: (ndarray) probability matrix of co-clustering together.
     '''
-    #model = model()
+    # model = model()
     labels = get_labels_for_coclust_matrix(X=X,
                                            model=model,
                                            nboot=nboot,
@@ -2466,7 +2466,7 @@ def get_variability_df(feature_matrix, cluster_df, columns=['cluster_id', 'cre_l
     '''
 
     variability_df = pd.DataFrame(columns=columns)
-    cre_lines = np.sort(vba_clust.get_cre_lines(cluster_df))
+    cre_lines = np.sort(get_cre_lines(cluster_df))
 
     columns = [*columns, metric]
 
@@ -2484,7 +2484,7 @@ def get_variability_df(feature_matrix, cluster_df, columns=['cluster_id', 'cre_l
         for cluster_id in cluster_ids:
             cluster_cids = cre_cluster_df[cre_cluster_df.cluster_id == cluster_id].index.values
             cluster_feature_matrix = cre_feature_matrix.loc[cluster_cids]
-            if metric is 'sse':
+            if metric == 'sse':
                 values = compute_sse(cluster_feature_matrix)
 
             variability_df = variability_df.append(pd.DataFrame({'cre_line': [cre_line] * len(values),
@@ -2493,7 +2493,7 @@ def get_variability_df(feature_matrix, cluster_df, columns=['cluster_id', 'cre_l
                                                                  metric: values}, index=np.arange(len(values))),
                                                    ignore_index=True)
 
-        if metric is 'sse':
+        if metric == 'sse':
             values = compute_sse(cre_feature_matrix)
         variability_df = variability_df.append(pd.DataFrame({'cre_line': [cre_line] * len(values),
                                                              'cluster_id': [np.nan] * len(values),

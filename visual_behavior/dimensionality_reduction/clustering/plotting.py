@@ -2017,7 +2017,7 @@ def plot_gap_statistic(gap_statistic, cre_lines=None, n_clusters_cre=None, tag='
         ax[1].set_ylabel('Gap statistic')
         ax[1].set_xlabel('Number of clusters')
         ax[1].axvline(x=n_clusters, ymin=0, ymax=1, linestyle='--', color='gray')
-        ax[1].set_ylim([0,0.3])
+        ax[1].set_ylim([0, 0.3])
 
         title = processing.get_cre_line_map(cre_line)  # get a more interpretable cell type name
         plt.suptitle(title)
