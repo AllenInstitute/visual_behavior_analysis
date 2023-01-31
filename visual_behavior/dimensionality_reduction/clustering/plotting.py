@@ -445,7 +445,7 @@ def plot_coclustering_matrix_sorted_by_cluster_size(coclustering_matrices, clust
         fig, ax = plt.subplots(figsize=figsize)
     ax = sns.heatmap(sorted_coclustering_matrix, cmap="Greys", ax=ax, square=True,
                      cbar=True, cbar_kws={"drawedges": False, "label": 'probability of\nco-clustering', 'shrink': 0.7, },)
-    ax.set_title(get_cell_type_for_cre_line(cre_line, cluster_meta))
+    ax.set_title(processing.get_cre_line_map(cre_line))
     ax.set_title('')
     ax.set_yticks((0, sorted_coclustering_matrix.shape[0]))
     ax.set_yticklabels((0, sorted_coclustering_matrix.shape[0]), fontsize=20)
@@ -502,7 +502,7 @@ def plot_umap_for_clusters(cluster_meta, feature_matrix, label_col='cluster_id',
 
     label_col: column in cluster_meta to colorize points by
     """
-    import umap
+#    import umap
     figsize = (15, 4)
     fig, ax = plt.subplots(1, 3, figsize=figsize)
     for i, cre_line in enumerate(get_cre_lines(cluster_meta)):
@@ -1231,11 +1231,14 @@ def get_cluster_color_map(labels):
 
 def plot_N_clusters_by_cre_line(labels_cre, ax=None, palette=None):
     if ax is None:
-        fig, ax = plt.subplots(1, 1, figsize=(7, 7))
+        fig, ax = plt.subplots(1, 1, figsize=(6, 3))
+
     if palette is None:
         palette = [(1.0, 0.596078431372549, 0.5882352941176471),
                    (0.6196078431372549, 0.8549019607843137, 0.8980392156862745),
                    (0.7725490196078432, 0.6901960784313725, 0.8352941176470589)]
+    markersize = [14, 10, 10]
+    linewidth = [4, 2, 2]
     for i, cre_line in enumerate(labels_cre.keys()):
         labels = labels_cre[cre_line]
         (unique, counts) = np.unique(labels, return_counts=True)
@@ -1244,11 +1247,14 @@ def plot_N_clusters_by_cre_line(labels_cre, ax=None, palette=None):
         cumulative_sum = [0]
         for freq in frequencies:
             cumulative_sum.append(cumulative_sum[-1] + freq)
-        ax.grid()
+
         ax.plot(range(0, len(cumulative_sum)), cumulative_sum, 'o-', color=palette[i],
-                linewidth=4, markersize=10)
+                linewidth=linewidth[i], markersize=markersize[i])
+        ax.hlines(y=80, xmin=-0.5, xmax=11, linestyle='--', color='Grey')
+        ax.set_xlim([-0.5, 11])
+        ax.set_xticks(np.arange(0, len(cumulative_sum)))
         ax.set_xlabel('Cluster number')
-        ax.set_ylabel('Cells per cluster (%)')
+        ax.set_ylabel('Cumulative % of all cells')
     ax.legend(['Excitatory', 'SST inhibitory', 'VIP inhibitory'])
 
     return ax
@@ -1611,7 +1617,7 @@ def plot_population_average_response_for_cluster(cluster_mdf, cre_line, cluster_
 
 
 def plot_clusters_row(cluster_meta, feature_matrix, cre_line,
-                      sort_order=None, rename_clusters=False, save_dir=None, folder=None, suffix='', formats=['.png', '.pdf']):
+                      sort_order=None, rename_clusters=False, save_dir=None, folder=None, suffix='', abbreviate_experience=True, formats=['.png', '.pdf']):
     """
     For each cluster in a given cre_line, plots dropout heatmaps, fraction cells per area/depth relative to chance,
     fraction cells per cluster per area/depth, and population average omission response.
@@ -1649,7 +1655,7 @@ def plot_clusters_row(cluster_meta, feature_matrix, cre_line,
     for i, cluster_id in enumerate(cluster_ids):
         # plot mean dropout heatmap for this cluster
         ax[i] = plot_dropout_heatmap(cluster_meta, feature_matrix, cre_line, cluster_id,
-                                     abbreviate_experience=True, abbreviate_features=True, ax=ax[i])
+                                     abbreviate_experience=abbreviate_experience, abbreviate_features=True, ax=ax[i])
 
         # # population average for this cluster
         # ax[i + (n_clusters * 1)] = plot_population_average_response_for_cluster(cluster_mdf, cre_line, cluster_id,
@@ -1997,7 +2003,7 @@ def plot_gap_statistic(gap_statistic, cre_lines=None, n_clusters_cre=None, tag='
         n_clusters = n_clusters_cre[cre_line]
         x = len(gap_statistic[cre_line]['gap'])
 
-        figsize = (10, 4)
+        figsize = (8, 4)
         fig, ax = plt.subplots(1, 2, figsize=figsize)
 
         ax[0].plot(np.arange(1, x + 1), gap_statistic[cre_line]['reference_inertia'], 'o-')
@@ -2011,6 +2017,7 @@ def plot_gap_statistic(gap_statistic, cre_lines=None, n_clusters_cre=None, tag='
         ax[1].set_ylabel('Gap statistic')
         ax[1].set_xlabel('Number of clusters')
         ax[1].axvline(x=n_clusters, ymin=0, ymax=1, linestyle='--', color='gray')
+        ax[1].set_ylim([0, 0.3])
 
         title = processing.get_cre_line_map(cre_line)  # get a more interpretable cell type name
         plt.suptitle(title)
@@ -2071,7 +2078,10 @@ def plot_eigengap_values(eigenvalues_cre, cre_lines, n_clusters_cre=None, save_d
         n_clusters_cre = processing.get_n_clusters_cre()
 
     for cre_line in cre_lines:
-        eigenvalues = eigenvalues_cre[cre_line][1]
+        if len(eigenvalues_cre[cre_line]) < 4:  # patchwork her.
+            eigenvalues = eigenvalues_cre[cre_line][1]
+        else:
+            eigenvalues = eigenvalues_cre[cre_line]
         n_clusters = n_clusters_cre[cre_line]
         suffix = cre_line
         title = processing.get_cre_line_map(cre_line)  # get a more interpretable cell type name
@@ -2706,7 +2716,7 @@ def plot_cluster_proportions_treemaps(location_fractions, cluster_meta, color_co
 
 
 # plot cluster sizes
-def plot_cluster_size_for_cluster(cluster_size_df, cluster_id, stats_table, ax=None):
+def plot_cluster_size_for_cluster(cluster_size_df, cluster_id, stats_table, diff_column, ax=None):
     if ax is None:
         fig, ax = plt.subplots()
 
@@ -2716,9 +2726,9 @@ def plot_cluster_size_for_cluster(cluster_size_df, cluster_id, stats_table, ax=N
     ax.spines['right'].set_visible(False)
     # plot size diff
     ax = sns.barplot(data=cluster_size_df[cluster_size_df['cluster_id'] == cluster_id], x='cluster_id',
-                     y='cluster_size_diff', color=color1, ax=ax)
+                     y=diff_column, color=color1, ax=ax)
     if stats_table is not None:
-        y = 1
+        y = cluster_size_df[[diff_column, 'cluster_id']].groupby('cluster_id').mean().max()
         if stats_table[stats_table.cluster_id == cluster_id]['significant'].values[0] == True:
             color = 'DarkRed'
             pvalue = round(stats_table[stats_table.cluster_id == cluster_id]['imq'].values[0], 4)
@@ -2741,7 +2751,7 @@ def plot_cluster_size_for_cluster(cluster_size_df, cluster_id, stats_table, ax=N
 
     ax.axhline(0, color='gray')
     ax.set_xlabel('')
-    ax.set_ylim([-0.4, 1])
+    # ax.set_ylim([-0.4, 1])
     ax.set_xlim([-1, 1])
     ax.set_xticklabels('', fontsize=12)
     ax.set_yticklabels(ax.get_yticklabels(), fontsize=12)
@@ -2757,7 +2767,7 @@ def plot_cluster_size_for_cluster(cluster_size_df, cluster_id, stats_table, ax=N
     return ax
 
 
-def plot_cluster_size(cluster_size_df, cre_line=None, shuffle_type=None, stats_table=None,
+def plot_cluster_size(cluster_size_df, cre_line=None, shuffle_type=None, stats_table=None, diff_column='cluster_size_diff',
                       ax=None, figsize=None, save_dir=None, folder=None):
     if cre_line is not None:
         if isinstance(cre_line, str):
@@ -2779,7 +2789,7 @@ def plot_cluster_size(cluster_size_df, cre_line=None, shuffle_type=None, stats_t
 
     # plot cluster size first
     for i, cluster_id in enumerate(cluster_ids):
-        ax[i] = plot_cluster_size_for_cluster(cluster_size_df, cluster_id, stats_table=stats_table, ax=ax[i])
+        ax[i] = plot_cluster_size_for_cluster(cluster_size_df, cluster_id, stats_table=stats_table, diff_column=diff_column, ax=ax[i])
 
     fig.subplots_adjust(hspace=1.2, wspace=0.6)
     plt.suptitle(processing.get_shuffle_label(shuffle_type), x=0.52, y=1.15)
