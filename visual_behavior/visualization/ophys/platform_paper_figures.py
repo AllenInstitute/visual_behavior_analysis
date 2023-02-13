@@ -129,7 +129,7 @@ def plot_population_averages_for_conditions(multi_session_df, data_type, event_t
         # axes_conditions = ['Familiar', 'Novel 1', 'Novel >1']
         axes_conditions = np.sort(sdf[axes_column].unique())
     else:
-        axes_conditions = np.sort(sdf[axes_column].unique())[::-1]
+        axes_conditions = np.sort(sdf[axes_column].unique())
     # if there is only one axis condition, set n conditions for plotting to 2 so it can still iterate
     if len(axes_conditions) == 1:
         n_axes_conditions = 2
@@ -138,8 +138,8 @@ def plot_population_averages_for_conditions(multi_session_df, data_type, event_t
     if ax is None:
         format_fig = True
         if horizontal:
-            figsize = (3 * n_axes_conditions, 3)
-            fig, ax = plt.subplots(1, n_axes_conditions, figsize=figsize, sharey=True)
+            figsize = (4 * n_axes_conditions, 4)
+            fig, ax = plt.subplots(1, n_axes_conditions, figsize=figsize, sharey=False)
         else:
             figsize = (5, 3.5 * n_axes_conditions)
             fig, ax = plt.subplots(n_axes_conditions, 1, figsize=figsize, sharex=True)
@@ -181,7 +181,7 @@ def plot_population_averages_for_conditions(multi_session_df, data_type, event_t
             ax[0].set_ylabel(ylabel)
         else:
             ax[i].set_xlabel(xlabel)
-    # ax[0].legend(loc='upper left', fontsize='xx-small')
+    ax[0].legend(loc='upper left', fontsize='xx-small') # title='passive', title_fontsize='xx-small')
 
     if project_code:
         if suptitle is None:
@@ -596,34 +596,41 @@ def plot_average_metric_value_for_experience_levels_across_containers(df, metric
     return ax
 
 
-def test_significant_metric_averages(data, metric):
+def test_significant_metric_averages(data, metric, column_to_compare='experience_level'):
     """
-    run one way anova across experience levels for a given metric in data,
+    run one way anova across experience levels or cell types for a given metric in data,
     based on Alex's stats across experience levels for GLM figures
     data: cell metrics dataframe, each row is one cell_specimen_id in a given ophys_experiment
     metric: column in data representing metric values of interest
+    column_to_compare: must be 'experience_level' or 'cell_type'
     """
 
     from scipy import stats
     import statsmodels.stats.multicomp as mc
 
     data = data[~data[metric].isnull()].copy()
-    if 'Novel +' in data.experience_level.unique():
+    if 'Novel +' in data[column_to_compare].unique():
         anova = stats.f_oneway(
             data.query('experience_level == "Familiar"')[metric],
             data.query('experience_level == "Novel"')[metric],
             data.query('experience_level == "Novel +"')[metric])
         mapper = {'Familiar': 0, 'Novel': 1, 'Novel +': 2, }
-
-
-    else:
+    elif 'Novel >1' in data[column_to_compare].unique():
         anova = stats.f_oneway(
             data.query('experience_level == "Familiar"')[metric],
             data.query('experience_level == "Novel >1"')[metric],
             data.query('experience_level == "Novel 1"')[metric])
         mapper = {'Familiar': 0, 'Novel 1': 1, 'Novel >1': 2,}
+    elif 'Excitatory' in data[column_to_compare].unique():
+        anova = stats.f_oneway(
+            data.query('cell_type == "Excitatory"')[metric],
+            data.query('cell_type == "Sst Inhibitory"')[metric],
+            data.query('cell_type == "Vip Inhibitory"')[metric])
+        mapper = {'Excitatory': 0, 'Sst Inhibitory': 1, 'Vip Inhibitory': 2, }
+    else:
+        print('data does not contain experience_level or cell_type')
 
-    comp = mc.MultiComparison(data[metric], data['experience_level'])
+    comp = mc.MultiComparison(data[metric], data[column_to_compare])
     post_hoc_res = comp.tukeyhsd()
     tukey_table = pd.read_html(post_hoc_res.summary().as_html(), header=0, index_col=0)[0]
     tukey_table = tukey_table.reset_index()
@@ -634,13 +641,17 @@ def test_significant_metric_averages(data, metric):
     return anova, tukey_table
 
 
-def add_experience_level_stats(data, metric, colors, ax, ymax=None):
+def add_stats_to_plot(data, metric, colors, ax, ymax=None, column_to_compare='experience_level'):
     """
     add stars to axis indicating across experience level statistics
-    x-axis of plots must be experience_levels
+    x-axis of plots must be experience_levels or cell_types
+
+    data: metrics dataframe, each row is one cell_specimen_id in a given ophys_experiment
+    metric: column in data representing metric values of interest
+    column_to_compare: must be 'experience_level' or 'cell_type'
     """
-    # do anova across experience levels followed by post-hoc tukey
-    anova, tukey = test_significant_metric_averages(data, metric)
+    # do anova across experience levels or cell types followed by post-hoc tukey
+    anova, tukey = test_significant_metric_averages(data, metric, column_to_compare)
 
     scale = 0.1
     fontsize = 12
@@ -679,6 +690,45 @@ def add_experience_level_stats(data, metric, colors, ax, ymax=None):
 
     return ax, tukey
 
+
+def get_ci_sem_for_grouped_metric(group):
+    """
+    Takes grouped dataframe and computes 95% confidence intervals and standard error of the mean
+    dataframe should only have one column, corresponding to the metric to compute stats for
+    """
+    import scipy.stats as st
+    # compute standard error of the mean
+    sem = st.sem(group.values, nan_policy='omit')
+    # compute 95% confidence intervals
+    ci = st.norm.interval(alpha=0.95, loc=np.nanmean(group.values), scale=sem)
+    ci = [c[0] for c in ci]
+    return pd.Series({'CI': ci, 'SEM': sem[0]})
+
+
+def get_descriptive_stats_for_metric(data, metric, cols_to_groupby):
+    """
+    group values in data by cols_to_groupby (ex: experience_level), then compute basic stats for metric values.
+    stats include mean, std, sem, 95% confidence intervals
+
+    data: dataframe with columns for metric and cols_to_groupby
+    metric: string, column of data with numeric values
+    cols_to_groupby: list, column(s) in data with categorical values to use for grouping
+    """
+    # get 95% CI and SEM
+    group = data.groupby(cols_to_groupby)[[metric]]
+    ci_sem = pd.DataFrame(group.apply(get_ci_sem_for_grouped_metric))
+
+    # get basic descriptive stats
+    values = data.groupby(cols_to_groupby)[[metric]].describe()
+    # get rid of multi-index with metric name
+    values.columns = values.columns.droplevel(0)
+
+    # merge
+    values = values.merge(ci_sem, on=cols_to_groupby)
+    # add column for metric value
+    values['metric'] = metric
+
+    return values
 
 def plot_metric_distribution_by_experience_no_cell_type(metrics_table, metric, event_type, hue=None, stripplot=False, pointplot=False,
                                            add_zero_line=False, ylabel=None, ylims=None, save_dir=None, ax=None, suffix=''):
@@ -765,7 +815,7 @@ def plot_metric_distribution_by_experience_no_cell_type(metrics_table, metric, e
             ax = sns.stripplot(data=ct_data, size=3 , alpha=0.5, jitter=0.2,
                                   x='experience_level', y=metric, palette=colors, ax=ax)
         # add stats to plot if only looking at experience levels
-        ax, tukey_table = add_experience_level_stats(ct_data, metric, 'white', ax, ymax=ymax)
+        ax, tukey_table = add_stats_to_plot(ct_data, metric, 'white', ax, ymax=ymax)
         # aggregate stats
         tukey_table['metric'] = metric
         tukey = pd.concat([tukey, tukey_table])
@@ -787,17 +837,21 @@ def plot_metric_distribution_by_experience_no_cell_type(metrics_table, metric, e
     if save_dir:
         folder = 'metric_distributions'
         filename = event_type + '_' + metric + '_distribution' + suffix
-        stats_filename = event_type + '_' + metric + '_stats' + suffix + '.csv'
+        stats_filename = event_type + '_' + metric + suffix
         utils.save_figure(fig, figsize, save_dir, folder, filename)
         try:
             print('saving_stats')
-            tukey.to_csv(os.path.join(save_dir, folder, stats_filename))
+            tukey.to_csv(os.path.join(save_dir, folder, stats_filename+'_tukey.csv'))
+            # save descriptive stats
+            cols_to_groupby = ['experience_level']
+            stats = get_descriptive_stats_for_metric(data, metric, cols_to_groupby)
+            stats.to_csv(os.path.join(save_dir, folder, stats_filename + '_values.csv'))
         except BaseException:
             print('STATS DID NOT SAVE FOR', metric, hue)
     return ax
 
 
-def plot_metric_distribution_by_experience(metrics_table, metric, event_type, hue=None, stripplot=False, pointplot=False,
+def plot_metric_distribution_by_experience(metrics_table, metric, event_type, hue=None, stripplot=False, pointplot=False, show_containers=False,
                                            add_zero_line=False, ylabel=None, ylims=None, save_dir=None, ax=None, suffix=''):
     """
     plot metric distribution across experience levels for each cell_type in metrics_table, with stats across experience levels
@@ -893,7 +947,7 @@ def plot_metric_distribution_by_experience(metrics_table, metric, event_type, hu
                 ax[i] = sns.stripplot(data=ct_data, size=1.5, alpha=0.5, jitter=0.2,
                                       x='experience_level', y=metric, palette=colors, ax=ax[i])
             # add stats to plot if only looking at experience levels
-            ax[i], tukey_table = add_experience_level_stats(ct_data, metric, 'white', ax[i], ymax=ymax)
+            ax[i], tukey_table = add_stats_to_plot(ct_data, metric, 'white', ax[i], ymax=ymax)
             # aggregate stats
             tukey_table['metric'] = metric
             tukey_table['cell_type'] = cell_type
@@ -901,11 +955,16 @@ def plot_metric_distribution_by_experience(metrics_table, metric, event_type, hu
             ax[i].set_ylim(ymin=ymin)
             ax[i].set_xlim(-0.5, len(order) - 0.5)
 
+        if show_containers:
+            for ophys_container_id in ct_data.ophys_container_id.unique():
+                ax[i] = sns.pointplot(data=ct_data[ct_data.ophys_container_id == ophys_container_id], x='experience_level',
+                                      y=metric, color='gray', join=True, markers='.', scale=0.25, errwidth=0.25, ax=ax[i])
+
         # add line at y=0
         if add_zero_line:
             ax[i].axhline(y=0, xmin=0, xmax=1, color='gray', linestyle='--')
-        # ax[i].set_title(cell_type)
-        ax[i].set_title('')
+        ax[i].set_title(cell_type)
+        # ax[i].set_title('')
         ax[i].set_xlabel('')
         ax[i].set_xticklabels(new_experience_levels, rotation=90,)# ha='right')
         if ylabel:
@@ -917,11 +976,16 @@ def plot_metric_distribution_by_experience(metrics_table, metric, event_type, hu
     if save_dir:
         folder = 'metric_distributions'
         filename = event_type + '_' + metric + '_distribution' + suffix
-        stats_filename = event_type + '_' + metric + '_stats' + suffix + '.csv'
+        stats_filename = event_type + '_' + metric + suffix
         utils.save_figure(fig, figsize, save_dir, folder, filename)
         try:
             print('saving_stats')
-            tukey.to_csv(os.path.join(save_dir, folder, stats_filename))
+            # save tukey
+            tukey.to_csv(os.path.join(save_dir, folder, stats_filename+'_tukey.csv'))
+            # save descriptive stats
+            cols_to_groupby = ['cell_type', 'experience_level']
+            stats = get_descriptive_stats_for_metric(data, metric, cols_to_groupby)
+            stats.to_csv(os.path.join(save_dir, folder, stats_filename + '_values.csv'))
         except BaseException:
             print('STATS DID NOT SAVE FOR', metric, hue)
     return ax
@@ -1513,6 +1577,7 @@ def plot_behavior_and_physio_timeseries_stacked(dataset, start_time, duration_se
                           formats=['.png', '.pdf'])
     return ax
 
+#### matched cell plots ####
 
 def plot_matched_roi_and_trace(ophys_container_id, cell_specimen_id, limit_to_last_familiar_second_novel=True,
                                use_events=False, filter_events=False, save_figure=True):
@@ -1711,6 +1776,520 @@ def plot_matched_roi_and_traces_example(cell_metadata, include_omissions=True,
         utils.save_figure(fig, figsize, save_dir, folder,
                           str(cell_specimen_id) + '_' + metadata_string + '_' + suffix)
         plt.close()
+
+
+#### behavior plots ####
+
+def plot_behavior_metric_by_experience(stats, metric, title='', ylabel='', ylims=None, best_image=True, show_containers=False,
+                                       save_dir=None, folder=None, suffix='', ax=None):
+    """
+    plots average metric value across experience levels, using experience level colors for average, gray for individual points.
+
+    stats should be a table of behavior metric values loaded using vba.utilities.get_behavior_stats_for_sessions()
+    metric is a column of the stats table
+
+    if stats table has a unique row for each image_name in each behavior session, all images will be included in the average,
+    unless best_image = True
+    if stats table does not have unique images, setting best_image to True will cause an error, as there are no images to filter
+
+    if best_image = True, will sort images by metric value within each experience level and select the top 2 images to plot
+    if show_containers = True, will plot a linked gray line for each individual container within the dataset
+
+    returns axis handle
+    """
+    experience_levels = utils.get_experience_levels()
+    new_experience_levels = utils.get_new_experience_levels()
+    cre_lines = utils.get_cre_lines()
+    cell_types = utils.get_cell_types()
+    colors = utils.get_experience_level_colors()
+
+    if ylims is None:
+        ymin = 0
+        ymax = None
+    else:
+        ymin = ylims[0]
+        ymax = ylims[1]
+
+    if best_image:
+        tmp = stats.copy()
+        tmp = tmp[tmp.image_name != 'omitted']
+
+        # sort images by metric value within each experience level
+        tmp = tmp.groupby(['experience_level', 'image_name']).mean()[[metric]].sort_values(by=['experience_level', metric])
+
+        best_familiar = tmp.loc['Familiar'].index.values[-2:]
+        best_novel = tmp.loc['Novel 1'].index.values[-2:]
+        best_novel_plus = tmp.loc['Novel >1'].index.values[-2:]
+
+        # get data for images with highest metric value
+        familiar_stats = stats[(stats.experience_level == 'Familiar') & (stats.image_name.isin(best_familiar))]
+        novel_stats = stats[(stats.experience_level == 'Novel 1') & (stats.image_name.isin(best_novel))]
+        novel_plus_stats = stats[(stats.experience_level == 'Novel >1') & (stats.image_name.isin(best_novel_plus))]
+
+        df = pd.concat([familiar_stats, novel_stats, novel_plus_stats])
+
+        data = df.copy()
+
+        suffix = suffix+'_best_image'
+
+    else:
+        data = stats.copy()
+
+    colors = utils.get_experience_level_colors()
+    experience_levels = utils.get_experience_levels()
+
+    if ax is None:
+        figsize = (2, 3)
+        fig, ax = plt.subplots(1, 1, figsize=figsize)
+
+    ax = sns.stripplot(data=data, x='experience_level', y=metric, order=experience_levels,
+                       orient='v', color='gray', dodge=True, jitter=0.1, size=2, ax=ax, zorder=0)
+    if show_containers:
+        for ophys_container_id in data.ophys_container_id.unique():
+            ax = sns.pointplot(data=data[data.ophys_container_id == ophys_container_id], x='experience_level', y=metric,
+                               order=experience_levels, join=True, orient='v', color='gray',
+                               markers='.', scale=0.15, errwidth=0.25, ax=ax)
+        suffix = suffix+'_containers'
+
+    ax = sns.pointplot(data=data, x='experience_level', y=metric, order=experience_levels,
+                       orient='v', palette=colors, ax=ax)
+    ax.set_xticklabels(new_experience_levels, rotation=90)
+    ax.set_xlabel('')
+    ax.set_ylabel('')
+    ax.set_title(title)
+    ax.set_ylabel(ylabel)
+    # ax.legend(bbox_to_anchor=(1,1), fontsize='xx-small')
+
+    # add stats to plot if only looking at experience levels
+    # stats dataframe to save
+    tukey = pd.DataFrame()
+    ax, tukey_table = add_stats_to_plot(data, metric, 'white', ax, ymax=ymax)
+    # aggregate stats
+    tukey_table['metric'] = metric
+    tukey = pd.concat([tukey, tukey_table])
+
+    ax.set_ylim(ymin=ymin)
+
+    if save_dir:
+        utils.save_figure(fig, figsize, save_dir, folder, metric + suffix)
+    stats_filename = metric + '_stats' + suffix
+    try:
+        print('saving_stats')
+        tukey.to_csv(os.path.join(save_dir, folder, stats_filename+ '_tukey.csv'))
+        # save stats
+        cols_to_groupby = ['experience_level']
+        stats = get_descriptive_stats_for_metric(data, metric, cols_to_groupby)
+        stats.to_csv(os.path.join(save_dir, folder, stats_filename+ '_values.csv'))
+    except BaseException:
+        print('stats did not save for', metric)
+
+
+def plot_behavior_metric_across_stages(data, metric, ylabel=None, save_dir=None, folder=None, suffix=''):
+    """
+    generate boxplot of metric values across behavior stages (gratings flashed, gratings static, familiar, novel)
+    with cre line on x-axis and behavior stages as hue
+    data: dataframe with one row for each behavior session and columns with metric values
+    data must contain 'behavior_stages' column
+    """
+    cell_types = utils.get_cell_types()
+    if ylabel is None:
+        ylabel = metric
+
+    # remove passive sessions
+    data = data[data.behavior_stage.str.contains('passive') == False]
+
+    behavior_stages = data.behavior_stage.unique()
+    color_map = utils.get_behavior_stage_color_map(as_rgb=True)
+    colors = [list(color_map[behavior_stage]) for behavior_stage in behavior_stages]
+    colors = [[c / 255. for c in color] for color in colors]
+
+    figsize = (7, 3)
+    fig, ax = plt.subplots(figsize=figsize)
+    ax = sns.boxplot(data=data, x='cell_type', y=metric, width=0.8, order=cell_types,
+                     hue='behavior_stage', hue_order=behavior_stages, palette=colors, ax=ax)
+    ax.set_xlabel('')
+    ax.set_ylabel(ylabel)
+    ax.legend().remove()
+    ax.legend(bbox_to_anchor=(1, 1), fontsize='x-small')
+
+    fig.subplots_adjust(hspace=0.3)
+    if save_dir:
+        utils.save_figure(fig, figsize, save_dir, folder, 'metric_across_stages_' + metric + suffix)
+        # save stats
+        stats = data.groupby(['cell_type', 'behavior_stage']).describe()[[metric]]
+        stats.to_csv(os.path.join(save_dir, folder, 'metric_across_stages_' + metric + suffix + '_values.csv'))
+
+
+def plot_days_in_stage(behavior_sessions, stage_column, save_dir=None, folder=None, suffix=None):
+    """
+    Plot the number of days in each stage, as a boxplot using stage as the hue and cell types on y-axis
+
+    behavior_sessions: behavior sessions table including 'cell_type', 'mouse_id'
+    stage_column: column in behavior_sessions to use for grouping of stages, can be 'behavior_stage', 'stimulus_phase', or 'session_type',
+    to add 'behavior_stage' column to behavior_sessions, use add_behavior_stage_to_behavior_sessions(behavior_sessions)
+
+    """
+
+    days_in_stage = \
+    behavior_sessions.groupby(['mouse_id', stage_column]).count().rename(columns={'equipment_name': 'days_in_stage'})[
+        ['days_in_stage']]
+    days_in_stage = days_in_stage.reset_index()
+    days_in_stage = days_in_stage.merge(behavior_sessions[['mouse_id', 'cell_type', 'project_code']], on='mouse_id')
+
+    behavior_stages = behavior_sessions[stage_column].unique()
+
+    data = days_in_stage.copy()
+    if stage_column == 'behavior_stage':
+        color_map = utils.get_behavior_stage_color_map(as_rgb=True)
+    elif stage_column == 'stimulus_phase':
+        color_map = utils.get_stimulus_phase_color_map(as_rgb=True)
+    elif stage_column == 'get_session_type_color_map':
+        color_map = utils.get_session_type_color_map(as_rgb=True)
+    else:
+        print('provided stage_column does not have a corresponding colormap')
+
+    colors = [list(color_map[behavior_stage]) for behavior_stage in behavior_stages]
+    colors = [[c / 255. for c in color] for color in colors]
+
+    figsize = (7, 3)
+    fig, ax = plt.subplots(figsize=figsize)
+    # for i, cell_type in enumerate(np.sort(data.cell_type.unique())):
+    #     ct_data = data[data.cell_type==cell_type]
+    ax = sns.boxplot(data=data, x='cell_type', y='days_in_stage', width=0.8, linewidth=0.8,
+                     hue=stage_column, hue_order=behavior_stages, palette=colors, ax=ax)
+    ax.set_xlabel('')
+    ax.set_ylabel('days in stage')
+    #     ax[i].set_xticklabels(behavior_stages, rotation=90)
+    #     ax[i].set_title(cell_type)
+    ax.legend().remove()
+    ax.legend(bbox_to_anchor=(1, 1), fontsize='x-small')
+
+    fig.subplots_adjust(hspace=0.3)
+    if save_dir:
+        # save plot
+        utils.save_figure(fig, figsize, save_dir, folder, 'days_in_stage' + '_' + stage_column + suffix)
+        # save stats
+        days_in_stage_stats = data.groupby(['cell_type', stage_column]).describe()
+        days_in_stage_stats.to_csv(os.path.join(save_dir, folder, 'days_in_stage_stats.csv'))
+
+
+def plot_prior_exposures_to_image_set_before_platform_ophys_sessions(platform_experiments, behavior_sessions, save_dir=None, folder=None, suffix='', ax=None):
+    """
+    Creates a boxplot showing the number of prior exposures to each image set for each experience level (Familiar, Novel, Novel +)
+    for the set of mice and sessions in platform_experiments
+    Boxplot is distribution of number of prior exposures across mice
+    """
+
+    # get the behavior sessions corresponding to the ophys sessions included in platform dataset
+    paper_ophys_behavior_sessions = behavior_sessions.loc[platform_experiments.behavior_session_id.unique()]
+    exposures = paper_ophys_behavior_sessions.set_index(['experience_level', 'mouse_id'])[['prior_exposures_to_image_set']].reset_index()
+
+    if ax is None:
+        figsize = (2.5,3)
+        fig, ax = plt.subplots(figsize=figsize)
+
+    colors = utils.get_experience_level_colors()
+    experience_levels = utils.get_experience_levels()
+
+    ax = sns.boxplot(data=exposures, x='experience_level', y='prior_exposures_to_image_set',
+               order=experience_levels, palette=colors, width=0.5, ax=ax)
+    ax.set_ylabel('# sessions')
+    ax.set_xlabel('')
+
+    stats = exposures.groupby(['experience_level']).describe()[['prior_exposures_to_image_set']]
+    stats.columns = stats.columns.droplevel(0)
+
+
+    xticklabels = utils.get_new_experience_levels()
+    ax.set_xticklabels(xticklabels, rotation=90,)
+    ax.set_title('total stimulus exposure')
+
+    for i, experience_level in enumerate(experience_levels):
+        y = int(np.round(stats.loc[experience_level]['mean'],0))
+        if experience_level == 'Novel 1':
+            text = '0'
+            y = y+4
+            i = 0.85
+        elif experience_level == 'Familiar':
+            y = y+12
+            text = str(int(np.round(stats.loc[experience_level]['mean'],0)))+'+/-'+str(int(np.round(stats.loc[experience_level]['std'],0)))
+        else:
+            y = y+8
+            text = str(int(np.round(stats.loc[experience_level]['mean'],0)))+'+/-'+str(int(np.round(stats.loc[experience_level]['std'],0)))
+        ax.text(i+0.1, y, text, fontsize=14, rotation='horizontal')
+
+    if save_dir:
+        # save plot
+        utils.save_figure(fig, figsize, save_dir, folder, 'stimulus_exposures_before_platform_expts_boxplot'+suffix)
+        # save stats
+        stats = exposures.groupby(['experience_level']).describe()[['prior_exposures_to_image_set']]
+        stats.to_csv(os.path.join(save_dir, folder, 'stimulus_exposures_before_platform_expts_stats.csv'))
+
+
+def plot_prior_exposures_per_cell_type_for_novel_plus(platform_experiments, behavior_sessions, save_dir=None,
+                                                      folder=None, suffix='', ax=None):
+    """
+    Creates a boxplot showing the number of  prior exposures to novel image set for Novel + sessions included in the platform paper
+    shows striplot of prior exposures across mice and pointplot of averages plus stats
+    """
+
+    cell_types = utils.get_cell_types()
+
+    # get the behavior sessions corresponding to the ophys sessions included in platform dataset
+    paper_ophys_behavior_sessions = behavior_sessions.loc[platform_experiments.behavior_session_id.unique()]
+    exposures = paper_ophys_behavior_sessions.set_index(['cell_type', 'experience_level', 'mouse_id'])[
+        ['prior_exposures_to_image_set']].reset_index()
+
+    #     print(prior_exposures.groupby(['cell_type', 'experience_level']).describe()[['prior_exposures_to_image_set']])
+
+    # limit to Novel+ sessions
+    if 'Novel >1' in exposures.experience_level.unique():
+        exposures = exposures[exposures.experience_level == 'Novel >1']
+    else:
+        exposures = exposures[exposures.experience_level == 'Novel +']
+
+    if ax is None:
+        figsize = (2.5, 3)
+        fig, ax = plt.subplots(figsize=figsize)
+
+    colors = utils.get_experience_level_colors()
+    experience_levels = utils.get_experience_levels()
+
+    #     ax = sns.boxplot(data=exposures, x='cell_type', y='prior_exposures_to_image_set',
+    #                order=cell_types, palette='gray', width=0.5, ax=ax)
+
+
+    ax = sns.violinplot(data=exposures, x='cell_type', y='prior_exposures_to_image_set', order=cell_types,
+                        orient='v', color='white', ax=ax)
+    ax = sns.stripplot(data=exposures, x='cell_type', y='prior_exposures_to_image_set', order=cell_types,
+                       orient='v', color='gray', dodge=True, size=2, jitter=0.2, ax=ax)
+
+    ax.set_ylabel('# sessions')
+    ax.set_xlabel('')
+
+    stats = exposures.groupby(['cell_type']).describe()[['prior_exposures_to_image_set']]
+    stats.columns = stats.columns.droplevel(0)
+
+    xticklabels = cell_types
+    for i, cell_type in enumerate(cell_types):
+        text = str((np.round(stats.loc[cell_type]['mean'], 1))) + '+/-' + str(
+            (np.round(stats.loc[cell_type]['std'], 1)))
+        xticklabels[i] = xticklabels[i] + '\n(' + text + ')'
+    # xticklabels = [experience_level+'\n N = '+str(int(np.round(exposures.loc[experience_level]['mean'],0)))+'+/-'+str(int(np.round(exposures.loc[experience_level]['std'],0))) if experience_level!='Novel 1' else 'Novel 1\nN = 0' for experience_level in experience_levels]
+    ax.set_xticklabels(xticklabels, rotation=90, )
+    ax.set_title('Novel sessions\nprior to Novel +')
+    ax.set_ylim(ymin=0)
+
+    ymax = ax.get_ylim()[1]
+    tukey = pd.DataFrame()
+    ax, tukey_table = add_stats_to_plot(exposures, 'prior_exposures_to_image_set', 'white', ax, ymax=ymax,
+                                            column_to_compare='cell_type')
+    # aggregate stats
+    tukey_table['metric'] = 'prior_exposures_to_image_set'
+    tukey = pd.concat([tukey, tukey_table])
+
+    if save_dir:
+        # save plot
+        utils.save_figure(fig, figsize, save_dir, folder, 'stimulus_exposures_before_novel_plus' + suffix)
+        # save stats
+        stats = exposures.groupby(['cell_type', 'experience_level']).describe()[['prior_exposures_to_image_set']]
+        stats.to_csv(os.path.join(save_dir, folder, 'stimulus_exposures_before_novel_plus_stats.csv'))
+
+
+def plot_total_stimulus_exposures(behavior_sessions, save_dir=None, folder=None, suffix='', ax=None):
+    """
+    Creates a boxplot showing the number of sessions for each experience level (Familiar, Novel, Novel +)
+    for the set of mice included in behavior_sessions
+    """
+
+    # count number of sessions for each experience level
+    exposures = behavior_sessions.groupby(['experience_level', 'mouse_id']).count()[
+        ['session_type']].reset_index().rename(columns={'session_type': 'n_sessions'})
+    #     print(exposures.groupby(['experience_level']).describe()[['n_sessions']])
+
+    if ax is None:
+        figsize = (2.5, 3)
+        fig, ax = plt.subplots(figsize=figsize)
+
+    colors = utils.get_experience_level_colors()
+    experience_levels = utils.get_experience_levels()
+    new_experience_levels = utils.get_new_experience_levels()
+
+    ax = sns.boxplot(data=exposures, x='experience_level', y='n_sessions',
+                     order=experience_levels, palette=colors, width=0.5, ax=ax)
+    ax.set_ylabel('# sessions')
+    ax.set_xlabel('')
+
+    stats = exposures.groupby(['experience_level']).describe()[['n_sessions']]
+    stats.columns = stats.columns.droplevel(0)
+
+    xticklabels = new_experience_levels
+    # xticklabels = [experience_level+'\n N = '+str(int(np.round(exposures.loc[experience_level]['mean'],0)))+'+/-'+str(int(np.round(exposures.loc[experience_level]['std'],0))) if experience_level!='Novel 1' else 'Novel 1\nN = 0' for experience_level in experience_levels]
+    ax.set_xticklabels(xticklabels, rotation=90, )
+    ax.set_title('stimulus exposure\nall sessions')
+
+    for i, experience_level in enumerate(experience_levels):
+        y = int(np.round(stats.loc[experience_level]['mean'], 0))
+        if experience_level == 'Novel 1':
+            text = '0'
+            y = y + 4
+            i = 0.85
+        elif experience_level == 'Familiar':
+            y = y + 12
+            text = str(int(np.round(stats.loc[experience_level]['mean'], 0))) + '+/-' + str(
+                int(np.round(stats.loc[experience_level]['std'], 0)))
+        else:
+            y = y + 8
+            text = str(int(np.round(stats.loc[experience_level]['mean'], 0))) + '+/-' + str(
+                int(np.round(stats.loc[experience_level]['std'], 0)))
+        ax.text(i + 0.1, y, text, fontsize=14, rotation='horizontal')
+
+    if save_dir:
+        utils.save_figure(fig, figsize, save_dir, folder, 'total_stimulus_exposures_all_sessions_boxplot' + suffix)
+        # save stats
+        stats = exposures.groupby(['experience_level']).describe()[['n_sessions']]
+        stats.to_csv(os.path.join(save_dir, folder, 'total_stimulus_exposures_all_sessions_stats.csv'))
+
+
+def plot_stimulus_exposure_prior_to_imaging(behavior_sessions, save_dir=None, folder=None, suffix='', ax=None):
+    """
+    Creates a boxplot showing the number of sessions for each experience level (Familiar, Novel, Novel +)
+    prior to the start of 2P imaging, for the set of mice included in behavior_sessions
+    """
+
+    data = behavior_sessions.copy()
+    # limit to non-ophys sessions
+    data = data[data.session_type.str.contains('OPHYS') == False]
+    # count number of sessions of each experience level
+    exposures = data.groupby(['experience_level', 'mouse_id']).count()[['session_type']].reset_index().rename(
+        columns={'session_type': 'n_sessions'})
+
+    experience_levels = utils.get_experience_levels()
+    new_experience_levels = utils.get_new_experience_levels()
+
+    if ax is None:
+        figsize = (2.5, 3)
+        fig, ax = plt.subplots(figsize=figsize)
+
+    exp = exposures.experience_level.unique()[::-1]
+
+    colors = utils.get_experience_level_colors()
+    c = [colors[0], [0.5, 0.5, 0.5]][::-1]
+
+    ax = sns.boxplot(data=exposures, x='experience_level', y='n_sessions',
+                     order=exp, palette=c, width=0.5, ax=ax)
+    ax.set_ylabel('# sessions')
+    ax.set_xlabel('')
+
+    stats = exposures.groupby(['experience_level']).describe()[['n_sessions']]
+    stats.columns = stats.columns.droplevel(0)
+
+    ax.set_xticklabels(['Gratings', 'Familiar\nimages'], rotation=90)
+    ax.set_title('stimulus exposure\nduring training')
+
+    for i, experience_level in enumerate(exposures.experience_level.unique()[::-1]):
+        y = int(np.round(stats.loc[experience_level]['mean'], 0))
+        if experience_level == 'Novel 1':
+            text = '0'
+            y = y + 4
+            i = 0.85
+        elif experience_level == 'Familiar':
+            y = y + 12
+            text = str(int(np.round(stats.loc[experience_level]['mean'], 0))) + '+/-' + str(
+                int(np.round(stats.loc[experience_level]['std'], 0)))
+        else:
+            y = y + 4
+            text = str(int(np.round(stats.loc[experience_level]['mean'], 0))) + '+/-' + str(
+                int(np.round(stats.loc[experience_level]['std'], 0)))
+        ax.text(i + 0.1, y, text, fontsize=14, rotation='horizontal')
+
+    if save_dir:
+        utils.save_figure(fig, figsize, save_dir, folder, 'stimulus_exposure_prior_to_imaging_boxplot' + suffix)
+        # save stats
+        stats = exposures.groupby(['experience_level']).describe()[['n_sessions']]
+        stats.to_csv(os.path.join(save_dir, folder, 'stimulus_exposure_prior_to_imaging_stats.csv'))
+
+
+def plot_training_history_for_mice(behavior_sessions, color_column='session_type', color_map=sns.color_palette(),
+                                   save_dir=None, folder=None, suffix='', ax=None):
+    """
+    plots the session sequence for all mice in behavior_sessions table, sorted by total # of sessions per mouse
+
+    sessions are colored by the provided color_column and color_map
+    values of color_column must match keys of color_map
+    acceptable pairs for color_column and color_map
+    color_column = 'session_type' : color_map = utils.get_session_type_color_map()
+    color_column = 'stimulus' : color_map = utils.get_stimulus_color_map(as_rgb=True)
+    color_column = 'stimulus_phase' : color_map = utils.get_stimulus_phase_color_map(as_rgb=True)
+
+    """
+    # group by mice and count n_session per mouse to get the max n_sessions and list of mouse_ids to plot
+    n_sessions = \
+    behavior_sessions.groupby(['cre_line', 'mouse_id']).count().rename(columns={'equipment_name': 'n_sessions'})[['n_sessions']]
+    n_sessions = n_sessions.reset_index()
+    n_sessions = n_sessions.sort_values(by=['cre_line', 'n_sessions'])
+    max_n_sessions = np.amax(n_sessions.n_sessions.values)
+    mouse_ids = n_sessions.mouse_id.values
+
+    # get ytick labels based on number of mice per cre line
+    yticklabels = [0]
+    for i, cre_line in enumerate(n_sessions.cre_line.unique()):
+        yticklabels.append(yticklabels[i] + len(n_sessions[n_sessions.cre_line == cre_line]))
+
+    n_mouse_ids = len(mouse_ids)
+
+    # create an array to fill in with session colors per mouse
+    img = np.empty((n_mouse_ids, max_n_sessions, 3))
+    img[:] = 256  # make the default value of 256 which is white in RGB space
+
+    # loop through mice
+    for mouse, mouse_id in enumerate(mouse_ids):
+        # sort session in acquisition date order
+        sessions = behavior_sessions[behavior_sessions.mouse_id == mouse_id].sort_values('date_of_acquisition')
+        # fill in image array with the color from color_map for the corresponding color_col
+        for session, session_id in enumerate(sessions.index.values):
+            color_column_value = sessions.loc[session_id][color_column]
+            img[mouse, session, :] = color_map[color_column_value]
+
+    # create plot with expt colors image
+    if ax is None:
+        figsize = (10, n_mouse_ids * 0.1)
+        fig, ax = plt.subplots(figsize=figsize)
+    ax.imshow(img.astype(int), aspect='auto')
+    ax.set_ylim(0, len(mouse_ids))
+    ax.invert_yaxis()
+    ax.set_yticks(yticklabels)
+    ax.set_yticklabels(yticklabels, fontdict={'verticalalignment': 'top'})
+    ax.set_xlabel('Session number')
+    ax.set_ylabel('Mouse number')
+    ax.set_title('Training history')
+
+    # label with cell type
+    for i, cre_line in enumerate(n_sessions.cre_line.unique()):
+        cell_type = utils.convert_cre_line_to_cell_type(cre_line)
+        ax.text(-2, (yticklabels[i] + yticklabels[i + 1]) / 2., cell_type.split(' ')[0], fontsize=16, ha='center',
+                va='center', rotation='vertical')
+
+
+        #     ax.axis('off')
+
+        #     for mouse, mouse_id in enumerate(mouse_ids):
+        #         # plot cre line
+        #         cre_line = behavior_sessions[behavior_sessions.mouse_id == mouse_id].cre_line.values[0]
+        #         if cre_line == 'Gad2-IRES-Cre': # square
+        #             ax.text(-1, mouse, '\u25a1', fontsize=16, ha='center', va='center',)
+        #         elif cre_line == 'Rbp4-Cre_KL100': # triangle
+        #             ax.text(-1, mouse, '\u25b2', fontsize=16, ha='center', va='center', color='black')
+        #         else: # circle
+        #             ax.text(-1, mouse, '\u25cf', fontsize=16, ha='center', va='center', color='black')
+        #         # plot mouse_id
+        #         sessions_for_mouse = n_sessions[n_sessions.mouse_id==mouse_id].n_sessions.values[0]
+        #         ax.text(sessions_for_mouse, mouse, str(mouse_id), fontsize=17, ha='left', va='center',)
+
+    if save_dir:
+        utils.save_figure(fig, figsize, save_dir, folder, 'training_history' + suffix)
+    return ax
+
 
 
 # examples

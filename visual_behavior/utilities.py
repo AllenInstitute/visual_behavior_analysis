@@ -1231,7 +1231,6 @@ def get_behavior_stats_cache_dir(method='stimulus_based', engaged_only=True, per
     :param method:
     :return:
     """
-    import visual_behavior.data_access.loading as loading
     base_dir = loading.get_platform_analysis_cache_dir()
 
     if method == 'trial_based':
@@ -1357,3 +1356,27 @@ def get_cached_behavior_stats(behavior_session_id, engaged_only=True, method='st
     fn = os.path.join(cache_dir, 'behavior_session_id={}.h5'.format(behavior_session_id))
 
     return pd.read_hdf(fn, key='data')
+
+
+def get_behavior_stats_for_sessions(behavior_session_ids, behavior_sessions,
+                                    method='stimulus_based', engaged_only=True, per_image=False):
+    from tqdm import tqdm
+    behavior_stats = pd.DataFrame()
+    problem_sessions = []
+    for behavior_session_id in tqdm(behavior_session_ids):
+        try:
+            print('loading for', behavior_session_id)
+            stats = get_cached_behavior_stats(behavior_session_id, engaged_only=engaged_only, method=method,
+                                                  per_image=per_image)
+            behavior_stats = pd.concat([behavior_stats, stats])
+        except:
+            print('cant load stats for', behavior_session_id)
+            problem_sessions.append(behavior_session_id)
+
+    cache_dir = get_behavior_stats_cache_dir(method=method, engaged_only=engaged_only, per_image=per_image)
+    filepath = os.path.join(cache_dir, 'all_sessions.h5')
+    if not os.path.exists(filepath):
+        behavior_stats.to_hdf(filepath, key='data')
+
+    return behavior_stats, problem_sessions
+

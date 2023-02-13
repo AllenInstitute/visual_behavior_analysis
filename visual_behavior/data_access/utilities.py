@@ -1408,6 +1408,45 @@ def add_stimulus_phase_to_behavior_sessions(behavior_sessions):
     return behavior_sessions
 
 
+def add_behavior_stage_to_behavior_sessions(behavior_sessions):
+    """
+    creates a column 'behavior_stage' based on session type and other metadata, values of which are:
+       ['gratings_static_training', 'gratings_flashed_training',
+       'familiar_images_training', 'familiar_images_ophys',
+       'familiar_images_ophys_passive', 'novel_images_ophys',
+       'novel_images_ophys_passive']
+    """
+    # get rid of sessions with no experience level
+    if len(behavior_sessions[behavior_sessions.experience_level.isnull()]) > 0:
+        bsid = behavior_sessions[behavior_sessions.experience_level == 'None'].index.values[0]
+        behavior_sessions = behavior_sessions.drop(index=bsid)
+    # create new behavior stage label
+    behavior_sessions['phase'] = ['training' if 'TRAINING' in session_type else 'ophys' for session_type in
+                                  behavior_sessions.session_type.values]
+    behavior_sessions['stimulus_type'] = ['gratings' if 'gratings' in session_type else 'images' for session_type in
+                                          behavior_sessions.session_type.values]
+    behavior_sessions['exp_level'] = [exp_level.split(' ')[0].lower() for exp_level in
+                                      behavior_sessions.experience_level.values]
+    behavior_sessions['exp_level'] = [exp_level + '_images' if 'gratings' not in exp_level else 'gratings' for exp_level
+                                      in behavior_sessions.exp_level.values]
+    # add static vs. flashed
+    for i, behavior_session in enumerate(behavior_sessions.index.values):
+        row = behavior_sessions.iloc[i]
+        if ('gratings' in row.session_type) and ('flashed' in row.session_type):
+            behavior_sessions.at[behavior_session, 'exp_level'] = row.exp_level + '_flashed'
+        if ('gratings' in row.session_type) and ('flashed' not in row.session_type):
+            behavior_sessions.at[behavior_session, 'exp_level'] = row.exp_level + '_static'
+    behavior_sessions['engagement'] = ['_passive' if 'passive' in session_type else '' for session_type in
+                                       behavior_sessions.session_type.values]
+
+    behavior_sessions['behavior_stage'] = None
+    for i, behavior_session in enumerate(behavior_sessions.index.values):
+        row = behavior_sessions.iloc[i]
+        behavior_sessions.at[behavior_session, 'behavior_stage'] = row.exp_level + '_' + row.phase + row.engagement
+
+    return behavior_sessions
+
+
 def add_experience_level_to_behavior_sessions(behavior_sessions):
     """
     adds a column to behavior_sessions table that contains a string indicating whether a session had
@@ -1984,3 +2023,5 @@ def annotate_epoch_df(epoch_df):
     epoch_df['experience_epoch'] = epoch_df[['experience_level', 'epoch']].apply(axis=1, func=merge_experience_epoch)
 
     return epoch_df
+
+

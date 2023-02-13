@@ -192,6 +192,40 @@ def get_stimulus_phase_color_map(as_rgb=False):
 
     return stimulus_phase_color_map
 
+def get_stimulus_phase_color_map(as_rgb=False):
+    session_number_colors = get_colors_for_session_numbers()
+    session_number_colors_GH = get_colors_for_session_numbers_GH()
+    white = np.array([1, 1, 1]).astype(np.uint8)
+
+    training_scale = 0.7
+    passive_scale = 0.4
+
+    stimulus_phase_color_map = {
+        'gratings_static_training': (0.4, 0.4, 0.4),
+        'gratings_flashed_training': (0.7, 0.7, 0.7),
+        'images_A_training': (session_number_colors[0] + (white - session_number_colors[0]) * training_scale),
+        'images_A_habituation_ophys': (session_number_colors[0] + (white - session_number_colors[0]) * training_scale),
+        'images_A_ophys': session_number_colors[0],
+        'images_A_passive_ophys': (session_number_colors[0] + (white - session_number_colors[0]) * passive_scale),
+        'images_B_training': (session_number_colors[3] + (white - session_number_colors[3]) * training_scale),
+        'images_B_habituation_ophys': (session_number_colors[3] + (white - session_number_colors[3]) * training_scale),
+        'images_B_ophys': session_number_colors[3],
+        'images_B_passive_ophys': (session_number_colors[3] + (white - session_number_colors[3]) * passive_scale),
+        'images_G_training': (session_number_colors_GH[0] + (white - session_number_colors_GH[0]) * training_scale),
+        'images_G_habituation_ophys': (session_number_colors_GH[0] + (white - session_number_colors_GH[0]) * training_scale),
+        'images_G_ophys': session_number_colors_GH[0],
+        'images_G_passive_ophys': (session_number_colors_GH[0] + (white - session_number_colors_GH[0]) * passive_scale),
+        'images_H_ophys': session_number_colors_GH[3],
+        'images_H_passive_ophys': (session_number_colors_GH[3] + (white - session_number_colors_GH[3]) * passive_scale),
+    }
+
+    if as_rgb:
+        for key in list(stimulus_phase_color_map.keys()):
+            stimulus_phase_color_map[key] = np.floor(
+                np.array([x for x in list(stimulus_phase_color_map[key])]) * 255).astype(np.uint8)
+
+    return stimulus_phase_color_map
+
 
 def get_session_type_color_map():
     colors = np.floor(np.array([list(x) for x in get_colors_for_session_numbers()]) * 255).astype(np.uint8)
@@ -285,12 +319,36 @@ def get_location_color(location, project_code):
     return location_colors[location]
 
 
-# def lighter(color, percent):
-#     color = color * 255
-#     color = np.array(color)
-#     white = np.array([255, 255, 255])
-#     return color + (white * percent)
-#
+def get_behavior_stage_color_map(as_rgb=False):
+    """
+    create colormap, as rgb or [0,1], corresponding to behavior stages defined in add_behavior_stage_to_behavior_sessions
+    (ex: ['gratings_static_training', 'gratings_flashed_training', 'familiar_images_training', )
+
+    """
+    session_number_colors = get_colors_for_session_numbers()
+    white = np.array([1, 1, 1]).astype(np.uint8)
+
+    training_scale = 0.7
+    passive_scale = 0.4
+
+    behavior_stage_color_map = {
+        'gratings_static_training': (0.7, 0.7, 0.7),
+        'gratings_flashed_training': (0.4, 0.4, 0.4),
+        'familiar_images_training': (session_number_colors[0] + (white - session_number_colors[0]) * training_scale),
+        'familiar_images_ophys': session_number_colors[0],
+        'familiar_images_ophys_passive': (
+        session_number_colors[0] + (white - session_number_colors[0]) * passive_scale),
+        'novel_images_ophys': session_number_colors[3],
+        'novel_images_ophys_passive': (session_number_colors[3] + (white - session_number_colors[3]) * passive_scale),
+    }
+
+    if as_rgb:
+        for key in list(behavior_stage_color_map.keys()):
+            behavior_stage_color_map[key] = np.floor(
+                np.array([x for x in list(behavior_stage_color_map[key])]) * 255).astype(np.uint8)
+
+    return behavior_stage_color_map
+
 
 def make_color_transparent(rgb_color, background_rgb=[255, 255, 255], alpha=0.5):
     return [alpha * c1 + (1 - alpha) * c2
