@@ -837,7 +837,7 @@ def plot_metric_distribution_by_experience_no_cell_type(metrics_table, metric, e
     if save_dir:
         folder = 'metric_distributions'
         filename = event_type + '_' + metric + '_distribution' + suffix
-        stats_filename = event_type + '_' + metric + suffix
+        stats_filename = event_type + '_' + metric + suffix +'_no_cell_type'
         utils.save_figure(fig, figsize, save_dir, folder, filename)
         try:
             print('saving_stats')
