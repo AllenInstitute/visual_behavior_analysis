@@ -100,9 +100,10 @@ def plot_population_averages_for_conditions(multi_session_df, data_type, event_t
     if 'dff' in data_type:
         ylabel = 'dF/F'
     elif 'events' in data_type:
-        ylabel = 'population response'
+        ylabel = 'event magnitude'
     elif 'pupil' in data_type:
-        ylabel = data_type + '\n normalized'
+        # ylabel = data_type + '\n normalized'
+        ylabel = 'normalized pupil width'
     elif 'running' in data_type:
         ylabel = 'running speed (cm/s)'
     else:
@@ -157,7 +158,7 @@ def plot_population_averages_for_conditions(multi_session_df, data_type, event_t
             ax[i] = utils.plot_flashes_on_trace(ax[i], timestamps, change=change, omitted=omitted)
             if omitted:
                 omission_color = sns.color_palette()[9]
-                ax[i].axvline(x=0, ymin=0, ymax=1, linestyle='--', color=omission_color)
+                ax[i].axvline(x=0, ymin=0, ymax=1, linestyle='--', color=omission_color, label=None)
             if title == 'metadata':
                 metadata_string = utils.get_container_metadata_string(utils.get_metadata_for_row_of_multi_session_df(cdf))
                 ax[i].set_title(metadata_string)
@@ -181,7 +182,9 @@ def plot_population_averages_for_conditions(multi_session_df, data_type, event_t
             ax[0].set_ylabel(ylabel)
         else:
             ax[i].set_xlabel(xlabel)
-    ax[0].legend(loc='upper left', fontsize='xx-small') # title='passive', title_fontsize='xx-small')
+    ax[0].legend(loc='upper left', fontsize='xx-small')
+    # ax[0].legend(['active', 'passive'], loc='upper right', fontsize='x-small')
+
 
     if project_code:
         if suptitle is None:
@@ -730,126 +733,6 @@ def get_descriptive_stats_for_metric(data, metric, cols_to_groupby):
 
     return values
 
-def plot_metric_distribution_by_experience_no_cell_type(metrics_table, metric, event_type, hue=None, stripplot=False, pointplot=False,
-                                           add_zero_line=False, ylabel=None, ylims=None, save_dir=None, ax=None, suffix=''):
-    """
-    plot metric distribution across experience levels in metrics_table, with stats across experience levels
-    if hue is provided, plots will be split by hue column and stats will be done on hue column differences instead of across experience levels
-    plots boxplot by default, can add stripplot (if no hue is provided) or use pointplot instead
-
-    metrics_table: cell metrics table, each row is one cell_specimen_id in one ophys_experiment_id
-    metric: column in metrics_table containing metric values, metrics will be plotted using experience level colors unless a hue is provided
-    hue: column in metrics_table to split metric values by for plotting (ex: 'targeted_structure')
-                plots using hue will have 'gray' as palette
-    stripplot: Bool, if True, plots each individual cell as swarmplot along with boxplot
-                only works when no hue is provided
-                if cell_type is 'Excitatory', only shows 25% of cells due to high density
-    pointplot: Bool, if True, will use pointplot instead of boxplot and/or stripplot
-    ylims: yaxis limits to use; if None, will use +/-1
-    save_dir: directory to save to. if None, plot will not be saved
-    ax: axes to plot figures on
-    """
-    data = metrics_table.copy()
-    experience_levels = utils.get_experience_levels()
-    new_experience_levels = utils.get_new_experience_levels()
-
-    if hue:
-        if hue == 'targeted_structure':
-            hue_order = np.sort(metrics_table[hue].unique())[::-1]
-        else:
-            hue_order = np.sort(metrics_table[hue].unique())[::-1]
-        suffix = '_' + hue + '_' + suffix
-    else:
-        suffix = '_experience_level' + '_' + suffix
-    if (ylims is None) and ('modulation_index' in metric):
-        ylims = (-1.1, 1.1)
-        ymin = ylims[0]
-        ymax = ylims[1]
-        # loc = 'lower right'
-    elif (ylims is None) and ('response' in metric):
-        ymin = 0
-        ymax = None
-        # loc = 'upper left'
-    elif ylims is None:
-        print('please provide ylims')
-        ymin = 0
-        ymax = None
-        # loc = 'upper left'
-    else:
-        ymin = ylims[0]
-        ymax = ylims[1]
-        # loc = 'upper left'
-    order = np.sort(metrics_table['experience_level'].unique())
-    colors = utils.get_experience_level_colors()
-    if ax is None:
-        figsize = (2, 3)
-        fig, ax = plt.subplots(1, 1, figsize=figsize)
-    # stats dataframe to save
-    tukey = pd.DataFrame()
-    ct_data = data.copy()
-    if hue:
-        if pointplot:
-            ax = sns.pointplot(data=ct_data, y=metric, x='experience_level', order=order, dodge=0.3, join=False,
-                                  hue=hue, hue_order=hue_order, palette='gray', ax=ax)
-        else:
-            ax = sns.boxplot(data=ct_data, y=metric, x='experience_level', order=order,
-                                width=0.4, hue=hue, hue_order=hue_order, palette='gray', ax=ax)
-        ax.legend(fontsize='xx-small', title='')  # , loc=loc)  # bbox_to_anchor=(1,1))
-        if ylims:
-            ax.set_ylim(ylims)
-            # TBD add area or depth comparison stats / stats across hue variable
-    else:
-        if pointplot:
-            ax = sns.pointplot(data=ct_data, x='experience_level', y=metric,
-                                  palette=colors, ax=ax)
-        else:
-            ax = sns.boxplot(data=ct_data, x='experience_level', y=metric, width=0.4,
-                                palette=colors, ax=ax)
-        if stripplot:
-            ax = sns.boxplot(data=ct_data, x='experience_level', y=metric, width=0.4,
-                                color='white', ax=ax)
-            # format to have black lines and transparent box face
-            plt.setp(ax.artists, edgecolor='k', facecolor=[0, 0, 0, 0])
-            plt.setp(ax.lines, color='k')
-            # add strip plot
-            ax = sns.stripplot(data=ct_data, size=3 , alpha=0.5, jitter=0.2,
-                                  x='experience_level', y=metric, palette=colors, ax=ax)
-        # add stats to plot if only looking at experience levels
-        ax, tukey_table = add_stats_to_plot(ct_data, metric, 'white', ax, ymax=ymax)
-        # aggregate stats
-        tukey_table['metric'] = metric
-        tukey = pd.concat([tukey, tukey_table])
-        ax.set_ylim(ymin=ymin)
-        ax.set_xlim(-0.5, len(order) - 0.5)
-
-        # add line at y=0
-        if add_zero_line:
-            ax.axhline(y=0, xmin=0, xmax=1, color='gray', linestyle='--')
-        ax.set_title('')
-        ax.set_xlabel('')
-        ax.set_xticklabels(new_experience_levels, rotation=90,)# ha='right')
-        if ylabel:
-            ax.set_ylabel(ylabel)
-        else:
-            ax.set_ylabel(metric)
-
-    fig.subplots_adjust(hspace=0.3)
-    if save_dir:
-        folder = 'metric_distributions'
-        filename = event_type + '_' + metric + '_distribution' + suffix
-        stats_filename = event_type + '_' + metric + suffix
-        utils.save_figure(fig, figsize, save_dir, folder, filename)
-        try:
-            print('saving_stats')
-            tukey.to_csv(os.path.join(save_dir, folder, stats_filename+'_tukey.csv'))
-            # save descriptive stats
-            cols_to_groupby = ['experience_level']
-            stats = get_descriptive_stats_for_metric(data, metric, cols_to_groupby)
-            stats.to_csv(os.path.join(save_dir, folder, stats_filename + '_values.csv'))
-        except BaseException:
-            print('STATS DID NOT SAVE FOR', metric, hue)
-    return ax
-
 
 def plot_metric_distribution_by_experience(metrics_table, metric, event_type, hue=None, stripplot=False, pointplot=False, show_containers=False,
                                            add_zero_line=False, ylabel=None, ylims=None, save_dir=None, ax=None, suffix=''):
@@ -874,6 +757,11 @@ def plot_metric_distribution_by_experience(metrics_table, metric, event_type, hu
     experience_levels = utils.get_experience_levels()
     new_experience_levels = utils.get_new_experience_levels()
 
+    if suffix == 'VisualBehaviorTask1B':
+        swap_colors = True
+    else:
+        swap_colors = False
+
     if hue:
         if hue == 'targeted_structure':
             hue_order = np.sort(metrics_table[hue].unique())[::-1]
@@ -902,6 +790,11 @@ def plot_metric_distribution_by_experience(metrics_table, metric, event_type, hu
         # loc = 'upper left'
     order = np.sort(metrics_table['experience_level'].unique())
     colors = utils.get_experience_level_colors()
+    # swap familiar and novel colors if its task1b
+    if swap_colors is True:
+        c = utils.get_experience_level_colors()
+        colors = [c[1], c[0], c[2]]
+
     if ax is None:
         figsize = (2, 10)
         fig, ax = plt.subplots(3, 1, figsize=figsize, sharex=True, sharey=False)
@@ -1136,11 +1029,11 @@ def plot_response_heatmaps_for_conditions(multi_session_df, timestamps, data_typ
     sdf = multi_session_df.copy()
 
     if 'omission' in event_type:
-        xlabel = 'time after omission (s)'
+        xlabel = 'Time after omission (s)'
     elif 'change' in event_type:
-        xlabel = 'time after change (s)'
+        xlabel = 'Time after change (s)'
     else:
-        xlabel = 'time (s)'
+        xlabel = 'Time (s)'
 
     if xlim_seconds is None:
         xlim_seconds = (timestamps[0], timestamps[-1])
@@ -1149,7 +1042,7 @@ def plot_response_heatmaps_for_conditions(multi_session_df, timestamps, data_typ
     col_conditions = np.sort(sdf[col_condition].unique())
 
     if ax is None:
-        figsize = (3 * len(col_conditions), 3 * len(row_conditions))
+        figsize = (3 * len(col_conditions), 3.5 * len(row_conditions))
         fig, ax = plt.subplots(len(row_conditions), len(col_conditions), figsize=figsize, sharex=True)
         ax = ax.ravel()
 
@@ -1167,12 +1060,15 @@ def plot_response_heatmaps_for_conditions(multi_session_df, timestamps, data_typ
             else:
                 vmax = 0.02
 
+            if event_type == 'omissions':
+                vmax = vmax / 2.
+
             tmp = row_sdf[(row_sdf[col_condition] == col)]
             tmp = tmp.reset_index()
             if cols_to_sort_by:
                 tmp = tmp.sort_values(by=cols_to_sort_by, ascending=True)
             else:
-                if match_cells:
+                if match_cells == True:
                     if c == 0:
                         tmp = tmp.sort_values(by='mean_response', ascending=True)
                         order = tmp.index.values
@@ -1185,7 +1081,12 @@ def plot_response_heatmaps_for_conditions(multi_session_df, timestamps, data_typ
 
             ax[i] = plot_cell_response_heatmap(data, timestamps, vmax=vmax, xlabel=xlabel, cbar=cbar,
                                                microscope=microscope, ax=ax[i])
-            ax[i].set_title(row + '\n' + col)
+            # label top row with exp level
+            if (col_condition == 'experience_level') & (r == 0):
+                title_colors = utilities.get_experience_level_colors()
+                ax[c].set_title(col, color=title_colors[c], fontsize=20)
+            # ax[i].set_title(row + '\n' + col)
+
             # label y with total number of cells
             ax[i].set_yticks([0, n_cells])
             ax[i].set_yticklabels([0, n_cells], fontsize=12)
@@ -1193,11 +1094,13 @@ def plot_response_heatmaps_for_conditions(multi_session_df, timestamps, data_typ
             ax[i].set_xticks(np.arange(0, len(timestamps), 30))  # assuming 30Hz traces
             ax[i].set_xticklabels([int(t) for t in timestamps[::30]])
             # set xlims according to input
-            start_index = np.where(timestamps == xlim_seconds[0])[0][0]
-            end_index = np.where(timestamps == xlim_seconds[1])[0][0]
+            start_index = np.searchsorted(timestamps, xlim_seconds[0])
+            end_index = np.searchsorted(timestamps, xlim_seconds[1])
             xlims = [start_index, end_index]
             ax[i].set_xlim(xlims)
             ax[i].set_ylabel('')
+
+            # ax[i].invert_yaxis()
 
             if r == len(row_conditions) - 1:
                 ax[i].set_xlabel(xlabel)
@@ -1205,16 +1108,19 @@ def plot_response_heatmaps_for_conditions(multi_session_df, timestamps, data_typ
                 ax[i].set_xlabel('')
             i += 1
 
-    for i in np.arange(0, (len(col_conditions) * len(row_conditions)), len(col_conditions)):
-        ax[i].set_ylabel('cells')
+    for i, row in enumerate(np.arange(0, (len(col_conditions) * len(row_conditions)), len(col_conditions))):
+        # ax[i].set_ylabel('cells')
+        # y label is row condition plus 'cells'
+        ax[row].set_ylabel(row_conditions[i] + ' cells')
 
     if suptitle:
         plt.suptitle(suptitle, x=0.52, y=1.04, fontsize=18)
-    fig.tight_layout()
+    # fig.tight_layout()
+    fig.subplots_adjust(hspace=0.3, wspace=0.5)
 
     if save_dir:
         fig_title = event_type + '_response_heatmap_' + data_type + '_' + col_condition + '_' + row_condition + '_' + suffix
-        utils.save_figure(fig, figsize, save_dir, folder, fig_title)
+        utils.save_figure(fig, figsize, save_dir, folder, fig_title, formats=['.png'])
 
     return ax
 
@@ -1797,11 +1703,20 @@ def plot_behavior_metric_by_experience(stats, metric, title='', ylabel='', ylims
 
     returns axis handle
     """
+
+    if 'Task1B' in suffix:
+        swap_colors = True
+    else:
+        swap_colors = False
+
     experience_levels = utils.get_experience_levels()
     new_experience_levels = utils.get_new_experience_levels()
     cre_lines = utils.get_cre_lines()
     cell_types = utils.get_cell_types()
     colors = utils.get_experience_level_colors()
+    if swap_colors is True:
+        c = utils.get_experience_level_colors()
+        colors = [c[1], c[0], c[2]]
 
     if ylims is None:
         ymin = 0
@@ -1834,9 +1749,6 @@ def plot_behavior_metric_by_experience(stats, metric, title='', ylabel='', ylims
 
     else:
         data = stats.copy()
-
-    colors = utils.get_experience_level_colors()
-    experience_levels = utils.get_experience_levels()
 
     if ax is None:
         figsize = (2, 3)
