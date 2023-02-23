@@ -277,7 +277,6 @@ def plot_population_averages_across_experience(multi_session_df, xlim_seconds=[-
                                                data_type='events', event_type='changes', interval_sec=1,
                                                save_dir=None, folder=None, suffix=None, ax=None):
     # get important information
-    experiments_table = loading.get_platform_paper_experiment_table()
     palette = utilities.get_experience_level_colors()
 
     # define plot axes
