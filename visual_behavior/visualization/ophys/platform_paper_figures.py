@@ -278,7 +278,6 @@ def plot_population_averages_across_experience(multi_session_df, xlim_seconds=[-
                                                save_dir=None, folder=None, suffix=None, ax=None):
     # get important information
     experiments_table = loading.get_platform_paper_experiment_table()
-    cell_types = np.sort(experiments_table.cell_type.unique())
     palette = utilities.get_experience_level_colors()
 
     # define plot axes
@@ -758,7 +757,6 @@ def plot_metric_distribution_by_experience_no_cell_type(metrics_table, metric, e
     ax: axes to plot figures on
     """
     data = metrics_table.copy()
-    experience_levels = utils.get_experience_levels()
     new_experience_levels = utils.get_new_experience_levels()
 
     if hue:
@@ -883,7 +881,7 @@ def plot_metric_distribution_by_experience(metrics_table, metric, event_type, da
     ax: axes to plot figures on
     """
     data = metrics_table.copy()
-    experience_levels = utils.get_experience_levels()
+    # experience_levels = utils.get_experience_levels()
     new_experience_levels = utils.get_new_experience_levels()
 
     if hue:
@@ -1598,7 +1596,7 @@ def plot_behavior_and_physio_timeseries_stacked(dataset, start_time, duration_se
                           formats=['.png', '.pdf'])
     return ax
 
-#### matched cell plots ####
+# ### matched cell plots ####
 
 
 def plot_matched_roi_and_trace(ophys_container_id, cell_specimen_id, limit_to_last_familiar_second_novel=True,
@@ -1800,7 +1798,7 @@ def plot_matched_roi_and_traces_example(cell_metadata, include_omissions=True,
         plt.close()
 
 
-#### behavior plots ####
+# ### behavior plots ####
 
 def plot_behavior_metric_by_experience(stats, metric, title='', ylabel='', ylims=None, best_image=True, show_containers=False,
                                        save_dir=None, folder=None, suffix='', ax=None):
@@ -1821,8 +1819,6 @@ def plot_behavior_metric_by_experience(stats, metric, title='', ylabel='', ylims
     """
     experience_levels = utils.get_experience_levels()
     new_experience_levels = utils.get_new_experience_levels()
-    cre_lines = utils.get_cre_lines()
-    cell_types = utils.get_cell_types()
     colors = utils.get_experience_level_colors()
 
     if ylims is None:
@@ -2073,9 +2069,6 @@ def plot_prior_exposures_per_cell_type_for_novel_plus(platform_experiments, beha
         figsize = (2.5, 3)
         fig, ax = plt.subplots(figsize=figsize)
 
-    colors = utils.get_experience_level_colors()
-    experience_levels = utils.get_experience_levels()
-
     #     ax = sns.boxplot(data=exposures, x='cell_type', y='prior_exposures_to_image_set',
     #                order=cell_types, palette='gray', width=0.5, ax=ax)
 
@@ -2183,9 +2176,6 @@ def plot_stimulus_exposure_prior_to_imaging(behavior_sessions, save_dir=None, fo
     # count number of sessions of each experience level
     exposures = data.groupby(['experience_level', 'mouse_id']).count()[['session_type']].reset_index().rename(
         columns={'session_type': 'n_sessions'})
-
-    experience_levels = utils.get_experience_levels()
-    new_experience_levels = utils.get_new_experience_levels()
 
     if ax is None:
         figsize = (2.5, 3)
