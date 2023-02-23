@@ -16,7 +16,7 @@ from . import database as db
 
 from visual_behavior.ophys.sync.sync_dataset import Dataset
 from visual_behavior.data_access import loading
-# import visual_behavior.visualization.behavior as behavior
+import visual_behavior.visualization.behavior as behavior
 
 
 def flatten_list(in_list):
@@ -1366,10 +1366,10 @@ def get_behavior_stats_for_sessions(behavior_session_ids, behavior_sessions,
     for behavior_session_id in tqdm(behavior_session_ids):
         try:
             print('loading for', behavior_session_id)
-            stats = get_cached_behavior_stats(behavior_session_id, engaged_only=engaged_only, method=method,
-                                                  per_image=per_image)
+            stats = get_cached_behavior_stats(behavior_session_id, engaged_only=engaged_only, method=method, per_image=per_image)
             behavior_stats = pd.concat([behavior_stats, stats])
-        except:
+        except Exception as e:
+            print(e)
             print('cant load stats for', behavior_session_id)
             problem_sessions.append(behavior_session_id)
 
@@ -1379,4 +1379,3 @@ def get_behavior_stats_for_sessions(behavior_session_ids, behavior_sessions,
         behavior_stats.to_hdf(filepath, key='data')
 
     return behavior_stats, problem_sessions
-

@@ -3400,26 +3400,26 @@ def get_multi_session_df_for_conditions(data_type, event_type, conditions, inclu
     # limit to platform expts
     if inclusion_criteria == 'platform_experiment_table':
         experiments_table = get_platform_paper_experiment_table(limit_to_closest_active=True,
-                                                                       add_extra_columns=True,
-                                                                       include_4x2_data=False,
-                                                                       remove_Ai94=True,
-                                                                       remove_flagged=True)
+                                                                add_extra_columns=True,
+                                                                include_4x2_data=False,
+                                                                remove_Ai94=True,
+                                                                remove_flagged=True)
         multi_session_df = multi_session_df[multi_session_df.ophys_experiment_id.isin(experiments_table.index.values)]
         print('there are', len(multi_session_df.ophys_experiment_id.unique()), 'experiments in the multi_session_df after limiting to platform experiments')
     elif 'strategy_paper' in inclusion_criteria:
         experiments_table = get_platform_paper_experiment_table(limit_to_closest_active=False,
-                                                                       add_extra_columns=True,
-                                                                       include_4x2_data=False,
-                                                                       remove_Ai94=True,
-                                                                       remove_flagged=True)
+                                                                add_extra_columns=True,
+                                                                include_4x2_data=False,
+                                                                remove_Ai94=True,
+                                                                remove_flagged=True)
         multi_session_df = multi_session_df[multi_session_df.ophys_experiment_id.isin(experiments_table.index.values)]
         print('there are', len(multi_session_df.ophys_experiment_id.unique()), 'experiments in the multi_session_df after limiting to strategy paper')
     else:
         experiments_table = get_platform_paper_experiment_table(limit_to_closest_active=False,
-                                                                       add_extra_columns=True,
-                                                                       include_4x2_data=True,
-                                                                       remove_Ai94=True,
-                                                                       remove_flagged=True)
+                                                                add_extra_columns=True,
+                                                                include_4x2_data=True,
+                                                                remove_Ai94=True,
+                                                                remove_flagged=True)
 
     # merge in metadata
     multi_session_df = multi_session_df.merge(experiments_table, on='ophys_experiment_id')

@@ -1981,8 +1981,9 @@ def count_mice_expts_containers_cells(df, conditions_to_group=['cell_type', 'exp
             matched_cells = limit_to_cell_specimen_ids_matched_in_all_experience_levels(matched_cells)
             matched_cells = value_counts(matched_cells, conditions=conditions_to_group + ['cell_specimen_id'])
             matched_cells = matched_cells.rename(columns={'n_cell_specimen_id': 'n_matched_cells'})
-        except:
-            include_matched_cells=False
+        except Exception as e:
+            print(e)
+            include_matched_cells = False
             print('could not compute matched cells because input dataframe was not limited to platform paper experiments')
 
     counts = mice.merge(sessions, on=conditions_to_group)
@@ -2023,5 +2024,3 @@ def annotate_epoch_df(epoch_df):
     epoch_df['experience_epoch'] = epoch_df[['experience_level', 'epoch']].apply(axis=1, func=merge_experience_epoch)
 
     return epoch_df
-
-
