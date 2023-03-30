@@ -57,4 +57,4 @@ def compute_running_speed(dx_raw, time, v_sig, v_in, smooth=False):
     if smooth:
         raise NotImplementedError
 
-    return speed
+    return speed, time
