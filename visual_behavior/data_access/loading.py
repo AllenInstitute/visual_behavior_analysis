@@ -641,7 +641,7 @@ def get_stimulus_response_df_filepath_for_experiment(ophys_experiment_id, data_t
                                                      interpolate=True, output_sampling_rate=30,
                                                      epoch_duration_mins=5):
 
-    filepath = os.path.join(get_stimulus_response_df_dir(interpolate, int(output_sampling_rate), event_type),
+    filepath = os.path.join(get_stimulus_response_df_dir(interpolate, output_sampling_rate, event_type),
                             str(ophys_experiment_id) + '_' + data_type + '_' + event_type + '_epoch_dur_' + str(epoch_duration_mins) + '.h5')
     return filepath
 
@@ -715,6 +715,12 @@ def get_stimulus_response_df(dataset, time_window=[-3, 3.1], interpolate=True, o
                                                     time_window=time_window, interpolate=interpolate,
                                                     output_sampling_rate=output_sampling_rate,
                                                     response_window_duration=response_window_duration)
+            # save it
+            try:
+                sdf.to_hdf(filepath, key='df')
+                print('saved response df to', filepath)
+            except BaseException:
+                print('could not save', filepath)
     else:  # if load_from_file is False, generate response df
         print('generating response df')
         sdf = vb_ophys.get_stimulus_response_df(dataset, data_type=data_type, event_type=event_type,
