@@ -9,7 +9,7 @@ from allensdk.brain_observatory.behavior.behavior_project_cache import VisualBeh
 python_file = r"/home/marinag/visual_behavior_analysis/scripts/create_multi_session_df.py"
 
 # conda environment to use
-conda_environment = 'learning_mFISH'
+conda_environment = 'visual_behavior_sdk'
 
 # build the python path
 # this assumes that the environments are saved in the user's home directory in a folder called 'anaconda2'

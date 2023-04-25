@@ -67,8 +67,8 @@ def get_multi_session_df(mouse_id, ophys_container_id, conditions, data_type, ev
     # experiments_table = loading.get_filtered_ophys_experiment_table()
     # experiments_table = experiments_table[experiments_table.project_code == 'LearningmFISHTask1A']
 
-    # save_dir = r'/allen/programs/mindscope/workgroups/learning/ophys/learning_project_cache'
-    save_dir = r'\\allen\programs\mindscope\workgroups\learning\ophys\learning_project_cache'
+    save_dir = r'/allen/programs/mindscope/workgroups/learning/ophys/learning_project_cache'
+    # save_dir = r'\\allen\programs\mindscope\workgroups\learning\ophys\learning_project_cache'
     experiments_table = pd.read_csv(os.path.join(save_dir, 'mFISH_project_expts.csv'))
     experiments_table = experiments_table.set_index('ophys_experiment_id')
     print(len(experiments_table), 'experiments in experiments table')
