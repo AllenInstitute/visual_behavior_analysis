@@ -111,9 +111,9 @@ def get_multi_session_df(mouse_id, ophys_container_id, conditions, data_type, ev
             try:
                 print(experiment_id)
                 # new dev object
-                dataset = BehaviorOphysExperimentDev(experiment_id)
+                # dataset = BehaviorOphysExperimentDev(experiment_id)
                 # get dataset
-                # dataset = loading.get_ophys_dataset(experiment_id, get_extended_stimulus_presentations=use_extended_stimulus_presentations)
+                dataset = loading.get_ophys_dataset(experiment_id, get_extended_stimulus_presentations=use_extended_stimulus_presentations)
                 # get stimulus_response_df
                 print('loading stimulus response df')
                 df = loading.get_stimulus_response_df(dataset, data_type=data_type, event_type=event_type, time_window=time_window,
