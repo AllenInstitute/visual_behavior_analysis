@@ -5,6 +5,8 @@ from allensdk.brain_observatory.behavior.behavior_project_cache import VisualBeh
 import visual_behavior.ophys.response_analysis.utilities as ut
 from visual_behavior.data_access import loading
 
+from brain_observatory_qc.data_access.behavior_ophys_experiment_dev import BehaviorOphysExperimentDev
+
 
 def get_multi_session_df(mouse_id, ophys_container_id, conditions, data_type, event_type, ophys_experiment_ids=None,
                          time_window=[-3, 3.1], interpolate=True, output_sampling_rate=30,
@@ -31,6 +33,7 @@ def get_multi_session_df(mouse_id, ophys_container_id, conditions, data_type, ev
     :param mouse_id: mouse_id to use when identifying what experiment_ids to include in the multi_session_df
     :param conditions: columns in stimulus_response_df to group by when averaging across trials / stimulus presentations
                         if use_extended_stimulus_presentations is True, columns available include the set of columns provided in that table (ex: engagement_state)
+                        example: ['cell_specimen_id', 'is_change', 'image_name']
     :param data_type: which timeseries in dataset object to get event triggered responses for
                         options: 'filtered_events', 'events', 'dff', 'running_speed', 'pupil_diameter', 'lick_rate'
     :param event_type: how to filter stimulus presentations when creating table with loading.get_stimulus_response_df()
@@ -64,8 +67,8 @@ def get_multi_session_df(mouse_id, ophys_container_id, conditions, data_type, ev
     # experiments_table = loading.get_filtered_ophys_experiment_table()
     # experiments_table = experiments_table[experiments_table.project_code == 'LearningmFISHTask1A']
 
-    save_dir = r'/allen/programs/mindscope/workgroups/learning/ophys/learning_project_cache'
-    # save_dir = r'\\allen\programs\mindscope\workgroups\learning\ophys\learning_project_cache'
+    # save_dir = r'/allen/programs/mindscope/workgroups/learning/ophys/learning_project_cache'
+    save_dir = r'\\allen\programs\mindscope\workgroups\learning\ophys\learning_project_cache'
     experiments_table = pd.read_csv(os.path.join(save_dir, 'mFISH_project_expts.csv'))
     experiments_table = experiments_table.set_index('ophys_experiment_id')
     print(len(experiments_table), 'experiments in experiments table')
@@ -107,8 +110,10 @@ def get_multi_session_df(mouse_id, ophys_container_id, conditions, data_type, ev
         for experiment_id in experiment_ids:
             try:
                 print(experiment_id)
+                # new dev object
+                dataset = BehaviorOphysExperimentDev(experiment_id,  skip_eye_tracking=False)
                 # get dataset
-                dataset = loading.get_ophys_dataset(experiment_id, get_extended_stimulus_presentations=use_extended_stimulus_presentations)
+                # dataset = loading.get_ophys_dataset(experiment_id, get_extended_stimulus_presentations=use_extended_stimulus_presentations)
                 # get stimulus_response_df
                 print('loading stimulus response df')
                 df = loading.get_stimulus_response_df(dataset, data_type=data_type, event_type=event_type, time_window=time_window,
