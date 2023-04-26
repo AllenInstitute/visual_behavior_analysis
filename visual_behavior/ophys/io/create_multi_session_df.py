@@ -67,26 +67,27 @@ def get_multi_session_df(mouse_id, ophys_container_id, conditions, data_type, ev
     # experiments_table = loading.get_filtered_ophys_experiment_table()
     # experiments_table = experiments_table[experiments_table.project_code == 'LearningmFISHTask1A']
 
-    save_dir = r'/allen/programs/mindscope/workgroups/learning/ophys/learning_project_cache'
-    # save_dir = r'\\allen\programs\mindscope\workgroups\learning\ophys\learning_project_cache'
+    # save_dir = r'/allen/programs/mindscope/workgroups/learning/ophys/learning_project_cache'
+    save_dir = r'\\allen\programs\mindscope\workgroups\learning\ophys\learning_project_cache'
     experiments_table = pd.read_csv(os.path.join(save_dir, 'mFISH_project_expts.csv'))
     experiments_table = experiments_table.set_index('ophys_experiment_id')
     print(len(experiments_table), 'experiments in experiments table')
 
+    save_mega_mdf = True
     if ophys_experiment_ids is None:
         print('mouse_id:', mouse_id, ', ophys_container_id:', ophys_container_id)
         experiments = experiments_table[(experiments_table.ophys_container_id == int(ophys_container_id)) &
                                         (experiments_table.mouse_id == int(mouse_id))]
         experiment_ids = experiments.index.values
         print(len(experiment_ids), 'experiments for this mouse_id and ophys_container_id')
-        save_mega_mdf = True
+        # save_mega_mdf = True
     else:
         experiment_ids = ophys_experiment_ids.copy()
         print('ophys_experiment_ids provided, ignoring mouse_id and ophys_container_id')
         print('generating multi_session_df for provided list of ophys_experiment_ids')
         print(len(experiment_ids), 'experiments are in the provided list')
         print('multi_session_df will not be automatically saved')
-        save_mega_mdf = False
+        # save_mega_mdf = False
 
     filename = loading.get_file_name_for_multi_session_df(data_type, event_type, mouse_id, ophys_container_id, conditions)
     mega_mdf_write_dir = loading.get_multi_session_df_dir(interpolate=interpolate, output_sampling_rate=output_sampling_rate, event_type=event_type)
@@ -111,9 +112,9 @@ def get_multi_session_df(mouse_id, ophys_container_id, conditions, data_type, ev
             try:
                 print(experiment_id)
                 # new dev object
-                # dataset = BehaviorOphysExperimentDev(experiment_id)
+                dataset = BehaviorOphysExperimentDev(experiment_id)
                 # get dataset
-                dataset = loading.get_ophys_dataset(experiment_id, get_extended_stimulus_presentations=use_extended_stimulus_presentations)
+                # dataset = loading.get_ophys_dataset(experiment_id, get_extended_stimulus_presentations=use_extended_stimulus_presentations)
                 # get stimulus_response_df
                 print('loading stimulus response df')
                 df = loading.get_stimulus_response_df(dataset, data_type=data_type, event_type=event_type, time_window=time_window,
