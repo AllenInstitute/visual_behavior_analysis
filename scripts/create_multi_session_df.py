@@ -22,8 +22,8 @@ if __name__ == '__main__':
 
     # params for stim response df creation
     time_window = [-2, 2.1]
-    interpolate = False
-    output_sampling_rate = None
+    interpolate = True
+    output_sampling_rate = 30
     use_extended_stimulus_presentations = False
     epoch_duration_mins = 5
 
@@ -35,21 +35,21 @@ if __name__ == '__main__':
 
     physio_conditions = [['cell_specimen_id', 'is_change'], # all stim presentations, change vs. not a change
                          ['cell_specimen_id', 'omitted'], # all omissions
-                         # ['cell_specimen_id', 'pre_change'], # all omissions
-                         # ['cell_specimen_id', 'is_change', 'epoch'], # all stim presentations, change vs no change, x min epochs
-                         # ['cell_specimen_id', 'omitted', 'epoch'], # omissions in x min epochs
-                         # ['cell_specimen_id', 'pre_change', 'epoch'],  # all stim presentations, pre-change, x min epochs
-                         # ['cell_specimen_id', 'image_name', 'epoch'], # each image, x min epochs
-                         # ['cell_specimen_id', 'is_change', 'omitted', 'epoch'],  # each image, x min epochs
-                         # ['cell_specimen_id', 'is_change', 'image_name'], # all stim presentations, change vs no change, each image identity
-                         # ['cell_specimen_id', 'is_change', 'hit'],  # only changes, hit vs. miss
-                         # ['cell_specimen_id', 'is_change', 'hit', 'epoch'], # only changes, hit vs. miss, x min epochs
-                         # ['cell_specimen_id', 'omitted', 'pre_omitted'], # all stim presentations, omission or not, pre-omitted or not
+                         ['cell_specimen_id', 'pre_change'], # all omissions
+                         ['cell_specimen_id', 'is_change', 'epoch'], # all stim presentations, change vs no change, x min epochs
+                         ['cell_specimen_id', 'omitted', 'epoch'], # omissions in x min epochs
+                         ['cell_specimen_id', 'pre_change', 'epoch'],  # all stim presentations, pre-change, x min epochs
+                         ['cell_specimen_id', 'image_name', 'epoch'], # each image, x min epochs
+                         ['cell_specimen_id', 'is_change', 'omitted', 'epoch'],  # each image, x min epochs
+                         ['cell_specimen_id', 'is_change', 'image_name'], # all stim presentations, change vs no change, each image identity
+                         ['cell_specimen_id', 'is_change', 'hit'],  # only changes, hit vs. miss
+                         ['cell_specimen_id', 'is_change', 'hit', 'epoch'], # only changes, hit vs. miss, x min epochs
+                         ['cell_specimen_id', 'omitted', 'pre_omitted'], # all stim presentations, omission or not, pre-omitted or not
                          ]
 
     # event types corresponding to the above physio conditions - must be in same sequential order
-    physio_event_types_for_conditions = ['changes', 'omissions',] #'all', 'changes', 'omissions',
-                                         # 'all', 'all', 'all', 'changes', 'changes', 'changes', 'all']
+    physio_event_types_for_conditions = ['changes', 'omissions', 'all', 'changes', 'omissions',
+                                         'all', 'all', 'all', 'changes', 'changes', 'changes', 'all']
 
 
     behavior_conditions = [['ophys_experiment_id', 'omitted'],
