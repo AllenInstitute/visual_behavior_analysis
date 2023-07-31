@@ -1425,13 +1425,14 @@ def get_coding_metrics(index_dropouts, index_value, index_name):
     # this makes sense under the assumption that Novel images becomes Familiar again rapidly in the Novel >1 session
     # if we wanted consider either novel session, could use novel_dropout = np.amax([row['Novel 1'], row['Novel >1']])
     exp_mod = (row['Novel 1'] - (np.mean([row['Familiar'], row['Novel >1']]))) / (row['Novel 1'] + (np.mean([row['Familiar'], row['Novel >1']])))
+    # exp_mod = (row['Novel 1'] - [row['Familiar']) / (row['Novel 1'] + [row['Familiar']))
     stats.loc[index_value, 'experience_modulation'] = exp_mod
     # direction of exp mod is whether coding is stronger for familiar or novel
     # if we wanted consider either novel session, could use novel_dropout = np.amax([row['Novel 1'], row['Novel >1']])
     exp_mod_direction = (row['Novel 1'] - row['Familiar']) / (row['Novel 1'] + row['Familiar'])
     # persistence of exp mod is whether coding stays similar after repetition of novel session
-#     exp_mod_persistence = (row['Novel >1']-row['Novel 1'])/(row['Novel >1']+row['Novel 1'])
-    exp_mod_persistence = row['Novel >1'] / row['Novel 1']
+    exp_mod_persistence = (row['Novel >1']-row['Novel 1'])/(row['Novel >1']+row['Novel 1'])
+    # exp_mod_persistence = row['Novel >1'] / row['Novel 1']
     stats.loc[index_value, 'exp_mod_direction'] = exp_mod_direction
     stats.loc[index_value, 'exp_mod_persistence'] = exp_mod_persistence
     # within session joint coding index
