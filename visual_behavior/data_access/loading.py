@@ -678,7 +678,8 @@ def get_stimulus_response_df(dataset, time_window=[-3, 3.1], interpolate=True, o
                                 columns include stimulus and behavior metadata
      """
 
-    import mindscope_utilities.visual_behavior_ophys.data_formatting as vb_ophys
+    # import mindscope_utilities.visual_behavior_ophys.data_formatting as vb_ophys
+    import brain_observatory_utilities.datasets.optical_physiology.data_formatting as vb_ophys
     # load stimulus response df from file if it exists otherwise generate it
     ophys_experiment_id = dataset.ophys_experiment_id
     filepath = get_stimulus_response_df_filepath_for_experiment(ophys_experiment_id, data_type, event_type,
