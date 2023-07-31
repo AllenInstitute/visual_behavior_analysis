@@ -159,14 +159,14 @@ def get_multi_session_df(project_code, session_number, conditions, data_type, ev
                     df = df[df.pre_change.isnull() == False]
                 # get params for mean df creation from stimulus_response_df
                 output_sampling_rate = df.output_sampling_rate.unique()[0]
-
+                print('generating mean response df')
                 mdf = ut.get_mean_df(df, conditions=conditions, frame_rate=output_sampling_rate,
                                      window_around_timepoint_seconds=time_window,
                                      response_window_duration_seconds=response_window_duration,
                                      get_pref_stim=get_pref_stim, exclude_omitted_from_pref_stim=True)
                 if 'correlation_values' in mdf.keys():
                     mdf = mdf.drop(columns=['correlation_values'])
-                mdf['ophys_experiment_id'] = experiment_id
+                mdf['ophys_experiment_id'] = int(experiment_id)
                 print('mean df created for', experiment_id)
                 mega_mdf = pd.concat([mega_mdf, mdf])
             except Exception as e:  # flake8: noqa: E722
