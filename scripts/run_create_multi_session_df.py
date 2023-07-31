@@ -11,10 +11,10 @@ python_file = r"/home/marinag/visual_behavior_analysis/scripts/create_multi_sess
 conda_environment = 'visual_behavior_sdk'
 
 # build the python path
-# this assumes that the environments are saved in the user's home directory in a folder called 'anaconda2'
+# this assumes that the environments are saved in the user's home directory in a folder called 'anaconda3'
 python_path = os.path.join(
     os.path.expanduser("~"),
-    'anaconda2',
+    'anaconda3',
     'envs',
     conda_environment,
     'bin',
