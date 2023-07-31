@@ -21,6 +21,8 @@ import visual_behavior.data_access.loading as loading
 import visual_behavior.data_access.utilities as utilities
 
 import visual_behavior_glm.GLM_analysis_tools as gat
+import visual_behavior_glm.GLM_across_session as gas
+
 import visual_behavior_glm.GLM_clustering as glm_clust
 import visual_behavior_glm.GLM_params as glm_params
 from statsmodels.stats.proportion import proportion_confint
@@ -213,24 +215,23 @@ def pivot_df(df, dropna=True, drop_duplicated_cells=True):
 # loading & processing ###
 
 def get_glm_results_pivoted_for_clustering(glm_version='24_events_all_L2_optimize_by_session',
-                                           model_output_type='adj_fraction_change_from_full', save_dir=None):
+                                           model_output_type='adj_fraction_change_from_full',
+                                           across_sessions_normalized=True, save_dir=None):
     """
     loads GLM results pivoted where columns are dropout scores and rows are cells in specific experiments
     filters to limit to cells matched in all experience levels
     loads from file if file exists in save_dir, otherwise generates from mongo and saves to save dir
     """
+    if across_sessions_normalized and save_dir:
+        results_file_path = os.path.join(save_dir, glm_version + '_across_normalized_results_pivoted.h5')
+    elif save_dir:
+        results_file_path = os.path.join(save_dir, glm_version + '_results_pivoted.h5')
 
-    results_file_path = os.path.join(save_dir, glm_version + '_results_pivoted.h5')
-    if os.path.exists(results_file_path):
+    if os.path.exists(results_file_path) is False:
         print('loading results_pivoted from', results_file_path)
         results_pivoted = pd.read_hdf(results_file_path, key='df')
 
     else:  # if it doesnt exist, then load it and save (note this is slow)
-        results_pivoted = gat.build_pivoted_results_summary(value_to_use=model_output_type, results_summary=None,
-                                                            glm_version=glm_version, cutoff=None)
-
-        # get rid of passive sessions
-        results_pivoted = results_pivoted[results_pivoted.passive == False]
 
         # get cells table and limit to cells matched in closest familiar and novel active
         cells_table = loading.get_cell_table()
@@ -244,16 +245,26 @@ def get_glm_results_pivoted_for_clustering(glm_version='24_events_all_L2_optimiz
         matched_experiments = cells_table.ophys_experiment_id.unique()
         matched_cells = cells_table.cell_specimen_id.unique()
 
+        if across_sessions_normalized is False:
+            results_pivoted = gat.build_pivoted_results_summary(value_to_use=model_output_type,
+                                                                results_summary=None,
+                                                                glm_version=glm_version, cutoff=None)
+
+            # get rid of passive sessions
+            results_pivoted = results_pivoted[results_pivoted.passive == False]
+        elif across_sessions_normalized is True:
+            results_pivoted, _ = gas.load_cells(glm_version=glm_version)
+
         # limit results pivoted to to last familiar and second novel
         results_pivoted = results_pivoted[results_pivoted.ophys_experiment_id.isin(matched_experiments)]
         results_pivoted = results_pivoted[results_pivoted.cell_specimen_id.isin(matched_cells)]
         print(len(results_pivoted.cell_specimen_id.unique()),
               'cells in results_pivoted after limiting to strictly matched cells')
 
-        if save_dir:
-            # save filtered results to save_dir
-            results_pivoted.to_hdf(os.path.join(save_dir, glm_version + '_results_pivoted.h5'), key='df')
-            print('results_pivoted saved')
+        # if save_dir:
+        #     # save filtered results to save_dir
+        #     results_pivoted.to_hdf(results_file_path, key='df')
+        #     print('results_pivoted saved')
     return results_pivoted
 
 
@@ -748,6 +759,8 @@ def get_labels_for_coclust_matrix(X, model=SpectralClustering, nboot=np.arange(1
     ___________
     :return: labels: matrix of labels, n repeats by n observations
     '''
+    if model is SpectralClustering:
+        model = model()
     labels = []
     if n_clusters is not None:
         model.n_clusters = n_clusters
@@ -767,6 +780,7 @@ def get_coClust_matrix(X, model=SpectralClustering, nboot=np.arange(150), n_clus
     ______________
     returns: coClust_matrix: (ndarray) probability matrix of co-clustering together.
     '''
+    # model = model()
     labels = get_labels_for_coclust_matrix(X=X,
                                            model=model,
                                            nboot=nboot,
@@ -1588,7 +1602,7 @@ def shuffle_dropout_score(df_dropout, shuffle_type='all'):
     Returns:
         df_shuffled (pd. Dataframe) of shuffled dropout scores
     '''
-    df_shuffled = df_dropout.copy(deep=True)
+    df_shuffled = df_dropout.copy()
     regressors = df_dropout.columns.levels[0].values
     experience_levels = df_dropout.columns.levels[1].values
     if shuffle_type == 'all':
@@ -2422,5 +2436,69 @@ def get_shuffle_label(shuffle_type):
     return shuffle_type_dict[shuffle_type]
 
 
-def get_cluster_size_statistics_df():
-    return 10
+def compute_sse(feature_matrix):
+    '''
+    Computes Sum of Squared Error between each cell in feature matrix and the mean.
+
+    INPUT:
+    feature_matrix (pd.DataFrame) dropout scores, rows are cell specimen ids
+
+    Returns:
+    SSE (list) of sse values between each cell and their mean.
+    '''
+
+    mean_values = feature_matrix.mean().values
+
+    SSE = np.sum(np.subtract(feature_matrix.values, mean_values) ** 2, axis=1)
+
+    return SSE
+
+
+def get_variability_df(feature_matrix, cluster_df, columns=['cluster_id', 'cre_line', 'clustered'], metric='sse'):
+    '''
+    INPUT:
+    feature_matrix:
+    cluster_df: (pd.DataFrame) dataframe with columns ['cre_line', 'cluster_id'] and cell specimen id as an index
+    metric: (string)
+
+    Returns:
+    variability_df
+    '''
+
+    variability_df = pd.DataFrame(columns=columns)
+    cre_lines = np.sort(get_cre_lines(cluster_df))
+
+    columns = [*columns, metric]
+
+    if 'cell_specimen_id' in cluster_df.keys():
+        cluster_df.set_index('cell_specimen_id', inplace=True)
+
+    for cre_line in cre_lines:
+        print(cre_line)
+        cre_cluster_df = cluster_df[cluster_df.cre_line == cre_line]
+        cre_cell_ids = cre_cluster_df.index.values
+        cre_feature_matrix = feature_matrix.loc[cre_cell_ids]
+
+        cluster_ids = np.sort(cre_cluster_df['cluster_id'].values)
+        # compute values for each cluster id
+        for cluster_id in cluster_ids:
+            cluster_cids = cre_cluster_df[cre_cluster_df.cluster_id == cluster_id].index.values
+            cluster_feature_matrix = cre_feature_matrix.loc[cluster_cids]
+            if metric == 'sse':
+                values = compute_sse(cluster_feature_matrix)
+
+            variability_df = variability_df.append(pd.DataFrame({'cre_line': [cre_line] * len(values),
+                                                                 'cluster_id': [cluster_id] * len(values),
+                                                                 'clustered': [True] * len(values),
+                                                                 metric: values}, index=np.arange(len(values))),
+                                                   ignore_index=True)
+
+        if metric == 'sse':
+            values = compute_sse(cre_feature_matrix)
+        variability_df = variability_df.append(pd.DataFrame({'cre_line': [cre_line] * len(values),
+                                                             'cluster_id': [np.nan] * len(values),
+                                                             'clustered': [False] * len(values),
+                                                             metric: values}, index=np.arange(len(values))),
+                                               ignore_index=True)
+
+    return variability_df

@@ -641,7 +641,7 @@ def get_stimulus_response_df_filepath_for_experiment(ophys_experiment_id, data_t
                                                      interpolate=True, output_sampling_rate=30,
                                                      epoch_duration_mins=5):
 
-    filepath = os.path.join(get_stimulus_response_df_dir(interpolate, output_sampling_rate, event_type),
+    filepath = os.path.join(get_stimulus_response_df_dir(interpolate, int(output_sampling_rate), event_type),
                             str(ophys_experiment_id) + '_' + data_type + '_' + event_type + '_epoch_dur_' + str(epoch_duration_mins) + '.h5')
     return filepath
 
