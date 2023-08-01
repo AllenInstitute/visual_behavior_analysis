@@ -133,6 +133,7 @@ def get_multi_session_df(project_code, session_number, conditions, data_type, ev
                 df = loading.get_stimulus_response_df(dataset, data_type=data_type, event_type=event_type, time_window=time_window,
                                                       interpolate=interpolate, output_sampling_rate=output_sampling_rate,
                                                       load_from_file=True, epoch_duration_mins=epoch_duration_mins)
+                print(len(df), 'length of stimulus_response_df')
                 # use response_window duration from stim response df if it exists
                 if response_window_duration in df.keys():
                     response_window_duration = df.response_window_duration.values[0]
@@ -157,6 +158,7 @@ def get_multi_session_df(project_code, session_number, conditions, data_type, ev
                                                  df.mean_pupil_area.values]
                 if 'pre_change' in conditions:
                     df = df[df.pre_change.isnull() == False]
+                print(len(mdf), 'length of stimulus_response_df after filtering')
                 # get params for mean df creation from stimulus_response_df
                 output_sampling_rate = df.output_sampling_rate.unique()[0]
                 print('generating mean response df')
@@ -164,11 +166,14 @@ def get_multi_session_df(project_code, session_number, conditions, data_type, ev
                                      window_around_timepoint_seconds=time_window,
                                      response_window_duration_seconds=response_window_duration,
                                      get_pref_stim=get_pref_stim, exclude_omitted_from_pref_stim=True)
+                print(len(mdf), 'length of multi session df')
                 if 'correlation_values' in mdf.keys():
                     mdf = mdf.drop(columns=['correlation_values'])
                 mdf['ophys_experiment_id'] = int(experiment_id)
                 print('mean df created for', experiment_id)
+                print(len(mega_mdf),'length of mega mdf')
                 mega_mdf = pd.concat([mega_mdf, mdf])
+                print(len(mega_mdf), 'length of mega mdf after merge')
             except Exception as e:  # flake8: noqa: E722
                 print(e)
                 print('problem for', experiment_id)
