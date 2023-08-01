@@ -137,7 +137,7 @@ def get_multi_session_df(project_code, session_number, conditions, data_type, ev
                 # use response_window duration from stim response df if it exists
                 if response_window_duration in df.keys():
                     response_window_duration = df.response_window_duration.values[0]
-                df['ophys_experiment_id'] = experiment_id
+                df['ophys_experiment_id'] = str(experiment_id)
                 # if using omissions, only include omissions where time from last change is more than 3 seconds
                 # if event_type == 'omissions':
                 #     df = df[df.time_from_last_change > 3]
