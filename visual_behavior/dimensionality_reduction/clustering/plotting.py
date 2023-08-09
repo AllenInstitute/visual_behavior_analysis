@@ -138,7 +138,7 @@ def plot_feature_matrix_for_cre_lines(feature_matrix, cell_metadata, use_abbrevi
 
 
 def plot_feature_matrix_sorted(feature_matrix, cluster_meta, sort_col='cluster_id', use_abbreviated_labels=False,
-                               save_dir=None, folder=None, suffix=''):
+                               resort_by_size=False, save_dir=None, folder=None, suffix=''):
     """
     plots feature matrix used for clustering sorted by sort_col
 
@@ -155,8 +155,14 @@ def plot_feature_matrix_sorted(feature_matrix, cluster_meta, sort_col='cluster_i
     figsize = (15, 5)
     fig, ax = plt.subplots(1, 3, figsize=figsize)
     for i, cre_line in enumerate(get_cre_lines(cluster_meta)):
+        cluster_meta_cre = cluster_meta[cluster_meta.cre_line == cre_line]
         # get cell ids for this cre line in sorted order
-        sorted_cluster_meta_cre = cluster_meta[cluster_meta.cre_line == cre_line].sort_values(by=sort_col)
+        if resort_by_size:
+            cluster_size_order = cluster_meta_cre['cluster_id'].value_counts().index.values
+            cluster_meta_cre['new_cluster_id'] = [np.where(cluster_size_order == label)[0][0] for label in
+                                                  cluster_meta_cre.cluster_id.values]
+            sort_col = 'new_cluster_id'
+        sorted_cluster_meta_cre = cluster_meta_cre.sort_values(by=sort_col)
         cell_order = sorted_cluster_meta_cre.index.values
         label_values = sorted_cluster_meta_cre[sort_col].values
 
