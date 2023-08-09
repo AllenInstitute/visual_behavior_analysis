@@ -97,8 +97,8 @@ def get_platform_analysis_cache_dir():
     This is the cache directory to use for all platform paper analysis
     This cache contains NWB files downloaded directly from AWS
     """
-    return '/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/platform_paper_cache'
-    # return r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\platform_paper_cache'
+    # return '/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/platform_paper_cache'
+    return r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\platform_paper_cache'
 
 
 def get_production_cache_dir():
@@ -681,7 +681,7 @@ def get_stimulus_response_df(dataset, time_window=[-3, 3.1], interpolate=True, o
     # import brain_observatory_utilities.datasets.optical_physiology.data_formatting as ophys_formatting
     # import brain_observatory_utilities.datasets.behavior.data_formatting as behavior_formatting
 
-    import brain_observatory_utilities.datasets.optical_physiology.data_formatting as data_formatting
+    import mindscope_utilities.visual_behavior_ophys.data_formatting as data_formatting
 
 
     # load stimulus response df from file if it exists otherwise generate it
