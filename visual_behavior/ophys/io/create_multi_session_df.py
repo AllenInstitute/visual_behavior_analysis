@@ -133,7 +133,7 @@ def get_multi_session_df(project_code, session_number, conditions, data_type, ev
                 df = loading.get_stimulus_response_df(dataset, data_type=data_type, event_type=event_type, time_window=time_window,
                                                       interpolate=interpolate, output_sampling_rate=output_sampling_rate,
                                                       load_from_file=True, epoch_duration_mins=epoch_duration_mins)
-                print(len(df), 'length of stimulus_response_df')
+                # print(len(df), 'length of stimulus_response_df')
                 # use response_window duration from stim response df if it exists
                 if response_window_duration in df.keys():
                     response_window_duration = df.response_window_duration.values[0]
@@ -158,7 +158,7 @@ def get_multi_session_df(project_code, session_number, conditions, data_type, ev
                                                  df.mean_pupil_area.values]
                 if 'pre_change' in conditions:
                     df = df[df.pre_change.isnull() == False]
-                print(len(mdf), 'length of stimulus_response_df after filtering')
+                # print(len(df), 'length of stimulus_response_df after filtering')
                 # get params for mean df creation from stimulus_response_df
                 output_sampling_rate = df.output_sampling_rate.unique()[0]
                 print('generating mean response df')
@@ -177,20 +177,21 @@ def get_multi_session_df(project_code, session_number, conditions, data_type, ev
             except Exception as e:  # flake8: noqa: E722
                 print(e)
                 print('problem for', experiment_id)
+        else:
+            print('multi_session_df not created')
 
-        if 'level_0' in mega_mdf.keys():
-            mega_mdf = mega_mdf.drop(columns='level_0')
-        if 'index' in mega_mdf.keys():
-            mega_mdf = mega_mdf.drop(columns='index')
+    if 'level_0' in mega_mdf.keys():
+        mega_mdf = mega_mdf.drop(columns='level_0')
+    if 'index' in mega_mdf.keys():
+        mega_mdf = mega_mdf.drop(columns='index')
 
-        # if file of the same name exists, delete & overwrite to prevent files from getting huge
-        if os.path.exists(filepath):
-            os.remove(filepath)
-        print('saving multi session mean df as ', filename)
-        mega_mdf.to_hdf(filepath, key='df')
-        print('saved to', mega_mdf_write_dir)
+    # if file of the same name exists, delete & overwrite to prevent files from getting huge
+    if os.path.exists(filepath):
+        os.remove(filepath)
+    print('saving multi session mean df as ', filename)
+    mega_mdf.to_hdf(filepath, key='df')
+    print('saved to', mega_mdf_write_dir)
 
-        return mega_mdf
+    return mega_mdf
 
-    else:
-        print('multi_session_df not created')
+
