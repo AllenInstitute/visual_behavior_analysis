@@ -678,8 +678,11 @@ def get_stimulus_response_df(dataset, time_window=[-3, 3.1], interpolate=True, o
                                 columns include stimulus and behavior metadata
      """
 
-    import brain_observatory_utilities.datasets.optical_physiology.data_formatting as ophys_formatting
-    import brain_observatory_utilities.datasets.behavior.data_formatting as behavior_formatting
+    # import brain_observatory_utilities.datasets.optical_physiology.data_formatting as ophys_formatting
+    # import brain_observatory_utilities.datasets.behavior.data_formatting as behavior_formatting
+
+    import brain_observatory_utilities.datasets.optical_physiology.data_formatting as data_formatting
+
 
     # load stimulus response df from file if it exists otherwise generate it
     ophys_experiment_id = dataset.ophys_experiment_id
@@ -703,7 +706,7 @@ def get_stimulus_response_df(dataset, time_window=[-3, 3.1], interpolate=True, o
                 print('stimulus_response_df does not exist or could not be loaded for', filepath)
                 print(e)
                 print('generating response df')
-                sdf = ophys_formatting.get_stimulus_response_df(dataset, data_type=data_type, event_type=event_type,
+                sdf = data_formatting.get_stimulus_response_df(dataset, data_type=data_type, event_type=event_type,
                                                         time_window=time_window, interpolate=interpolate,
                                                         output_sampling_rate=output_sampling_rate,
                                                         response_window_duration=response_window_duration)
@@ -714,7 +717,7 @@ def get_stimulus_response_df(dataset, time_window=[-3, 3.1], interpolate=True, o
                     print('could not save', filepath)
         else:  # if file does not exist, generate response df
             print('generating response df')
-            sdf = ophys_formatting.get_stimulus_response_df(dataset, data_type=data_type, event_type=event_type,
+            sdf = data_formatting.get_stimulus_response_df(dataset, data_type=data_type, event_type=event_type,
                                                     time_window=time_window, interpolate=interpolate,
                                                     output_sampling_rate=output_sampling_rate,
                                                     response_window_duration=response_window_duration)
@@ -726,7 +729,7 @@ def get_stimulus_response_df(dataset, time_window=[-3, 3.1], interpolate=True, o
                 print('could not save', filepath)
     else:  # if load_from_file is False, generate response df
         print('generating response df')
-        sdf = ophys_formatting.get_stimulus_response_df(dataset, data_type=data_type, event_type=event_type,
+        sdf = data_formatting.get_stimulus_response_df(dataset, data_type=data_type, event_type=event_type,
                                                 time_window=time_window, interpolate=interpolate,
                                                 output_sampling_rate=output_sampling_rate,
                                                 response_window_duration=response_window_duration)
@@ -735,7 +738,7 @@ def get_stimulus_response_df(dataset, time_window=[-3, 3.1], interpolate=True, o
     if 'extended_stimulus_presentations' in dir(dataset):
         stimulus_presentations = dataset.extended_stimulus_presentations.copy()
     else:
-        stimulus_presentations = behavior_formatting.get_annotated_stimulus_presentations(dataset, epoch_duration_mins=epoch_duration_mins)
+        stimulus_presentations = data_formatting.get_annotated_stimulus_presentations(dataset, epoch_duration_mins=epoch_duration_mins)
     sdf = sdf.merge(stimulus_presentations, on='stimulus_presentations_id')
     print(len(sdf), 'length of sdf AFTER merging with stim presentations')
     return sdf
