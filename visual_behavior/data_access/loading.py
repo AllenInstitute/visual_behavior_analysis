@@ -698,6 +698,7 @@ def get_stimulus_response_df(dataset, time_window=[-3, 3.1], interpolate=True, o
                 print('file exists:', )
                 print('loading response df from file for', ophys_experiment_id, data_type, event_type)
                 sdf = pd.read_hdf(filepath, key='df')
+                print('sdf loaded')
             except Exception as e:  # if it cant be loaded for whatever reason, create it and save it
                 print('stimulus_response_df does not exist or could not be loaded for', filepath)
                 print(e)
@@ -729,14 +730,14 @@ def get_stimulus_response_df(dataset, time_window=[-3, 3.1], interpolate=True, o
                                                 time_window=time_window, interpolate=interpolate,
                                                 output_sampling_rate=output_sampling_rate,
                                                 response_window_duration=response_window_duration)
-
+    print(len(sdf), 'length of sdf before merging with stim presentations')
     # if extended_stimulus_presentations is an attribute of the dataset object, use it, otherwise get regular stimulus_presentations
     if 'extended_stimulus_presentations' in dir(dataset):
         stimulus_presentations = dataset.extended_stimulus_presentations.copy()
     else:
         stimulus_presentations = behavior_formatting.get_annotated_stimulus_presentations(dataset, epoch_duration_mins=epoch_duration_mins)
     sdf = sdf.merge(stimulus_presentations, on='stimulus_presentations_id')
-
+    print(len(sdf), 'length of sdf AFTER merging with stim presentations')
     return sdf
 
 
