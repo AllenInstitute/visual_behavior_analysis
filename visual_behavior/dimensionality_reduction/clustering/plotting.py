@@ -620,12 +620,14 @@ def plot_within_cluster_correlations_all_cre(cluster_meta, n_clusters_cre, sort_
         utils.save_figure(fig, figsize, save_dir, folder, 'within_cluster_correlations_' + suffix)
 
 
-def plot_dropout_heatmap(cluster_meta, feature_matrix, cre_line, cluster_id, cbar=False,
+def plot_dropout_heatmap(cluster_meta, feature_matrix, cluster_id, cre_line=None, cbar=False,
                          abbreviate_features=False, abbreviate_experience=False,
                          cluster_size_in_title=True, small_fontsize=False, ax=None):
     """
-    Plots the average dropout score heatmap for a given cluster within a cre line
-    Labels plot with original_cluster_id
+    Plots the average dropout score heatmap for a given cluster
+    If cre_line is not None, will filter by cre line before computing average cluster dropout scores
+    if cluster_size_in_title is True, title will include the fraction of cells in that cluster relative to the full population
+    (full population is all cells in cluster_meta if cre_line is None, else full population will be all cells in that cre line)
 
     cluster_meta: dataframe with cell_specimen_id as index, cluster_id, cre_line and other metadata as columns
     feature_matrix: input to clustering - dataframe of dropout scores for features x experience levels,
@@ -640,12 +642,18 @@ def plot_dropout_heatmap(cluster_meta, feature_matrix, cre_line, cluster_id, cba
     else:
         vmin = 0
         cmap = 'Blues'
-    cre_csids = cluster_meta[(cluster_meta['cre_line'] == cre_line)].index.values
-    this_cluster_meta = cluster_meta[(cluster_meta['cluster_id'] == cluster_id) &
-                                     (cluster_meta['cre_line'] == cre_line)]
-    this_cluster_csids = this_cluster_meta.index.values
-    feature_matrix_cre = processing.get_feature_matrix_for_cre_line(feature_matrix, cluster_meta, cre_line)
-    mean_dropout_df = feature_matrix_cre.loc[this_cluster_csids].mean().unstack()
+    if cre_line is not None:
+        all_csids = cluster_meta[(cluster_meta['cre_line'] == cre_line)].index.values
+        this_cluster_meta = cluster_meta[(cluster_meta['cluster_id'] == cluster_id) &
+                                         (cluster_meta['cre_line'] == cre_line)]
+        this_cluster_csids = this_cluster_meta.index.values
+        feature_matrix = processing.get_feature_matrix_for_cre_line(feature_matrix, cluster_meta, cre_line)
+    else:
+        all_csids = cluster_meta.index.values
+        this_cluster_meta = cluster_meta[(cluster_meta['cluster_id'] == cluster_id)]
+        this_cluster_csids = this_cluster_meta.index.values
+
+    mean_dropout_df = feature_matrix.loc[this_cluster_csids].mean().unstack()
     features = processing.get_features_for_clustering()
     mean_dropout_df = mean_dropout_df.loc[features]  # order regressors in a specific order
 
@@ -654,15 +662,18 @@ def plot_dropout_heatmap(cluster_meta, feature_matrix, cre_line, cluster_id, cba
     ax = sns.heatmap(mean_dropout_df, cmap=cmap, vmin=vmin, vmax=1, ax=ax, cbar=cbar, cbar_kws={'label': 'coding score'})
     if cluster_size_in_title:
         # fraction is number of cells in this cluster vs all cells in this cre line
-        fraction_cre = len(this_cluster_csids) / float(len(cre_csids))
+        fraction_cre = len(this_cluster_csids) / float(len(all_csids))
         fraction = np.round(fraction_cre * 100, 1)
         # set title and labels
         ax.set_title('cluster ' + str(cluster_id) + '\n' + str(fraction) + '%, n=' + str(len(this_cluster_csids)))
     else:
-        # title is cre line abbreviation and cluster #
-        cell_type = processing.get_cell_type_for_cre_line(cre_line, cluster_meta)
-        cell_type_abbreviation = cell_type[:3]
-        ax.set_title(cell_type_abbreviation + ' cluster ' + str(cluster_id))
+        if cre_line is not None:
+            # title is cre line abbreviation and cluster #
+            cell_type = processing.get_cell_type_for_cre_line(cre_line, cluster_meta)
+            cell_type_abbreviation = cell_type[:3]
+            ax.set_title(cell_type_abbreviation + ' cluster ' + str(cluster_id))
+        else:
+            ax.set_title(' cluster ' + str(cluster_id))
     ax.set_yticks(np.arange(0.5, len(mean_dropout_df.index.values) + 0.5))
     if abbreviate_features:
         # set yticks to abbreviated feature labels
@@ -697,7 +708,7 @@ def plot_dropout_heatmaps_and_save_to_cell_examples_folders(cluster_meta, featur
             # plot each cluster separately
             figsize = (3, 2.5)
             fig, ax = plt.subplots(figsize=figsize)
-            ax = plot_dropout_heatmap(cluster_meta, feature_matrix, cre_line, cluster_id, ax=ax)
+            ax = plot_dropout_heatmap(cluster_meta, feature_matrix, cluster_id, cre_line, ax=ax)
             # save in same folder as matched cell examples for this cre line and cluster ID
             plot_save_dir = os.path.join(save_dir, 'matched_cell_examples', cre_line)
             if not os.path.exists(plot_save_dir):
@@ -740,7 +751,7 @@ def plot_dropout_heatmaps_for_clusters(cluster_meta, feature_matrix, sort_col='c
             # generate and label plot for original cluster_id
             original_cluster_id = cluster_meta[(cluster_meta.cre_line == cre_line) & (
                 cluster_meta[sort_col] == cluster_id)].original_cluster_id.unique()[0]
-            ax[i] = plot_dropout_heatmap(cluster_meta, feature_matrix, cre_line, original_cluster_id, ax=ax[i])
+            ax[i] = plot_dropout_heatmap(cluster_meta, feature_matrix, original_cluster_id, cre_line, ax=ax[i])
 
         plt.suptitle(get_cell_type_for_cre_line(cre_line, cluster_meta), x=0.51, y=.95, fontsize=16)
         plt.subplots_adjust(hspace=0.6, wspace=0.4)
@@ -1427,7 +1438,7 @@ def plot_dropout_heatmaps_for_clusters_sorted(cluster_meta, feature_matrix, clus
         for i, cluster_id in enumerate(clusters):
             # generate and label plot for original cluster_id
             #             original_cluster_id = cluster_meta[(cluster_meta.cre_line==cre_line)&(cluster_meta[sort_col]==cluster_id)].original_cluster_id.unique()[0]
-            ax[i] = plot_dropout_heatmap(cluster_meta, feature_matrix, cre_line, cluster_id, ax=ax[i])
+            ax[i] = plot_dropout_heatmap(cluster_meta, feature_matrix, cluster_id, cre_line, ax=ax[i])
 
         plt.suptitle(get_cell_type_for_cre_line(cre_line, cluster_meta), x=0.51, y=.95, fontsize=16)
         plt.subplots_adjust(hspace=0.6, wspace=0.4)
@@ -1660,7 +1671,7 @@ def plot_clusters_row(cluster_meta, feature_matrix, cre_line,
     ax = ax.ravel()
     for i, cluster_id in enumerate(cluster_ids):
         # plot mean dropout heatmap for this cluster
-        ax[i] = plot_dropout_heatmap(cluster_meta, feature_matrix, cre_line, cluster_id,
+        ax[i] = plot_dropout_heatmap(cluster_meta, feature_matrix, cluster_id, cre_line,
                                      abbreviate_experience=abbreviate_experience, abbreviate_features=True, ax=ax[i])
 
         # # population average for this cluster
@@ -1707,7 +1718,7 @@ def plot_clusters_column(cluster_meta, feature_matrix, cre_line,
     ax = ax.ravel()
     for i, cluster_id in enumerate(cluster_ids):
         # plot mean dropout heatmap for this cluster
-        ax[i] = plot_dropout_heatmap(cluster_meta, feature_matrix, cre_line, cluster_id,
+        ax[i] = plot_dropout_heatmap(cluster_meta, feature_matrix, cluster_id, cre_line,
                                      abbreviate_experience=True, abbreviate_features=True, ax=ax[i])
 
         # # population average for this cluster
@@ -1791,7 +1802,7 @@ def plot_clusters_stats_pop_avg_rows(cluster_meta, feature_matrix, multi_session
     ax = ax.ravel()
     for i, cluster_id in enumerate(cluster_ids):
         # plot mean dropout heatmap for this cluster
-        ax[i] = plot_dropout_heatmap(cluster_meta_cre, feature_matrix, cre_line, cluster_id, small_fontsize=True, ax=ax[i])
+        ax[i] = plot_dropout_heatmap(cluster_meta_cre, feature_matrix, cluster_id, cre_line, small_fontsize=True, ax=ax[i])
 
         # plot population averages per cluster
         ax[i + (n_clusters * 1)] = plot_population_average_response_for_cluster(cluster_mdf, cre_line, cluster_id, change, omitted,
@@ -1865,7 +1876,7 @@ def plot_cluster_data(cluster_meta, feature_matrix, cre_line, cluster_id, multi_
         cluster_size_in_title = True
     else:
         cluster_size_in_title = False
-    ax[0] = plot_dropout_heatmap(cluster_meta, feature_matrix, cre_line, cluster_id,
+    ax[0] = plot_dropout_heatmap(cluster_meta, feature_matrix, cluster_id, cre_line,
                                  abbreviate_features=abbreviate_features, abbreviate_experience=abbreviate_experience,
                                  small_fontsize=False, cluster_size_in_title=cluster_size_in_title, ax=ax[0])
 
