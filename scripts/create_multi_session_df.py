@@ -24,7 +24,7 @@ if __name__ == '__main__':
     time_window = [-2, 2.1]
     interpolate = True
     output_sampling_rate = 30
-    use_extended_stimulus_presentations = False
+    use_extended_stimulus_presentations = True
     epoch_duration_mins = 10
 
     # set up conditions to make multi session dfs for

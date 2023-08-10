@@ -161,7 +161,7 @@ def get_multi_session_df(project_code, session_number, conditions, data_type, ev
                     df = df[df.pre_change.isnull() == False]
                 # print(len(df), 'length of stimulus_response_df after filtering')
                 # get params for mean df creation from stimulus_response_df
-                output_sampling_rate = df.output_sampling_rate.unique()[0]
+                output_sampling_rate = df.output_sampling_rate.values[0]
                 print('generating mean response df')
                 mdf = ut.get_mean_df(df, conditions=conditions, frame_rate=output_sampling_rate,
                                      window_around_timepoint_seconds=time_window,
