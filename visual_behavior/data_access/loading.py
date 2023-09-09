@@ -97,10 +97,9 @@ def get_platform_analysis_cache_dir():
     This is the cache directory to use for all platform paper analysis
     This cache contains NWB files downloaded directly from AWS
     """
-    return '/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/platform_paper_cache'
-    # return r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\platform_paper_cache'
+    return r'/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/platform_paper_cache'
 
-
+  
 def get_production_cache_dir():
     """Get directory containing a manifest file that includes all VB production data, including failed experiments"""
     cache_dir = r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/2020_cache/production_cache'
