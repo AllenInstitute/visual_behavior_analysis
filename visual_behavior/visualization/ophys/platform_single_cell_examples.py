@@ -18,7 +18,7 @@ import visual_behavior_glm.GLM_params as glm_params
 
 # formatting
 sns.set_context('notebook', font_scale=1.5, rc={'lines.markeredgewidth': 2})
-sns.set_style('white', {'axes.spines.right': False, 'axes.spines.top': False})
+# sns.set_style('white', {'axes.spines.right': False, 'axes.spines.top': False})
 sns.set_palette('deep')
 
 

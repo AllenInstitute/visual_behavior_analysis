@@ -84,6 +84,15 @@ def convert_cre_line_to_cell_type(cre_line):
     return cell_type
 
 
+def get_abbreviated_cell_type(cre_line):
+    """
+    returns 3 letter cell type name (i.e. 'Exc', 'Sst', 'Vip')
+    :param cre_line:
+    :return:
+    """
+    return convert_cre_line_to_cell_type(cre_line)[:3]
+
+
 def get_experience_level_colors():
     """
     get color map corresponding to Familiar, Novel 1 and Novel >1

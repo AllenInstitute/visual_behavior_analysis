@@ -83,7 +83,7 @@ def plot_n_segmented_cells(multi_session_df, df_name, horizontal=True, save_dir=
 
 def plot_population_averages_for_conditions(multi_session_df, data_type, event_type, axes_column, hue_column,
                                             project_code=None, timestamps=None, palette=None, title=None, suptitle=None,
-                                            horizontal=True, xlim_seconds=None, interval_sec=1,
+                                            horizontal=True, xlim_seconds=None, interval_sec=1, legend=True,
                                             save_dir=None, folder=None, suffix='', ax=None):
     if palette is None:
         palette = utils.get_experience_level_colors()
@@ -186,7 +186,8 @@ def plot_population_averages_for_conditions(multi_session_df, data_type, event_t
             ax[0].set_ylabel(ylabel)
         else:
             ax[i].set_xlabel(xlabel)
-    # ax[0].legend(loc='upper right', fontsize='xx-small') # title='passive', title_fontsize='xx-small')
+    if legend:
+        ax[0].legend(loc='upper right', fontsize='x-small') # title='passive', title_fontsize='xx-small')
 
     if project_code:
         if suptitle is None:
@@ -1177,11 +1178,11 @@ def plot_response_heatmaps_for_conditions(multi_session_df, timestamps, data_typ
         for c, col in enumerate(col_conditions):
 
             if row == 'Excitatory':
-                vmax = 0.01
+                vmax = 0.005 #0.01
             elif row == 'Vip Inhibitory':
-                vmax = 0.02
+                vmax = 0.01#0.02
             elif row == 'Sst Inhibitory':
-                vmax = 0.03
+                vmax = 0.015#30.03
             else:
                 vmax = 0.02
 
@@ -1203,16 +1204,19 @@ def plot_response_heatmaps_for_conditions(multi_session_df, timestamps, data_typ
 
             ax[i] = plot_cell_response_heatmap(data, timestamps, vmax=vmax, xlabel=xlabel, cbar=cbar,
                                                microscope=microscope, ax=ax[i])
-            ax[i].set_title(row + '\n' + col)
+            ax[i].set_title(row + '\n' + str(col))
+            if col_condition == 'experience_level':
+                colors = utils.get_experience_level_colors()
+                ax[i].set_title(col, color=colors[c])
             # label y with total number of cells
             ax[i].set_yticks([0, n_cells])
             ax[i].set_yticklabels([0, n_cells], fontsize=12)
             # set xticks to every 1 second, assuming 30Hz traces
             ax[i].set_xticks(np.arange(0, len(timestamps), 30))  # assuming 30Hz traces
-            ax[i].set_xticklabels([int(t) for t in timestamps[::30]])
+            ax[i].set_xticklabels([t for t in timestamps[::30]])
             # set xlims according to input
             start_index = np.where(timestamps == xlim_seconds[0])[0][0]
-            end_index = np.where(timestamps == xlim_seconds[1])[0][0]
+            end_index = np.where(timestamps <= xlim_seconds[1])[0][-1]
             xlims = [start_index, end_index]
             ax[i].set_xlim(xlims)
             ax[i].set_ylabel('')
@@ -1221,7 +1225,10 @@ def plot_response_heatmaps_for_conditions(multi_session_df, timestamps, data_typ
                 ax[i].set_xlabel(xlabel)
             else:
                 ax[i].set_xlabel('')
+            sns.despine(ax=ax[i], top=False, right=False, left=False, bottom=False, offset=None, trim=False)
             i += 1
+
+
 
     for i in np.arange(0, (len(col_conditions) * len(row_conditions)), len(col_conditions)):
         ax[i].set_ylabel('cells')
