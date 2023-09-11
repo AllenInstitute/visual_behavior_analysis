@@ -492,7 +492,8 @@ def get_sync_data(lims_data, use_acq_trigger):
     # print(len(frames_2p))
     if lims_data.rig.values[0][0] == 'M':  # if Mesoscope
         roi_group = get_roi_group(lims_data)  # get roi_group order
-        frames_2p = frames_2p[roi_group::4]  # resample sync times
+        fov_nums = get_fov_nums(lims_data)
+        frames_2p = frames_2p[roi_group::fov_nums]  # resample sync times
     # print(len(frames_2p))
     logger.info('stimulus frames detected in sync: {}'.format(len(vsyncs)))
     logger.info('ophys frames detected in sync: {}'.format(len(frames_2p)))
@@ -543,7 +544,17 @@ def get_roi_group(lims_data):
             expt_id = int(group[plane]['experiment_id'])
             if expt_id == experiment_id:
                 expt_roi_group = i
-    return expt_roi_group
+                return expt_roi_group
+
+
+def get_fov_nums(lims_data):
+    ophys_session_dir = get_ophys_session_dir(lims_data)
+    import json
+    json_file = [file for file in os.listdir(ophys_session_dir) if ('SPLITTING' in file) and ('input.json' in file)]
+    json_path = os.path.join(ophys_session_dir, json_file[0])
+    with open(json_path, 'r') as w:
+        jin = json.load(w)
+    return len(jin['plane_groups'])
 
 
 def get_lims_id(lims_data):
