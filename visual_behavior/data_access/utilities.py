@@ -398,7 +398,14 @@ def get_sync_data(lims_data, use_acq_trigger):
     try:
         sync_dataset.get_rising_edges('2p_vsync')
     except ValueError:
-        sync_dataset.line_labels = ['2p_vsync', '', 'stim_vsync', '', 'photodiode', 'acq_trigger', '', '',
+        if 'beh_frame_received' in sync_dataset.line_labels: # rename new line labels to enable processing
+            sync_dataset.line_labels = ['2p_vsync', '', 'stim_vsync', '', 'photodiode', 'acq_trigger', '', '',
+                                        'beh_frame_received', 'eye_frame_received', 'face_frame_received',
+                                        '', '', '', '', '', '', 'stim_running_opto', 'stim_trial_opto', '', '',
+                                        'beh_cam_frame_readout', 'face_cam_frame_readout', '', '', 'eye_cam_frame_readout', '',
+                                        'beh_cam_exposing', 'face_cam_exposing', 'eye_cam_exposing', '', 'lick_sensor']
+        else: # old version of line labels
+            sync_dataset.line_labels = ['2p_vsync', '', 'stim_vsync', '', 'photodiode', 'acq_trigger', '', '',
                                     'behavior_monitoring', 'eye_tracking', '', '', '', '', '', '', '', '', '', '', '',
                                     '', '', '', '', '', '', '', '', '', '', 'lick_sensor']
         sync_dataset.meta_data['line_labels'] = sync_dataset.line_labels
@@ -451,12 +458,20 @@ def get_sync_data(lims_data, use_acq_trigger):
         eye_tracking = sync_dataset.get_rising_edges('cam2') / sample_freq
     elif 'eye_tracking' in meta_data['line_labels']:
         eye_tracking = sync_dataset.get_rising_edges('eye_tracking') / sample_freq
+    elif 'eye_cam_frame_readout' in meta_data['line_labels']:
+        eye_tracking = sync_dataset.get_rising_edges('eye_cam_frame_readout') / sample_freq
     if 'cam1_exposure' in meta_data['line_labels']:
         behavior_monitoring = sync_dataset.get_rising_edges('cam1_exposure') / sample_freq
     elif 'cam1' in meta_data['line_labels']:
         behavior_monitoring = sync_dataset.get_rising_edges('cam1') / sample_freq
     elif 'behavior_monitoring' in meta_data['line_labels']:
         behavior_monitoring = sync_dataset.get_rising_edges('behavior_monitoring') / sample_freq
+    elif 'beh_cam_frame_readout' in meta_data['line_labels']:
+        behavior_monitoring = sync_dataset.get_rising_edges('beh_cam_frame_readout') / sample_freq
+    if 'face_cam_frame_readout' in meta_data['line_labels']:
+        face_monitoring = sync_dataset.get_rising_edges('face_cam_frame_readout') / sample_freq
+    else:
+        face_monitoring = []
     # some experiments have 2P frames prior to stimulus start - restrict to timestamps after trigger for 2P6 only
     if use_acq_trigger:
         frames_2p = frames_2p[frames_2p > trigger[0]]
@@ -474,12 +489,14 @@ def get_sync_data(lims_data, use_acq_trigger):
     times_trigger = {'timestamps': trigger}
     times_eye_tracking = {'timestamps': eye_tracking}
     times_behavior_monitoring = {'timestamps': behavior_monitoring}
+    times_face_monitoring = {'timestamps': face_monitoring}
     times_stim_photodiode = {'timestamps': stim_photodiode}
     sync_data = {'ophys_frames': times_2p,
                  'stimulus_frames': times_vsync,
                  'lick_times': times_lick,
                  'eye_tracking': times_eye_tracking,
                  'behavior_monitoring': times_behavior_monitoring,
+                 'face_monitoring': times_face_monitoring,
                  'stim_photodiode': times_stim_photodiode,
                  'ophys_trigger': times_trigger,
                  }
