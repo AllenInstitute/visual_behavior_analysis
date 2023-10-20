@@ -159,9 +159,9 @@ def plot_feature_matrix_sorted(feature_matrix, cluster_meta, sort_col='cluster_i
         # get cell ids for this cre line in sorted order
         if resort_by_size:
             cluster_size_order = cluster_meta_cre['cluster_id'].value_counts().index.values
-            cluster_meta_cre['new_cluster_id'] = [np.where(cluster_size_order == label)[0][0] for label in
+            cluster_meta_cre['size_sort_cluster_id'] = [np.where(cluster_size_order == label)[0][0] for label in
                                                   cluster_meta_cre.cluster_id.values]
-            sort_col = 'new_cluster_id'
+            sort_col = 'size_sort_cluster_id'
         sorted_cluster_meta_cre = cluster_meta_cre.sort_values(by=sort_col)
         cell_order = sorted_cluster_meta_cre.index.values
         label_values = sorted_cluster_meta_cre[sort_col].values
@@ -432,7 +432,7 @@ def plot_coclustering_matrix_and_dendrograms(coclustering_matrices, cre_line, cl
 
 
 def plot_coclustering_matrix_sorted_by_cluster_size(coclustering_matrices, cluster_meta, cre_line,
-                                                    save_dir=None, folder=None, ax=None):
+                                                    save_dir=None, folder=None, suffix='', ax=None):
     """
     plot co-clustering matrix sorted by cluster size for a given cre_line
     will save plot if save_dir and folder are provided (and ax is None)
@@ -447,22 +447,25 @@ def plot_coclustering_matrix_sorted_by_cluster_size(coclustering_matrices, clust
     sorted_coclustering_matrix = sorted_coclustering_matrix[sorted_cell_specimen_ids]
 
     if ax is None:
-        figsize = (5, 5)
+        figsize = (8, 8)
         fig, ax = plt.subplots(figsize=figsize)
     ax = sns.heatmap(sorted_coclustering_matrix, cmap="Greys", ax=ax, square=True,
                      cbar=True, cbar_kws={"drawedges": False, "label": 'probability of\nco-clustering', 'shrink': 0.7, },)
-    ax.set_title(processing.get_cre_line_map(cre_line))
+    if cre_line == 'all':
+        ax.set_title('all cell types clustered')
+    else:
+        ax.set_title(processing.get_cre_line_map(cre_line))
     ax.set_title('')
     ax.set_yticks((0, sorted_coclustering_matrix.shape[0]))
     ax.set_yticklabels((0, sorted_coclustering_matrix.shape[0]), fontsize=20)
     ax.set_ylabel('cells', fontsize=20)
     ax.set_xticks((0, sorted_coclustering_matrix.shape[0]))
-    ax.set_xticklabels('')
+    ax.set_xticklabels((0, sorted_coclustering_matrix.shape[0]), fontsize=20, rotation=0)
     ax.set_xlabel('')
     sns.despine(ax=ax, bottom=False, top=False, left=False, right=False)
     if save_dir:
-        filename = 'coclustering_matrix_sorted_by_cluster_size_' + cre_line.split('-')[0]
-        utils.save_figure(fig, figsize, save_dir, folder, filename, formats=['.png', '.pdf'])  # saving to PDF is super slow)
+        filename = 'coclustering_matrix_sorted_by_cluster_size_' + cre_line.split('-')[0]+suffix
+        utils.save_figure(fig, figsize, save_dir, folder, filename, formats=['.png'])  # saving to PDF is super slow)
     return ax
 
 
@@ -565,17 +568,19 @@ def plot_cluster_density(df_dropouts=None, labels_list=None, cluster_corrs=None,
     return ax
 
 
-def plot_within_cluster_correlations_for_cre_line(cluster_meta, cre_line, sort_order=None, suffix='_cluster_id_sort',
+def plot_within_cluster_correlations(cluster_meta, sort_order=None, spearman=False, suffix='_cluster_id_sort',
                                                   save_dir=None, folder=None, ax=None):
     """
-    plot distribution of within cluster correlations for a given cre line
+    plot distribution of within cluster correlations for each cluster_id in cluster_meta
+    cluster_meta must include one of these columns: 'within_cluster_correlation', 'within_cluster_correlation_s', 'within_cluster_correlation_p'
+    if spearman=False, will load pearson corr values, else spearman
+    if the relevant column in cluster_meta is 'within_cluster_correlation', it is unknown whether spearman or pearson was used, but the correlation values will still be plotted
 
     sort_order: can be 'cluster_id' or 'manual_sort_order'
     """
 
     # get feature_matrix for this cre line
-    cluster_meta_cre = cluster_meta[cluster_meta.cre_line == cre_line]
-    cluster_ids = np.sort(cluster_meta_cre.cluster_id.unique())
+    cluster_ids = np.sort(cluster_meta.cluster_id.unique())
     n_clusters = len(cluster_ids)
     # create fig proportional to number clusters
     if ax is None:
@@ -585,25 +590,45 @@ def plot_within_cluster_correlations_for_cre_line(cluster_meta, cre_line, sort_o
     if sort_order is None:
         order = cluster_ids
     else:
-        order = sort_order[cre_line]
+        order = sort_order
+    if 'within_cluster_correlation' in cluster_meta.keys():
+        y = 'within_cluster_correlation'
+        title = 'correlation'
+    elif spearman:
+        y = 'within_cluster_correlation_s'
+        suffix = suffix+'_spearman'
+        title = 'spearman\ncorrelation'
+    elif not spearman:
+        y = 'within_cluster_correlation_p'
+        suffix = suffix + '_pearson'
+        title = 'pearson\ncorrelation'
+        title = 'within cluster correlation'
+    else:
+        print('there is no "within cluster correlation" column in cluster_meta')
+
     # violin or boxplot of cluster correlation values
-    ax = sns.boxplot(data=cluster_meta_cre, x='cluster_id', y='within_cluster_correlation',
+    ax = sns.boxplot(data=cluster_meta, x='cluster_id', y=y,
                      order=order, ax=ax, color='white', width=0.5)
     # add line at 0
     ax.axhline(y=0, xmin=0, xmax=1, color='grey', linestyle='--')
-    ax.set_title(get_cell_type_for_cre_line(cre_line, cluster_meta))
+    ax.set_title(title)
     ax.set_ylabel('correlation')
     ax.set_xlabel('cluster #')
     ax.set_ylim(-1.1, 1.1)
     if save_dir:
         utils.save_figure(fig, figsize, save_dir, folder,
-                          'within_cluster_correlations_' + cre_line.split('-')[0] + suffix)
+                          'within_cluster_correlations' + suffix)
     return ax
 
 
-def plot_within_cluster_correlations_all_cre(cluster_meta, n_clusters_cre, sort_order=None, suffix='_cluster_id_sort', save_dir=None, folder=None):
+def plot_within_cluster_correlations_all_cre(cluster_meta, n_clusters_cre,  sort_order=None, spearman=False, suffix='_cluster_id_sort', save_dir=None, folder=None):
     """
     plot distribution of within cluster correlations for all cre lines, sorted by sort_order
+
+    cluster_meta must include one of these columns: 'within_cluster_correlation', 'within_cluster_correlation_s', 'within_cluster_correlation_p'
+    if spearman=False, will load pearson corr values, else spearman
+    if the relevant column in cluster_meta is 'within_cluster_correlation', it is unknown whether spearman or pearson was used, but the correlation values will still be plotted
+
 
     sort_order: dict with cre_lines as keys, order of cluster to sort by as values
     """
@@ -613,7 +638,9 @@ def plot_within_cluster_correlations_all_cre(cluster_meta, n_clusters_cre, sort_
     figsize = (12, 3)
     fig, ax = plt.subplots(1, 3, figsize=figsize, gridspec_kw={'width_ratios': n_clusters})
     for i, cre_line in enumerate(cre_lines):
-        ax[i] = plot_within_cluster_correlations_for_cre_line(cluster_meta, cre_line, sort_order, ax=ax[i])
+        cluster_meta_cre = cluster_meta[cluster_meta.cre_line==cre_line]
+        ax[i] = plot_within_cluster_correlations_for_cre_line(cluster_meta_cre, cre_line, sort_order, spearman=spearman, ax=ax[i])
+        ax[i].set_title(get_cell_type_for_cre_line(cre_line, cluster_meta))
 
     fig.tight_layout()
     if save_dir:
@@ -658,7 +685,7 @@ def plot_dropout_heatmap(cluster_meta, feature_matrix, cluster_id, cre_line=None
     mean_dropout_df = mean_dropout_df.loc[features]  # order regressors in a specific order
 
     if ax is None:
-        fig, ax = plt.subplots()
+        fig, ax = plt.subplots(figsize=(2.5,2))
     ax = sns.heatmap(mean_dropout_df, cmap=cmap, vmin=vmin, vmax=1, ax=ax, cbar=cbar, cbar_kws={'label': 'coding score'})
     if cluster_size_in_title:
         # fraction is number of cells in this cluster vs all cells in this cre line
@@ -748,10 +775,10 @@ def plot_dropout_heatmaps_for_clusters(cluster_meta, feature_matrix, sort_col='c
 
         # loop through clusters in sorted order
         for i, cluster_id in enumerate(clusters):
-            # generate and label plot for original cluster_id
-            original_cluster_id = cluster_meta[(cluster_meta.cre_line == cre_line) & (
-                cluster_meta[sort_col] == cluster_id)].original_cluster_id.unique()[0]
-            ax[i] = plot_dropout_heatmap(cluster_meta, feature_matrix, original_cluster_id, cre_line, ax=ax[i])
+            # # generate and label plot for original cluster_id
+            # original_cluster_id = cluster_meta[(cluster_meta.cre_line == cre_line) & (
+            #     cluster_meta[sort_col] == cluster_id)].original_cluster_id.unique()[0]
+            ax[i] = plot_dropout_heatmap(cluster_meta, feature_matrix, cluster_id, cre_line, ax=ax[i])
 
         plt.suptitle(get_cell_type_for_cre_line(cre_line, cluster_meta), x=0.51, y=.95, fontsize=16)
         plt.subplots_adjust(hspace=0.6, wspace=0.4)

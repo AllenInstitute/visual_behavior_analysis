@@ -101,7 +101,7 @@ def plot_population_averages_for_conditions(multi_session_df, data_type, event_t
     if 'dff' in data_type:
         ylabel = 'dF/F'
     elif 'events' in data_type:
-        ylabel = 'population response'
+        ylabel = 'response'
     elif 'pupil' in data_type:
         ylabel = 'pupil width\n(normalized)'
     elif 'running' in data_type:
@@ -113,7 +113,7 @@ def plot_population_averages_for_conditions(multi_session_df, data_type, event_t
     if event_type == 'omissions':
         omitted = True
         change = False
-        xlabel = 'time after omission (s)'
+        xlabel = 'time relative to omission (s)'
     elif event_type == 'changes':
         omitted = False
         change = True
@@ -141,7 +141,7 @@ def plot_population_averages_for_conditions(multi_session_df, data_type, event_t
     if ax is None:
         format_fig = True
         if horizontal:
-            figsize = (4.5 * n_axes_conditions, 4)
+            figsize = (3 * n_axes_conditions, 2)
             fig, ax = plt.subplots(1, n_axes_conditions, figsize=figsize, sharey=False)
         else:
             figsize = (5, 3.5 * n_axes_conditions)
@@ -179,6 +179,7 @@ def plot_population_averages_for_conditions(multi_session_df, data_type, event_t
             else:
                 ax[i].set_ylabel(ylabel)
                 ax[i].set_xlabel('')
+            # ax[i].set_ylim(ymin=0, ymax=20)
             # except:
             #     print('no data for', axis, hue)
     if format_fig:
@@ -187,7 +188,7 @@ def plot_population_averages_for_conditions(multi_session_df, data_type, event_t
         else:
             ax[i].set_xlabel(xlabel)
     if legend:
-        ax[0].legend(loc='upper right', fontsize='x-small') # title='passive', title_fontsize='xx-small')
+        ax[0].legend(loc='upper center', fontsize='x-small') # title='passive', title_fontsize='xx-small')
 
     if project_code:
         if suptitle is None:
@@ -196,10 +197,9 @@ def plot_population_averages_for_conditions(multi_session_df, data_type, event_t
         if suptitle is None:
             suptitle = 'population average response - ' + data_type + '_' + event_type
     if format_fig:
-        plt.suptitle(suptitle, x=0.52, y=1.04, fontsize=18)
-        fig.tight_layout()
+        plt.suptitle(suptitle, x=0.52, y=1.3, fontsize=18)
         if horizontal:
-            fig.subplots_adjust(wspace=0.3)
+            fig.subplots_adjust(wspace=0.4)
 
     if save_dir:
         fig_title = 'population_average_' + axes_column + '_' + hue_column + suffix
@@ -1877,7 +1877,7 @@ def plot_behavior_metric_by_experience(stats, metric, title='', ylabel='', ylims
 
     ax = sns.pointplot(data=data, x='experience_level', y=metric, order=experience_levels,
                        orient='v', palette=colors, ax=ax)
-    ax.set_xticklabels(new_experience_levels, rotation=90)
+    ax.set_xticklabels(new_experience_levels, rotation=45)
     ax.set_xlabel('')
     ax.set_ylabel('')
     ax.set_title(title)
@@ -1887,10 +1887,10 @@ def plot_behavior_metric_by_experience(stats, metric, title='', ylabel='', ylims
     # add stats to plot if only looking at experience levels
     # stats dataframe to save
     tukey = pd.DataFrame()
-    ax, tukey_table = add_stats_to_plot(data, metric, 'white', ax, ymax=ymax)
+    # ax, tukey_table = add_stats_to_plot(data, metric, 'white', ax, ymax=ymax)
     # aggregate stats
-    tukey_table['metric'] = metric
-    tukey = pd.concat([tukey, tukey_table])
+    # tukey_table['metric'] = metric
+    # tukey = pd.concat([tukey, tukey_table])
 
     ax.set_ylim(ymin=ymin)
 
@@ -1898,8 +1898,8 @@ def plot_behavior_metric_by_experience(stats, metric, title='', ylabel='', ylims
         utils.save_figure(fig, figsize, save_dir, folder, metric + suffix)
     stats_filename = metric + '_stats' + suffix
     try:
-        print('saving_stats')
-        tukey.to_csv(os.path.join(save_dir, folder, stats_filename + '_tukey.csv'))
+        # print('saving_stats')
+        # tukey.to_csv(os.path.join(save_dir, folder, stats_filename + '_tukey.csv'))
         # save stats
         cols_to_groupby = ['experience_level']
         stats = get_descriptive_stats_for_metric(data, metric, cols_to_groupby)
@@ -2009,7 +2009,7 @@ def plot_prior_exposures_to_image_set_before_platform_ophys_sessions(platform_ex
     exposures = paper_ophys_behavior_sessions.set_index(['experience_level', 'mouse_id'])[['prior_exposures_to_image_set']].reset_index()
 
     if ax is None:
-        figsize = (2.5, 3)
+        figsize = (2, 3)
         fig, ax = plt.subplots(figsize=figsize)
 
     colors = utils.get_experience_level_colors()
@@ -2024,8 +2024,8 @@ def plot_prior_exposures_to_image_set_before_platform_ophys_sessions(platform_ex
     stats.columns = stats.columns.droplevel(0)
 
     xticklabels = utils.get_new_experience_levels()
-    ax.set_xticklabels(xticklabels, rotation=90,)
-    ax.set_title('total stimulus exposure')
+    ax.set_xticklabels(xticklabels, rotation=45)
+    ax.set_title('stimulus exposure')
 
     for i, experience_level in enumerate(experience_levels):
         y = int(np.round(stats.loc[experience_level]['mean'], 0))

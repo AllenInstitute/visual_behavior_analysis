@@ -87,6 +87,10 @@ def get_flagged_ophys_experiment_ids():
     # ophys_session_id = 875259383 # SDK#2202 incorrectly shown OPHYS_6_images_A, but
     # this session no longer shows up in the ophys experiment table for some reason
 
+    # oeids = [920288855, 920288849, 920288853, 920288851, 920288845, 920288843,
+    #          932372699, 932372701, 932372707, 932372711, 932372705,
+    #          856938751]
+
     return oeids
 
 #  RELEVANT DIRECTORIES
@@ -97,7 +101,8 @@ def get_platform_analysis_cache_dir():
     This is the cache directory to use for all platform paper analysis
     This cache contains NWB files downloaded directly from AWS
     """
-    return r'/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/platform_paper_cache'
+    # return '/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/platform_paper_cache'
+    return r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\platform_paper_cache'
 
   
 def get_production_cache_dir():
@@ -256,6 +261,15 @@ def get_platform_paper_experiment_table(add_extra_columns=True, limit_to_closest
     cache = bpc.from_s3_cache(cache_dir=cache_dir)
     experiment_table = cache.get_ophys_experiment_table()
 
+    # REMOVE PROBLEMATIC SESSIONS
+    if remove_flagged:
+        flagged_oeids = get_flagged_ophys_experiment_ids()
+        print('removing', len(flagged_oeids), 'problematic experiments')
+        experiment_table = experiment_table.drop(flagged_oeids, axis=0)
+
+    # bad_session_ids = [931326814, 919888953]
+    # experiment_table = experiment_table[experiment_table.ophys_session_id.isin(bad_session_ids) == False]
+
     # remove 4x2
     if not include_4x2_data:
         experiment_table = experiment_table[(experiment_table.project_code != 'VisualBehaviorMultiscope4areasx2d')].copy()
@@ -289,11 +303,6 @@ def get_platform_paper_experiment_table(add_extra_columns=True, limit_to_closest
         # add column that has a combination of experience level and exposure to omissions for familiar sessions,
         # or exposure to image set for novel sessions
         experiment_table = utilities.add_experience_exposure_column(experiment_table)
-
-    if remove_flagged:
-        # Remove flagged ophys experiment ids
-        flagged_oeids = get_flagged_ophys_experiment_ids()
-        experiment_table = experiment_table.drop(flagged_oeids, axis=0)
 
     if limit_to_closest_active:
         experiment_table = utilities.limit_to_last_familiar_second_novel_active(experiment_table)
@@ -394,6 +403,10 @@ def get_filtered_ophys_experiment_table(include_failed_data=False, release_data_
         print('getting experiment table for March and August releases from lims')
         cache = bpc.from_lims(data_release_date=['2021-03-25', '2021-08-12'])
         experiments = cache.get_ophys_experiment_table()
+
+    bad_session_ids = [931326814, 919888953]  # 931326814 is an OPHYS_2_passive that was actually novel, 919888953 is an OPHYS_3 that appears to have been novel
+    experiments = experiments[experiments.ophys_session_id.isin(bad_session_ids) == False]
+
     if not release_data_only:
         if from_cached_file:
             if 'filtered_ophys_experiment_table.csv' in os.listdir(get_production_cache_dir()):
@@ -3321,11 +3334,15 @@ def get_cell_table(platform_paper_only=True, add_extra_columns=True, limit_to_cl
     return cell_table
 
 
+
 def get_matched_cells_table(cells_table):
     """
     takes cells_table from sdk and limits to last familiar and second novel active sessions,
     container and cells matched in all experience levels
     """
+    # remove bad experiments
+    # bad_experiment_ids = get_flagged_ophys_experiment_ids()
+    # cells_table = cells_table[cells_table.ophys_experiment_id.isin(bad_experiment_ids) == False]
     # limit to cells matched in closest familiar and novel active
     cells_table = utilities.limit_to_last_familiar_second_novel_active(cells_table)
     cells_table = utilities.limit_to_containers_with_all_experience_levels(cells_table)

@@ -470,6 +470,26 @@ def plot_mean_trace(traces, timestamps, ylabel='dF/F', legend_label=None, color=
     return ax
 
 
+def plot_mean_trace_from_mean_df(cell_data, ylabel='dF/F', xlabel='time (s)', legend_label=None, color='k', interval_sec=1,
+                                 xlims=[-4, 4],  ax=None, plot_sem=True, width=3):
+
+    xlim = [0, xlims[1] + np.abs(xlims[0])]
+    if ax is None:
+        fig, ax = plt.subplots()
+    trace = cell_data.mean_trace.values[0]
+    timestamps = cell_data.trace_timestamps.values[0]
+    sem = cell_data.sem_trace.values[0]
+    ax.plot(timestamps, trace, label=legend_label, linewidth=width, color=color)
+    if plot_sem:
+        ax.fill_between(timestamps, trace + sem, trace - sem, alpha=0.5, color=color)
+    ax.set_xticks(np.arange(int(timestamps[0]), int(timestamps[-1]) + 1, interval_sec))
+    ax.set_xlim(xlims)
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+    sns.despine(ax=ax)
+    return ax
+
+
 def plot_stimulus_response_df_trace(stimulus_response_df, time_window=[-1, 1], change=True, omitted=False,
                                     ylabel=None, legend_label=None, title=None, color='k', ax=None):
     """
