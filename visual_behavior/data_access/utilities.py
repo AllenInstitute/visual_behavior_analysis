@@ -1676,7 +1676,10 @@ def dateformat(exp_date):
     reformat date of acquisition for accurate sorting by date
     """
     from datetime import datetime
-    date = int(datetime.strptime(exp_date, '%Y-%m-%d  %H:%M:%S.%f').strftime('%Y%m%d'))
+    if type(exp_date) is str:
+        date = int(datetime.strptime(exp_date, '%Y-%m-%d  %H:%M:%S.%f').strftime('%Y%m%d'))
+    else:
+        date = exp_date
     return date
 
 
