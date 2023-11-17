@@ -14,6 +14,7 @@ import glob
 import h5py  # for loading motion corrected movie
 import numpy as np
 import pandas as pd
+from tqdm import tqdm
 import configparser as configp  # for parsing scientifica ini files
 config = configp.ConfigParser()
 
@@ -2866,7 +2867,7 @@ def get_file_name_for_multi_session_df(data_type, event_type, project_code, sess
     return filename
 
 
-def load_multi_session_df(data_type, event_type, conditions, interpolate=True, output_sampling_rate=30, epoch_duration_mins=None):
+def load_multi_session_df(data_type, event_type, conditions, interpolate=True, output_sampling_rate=30, epoch_duration_mins=None, exclude_passive_sessions=True):
     """
     Loops through all experiments in the provided experiments_table and loads pre-generated dataframes containing
     trial averaged responses for each cell in each session, for the provided set of conditions, data_type, and event_type.
@@ -2882,6 +2883,11 @@ def load_multi_session_df(data_type, event_type, conditions, interpolate=True, o
     cache_dir = get_platform_analysis_cache_dir()
     cache = bpc.from_s3_cache(cache_dir=cache_dir)
     experiments_table = cache.get_ophys_experiment_table()
+    if exclude_passive_sessions:
+        session_types = experiments_table.session_type.unique()
+        filtered_session_types = [s for s in session_types if 'passive' not in s]
+    else:
+        filtered_session_types = experiments_table.session_type.unique()
 
     multi_session_df_dir = get_multi_session_df_dir(interpolate=interpolate, output_sampling_rate=output_sampling_rate, event_type=event_type)
     print('loading files from', multi_session_df_dir)
@@ -2892,7 +2898,7 @@ def load_multi_session_df(data_type, event_type, conditions, interpolate=True, o
         experiments = experiments_table[(experiments_table.project_code == project_code)]
         if project_code == 'VisualBehaviorMultiscope':
             experiments = experiments[experiments.session_type != 'OPHYS_2_images_B_passive']
-        for session_type in np.sort(experiments.session_type.unique()):
+        for session_type in tqdm(np.sort(filtered_session_types)):
             try:
                 filename = get_file_name_for_multi_session_df(data_type, event_type, project_code, session_type, conditions,
                                                               epoch_duration_mins)
@@ -3415,11 +3421,11 @@ def check_whether_multi_session_df_has_all_platform_experiments(multi_session_df
 
 
 def get_multi_session_df_for_conditions(data_type, event_type, conditions, inclusion_criteria='platform_experiment_table',
-                                        interpolate=True, output_sampling_rate=30, epoch_duration_mins=None):
+                                        interpolate=True, output_sampling_rate=30, epoch_duration_mins=None, exclude_passive_sessions=False):
 
     multi_session_df = load_multi_session_df(data_type=data_type, event_type=event_type, conditions=conditions,
                                              interpolate=interpolate, output_sampling_rate=output_sampling_rate,
-                                             epoch_duration_mins=epoch_duration_mins)
+                                             epoch_duration_mins=epoch_duration_mins, exclude_passive_sessions=exclude_passive_sessions)
     print('there are', len(multi_session_df.ophys_experiment_id.unique()), 'experiments in the full multi_session_df')
 
     #     missing_expts = loading.check_whether_multi_session_df_has_all_platform_experiments(multi_session_df)

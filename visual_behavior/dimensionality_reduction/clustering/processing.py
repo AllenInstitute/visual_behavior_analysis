@@ -1482,7 +1482,7 @@ def get_cell_metrics(cluster_meta, results_pivoted):
     return cell_metrics
 
 
-def get_cluster_metrics(cluster_meta, feature_matrix, results_pivoted):
+def get_cluster_metrics(cluster_meta, feature_matrix, results_pivoted, cre=None):
     """
     computes metrics for each cluster, including experience modulation, feature selectivity, etc
     """
@@ -1495,7 +1495,10 @@ def get_cluster_metrics(cluster_meta, feature_matrix, results_pivoted):
     cluster_metrics = pd.DataFrame()
     for cre_line in cre_lines:
         # get cell specimen ids for this cre line
-        cre_cell_specimen_ids = cluster_meta[cluster_meta.cre_line == cre_line].index.values
+        if cre is None:
+            cre_cell_specimen_ids = cluster_meta.index.values
+        else:
+            cre_cell_specimen_ids = cluster_meta[cluster_meta.cre_line == cre_line].index.values
         # get cluster labels dataframe for this cre line
         cre_cluster_ids = cluster_meta.loc[cre_cell_specimen_ids]
         # get unique cluster labels for this cre line
