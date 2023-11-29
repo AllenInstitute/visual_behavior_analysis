@@ -941,6 +941,7 @@ def get_general_info_for_ophys_container_id(ophys_container_id):
 
 
 def get_isi_info(isi_experiment_id: int):
+    isi_experiment_id = int(isi_experiment_id)
     conditions.validate_id_type(isi_experiment_id, "isi_experiment_id")
 
     query = '''
