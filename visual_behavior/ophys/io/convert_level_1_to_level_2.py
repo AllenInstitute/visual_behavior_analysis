@@ -48,9 +48,11 @@ def save_dataframe_as_h5(df, name, analysis_dir):
 def get_cache_dir(cache_dir=None):
     if not cache_dir:
         if platform.system() == 'Linux':
-            cache_dir = r'/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/visual_behavior_production_analysis'
+            cache_dir = r'/allen/programs/mindscope/workgroups/learning/learning_mFISH_production_analysis'
+            # cache_dir = r'/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/visual_behavior_production_analysis'
         else:
-            cache_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\visual_behavior_production_analysis'
+            cache_dir = r'\\allen\programs\mindscope\workgroups\learning\learning_mFISH_production_analysis'
+            # cache_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\visual_behavior_production_analysis'
         return cache_dir
     else:
         return cache_dir
@@ -908,7 +910,7 @@ def convert_level_1_to_level_2(lims_id, cache_dir=None, plot_roi_validation=Fals
 
     analysis_dir = get_analysis_dir(lims_data, cache_on_lims_data=True, cache_dir=cache_dir)
 
-    timestamps = get_timestamps(lims_data, analysis_dir)
+    timestamps = get_timestamps(lims_data)
 
     pkl = get_pkl(lims_data)
     stimulus_timestamps = get_stimulus_timestamps(timestamps)
