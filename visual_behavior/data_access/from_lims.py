@@ -939,22 +939,23 @@ def get_general_info_for_ophys_container_id(ophys_container_id):
     general_info = lims_utils.correct_general_info_filepaths(general_info)
     return general_info
 
-def get_isi_info(isi_experiment_id:int):
+
+def get_isi_info(isi_experiment_id: int):
     conditions.validate_id_type(isi_experiment_id, "isi_experiment_id")
-    
+
     query = '''
-    SELECT 
+    SELECT
     isi.id as isi_experiment_id,
     isi.workflow_state as lims_workflow_state,
     projects.code AS project,
     isi.date_of_acquisition
-    
+
     FROM isi_experiments isi
     JOIN projects ON projects.id = isi.project_id
-    
+
     WHERE isi.id = {}
     '''.format(isi_experiment_id)
-    
+
     isi_info = mixin.select(query)
     return isi_info
 
