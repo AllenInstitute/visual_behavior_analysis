@@ -488,7 +488,7 @@ def get_cell_metadata_for_feature_matrix(feature_matrix, cells_table):
     """
     # get metadata for cells in matched cells df
     cell_metadata = cells_table[cells_table.cell_specimen_id.isin(feature_matrix.index.values)]
-    cell_metadata = cell_metadata.drop_duplicates(subset='cell_specimen_id')
+    cell_metadata = cell_metadata.drop_duplicates(subset=['cell_specimen_id'])
     cell_metadata = cell_metadata.set_index('cell_specimen_id')
     print(len(cell_metadata), 'cells in cell_metadata for feature_matrix')
     return cell_metadata
@@ -1525,6 +1525,39 @@ def get_cluster_metrics(cluster_meta, feature_matrix, results_pivoted, cre=None)
     n_cells = cluster_meta.groupby(['cre_line', 'cluster_id']).count()[['labels']].rename(
         columns={'labels': 'n_cells_cluster'})
     cluster_metrics = cluster_metrics.merge(n_cells, on=['cre_line', 'cluster_id'])
+
+    return cluster_metrics
+
+
+def get_cluster_metrics_all_cre(cluster_meta, feature_matrix, results_pivoted):
+    """
+    computes metrics for each cluster, including experience modulation, feature selectivity, etc
+    """
+    # cell_metrics = processing.get_cell_metrics(cluster_meta, results_pivoted)
+    cluster_metrics = pd.DataFrame()
+    # get cell specimen ids
+    cell_specimen_ids = cluster_meta.index.values
+    # get unique cluster labels
+    cluster_labels = np.sort(cluster_meta.cluster_id.unique())
+    for i, cluster_id in enumerate(cluster_labels):
+        # get cell specimen ids in this cluster
+        this_cluster_csids = cluster_meta[cluster_meta['cluster_id'] == cluster_id].index.values
+        # get dropout scores for cells in this cluster in this cre line
+        mean_dropout_df = np.abs(feature_matrix.loc[this_cluster_csids].mean().unstack())
+        exp_levels = np.sort(mean_dropout_df.columns)
+        stats = get_coding_metrics(index_dropouts=mean_dropout_df.T, index_value=cluster_id,
+                                    index_name='cluster_id')
+        fraction_cells = len(this_cluster_csids) / float(len(cell_specimen_ids))
+        stats['fraction_cells'] = fraction_cells
+        stats['F_max'] = mean_dropout_df[exp_levels[0]].max()
+        stats['N1_max'] = mean_dropout_df[exp_levels[1]].max()
+        stats['N2_max'] = mean_dropout_df[exp_levels[2]].max()
+        stats['abs_max'] = mean_dropout_df.max().max()
+        cluster_metrics = pd.concat([cluster_metrics, stats])
+    cluster_metrics = cluster_metrics.reset_index()
+    print(cluster_metrics.keys())
+    n_cells = cluster_meta.groupby(['cluster_id']).count()[['labels']].rename(columns={'labels': 'n_cells_cluster'})
+    cluster_metrics = cluster_metrics.merge(n_cells, on=['cluster_id'])
 
     return cluster_metrics
 
