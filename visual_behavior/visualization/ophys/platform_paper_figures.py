@@ -13,6 +13,7 @@ import visual_behavior.data_access.loading as loading
 import visual_behavior.data_access.utilities as utilities
 import visual_behavior.visualization.ophys.summary_figures as sf
 import visual_behavior.ophys.response_analysis.response_processing as rp
+from visual_behavior_glm import GLM_visualization_tools as gvt
 from visual_behavior.ophys.response_analysis.response_analysis import ResponseAnalysis
 
 # formatting
@@ -2143,7 +2144,6 @@ def plot_total_stimulus_exposures(behavior_sessions, save_dir=None, folder=None,
     stats.columns = stats.columns.droplevel(0)
 
     xticklabels = new_experience_levels
-    # xticklabels = [experience_level+'\n N = '+str(int(np.round(exposures.loc[experience_level]['mean'],0)))+'+/-'+str(int(np.round(exposures.loc[experience_level]['std'],0))) if experience_level!='Novel 1' else 'Novel 1\nN = 0' for experience_level in experience_levels]
     ax.set_xticklabels(xticklabels, rotation=90, )
     ax.set_title('stimulus exposure\nall sessions')
 
@@ -2305,7 +2305,47 @@ def plot_training_history_for_mice(behavior_sessions, color_column='session_type
         utils.save_figure(fig, figsize, save_dir, folder, 'training_history' + suffix)
     return ax
 
+def plot_area_depth_modulation(combined_mean_table, ax = None):
+    '''plot modulation index by area and layer for each cluster type.
+    Parameters
+    ----------
+    combined_mean_table : dataframe
+        dataframe with mean modulation index values for each cluster id'''
+    if ax is None:
+        fig, ax = plt.subplots(1,1, figsize = (8,4.5))
+    plt.rcParams['font.size'] = 14
+    color_map = []
+    for c, cre in enumerate(combined_mean_table.cre_line.unique()):
+        color_map.append(gvt.project_colors()[cre])
 
+    sns.scatterplot(data=combined_mean_table, y='modulation_index_layer', x = 'modulation_index_area', hue = 'cre_line',
+                size='size_col', palette = color_map, sizes=(50, 500), alpha=0.7, ax=ax)
+    legend = plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
+    text = legend.get_texts()
+    
+    for c, cre in enumerate(combined_mean_table.cre_line.unique()):
+        for cluster_id in range(1,13):
+            cluster_table = combined_mean_table[(combined_mean_table.cre_line==cre) &
+                                            (combined_mean_table.cluster_id==cluster_id)]    
+            plt.text(cluster_table['modulation_index_area'], cluster_table['modulation_index_layer'], str(cluster_id), ha='right', va='bottom')
+    #     ax.legend('')
+    plt.plot([0, 0], [-1.2,1.4], '--', color='gray')
+    plt.plot([-1.1, 1.1], [0,0], '--', color='gray')
+    ax.set_xlabel( '<- LM      V1 ->', fontsize=20)
+    ax.set_xticks([-1, -.5, 0, .5, 1])
+    ax.set_xlim([-1.1, 1.1])
+    ax.set_xticklabels(['-1.0', '-0.5', '0.0', '0.5', '1.0']) 
+    ax.set_ylabel( '<- lower    upper ->', fontsize=20)
+    ax.set_yticks([-1, -.5, 0, .5, 1])
+    ax.set_ylim([-1.2, 1.2])
+    ax.set_yticklabels(['-1.0', '-0.5', '0.0', '0.5', '1.0']) 
+    text[0].set_text('cell type')
+    text[1].set_text('Excitatory')
+    text[2].set_text('Sst Inhibitory')
+    text[3].set_text('Vip Inhibitory')
+    text[4].set_text('cluster size \n(cre proportion)')
+    plt.tight_layout()
+    
 # examples
 if __name__ == '__main__':
 
@@ -2349,3 +2389,5 @@ if __name__ == '__main__':
                                             axes_column, hue_column, palette,
                                             use_events=True, filter_events=True, xlim_seconds=xlim_seconds,
                                             horizontal=True, save_dir=None, folder=None)
+
+

@@ -12,6 +12,7 @@ from scipy.stats import ttest_ind
 from scipy.stats import sem
 from scipy.sparse import csgraph
 from scipy.stats import chisquare
+from scipy import stats
 
 from sklearn.metrics import silhouette_score
 from sklearn.metrics import pairwise_distances
@@ -27,6 +28,7 @@ import visual_behavior_glm.GLM_clustering as glm_clust
 import visual_behavior_glm.GLM_params as glm_params
 from statsmodels.stats.proportion import proportion_confint
 from statsmodels.stats.proportion import multinomial_proportions_confint
+
 
 import seaborn as sns
 sns.set_context('notebook', font_scale=1.5, rc={'lines.markeredgewidth': 2})
@@ -182,7 +184,7 @@ def clean_cluster_meta(cluster_meta):
     """
     # get clusters with <5 cells
     tmp = cluster_meta.groupby(['cre_line', 'cluster_id']).count()
-    locs_to_drop = tmp[tmp.labels <= 5].index
+    locs_to_drop = tmp[tmp.labels < 5].index
     # remove them from cluster_meta
     inds_to_drop = []
     for loc_to_drop in locs_to_drop:
@@ -488,7 +490,7 @@ def get_cell_metadata_for_feature_matrix(feature_matrix, cells_table):
     """
     # get metadata for cells in matched cells df
     cell_metadata = cells_table[cells_table.cell_specimen_id.isin(feature_matrix.index.values)]
-    cell_metadata = cell_metadata.drop_duplicates(subset=['cell_specimen_id'])
+    cell_metadata = cell_metadata.drop_duplicates(subset='cell_specimen_id')
     cell_metadata = cell_metadata.set_index('cell_specimen_id')
     print(len(cell_metadata), 'cells in cell_metadata for feature_matrix')
     return cell_metadata
@@ -919,32 +921,28 @@ def get_cluster_density(df_dropouts, labels_df, label_col='cluster_id', use_spea
 def add_within_cluster_corr_to_cluster_meta(feature_matrix, cluster_meta, use_spearmanr=True):
     '''
     Computes correlation coefficient of each cell's dropout scores with the average dropout score for it's cluster
-    adds columns to cluster_meta: 'within_cluster_correlation_s' for spearman and 'within_cluster_correlation_p' for pearson correlations
 
     feature_matrix: dataframe where rows are unique cell_specimen_ids and columns are dropout scores across experience levels
     cluster_meta: dataframe with cell_specimen_ids as index and cluster metadata as cols, must include 'cluster_id'
-    Returns
-        cluster_meta with columns added
     '''
     print('adding within cluster correlation to cluster_meta')
-    # for cre_line in get_cre_lines(cluster_meta):
-    #     cluster_meta_cre = cluster_meta[cluster_meta.cre_line == cre_line]
-    clusters = cluster_meta['cluster_id'].unique()
-    for cluster_id in clusters:
-        cluster_csids = cluster_meta[cluster_meta.cluster_id == cluster_id].index.values
-        # get average dropout scores for this cluster
-        cluster_dropouts = feature_matrix.loc[cluster_csids]
-        cluster_mean = cluster_dropouts.mean().values
-        # compute correlation of each cell in this cluster to the average
-        for cell_specimen_id in cluster_csids:
-            # if use_spearmanr is False:
-            corr_coeff_p = np.corrcoef(cluster_mean, feature_matrix.loc[cell_specimen_id].values)[0][1]
-            # elif use_spearmanr is True:
-            from scipy.stats import spearmanr
-            corr_coeff_s = spearmanr(cluster_mean, feature_matrix.loc[cell_specimen_id].values)[0]
-            # save correlation value to cluster_meta
-            cluster_meta.at[cell_specimen_id, 'within_cluster_correlation_s'] = corr_coeff_s
-            cluster_meta.at[cell_specimen_id, 'within_cluster_correlation_p'] = corr_coeff_p
+    for cre_line in get_cre_lines(cluster_meta):
+        cluster_meta_cre = cluster_meta[cluster_meta.cre_line == cre_line]
+        clusters = cluster_meta_cre['cluster_id'].unique()
+        for cluster_id in clusters:
+            cluster_csids = cluster_meta_cre[cluster_meta_cre.cluster_id == cluster_id].index.values
+            # get average dropout scores for this cluster
+            cluster_dropouts = feature_matrix.loc[cluster_csids]
+            cluster_mean = cluster_dropouts.mean().abs().values
+            # compute correlation of each cell in this cluster to the average
+            for cell_specimen_id in cluster_csids:
+                if use_spearmanr is False:
+                    corr_coeff = np.corrcoef(cluster_mean, feature_matrix.loc[cell_specimen_id].values)[0][1]
+                elif use_spearmanr is True:
+                    from scipy.stats import spearmanr
+                    corr_coeff = spearmanr(cluster_mean, feature_matrix.loc[cell_specimen_id].values)[0]
+                # save correlation value to cluster_meta
+                cluster_meta.at[cell_specimen_id, 'within_cluster_correlation'] = corr_coeff
     return cluster_meta
 
 
@@ -1404,7 +1402,6 @@ def get_coding_metrics(index_dropouts, index_value, index_name):
     index_value should be the cluster_id or cell_specimen_id corresponding to the input dropouts
     index_name is the column name corresponding to index_value, i.e. 'cluster_id' or 'cell_specimen_id'
     """
-    experience_levels = np.sort(index_dropouts.index)
     stats = pd.DataFrame(index=[index_value])
     stats.index.name = index_name
     # get dropout scores per cell
@@ -1429,18 +1426,14 @@ def get_coding_metrics(index_dropouts, index_value, index_name):
     # overall experience modulation is how strong novel session coding is relative to average of Familiar and Novel >1
     # this makes sense under the assumption that Novel images becomes Familiar again rapidly in the Novel >1 session
     # if we wanted consider either novel session, could use novel_dropout = np.amax([row['Novel 1'], row['Novel >1']])
-    familiar = experience_levels[0]
-    novel = experience_levels[1]
-    novel_plus = experience_levels[2]
-    exp_mod = (row[novel] - (np.mean([row[familiar], row[novel_plus]]))) / (row[novel] + (np.mean([row[familiar], row[novel_plus]])))
-    # exp_mod = (row['Novel 1'] - [row['Familiar']) / (row['Novel 1'] + [row['Familiar']))
+    exp_mod = (row['Novel 1'] - (np.mean([row['Familiar'], row['Novel >1']]))) / (row['Novel 1'] + (np.mean([row['Familiar'], row['Novel >1']])))
     stats.loc[index_value, 'experience_modulation'] = exp_mod
     # direction of exp mod is whether coding is stronger for familiar or novel
     # if we wanted consider either novel session, could use novel_dropout = np.amax([row['Novel 1'], row['Novel >1']])
-    exp_mod_direction = (row[novel] - row[familiar]) / (row[novel] + row[familiar])
+    exp_mod_direction = (row['Novel 1'] - row['Familiar']) / (row['Novel 1'] + row['Familiar'])
     # persistence of exp mod is whether coding stays similar after repetition of novel session
-    exp_mod_persistence = (row[novel_plus]-row[novel])/(row[novel_plus]+row[novel])
-    # exp_mod_persistence = row['Novel >1'] / row['Novel 1']
+#     exp_mod_persistence = (row['Novel >1']-row['Novel 1'])/(row['Novel >1']+row['Novel 1'])
+    exp_mod_persistence = row['Novel >1'] / row['Novel 1'] # make it an index
     stats.loc[index_value, 'exp_mod_direction'] = exp_mod_direction
     stats.loc[index_value, 'exp_mod_persistence'] = exp_mod_persistence
     # within session joint coding index
@@ -1484,14 +1477,15 @@ def get_cell_metrics(cluster_meta, results_pivoted):
 
 def get_cluster_metrics(cluster_meta, feature_matrix, results_pivoted, cre=None):
     """
-    computes metrics for each cluster, including experience modulation, feature selectivity, etc
+    computes metrics for each cluster, including experience modulation, feature selectivity, etc.
     """
-    experience_levels = np.sort(results_pivoted.experience_level.unique())
-    print(experience_levels)
     if 'location' not in cluster_meta.keys():
         cluster_meta = add_location_column(cluster_meta, columns_to_groupby=['targeted_structure', 'layer'])
-    cre_lines = np.sort(cluster_meta.cre_line.unique())
-    # cell_metrics = get_cell_metrics(cluster_meta, results_pivoted)
+    if cre is None:
+        cre_lines = ['all']
+    else:
+        cre_lines = np.sort(cluster_meta.cre_line.unique())
+    cell_metrics = get_cell_metrics(cluster_meta, results_pivoted)
     cluster_metrics = pd.DataFrame()
     for cre_line in cre_lines:
         # get cell specimen ids for this cre line
@@ -1515,49 +1509,16 @@ def get_cluster_metrics(cluster_meta, feature_matrix, results_pivoted, cre=None)
             fraction_cre = len(this_cluster_csids) / float(len(cre_cell_specimen_ids))
             stats['fraction_cre'] = fraction_cre
             stats['cre_line'] = cre_line
-            stats['F_max'] = mean_dropout_df[experience_levels[0]].max()
-            stats['N1_max'] = mean_dropout_df[experience_levels[1]].max()
-            stats['N2_max'] = mean_dropout_df[experience_levels[2]].max()
+            stats['F_max'] = mean_dropout_df['Familiar'].max()
+            stats['N1_max'] = mean_dropout_df['Novel 1'].max()
+            stats['N2_max'] = mean_dropout_df['Novel >1'].max()
             stats['abs_max'] = mean_dropout_df.max().max()
             cluster_metrics = pd.concat([cluster_metrics, stats])
     cluster_metrics = cluster_metrics.reset_index()
     print(cluster_metrics.keys())
-    n_cells = cluster_meta.groupby(['cre_line', 'cluster_id']).count()[['labels']].rename(
+    n_cells = cell_metrics.groupby(['cre_line', 'cluster_id']).count()[['labels']].rename(
         columns={'labels': 'n_cells_cluster'})
     cluster_metrics = cluster_metrics.merge(n_cells, on=['cre_line', 'cluster_id'])
-
-    return cluster_metrics
-
-
-def get_cluster_metrics_all_cre(cluster_meta, feature_matrix, results_pivoted):
-    """
-    computes metrics for each cluster, including experience modulation, feature selectivity, etc
-    """
-    # cell_metrics = processing.get_cell_metrics(cluster_meta, results_pivoted)
-    cluster_metrics = pd.DataFrame()
-    # get cell specimen ids
-    cell_specimen_ids = cluster_meta.index.values
-    # get unique cluster labels
-    cluster_labels = np.sort(cluster_meta.cluster_id.unique())
-    for i, cluster_id in enumerate(cluster_labels):
-        # get cell specimen ids in this cluster
-        this_cluster_csids = cluster_meta[cluster_meta['cluster_id'] == cluster_id].index.values
-        # get dropout scores for cells in this cluster in this cre line
-        mean_dropout_df = np.abs(feature_matrix.loc[this_cluster_csids].mean().unstack())
-        exp_levels = np.sort(mean_dropout_df.columns)
-        stats = get_coding_metrics(index_dropouts=mean_dropout_df.T, index_value=cluster_id,
-                                    index_name='cluster_id')
-        fraction_cells = len(this_cluster_csids) / float(len(cell_specimen_ids))
-        stats['fraction_cells'] = fraction_cells
-        stats['F_max'] = mean_dropout_df[exp_levels[0]].max()
-        stats['N1_max'] = mean_dropout_df[exp_levels[1]].max()
-        stats['N2_max'] = mean_dropout_df[exp_levels[2]].max()
-        stats['abs_max'] = mean_dropout_df.max().max()
-        cluster_metrics = pd.concat([cluster_metrics, stats])
-    cluster_metrics = cluster_metrics.reset_index()
-    print(cluster_metrics.keys())
-    n_cells = cluster_meta.groupby(['cluster_id']).count()[['labels']].rename(columns={'labels': 'n_cells_cluster'})
-    cluster_metrics = cluster_metrics.merge(n_cells, on=['cluster_id'])
 
     return cluster_metrics
 
@@ -2549,3 +2510,48 @@ def get_variability_df(feature_matrix, cluster_df, columns=['cluster_id', 'cre_l
                                                ignore_index=True)
 
     return variability_df
+
+## Functions for response metric plots across clusters
+def add_significance(sample1, sample2, test='2ttest'):
+    
+    from scipy import stats
+    if len(sample1)!=0 and len(sample2)!=0:
+
+        nan_mask = np.isnan(sample1)
+        # Remove NaN values from the array
+        sample1_without_nans = sample1[~nan_mask]
+
+        nan_mask = np.isnan(sample2)
+        # Remove NaN values from the array
+        sample2_without_nans = sample2[~nan_mask]
+
+        if test == '2ttest':
+
+            # Perform two-sample t-test (parametric)
+            t, p = stats.ttest_ind(sample1_without_nans, sample2_without_nans)
+
+        elif test == 'MW':
+
+            # Perform Mann-Whitney U test (non-parametric)
+            t, p = stats.mannwhitneyu(sample1_without_nans, sample2_without_nans)
+
+        elif test == 'W':
+            try:            
+                diff = np.squeeze(sample1)- np.squeeze(sample2)
+                res = stats.wilcoxon(diff)# diff)
+                t = res.statistic
+                p = res.pvalue
+            except:
+                t=np.nan
+                p=np.nan
+        else:
+            print('Test was not recognized')
+            t=np.nan
+            p=np.nan
+    else:
+        t=np.nan
+        p=np.nan
+        
+    return t,p
+    
+

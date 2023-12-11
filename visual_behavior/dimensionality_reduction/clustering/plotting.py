@@ -3061,3 +3061,115 @@ def plot_unraveled_clusters(feature_matrix, cluster_df, sort_order=None, cre_lin
     fig.subplots_adjust(wspace=0.5)
     if save_dir is not None:
         utils.save_figure(fig, figsize, save_dir, folder, f'feature_matrix_sorted_by_cluster_id_{tag}')
+
+## Plotting functions for response metrics of the clusters
+
+def plot_distribution(data_array1, data_array2, exp_level_1, exp_level_2, 
+                      ax = None, bins=30, density=True, label=False, test='MW', suffix='', cre='all', rm_f=''):
+    ''' function to plot two separate distribution of response metrics 
+    test can be MW for two sample comparison or W for within one sample comparison
+    
+    INPUT:
+    
+        data_array1: (np.array) array of response metrics for one cluster group
+        data_array2: (np.array) array of response metrics for another cluster group
+        exp_level_1: (str) experience level of first cluster group
+        exp_level_2: (str) experience level of second cluster group
+        ax: (obj) axis to plot on, default=None
+        bins: (int) number of bins for histogram, default=30
+        density: (boolean) if True, plot density instead of count, default=True
+        label: (boolean) if True, add label to plot, default=False
+        test: (str) test to use for significance, default='MW', other other options are 'ttest' and 'W' for within sample comparison
+         suffix: (str) suffix to add to plot title, default='' '''
+    
+    from visual_behavior_glm import GLM_visualization_tools as gvt    
+    if ax is None:
+        fig, ax = plt.subplots(1,1)
+    
+    if exp_level_1 == exp_level_2:
+        linecolor_1 = 'blue'
+        linecolor_2 = 'black'
+    else:
+        linecolor_1 = None
+        linecolor_2 = None 
+        
+    
+    ax.hist(data_array1, bins=bins, density=density, alpha=0.5, color=gvt.project_colors()[exp_level_1], edgecolor=linecolor_1, label=label)
+    ax.hist(data_array2, bins=bins, density=density, alpha=0.5, color=gvt.project_colors()[exp_level_2], edgecolor=linecolor_2, label=label)
+    
+    # add stats if both data arrays are not empty
+    if len(data_array1)!=0 and len(data_array2)!=0:
+        t, p = processing.add_significance(data_array1, data_array2, test=test)
+        ymax = ax.get_yticks()[-1]
+        xmin = ax.get_xticks()[0]
+        ax.text(xmin, ymax+ymax*.2, f'{test} p-value: {p:.4f}', ha='left', va='top', bbox=dict(facecolor='white', alpha=0.5))
+    
+    ax.set_title(cre)
+    ax.set_xlabel(rm_f+ suffix)
+    plt.tight_layout()
+
+
+def plot_boxplot(data_array1, data_array2, exp_level_1, exp_level_2, 
+                      ax = None, patch_artist=True, widths = 0.5, test= 'MW', suffix='', cre='all', rm_f=''):
+    ''' function to plot two separate distribution of response metrics 
+    test can be MW for two sample comparison or W for within one sample comparison
+    
+    Input:
+    
+        data_array1: (np.array) array of response metrics for one cluster group
+        data_array2: (np.array) array of response metrics for another cluster group
+        exp_level_1: (str) experience level of first cluster group
+        exp_level_2: (str) experience level of second cluster group
+        ax: (obj) axis to plot on, default=None
+        patch_artist: (boolean) if True, fill boxplot with color, default=True
+        widths: (float) width of boxplot, default=0.5
+        test: (str) test to use for significance, default='MW', other other options are 'ttest' and 'W' for within sample comparison
+        suffix: (str) suffix to add to plot title, default='' '''
+        
+    from visual_behavior_glm import GLM_visualization_tools as gvt    
+    if ax is None:
+        fig, ax = plt.subplots(1,1)
+    
+    
+    stats=True
+    if len(data_array1)==0:
+        data_array1 = [np.nan, np.nan]
+        stats = False
+    else:
+        nan_mask = np.isnan(data_array1)
+        # Remove NaN values from the array
+        data_array1 = data_array1[~nan_mask]
+    
+
+    if len(data_array2)==0:
+        data_array2 = [np.nan, np.nan]
+        stats = False
+    else:
+        nan_mask = np.isnan(data_array2)
+        # Remove NaN values from the array
+        data_array2 = data_array2[~nan_mask]
+        
+        
+    bplot = ax.boxplot(np.squeeze([data_array1,data_array2]).T, patch_artist=patch_artist, widths=widths)
+    colors = [gvt.project_colors()[exp_level_1],gvt.project_colors()[exp_level_2]]
+    # change color
+    for patch, color in zip(bplot['boxes'], colors):
+        patch.set_facecolor(color)
+    ax.set_yscale('log')  
+    # add stats if both data arrays are not empty
+    if stats is True:
+        t, p = processing.add_significance(data_array1, data_array2, test=test)
+        ymax = ax.get_yticks()[-1]
+        xmin = ax.get_xticks()[0]
+        ax.text(xmin, ymax+ymax*.2, f'{test} p-value: {p:.4f}', ha='left', va='top', bbox=dict(facecolor='white', alpha=0.5))
+    if exp_level_2 == 'Novel >1':
+        exp_level_2 = 'Novel+'
+    if exp_level_1 == 'Novel >1':
+        exp_level_1 = 'Novel+'
+    ax.set_xticklabels([exp_level_1, exp_level_2])
+    ax.set_title(cre)
+    ax.set_xlabel(rm_f+ suffix)
+    
+    plt.tight_layout()
+
+    
