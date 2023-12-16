@@ -1979,6 +1979,15 @@ def get_cre_line_map(cre_line):
     mapped_cre_line = cre_line_dict[cre_line]
     return mapped_cre_line
 
+def get_experience_map(experience_level):
+
+    experience_dict = {'Familiar': 'Familiar',
+                     'Novel 1': 'Novel',
+                     'Novel >1': 'Novel+'}
+
+    mapped_exp_level = experience_dict[experience_level]
+    return mapped_exp_level
+
 
 def get_n_clusters_cre():
     ''' Number of clusters used in clustering per cre line'''
