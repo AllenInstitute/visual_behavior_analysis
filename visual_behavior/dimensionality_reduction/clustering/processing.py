@@ -1205,6 +1205,66 @@ def get_cluster_proportions(df, cre):
     return proportion_table, stats_table
 
 
+def get_fraction_cells_per_location(cluster_meta, location='layer'):
+    """
+    computes the fraction of cells in a given location (i.e. area/depth) in a given cluster
+    relative to the total number of cells in that location (i.e. area/depth) in that cre line
+    i.e. 'out of all the cells in this area and depth, how many are in this cluster? '
+
+    location can be any categorical column in cluster_meta,
+     typically one of: 'layer', 'targeted_structure', 'binned_depth', 'area_binned_depth' etc.
+    """
+    # get fraction cells per area and depth per cluster
+    # frequency will be the fraction of cells in each cluster for a given location
+    # relative to the total number of cells in that location for that cre line
+    locations = np.sort(cluster_meta[location].unique())
+    n_cells_per_location = cluster_meta.reset_index().groupby(['cre_line', location])['cell_specimen_id'].count().unstack()
+    n_cells_per_location_per_cluster = cluster_meta.reset_index().groupby(['cre_line', 'cluster_id', location])['cell_specimen_id'].count().unstack()
+    n_cells_per_location_per_cluster = n_cells_per_location_per_cluster.fillna(value=0)
+    fraction_cells = n_cells_per_location_per_cluster / n_cells_per_location
+    fraction_cells = fraction_cells[locations] # sort by location order for convenience
+    return fraction_cells
+
+
+def get_fraction_cells_per_cluster(cluster_meta):
+    """
+    computes the fraction of cells in each cluster
+    relative to the total number of cells in that cre line
+
+    """
+    # get fraction cells per area and depth per cluster
+    # frequency will be the fraction of cells in each cluster for a given location
+    # relative to the total number of cells in that location for that cre line
+    n_cells_per_cre = cluster_meta.reset_index().groupby(['cre_line'])['cell_specimen_id'].count()
+    n_cells_per_cluster = cluster_meta.reset_index().groupby(['cre_line', 'cluster_id'])['cell_specimen_id'].count()
+    n_cells_per_cluster = n_cells_per_cluster.fillna(value=0)
+    fraction_cells_per_cluster = n_cells_per_cluster / n_cells_per_cre
+    fraction_cells_per_cluster = pd.DataFrame(fraction_cells_per_cluster)
+    fraction_cells_per_cluster = fraction_cells_per_cluster.rename(columns={'cell_specimen_id': 'fraction_cells_per_cluster'})
+    return fraction_cells_per_cluster
+
+
+def get_fraction_cells_relative_to_cluster_size(cluster_meta, location='layer'):
+    """
+    computes the fraction of cells in a given location (i.e. area/depth) in a given cluster
+    relative to the total number of cells in that location (i.e. area/depth) in that cre line,
+    normalized to the overall size of that cluster within that cre line
+    i.e. 'how many times more (or less) cells do we see in this location relative to the expected size of the cluster '
+
+    location can be any categorical column in cluster_meta,
+     typically one of: 'layer', 'targeted_structure', 'binned_depth', 'area_binned_depth' etc.
+    """
+    fraction_cells_per_location = get_fraction_cells_per_location(cluster_meta, location)
+    fraction_cells_per_cluster = get_fraction_cells_per_cluster(cluster_meta)
+    # combine the two so we can devide fraction cells per location by fraction per cluster
+    fraction_cells = fraction_cells_per_location.merge(fraction_cells_per_cluster, on=['cre_line', 'cluster_id'])
+    locations = np.sort(cluster_meta[location].unique())
+    for loc in locations:
+        fraction_cells['fraction_of_cluster_size_'+loc] = fraction_cells[loc]/fraction_cells.fraction_cells_per_cluster
+        fraction_cells = fraction_cells.rename(columns={loc: 'fraction_cells_'+loc})
+    return fraction_cells
+
+
 def compute_cluster_proportion_cre(cluster_meta, cre_line, groupby_columns=['targeted_structure', 'layer']):
     """
     gets proportion of cells per cluster for each area and depth,
@@ -1274,7 +1334,7 @@ def get_proportion_cells_rel_cluster_average(cluster_meta, cre_lines, columns_to
     return cluster_proportions, stats_table
 
 
-def stats(df, cre):
+def compute_cluster_proportion_stats(cluster_meta, cre_line, location='area_layer'):
     '''
         Performs chi-squared tests to asses whether the observed cell counts in each area/depth differ
         significantly from the average for that cluster.
@@ -1282,9 +1342,12 @@ def stats(df, cre):
 
     from scipy.stats import chisquare
 
+    df = cluster_meta.reset_index()
+    cre = cre_line
+    locations = np.sort(df[location].unique())
     # compute cell counts in each area/cluster
-    table = df.query('cre_line == @cre').groupby(['cluster_id', 'coarse_binned_depth_area'])['cell_specimen_id'].count().unstack()
-    table = table[['VISp_upper', 'VISp_lower', 'VISl_upper', 'VISl_lower']]
+    table = df.query('cre_line == @cre').groupby(['cluster_id', location])['cell_specimen_id'].count().unstack()
+    table = table[locations]
     table = table.fillna(value=0)
 
     # compute proportion
@@ -1296,18 +1359,20 @@ def stats(df, cre):
     table['mean'] = table.mean(axis=1)
 
     # second table of cell counts in each area/cluster
-    table2 = df.query('cre_line == @cre').groupby(['cluster_id', 'coarse_binned_depth_area'])['cell_specimen_id'].count().unstack()
-    table2 = table2[['VISp_upper', 'VISp_lower', 'VISl_upper', 'VISl_lower']]
+    table2 = df.query('cre_line == @cre').groupby(['cluster_id', location])['cell_specimen_id'].count().unstack()
+    table2 = table2[locations]
     table2 = table2.fillna(value=0)
 
     # compute estimated frequency of cells based on average fraction for each cluster
+    chance_columns = []
     for da in depth_areas:
+        chance_columns.append(da + '_chance_count')
         table2[da + '_chance_count'] = table2[da].sum() * table['mean']
 
     # perform chi-squared test
     for index in table2.index.values:
-        f = table2.loc[index][['VISp_upper', 'VISp_lower', 'VISl_upper', 'VISl_lower']].values
-        f_expected = table2.loc[index][['VISp_upper_chance_count', 'VISp_lower_chance_count', 'VISl_upper_chance_count', 'VISl_lower_chance_count']].values
+        f = table2.loc[index][locations].values
+        f_expected = table2.loc[index][chance_columns].values
         out = chisquare(f, f_expected)
         table2.at[index, 'pvalue'] = out.pvalue
         table2.at[index, 'significant'] = out.pvalue < 0.05
@@ -1378,8 +1443,8 @@ def get_cluster_order_for_metric_location(cell_count_stats, cluster_meta, locati
 
 def get_fraction_cells_per_area_depth(cluster_meta):
     """
-    computes the fraction of cells per area/depth in a given cluster
-    relative to the total number of cells in that area/depth in that cre line
+    computes the fraction of cells per area and depth in a given cluster
+    relative to the total number of cells in that area and depth in that cre line
     i.e. 'out of all the cells in this area and depth, how many are in this cluster? '
     """
     # get fraction cells per area and depth per cluster
@@ -1392,15 +1457,20 @@ def get_fraction_cells_per_area_depth(cluster_meta):
     return fraction_cells
 
 
+
 def get_coding_metrics(index_dropouts, index_value, index_name):
     """
     Computes a variety of metrics on dropout scores for some condition (ex: one cell or one cluster)
     including selectivity across features or experience levels, within and across sessions
 
-    index_dropouts can be the dropout scores for a single cell, or average dropouts across cells
-    index_dropouts should be in the format of rows = experience levels, cols = regressors
-    index_value should be the cluster_id or cell_specimen_id corresponding to the input dropouts
-    index_name is the column name corresponding to index_value, i.e. 'cluster_id' or 'cell_specimen_id'
+    index_dropouts: dataframe, the dropout scores for a single cell, or average dropouts across cells
+                                formatted with rows = experience levels, cols = regressors
+    index_value: int, should be the cluster_id or cell_specimen_id corresponding to the input dropouts
+    index_name: str, is the column name corresponding to index_value, i.e. 'cluster_id' or 'cell_specimen_id'
+
+    Returns
+    stats: dataframe, containing one row for each cell_specimen_id or cluster_id, with metrics as columns
+                        metrics can be computed within or across experience levels,
     """
     stats = pd.DataFrame(index=[index_value])
     stats.index.name = index_name
@@ -1419,6 +1489,10 @@ def get_coding_metrics(index_dropouts, index_value, index_name):
     order = np.argsort(index_dropouts[dominant_feature])
     values = index_dropouts[dominant_feature].values[order[::-1]]
     experience_selectivity = (values[0] - (np.mean(values[1:]))) / (values[0] + (np.mean(values[1:])))
+    stats.loc[index_value, 'max_coding_score'] = index_dropouts.loc[dominant_experience_level][dominant_feature]
+    stats.loc[index_value, 'max_image_coding_score'] = index_dropouts.loc[dominant_experience_level]['all-images']
+    for experience_level in index_dropouts.index.values:
+        stats.loc[index_value, 'image_coding_'+experience_level] = index_dropouts.loc[experience_level]['all-images']
     stats.loc[index_value, 'feature_selectivity'] = feature_selectivity
     stats.loc[index_value, 'experience_selectivity'] = experience_selectivity
     # get experience modulation indices

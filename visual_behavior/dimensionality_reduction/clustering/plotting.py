@@ -138,7 +138,7 @@ def plot_feature_matrix_for_cre_lines(feature_matrix, cell_metadata, use_abbrevi
 
 
 def plot_feature_matrix_sorted(feature_matrix, cluster_meta, sort_col='cluster_id', use_abbreviated_labels=False,
-                               resort_by_size=False, save_dir=None, folder=None, suffix=''):
+                               resort_by_size=False, cmap='Blues', vmax=1, save_dir=None, folder=None, suffix=''):
     """
     plots feature matrix used for clustering sorted by sort_col
 
@@ -147,10 +147,8 @@ def plot_feature_matrix_sorted(feature_matrix, cluster_meta, sort_col='cluster_i
     # check if there are negative values in feature_matrix, if so, use diff cmap and set vmin to -1
     if len(np.where(feature_matrix < 0)[0]) > 0:
         vmin = -1
-        cmap = 'RdBu'
     else:
         vmin = 0
-        cmap = 'Blues'
 
     figsize = (15, 5)
     fig, ax = plt.subplots(1, 3, figsize=figsize)
@@ -168,7 +166,7 @@ def plot_feature_matrix_sorted(feature_matrix, cluster_meta, sort_col='cluster_i
 
         # get data from feature matrix for this set of cells
         data = feature_matrix.loc[cell_order]
-        ax[i] = sns.heatmap(data.values, cmap=cmap, ax=ax[i], vmin=vmin, vmax=1,
+        ax[i] = sns.heatmap(data.values, cmap=cmap, ax=ax[i], vmin=vmin, vmax=vmax,
                             robust=True, cbar_kws={"drawedges": False, "shrink": 0.7, "label": 'coding score'})
 
         for x in [3, 6, 9]:
