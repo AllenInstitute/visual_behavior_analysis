@@ -1205,6 +1205,63 @@ def get_cluster_proportions(df, cre):
     return proportion_table, stats_table
 
 
+def get_n_cells_table(cluster_meta, location='layer'):
+    """
+    creates table with:
+        the number of cells in a given location (i.e. area/depth) in a given cluster & cre line
+        the total number of cells in that location (i.e. area/depth) in that cre line
+        the number of cells in each cluster in each cre line
+        the total number of cells in that cre line
+
+    location can be any categorical column in cluster_meta,
+     typically one of: 'layer', 'targeted_structure', 'binned_depth', 'area_binned_depth' etc.
+    """
+    # get fraction cells per area and depth per cluster
+    # frequency will be the fraction of cells in each cluster for a given location
+    # relative to the total number of cells in that location for that cre line
+    locations = np.sort(cluster_meta[location].unique())
+
+    # get number of cells in each location for each cluster in each cre line
+    # n_cells_per_location_per_cluster = cluster_meta.reset_index().groupby(['cre_line', 'cluster_id', location])['cell_specimen_id'].count().unstack()
+    # n_cells_per_location_per_cluster = n_cells_per_location_per_cluster.fillna(value=0)
+    n_cells_per_location_per_cluster = cluster_meta.reset_index().groupby(['cre_line', 'cluster_id', location])[
+        'cell_specimen_id'].count().to_frame(name='n_cells')
+    # get total number of cells in each location for each cre line
+    # n_cells_per_location = cluster_meta.reset_index().groupby(['cre_line', location])['cell_specimen_id'].count().unstack()
+    n_cells_per_location = cluster_meta.reset_index().groupby(['cre_line', location])[
+        'cell_specimen_id'].count().to_frame(
+        name='n_cells_location_total')
+    n_cells_table = n_cells_per_location_per_cluster.merge(n_cells_per_location, on=['cre_line', 'location'], how='left')
+    n_cells_table['fraction_of_cells_location']
+
+    # number of cells per cre line
+    n_cells_per_cre = cluster_meta.reset_index().groupby(['cre_line']).count()[['cell_specimen_id']]
+    n_cells_per_cre = n_cells_per_cre.rename(columns={'cell_specimen_id': 'n_cells_cre'})
+    # get number of cells per cluster per cre line
+    n_cells_per_cluster = cluster_meta.reset_index().groupby(['cre_line', 'cluster_id']).count()[['cell_specimen_id']]
+    n_cells_per_cluster = n_cells_per_cluster.rename(columns={'cell_specimen_id': 'n_cells_cluster'})
+
+
+    # relabel to include location in column name
+    for loc in locations:
+        n_cells_per_location = n_cells_per_location.rename(columns={loc: 'n_cells_total_'+loc})
+        n_cells_per_location_per_cluster = n_cells_per_location_per_cluster.rename(columns={loc: 'n_cells_'+loc})
+    # create final df with all counts
+    n_cells = n_cells_per_location_per_cluster.merge(n_cells_per_cluster, on=['cre_line', 'cluster_id'])
+    n_cells = n_cells.reset_index().merge(n_cells_per_location, on='cre_line', how='left')
+    n_cells = n_cells.reset_index().merge(n_cells_per_cre, on='cre_line', how='left')
+    # get fraction of cells in each cluster per cre then compute expected number
+    # of cells in each location if they were proportional to overall cluster size (i.e. chance level)
+    n_cells['fraction_cells_cluster'] = n_cells['n_cells_cluster'] / n_cells['n_cells_cre']
+    for loc in locations:
+        n_cells['n_cells_chance_' + loc] = n_cells['fraction_cells_cluster'] * n_cells['n_cells_total_' + loc]
+    # this allows us to ask - is the actual number of cells in the cluster different than the number of cells you would expect given the cluster size
+
+    n_cells.columns.name = None # get rid of residual column index name
+    n_cells = n_cells.set_index(['cre_line', 'cluster_id'])
+    return n_cells
+
+
 def get_fraction_cells_per_location(cluster_meta, location='layer'):
     """
     computes the fraction of cells in a given location (i.e. area/depth) in a given cluster
@@ -1218,12 +1275,15 @@ def get_fraction_cells_per_location(cluster_meta, location='layer'):
     # frequency will be the fraction of cells in each cluster for a given location
     # relative to the total number of cells in that location for that cre line
     locations = np.sort(cluster_meta[location].unique())
+    # get n_cells for each location in a given cre line
     n_cells_per_location = cluster_meta.reset_index().groupby(['cre_line', location])['cell_specimen_id'].count().unstack()
+    # get n_cells in each cluster for each location in a given cre linecre line
     n_cells_per_location_per_cluster = cluster_meta.reset_index().groupby(['cre_line', 'cluster_id', location])['cell_specimen_id'].count().unstack()
     n_cells_per_location_per_cluster = n_cells_per_location_per_cluster.fillna(value=0)
-    fraction_cells = n_cells_per_location_per_cluster / n_cells_per_location
-    fraction_cells = fraction_cells[locations] # sort by location order for convenience
-    return fraction_cells
+    # n_cells in each cluster for a given location divided by total n_cells in that location
+    fraction_cells_per_location = n_cells_per_location_per_cluster / n_cells_per_location
+    fraction_cells_per_location = fraction_cells_per_location[locations] # sort by location order for convenience
+    return fraction_cells_per_location
 
 
 def get_fraction_cells_per_cluster(cluster_meta):
@@ -1235,12 +1295,17 @@ def get_fraction_cells_per_cluster(cluster_meta):
     # get fraction cells per area and depth per cluster
     # frequency will be the fraction of cells in each cluster for a given location
     # relative to the total number of cells in that location for that cre line
+
+    # total n cells in each cre line
     n_cells_per_cre = cluster_meta.reset_index().groupby(['cre_line'])['cell_specimen_id'].count()
+    # number of cells in each cluster in each cre line
     n_cells_per_cluster = cluster_meta.reset_index().groupby(['cre_line', 'cluster_id'])['cell_specimen_id'].count()
     n_cells_per_cluster = n_cells_per_cluster.fillna(value=0)
+    # n_cells per cluster relative to n cells per cre
     fraction_cells_per_cluster = n_cells_per_cluster / n_cells_per_cre
+    # create dataframe and clean it
     fraction_cells_per_cluster = pd.DataFrame(fraction_cells_per_cluster)
-    fraction_cells_per_cluster = fraction_cells_per_cluster.rename(columns={'cell_specimen_id': 'fraction_cells_per_cluster'})
+    fraction_cells_per_cluster = fraction_cells_per_cluster.rename(columns={'cell_specimen_id': 'fraction_cells_cluster'})
     return fraction_cells_per_cluster
 
 
@@ -1258,9 +1323,13 @@ def get_fraction_cells_relative_to_cluster_size(cluster_meta, location='layer'):
     fraction_cells_per_cluster = get_fraction_cells_per_cluster(cluster_meta)
     # combine the two so we can devide fraction cells per location by fraction per cluster
     fraction_cells = fraction_cells_per_location.merge(fraction_cells_per_cluster, on=['cre_line', 'cluster_id'])
+    # get average of proportions across locations (i.e. cluster average proportion) and add to main df
+    fraction_cells_per_location['average_of_locations'] = fraction_cells_per_location.mean(axis=1)
+    fraction_cells['average_of_locations'] = fraction_cells_per_location['average_of_locations']
+    # compute fraction of cells in each location in each cluster relative to overall fraction of cells per cluster
     locations = np.sort(cluster_meta[location].unique())
     for loc in locations:
-        fraction_cells['fraction_of_cluster_size_'+loc] = fraction_cells[loc]/fraction_cells.fraction_cells_per_cluster
+        fraction_cells['fraction_of_cluster_size_'+loc] = fraction_cells[loc]/fraction_cells.fraction_cells_cluster
         fraction_cells = fraction_cells.rename(columns={loc: 'fraction_cells_'+loc})
     return fraction_cells
 
@@ -1338,6 +1407,8 @@ def compute_cluster_proportion_stats(cluster_meta, cre_line, location='area_laye
     '''
         Performs chi-squared tests to asses whether the observed cell counts in each area/depth differ
         significantly from the average for that cluster.
+
+        replicated from glm_clust.stats()
     '''
 
     from scipy.stats import chisquare
@@ -1351,9 +1422,8 @@ def compute_cluster_proportion_stats(cluster_meta, cre_line, location='area_laye
     table = table.fillna(value=0)
 
     # compute proportion
-    depth_areas = table.columns.values
-    for da in depth_areas:
-        table[da] = table[da] / table[da].sum()
+    for loc in locations:
+        table[loc] = table[loc] / table[loc].sum()
 
     # get average for each cluster
     table['mean'] = table.mean(axis=1)
@@ -1365,9 +1435,10 @@ def compute_cluster_proportion_stats(cluster_meta, cre_line, location='area_laye
 
     # compute estimated frequency of cells based on average fraction for each cluster
     chance_columns = []
-    for da in depth_areas:
-        chance_columns.append(da + '_chance_count')
-        table2[da + '_chance_count'] = table2[da].sum() * table['mean']
+    for loc in locations:
+        chance_columns.append(loc + '_chance_count')
+        table2[loc + '_chance_count'] = table2[loc].sum() * table['mean']
+    # n_cells you would get if they were proportional to overall size of cluster
 
     # perform chi-squared test
     for index in table2.index.values:
@@ -1403,22 +1474,6 @@ def add_hochberg_correction(table):
 
     # reset order of table and return
     return table.sort_values(by='cluster_id').set_index('cluster_id')
-
-
-def compute_proportion_cre(df, cre):
-    '''
-        Computes the proportion of cells in each cluster within each location
-    '''
-    # Count cells in each area/cluster
-    table = df.query('cre_line == @cre').groupby(['cluster_id', 'coarse_binned_depth_area'])['cell_specimen_id'].count().unstack()
-    table = table[['VISp_upper', 'VISp_lower', 'VISl_upper', 'VISl_lower']]
-    table = table.fillna(value=0)
-
-    # compute fraction in each area/cluster
-    depth_areas = table.columns.values
-    for da in depth_areas:
-        table[da] = table[da] / table[da].sum()
-    return table
 
 
 def get_cluster_order_for_metric_location(cell_count_stats, cluster_meta, location='VISp_upper',
