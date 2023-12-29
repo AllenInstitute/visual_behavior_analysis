@@ -1487,6 +1487,8 @@ def standardize_axes_fontsize(ax):
     return ax
 
 
+### older methods of plotting area / depth distributions across clusters ###
+
 def plot_pct_rel_to_chance_for_cluster(cre_counts, cluster_id, ax=None):
     """
     Plots the % of cells in each area and depth relative to chance for a given cluster
@@ -1622,6 +1624,153 @@ def plot_fraction_cells_per_area_depth(cre_fraction, cluster_id, ax=None):
     ax = standardize_axes_fontsize(ax)
     return ax
 
+
+### up to date functions looking at cluster sizes & area/depth distributions
+
+
+def plot_location_distribution_for_cre_lines(cre_stats, location='layer', order=None,
+                                            metric='fraction_cells_location', xlabel='fraction cells', ylabel='',
+                                            sharex=True, ax=None, save_dir=None, folder=None):
+    '''
+    Plots a barplot of the fraction or number of cells (on the x-axis) across locations (on the y-axis),
+    with one axis per cre line
+    cre_stats is computed using the function get_cluster_proportion_stats_for_locations()
+
+    cre_stats: dataframe, containing one row per cre line / location combination with the following columns:
+    location: column in n_cells_table with categorical variable identifying how clusters are split for statistics
+    order: order of values in location column to plot on yaxis. If None, will sort location values automatically
+    metric: column in n_cells_table with the metric value of interest, such as 'fraction_cells_location' or 'fraction_of_cluster_size', or 'n_cells_location'
+    xlabel: string describing metric for x-axis label. If None, will use value of `metric`
+
+    '''
+    data = cre_stats.copy().reset_index()
+
+    cre_lines = np.sort(data.cre_line.unique())
+    locations = np.sort(data[location].unique())
+    if order is None:
+        order = locations
+    if xlabel is None:
+        xlabel = metric
+
+    axes_conditions = cre_lines
+    n_axes_conditions = len(axes_conditions)
+
+    if ax is None:
+        figsize = (2, 5)
+        fig, ax = plt.subplots(n_axes_conditions, 1, figsize=figsize, sharey=True, sharex=sharex)
+        ax = ax.ravel()
+
+    i = 0
+    for i, cre_line in enumerate(cre_lines):
+        cre_data = data[(data.cre_line==cre_line)]
+        ax[i] = sns.barplot(data=cre_data, x=metric, y=location, order=order,
+                                orient='h', width=0.7, palette='gray', ax=ax[i])
+        ax[i].set_title(utils.get_abbreviated_cell_type(cre_line))
+        ax[i].set_xlabel('')
+        ax[i].set_ylabel(ylabel)
+        sns.despine(ax=ax[i], top=True, right=True, left=False, bottom=False, offset=None, trim=False)
+    ax[i].set_xlabel(xlabel)
+
+    fig.subplots_adjust(wspace=0.2, hspace=0.8)
+    if save_dir:
+        fig_title = metric + '_' + location + '_for_cre_lines'
+        utils.save_figure(fig, figsize, save_dir, folder, fig_title)
+    return ax
+
+
+
+def plot_location_distribution_across_clusters_for_cre_lines(n_cells_table, location='layer', order=None,
+                                                             metric='fraction_cells_location', xlabel='fraction cells',
+                                                             significance_col='bh_significant', sharex=True,
+                                                             ax=None, save_dir=None, folder=None):
+    '''
+    Plots a barplot of the fraction or number of cells (on the x-axis) across locations (on the y-axis),
+    with cre lines as rows and cluster IDs as columns. Stats are plotted as red stars above plots.
+    n_cells_table is computed using the function get_cluster_proportion_stats_for_locations()
+
+    n_cells_table: dataframe, containing one row per cre line / cluster / location combination with the following columns:
+    location: column in n_cells_table with categorical variable identifying how clusters are split for statistics
+    order: order of values in location column to plot on yaxis. If None, will sort location values automatically
+    metric: column in n_cells_table with the metric value of interest, such as 'fraction_cells_location' or 'fraction_of_cluster_size', or 'n_cells_location'
+    xlabel: string describing metric for x-axis label. If None, will use value of `metric`
+    significance_col: Boolean column in n_cells_table indicating whether the comparison was significant (ex: 'bh_significant' or 'significant')
+
+    '''
+    data = n_cells_table.copy().reset_index()
+
+    cre_lines = np.sort(data.cre_line.unique())
+    cluster_ids = np.sort(data.cluster_id.unique())
+    locations = np.sort(data[location].unique())
+    if order is None:
+        order = locations
+    if xlabel is None:
+        xlabel = metric
+
+    axes_conditions = cluster_ids
+    n_axes_conditions = len(axes_conditions)
+    if len(locations) ==2:
+        fig_height = 2.8
+    else:
+        fig_height = 3*1+(0.2*len(locations))
+    if sharex == False:
+        fig_height = fig_height+1
+
+    if ax is None:
+        figsize = (2 * n_axes_conditions, fig_height)
+        fig, ax = plt.subplots(3, n_axes_conditions, figsize=figsize, sharey=False, sharex=False)
+        ax = ax.ravel()
+
+    i = 0
+    for c, cre_line in enumerate(cre_lines):
+        for x, cluster_id in enumerate(cluster_ids):
+            cluster_data = data[(data.cre_line==cre_line)& (data.cluster_id==cluster_id)]
+            ax[i] = sns.barplot(data=cluster_data, x=metric, y=location, order=order,
+                                    orient='h', width=0.7, palette='gray', ax=ax[i])
+            if sharex == True:
+                ax[i].set_xlim([0, data[metric].max()])
+            if c == 0:
+                ax[i].set_title('Cluster '+str(cluster_id))
+            if c == 2:
+                ax[i].set_xlabel(xlabel)
+            if x == 0:
+                ax[i].set_ylabel(utils.get_abbreviated_cell_type(cre_line), fontsize=20)
+            else:
+                ax[i].set_ylabel('')
+                ax[i].set_yticks([])
+            if c < 2:
+                ax[i].set_xlabel('')
+                if sharex == True:
+                    ax[i].set_xticks([])
+                sns.despine(ax=ax[i], top=True, right=True, left=False, bottom=True, offset=None, trim=False)
+            else:
+                sns.despine(ax=ax[i], top=True, right=True, left=False, bottom=False, offset=None, trim=False)
+            # if there are no cells here, dont plot xticks
+            # if len(cluster_data[metric].values) == 0:
+            #         ax[i].set_xticks([])
+            # plot asterix for significant comparisons
+            if cluster_data[significance_col].any():
+                x_pos = cluster_data[metric].max()+0.02# xlocation slightly further to the right than max value
+                # x_pos = data[metric].max()-0.01 # put star at max x value
+                ax[i].text(x_pos, len(locations)/2., '*', fontsize=24, color=sns.color_palette()[3],
+                        horizontalalignment='center', verticalalignment='center')
+            i+=1
+
+    suptitle = ''
+    if suptitle is not None:
+        plt.suptitle(suptitle, x=0.52, y=1.04, fontsize=18)
+    if sharex == True:
+        hspace = 0.3
+    else:
+        hspace = 0.5
+    fig.subplots_adjust(wspace=0.2, hspace=hspace)
+    if save_dir:
+        fig_title = metric + '_' + location + '_split_by_cre'
+        utils.save_figure(fig, figsize, save_dir, folder, fig_title)
+    return ax
+
+
+
+### various ways of plotting different types of information about clusters ###
 
 def plot_population_average_response_for_cluster(cluster_mdf, cre_line, cluster_id, change=False, omitted=True,
                                                  small_fontsize=True, alpha=0.1, ax=None):

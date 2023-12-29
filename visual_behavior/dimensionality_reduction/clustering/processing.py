@@ -44,6 +44,7 @@ sns.set_context('notebook', font_scale=1.5, rc={'lines.markeredgewidth': 2})
 # import visual_behavior_glm.GLM_params as glm_params
 
 
+
 # utilities ###
 
 def get_multi_session_df_for_omissions():
@@ -111,6 +112,34 @@ def get_cell_type_for_cre_line(cre_line, cell_metadata=None):
                           'Sst-IRES-Cre': 'Sst Inhibitory'}
         cell_type = cell_type_dict[cre_line]
     return cell_type
+
+
+def get_cre_line_map(cre_line):
+
+    cre_line_dict = {'Slc17a7-IRES2-Cre': 'Excitatory',
+                     'Sst-IRES-Cre': 'SST inhibitory',
+                     'Vip-IRES-Cre': 'VIP inhibitory'}
+
+    mapped_cre_line = cre_line_dict[cre_line]
+    return mapped_cre_line
+
+
+def get_experience_map(experience_level):
+
+    experience_dict = {'Familiar': 'Familiar',
+                     'Novel 1': 'Novel',
+                     'Novel >1': 'Novel+'}
+
+    mapped_exp_level = experience_dict[experience_level]
+    return mapped_exp_level
+
+
+def get_n_clusters_cre():
+    ''' Number of clusters used in clustering per cre line'''
+    n_clusters_cre = {'Slc17a7-IRES2-Cre': 10,
+                      'Sst-IRES-Cre': 5,
+                      'Vip-IRES-Cre': 10}
+    return n_clusters_cre
 
 
 def get_cre_line_cell_specimen_ids(df_no_cre, df_cre):
@@ -196,6 +225,34 @@ def clean_cluster_meta(cluster_meta):
     return cluster_meta
 
 
+def add_location_column(cluster_meta, columns_to_groupby=['targeted_structure', 'layer']):
+    '''
+    function to add location column to a df
+    INPUT:
+    cluster_meta: (pd.DataFrame) of groupout scores for each cell with other meta data columns
+    columns_to_groupby: columns in cluster_meta to use to create new location column
+                                location is defined as the concatenation of the column values in columns_to_groupby
+
+    '''
+    cluster_meta_copy = cluster_meta.copy()
+    if 'layer' not in cluster_meta.keys():
+        cluster_meta_copy['layer'] = ['upper' if x < 250 else 'lower' for x in cluster_meta_copy['imaging_depth']]
+        print('column layer is not in the dataframe, using 250 as a threshold to create the column')
+    if len(columns_to_groupby) == 0:
+        print('no columns were provided for grouping location')
+    elif len(columns_to_groupby) == 1:
+        cluster_meta_copy['location'] = cluster_meta_copy[columns_to_groupby[0]]
+    elif len(columns_to_groupby) == 2:
+        cluster_meta_copy['location'] = cluster_meta_copy[columns_to_groupby[0]] + '_' + cluster_meta_copy[columns_to_groupby[1]]
+    elif len(columns_to_groupby) == 3:
+        cluster_meta_copy['location'] = cluster_meta_copy[columns_to_groupby[0]] + '_' + cluster_meta_copy[
+            columns_to_groupby[1]] + '_' + cluster_meta_copy[columns_to_groupby[2]]
+    elif len(columns_to_groupby) > 3:
+        print('cannot combine more than three columns into a location column')
+
+    return cluster_meta_copy
+
+
 def pivot_df(df, dropna=True, drop_duplicated_cells=True):
     df_pivoted = df.groupby(['cell_specimen_id', 'experience_level']).mean()
     if dropna is True:
@@ -214,7 +271,7 @@ def pivot_df(df, dropna=True, drop_duplicated_cells=True):
     return df_pivoted
 
 
-# loading & processing ###
+# loading & processing of GLM outputs ###
 
 def get_glm_results_pivoted_for_clustering(glm_version='24_events_all_L2_optimize_by_session',
                                            model_output_type='adj_fraction_change_from_full',
@@ -507,6 +564,8 @@ def get_feature_matrix_for_cre_line(feature_matrix, cell_metadata, cre_line, dro
     return feature_matrix_cre
 
 
+### selecting # K ###
+
 def compute_inertia(a, X, metric='euclidean'):
     W = [np.mean(pairwise_distances(X[a == c, :], metric=metric)) for c in np.unique(a)]
     return np.mean(W)
@@ -751,6 +810,8 @@ def load_eigengap(glm_version, feature_matrix, cell_metadata, save_dir=None, k_m
     return eigengap
 
 
+### Clustering analysis ###
+
 def get_labels_for_coclust_matrix(X, model=SpectralClustering, nboot=np.arange(100), n_clusters=8):
     '''
 
@@ -839,6 +900,8 @@ def get_cluster_label_file_name(cre_lines, n_clusters_cre, prefix='cluster_label
     cluster_file_name = prefix + cluster_file_name + '.h5'
     return cluster_file_name
 
+
+### determining cluster labels & assessing cluster correlation ###
 
 def get_cluster_labels(coclustering_matrices, cell_metadata, n_clusters_cre, save_dir=None, load=True):
     """
@@ -982,6 +1045,8 @@ def get_cluster_meta(cluster_labels, cell_metadata, feature_matrix, n_clusters_c
         cluster_meta.to_hdf(cluster_meta_filepath, key='df')
     return cluster_meta
 
+
+### old functions for computing area / depth frequencies across clusters, by MG ###
 
 def make_frequency_table(cluster_meta, groupby_columns=['binned_depth'], normalize=True):
     '''
@@ -1154,6 +1219,52 @@ def get_cell_count_stats(cluster_meta, conditions_to_groupby=['targeted_structur
     return cell_count_stats
 
 
+def get_cluster_order_for_metric_location(cell_count_stats, cluster_meta, location='VISp_upper',
+                                          metric='relative_to_random'):
+    """
+    obtain values of metric for the given location and sort clusters within each cre line by that metric value
+    location and metric are columns in cell_count_stats to sort the data by
+    location is typically a conjunction of targeted_structure and layer
+        but can be any set of conditions defined by the column 'location' in cell_count_stats
+    metric can be things like the fraction or number of cells in a given location
+    cell_count_stats is a table with information about the number and fraction of cells
+        for a given set of conditions (such as area & depth) in each cluster in each cre line
+    """
+    cluster_order = {}
+    for cre_line in get_cre_lines(cluster_meta):
+        cre_data = cell_count_stats[(cell_count_stats.cre_line == cre_line) &
+                                    (cell_count_stats.location == location)]
+        cluster_order_cre = cre_data.sort_values(by=metric, ascending=False).cluster_id.values
+        cluster_order[cre_line] = cluster_order_cre
+    return cluster_order
+
+
+def get_location_fractions(cluster_meta):
+    """
+    for each location, compute percent of cells belonging to each cluster
+    """
+
+    cre_lines = np.sort(cluster_meta.cre_line.unique())
+    locations = np.sort(cluster_meta.location.unique())[::-1]
+    location_fractions = pd.DataFrame()
+    for cre_line in cre_lines:
+        for location in locations:
+            cells = cluster_meta[(cluster_meta.location == location) & (cluster_meta.cre_line == cre_line)]
+            total = len(cells)
+            cluster_cells = cells.groupby('cluster_id').count()[['labels']].rename(columns={'labels': 'n_cells'})
+            fraction = cluster_cells.n_cells / total
+
+            cluster_cells['fraction'] = fraction
+            cluster_cells = cluster_cells.reset_index()
+            cluster_cells['cre_line'] = cre_line
+            cluster_cells['location'] = location
+            location_fractions = pd.concat([location_fractions, cluster_cells])
+
+    return location_fractions
+
+
+### area / depth proportion functions based on Alex's GLM repo code ###
+
 # chi_squared test
 def get_stats_table(cre_original_cluster_sizes, shuffle_type_cluster_sizes, cre_lines=None,
                     shuffle_types=None, test='chi_squared', add_hochberg_correction=True):
@@ -1205,139 +1316,12 @@ def get_cluster_proportions(df, cre):
     return proportion_table, stats_table
 
 
-def get_n_cells_table(cluster_meta, location='layer'):
-    """
-    creates table with:
-        the number of cells in a given location (i.e. area/depth) in a given cluster & cre line
-        the total number of cells in that location (i.e. area/depth) in that cre line
-        the number of cells in each cluster in each cre line
-        the total number of cells in that cre line
-
-    location can be any categorical column in cluster_meta,
-     typically one of: 'layer', 'targeted_structure', 'binned_depth', 'area_binned_depth' etc.
-    """
-    # get fraction cells per area and depth per cluster
-    # frequency will be the fraction of cells in each cluster for a given location
-    # relative to the total number of cells in that location for that cre line
-    locations = np.sort(cluster_meta[location].unique())
-
-    # get number of cells in each location for each cluster in each cre line
-    # n_cells_per_location_per_cluster = cluster_meta.reset_index().groupby(['cre_line', 'cluster_id', location])['cell_specimen_id'].count().unstack()
-    # n_cells_per_location_per_cluster = n_cells_per_location_per_cluster.fillna(value=0)
-    n_cells_per_location_per_cluster = cluster_meta.reset_index().groupby(['cre_line', 'cluster_id', location])[
-        'cell_specimen_id'].count().to_frame(name='n_cells')
-    # get total number of cells in each location for each cre line
-    # n_cells_per_location = cluster_meta.reset_index().groupby(['cre_line', location])['cell_specimen_id'].count().unstack()
-    n_cells_per_location = cluster_meta.reset_index().groupby(['cre_line', location])[
-        'cell_specimen_id'].count().to_frame(
-        name='n_cells_location_total')
-    n_cells_table = n_cells_per_location_per_cluster.merge(n_cells_per_location, on=['cre_line', 'location'], how='left')
-    n_cells_table['fraction_of_cells_location']
-
-    # number of cells per cre line
-    n_cells_per_cre = cluster_meta.reset_index().groupby(['cre_line']).count()[['cell_specimen_id']]
-    n_cells_per_cre = n_cells_per_cre.rename(columns={'cell_specimen_id': 'n_cells_cre'})
-    # get number of cells per cluster per cre line
-    n_cells_per_cluster = cluster_meta.reset_index().groupby(['cre_line', 'cluster_id']).count()[['cell_specimen_id']]
-    n_cells_per_cluster = n_cells_per_cluster.rename(columns={'cell_specimen_id': 'n_cells_cluster'})
-
-
-    # relabel to include location in column name
-    for loc in locations:
-        n_cells_per_location = n_cells_per_location.rename(columns={loc: 'n_cells_total_'+loc})
-        n_cells_per_location_per_cluster = n_cells_per_location_per_cluster.rename(columns={loc: 'n_cells_'+loc})
-    # create final df with all counts
-    n_cells = n_cells_per_location_per_cluster.merge(n_cells_per_cluster, on=['cre_line', 'cluster_id'])
-    n_cells = n_cells.reset_index().merge(n_cells_per_location, on='cre_line', how='left')
-    n_cells = n_cells.reset_index().merge(n_cells_per_cre, on='cre_line', how='left')
-    # get fraction of cells in each cluster per cre then compute expected number
-    # of cells in each location if they were proportional to overall cluster size (i.e. chance level)
-    n_cells['fraction_cells_cluster'] = n_cells['n_cells_cluster'] / n_cells['n_cells_cre']
-    for loc in locations:
-        n_cells['n_cells_chance_' + loc] = n_cells['fraction_cells_cluster'] * n_cells['n_cells_total_' + loc]
-    # this allows us to ask - is the actual number of cells in the cluster different than the number of cells you would expect given the cluster size
-
-    n_cells.columns.name = None # get rid of residual column index name
-    n_cells = n_cells.set_index(['cre_line', 'cluster_id'])
-    return n_cells
-
-
-def get_fraction_cells_per_location(cluster_meta, location='layer'):
-    """
-    computes the fraction of cells in a given location (i.e. area/depth) in a given cluster
-    relative to the total number of cells in that location (i.e. area/depth) in that cre line
-    i.e. 'out of all the cells in this area and depth, how many are in this cluster? '
-
-    location can be any categorical column in cluster_meta,
-     typically one of: 'layer', 'targeted_structure', 'binned_depth', 'area_binned_depth' etc.
-    """
-    # get fraction cells per area and depth per cluster
-    # frequency will be the fraction of cells in each cluster for a given location
-    # relative to the total number of cells in that location for that cre line
-    locations = np.sort(cluster_meta[location].unique())
-    # get n_cells for each location in a given cre line
-    n_cells_per_location = cluster_meta.reset_index().groupby(['cre_line', location])['cell_specimen_id'].count().unstack()
-    # get n_cells in each cluster for each location in a given cre linecre line
-    n_cells_per_location_per_cluster = cluster_meta.reset_index().groupby(['cre_line', 'cluster_id', location])['cell_specimen_id'].count().unstack()
-    n_cells_per_location_per_cluster = n_cells_per_location_per_cluster.fillna(value=0)
-    # n_cells in each cluster for a given location divided by total n_cells in that location
-    fraction_cells_per_location = n_cells_per_location_per_cluster / n_cells_per_location
-    fraction_cells_per_location = fraction_cells_per_location[locations] # sort by location order for convenience
-    return fraction_cells_per_location
-
-
-def get_fraction_cells_per_cluster(cluster_meta):
-    """
-    computes the fraction of cells in each cluster
-    relative to the total number of cells in that cre line
-
-    """
-    # get fraction cells per area and depth per cluster
-    # frequency will be the fraction of cells in each cluster for a given location
-    # relative to the total number of cells in that location for that cre line
-
-    # total n cells in each cre line
-    n_cells_per_cre = cluster_meta.reset_index().groupby(['cre_line'])['cell_specimen_id'].count()
-    # number of cells in each cluster in each cre line
-    n_cells_per_cluster = cluster_meta.reset_index().groupby(['cre_line', 'cluster_id'])['cell_specimen_id'].count()
-    n_cells_per_cluster = n_cells_per_cluster.fillna(value=0)
-    # n_cells per cluster relative to n cells per cre
-    fraction_cells_per_cluster = n_cells_per_cluster / n_cells_per_cre
-    # create dataframe and clean it
-    fraction_cells_per_cluster = pd.DataFrame(fraction_cells_per_cluster)
-    fraction_cells_per_cluster = fraction_cells_per_cluster.rename(columns={'cell_specimen_id': 'fraction_cells_cluster'})
-    return fraction_cells_per_cluster
-
-
-def get_fraction_cells_relative_to_cluster_size(cluster_meta, location='layer'):
-    """
-    computes the fraction of cells in a given location (i.e. area/depth) in a given cluster
-    relative to the total number of cells in that location (i.e. area/depth) in that cre line,
-    normalized to the overall size of that cluster within that cre line
-    i.e. 'how many times more (or less) cells do we see in this location relative to the expected size of the cluster '
-
-    location can be any categorical column in cluster_meta,
-     typically one of: 'layer', 'targeted_structure', 'binned_depth', 'area_binned_depth' etc.
-    """
-    fraction_cells_per_location = get_fraction_cells_per_location(cluster_meta, location)
-    fraction_cells_per_cluster = get_fraction_cells_per_cluster(cluster_meta)
-    # combine the two so we can devide fraction cells per location by fraction per cluster
-    fraction_cells = fraction_cells_per_location.merge(fraction_cells_per_cluster, on=['cre_line', 'cluster_id'])
-    # get average of proportions across locations (i.e. cluster average proportion) and add to main df
-    fraction_cells_per_location['average_of_locations'] = fraction_cells_per_location.mean(axis=1)
-    fraction_cells['average_of_locations'] = fraction_cells_per_location['average_of_locations']
-    # compute fraction of cells in each location in each cluster relative to overall fraction of cells per cluster
-    locations = np.sort(cluster_meta[location].unique())
-    for loc in locations:
-        fraction_cells['fraction_of_cluster_size_'+loc] = fraction_cells[loc]/fraction_cells.fraction_cells_cluster
-        fraction_cells = fraction_cells.rename(columns={loc: 'fraction_cells_'+loc})
-    return fraction_cells
-
-
 def compute_cluster_proportion_cre(cluster_meta, cre_line, groupby_columns=['targeted_structure', 'layer']):
     """
     gets proportion of cells per cluster for each area and depth,
     then subtracts the average proportion for each cluster
+
+    taken from vba_glm.glm_clust()
     """
     frequency = make_frequency_table(cluster_meta[cluster_meta.cre_line == cre_line],
                                      groupby_columns=groupby_columns, normalize=True)
@@ -1403,10 +1387,10 @@ def get_proportion_cells_rel_cluster_average(cluster_meta, cre_lines, columns_to
     return cluster_proportions, stats_table
 
 
-def compute_cluster_proportion_stats(cluster_meta, cre_line, location='area_layer'):
+def compute_cluster_proportion_stats(cluster_meta, cre_line, location='layer'):
     '''
-        Performs chi-squared tests to asses whether the observed cell counts in each area/depth differ
-        significantly from the average for that cluster.
+        Performs chi-squared tests to asses whether the observed cell counts in each location differ
+        significantly from the expected number of cells per location based on the overall size of that cluster.
 
         replicated from glm_clust.stats()
     '''
@@ -1476,29 +1460,11 @@ def add_hochberg_correction(table):
     return table.sort_values(by='cluster_id').set_index('cluster_id')
 
 
-def get_cluster_order_for_metric_location(cell_count_stats, cluster_meta, location='VISp_upper',
-                                          metric='relative_to_random'):
-    """
-    obtain values of metric for the given location and sort clusters within each cre line by that metric value
-    location and metric are columns in cell_count_stats to sort the data by
-    location is typically a conjunction of targeted_structure and layer
-        but can be any set of conditions defined by the column 'location' in cell_count_stats
-    metric can be things like the fraction or number of cells in a given location
-    cell_count_stats is a table with information about the number and fraction of cells
-        for a given set of conditions (such as area & depth) in each cluster in each cre line
-    """
-    cluster_order = {}
-    for cre_line in get_cre_lines(cluster_meta):
-        cre_data = cell_count_stats[(cell_count_stats.cre_line == cre_line) &
-                                    (cell_count_stats.location == location)]
-        cluster_order_cre = cre_data.sort_values(by=metric, ascending=False).cluster_id.values
-        cluster_order[cre_line] = cluster_order_cre
-    return cluster_order
-
+### additional functions by MG to compute # and % of cells across locations ###
 
 def get_fraction_cells_per_area_depth(cluster_meta):
     """
-    computes the fraction of cells per area and depth in a given cluster
+    computes the fraction of cells per area and depth in a given cluster (hard-coded to use 'targeted_structure' and 'layer')
     relative to the total number of cells in that area and depth in that cre line
     i.e. 'out of all the cells in this area and depth, how many are in this cluster? '
     """
@@ -1512,6 +1478,265 @@ def get_fraction_cells_per_area_depth(cluster_meta):
     return fraction_cells
 
 
+def get_fraction_cells_per_cluster(cluster_meta):
+    """
+    creates a dataframe with cre lines and cluster ids as indices
+    values are the fraction of cells in each cluster
+    relative to the total number of cells in that cre line,
+    provided as a single column 'fraction_cells_cluster'
+    """
+    # get fraction cells per area and depth per cluster
+    # frequency will be the fraction of cells in each cluster for a given location
+    # relative to the total number of cells in that location for that cre line
+
+    # total n cells in each cre line
+    n_cells_per_cre = cluster_meta.reset_index().groupby(['cre_line'])['cell_specimen_id'].count()
+    # number of cells in each cluster in each cre line
+    n_cells_per_cluster = cluster_meta.reset_index().groupby(['cre_line', 'cluster_id'])['cell_specimen_id'].count()
+    n_cells_per_cluster = n_cells_per_cluster.fillna(value=0)
+    # n_cells per cluster relative to n cells per cre
+    fraction_cells_per_cluster = n_cells_per_cluster / n_cells_per_cre
+    # create dataframe and clean it
+    fraction_cells_per_cluster = pd.DataFrame(fraction_cells_per_cluster)
+    fraction_cells_per_cluster = fraction_cells_per_cluster.rename(columns={'cell_specimen_id': 'fraction_cells_cluster'})
+    return fraction_cells_per_cluster
+
+
+def get_fraction_cells_per_location(cluster_meta, location='layer'):
+    """
+    creates a dataframe with cre lines & cluster IDs as indices, and locations as columns
+
+    values are the fraction of cells in a given location (i.e. area/depth) in a given cluster
+    relative to the total number of cells in that location (i.e. area/depth) in that cre line
+    i.e. 'out of all the cells in this area and depth, how many are in this cluster? '
+
+    location can be any categorical column in cluster_meta,
+     typically one of: 'layer', 'targeted_structure', 'binned_depth', 'area_binned_depth' etc.
+
+    """
+    # get fraction cells per area and depth per cluster
+    # frequency will be the fraction of cells in each cluster for a given location
+    # relative to the total number of cells in that location for that cre line
+    locations = np.sort(cluster_meta[location].unique())
+    # get n_cells for each location in a given cre line
+    n_cells_per_location = cluster_meta.reset_index().groupby(['cre_line', location])['cell_specimen_id'].count().unstack()
+    # get n_cells in each cluster for each location in a given cre linecre line
+    n_cells_per_location_per_cluster = cluster_meta.reset_index().groupby(['cre_line', 'cluster_id', location])['cell_specimen_id'].count().unstack()
+    n_cells_per_location_per_cluster = n_cells_per_location_per_cluster.fillna(value=0)
+    # n_cells in each cluster for a given location divided by total n_cells in that location
+    fraction_cells_per_location = n_cells_per_location_per_cluster / n_cells_per_location
+    fraction_cells_per_location = fraction_cells_per_location[locations] # sort by location order for convenience
+    return fraction_cells_per_location
+
+
+def get_fraction_cells_relative_to_cluster_size(cluster_meta, location='layer'):
+    """
+    computes the fraction of cells in a given location (i.e. area/depth) in a given cluster
+    relative to the total number of cells in that location (i.e. area/depth) in that cre line,
+    normalized to the overall size of that cluster within that cre line
+    i.e. 'how many times more (or less) cells do we see in this location relative to the expected size of the cluster '
+
+    location can be any categorical column in cluster_meta,
+     typically one of: 'layer', 'targeted_structure', 'binned_depth', 'area_binned_depth' etc.
+    """
+    fraction_cells_per_location = get_fraction_cells_per_location(cluster_meta, location)
+    fraction_cells_per_cluster = get_fraction_cells_per_cluster(cluster_meta)
+    # combine the two so we can devide fraction cells per location by fraction per cluster
+    fraction_cells = fraction_cells_per_location.merge(fraction_cells_per_cluster, on=['cre_line', 'cluster_id'])
+    # get average of proportions across locations (i.e. cluster average proportion) and add to main df
+    fraction_cells_per_location['average_of_locations'] = fraction_cells_per_location.mean(axis=1)
+    fraction_cells['average_of_locations'] = fraction_cells_per_location['average_of_locations']
+    # compute fraction of cells in each location in each cluster relative to overall fraction of cells per cluster
+    locations = np.sort(cluster_meta[location].unique())
+    for loc in locations:
+        fraction_cells['fraction_of_cluster_size_'+loc] = fraction_cells[loc]/fraction_cells.fraction_cells_cluster
+        fraction_cells = fraction_cells.rename(columns={loc: 'fraction_cells_'+loc})
+    return fraction_cells
+
+
+def get_n_cells_per_location_for_clusters(cluster_meta, location='layer'):
+    """
+    creates table cre line & cluster IDs as indices with unqique columsn for:
+        the number of cells in a given location (i.e. area/depth) in a given cluster/cre line
+        the total number of cells in that location (i.e. area/depth) in that cre line
+        the number of cells in each cluster in each cre line
+        the total number of cells in that cre line
+
+    location can be any categorical column in cluster_meta,
+     typically one of: 'layer', 'targeted_structure', 'binned_depth', 'area_binned_depth' etc.
+    """
+    # get fraction cells per area and depth per cluster
+    # frequency will be the fraction of cells in each cluster for a given location
+    # relative to the total number of cells in that location for that cre line
+    locations = np.sort(cluster_meta[location].unique())
+    # get number of cells per cluster per cre line
+    n_cells_per_cluster = cluster_meta.reset_index().groupby(['cre_line', 'cluster_id']).count()[['cell_specimen_id']]
+    n_cells_per_cluster = n_cells_per_cluster.rename(columns={'cell_specimen_id': 'n_cells_cluster'})
+    # get total number of cells in each location for each cre line
+    n_cells_per_location = cluster_meta.reset_index().groupby(['cre_line', location])['cell_specimen_id'].count().unstack()
+    # get number of cells in each location for each cluster in each cre line
+    n_cells_per_location_per_cluster = cluster_meta.reset_index().groupby(['cre_line', 'cluster_id', location])['cell_specimen_id'].count().unstack()
+    n_cells_per_location_per_cluster = n_cells_per_location_per_cluster.fillna(value=0)
+    # relabel to include location in column name
+    for loc in locations:
+        n_cells_per_location = n_cells_per_location.rename(columns={loc: 'n_cells_total_'+loc})
+        n_cells_per_location_per_cluster = n_cells_per_location_per_cluster.rename(columns={loc: 'n_cells_'+loc})
+    # create final df with all counts
+    n_cells = n_cells_per_location_per_cluster.merge(n_cells_per_cluster, on=['cre_line', 'cluster_id'])
+    n_cells = n_cells.reset_index().merge(n_cells_per_location, on='cre_line', how='left')
+
+    n_cells.columns.name = None # get rid of residual column index name
+    n_cells = n_cells.set_index(['cre_line', 'cluster_id'])
+    return n_cells
+
+### THIS IS THE FINAL FUNCTION TO USE FOR GETTING AREA / DEPTH DISTRIBUTIONS FOR CLUSTERS ###
+#### it compures all the possible metrics, including stats based on Alex's code ###
+
+def get_cluster_proportion_stats_for_locations(cluster_meta, location='layer'):
+    """
+    creates table with cre line, cluster ID, and locations as indices, with unique columns for:
+        the number of cells in a given location (i.e. area/depth) in a given cluster & cre line
+        the total number of cells in that location (i.e. area/depth) in that cre line
+        the fraction of cells in that location & cluster relative to the total number of cells in that location
+        the number of cells in each cluster in each cre line
+        the total number of cells in that cre line
+        the fraction of cells in each cluster
+        the fraction of cells in a given location relative to the overall size of the cluster
+        the number of cells in a given location expected by chance based on the size of the cluster & total # cells in that location
+        the p-value comparing number of cells in each location to the number expected based on chance for each cluster
+        Boolean columns for whether p-val is significant, with and without correction for multiple comparisons
+
+    cluster_meta must have one row per cell_specimen_id, and include columns for 'cre_line', 'cluster_id', and location column
+    location can be any categorical column in cluster_meta,
+     typically one of: 'layer', 'targeted_structure', 'binned_depth', 'area_binned_depth' etc.
+    """
+
+    locations = np.sort(cluster_meta[location].unique())
+
+    # get number of cells in each location for each cluster in each cre line
+    n_cells_per_location_per_cluster = cluster_meta.reset_index().groupby(['cre_line', 'cluster_id', location])[
+        'cell_specimen_id'].count().to_frame(name='n_cells_location')
+    # get total number of cells in each location for each cre line
+    # n_cells_per_location = cluster_meta.reset_index().groupby(['cre_line', location])['cell_specimen_id'].count().unstack()
+    n_cells_per_location = cluster_meta.reset_index().groupby(['cre_line', location])[
+        'cell_specimen_id'].count().to_frame(name='n_cells_location_total')
+    # merge them and compute fraction of cells in each cluster for each location
+    n_cells_table = n_cells_per_location_per_cluster.copy()
+    n_cells_table = n_cells_table.reset_index().merge(n_cells_per_location.reset_index(), on=['cre_line', location],
+                                                      how='left')
+    n_cells_table['fraction_cells_location'] = n_cells_table['n_cells_location'] / n_cells_table[
+        'n_cells_location_total']
+
+    # get number of cells per cluster per cre line
+    n_cells_per_cluster = cluster_meta.reset_index().groupby(['cre_line', 'cluster_id']).count()[['cell_specimen_id']]
+    n_cells_per_cluster = n_cells_per_cluster.rename(columns={'cell_specimen_id': 'n_cells_cluster'})
+    # number of cells per cre line
+    n_cells_per_cre = cluster_meta.reset_index().groupby(['cre_line']).count()[['cell_specimen_id']]
+    n_cells_per_cre = n_cells_per_cre.rename(columns={'cell_specimen_id': 'n_cells_cre'})
+    # fraction cells per cluster per cre line
+    n_cells_table = n_cells_table.merge(n_cells_per_cluster.reset_index(), on=['cre_line', 'cluster_id'], how='left')
+    n_cells_table = n_cells_table.merge(n_cells_per_cre.reset_index(), on=['cre_line'], how='left')
+    n_cells_table['fraction_cells_cluster'] = n_cells_table['n_cells_cluster'] / n_cells_table['n_cells_cre']
+    # compute the proportion of cells in a given location for each cluster/cre relative to the proportion of cells in that cluster/cre
+    n_cells_table['fraction_of_cluster_size'] = n_cells_table['fraction_cells_location'] / n_cells_table[
+        'fraction_cells_cluster']
+    # how many cells would you expect per location by chance, assuming fraction of cells in each location is equal to overall size of cluster
+    # i.e. null hypothesis that cells are evenly distributed across locations within each cluster (accounting for bias in overall # cells per location)
+    n_cells_table['n_cells_chance_location'] = n_cells_table['fraction_cells_cluster'] * n_cells_table[
+        'n_cells_location_total']
+
+    # STATS
+    # make sure index is properly set before doing stats
+    n_cells_table = n_cells_table.set_index(['cre_line', 'cluster_id', location])
+    # chi square test for significance of actual cell counts per location/cluster vs chance level based on cluster size
+    n_cells_table = add_stats_for_location_comparison_to_cluster_proportion_stats(n_cells_table)
+    # # make sure index is properly set before returning
+    # n_cells_table = n_cells_table.set_index(['cre_line', 'cluster_id', location])
+    return n_cells_table
+
+
+def add_stats_for_location_comparison_to_cluster_proportion_stats(n_cells_table):
+    '''
+    Takes in a table with cell counts and proportions for each location, cluster, and cre line combination,
+    and performs a chi-square test with Benjamini Hochberg correction to determine if the
+    number of cells in each location for a given cluster is significantly different
+    than the number expected by chance based on the overall size of the cluster & # cells in each location.
+    Chance level for a given location in a given cluster is n_total_cells_for_location * fraction_cells_in_cluster
+
+    input dataframe must contain columns 'n_cells_location', and 'n_cells_chance_location',
+        and be a multi-index with [(cre_line, cluster_id, location)] as indices
+
+    returns input table with columns 'pvalue', 'significant', 'imq', and 'bh_significant',
+        computed across locations within each cluster & cre line
+    '''
+
+    from scipy.stats import chisquare
+
+    cre_lines = n_cells_table.index.get_level_values(level=0).unique().values
+    # iterate through clusters for each cre and compute stats for comparison across locations
+    for cre_line in cre_lines:
+        # get cluster IDs for this cre
+        cluster_ids = n_cells_table.loc[(cre_line)].index.get_level_values(level=0).unique().values
+        for cluster_id in cluster_ids:
+            # get the actual n_cells and chance level n_cells for both locations for this cluster
+            f = n_cells_table.loc[(cre_line, cluster_id)]['n_cells_location']
+            f_expected = n_cells_table.loc[(cre_line, cluster_id)]['n_cells_chance_location']
+            # ask if the actual frequency values are significantly different than expected frequencies
+            if len(f) > 1:  # needs to be at least 2 locations to compare
+                out = chisquare(f, f_expected)
+                n_cells_table.loc[(cre_line, cluster_id), 'pvalue'] = out.pvalue
+                n_cells_table.loc[(cre_line, cluster_id), 'significant'] = out.pvalue < 0.05
+            else:
+                n_cells_table.loc[(cre_line, cluster_id), 'pvalue'] = np.NaN
+                n_cells_table.loc[(cre_line, cluster_id), 'significant'] = np.NaN
+
+        ### Benjamini Hochberg correction
+        # isolate data just for one cre line and remove extra rows per cluster (p-values are the same for each location within a cluster)
+        cre_data = n_cells_table.loc[(cre_line)].reset_index().drop_duplicates(subset=['cluster_id'])
+        # sort by p-value within this cre line
+        cre_data = cre_data.sort_values(by='pvalue')
+        # compute the corrected pvalue based on the rank of each test
+        cre_data['imq'] = cre_data.index.values / len(cre_data) * 0.05
+        # Find the largest pvalue less than its corrected pvalue
+        # all tests above that are significant
+        cre_data['bh_significant'] = False
+        passing_tests = cre_data[cre_data['pvalue'] < cre_data['imq']]
+        if len(passing_tests) > 0:
+            last_index = cre_data[cre_data['pvalue'] < cre_data['imq']].tail(1).index.values[0]
+            cre_data.at[last_index, 'bh_significant'] = True
+            cre_data.at[0:last_index, 'bh_significant'] = True
+        # reset order of table and return
+        cre_data = cre_data.sort_values(by='cluster_id').set_index('cluster_id')
+        for cluster_id in cre_data.index.values:
+            n_cells_table.loc[(cre_line, cluster_id), 'imq'] = cre_data.loc[cluster_id, 'imq']
+            n_cells_table.loc[(cre_line, cluster_id), 'bh_significant'] = cre_data.loc[cluster_id, 'bh_significant']
+    return n_cells_table
+
+
+
+def get_cre_line_stats_for_locations(cell_metadata, location='layer'):
+    """
+    creates table with the number and fraction of cells in a given location (i.e. area/depth) in a given cre line
+
+    cell_metadata: dataframe, containing one row per cell_specimen_id
+                typically the ophys_cells_table after droping duplicate cells or the cluster_meta table
+    location: any categorical column in cell_metadata,
+                typically one of: 'layer', 'targeted_structure', 'binned_depth', 'area_binned_depth' etc.
+    """
+    # get total number of cells in each location for each cre line
+    n_cells_per_location = cell_metadata.reset_index().groupby(['cre_line', location])[
+        'cell_specimen_id'].count().to_frame(name='n_cells_location')
+    # total number of cells per cre line
+    n_cells_per_cre = cell_metadata.reset_index().groupby(['cre_line']).count()[['cell_specimen_id']]
+    n_cells_per_cre = n_cells_per_cre.rename(columns={'cell_specimen_id': 'n_cells_total'})
+    # fraction cells per cluster per cre line
+    cre_stats = n_cells_per_location.reset_index().merge(n_cells_per_cre.reset_index(), on=['cre_line'],  how='left')
+    cre_stats['fraction_cells_location'] = cre_stats['n_cells_location'] / cre_stats['n_cells_total']
+    cre_stats = cre_stats.set_index(['cre_line', location])
+    return cre_stats
+
+
+### metrics computed on GLM coding scores ###
 
 def get_coding_metrics(index_dropouts, index_value, index_name):
     """
@@ -1555,14 +1780,14 @@ def get_coding_metrics(index_dropouts, index_value, index_name):
     # overall experience modulation is how strong novel session coding is relative to average of Familiar and Novel >1
     # this makes sense under the assumption that Novel images becomes Familiar again rapidly in the Novel >1 session
     # if we wanted consider either novel session, could use novel_dropout = np.amax([row['Novel 1'], row['Novel >1']])
-    exp_mod = (row['Novel 1'] - (np.mean([row['Familiar'], row['Novel >1']]))) / (row['Novel 1'] + (np.mean([row['Familiar'], row['Novel >1']])))
+    exp_mod = (row['Novel'] - (np.mean([row['Familiar'], row['Novel +']]))) / (row['Novel'] + (np.mean([row['Familiar'], row['Novel +']])))
     stats.loc[index_value, 'experience_modulation'] = exp_mod
     # direction of exp mod is whether coding is stronger for familiar or novel
     # if we wanted consider either novel session, could use novel_dropout = np.amax([row['Novel 1'], row['Novel >1']])
-    exp_mod_direction = (row['Novel 1'] - row['Familiar']) / (row['Novel 1'] + row['Familiar'])
+    exp_mod_direction = (row['Novel'] - row['Familiar']) / (row['Novel'] + row['Familiar'])
     # persistence of exp mod is whether coding stays similar after repetition of novel session
 #     exp_mod_persistence = (row['Novel >1']-row['Novel 1'])/(row['Novel >1']+row['Novel 1'])
-    exp_mod_persistence = row['Novel >1'] / row['Novel 1'] # make it an index
+    exp_mod_persistence = row['Novel +'] / row['Novel'] # make it an index
     stats.loc[index_value, 'exp_mod_direction'] = exp_mod_direction
     stats.loc[index_value, 'exp_mod_persistence'] = exp_mod_persistence
     # within session joint coding index
@@ -1639,8 +1864,8 @@ def get_cluster_metrics(cluster_meta, feature_matrix, results_pivoted, cre=None)
             stats['fraction_cre'] = fraction_cre
             stats['cre_line'] = cre_line
             stats['F_max'] = mean_dropout_df['Familiar'].max()
-            stats['N1_max'] = mean_dropout_df['Novel 1'].max()
-            stats['N2_max'] = mean_dropout_df['Novel >1'].max()
+            stats['N1_max'] = mean_dropout_df['Novel'].max()
+            stats['N2_max'] = mean_dropout_df['Novel +'].max()
             stats['abs_max'] = mean_dropout_df.max().max()
             cluster_metrics = pd.concat([cluster_metrics, stats])
     cluster_metrics = cluster_metrics.reset_index()
@@ -1651,6 +1876,158 @@ def get_cluster_metrics(cluster_meta, feature_matrix, results_pivoted, cre=None)
 
     return cluster_metrics
 
+
+def get_cluster_metrics_all_cre(cluster_meta, feature_matrix, results_pivoted):
+    """
+    computes metrics for each cluster, including experience modulation, feature selectivity, etc
+    """
+    # cell_metrics = processing.get_cell_metrics(cluster_meta, results_pivoted)
+    cluster_metrics = pd.DataFrame()
+    # get cell specimen ids
+    cell_specimen_ids = cluster_meta.index.values
+    # get unique cluster labels
+    cluster_labels = np.sort(cluster_meta.cluster_id.unique())
+    for i, cluster_id in enumerate(cluster_labels):
+        # get cell specimen ids in this cluster
+        this_cluster_csids = cluster_meta[cluster_meta['cluster_id'] == cluster_id].index.values
+        # get dropout scores for cells in this cluster in this cre line
+        mean_dropout_df = np.abs(feature_matrix.loc[this_cluster_csids].mean().unstack())
+        stats = get_coding_metrics(index_dropouts=mean_dropout_df.T, index_value=cluster_id,
+                                    index_name='cluster_id')
+        fraction_cells = len(this_cluster_csids) / float(len(cell_specimen_ids))
+        stats['fraction_cells'] = fraction_cells
+        stats['F_max'] = mean_dropout_df['Familiar'].max()
+        stats['N1_max'] = mean_dropout_df['Novel'].max()
+        stats['N2_max'] = mean_dropout_df['Novel +'].max()
+        stats['abs_max'] = mean_dropout_df.max().max()
+        cluster_metrics = pd.concat([cluster_metrics, stats])
+    cluster_metrics = cluster_metrics.reset_index()
+    print(cluster_metrics.keys())
+    n_cells = cluster_meta.groupby(['cluster_id']).count()[['labels']].rename(columns={'labels': 'n_cells_cluster'})
+    cluster_metrics = cluster_metrics.merge(n_cells, on=['cluster_id'])
+
+    return cluster_metrics
+
+
+def define_cluster_types(cluster_metrics):
+    """
+    defines clusters as non-coding, mixed coding, image, behavioral, omission or task depending on
+    max dropout score, degree of selectivity across sessions, and max feature category
+    adds column 'cluster_types' to cluster_metrics
+    """
+    cluster_types = []
+    for i in range(len(cluster_metrics)):
+        row = cluster_metrics.iloc[i]
+        if row.abs_max < 0.1:
+            cluster_type = 'non-coding'
+        elif row.feature_sel_across_sessions < 0.2:
+            cluster_type = 'mixed coding'
+        else:
+            cluster_type = row.dominant_feature
+        cluster_types.append(cluster_type)
+    cluster_metrics['cluster_type'] = cluster_types
+    return cluster_metrics
+
+
+def add_cluster_types(location_fractions, cluster_metrics):
+    """
+    add column to location_fractions indicating the cluster type for each cluster
+    cluster_types include ['all-images', 'omissions', 'behavioral', 'task', 'mixed coding', 'non-coding']
+    """
+    cluster_metrics = define_cluster_types(cluster_metrics)
+
+    # merge location fractions with metrics per cluster
+    cs = cluster_metrics[['cre_line', 'cluster_id', 'cluster_type',
+                          'dominant_feature', 'dominant_experience_level',
+                          'experience_modulation', 'exp_mod_direction', 'exp_mod_persistence']]
+    location_fractions = location_fractions.merge(cs, on=['cre_line', 'cluster_id'])
+    return location_fractions
+
+
+def get_cluster_types():
+    return ['all-images', 'omissions', 'behavioral', 'task', 'mixed coding', 'non-coding']
+
+
+def get_cluster_type_color_df():
+    """
+    creates a dataframe with columns for cluster_type and corresponding cluster_type_color
+    """
+    cluster_types = get_cluster_types()
+
+    # get feature colors from gvt
+    import visual_behavior_glm.GLM_visualization_tools as gvt
+    cluster_type_colors = [
+        gvt.project_colors()[cluster_type][:3] if cluster_type in list(gvt.project_colors().keys()) else (0.5, 0.5, 0.5)
+        for cluster_type in cluster_types]
+
+    cluster_type_color_df = pd.DataFrame(columns=['cluster_type', 'color'])
+    cluster_type_color_df['cluster_type'] = cluster_types
+    cluster_type_color_df['cluster_type_color'] = cluster_type_colors
+
+    # make mixed and non-coding shades of gray
+    index = cluster_type_color_df[cluster_type_color_df.cluster_type == 'non-coding'].index[0]
+    cluster_type_color_df.at[index, 'cluster_type_color'] = (0.8, 0.8, 0.8)
+    index = cluster_type_color_df[cluster_type_color_df.cluster_type == 'mixed coding'].index[0]
+    cluster_type_color_df.at[index, 'cluster_type_color'] = (0.4, 0.4, 0.4)
+
+    return cluster_type_color_df
+
+
+def get_experience_level_color_df():
+    """
+    create dataframe with columns for experience_level and exp_level_color
+    """
+    import pandas as pd
+    import visual_behavior.visualization.utils as utils
+    colors = utils.get_experience_level_colors()
+    experience_levels = utils.get_experience_levels()
+    exp_colors = [colors[np.where(np.asarray(experience_levels) == exp_level)[0][0]] for exp_level in experience_levels]
+
+    exp_level_color_df = pd.DataFrame()
+    exp_level_color_df['experience_level'] = experience_levels
+    exp_level_color_df['exp_level_color'] = exp_colors
+    return exp_level_color_df
+
+
+def get_cluster_fractions_per_location(cluster_meta, cluster_metrics):
+    """
+    Compute the fraction of cells in each location that belong to each cluster
+    Designate a 'cluster_type', based on metrics of feature and experience selectivity
+    Add colors for cluster_types and preferred experience levels for plotting
+    This function is used in plotting.plot_cluster_proportions_all_locations()
+
+    :param cluster_meta: table of metadata for each cell_specimen_id, including their cluster_id
+    :param cluster_metrics: metrics computed based on average coding scores of each cluster (ex: 'experience_modulation', 'dominant_feature', etc)
+    :return:
+    """
+    if 'location' not in cluster_meta.keys():
+        cluster_meta = add_location_column(cluster_meta, columns_to_groupby=['targeted_structure', 'layer'])
+    # cre_lines = np.sort(cluster_meta.cre_line.unique())
+    # get fraction cells per location belonging to each cluster
+    location_fractions = get_location_fractions(cluster_meta)
+    # add cluster types
+    location_fractions = add_cluster_types(location_fractions, cluster_metrics)
+    # merge with cluster type colors
+    cluster_type_color_df = get_cluster_type_color_df()
+    location_fractions = location_fractions.merge(cluster_type_color_df, on='cluster_type')
+    # merge with experience level colors
+    exp_level_color_df = get_experience_level_color_df()
+    exp_level_color_df = exp_level_color_df.rename(columns={'experience_level': 'dominant_experience_level'})
+    location_fractions = location_fractions.merge(exp_level_color_df, on='dominant_experience_level')
+    # make exp level color gray for non-coding clusters
+    non_coding_inds = location_fractions[location_fractions.cluster_type == 'non-coding'].index
+    location_fractions.at[non_coding_inds, 'exp_level_color'] = location_fractions.loc[non_coding_inds, 'cluster_type_color']
+    # add experience modulation index with color values in a continuous colormap
+    import matplotlib.pyplot as plt
+    cmap = plt.get_cmap('RdBu')
+    exp_mod = location_fractions.experience_modulation.values
+    exp_mod_normed = ((exp_mod + 1) / 2) * 256
+    colors = [cmap(int(np.round(i)))[:3] for i in exp_mod_normed]
+    location_fractions['exp_mod_color'] = colors
+    return location_fractions
+
+
+### stats for comparison of coding scores across experience levels (and/or shuffle control) ###
 
 def kruskal_by_experience_level(df_pivoted, posthoc=True):
     stats = {}
@@ -1929,204 +2306,7 @@ def get_CI_for_clusters(cluster_meta, columns_to_groupby=['targeted_structure', 
     return CI_df
 
 
-def add_location_column(cluster_meta, columns_to_groupby=['targeted_structure', 'layer']):
-    '''
-    function to add location column to a df
-    INPUT:
-    cluster_meta: (pd.DataFrame) of groupout scores for each cell with other meta data columns
-    columns_to_groupby: columns in cluster_meta to use to create new location column
-                                location is defined as the concatenation of the column values in columns_to_groupby
-
-    '''
-    cluster_meta_copy = cluster_meta.copy()
-    if 'layer' not in cluster_meta.keys():
-        cluster_meta_copy['layer'] = ['upper' if x < 250 else 'lower' for x in cluster_meta_copy['imaging_depth']]
-        print('column layer is not in the dataframe, using 250 as a threshold to create the column')
-    if len(columns_to_groupby) == 0:
-        print('no columns were provided for grouping location')
-    elif len(columns_to_groupby) == 1:
-        cluster_meta_copy['location'] = cluster_meta_copy[columns_to_groupby[0]]
-    elif len(columns_to_groupby) == 2:
-        cluster_meta_copy['location'] = cluster_meta_copy[columns_to_groupby[0]] + '_' + cluster_meta_copy[columns_to_groupby[1]]
-    elif len(columns_to_groupby) == 3:
-        cluster_meta_copy['location'] = cluster_meta_copy[columns_to_groupby[0]] + '_' + cluster_meta_copy[
-            columns_to_groupby[1]] + '_' + cluster_meta_copy[columns_to_groupby[2]]
-    elif len(columns_to_groupby) > 3:
-        print('cannot combine more than three columns into a location column')
-
-    return cluster_meta_copy
-
-
-def get_location_fractions(cluster_meta):
-    """
-    for each location, compute percent of cells belonging to each cluster
-    """
-
-    cre_lines = np.sort(cluster_meta.cre_line.unique())
-    locations = np.sort(cluster_meta.location.unique())[::-1]
-    location_fractions = pd.DataFrame()
-    for cre_line in cre_lines:
-        for location in locations:
-            cells = cluster_meta[(cluster_meta.location == location) & (cluster_meta.cre_line == cre_line)]
-            total = len(cells)
-            cluster_cells = cells.groupby('cluster_id').count()[['labels']].rename(columns={'labels': 'n_cells'})
-            fraction = cluster_cells.n_cells / total
-
-            cluster_cells['fraction'] = fraction
-            cluster_cells = cluster_cells.reset_index()
-            cluster_cells['cre_line'] = cre_line
-            cluster_cells['location'] = location
-            location_fractions = pd.concat([location_fractions, cluster_cells])
-
-    return location_fractions
-
-
-def define_cluster_types(cluster_metrics):
-    """
-    defines clusters as non-coding, mixed coding, image, behavioral, omission or task depending on
-    max dropout score, degree of selectivity across sessions, and max feature category
-    adds column 'cluster_types' to cluster_metrics
-    """
-    cluster_types = []
-    for i in range(len(cluster_metrics)):
-        row = cluster_metrics.iloc[i]
-        if row.abs_max < 0.1:
-            cluster_type = 'non-coding'
-        elif row.feature_sel_across_sessions < 0.2:
-            cluster_type = 'mixed coding'
-        else:
-            cluster_type = row.dominant_feature
-        cluster_types.append(cluster_type)
-    cluster_metrics['cluster_type'] = cluster_types
-    return cluster_metrics
-
-
-def add_cluster_types(location_fractions, cluster_metrics):
-    """
-    add column to location_fractions indicating the cluster type for each cluster
-    cluster_types include ['all-images', 'omissions', 'behavioral', 'task', 'mixed coding', 'non-coding']
-    """
-    cluster_metrics = define_cluster_types(cluster_metrics)
-
-    # merge location fractions with metrics per cluster
-    cs = cluster_metrics[['cre_line', 'cluster_id', 'cluster_type',
-                          'dominant_feature', 'dominant_experience_level',
-                          'experience_modulation', 'exp_mod_direction', 'exp_mod_persistence']]
-    location_fractions = location_fractions.merge(cs, on=['cre_line', 'cluster_id'])
-    return location_fractions
-
-
-def get_cluster_types():
-    return ['all-images', 'omissions', 'behavioral', 'task', 'mixed coding', 'non-coding']
-
-
-def get_cluster_type_color_df():
-    """
-    creates a dataframe with columns for cluster_type and corresponding cluster_type_color
-    """
-    cluster_types = get_cluster_types()
-
-    # get feature colors from gvt
-    import visual_behavior_glm.GLM_visualization_tools as gvt
-    cluster_type_colors = [
-        gvt.project_colors()[cluster_type][:3] if cluster_type in list(gvt.project_colors().keys()) else (0.5, 0.5, 0.5)
-        for cluster_type in cluster_types]
-
-    cluster_type_color_df = pd.DataFrame(columns=['cluster_type', 'color'])
-    cluster_type_color_df['cluster_type'] = cluster_types
-    cluster_type_color_df['cluster_type_color'] = cluster_type_colors
-
-    # make mixed and non-coding shades of gray
-    index = cluster_type_color_df[cluster_type_color_df.cluster_type == 'non-coding'].index[0]
-    cluster_type_color_df.at[index, 'cluster_type_color'] = (0.8, 0.8, 0.8)
-    index = cluster_type_color_df[cluster_type_color_df.cluster_type == 'mixed coding'].index[0]
-    cluster_type_color_df.at[index, 'cluster_type_color'] = (0.4, 0.4, 0.4)
-
-    return cluster_type_color_df
-
-
-def get_experience_level_color_df():
-    """
-    create dataframe with columns for experience_level and exp_level_color
-    """
-    import pandas as pd
-    import visual_behavior.visualization.utils as utils
-    colors = utils.get_experience_level_colors()
-    experience_levels = utils.get_experience_levels()
-    exp_colors = [colors[np.where(np.asarray(experience_levels) == exp_level)[0][0]] for exp_level in experience_levels]
-
-    exp_level_color_df = pd.DataFrame()
-    exp_level_color_df['experience_level'] = experience_levels
-    exp_level_color_df['exp_level_color'] = exp_colors
-    return exp_level_color_df
-
-
-def get_cluster_fractions_per_location(cluster_meta, cluster_metrics):
-    """
-    Compute the fraction of cells in each location that belong to each cluster
-    Designate a 'cluster_type', based on metrics of feature and experience selectivity
-    Add colors for cluster_types and preferred experience levels for plotting
-    This function is used in plotting.plot_cluster_proportions_all_locations()
-
-    :param cluster_meta: table of metadata for each cell_specimen_id, including their cluster_id
-    :param cluster_metrics: metrics computed based on average coding scores of each cluster (ex: 'experience_modulation', 'dominant_feature', etc)
-    :return:
-    """
-    if 'location' not in cluster_meta.keys():
-        cluster_meta = add_location_column(cluster_meta, columns_to_groupby=['targeted_structure', 'layer'])
-    # cre_lines = np.sort(cluster_meta.cre_line.unique())
-    # get fraction cells per location belonging to each cluster
-    location_fractions = get_location_fractions(cluster_meta)
-    # add cluster types
-    location_fractions = add_cluster_types(location_fractions, cluster_metrics)
-    # merge with cluster type colors
-    cluster_type_color_df = get_cluster_type_color_df()
-    location_fractions = location_fractions.merge(cluster_type_color_df, on='cluster_type')
-    # merge with experience level colors
-    exp_level_color_df = get_experience_level_color_df()
-    exp_level_color_df = exp_level_color_df.rename(columns={'experience_level': 'dominant_experience_level'})
-    location_fractions = location_fractions.merge(exp_level_color_df, on='dominant_experience_level')
-    # make exp level color gray for non-coding clusters
-    non_coding_inds = location_fractions[location_fractions.cluster_type == 'non-coding'].index
-    location_fractions.at[non_coding_inds, 'exp_level_color'] = location_fractions.loc[non_coding_inds, 'cluster_type_color']
-    # add experience modulation index with color values in a continuous colormap
-    import matplotlib.pyplot as plt
-    cmap = plt.get_cmap('RdBu')
-    exp_mod = location_fractions.experience_modulation.values
-    exp_mod_normed = ((exp_mod + 1) / 2) * 256
-    colors = [cmap(int(np.round(i)))[:3] for i in exp_mod_normed]
-    location_fractions['exp_mod_color'] = colors
-    return location_fractions
-
-
-def get_cre_line_map(cre_line):
-
-    cre_line_dict = {'Slc17a7-IRES2-Cre': 'Excitatory',
-                     'Sst-IRES-Cre': 'SST inhibitory',
-                     'Vip-IRES-Cre': 'VIP inhibitory'}
-
-    mapped_cre_line = cre_line_dict[cre_line]
-    return mapped_cre_line
-
-def get_experience_map(experience_level):
-
-    experience_dict = {'Familiar': 'Familiar',
-                     'Novel 1': 'Novel',
-                     'Novel >1': 'Novel+'}
-
-    mapped_exp_level = experience_dict[experience_level]
-    return mapped_exp_level
-
-
-def get_n_clusters_cre():
-    ''' Number of clusters used in clustering per cre line'''
-    n_clusters_cre = {'Slc17a7-IRES2-Cre': 10,
-                      'Sst-IRES-Cre': 5,
-                      'Vip-IRES-Cre': 10}
-    return n_clusters_cre
-
-
-# shuffle control functions #############
+#### shuffle control functions ###
 
 def get_cluster_mapping(matrix, threshold=1, ):
     '''
