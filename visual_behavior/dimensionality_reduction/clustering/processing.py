@@ -86,7 +86,7 @@ def get_features_for_clustering():
     """
     get GLM features to use for clustering analysis
     """
-    features = ['all-images', 'omissions', 'behavioral', 'task']
+    features = ['all-images', 'omissions', 'task', 'behavioral']
     return features
 
 
@@ -1829,24 +1829,19 @@ def get_cell_metrics(cluster_meta, results_pivoted):
     return cell_metrics
 
 
-def get_cluster_metrics(cluster_meta, feature_matrix, results_pivoted, cre=None):
+def get_cluster_metrics(cluster_meta, feature_matrix, results_pivoted):
     """
-    computes metrics for each cluster, including experience modulation, feature selectivity, etc.
+    Computes metrics for each cluster / cre line, using the average coding score for that cluster
+    metrics include experience modulation, feature selectivity, etc.
+
+    returns dataframe with one row per cre line & cluster, with unique columns for metrics
     """
-    if 'location' not in cluster_meta.keys():
-        cluster_meta = add_location_column(cluster_meta, columns_to_groupby=['targeted_structure', 'layer'])
-    if cre is None:
-        cre_lines = ['all']
-    else:
-        cre_lines = np.sort(cluster_meta.cre_line.unique())
+    cre_lines = np.sort(cluster_meta.cre_line.unique())
     cell_metrics = get_cell_metrics(cluster_meta, results_pivoted)
     cluster_metrics = pd.DataFrame()
     for cre_line in cre_lines:
         # get cell specimen ids for this cre line
-        if cre is None:
-            cre_cell_specimen_ids = cluster_meta.index.values
-        else:
-            cre_cell_specimen_ids = cluster_meta[cluster_meta.cre_line == cre_line].index.values
+        cre_cell_specimen_ids = cluster_meta[cluster_meta.cre_line == cre_line].index.values
         # get cluster labels dataframe for this cre line
         cre_cluster_ids = cluster_meta.loc[cre_cell_specimen_ids]
         # get unique cluster labels for this cre line
@@ -1869,11 +1864,10 @@ def get_cluster_metrics(cluster_meta, feature_matrix, results_pivoted, cre=None)
             stats['abs_max'] = mean_dropout_df.max().max()
             cluster_metrics = pd.concat([cluster_metrics, stats])
     cluster_metrics = cluster_metrics.reset_index()
-    print(cluster_metrics.keys())
     n_cells = cell_metrics.groupby(['cre_line', 'cluster_id']).count()[['labels']].rename(
         columns={'labels': 'n_cells_cluster'})
     cluster_metrics = cluster_metrics.merge(n_cells, on=['cre_line', 'cluster_id'])
-
+    cluster_metrics = cluster_metrics.set_index(['cre_line', 'cluster_id'])
     return cluster_metrics
 
 
@@ -1905,6 +1899,31 @@ def get_cluster_metrics_all_cre(cluster_meta, feature_matrix, results_pivoted):
     print(cluster_metrics.keys())
     n_cells = cluster_meta.groupby(['cluster_id']).count()[['labels']].rename(columns={'labels': 'n_cells_cluster'})
     cluster_metrics = cluster_metrics.merge(n_cells, on=['cluster_id'])
+    cluster_metrics = cluster_metrics.set_index(['cre_line', 'cluster_id'])
+    return cluster_metrics
+
+
+def add_layer_index_to_cluster_metrics(cluster_metrics, n_cells_table):
+    '''
+    computes fraction cells upper vs lower over sum from n_cells table then appends that value
+    to the cluster_metrics table as 'layer_index'
+
+    n_cells_table: dataframe with cre line, cluter ID and layer as indices, columns for fraction cells in that layer, etc
+    cluster_metrics: dataframe with cre line & cluster ID as indices, columns for various metrics computed on cluster
+
+    '''
+
+    layer_index = n_cells_table[['fraction_cells_location']].unstack()
+    layer_index.columns = layer_index.columns.droplevel(0)
+    layer_index['layer_index'] = (layer_index.upper - layer_index.lower) / (layer_index.upper + layer_index.lower)
+    layer_index = layer_index.merge(n_cells_table[['bh_significant', 'significant']], on=['cre_line', 'cluster_id'])
+    layer_index = layer_index.reset_index().drop_duplicates(subset=['cre_line', 'cluster_id']).set_index(
+        ['cre_line', 'cluster_id'])
+
+    cluster_metrics = cluster_metrics.merge(layer_index[['layer_index']], on=['cre_line', 'cluster_id'])
+    fraction = n_cells_table[['fraction_cells_cluster']].reset_index().drop_duplicates(subset=['cre_line', 'cluster_id'])
+    cluster_metrics = cluster_metrics.merge(fraction, on=['cre_line', 'cluster_id']).set_index(['cre_line', 'cluster_id'])
+    cluster_metrics = cluster_metrics.drop(columns=['layer'])
 
     return cluster_metrics
 

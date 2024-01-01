@@ -1229,8 +1229,6 @@ def plot_response_heatmaps_for_conditions(multi_session_df, timestamps, data_typ
             sns.despine(ax=ax[i], top=False, right=False, left=False, bottom=False, offset=None, trim=False)
             i += 1
 
-
-
     for i in np.arange(0, (len(col_conditions) * len(row_conditions)), len(col_conditions)):
         ax[i].set_ylabel('cells')
 
