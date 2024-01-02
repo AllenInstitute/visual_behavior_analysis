@@ -106,7 +106,7 @@ if __name__ == '__main__':
     # fit
     nb_full_name = os.path.join(save_dir, 'files', nb_filename+'_cluster_labels.h5')
     if os.path.exists(nb_full_name):
-        clustered_df = pd.read_hdf(nb_full_name, key='clustered_df')
+        cluster_df = pd.read_hdf(nb_full_name, key='clustered_df')
     else:
         cluster = ac(n_clusters=n_clusters, affinity='euclidean', linkage='average')
         labels = cluster.fit_predict(coclust_matrix)
