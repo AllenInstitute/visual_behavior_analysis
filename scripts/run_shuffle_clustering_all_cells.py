@@ -17,6 +17,11 @@ if __name__ == '__main__':
     parser.add_argument('--shuffle_type', type=str, help='type of shuffle to perform (experience, experience_within_cell, regressors, all')
     parser.add_argument('--n_boot', type=int, help='run number')
     args = parser.parse_args()
+    
+    # get shuffle type and n_boot
+    shuffle_type = args.shuffle_type
+    n_boot = args.n_boot
+
 
     base_dir = '//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/platform_paper_plots/figure_4/all_cre_clustering_082823_n_14'
     glm_version = '24_events_all_L2_optimize_by_session'
@@ -26,15 +31,17 @@ if __name__ == '__main__':
     if not os.path.exists(save_dir):
         os.mkdir(save_dir)
 
+    # load feature matrix
     filename = '24_events_all_L2_optimize_by_session_feature_matrix.h5'
     df = pd.read_hdf(os.path.join(base_dir, filename), key='df')
+
+    # load meta data
     meta_filename = 'cluster_meta_n_14_clusters.h5'
     df_meta = pd.read_hdf(os.path.join(base_dir, meta_filename), key='df')
+    # get cre lines
     cre_lines = np.sort(df_meta.cre_line.unique())
-    shuffle_type = args.shuffle_type
-    n_boot = args.n_boot
 
-    # create a dictionary of splitting cre lines
+    # create a dictionary of splitting feature matrix by cre line
     cre_line_dfs = {}
     for cre_line in cre_lines:
         cids = df_meta[df_meta['cre_line'] == cre_line].cell_specimen_id.values
@@ -42,7 +49,6 @@ if __name__ == '__main__':
         cre_line_dfs[cre_line] = df_cre
 
     # Optimal number of clusters
-    n_clusters_cre_dict = {}
     n_clusters = 12
 
     # create clustering object
@@ -52,7 +58,7 @@ if __name__ == '__main__':
     nb_filename ='all_cells_{}_nb{}'.format(shuffle_type, n_boot) # nb shuffled dataset
     nb_full_name = os.path.join(save_dir, 'files', nb_filename+'.h5')
 
-    # 1.shuffle feature matrix
+    # 1.shuffle feature matrix within cre line and merge it
     # if that shuffle already exist, load it
     start=True
     for cre_line in cre_lines:
@@ -68,6 +74,7 @@ if __name__ == '__main__':
                 shuffled_feature_matrix = shuffled_feature_matrix.append(shuffled_feature_matrix_cre)
     shuffled_feature_matrix.to_hdf(nb_full_name, key='df')
 
+    # get feature matrix as numpy array
     X = shuffled_feature_matrix.values
 
     # 2. Compute coclustering matrix
