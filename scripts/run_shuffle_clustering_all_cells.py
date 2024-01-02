@@ -28,7 +28,7 @@ if __name__ == '__main__':
 
     filename = '24_events_all_L2_optimize_by_session_feature_matrix.h5'
     df = pd.read_hdf(os.path.join(base_dir, filename), key='df')
-    meta_filename = 'cluster_metadata_n_14_clusters.h5'
+    meta_filename = 'cluster_meta_n_14_clusters.h5'
     df_meta = pd.read_hdf(os.path.join(base_dir, meta_filename), key='df')
     cre_lines = np.sort(df_meta.cre_line.unique())
     shuffle_type = args.shuffle_type
