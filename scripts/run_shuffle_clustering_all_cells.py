@@ -121,8 +121,8 @@ if __name__ == '__main__':
 
     # 3. Plot clusters
     for cre_line in cre_lines:
-        cluster_df = clustered_df[clustered_df['cre_line'] == cre_line]
-        sort_order_array = cluster_df.value_counts('cluster_id').index.values # this might need upgrade in pandas package if you get an arror
+        tmp = cluster_df[cluster_df['cre_line'] == cre_line]
+        sort_order_array = tmp.value_counts('cluster_id').index.values # this might need upgrade in pandas package if you get an arror
         sort_order = {cre_line: sort_order_array} # sort order must be a dictionary with cre line as a key
         # make sure that clustered_df (or meta dataframe) in indexed with cell specimen ids
         vba_clust.plot_clusters_row(cluster_df.set_index('cell_specimen_id'),
