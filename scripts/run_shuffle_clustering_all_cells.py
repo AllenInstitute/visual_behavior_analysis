@@ -64,6 +64,7 @@ if __name__ == '__main__':
     for cre_line in cre_lines:
         feature_matrix = cre_line_dfs[cre_line]
         if os.path.exists(nb_full_name):
+            print(f'found shuffled feature matrix {n_boot}..')
             shuffled_feature_matrix = pd.read_hdf(nb_full_name, key='df')
         else:
             shuffled_feature_matrix_cre = vba_clust.shuffle_dropout_score(feature_matrix, shuffle_type=shuffle_type)
@@ -94,7 +95,7 @@ if __name__ == '__main__':
     fig_name = nb_filename + '_coClustering_Matrix'
     fig.fig.suptitle(fig_name)
     utils.save_figure(fig.fig, figsize=(25, 20), save_dir=save_dir, folder='plots',
-                          fig_title=fig_name, formats=['.png', '.pdf'])
+                          fig_title=fig_name, formats=['.png'])
 
     # fit
     nb_full_name = os.path.join(save_dir, 'files', nb_filename+'_cluster_labels.h5')
