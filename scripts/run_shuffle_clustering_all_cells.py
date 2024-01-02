@@ -37,7 +37,7 @@ if __name__ == '__main__':
     # create a dictionary of splitting cre lines
     cre_line_dfs = {}
     for cre_line in cre_lines:
-        cids = df_meta[df_meta['cre_line'] == cre_line].index.values
+        cids = df_meta[df_meta['cre_line'] == cre_line].cell_specimen_id.values
         df_cre = df.loc[cids].copy()
         cre_line_dfs[cre_line] = df_cre
 
