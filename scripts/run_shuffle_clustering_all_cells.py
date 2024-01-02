@@ -111,6 +111,7 @@ if __name__ == '__main__':
         cluster = ac(n_clusters=n_clusters, affinity='euclidean', linkage='average')
         labels = cluster.fit_predict(coclust_matrix)
         cluster_ids = labels +1
+        print(len(ids), len(cre_lines_values), len(cluster_ids), len(labels))
         data = {'cell_specimen_id': ids, 'cre_line': cre_lines_values,
                     'cluster_id': cluster_ids, 'labels': labels}
         cluster_df = pd.DataFrame(data=data)
