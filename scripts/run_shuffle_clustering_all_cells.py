@@ -43,10 +43,16 @@ if __name__ == '__main__':
 
     # create a dictionary of splitting feature matrix by cre line
     cre_line_dfs = {}
+    ids =[]
+    cre_lines_values = []
     for cre_line in cre_lines:
         cids = df_meta[df_meta['cre_line'] == cre_line].cell_specimen_id.values
         df_cre = df.loc[cids].copy()
         cre_line_dfs[cre_line] = df_cre
+        ids.append(cids)
+        cre_lines_values.append([cre_line]* len(cids))
+    ids = np.concatenate(ids)
+    cre_lines_values = np.concatenate(cre_lines_values)
 
     # Optimal number of clusters
     n_clusters = 12
@@ -102,14 +108,14 @@ if __name__ == '__main__':
     if os.path.exists(nb_full_name):
         clustered_df = pd.read_hdf(nb_full_name, key='clustered_df')
     else:
-        ids = df.index.values
         cluster = ac(n_clusters=n_clusters, affinity='euclidean', linkage='average')
         labels = cluster.fit_predict(coclust_matrix)
         cluster_ids = labels +1
-        data = {'cell_specimen_id': ids, 'cre_line': [cre_line] * len(ids),
+        data = {'cell_specimen_id': ids, 'cre_line': cre_lines_values,
                     'cluster_id': cluster_ids, 'labels': labels}
         cluster_df = pd.DataFrame(data=data)
         cluster_df.to_hdf(nb_full_name, key='clustered_df')
+
 
 
     # 3. Plot clusters
