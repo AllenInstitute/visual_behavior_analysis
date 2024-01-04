@@ -30,8 +30,8 @@ def get_abbreviated_experience_levels(experience_levels):
     converts experience level names (ex: 'Novel >1') into short hand versions (ex: 'N>1')
     abbreviated names are returned in the same order as provided in experience_levels
     """
-    exp_level_abbreviations = [exp_level.split(' ')[0][0] if len(exp_level.split(' ')) == 1 else exp_level.split(' ')[0][0] + exp_level.split(' ')[1][:2] for exp_level in experience_levels]
-    # exp_level_abbreviations = ['F', 'N', 'N+']
+    #exp_level_abbreviations = [exp_level.split(' ')[0][0] if len(exp_level.split(' ')) == 1 else exp_level.split(' ')[0][0] + exp_level.split(' ')[1][:2] for exp_level in experience_levels]
+    exp_level_abbreviations = ['F', 'N', 'N+']
     return exp_level_abbreviations
 
 
