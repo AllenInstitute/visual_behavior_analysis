@@ -1689,32 +1689,12 @@ def plot_coding_score_heatmap_remapped(cluster_meta, feature_matrix, sort_by='cl
         utils.save_figure(fig, figsize, save_dir, folder, 'feature_matrix_n_clusters_'+str(n_clusters)+'_remapped_'+sort_by+'_sort')
 
 
-def get_fraction_cells_per_cluster_per_group(cluster_meta, col_to_group='mouse_id'):
-    """
-    counts the number of cells a given condition, and the number of cells in each cluster for that given condition,
-    then computes the proportion of cells in each cluster for the given condition
-    col_to_group: can be 'cre_line', 'mouse_id', etc
-    """
-    # get number of cells in each group defined by col_to_group
-    n_cells_group = cluster_meta.groupby([col_to_group]).count()[['cluster_id']].reset_index().rename(
-        columns={'cluster_id': 'n_cells_group'})
-    # get number of cells in each cluster for each group
-    n_cells_per_cluster = cluster_meta.groupby([col_to_group, 'cluster_id']).count()[
-        ['ophys_experiment_id']].reset_index().rename(columns={'ophys_experiment_id': 'n_cells_cluster'})
-    # add n cells per cluster per group to total number of cells per group and compute the fraction per cluster in each group
-    n_cells_per_cluster = n_cells_per_cluster.merge(n_cells_group, on=col_to_group)
-    n_cells_per_cluster[
-        'fraction_per_cluster'] = n_cells_per_cluster.n_cells_cluster / n_cells_per_cluster.n_cells_group
-
-    return n_cells_per_cluster
-
-
 def plot_fraction_cells_per_cluster_per_cre(cluster_meta, col_to_group='cre_line', save_dir=None, folder=None):
     '''
     plots the fraction of cells in each cre line belonging to each cluster as a barplot
     with one axis / row per cre line
     '''
-    n_cells_per_cluster = get_fraction_cells_per_cluster_per_group(cluster_meta, col_to_group)
+    n_cells_per_cluster = processing.get_fraction_cells_per_cluster_per_group(cluster_meta, col_to_group)
 
     figsize = (5, 5)
     fig, ax = plt.subplots(3, 1, figsize=figsize, sharey=True, sharex=True)
@@ -3902,7 +3882,44 @@ def plot_unraveled_clusters(feature_matrix, cluster_df, sort_order=None, cre_lin
     if save_dir is not None:
         utils.save_figure(fig, figsize, save_dir, folder, f'feature_matrix_sorted_by_cluster_id_{tag}')
 
-## Plotting functions for response metrics of the clusters
+
+### basic coding score features ###
+
+
+def get_fraction_cells_for_column(coding_score_metrics, column_to_group = 'dominant_feature'):
+    n_cells = coding_score_metrics.reset_index().groupby(['cre_line', column_to_group]).count()[['cell_specimen_id']].rename(columns={'cell_specimen_id': 'n_cells'})
+    total_cells = coding_score_metrics.reset_index().groupby(['cre_line']).count()[['cell_specimen_id']].rename(columns={'cell_specimen_id': 'total_cells'})
+    fraction_cells = n_cells.reset_index().merge(total_cells, on='cre_line', how='left')
+    fraction_cells['fraction'] = fraction_cells.n_cells/fraction_cells.total_cells
+    return fraction_cells
+
+
+def plot_fraction_cells_distribution_stacked_barplot(coding_score_metrics, metric, palette=None, title='', legend=False, ax=None):
+    '''
+    plot stacked barplot of fraction cells belonging to each category in metric column
+    coding_score_metrics must be dataframe with cells as rows with various metadata columns
+    metric must be a column in coding_score_metrics that contains a categorical variable to group cells by
+    '''
+    fraction_cells = get_fraction_cells_for_column(coding_score_metrics, column_to_group=metric)
+    hue_order = fraction_cells[metric].unique()
+    if palette is None:
+        palette = sns.color_palette()
+    if ax is None:
+        figsize = (3,2.5)
+        fig, ax = plt.subplots(figsize=figsize)
+    ax = sns.histplot(fraction_cells, y='cre_line', hue=metric, hue_order=hue_order, weights='fraction',
+                multiple='stack', palette=palette, shrink=0.8, alpha=0.8)
+    ax.set_yticklabels([utils.get_abbreviated_cell_type(cre_line) for cre_line in utils.get_cre_lines()])
+    ax.set_ylabel('')
+    ax.set_xlabel('fraction of cells')
+    ax.set_title(title)
+    # ax.legend(hue_order, bbox_to_anchor=(1,1),  title='', fontsize='x-small')
+    if legend == False:
+        ax.get_legend().remove()
+
+
+
+## Plotting functions for response metrics of the clusters ###
 
 def plot_distribution(data_array1, data_array2, exp_level_1, exp_level_2, 
                       ax = None, bins=30, density=True, label=False, test='MW', suffix='', cre='all', rm_f=''):
@@ -4012,4 +4029,481 @@ def plot_boxplot(data_array1, data_array2, exp_level_1, exp_level_2,
     
     plt.tight_layout()
 
-    
+
+def get_feature_colors_and_labels():
+    c = sns.color_palette()
+    feature_colors = [c[2], c[9], c[1], c[8]]
+
+    feature_labels_dict = {'all-images': 'images',
+                         'omissions': 'omissions',
+                         'behavioral': 'behavior',
+                         'task': 'task'}
+    return feature_colors, feature_labels_dict
+
+
+def plot_barplot_of_metric_value_for_pref_feature(metrics, x, xlabel,
+                                                  save_dir=None, folder=None, ax=None):
+    '''
+    Plots mean and CI of metric distribution with preferred feature on y axis and metric value on x
+    values averaged across cre lines
+
+    metrics is a merged table of coding score metrics & model free metrics, computed using
+     processing.generate_merged_table_of_coding_score_and_model_free_metrics()
+
+    x is a column in metrics table
+    xlabel is the string used for plotting
+    '''
+    feature_colors, feature_labels_dict = get_feature_colors_and_labels()
+    features = list(feature_labels_dict.keys())
+    feature_labels = list(feature_labels_dict.values())
+
+    # limit metrics to the preferred experience level for each cell so each cell only counts once
+    data = metrics[metrics.pref_experience_level == True].copy()
+    # data = metrics.copy()
+
+    if ax is None:
+        figsize = (3, 2.5)
+        fig, ax = plt.subplots(figsize=figsize)
+    ax = sns.barplot(data=data, y='dominant_feature_cluster', x=x,
+                     orient='h', order=features, palette=feature_colors, width=0.8, alpha=0.8, ax=ax, )
+    ax.legend(fontsize='x-small', bbox_to_anchor=(1, 1))
+    if xlabel is None:
+        xlabel = x
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel('preferred feature')
+    ax.set_yticklabels(feature_labels, rotation=0);
+
+    if save_dir:
+        filename = 'metric_dist_for_pref_feature_barplot_' + x
+        utils.save_figure(fig, figsize, os.path.join(save_dir, folder), 'metric_distributions', filename)
+    return ax
+
+
+def plot_boxplot_of_metric_value_for_pref_feature_by_cre(metrics, x, xlabel=None,
+                                                         save_dir=None, folder=None, ax=None):
+    '''
+    Plots mean and CI of metric distribution with cre lines on y axis, metric value on x,
+    and preferred feature indicated via hues
+
+    metrics is a merged table of coding score metrics & model free metrics, computed using
+     processing.generate_merged_table_of_coding_score_and_model_free_metrics()
+
+    x is a column in metrics table
+    xlabel is the string used for plotting
+    '''
+    feature_colors, feature_labels_dict = get_feature_colors_and_labels()
+    features = list(feature_labels_dict.keys())
+    feature_labels = list(feature_labels_dict.values())
+    cre_lines = utils.get_cre_lines()
+    cell_type_labels = [utils.get_abbreviated_cell_type(cre_line) for cre_line in cre_lines]
+
+    # limit metrics to the preferred experience level for each cell so each cell only counts once
+    data = metrics[metrics.pref_experience_level == True]
+
+    if ax is None:
+        figsize = (4, 2.5)
+        fig, ax = plt.subplots(figsize=figsize)
+    ax = sns.boxplot(data=data, y='cre_line', x=x,
+                     orient='h', order=cre_lines, width=0.8, ax=ax, boxprops=dict(alpha=.7),
+                     hue='dominant_feature_cluster', hue_order=features, palette=feature_colors)
+    ax.legend(fontsize='x-small', bbox_to_anchor=(1, 1))
+    if xlabel is None:
+        xlabel = x
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel('')
+    ax.set_yticklabels(cell_type_labels, rotation=0);
+
+    if save_dir:
+        filename = 'metric_dist_for_pref_feature_boxplot_split_by_cre_' + x
+        utils.save_figure(fig, figsize, os.path.join(save_dir, folder), 'metric_distributions', filename)
+    return ax
+
+
+def plot_barplot_of_metric_value_for_pref_exp_level(metrics, x, xlabel,
+                                                    save_dir=None, folder=None, ax=None):
+    '''
+    Plots mean and CI of metric distribution with preferred feature on y axis and metric value on x
+    values averaged across cre lines
+
+    metrics is a merged table of coding score metrics & model free metrics, computed using
+     processing.generate_merged_table_of_coding_score_and_model_free_metrics()
+
+    x is a column in metrics table
+    xlabel is the string used for plotting
+    '''
+    experience_levels = utils.get_new_experience_levels()
+    experience_level_colors = utils.get_experience_level_colors()
+
+    # only look at metric values for max exp level & pref feature
+    data = metrics.copy()
+    data = data[(data.dominant_experience_level_cluster == data.experience_level)]
+
+    if ax is None:
+        figsize = (3, 2.5)
+        fig, ax = plt.subplots(figsize=figsize)
+    ax = sns.barplot(data=data, y='dominant_experience_level_cluster', x=x,
+                     orient='h', order=experience_levels, palette=experience_level_colors, width=0.8, alpha=0.8,
+                     ax=ax, )
+    ax.legend(fontsize='x-small', bbox_to_anchor=(1, 1))
+    if xlabel is None:
+        xlabel = x
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel('max experience level')
+    ax.set_yticklabels(experience_levels, rotation=0);
+
+    if save_dir:
+        filename = 'metric_dist_for_max_exp_level_barplot_' + x
+        utils.save_figure(fig, figsize, os.path.join(save_dir, folder), 'metric_distributions', filename)
+    return ax
+
+
+### each cre
+def plot_boxplot_of_metric_value_for_pref_exp_level_by_cre(metrics, x, xlabel=None,
+                                                           save_dir=None, folder=None, ax=None):
+    '''
+    Plots mean and CI of metric distribution with cre lines on y axis, metric value on x,
+    and preferred feature indicated via hues
+
+    metrics is a merged table of coding score metrics & model free metrics, computed using
+     processing.generate_merged_table_of_coding_score_and_model_free_metrics()
+
+    x is a column in metrics table
+    xlabel is the string used for plotting
+    '''
+    experience_levels = utils.get_new_experience_levels()
+    experience_level_colors = utils.get_experience_level_colors()
+    cre_lines = utils.get_cre_lines()
+    cell_type_labels = [utils.get_abbreviated_cell_type(cre_line) for cre_line in cre_lines]
+
+    # only look at metric values for max exp level & pref feature
+    data = metrics.copy()
+    data = data[(data.dominant_experience_level_cluster == data.experience_level)]
+
+    if ax is None:
+        figsize = (4, 2.5)
+        fig, ax = plt.subplots(figsize=figsize)
+    ax = sns.boxplot(data=data, y='cre_line', x=x,
+                     orient='h', order=cre_lines, width=0.8, ax=ax, boxprops=dict(alpha=.7),
+                     hue='dominant_experience_level_cluster', hue_order=experience_levels,
+                     palette=experience_level_colors)
+    ax.legend(fontsize='x-small', bbox_to_anchor=(1, 1))
+    if xlabel is None:
+        xlabel = x
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel('')
+    ax.set_yticklabels(cell_type_labels, rotation=0);
+
+    if save_dir:
+        filename = 'metric_dist_for_pref_exp_level_boxplot_split_by_cre_' + x
+        utils.save_figure(fig, figsize, os.path.join(save_dir, folder), 'metric_distributions', filename)
+    return ax
+
+
+def plot_metric_distribution_for_dominant_feature_cluster_types(metrics, metric, cre_line=None,
+                                                                xlabel='', title='', legend=True,
+                                                                cumulative=True, step=0.05, linewidth=1,
+                                                                save_dir=None, folder=None, ax=None):
+    '''
+    Plots a distribution of values of a given metric for cells belonging to clusters of each of the 4 types,
+    defined by having a dominant feature of (images, omissions, behavioral, task).
+    cluster will be cumulative if cumulative =True, otherwise standard distribution.
+    Also shows rugplot for each feature type under the distribution
+
+    metrics: dataframe where each row is one cell in one experience level, with columns for various metric values computed on each session
+                plot will include the metric values for all experience levels for each cell, unless you
+                limit metrics table to preferred experience level for each cell prior to passing into the function
+    metric: str, column value in metrics to plot distribution of
+    cre_line: str or None, if None, plot includes all cre lines, if cre line is provided, distribution will be limited
+                to that cre line and the cell type will be added to the plot title and figure handle
+
+    '''
+
+    data = metrics.copy()
+    # if cre line is provided, limit data to that cre line
+    if cre_line is not None:
+        data = data[data.cre_line == cre_line]
+        title = title + '\n' + utils.convert_cre_line_to_cell_type(cre_line)
+
+    if ax is None:
+        figsize = (5, 5)
+        fig, ax = plt.subplots(figsize=figsize)
+
+    colors, feature_labels_dict = get_feature_colors_and_labels()
+    features = list(feature_labels_dict.keys())
+    feature_labels = list(feature_labels_dict.values())
+    n_hues = len(features)  # there are 4 feature categories
+
+    # y loc values for rugplot
+    y_shifts = np.arange(-step, -(step * n_hues + 1), -step)
+
+    for i, dominant_feature in enumerate(np.sort(metrics.dominant_feature.unique())):
+        ax = sns.histplot(data=data[data.dominant_feature == dominant_feature], x=metric, bins=25,
+                          color=colors[i], fill=False, element='step', multiple='stack', label=dominant_feature,
+                          common_norm=False, common_bins=True, kde=True, cumulative=cumulative, stat='proportion',
+                          linewidth=linewidth, ax=ax)
+        rug_data = data[data.dominant_feature == dominant_feature][metric].values
+        # manualy create rugplot
+        ax.plot(rug_data, [y_shifts[i]] * len(rug_data), '|', color=colors[i])
+    ax.set_ylim(ymin=-(n_hues * step) - step)
+    if legend:
+        ax.legend()
+        sns.move_legend(ax, "upper left", title='preferred feature', fontsize='x-small', title_fontsize='x-small')
+    ax.set_xlabel(xlabel)
+    ax.set_title(title)
+
+    if save_dir:
+        filename = metric + '_distribution_for_cluster_types'
+        if cre_line is not None:
+            filename = filename + '_' + utils.convert_cre_line_to_cell_type(cre_line).split(' ')[0]
+        utils.save_figure(fig, figsize, os.path.join(save_dir, folder), 'metric_distributions', filename)
+    return ax
+
+
+def plot_metric_distribution_for_dominant_feature_cluster_types_per_cre(metrics, metric,
+                                                                        xlabel=None, title=None, linewidth=0.3,
+                                                                        cumulative=True, step=0.05, legend=False,
+                                                                        save_dir=None, folder=None):
+    '''
+    runs the plotting function plot_metric_distribution_for_dominant_feature_cluster_types
+    on each cre line and places them in a single figure
+    '''
+    # limit metrics to the preferred experience level for each cell so each cell only counts once
+    data = metrics[metrics.pref_experience_level == True]
+
+    figsize = (15, 5)
+    fig, ax = plt.subplots(1, 3, figsize=figsize)
+    for i, cre_line in enumerate(utils.get_cre_lines()):
+        cre_data = data[data.cre_line == cre_line]
+        ax[i] = plot_metric_distribution_for_dominant_feature_cluster_types(cre_data, metric, cre_line=cre_line,
+                                                                            xlabel=xlabel, title=title,
+                                                                            linewidth=linewidth,
+                                                                            cumulative=cumulative, step=step,
+                                                                            legend=legend,
+                                                                            save_dir=None, folder=None, ax=ax[i])
+    fig.tight_layout()
+    filename = metric + '_distribution_for_cluster_types_per_cre_line'
+    utils.save_figure(fig, figsize, os.path.join(save_dir, folder), 'metric_distributions', filename)
+
+
+
+
+### image selectivity & within session changes for clusters ###
+
+def add_image_index_column(df):
+    '''
+    for a dataframe with image_name as a column, create a new column 'image_index' based on sorted order of image names
+
+    currently only works for dfs with image_names from image sets A and B
+    '''
+    # make lookup table
+    image_names_A = list(df[df.image_set == 'A'].image_name.unique())
+    image_indices_A = list(np.argsort(image_names_A))
+    image_names_B = list(df[df.image_set == 'B'].image_name.unique())
+    image_indices_B = list(np.argsort(image_names_B))
+
+    image_names = image_names_A + image_names_B
+    image_indices = image_indices_A + image_indices_B
+
+    image_dict = dict(zip(image_names, image_indices))
+
+    # add image_index column using lookup table
+    df['image_index'] = [image_dict[image_name] for image_name in df.image_name.values]
+
+    return df
+
+
+def get_cell_list_ordered_by_pref_image_index(df):
+    '''
+    take a dataframe containing mean image responses for cells and return list of cell_specimen_ids
+    in order of preferred image and mean response within each preferred image
+    df: multi_session_df with 'image_index' and 'mean_response' as columns
+    '''
+    # remove omissions
+    df = df[df.image_name!='omitted']
+    image_indices = np.sort(df['image_index'].unique())
+    cell_list = []
+    for image_index in image_indices:
+        # get cells with pref stim for this image index
+        tmp = df[(df['image_index'] == image_index) & (df.pref_stim == True)]
+        # sort cells by mean response value
+        order = np.argsort(tmp.mean_response.values)[::-1]
+        # add to list of IDs
+        cell_ids = list(tmp.cell_specimen_id.values[order])
+        cell_list = cell_list + cell_ids
+    return cell_list
+
+
+def plot_tuning_curve_heatmap_for_cluster(df, cell_list=None, vmax=0.3, cmap='magma', sup_title=None, title=None,
+                                          ax=None, save_dir=None, folder=None,
+                                          label='response', colorbar=True):
+    '''
+    plot a heatmap where x axis is image_name and y axis is cell_specimen_ids,
+    sorted by the preferred image then mean response within each pref image
+    use cell_list for sorting if provided
+    '''
+    # make sure image_index column exists
+    if 'image_index' not in df.columns:
+        print('adding image index')
+        df = add_image_index_column(df)
+    # remove omissions
+    # df = df[df.image_name!='omitted']
+    image_indices = np.sort(df['image_index'].unique())
+    if cell_list is None:
+        cell_list = get_cell_list_ordered_by_pref_image_index(df)
+    response_matrix = np.empty((len(cell_list), len(image_indices)))
+    for i, csid in enumerate(cell_list):
+        responses = []
+        for image_index in image_indices:
+            response = df[(df.cell_specimen_id == csid) & (df['image_index'] == image_index)].mean_response.values[0]
+            responses.append(response)
+        response_matrix[i, :] = np.asarray(responses)
+    if ax is None:
+        figsize = (5, 8)
+        fig, ax = plt.subplots(figsize=figsize)
+        fig.tight_layout()
+
+    ax = sns.heatmap(response_matrix, cmap=cmap, linewidths=0, linecolor='white', square=False,
+                     vmin=0, vmax=vmax, robust=True, cbar=colorbar,
+                     cbar_kws={"drawedges": False, "shrink": 0.5, "label": label}, ax=ax)
+
+    # import matplotlib.cm
+    # cmap = matplotlib.cm.ScalarMappable(norm=None, cmap='magma')
+    # cmap.set_clim(vmin=0, vmax=0.2)
+
+    # fig, ax = plt.subplots()
+    # cbar = fig.colorbar(cmap, ax=ax)
+    # cbar_labels = cbar.ax.get_yticklabels()
+    # cbar.ax.set_yticklabels(cbar_labels, fontsize=10)
+
+    ax.set_title(title, va='bottom', ha='center')
+    ax.set_xticks(np.arange(0.5, len(image_indices) + 0.5))
+    if len(image_indices) > 8:  # if omissions are included
+        ax.set_xticklabels(list(image_indices[:8] + 1) + [0], rotation=0, fontsize=14)
+    else:
+        ax.set_xticklabels(list(image_indices + 1), rotation=0, fontsize=14)
+    ax.set_ylabel('cells')
+    ax.set_yticks((0, response_matrix.shape[0]))
+    ax.set_yticklabels((0, response_matrix.shape[0]), fontsize=14)
+    if save_dir:
+        plt.suptitle(sup_title, x=0.46, y=0.99, fontsize=18)
+        fig.tight_layout()
+        plt.gcf().subplots_adjust(top=0.9)
+        utils.save_figure(fig, figsize, save_dir, folder, 'tuning_curve_heatmap_' + sup_title + '_' + title)
+    return ax
+
+
+def plot_image_tuning_curves_across_experience_for_cluster(each_image_mdf, cluster_metrics, cluster_id,
+                                                           vmax=0.02, cmap='viridis', sort_by_pref_exp_level=True,
+                                                           save_dir=None, folder=None):
+    '''
+    plots heatmap of imaging tuning curves across cells in each cre line in each cluster
+    x axis is image index, y axis is cell ID
+
+    if sort_by_pref_exp_level is True, cells are sorted by the max image responses for the preferred experience level for that cluster
+    if False, cells are sorted within each experience level
+
+    each_image_mdf is a multi_session_dataframe using conditions = ['cell_specimen_id', 'is_change', 'image_name'], event_type = 'all'
+    each_image_mdf must have column 'cluster_id'
+    cluster_metrics is obtained using the function processing.get_cluster_metrics()
+    '''
+
+    if 'cluster_id' not in cluster_metrics.columns:
+        cluster_metrics = cluster_metrics.reset_index()
+
+    figsize = (8, 8)
+    fig, ax = plt.subplots(3, 4, figsize=figsize, sharey=False, sharex=False)
+    ax = ax.ravel()
+
+    for c, cre_line in enumerate(utils.get_cre_lines()):
+
+        # get image responses for cells in this cluster for a given cre line
+        cluster_df = each_image_mdf[
+            (each_image_mdf.cluster_id == cluster_id) & (each_image_mdf.cre_line == cre_line)].copy()
+        print(cre_line, len(cluster_df.cell_specimen_id.unique()))
+
+        if len(cluster_df) > 0:  # only plot if there are actually cells in this cluster for this cre line
+            # get preferred experience level for cluster
+            pref_exp_level = \
+            cluster_metrics[(cluster_metrics.cluster_id == cluster_id)].dominant_experience_level.values[0]
+
+            if sort_by_pref_exp_level:
+                # get order of cells based on tuning in pref experience level
+                cell_list = get_cell_list_ordered_by_pref_image_index(cluster_df[cluster_df.experience_level == pref_exp_level])
+                prefix = 'sort_by_pref_exp_level'
+            else:
+                cell_list = None
+                prefix = 'sort_within_exp_level'
+
+            for i, experience_level in enumerate(utils.get_new_experience_levels()):
+                df = cluster_df[cluster_df.experience_level == experience_level].copy()
+                ax[(c * 4) + i] = plot_tuning_curve_heatmap_for_cluster(df, cell_list=cell_list,
+                                                                                 vmax=vmax, cmap='magma',
+                                                                                 sup_title=None, title=None,
+                                                                                 ax=ax[(c * 4) + i], save_dir=None,
+                                                                                 folder=None, label='', colorbar=False)
+                ax[(c * 4) + i].set_ylabel('')
+                ax[(c * 4) + i].set_yticklabels([])
+                if c == 0:
+                    ax[(c * 4) + i].set_title(experience_level)
+            # ax[0].set_ylabel('cells')
+            ax[(c * 4) + 0].set_ylabel(utils.convert_cre_line_to_cell_type(cre_line))
+            ax[(c * 4) + 0].set_yticks((0, len(cell_list)))
+            ax[(c * 4) + 0].set_yticklabels((0, len(cell_list)), fontsize=14)
+            ax[(c * 4) + 3].set_yticklabels([])
+            # add custom colorbar on its own axis
+            # import matplotlib.cm
+            cmap = matplotlib.cm.ScalarMappable(norm=None, cmap='magma')
+            cmap.set_clim(vmin=0, vmax=vmax)
+            cbar = fig.colorbar(cmap, ax=ax[(c * 4) + 3], label='response')
+            # cbar_labels = cbar.ax.get_yticklabels()
+            # cbar.ax.set_yticklabels(cbar_labels, fontsize=10)
+            # ax[3].axis('off')
+
+            fig.subplots_adjust(wspace=0.3, hspace=0.3)
+            fig.suptitle('cluster ' + str(cluster_id), x=0.42, y=0.97)
+
+    if save_dir:
+        utils.save_figure(fig, figsize, os.path.join(save_dir, folder), 'tuning_curves',
+                          prefix + '_cluster_' + str(cluster_id) + '_tuning_curves')
+
+
+def plot_single_cell_tuning_curve_across_experience_levels(cell_specimen_id, image_mdf, response_metrics,
+                                                           save_dir=None, folder=None):
+    '''
+    plots mean image response for each experience level for a single cell, sorted by the magnitude of the mean response
+    includes lifetime sparseness value in title
+    image_mdf: multi_session_df with one row per image per cell_specimen_id, including columns 'mean_response' and 'image_index'
+    response_metrics: table of metric values for single cells, obtained using cell_metrics.get_cell_metrics_for_conditions()
+    '''
+    figsize = (10,2)
+    fig, ax = plt.subplots(1, 3, figsize=figsize, sharey=True)
+
+    for i, experience_level in enumerate(utils.get_new_experience_levels()):
+        cdf = image_mdf[(image_mdf.cell_specimen_id==cell_specimen_id)&(image_mdf.experience_level==experience_level)]
+
+        tmp = cdf[cdf.image_name!='omitted'].sort_values(by='mean_response', ascending=False)
+        image_ids = list(tmp.image_index.values+1)
+        tuning_curve = list(tmp.mean_response.values) + [cdf[cdf.image_name=='omitted'].mean_response.values]
+        sparseness = response_metrics[(response_metrics.cell_specimen_id==cell_specimen_id) &
+                                    (response_metrics.experience_level==experience_level)].lifetime_sparseness.values[0]
+        sparseness = np.round(sparseness, 2)
+
+        ax[i].plot(tuning_curve)
+        ax[i].set_ylabel('')
+        ax[i].set_xticks(np.arange(0, len(image_ids)+1))
+        ax[i].set_xticklabels(image_ids+[0]);
+        ax[i].set_xlabel('sorted image index')
+        ax[i].set_title(experience_level+'\nsparseness: '+str(sparseness))
+    ax[0].set_ylabel('response')
+
+    cluster_id = cdf.cluster_id.unique()[0]
+    cre_line = cdf.cre_line.unique()[0]
+    title = 'cluster '+str(cluster_id)+' - '+utils.convert_cre_line_to_cell_type(cre_line)+', csid: '+str(cell_specimen_id)
+    plt.suptitle(title, x=0.5, y=1.35, fontsize=18)
+
+    fig.subplots_adjust(wspace=0.4)
+
+    if save_dir:
+        filename = utils.convert_cre_line_to_cell_type(cre_line)+'_'+'cluster_'+str(cluster_id)+'_csid_'+str(cell_specimen_id)
+        utils.save_figure(fig, figsize, os.path.join(save_dir, folder, 'tuning_curves'), 'single_cell_plots', filename)
+        plt.close()
