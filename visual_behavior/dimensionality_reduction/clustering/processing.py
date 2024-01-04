@@ -20,6 +20,7 @@ from sklearn.cluster import SpectralClustering
 
 import visual_behavior.data_access.loading as loading
 import visual_behavior.data_access.utilities as utilities
+import visual_behavior.visualization.utils as utils
 
 import visual_behavior_glm.GLM_analysis_tools as gat
 import visual_behavior_glm.GLM_across_session as gas
@@ -1045,8 +1046,100 @@ def get_cluster_meta(cluster_labels, cell_metadata, feature_matrix, n_clusters_c
         cluster_meta.to_hdf(cluster_meta_filepath, key='df')
     return cluster_meta
 
+### run clustering on all cre lines ###
 
-### old functions for computing area / depth frequencies across clusters, by MG ###
+def run_all_cre_clustering(feature_matrix, cells_table, n_clusters, save_dir, folder):
+    cluster_meta_save_path = os.path.join(save_dir, 'cluster_meta_n_' + str(n_clusters) + '_clusters.h5')
+
+    # if clustering output exists, load it
+    if os.path.exists(cluster_meta_save_path):
+        cluster_meta = pd.read_hdf(cluster_meta_save_path, key='df')
+        # merge in cell metadata
+        cell_metadata = get_cell_metadata_for_feature_matrix(feature_matrix, cells_table)
+        cell_metadata = cell_metadata.drop(columns=['ophys_experiment_id', 'cre_line'])
+        cluster_meta = cluster_meta.merge(cell_metadata.reset_index(), on='cell_specimen_id')
+        cluster_meta = cluster_meta.set_index('cell_specimen_id')
+    # otherwise run it and save it
+    else:
+        # run spectral clustering and get co-clustering matrix
+        from sklearn.cluster import SpectralClustering
+        sc = SpectralClustering()
+        X = feature_matrix.values
+        m = get_coClust_matrix(X=X, n_clusters=n_clusters, model=sc, nboot=np.arange(100))
+        # make co-clustering matrix a dataframe with cell_specimen_ids as indices and columns
+        coclustering_df = pd.DataFrame(data=m, index=feature_matrix.index, columns=feature_matrix.index)
+
+        # save co-clustering matrix
+        coclust_save_path = os.path.join(save_dir, 'coclustering_matrix_n_' + str(n_clusters) + '_clusters.h5')
+        coclustering_df.to_hdf(coclust_save_path, key='df', format='table')
+
+        # run agglomerative clustering on co-clustering matrix to identify cluster labels
+        from sklearn.cluster import AgglomerativeClustering
+        X = coclustering_df.values
+        cluster = AgglomerativeClustering(n_clusters=n_clusters, affinity='euclidean',
+                                          linkage='average')
+        labels = cluster.fit_predict(X)
+        cell_specimen_ids = coclustering_df.index.values
+        # make dictionary with labels for each cell specimen ID in this cre line
+        labels_dict = {'labels': labels, 'cell_specimen_id': cell_specimen_ids}
+        # turn it into a dataframe
+        labels_df = pd.DataFrame(data=labels_dict, columns=['labels', 'cell_specimen_id'])
+        # get new cluster_ids based on size of clusters and add to labels_df
+        cluster_size_order = labels_df['labels'].value_counts().index.values
+        # translate between original labels and new IDS based on cluster size
+        labels_df['cluster_id'] = [np.where(cluster_size_order == label)[0][0] for label in labels_df.labels.values]
+        # concatenate with df for all cre lines
+        cluster_labels = labels_df
+
+        # add metadata to cluster labels
+        cell_metadata = get_cell_metadata_for_feature_matrix(feature_matrix, cells_table)
+
+        cluster_meta = cluster_labels[['cell_specimen_id', 'cluster_id', 'labels']].merge(cell_metadata,
+                                                                                          on='cell_specimen_id')
+        cluster_meta = cluster_meta.set_index('cell_specimen_id')
+        # annotate & clean cluster metadata
+        cluster_meta = clean_cluster_meta(cluster_meta)  # drop cluster IDs with fewer than 5 cells in them
+        cluster_meta['original_cluster_id'] = cluster_meta.cluster_id
+
+        # plot coclustering matrix - need to hack it since it assumes cre lines
+        coclustering_dict = {}
+        coclustering_dict['all'] = coclustering_df
+        cluster_meta_tmp = cluster_meta.copy()
+        cluster_meta_tmp['cre_line'] = 'all'
+        plotting.plot_coclustering_matrix_sorted_by_cluster_size(coclustering_dict, cluster_meta_tmp, cre_line='all',
+                                                                 save_dir=save_dir, folder=folder,
+                                                                 suffix='_' + str(n_clusters) + '_clusters', ax=None)
+
+        # add within cluster correlation
+        cluster_meta = add_within_cluster_corr_to_cluster_meta(feature_matrix, cluster_meta,
+                                                                          use_spearmanr=True)
+
+        # plot within cluster correlations
+        plotting.plot_within_cluster_correlations(cluster_meta, sort_order=None, spearman=True,
+                                                  suffix='_' + str(n_clusters) + '_clusters',
+                                                  save_dir=save_dir, folder=folder, ax=None)
+
+        # # compute the within and acorss cluster correlations for each cell and plot the results for each cluster
+        # correlations_df = compute_within_and_across_cluster_correlations(feature_matrix, cluster_meta, save_dir=save_dir)
+        # correlations_summary = correlations_df.groupby(['cell_specimen_id']).apply(get_summary_of_within_across_cluster_correlations)
+        # correlations_summary.to_hdf(os.path.join(save_dir, 'correlations_summary_'+str(n_clusters)+'.h5'), key='df')
+        # plot_within_across_cluster_correlations(correlations_summary, save_dir=save_dir, folder=folder)
+
+        # save clustering results
+        cluster_meta_save_path = os.path.join(save_dir, 'cluster_meta_n_' + str(n_clusters) + '_clusters.h5')
+        cluster_data = cluster_meta.reset_index()[
+            ['cell_specimen_id', 'ophys_experiment_id', 'cre_line', 'cluster_id', 'labels',
+             'within_cluster_correlation_p', 'within_cluster_correlation_s']]
+        cluster_data.to_hdf(cluster_meta_save_path, key='df', format='table')
+
+    # if cluster_id is zero indexed, add one to it
+    if 0 in cluster_meta.cluster_id.unique():
+        cluster_meta['cluster_id'] = [cluster_id+1 for cluster_id in cluster_meta.cluster_id.values]
+
+    return cluster_meta
+
+
+### older functions for computing area / depth frequencies across clusters, by MG ###
 
 def make_frequency_table(cluster_meta, groupby_columns=['binned_depth'], normalize=True):
     '''
@@ -1263,6 +1356,26 @@ def get_location_fractions(cluster_meta):
     return location_fractions
 
 
+def get_fraction_cells_per_cluster_per_group(cluster_meta, col_to_group='mouse_id'):
+    """
+    counts the number of cells a given condition, and the number of cells in each cluster for that given condition,
+    then computes the proportion of cells in each cluster for the given condition
+    col_to_group: can be 'cre_line', 'mouse_id', etc
+    """
+    # get number of cells in each group defined by col_to_group
+    n_cells_group = cluster_meta.groupby([col_to_group]).count()[['cluster_id']].reset_index().rename(
+        columns={'cluster_id': 'n_cells_group'})
+    # get number of cells in each cluster for each group
+    n_cells_per_cluster = cluster_meta.groupby([col_to_group, 'cluster_id']).count()[
+        ['ophys_experiment_id']].reset_index().rename(columns={'ophys_experiment_id': 'n_cells_cluster'})
+    # add n cells per cluster per group to total number of cells per group and compute the fraction per cluster in each group
+    n_cells_per_cluster = n_cells_per_cluster.merge(n_cells_group, on=col_to_group)
+    n_cells_per_cluster[
+        'fraction_per_cluster'] = n_cells_per_cluster.n_cells_cluster / n_cells_per_cluster.n_cells_group
+
+    return n_cells_per_cluster
+
+
 ### area / depth proportion functions based on Alex's GLM repo code ###
 
 # chi_squared test
@@ -1460,7 +1573,7 @@ def add_hochberg_correction(table):
     return table.sort_values(by='cluster_id').set_index('cluster_id')
 
 
-### additional functions by MG to compute # and % of cells across locations ###
+### new functions by MG to compute # and % of cells across locations ###
 
 def get_fraction_cells_per_area_depth(cluster_meta):
     """
@@ -1829,6 +1942,40 @@ def get_cell_metrics(cluster_meta, results_pivoted):
     return cell_metrics
 
 
+
+def get_coding_score_metrics_per_experience_level(cluster_meta, results_pivoted):
+    '''
+    Takes coding scores from results_pivoted and computes a few additional pieces of information for each cell,
+    including which experience level and feature have the max coding score, a column for the max coding score, and
+    a boolean for rows where the experience level is the preferred experience level
+
+    Returns
+        coding_scores: dataframe with one row per cell per experience level, and columns for the coding scores for each feature,
+                        plus information about the preferred feature and experience level for that cell
+    '''
+    coding_score_metrics = pd.DataFrame()
+    for i, cell_specimen_id in enumerate(cluster_meta.index.values):
+        cell_scores = results_pivoted[results_pivoted.cell_specimen_id == cell_specimen_id].reset_index().drop(columns='identifier')
+        cell_scores_grid = cell_scores.groupby('experience_level').mean()[get_features_for_clustering()]
+        # determine which experience level & feature gives largest coding score
+        dominant_feature = cell_scores_grid.stack().idxmax()[1]
+        dominant_experience_level = cell_scores_grid.stack().idxmax()[0]
+        # create column listing the preferred coding score for this cell
+        cell_scores['max_coding_score'] = cell_scores_grid.loc[dominant_experience_level, dominant_feature]
+        # create columns listing preferred feature & exp level
+        cell_scores['dominant_feature'] = dominant_feature
+        cell_scores['dominant_experience_level'] = dominant_experience_level
+        # create boolean column for rows where the experience level is the one that has the max coding score
+        indices = cell_scores[(cell_scores.experience_level==dominant_experience_level)].index.values
+        cell_scores['pref_experience_level'] = False
+        cell_scores.at[indices, 'pref_experience_level'] = True
+        # move cell specimen id and exp level to front of df
+        cell_scores.insert(0, 'cell_specimen_id', cell_scores.pop('cell_specimen_id'))
+        cell_scores.insert(1, 'experience_level', cell_scores.pop('experience_level'))
+        coding_score_metrics = pd.concat([coding_score_metrics, cell_scores])
+    return coding_score_metrics
+
+
 def get_cluster_metrics(cluster_meta, feature_matrix, results_pivoted):
     """
     Computes metrics for each cluster / cre line, using the average coding score for that cluster
@@ -1875,7 +2022,7 @@ def get_cluster_metrics_all_cre(cluster_meta, feature_matrix, results_pivoted):
     """
     computes metrics for each cluster, including experience modulation, feature selectivity, etc
     """
-    # cell_metrics = processing.get_cell_metrics(cluster_meta, results_pivoted)
+    # cell_metrics = get_cell_metrics(cluster_meta, results_pivoted)
     cluster_metrics = pd.DataFrame()
     # get cell specimen ids
     cell_specimen_ids = cluster_meta.index.values
@@ -1899,7 +2046,7 @@ def get_cluster_metrics_all_cre(cluster_meta, feature_matrix, results_pivoted):
     print(cluster_metrics.keys())
     n_cells = cluster_meta.groupby(['cluster_id']).count()[['labels']].rename(columns={'labels': 'n_cells_cluster'})
     cluster_metrics = cluster_metrics.merge(n_cells, on=['cluster_id'])
-    cluster_metrics = cluster_metrics.set_index(['cre_line', 'cluster_id'])
+    cluster_metrics = cluster_metrics.set_index(['cluster_id'])
     return cluster_metrics
 
 
@@ -2044,6 +2191,205 @@ def get_cluster_fractions_per_location(cluster_meta, cluster_metrics):
     colors = [cmap(int(np.round(i)))[:3] for i in exp_mod_normed]
     location_fractions['exp_mod_color'] = colors
     return location_fractions
+
+
+### functions to merge coding score metrics with model free cell metrics ###
+
+
+def generate_merged_table_of_model_free_metrics(data_type='filtered_events', session_subset='full_session',
+                                                inclusion_criteria='platform_experiment_table', save_dir=None):
+    '''
+    Load table of cell metrics computed on average image, omission, and change responses,
+    rename columns to indicate which type of response the metric is for (ex: 'mean_response_omissions'),
+    then merge together all types of table to create a unified table of cell response (i.e. model free) metrics
+
+    if file already exists in save_dir, load it, if not, generate and save it
+
+    input variables are as described in visual_behavior.ophys.response_analysis.cell_metrics.get_cell_metrics_for_conditions()
+    '''
+    import visual_behavior.ophys.response_analysis.cell_metrics as cm
+
+    if save_dir is not None:
+        merged_model_free_metrics_table_filepath = os.path.join(save_dir, 'merged_model_free_metrics_table_'+data_type+'.csv')
+    else:
+        print('no save_dir provided, cant save or load model free metrics table')
+    if (save_dir is not None) and (os.path.exists(merged_model_free_metrics_table_filepath)):
+        print('loading model free metrics table')
+        model_free_metrics = pd.read_csv(merged_model_free_metrics_table_filepath)
+    else:
+        ### load model free metrics (one row per cell / experience level)
+
+        # all images
+        condition = 'images'
+        stimuli = 'all_images'
+        response_metrics = cm.get_cell_metrics_for_conditions(data_type, condition, stimuli, session_subset, inclusion_criteria)
+
+        # pref image
+        condition = 'images'
+        stimuli = 'pref_image'
+        pref_stim_response_metrics = cm.get_cell_metrics_for_conditions(data_type, condition, stimuli, session_subset, inclusion_criteria)
+
+        # omissions
+        condition = 'omissions'
+        stimuli = 'all_images'
+        omission_response_metrics = cm.get_cell_metrics_for_conditions(data_type, condition, stimuli, session_subset, inclusion_criteria)
+
+        # changes
+        condition = 'changes'
+        stimuli = 'all_images'
+        change_response_metrics = cm.get_cell_metrics_for_conditions(data_type, condition, stimuli, session_subset, inclusion_criteria)
+
+        ### merge all tables together
+
+        # rename metrics so its clear what they were computed on (i.e. images vs. omissions vs. changes)
+        model_free_metrics = pref_stim_response_metrics.rename(columns={'mean_response':'mean_response_pref_image',
+                                                        'reliability': 'reliability_pref_image',
+                                                        'fano_factor': 'fano_factor_pref_image',
+                                                        'running_modulation_index': 'running_modulation_pref_image'})
+
+        # select columns to keep
+        model_free_metrics = model_free_metrics[['cell_specimen_id', 'experience_level', 'lifetime_sparseness',
+                                    'mean_response_pref_image', 'reliability_pref_image',
+                                    'fano_factor_pref_image', 'running_modulation_pref_image']]
+
+        # rename and merge in all image metrics
+        tmp = response_metrics.rename(columns={'mean_response':'mean_response_all_images',
+                                                    'reliability': 'reliability_all_images',
+                                                    'fano_factor': 'fano_factor_all_images',
+                                                    'running_modulation_index': 'running_modulation_all_images'})
+        model_free_metrics = model_free_metrics.merge(tmp[['cell_specimen_id', 'experience_level',
+                                    'mean_response_all_images', 'reliability_all_images',
+                                    'fano_factor_all_images', 'running_modulation_all_images']], on=['cell_specimen_id', 'experience_level'])
+
+        # merge in omission metrics for each exp level
+        tmp = omission_response_metrics.rename(columns={'mean_response':'mean_response_omissions',
+                                                        'reliability': 'reliability_omissions',
+                                                        'fano_factor': 'fano_factor_omissions',
+                                                        'running_modulation_index': 'running_modulation_omissions'})
+        model_free_metrics = model_free_metrics.merge(tmp[['cell_specimen_id', 'experience_level',
+                                    'mean_response_omissions', 'reliability_omissions',
+                                    'fano_factor_omissions', 'running_modulation_omissions',
+                                    'omission_modulation_index']], on=['cell_specimen_id', 'experience_level'])
+        # merge in change metrics for each exp level
+        tmp = change_response_metrics.rename(columns={'mean_response':'mean_response_changes',
+                                                        'reliability': 'reliability_changes',
+                                                        'fano_factor': 'fano_factor_changes',
+                                                        'running_modulation_index': 'running_modulation_changes'})
+        model_free_metrics = model_free_metrics.merge(tmp[['cell_specimen_id', 'experience_level',
+                                    'mean_response_changes', 'reliability_changes',
+                                    'fano_factor_changes', 'running_modulation_changes',
+                                    'change_modulation_index', 'hit_miss_index']], on=['cell_specimen_id', 'experience_level'])
+
+        # convert experience level
+        model_free_metrics['experience_level'] = [utils.convert_experience_level(experience_level) for experience_level in model_free_metrics.experience_level.values]
+
+        print(len(model_free_metrics.cell_specimen_id.unique()), 'cells in merged response metrics table')
+
+        # save it
+        if save_dir is not None:
+            model_free_metrics.to_csv(merged_model_free_metrics_table_filepath)
+            print('response metrics table saved')
+
+    return model_free_metrics
+
+
+def generate_coding_score_metrics_per_experience_level_table(cluster_meta, results_pivoted, save_dir=None):
+    '''
+    compute metrics on coding scores for each experience level, and across experience levels, per cell, then merge tables
+    metrics include things like 'dominant_feature' and 'max_image_coding_score', 'experience_modulation_direction' etc
+
+    output is a table with one row per cell / experience level, limited to cells matched across experience levels
+    table includes cluster_id from cluster_meta input table
+
+    cluster_meta: dataframe containing one row per cell_specimen_id with the cluster_id assigned by clustering
+    results_pivoted: dataframe containing GLM coding scores for features used in clustering
+    '''
+
+    # if metrics table already exists, load it, if not, generate and save it
+    if save_dir is not None:
+        coding_score_metrics_per_exp_level_filepath = os.path.join(save_dir, 'merged_coding_score_metrics_per_exp_level_table.csv')
+    else:
+        print('no save_dir provided, cant load or save coding score metrics per exp level table')
+    if (save_dir is not None) and (os.path.exists(coding_score_metrics_per_exp_level_filepath)):
+        print('loading coding score metrics per experience level table')
+        metrics = pd.read_csv(coding_score_metrics_per_exp_level_filepath)
+    else:
+        # get coding scores per exp level from results_pivoted
+        coding_scores_per_exp_level = get_coding_score_metrics_per_experience_level(cluster_meta, results_pivoted)
+        print(coding_scores_per_exp_level.experience_level.unique())
+
+        # get coding score metrics for each cell (metrics computed across experience levels, one row per cell)
+        coding_score_metrics = get_cell_metrics(cluster_meta, results_pivoted)
+        coding_score_metrics['experience_level'] = coding_score_metrics.dominant_experience_level
+
+        # merge coding score metrics per experience level with select coding score metrics per cell
+
+        # add columns with the dominant feature and exp level determined based on the cluster each cell belongs to
+        # get cluster based dominant feature & exp from coding score metrics table
+        coding_score_metrics['dominant_feature_cluster'] = coding_score_metrics.dominant_feature
+        coding_score_metrics['dominant_experience_level_cluster'] = coding_score_metrics.dominant_experience_level
+
+        # merge coding scores tables
+        merged_metrics = coding_scores_per_exp_level.merge(coding_score_metrics.reset_index()[['cell_specimen_id', 'dominant_feature_cluster',
+                                                                'dominant_experience_level_cluster']], on='cell_specimen_id', how='left')
+        print(merged_metrics.experience_level.unique())
+        # merge in metadata for each cell if cluster_meta is provided
+        merged_metrics = merged_metrics.merge(cluster_meta.reset_index()[['cell_specimen_id', 'cre_line', 'cluster_id', 'targeted_structure',
+                                                'imaging_depth', 'binned_depth', 'area_binned_depth', 'project_code',
+                                                'mouse_id' ]], on='cell_specimen_id', how='left')
+
+        print(len(merged_metrics.cell_specimen_id.unique()), 'cells in merged coding score metrics per exp level table')
+        if save_dir is not None:
+            merged_metrics.to_csv(coding_score_metrics_per_exp_level_filepath)
+            print('metrics table saved')
+
+    return merged_metrics
+
+
+def generate_merged_table_of_coding_score_and_model_free_metrics(cluster_meta, results_pivoted,
+                                                                 data_type='filtered_events',
+                                                                 session_subset='full_session',
+                                                                 inclusion_criteria='platform_experiment_table',
+                                                                 save_dir=None):
+    '''
+
+    generate table of coding score metrics per cell / experience level and merge with
+    table of model-free metrics computed on cell responses for each cell / experience level,
+    plus cluster metadata (i.e. cluster ID assigned to each cell_specimen_id)
+
+    resulting merged table has one row per cell_specimen_id & experience_level and
+    should be limited to cells used in clustering
+
+    cluster_meta: dataframe containing one row per cell_specimen_id with the cluster_id assigned by clustering
+    results_pivoted: dataframe containing GLM coding scores for features used in clustering
+    save_dir: directory to save or load merged metrics table from
+
+    other input variables are as described in visual_behavior.ophys.response_analysis.cell_metrics.get_cell_metrics_for_conditions()
+
+    '''
+
+    # if metrics table already exists, load it, if not, generate and save it
+    if save_dir is not None:
+        merged_metrics_table_filepath = os.path.join(save_dir, 'merged_coding_score_and_model_free_metrics_table_'+data_type+'.csv')
+    else:
+        print('no save_dir provided, cant load or save metrics table')
+    if (save_dir is not None) and (os.path.exists(merged_metrics_table_filepath)):
+        print('loading coding score and model free metrics table')
+        metrics = pd.read_csv(merged_metrics_table_filepath)
+    else:
+
+        model_free_metrics = generate_merged_table_of_model_free_metrics(data_type, session_subset, inclusion_criteria, save_dir)
+
+        coding_score_per_experience_metrics = generate_coding_score_metrics_per_experience_level_table(cluster_meta, results_pivoted, save_dir)
+
+        metrics = coding_score_per_experience_metrics.merge(model_free_metrics, on=['cell_specimen_id', 'experience_level'], how='left')
+
+        print(len(metrics.cell_specimen_id.unique()), 'cells in merged coding score and model free metrics table')
+        if save_dir is not None:
+            metrics.to_csv(merged_metrics_table_filepath)
+            print('merged metrics table saved')
+
+    return metrics
 
 
 ### stats for comparison of coding scores across experience levels (and/or shuffle control) ###

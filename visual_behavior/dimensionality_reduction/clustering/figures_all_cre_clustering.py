@@ -94,88 +94,93 @@ results_pivoted['experience_level'] = [utils.convert_experience_level(experience
 
 feature_matrix = processing.get_feature_matrix_for_clustering(results_pivoted, glm_version, save_dir=save_dir)
 
-# get metadata for cells that will be clustered
-cell_metadata = processing.get_cell_metadata_for_feature_matrix(feature_matrix, cells_table)
-
 n_clusters = 14 # empirically determined, then validated based on within vs. across cluster variance
 
-cluster_meta_save_path = os.path.join(save_dir, 'cluster_meta_n_'+str(n_clusters)+'_clusters.h5')
+# get cluster ID assignments for all cell_specimen_ids
+# loads from file if it exists, otherwise runs clustering analysis
+cluster_meta = processing.run_all_cre_clustering(feature_matrix, cells_table, n_clusters, save_dir, folder)
 
-# if clustering output exists, load it
-if os.path.exists(cluster_meta_save_path):
-    cluster_meta = pd.read_hdf(cluster_meta_save_path, key='df')
-    if 0 in cluster_meta.cluster_id.unique():
-        # add one to cluster ID so it starts at 1
-        cluster_meta['cluster_id'] = cluster_meta['cluster_id']+1
-    # merge in cell metadata
-    cell_metadata = processing.get_cell_metadata_for_feature_matrix(feature_matrix, cells_table)
-    cell_metadata = cell_metadata.drop(columns=['ophys_experiment_id', 'cre_line'])
-    cluster_meta = cluster_meta.merge(cell_metadata.reset_index(), on='cell_specimen_id')
-    cluster_meta = cluster_meta.set_index('cell_specimen_id')
-# otherwise run it and save it
-else:
-    # run spectral clustering and get co-clustering matrix
-    from sklearn.cluster import SpectralClustering
-    sc = SpectralClustering()
-    X = feature_matrix.values
-    m = processing.get_coClust_matrix(X=X, n_clusters=n_clusters, model=sc, nboot=np.arange(100))
-    # make co-clustering matrix a dataframe with cell_specimen_ids as indices and columns
-    coclustering_df = pd.DataFrame(data=m, index=feature_matrix.index, columns=feature_matrix.index)
 
-    # save co-clustering matrix
-    coclust_save_path = os.path.join(save_dir, 'coclustering_matrix_n_'+str(n_clusters)+'_clusters.h5')
-    coclustering_df.to_hdf(coclust_save_path, key='df', format='table')
+# # get metadata for cells that will be clustered
+# cell_metadata = processing.get_cell_metadata_for_feature_matrix(feature_matrix, cells_table)
 
-    # run agglomerative clustering on co-clustering matrix to identify cluster labels
-    from sklearn.cluster import AgglomerativeClustering
-    X = coclustering_df.values
-    cluster = AgglomerativeClustering(n_clusters=n_clusters, affinity='euclidean',
-                                    linkage='average')
-    labels = cluster.fit_predict(X)
-    cell_specimen_ids = coclustering_df.index.values
-    # make dictionary with labels for each cell specimen ID in this cre line
-    labels_dict = {'labels': labels, 'cell_specimen_id': cell_specimen_ids}
-    # turn it into a dataframe
-    labels_df = pd.DataFrame(data=labels_dict, columns=['labels', 'cell_specimen_id'])
-    # get new cluster_ids based on size of clusters and add to labels_df
-    cluster_size_order = labels_df['labels'].value_counts().index.values
-    # translate between original labels and new IDS based on cluster size
-    labels_df['cluster_id'] = [np.where(cluster_size_order == label)[0][0] for label in labels_df.labels.values]
-    # concatenate with df for all cre lines
-    cluster_labels = labels_df
-
-    # add metadata to cluster labels
-    cell_metadata = processing.get_cell_metadata_for_feature_matrix(feature_matrix, cells_table)
-
-    cluster_meta = cluster_labels[['cell_specimen_id', 'cluster_id', 'labels']].merge(cell_metadata, on='cell_specimen_id')
-    cluster_meta = cluster_meta.set_index('cell_specimen_id')
-    # annotate & clean cluster metadata
-    cluster_meta = processing.clean_cluster_meta(cluster_meta)  # drop cluster IDs with fewer than 5 cells in them
-    cluster_meta['original_cluster_id'] = cluster_meta.cluster_id
-    # increment cluster ID if needed
-    if 0 in cluster_meta.cluster_id.unique():
-        # add one to cluster ID so it starts at 1
-        cluster_meta['cluster_id'] = cluster_meta['cluster_id']+1
-
-    # plot coclustering matrix - need to hack it since it assumes cre lines
-    coclustering_dict = {}
-    coclustering_dict['all'] = coclustering_df
-    cluster_meta_tmp = cluster_meta.copy()
-    cluster_meta_tmp['cre_line'] = 'all'
-    plotting.plot_coclustering_matrix_sorted_by_cluster_size(coclustering_dict, cluster_meta_tmp, cre_line='all',
-                                                    save_dir=save_dir, folder=folder, ax=None)
-
-    # add within cluster correlation
-    cluster_meta = processing.add_within_cluster_corr_to_cluster_meta(feature_matrix, cluster_meta, use_spearmanr=False)
-
-    # plot within cluster correlations distribution
-    plotting.plot_within_cluster_correlations(cluster_meta, sort_order=None, spearman=False, suffix='_'+str(n_clusters)+'_clusters',
-                                                    save_dir=save_dir, folder=folder, ax=None)
-
-    # save clustering results
-    cluster_meta_save_path = os.path.join(save_dir, 'cluster_meta_n_'+str(n_clusters)+'_clusters.h5')
-    cluster_data = cluster_meta.reset_index()[['cell_specimen_id', 'ophys_experiment_id', 'cre_line', 'cluster_id', 'labels', 'within_cluster_correlation_p']]
-    cluster_data.to_hdf(cluster_meta_save_path, key='df', format='table')
+# cluster_meta_save_path = os.path.join(save_dir, 'cluster_meta_n_'+str(n_clusters)+'_clusters.h5')
+#
+# # if clustering output exists, load it
+# if os.path.exists(cluster_meta_save_path):
+#     cluster_meta = pd.read_hdf(cluster_meta_save_path, key='df')
+#     if 0 in cluster_meta.cluster_id.unique():
+#         # add one to cluster ID so it starts at 1
+#         cluster_meta['cluster_id'] = cluster_meta['cluster_id']+1
+#     # merge in cell metadata
+#     cell_metadata = processing.get_cell_metadata_for_feature_matrix(feature_matrix, cells_table)
+#     cell_metadata = cell_metadata.drop(columns=['ophys_experiment_id', 'cre_line'])
+#     cluster_meta = cluster_meta.merge(cell_metadata.reset_index(), on='cell_specimen_id')
+#     cluster_meta = cluster_meta.set_index('cell_specimen_id')
+# # otherwise run it and save it
+# else:
+#     # run spectral clustering and get co-clustering matrix
+#     from sklearn.cluster import SpectralClustering
+#     sc = SpectralClustering()
+#     X = feature_matrix.values
+#     m = processing.get_coClust_matrix(X=X, n_clusters=n_clusters, model=sc, nboot=np.arange(100))
+#     # make co-clustering matrix a dataframe with cell_specimen_ids as indices and columns
+#     coclustering_df = pd.DataFrame(data=m, index=feature_matrix.index, columns=feature_matrix.index)
+#
+#     # save co-clustering matrix
+#     coclust_save_path = os.path.join(save_dir, 'coclustering_matrix_n_'+str(n_clusters)+'_clusters.h5')
+#     coclustering_df.to_hdf(coclust_save_path, key='df', format='table')
+#
+#     # run agglomerative clustering on co-clustering matrix to identify cluster labels
+#     from sklearn.cluster import AgglomerativeClustering
+#     X = coclustering_df.values
+#     cluster = AgglomerativeClustering(n_clusters=n_clusters, affinity='euclidean',
+#                                     linkage='average')
+#     labels = cluster.fit_predict(X)
+#     cell_specimen_ids = coclustering_df.index.values
+#     # make dictionary with labels for each cell specimen ID in this cre line
+#     labels_dict = {'labels': labels, 'cell_specimen_id': cell_specimen_ids}
+#     # turn it into a dataframe
+#     labels_df = pd.DataFrame(data=labels_dict, columns=['labels', 'cell_specimen_id'])
+#     # get new cluster_ids based on size of clusters and add to labels_df
+#     cluster_size_order = labels_df['labels'].value_counts().index.values
+#     # translate between original labels and new IDS based on cluster size
+#     labels_df['cluster_id'] = [np.where(cluster_size_order == label)[0][0] for label in labels_df.labels.values]
+#     # concatenate with df for all cre lines
+#     cluster_labels = labels_df
+#
+#     # add metadata to cluster labels
+#     cell_metadata = processing.get_cell_metadata_for_feature_matrix(feature_matrix, cells_table)
+#
+#     cluster_meta = cluster_labels[['cell_specimen_id', 'cluster_id', 'labels']].merge(cell_metadata, on='cell_specimen_id')
+#     cluster_meta = cluster_meta.set_index('cell_specimen_id')
+#     # annotate & clean cluster metadata
+#     cluster_meta = processing.clean_cluster_meta(cluster_meta)  # drop cluster IDs with fewer than 5 cells in them
+#     cluster_meta['original_cluster_id'] = cluster_meta.cluster_id
+#     # increment cluster ID if needed
+#     if 0 in cluster_meta.cluster_id.unique():
+#         # add one to cluster ID so it starts at 1
+#         cluster_meta['cluster_id'] = cluster_meta['cluster_id']+1
+#
+#     # plot coclustering matrix - need to hack it since it assumes cre lines
+#     coclustering_dict = {}
+#     coclustering_dict['all'] = coclustering_df
+#     cluster_meta_tmp = cluster_meta.copy()
+#     cluster_meta_tmp['cre_line'] = 'all'
+#     plotting.plot_coclustering_matrix_sorted_by_cluster_size(coclustering_dict, cluster_meta_tmp, cre_line='all',
+#                                                     save_dir=save_dir, folder=folder, ax=None)
+#
+#     # add within cluster correlation
+#     cluster_meta = processing.add_within_cluster_corr_to_cluster_meta(feature_matrix, cluster_meta, use_spearmanr=False)
+#
+#     # plot within cluster correlations distribution
+#     plotting.plot_within_cluster_correlations(cluster_meta, sort_order=None, spearman=False, suffix='_'+str(n_clusters)+'_clusters',
+#                                                     save_dir=save_dir, folder=folder, ax=None)
+#
+#     # save clustering results
+#     cluster_meta_save_path = os.path.join(save_dir, 'cluster_meta_n_'+str(n_clusters)+'_clusters.h5')
+#     cluster_data = cluster_meta.reset_index()[['cell_specimen_id', 'ophys_experiment_id', 'cre_line', 'cluster_id', 'labels', 'within_cluster_correlation_p']]
+#     cluster_data.to_hdf(cluster_meta_save_path, key='df', format='table')
 
 
 ### plot clustring results ###
@@ -199,6 +204,10 @@ plotting.plot_coding_score_heatmap_remapped(cluster_meta, feature_matrix, sort_b
 # average coding sores for clusters
 plotting.plot_cluster_means_remapped(feature_matrix, cluster_meta, save_dir=save_dir, folder=folder, ax=None)
 
+# fraction cells per cluster per cre line
+plotting.plot_fraction_cells_per_cluster_per_cre(cluster_meta, col_to_group='cre_line',
+                                                    save_dir=save_dir, folder=folder)
+
 
 ### load multi session dfs to plot population average responses ###
 
@@ -215,8 +224,15 @@ multi_session_df = loading.get_multi_session_df_for_conditions(data_type, event_
                                                         interpolate=interpolate, output_sampling_rate=output_sampling_rate,
                                                          epoch_duration_mins=None)
 
+# limit to changes, convert experience level and merge with cluster IDs
 change_mdf = multi_session_df[multi_session_df.is_change==True]
+change_mdf['experience_level'] = [utils.convert_experience_level(experience_level) for experience_level in change_mdf.experience_level.values]
+change_mdf = change_mdf.merge(cluster_meta.reset_index()[['cell_specimen_id', 'cluster_id']], on='cell_specimen_id')
+
+# limit to non-changes, convert experience level and merge with cluster IDs
 image_mdf = multi_session_df[(multi_session_df.is_change==False)]
+image_mdf['experience_level'] = [utils.convert_experience_level(experience_level) for experience_level in image_mdf.experience_level.values]
+image_mdf = image_mdf.merge(cluster_meta.reset_index()[['cell_specimen_id', 'cluster_id']], on='cell_specimen_id')
 
 # omission mdf
 event_type = 'all'
@@ -226,11 +242,14 @@ omission_mdf = loading.get_multi_session_df_for_conditions(data_type, event_type
                                                         interpolate=interpolate, output_sampling_rate=output_sampling_rate,
                                                          epoch_duration_mins=None)
 omission_mdf = omission_mdf[omission_mdf.omitted==True]
+omission_mdf['experience_level'] = [utils.convert_experience_level(experience_level) for experience_level in omission_mdf.experience_level.values]
+omission_mdf = omission_mdf.merge(cluster_meta.reset_index()[['cell_specimen_id', 'cluster_id']], on='cell_specimen_id')
 
-### plot population average image response for each cluster (averaged over cre lines) ###
+
+### plot population average image response for each cluster ###
 
 # remove outliers
-tmp = image_mdf.merge(cluster_meta.reset_index()[['cell_specimen_id', 'cluster_id']], on='cell_specimen_id')
+tmp = image_mdf.copy()
 tmp = tmp[(tmp.mean_baseline<np.percentile(tmp.mean_baseline.values, 99.9)) &  (tmp.mean_response<np.percentile(tmp.mean_response.values, 99.8))]
 
 xlim_seconds = [-0.25, 0.75]
@@ -259,10 +278,10 @@ plotting.plot_population_averages_for_conditions_multi_row(tmp, data_type, 'all'
                                             save_dir=save_dir, folder=folder, suffix='_images_clusters', ax=None);
 
 
-### plot population average change response for each cluster (averaged over cre lines) ###
+### plot population average change response for each cluster ###
 
 # remove outliers
-tmp = change_mdf.merge(cluster_meta.reset_index()[['cell_specimen_id', 'cluster_id']], on='cell_specimen_id')
+tmp = change_mdf.copy()
 tmp = tmp[(tmp.mean_baseline<np.percentile(tmp.mean_baseline.values, 99.9)) &  (tmp.mean_response<np.percentile(tmp.mean_response.values, 99.8))]
 
 xlim_seconds = [-0.9, 0.75]
@@ -289,10 +308,10 @@ plotting.plot_population_averages_for_conditions_multi_row(tmp, data_type, 'chan
                                             save_dir=save_dir, folder=folder, suffix='_changes_clusters_per_cre', ax=None);
 
 
-# population average omission response for each cluster (averaged over cre line
+#### population average omission response for each cluster ###
 
 # remove outliers
-tmp = omission_mdf.merge(cluster_meta.reset_index()[['cell_specimen_id', 'cluster_id']], on='cell_specimen_id')
+tmp = omission_mdf.copy()
 tmp = tmp[(tmp.mean_baseline<np.percentile(tmp.mean_baseline.values, 99.9)) &  (tmp.mean_response<np.percentile(tmp.mean_response.values, 99.8))]
 
 xlim_seconds = [-1, 1.5]
@@ -319,7 +338,7 @@ plotting.plot_population_averages_for_conditions_multi_row(tmp, data_type, 'omis
                                             save_dir=save_dir, folder=folder, suffix='_omissions_clusters_per_cre', ax=None);
 
 
-### area / depth distributions by cluster & cre line
+### area / depth distributions by cluster & cre line ###
 
 # across layers
 location = 'layer'
@@ -396,7 +415,12 @@ cluster_metrics = processing.add_layer_index_to_cluster_metrics(cluster_metrics,
 ### within session changes per cluster ###
 
 
+### comparing coding score metrics with model free metrics ###
 
+metrics = processing.generate_merged_table_of_coding_score_and_model_free_metrics(cluster_meta, results_pivoted,
+                                                                 data_type='filtered_events',
+                                                                 session_subset='full_session',
+                                                                 inclusion_criteria='platform_experiment_table')
 
 
 

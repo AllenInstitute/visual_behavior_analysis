@@ -568,12 +568,12 @@ if __name__ == '__main__':
 
 
 
+
     ### TBD ###
 
 
     ### image tuning curves for individual cells ###
 
-    ### image tuning curve heatmap for all cells each cluster ### 
+    ### image tuning curve heatmap for all cells each cluster ###
 
 
-        
