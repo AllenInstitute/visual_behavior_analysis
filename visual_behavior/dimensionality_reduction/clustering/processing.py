@@ -2781,10 +2781,10 @@ def get_mean_dropout_scores_per_cluster(dropout_df, cluster_df=None, labels=None
         this_cluster_ids = cluster_df[cluster_df['cluster_id'] == cluster_id]['cell_specimen_id'].unique()
         if stacked is True:
             mean_dropout_df = dropout_df.loc[this_cluster_ids].mean()
-            mean_cluster[i + 1] = mean_dropout_df.values
+            mean_cluster[cluster_id] = mean_dropout_df.values
         elif stacked is False:
             mean_dropout_df = dropout_df.loc[this_cluster_ids].mean().unstack()
-            mean_cluster[i + 1] = mean_dropout_df
+            mean_cluster[cluster_id] = mean_dropout_df
 
     if stacked is True:
         return (pd.DataFrame(mean_cluster))
