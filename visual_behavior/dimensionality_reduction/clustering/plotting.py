@@ -3682,7 +3682,7 @@ def plot_cluster_size_and_probability_for_cluster(cluster_size_df, shuffle_proba
     ax.set_ylabel('')
     ax.set_yticklabels('')
     ax.set_ylim([-0.1, 1.1])
-    # ax.set_xticks([0.5, 0])
+    ax.set_xticks([0.5, 0])
     ax.set_xlim([-1, 1])
     ax.set_xticklabels('')
     ax.spines['top'].set_visible(False)
@@ -3694,12 +3694,12 @@ def plot_cluster_size_and_probability_for_cluster(cluster_size_df, shuffle_proba
     # plot size diff
     ax2 = ax.twinx()
     ax2 = sns.barplot(data=cluster_size_df[cluster_size_df['cluster_id'] == cluster_id], x='cluster_id',
-                      y='cluster_size_diff', color=color1, ax=ax2)
+                      y='abs_cluster_size_diff', color=color1, ax=ax2)
     ax2.axhline(0, color='gray')
     ax2.set_xlabel('')
-    ax2.set_ylim([-0.4, 1])
+    # ax2.set_ylim([-0.4, 1])
     ax2.set_xlim([-1, 1])
-    # ax2.set_xticks([1, 0])
+    ax2.set_xticks([1, 0])
     ax2.set_xticklabels('', fontsize=12)
     ax2.set_yticklabels(ax.get_yticklabels(), fontsize=12)
     # ax2.set_title(f'cluster {cluster_id}', fontsize=12)
@@ -3718,6 +3718,20 @@ def plot_cluster_size_and_probability_for_cluster(cluster_size_df, shuffle_proba
 
 def plot_cluster_size_and_probability(cluster_size_df, shuffle_probability_df, cre_line=None, shuffle_type=None,
                                       ax=None, figsize=None, save_dir=None, folder=None):
+    '''
+    Function to plot cluster size and probability of cluster for each cluster id.
+
+    :param cluster_size_df: dataframe with cluster size for each cluster
+    :param shuffle_probability_df: dataframe with probability of cluster for each cluster
+    :param cre_line: cre line to plot
+    :param shuffle_type: shuffle type to plot
+    :param ax: axes to plot on
+    :param figsize: figure size
+    :param save_dir: directory to save figure
+    :param folder: folder to save figure
+    :return:
+        ax: axes with plot'''
+    cluster_ids = cluster_size_df.cluster_id.unique()
     if cre_line is not None:
         if isinstance(cre_line, str):
             cluster_size_df = cluster_size_df[cluster_size_df.cre_line == cre_line]
@@ -3727,22 +3741,25 @@ def plot_cluster_size_and_probability(cluster_size_df, shuffle_probability_df, c
     if shuffle_type is not None:
         cluster_size_df = cluster_size_df[cluster_size_df.shuffle_type == shuffle_type]
         shuffle_probability_df = shuffle_probability_df[shuffle_probability_df.shuffle_type == shuffle_type]
-    cluster_ids = cluster_size_df.cluster_id.unique()
+    
     if figsize is None:
         figsize = (3.5 * len(cluster_ids), 2)
+        if ax is None:
+            fig, ax = plt.subplots(1, len(cluster_ids), figsize=figsize, sharey='row')
+            ax = ax.ravel()
     if ax is None:
         fig, ax = plt.subplots(1, len(cluster_ids), figsize=figsize, sharey='row')
         ax = ax.ravel()
 
     # plot cluster size first
     for i, cluster_id in enumerate(cluster_ids):
-        ax[i] = plot_cluster_size_and_probability_for_cluster(cluster_size_df, shuffle_probability_df, cluster_id, ax=ax[i])
+        ax[cluster_id-1] = plot_cluster_size_and_probability_for_cluster(cluster_size_df, shuffle_probability_df, cluster_id, ax=ax[cluster_id-1])
 
     fig.subplots_adjust(hspace=1.2, wspace=0.6)
     plt.suptitle(cre_line, x=0.52, y=1.15)
     if save_dir:
-        utils.save_figure(fig, figsize, save_dir, folder,
-                          f'{shuffle_type}_prob_size' + cre_line[:3]  )
+        utils.save_figure(fig, figsize, save_dir=save_dir, folder=folder,
+                          fig_title = f'{shuffle_type}_prob_size' + cre_line[:3], formats = ['.png', '.pdf'])
 
     return ax
 
@@ -3807,7 +3824,7 @@ def plot_matched_clusters_heatmap(SSE_mapping, mean_dropout_scores_unstacked, me
 
     if save_dir:
         utils.save_figure(fig, figsize, save_dir, folder,
-                          f'{metric}_{shuffle_type}dropout_matched_clusters' + cre_line[:3]  )
+                          f'{metric}_{shuffle_type}dropout_matched_clusters' + cre_line[:3], formats = ['.png', '.pdf'])
 
 
 def plot_unraveled_clusters(feature_matrix, cluster_df, sort_order=None, cre_line=None, save_dir=None, folder='', tag='',
