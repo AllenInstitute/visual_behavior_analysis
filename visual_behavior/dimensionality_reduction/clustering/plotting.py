@@ -3788,6 +3788,7 @@ def plot_matched_clusters_heatmap(SSE_mapping, mean_dropout_scores_unstacked, me
     SSE_mapping: dictionary for each n_boot, original cluster_id: matched shuffled cluster_id
     mean_dropout_scores_unstacked: dictionary ofmean unstacked dropout scores  cluster_id: unstached pd.Data'''
 
+
     all_clusters_means_dict = processing.get_matched_clusters_means_dict(SSE_mapping,
                                                                          mean_dropout_scores_unstacked,
                                                                          metric=metric, shuffle_type=shuffle_type,
@@ -3836,10 +3837,14 @@ def plot_matched_clusters_heatmap(SSE_mapping, mean_dropout_scores_unstacked, me
     # plt.suptitle(cre_line + ' ' + shuffle_type_dict[shuffle_type])
     fig.subplots_adjust(hspace=1.2, wspace=0.6)
     # plt.tight_layout()
+    if cre_line is None:
+        cre_line_suffix = 'all'
+    else:
+        cre_line_suffix = cre_line[:3]
 
     if save_dir:
         utils.save_figure(fig, figsize, save_dir, folder,
-                          f'{metric}_{shuffle_type}dropout_matched_clusters' + cre_line[:3], formats = ['.png', '.pdf'])
+                          f'{metric}_{shuffle_type}dropout_matched_clusters' + cre_line_suffix, formats = ['.png', '.pdf'])
 
 
 def plot_unraveled_clusters(feature_matrix, cluster_df, sort_order=None, cre_line=None, save_dir=None, folder='', tag='',

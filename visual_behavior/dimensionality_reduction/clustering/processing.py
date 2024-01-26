@@ -1407,7 +1407,7 @@ def get_stats_table(cre_original_cluster_sizes, shuffle_type_cluster_sizes, cre_
                 data = [shuffle_type, cre_line, cluster_id, original_df.loc[cluster_id],
                         shuffle_clusters_df.loc[cluster_id], out.pvalue, out.pvalue <= 0.05]
 
-                for c, column in columns:
+                for c, column in enumerate(columns):
                     cluster_statistics_df.at[index, column] = data[c]
                     index = index + 1
 
