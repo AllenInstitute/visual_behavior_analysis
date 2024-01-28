@@ -24,14 +24,12 @@ if __name__ == '__main__':
     time_window = [-2, 2.1]
     interpolate = True
     output_sampling_rate = 30
-    use_extended_stimulus_presentations = True
-    epoch_duration_mins = 10
+    use_extended_stimulus_presentations = False
+    epoch_duration_mins = 5
 
     # set up conditions to make multi session dfs for
-    physio_data_types = ['events', 'filtered_events', 'dff']
+    physio_data_types = ['events', ] #'filtered_events', 'dff']
     behavior_data_types = ['pupil_width', 'running_speed', 'lick_rate']
-
-    # epoch duration that will be used is coded in io\create_multi_session_df.py
 
     physio_conditions = [['cell_specimen_id', 'is_change', 'omitted', 'epoch']]
     # physio_conditions = [['cell_specimen_id', 'is_change'], # all stim presentations, change vs. not a change

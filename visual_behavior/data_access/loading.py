@@ -2845,7 +2845,18 @@ def add_superficial_deep_to_experiments_table(experiments_table):
 
 
 def get_file_name_for_multi_session_df(data_type, event_type, project_code, session_type, conditions, epoch_duration_mins):
+    '''
+    Get filename of multisession df for a specific project code & session type
 
+    :param data_type: ['dff', 'events', 'filtered_events', 'pupil_width', 'running_speed', 'lick_rate']
+    :param event_type: ['all', 'changes', 'omissions']
+    :param project_code: ['VisualBehavior', VisualBehaviorTask1B', 'VisualBehaviorMultiscope', 'VisualBehaviorMultiscope4areasx2d']
+    :param session_type: ex OPHYS_1_images_A
+    :param conditions: set of columns in stimulus response df to group over for averaging, ex: ['cell_specimen_id', 'image_name']
+    :param epoch_duration_mins: duration of epoch to use when annotating stim response df and grouoping over conditions
+    :return: dataframe with one row per cell x condition, with columns for the cell average trace for that condition,
+                the mean response in a 500ms or 750ms window, various metrics of responsiveness, etc
+    '''
     if len(conditions) == 6:
         filename = 'mean_response_df_' + data_type + '_' + event_type + '_' + project_code + '_' + session_type + '_' + conditions[1] + '_' + conditions[2] + '_' + conditions[3] + '_' + conditions[4] + '_' + conditions[5]
     elif len(conditions) == 5:
@@ -2867,7 +2878,42 @@ def get_file_name_for_multi_session_df(data_type, event_type, project_code, sess
     return filename
 
 
-def load_multi_session_df(data_type, event_type, conditions, interpolate=True, output_sampling_rate=30, epoch_duration_mins=None, exclude_passive_sessions=True):
+def get_file_name_for_saved_multi_session_df(data_type, event_type, conditions, inclusion_criteria, epoch_duration_mins=None):
+    '''
+    Gets filename for saved hdf5 file of all sessions
+
+    :param data_type: ['dff', 'events', 'filtered_events', 'pupil_width', 'running_speed', 'lick_rate']
+    :param event_type: ['all', 'changes', 'omissions']
+    :param conditions: set of columns in stimulus response df to group over for averaging, ex: ['cell_specimen_id', 'image_name']
+    :param inclusion_criteria: ex: 'platform_experiments_table' or other string used when selecting data to save
+    :param epoch_duration_mins: duration of epoch to use when annotating stim response df and grouoping over conditions
+    :return: dataframe with one row per cell x condition, with columns for the cell average trace for that condition,
+                the mean response in a 500ms or 750ms window, various metrics of responsiveness, etc
+    '''
+
+    if len(conditions) == 6:
+        filename = 'mean_response_df_' + data_type + '_' + event_type + '_' + conditions[1] + '_' + conditions[2] + '_' + conditions[3] + '_' + conditions[4] + '_' + conditions[5]
+    elif len(conditions) == 5:
+        filename = 'mean_response_df_' + data_type + '_' + event_type + '_' + conditions[1] + '_' + conditions[2] + '_' + conditions[3] + '_' + conditions[4]
+    elif len(conditions) == 4:
+        filename = 'mean_response_df_' + data_type + '_' + event_type + '_' + conditions[1] + '_' + conditions[2] + '_' + conditions[3]
+    elif len(conditions) == 3:
+        filename = 'mean_response_df_' + data_type + '_' + event_type + '_' + conditions[1] + '_' + conditions[2]
+    elif len(conditions) == 2:
+        filename = 'mean_response_df_' + data_type + '_' + event_type + '_' + conditions[1]
+    elif len(conditions) == 1:
+        filename = 'mean_response_df_' + data_type + '_' + event_type + '_' + conditions[0]
+
+    if epoch_duration_mins is not None:
+        filename = filename + '_epoch_dur_' + str(epoch_duration_mins)
+        filename = filename + '_' + inclusion_criteria+ '.pkl'
+    else:
+        filename = filename + '_' + inclusion_criteria + '.pkl'
+
+    return filename
+
+
+def load_multi_session_df(data_type, event_type, conditions, inclusion_criteria, interpolate=True, output_sampling_rate=30, epoch_duration_mins=None, exclude_passive_sessions=True):
     """
     Loops through all experiments in the provided experiments_table and loads pre-generated dataframes containing
     trial averaged responses for each cell in each session, for the provided set of conditions, data_type, and event_type.
@@ -2892,20 +2938,36 @@ def load_multi_session_df(data_type, event_type, conditions, interpolate=True, o
     multi_session_df_dir = get_multi_session_df_dir(interpolate=interpolate, output_sampling_rate=output_sampling_rate, event_type=event_type)
     print('loading files from', multi_session_df_dir)
 
-    project_codes = experiments_table.project_code.unique()
-    multi_session_df = pd.DataFrame()
-    for project_code in project_codes:
-        experiments = experiments_table[(experiments_table.project_code == project_code)]
-        if project_code == 'VisualBehaviorMultiscope':
-            experiments = experiments[experiments.session_type != 'OPHYS_2_images_B_passive']
-        for session_type in tqdm(np.sort(filtered_session_types)):
-            try:
-                filename = get_file_name_for_multi_session_df(data_type, event_type, project_code, session_type, conditions,
-                                                              epoch_duration_mins)
-                df = pd.read_hdf(os.path.join(multi_session_df_dir, filename), key='df')
-                multi_session_df = pd.concat([multi_session_df, df])
-            except BaseException:
-                print('no multi_session_df for', project_code, session_type)
+    saved_multi_session_df_filename = get_file_name_for_saved_multi_session_df(data_type, event_type,
+                                                                                       conditions,
+                                                                                       inclusion_criteria,
+                                                                                       epoch_duration_mins)
+    print(saved_multi_session_df_filename)
+    saved_multi_session_df_filepath = os.path.join(multi_session_df_dir, saved_multi_session_df_filename)
+    # if mutli session df for these conditions has already been generated and saved, load it
+    if os.path.exists(saved_multi_session_df_filepath):
+        print('loading multi_session_df from saved file at',saved_multi_session_df_filepath)
+        multi_session_df = pd.read_pickle(saved_multi_session_df_filepath)
+    # otherwise generate and save it
+    else:
+        project_codes = experiments_table.project_code.unique()
+        multi_session_df = pd.DataFrame()
+        for project_code in project_codes:
+            experiments = experiments_table[(experiments_table.project_code == project_code)]
+            if project_code == 'VisualBehaviorMultiscope':
+                experiments = experiments[experiments.session_type != 'OPHYS_2_images_B_passive']
+            for session_type in tqdm(np.sort(filtered_session_types)):
+                try:
+                    filename = get_file_name_for_multi_session_df(data_type, event_type, project_code, session_type, conditions,
+                                                                  epoch_duration_mins)
+                    df = pd.read_hdf(os.path.join(multi_session_df_dir, filename), key='df')
+                    multi_session_df = pd.concat([multi_session_df, df])
+                except BaseException:
+                    print('no multi_session_df for', project_code, session_type)
+        # save it
+        print('saving multi session df to pkl')
+        multi_session_df.to_pickle(saved_multi_session_df_filepath)
+
     return multi_session_df
 
 
@@ -3422,9 +3484,12 @@ def check_whether_multi_session_df_has_all_platform_experiments(multi_session_df
 
 def get_multi_session_df_for_conditions(data_type, event_type, conditions, inclusion_criteria='platform_experiment_table',
                                         interpolate=True, output_sampling_rate=30, epoch_duration_mins=None, exclude_passive_sessions=False):
+    '''
+    Load saved multi session df aggregated across session types & project codes
 
+    '''
     multi_session_df = load_multi_session_df(data_type=data_type, event_type=event_type, conditions=conditions,
-                                             interpolate=interpolate, output_sampling_rate=output_sampling_rate,
+                                             inclusion_criteria=inclusion_criteria, interpolate=interpolate, output_sampling_rate=output_sampling_rate,
                                              epoch_duration_mins=epoch_duration_mins, exclude_passive_sessions=exclude_passive_sessions)
     print('there are', len(multi_session_df.ophys_experiment_id.unique()), 'experiments in the full multi_session_df')
 
