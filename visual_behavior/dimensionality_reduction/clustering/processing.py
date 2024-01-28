@@ -2210,12 +2210,13 @@ def generate_merged_table_of_model_free_metrics(data_type='filtered_events', ses
     import visual_behavior.ophys.response_analysis.cell_metrics as cm
 
     if save_dir is not None:
-        merged_model_free_metrics_table_filepath = os.path.join(save_dir, 'merged_model_free_metrics_table_'+data_type+'.csv')
+        merged_model_free_metrics_table_filepath = os.path.join(save_dir, 'merged_model_free_metrics_table_'+data_type+'_'+inclusion_criteria+'.csv')
+        print('filepath:', merged_model_free_metrics_table_filepath)
     else:
         print('no save_dir provided, cant save or load model free metrics table')
     if (save_dir is not None) and (os.path.exists(merged_model_free_metrics_table_filepath)):
         print('loading model free metrics table')
-        model_free_metrics = pd.read_csv(merged_model_free_metrics_table_filepath)
+        model_free_metrics = pd.read_csv(merged_model_free_metrics_table_filepath, index_col=0)
     else:
         ### load model free metrics (one row per cell / experience level)
 
@@ -2245,40 +2246,56 @@ def generate_merged_table_of_model_free_metrics(data_type='filtered_events', ses
         model_free_metrics = pref_stim_response_metrics.rename(columns={'mean_response':'mean_response_pref_image',
                                                         'reliability': 'reliability_pref_image',
                                                         'fano_factor': 'fano_factor_pref_image',
-                                                        'running_modulation_index': 'running_modulation_pref_image'})
+                                                        'running_modulation_index': 'running_modulation_pref_image',
+                                                        'fraction_significant_p_value_gray_screen':'fraction_significant_p_value_gray_screen_pref_image'})
 
         # select columns to keep
-        model_free_metrics = model_free_metrics[['cell_specimen_id', 'experience_level', 'lifetime_sparseness',
-                                    'mean_response_pref_image', 'reliability_pref_image',
-                                    'fano_factor_pref_image', 'running_modulation_pref_image']]
+        model_free_metrics = model_free_metrics[['cell_specimen_id', 'experience_level', 'ophys_experiment_id',
+                                                'mean_response_pref_image', 'reliability_pref_image', 'fraction_significant_p_value_gray_screen_pref_image',
+                                                'fano_factor_pref_image', 'running_modulation_pref_image']]
 
         # rename and merge in all image metrics
         tmp = response_metrics.rename(columns={'mean_response':'mean_response_all_images',
-                                                    'reliability': 'reliability_all_images',
-                                                    'fano_factor': 'fano_factor_all_images',
-                                                    'running_modulation_index': 'running_modulation_all_images'})
-        model_free_metrics = model_free_metrics.merge(tmp[['cell_specimen_id', 'experience_level',
-                                    'mean_response_all_images', 'reliability_all_images',
-                                    'fano_factor_all_images', 'running_modulation_all_images']], on=['cell_specimen_id', 'experience_level'])
+                                               'lifetime_sparseness': 'lifetime_sparseness_images',
+                                                'reliability': 'reliability_all_images',
+                                                'fano_factor': 'fano_factor_all_images',
+                                                'running_modulation_index': 'running_modulation_all_images',
+                                               'fraction_significant_p_value_gray_screen': 'fraction_significant_p_value_gray_screen_all_images'})
+        model_free_metrics = model_free_metrics.merge(tmp[['cell_specimen_id', 'experience_level',  'ophys_experiment_id',
+                                                        'mean_response_all_images', 'lifetime_sparseness_images',
+                                                        'reliability_all_images', 'fraction_significant_p_value_gray_screen_all_images',
+                                                        'fano_factor_all_images', 'running_modulation_all_images']],
+                                                      on=['cell_specimen_id', 'experience_level',  'ophys_experiment_id'])
 
         # merge in omission metrics for each exp level
         tmp = omission_response_metrics.rename(columns={'mean_response':'mean_response_omissions',
+                                                        # 'post_omitted_response': 'mean_response_post_omissions',
                                                         'reliability': 'reliability_omissions',
                                                         'fano_factor': 'fano_factor_omissions',
-                                                        'running_modulation_index': 'running_modulation_omissions'})
-        model_free_metrics = model_free_metrics.merge(tmp[['cell_specimen_id', 'experience_level',
-                                    'mean_response_omissions', 'reliability_omissions',
-                                    'fano_factor_omissions', 'running_modulation_omissions',
-                                    'omission_modulation_index']], on=['cell_specimen_id', 'experience_level'])
+                                                        'running_modulation_index': 'running_modulation_omissions',
+                                                        'fraction_significant_p_value_gray_screen': 'fraction_significant_p_value_gray_screen_omissions'})
+        model_free_metrics = model_free_metrics.merge(tmp[['cell_specimen_id', 'experience_level', 'ophys_experiment_id',
+                                                            'mean_response_omissions', #'mean_response_post_omissions',
+                                                           'reliability_omissions', 'fraction_significant_p_value_gray_screen_omissions',
+                                                            'fano_factor_omissions', 'running_modulation_omissions',
+                                                            'omission_modulation_index']],
+                                                      on=['cell_specimen_id', 'experience_level', 'ophys_experiment_id'])
+
         # merge in change metrics for each exp level
         tmp = change_response_metrics.rename(columns={'mean_response':'mean_response_changes',
+                                                      'pre_change_response': 'mean_response_pre_change',
+                                                      'lifetime_sparseness': 'lifetime_sparseness_changes',
                                                         'reliability': 'reliability_changes',
                                                         'fano_factor': 'fano_factor_changes',
-                                                        'running_modulation_index': 'running_modulation_changes'})
-        model_free_metrics = model_free_metrics.merge(tmp[['cell_specimen_id', 'experience_level',
-                                    'mean_response_changes', 'reliability_changes',
-                                    'fano_factor_changes', 'running_modulation_changes',
-                                    'change_modulation_index', 'hit_miss_index']], on=['cell_specimen_id', 'experience_level'])
+                                                        'running_modulation_index': 'running_modulation_changes',
+                                                       'fraction_significant_p_value_gray_screen': 'fraction_significant_p_value_gray_screen_changes'})
+        model_free_metrics = model_free_metrics.merge(tmp[['cell_specimen_id', 'experience_level',  'ophys_experiment_id',
+                                                            'mean_response_changes', 'mean_response_pre_change',
+                                                            'lifetime_sparseness_changes',
+                                                            'reliability_changes', 'fraction_significant_p_value_gray_screen_changes',
+                                                            'fano_factor_changes', 'running_modulation_changes',
+                                                            'change_modulation_index', 'hit_miss_index']],
+                                                      on=['cell_specimen_id', 'experience_level',  'ophys_experiment_id'])
 
         # convert experience level
         model_free_metrics['experience_level'] = [utils.convert_experience_level(experience_level) for experience_level in model_free_metrics.experience_level.values]
@@ -2312,7 +2329,7 @@ def generate_coding_score_metrics_per_experience_level_table(cluster_meta, resul
         print('no save_dir provided, cant load or save coding score metrics per exp level table')
     if (save_dir is not None) and (os.path.exists(coding_score_metrics_per_exp_level_filepath)):
         print('loading coding score metrics per experience level table')
-        metrics = pd.read_csv(coding_score_metrics_per_exp_level_filepath)
+        metrics = pd.read_csv(coding_score_metrics_per_exp_level_filepath, index_col=0)
     else:
         # get coding scores per exp level from results_pivoted
         coding_scores_per_exp_level = get_coding_score_metrics_per_experience_level(cluster_meta, results_pivoted)
@@ -2370,12 +2387,13 @@ def generate_merged_table_of_coding_score_and_model_free_metrics(cluster_meta, r
 
     # if metrics table already exists, load it, if not, generate and save it
     if save_dir is not None:
-        merged_metrics_table_filepath = os.path.join(save_dir, 'merged_coding_score_and_model_free_metrics_table_'+data_type+'.csv')
+        filename = 'merged_coding_score_and_model_free_metrics_table_'+data_type+'_'+inclusion_criteria+'.csv'
+        merged_metrics_table_filepath = os.path.join(save_dir, filename)
     else:
         print('no save_dir provided, cant load or save metrics table')
     if (save_dir is not None) and (os.path.exists(merged_metrics_table_filepath)):
         print('loading coding score and model free metrics table')
-        metrics = pd.read_csv(merged_metrics_table_filepath)
+        metrics = pd.read_csv(merged_metrics_table_filepath, index_col=0)
     else:
 
         model_free_metrics = generate_merged_table_of_model_free_metrics(data_type, session_subset, inclusion_criteria, save_dir)
