@@ -93,6 +93,16 @@ def get_abbreviated_cell_type(cre_line):
     return convert_cre_line_to_cell_type(cre_line)[:3]
 
 
+def get_abbreviated_experience_levels():
+    """
+    converts experience level names (ex: 'Novel +') into short hand versions (ex: 'N+')
+    abbreviated names are returned in the same order as provided in experience_levels
+    """
+    #exp_level_abbreviations = [exp_level.split(' ')[0][0] if len(exp_level.split(' ')) == 1 else exp_level.split(' ')[0][0] + exp_level.split(' ')[1][:2] for exp_level in experience_levels]
+    exp_level_abbreviations = ['F', 'N', 'N+']
+    return exp_level_abbreviations
+
+
 def get_experience_level_colors():
     """
     get color map corresponding to Familiar, Novel 1 and Novel >1
@@ -110,6 +120,15 @@ def get_experience_level_colors():
     # colors = [blues[0], reds[0],  purples[0]]
 
     return colors
+
+
+def color_xaxis_labels_by_experience(ax):
+    """
+    iterates through x-axis tick labels and sets them to experience level colors in an alternating way,
+    assuming that the labels are in [F, N, N+]
+    """
+    c_vals = get_experience_level_colors()
+    [t.set_color(i) for (i,t) in zip([c_vals[0], c_vals[1], c_vals[2]], ax.xaxis.get_ticklabels())]
 
 
 def lighter(color, percent):
@@ -145,12 +164,19 @@ def get_stimulus_color_map(as_rgb=False):
     black = np.array([0, 0, 0]).astype(np.uint8)
 
     stimulus_color_map = {
+        'gratings': (0.5, 0.5, 0.5),
         'gratings_static': (0.25, 0.25, 0.25),
         'gratings_flashed': (0.5, 0.5, 0.5),
+        'gratings_training': (0.5, 0.5, 0.5),
+        'familiar': session_number_colors[0],
+        'novel': session_number_colors[3],
         'images_A': session_number_colors[0],
+        'images_A_ophys': session_number_colors[0],
         'images_A_passive': session_number_colors[2],
+        'images_A_training': sns.color_palette('Reds_r', 6)[:5][::2][1],
         'images_A_habituation': session_number_colors[0],
         'images_B': session_number_colors[3],
+        'images_B_ophys': session_number_colors[3],
         'images_B_passive': session_number_colors[5],
         'images_B_habituation': session_number_colors[3],
         'images_G': session_number_colors_GH[0],
