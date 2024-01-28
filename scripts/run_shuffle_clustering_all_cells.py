@@ -106,7 +106,8 @@ if __name__ == '__main__':
     # fit
     nb_full_name = os.path.join(save_dir, 'files', nb_filename+'_cluster_labels.h5')
     if os.path.exists(nb_full_name):
-        cluster_df = pd.read_hdf(nb_full_name, key='clustered_df')
+        clustered_df = pd.read_hdf(nb_full_name, key='clustered_df')
+        print('loading cluster labels..')
     else:
         cluster = ac(n_clusters=n_clusters, affinity='euclidean', linkage='average')
         labels = cluster.fit_predict(coclust_matrix)
@@ -114,14 +115,14 @@ if __name__ == '__main__':
         print(len(ids), len(cre_lines_values), len(cluster_ids), len(labels))
         data = {'cell_specimen_id': ids, 'cre_line': cre_lines_values,
                     'cluster_id': cluster_ids, 'labels': labels}
-        cluster_df = pd.DataFrame(data=data)
-        cluster_df.to_hdf(nb_full_name, key='clustered_df')
+        clustered_df = pd.DataFrame(data=data)
+        clustered_df.to_hdf(nb_full_name, key='clustered_df')
 
 
 
     # 3. Plot clusters
     for cre_line in cre_lines:
-        tmp = cluster_df[cluster_df['cre_line'] == cre_line]
+        tmp = clustered_df[clustered_df['cre_line'] == cre_line]
         sort_order_array = tmp.value_counts('cluster_id').index.values # this might need upgrade in pandas package if you get an arror
         sort_order = {cre_line: sort_order_array} # sort order must be a dictionary with cre line as a key
         # make sure that clustered_df (or meta dataframe) in indexed with cell specimen ids

@@ -87,7 +87,7 @@ def get_features_for_clustering():
     """
     get GLM features to use for clustering analysis
     """
-    features = ['all-images', 'omissions', 'task', 'behavioral']
+    features = ['all-images', 'omissions',  'behavioral', 'task']
     return features
 
 
@@ -1407,7 +1407,7 @@ def get_stats_table(cre_original_cluster_sizes, shuffle_type_cluster_sizes, cre_
                 data = [shuffle_type, cre_line, cluster_id, original_df.loc[cluster_id],
                         shuffle_clusters_df.loc[cluster_id], out.pvalue, out.pvalue <= 0.05]
 
-                for c, column in columns:
+                for c, column in enumerate(columns):
                     cluster_statistics_df.at[index, column] = data[c]
                     index = index + 1
 
@@ -2737,7 +2737,8 @@ def get_mapped_SSE_values(matrix, threshold=1, ):
     collect SSE values for plotting for each cluster id
     Input:
     matrix: (np.array) SSE matrix (n clusters by n clusters), can be any other matrix (correlation, etc)
-    threshold: (int) a value, abov which the matrix will not find an optimally similar cluster
+    threshold: (int) a value, abov which the matrix will not find an optimally similar cluster. This is necessary because 
+        min values do not always reflect a true match, but rather a match that is better than all other matches.
 
     Returns:
     cluster_mapping_SSE,  (dict)
@@ -2762,13 +2763,14 @@ def get_mapped_SSE_values(matrix, threshold=1, ):
     return cluster_mapping_SSE
 
 
-def get_mean_dropout_scores_per_cluster(dropout_df, cluster_df=None, labels=None, stacked=True):
+def get_mean_dropout_scores_per_cluster(dropout_df, cluster_df=None, labels=None, stacked=True, sort=False, max_n_clusters=None):
     '''
     INPUT:
     dropout_df: (pd.DataFrame) of GLM dropout scores (cell_specimen_ids by regressors x experience)
     cluster_df: (pd.DataFrame), either provide this df, must contain columns 'cluster_id', 'cell_specimen_id'
     labels: (list, np.array) or provide this array, list or array of int indicating cells' cluster ids,
                             if provided, len(labels)==len(dropout_df)
+    sort: boolean, if True, sorts clusters by size, if False, clusters are not sorted
 
     Provide either cluster_df or labels. Cluster df must be df with 'cluster_id' and 'cell_specimen_id' columns,
     labels can be np array or list of cluster ids
@@ -2779,8 +2781,14 @@ def get_mean_dropout_scores_per_cluster(dropout_df, cluster_df=None, labels=None
 
     Clusters are sorted by size.
     '''
-    if isinstance(cluster_df, pd.core.frame.DataFrame):
+    if sort and isinstance(cluster_df, pd.core.frame.DataFrame):
         cluster_ids = cluster_df['cluster_id'].value_counts().index.values  # sort cluster ids by size
+    elif sort is False and isinstance(cluster_df, pd.core.frame.DataFrame):
+        cluster_ids = cluster_df['cluster_id'].unique() # sorts numerically not by cluster size
+    
+    if sort is False and max_n_clusters is not None:
+        cluster_ids = np.arange(1, max_n_clusters+1)
+
     elif labels is not None:
         cluster_df = pd.DataFrame(data={'cluster_id': labels, 'cell_specimen_id': dropout_df.index.values})
         cluster_ids = cluster_df['cluster_id'].value_counts().index.values  # sort cluster ids by size
@@ -2791,10 +2799,10 @@ def get_mean_dropout_scores_per_cluster(dropout_df, cluster_df=None, labels=None
         this_cluster_ids = cluster_df[cluster_df['cluster_id'] == cluster_id]['cell_specimen_id'].unique()
         if stacked is True:
             mean_dropout_df = dropout_df.loc[this_cluster_ids].mean()
-            mean_cluster[i + 1] = mean_dropout_df.values
+            mean_cluster[cluster_id] = mean_dropout_df.values
         elif stacked is False:
             mean_dropout_df = dropout_df.loc[this_cluster_ids].mean().unstack()
-            mean_cluster[i + 1] = mean_dropout_df
+            mean_cluster[cluster_id] = mean_dropout_df
 
     if stacked is True:
         return (pd.DataFrame(mean_cluster))
@@ -2853,9 +2861,9 @@ def get_cluster_size_differece_df(cre_original_cluster_sizes, shuffle_type_clust
 
     '''
     if cre_line is None:
-        cre_lines = cre_original_cluster_sizes.keys()
+        cre_lines = [None]
     else:
-        cre_lines = [cre_line]
+        cre_lines = cre_line
     shuffle_types = shuffle_type_cluster_sizes.keys()
     # create empty df with columns to collect
     cluster_size_difference_df = pd.DataFrame(columns=columns)
@@ -2864,11 +2872,18 @@ def get_cluster_size_differece_df(cre_original_cluster_sizes, shuffle_type_clust
         for cre_line in cre_lines:
 
             # number of clusters to iterate over in this cre line
-            cluster_ids = shuffle_type_cluster_sizes[shuffle_type][cre_line].keys()
+            if cre_line is not None:
+                cluster_ids = shuffle_type_cluster_sizes[shuffle_type][cre_line].keys()
+            else:
+                cluster_ids = shuffle_type_cluster_sizes[shuffle_type].keys()
 
             for cluster_id in cluster_ids:
-                og_size = cre_original_cluster_sizes[cre_line][cluster_id]
-                shuffled_sizes = shuffle_type_cluster_sizes[shuffle_type][cre_line][cluster_id]
+                if cre_line is not None:
+                    og_size = cre_original_cluster_sizes[cre_line][cluster_id]
+                    shuffled_sizes = shuffle_type_cluster_sizes[shuffle_type][cre_line][cluster_id]
+                else:
+                    og_size = cre_original_cluster_sizes[cluster_id]
+                    shuffled_sizes = shuffle_type_cluster_sizes[shuffle_type][cluster_id]
                 cluster_size_diff = np.subtract(og_size, shuffled_sizes) / np.add(og_size, shuffled_sizes)
                 abs_cluster_size_diff = np.subtract(og_size, shuffled_sizes)
 
@@ -2882,7 +2897,7 @@ def get_cluster_size_differece_df(cre_original_cluster_sizes, shuffle_type_clust
     return cluster_size_difference_df
 
 
-def get_cluster_probability_df(shuffle_type_probabilities,
+def get_cluster_probability_df(shuffle_type_probabilities, cre_line=None,
                                columns=['cre_line', 'cluster_id', 'shuffle_type', 'probability']):
     ''' in long format, probabilities of shuffled clusters.
     This function is not finished but it works for now.'''
@@ -2890,15 +2905,24 @@ def get_cluster_probability_df(shuffle_type_probabilities,
     shuffle_types = shuffle_type_probabilities.keys()
     # create empty df with columns to collect
     shuffle_type_probability_df = pd.DataFrame(columns=columns)
-
+   
     for shuffle_type in shuffle_types:
-        cre_lines = shuffle_type_probabilities[shuffle_type].keys()
+        if cre_line is None:
+            cre_lines = [None]
+        else:
+            cre_lines = shuffle_type_probabilities[shuffle_type].keys()
         for cre_line in cre_lines:
 
             # number of clusters to iterate over in this cre line
-            cluster_ids = shuffle_type_probabilities[shuffle_type][cre_line].keys()
+            if cre_line is not None:
+                cluster_ids = shuffle_type_probabilities[shuffle_type][cre_line].keys()
+            else:
+                cluster_ids = shuffle_type_probabilities[shuffle_type].keys()
             for cluster_id in cluster_ids:
-                value = shuffle_type_probabilities[shuffle_type][cre_line][cluster_id]
+                if cre_line is not None:
+                    value = shuffle_type_probabilities[shuffle_type][cre_line][cluster_id]
+                else:
+                    value = shuffle_type_probabilities[shuffle_type][cluster_id]
                 # cluster_df = pd.DataFrame(data=[cre_line, cluster_id, shuffle_type, value], columns = columns)
                 cluster_df = pd.DataFrame({'cre_line': cre_line, 'cluster_id': cluster_id, 'shuffle_type': shuffle_type,
                                            'probability': value},
@@ -2914,27 +2938,27 @@ def get_matched_cluster_labels(SSE_mapping):
     this function reformats SSE_mapping dictionary from {n_boot: {original id: matched id}}
     to matched_clusters dictionary of {original id: [matched id nb1, nb2, etc.]}
     '''
-    cluster_ids = SSE_mapping[0].keys()  # is this just using the first set of mappings to get original cluster IDs?
+    original_cluster_ids = SSE_mapping[0].keys()  # this is just using the first set of mappings to get original cluster IDs
     n_boots = SSE_mapping.keys()
     matched_clusters = {}
-    for cluster_id in cluster_ids:
+    for cluster_id in original_cluster_ids:
         matched_ids = []
         for n_boot in n_boots:  # for every shuffle iteration, collect the matched ID for each original cluster id
             matched_id = SSE_mapping[n_boot][cluster_id]
             matched_ids.append(matched_id)
         matched_clusters[cluster_id] = matched_ids  # list of all matched IDs for each original cluster
-    return matched_clusters
+    return matched_clusters # dictionary of original cluster IDs and their matched IDs across all shuffle iterations
 
 
 def get_cluster_size_variance(SSE_mapping, cluster_df_shuffled, normalize=False, use_nan=False, adjust_to_expected_N=False):
-    cluster_ids = SSE_mapping[0].keys()
+    original_cluster_ids = SSE_mapping[0].keys()
     matched_ids = get_matched_cluster_labels(SSE_mapping)  # gets list of all matched IDs across shuffle iterations for
-    # each original cluster
+    # each original cluster, in the order of shuffle iterations
 
     # cluster_df_shuffled is a dictionary with the cluster labels for each shuffle iteration
     n_boots = cluster_df_shuffled.keys()
     all_cluster_sizes = {}
-    for original_cluster_id in cluster_ids:
+    for original_cluster_id in original_cluster_ids:
         cluster_sizes = []
         for n_boot in n_boots:
             # count how many cells there are in each cluster for each shuffle iteration
@@ -2952,7 +2976,12 @@ def get_cluster_size_variance(SSE_mapping, cluster_df_shuffled, normalize=False,
 
             if matched_id_this_nb != -1:
                 # get number of cells per cluster for the cluster IDs in the shuffles using the matched ID for THIS shuffle iteration
-                cluster_sizes.append(shuffled_cluster_sizes_this_boot.loc[matched_id_this_nb])
+                
+                try:
+                    cluster_sizes.append(shuffled_cluster_sizes_this_boot.loc[matched_id_this_nb])
+                except KeyError:
+                    # print(shuffled_cluster_sizes_this_boot)
+                    break
             else:
                 if use_nan is True:
                     cluster_sizes.append(np.nan)
