@@ -1052,6 +1052,9 @@ def get_behavior_stats(behavior_session_id, method='stimulus_based', engaged_onl
     '''
     gets behavior stats for a given behavior session
 
+    Note this function uses loading.get_extended_stimulus_presentations() to get reward_rate, and
+    sets engagement state based on a threshold of 2/3 rewards/min (rather than 2 rewards per min as in SDK)
+
     Parameters:
     -----------
     behavior_session_id : int
@@ -1103,7 +1106,7 @@ def get_behavior_stats(behavior_session_id, method='stimulus_based', engaged_onl
             print(len(trials), 'total trials')
 
             if engaged_only:
-                trials = trials[trials.engagement_state == 'engaged']
+                trials = trials[trials.engagement_state == 'engaged'] # 2/3 rewards / min threshold
                 print(len(trials), 'engaged trials')
 
             if per_image:  # creates a dictionary of dictionaries with key for each image name, values as metrics for that image
@@ -1154,7 +1157,7 @@ def get_behavior_stats(behavior_session_id, method='stimulus_based', engaged_onl
             stimulus_presentations = annotate_stimuli(session, inplace=False)
             print(len(stimulus_presentations), 'total stimulus presentations')
 
-            if engaged_only == True:
+            if engaged_only == True: # 2/3 rewards / min threshold
                 stimulus_presentations = stimulus_presentations[stimulus_presentations.engagement_state == 'engaged']
                 print(len(stimulus_presentations), 'engaged stimulus presentations')
 
@@ -1363,22 +1366,59 @@ def get_cached_behavior_stats(behavior_session_id, engaged_only=True, method='st
 
 def get_behavior_stats_for_sessions(behavior_session_ids, behavior_sessions,
                                     method='stimulus_based', engaged_only=True, per_image=False):
-    from tqdm import tqdm
-    behavior_stats = pd.DataFrame()
-    problem_sessions = []
-    for behavior_session_id in tqdm(behavior_session_ids):
-        try:
-            print('loading for', behavior_session_id)
-            stats = get_cached_behavior_stats(behavior_session_id, engaged_only=engaged_only, method=method, per_image=per_image)
-            behavior_stats = pd.concat([behavior_stats, stats])
-        except Exception as e:
-            print(e)
-            print('cant load stats for', behavior_session_id)
-            problem_sessions.append(behavior_session_id)
 
+    '''
+    load or generate a table of behavior metrics for the behavior sessions provided in list of behavior_session_ids
+    multiple ways of computing behavior metrics are possible, given by the 'method' input (see below)
+
+    :param behavior_session_ids: list of behavior session IDs to retrieve metrics for
+    :param behavior_sessions: behavior sessions table from VisualBehaviorOphysProjectCache
+    :param method: one of ['trial_based', 'stimulus_based', 'sdk', 'response_probability']
+                    trial based uses conservatively defined catch trials,
+                    stimulus_based uses any non-change that could have been a change (less conservative)
+                    sdk uses the exact metrics out of the allensdk behavior_performance metrics attribute
+                    response_probability computes response_probability
+    :param engaged_only: Bool, whether or not to limit to engaged portions of the session
+                        basically meaningless for method = 'sdk' because sdk computes metrics for both engaged and disengaged states by default
+    :param per_image: Bool, whether to compute metrics on a per image basis or not
+    :return:
+        dataframe where rows are behavior session IDs and columns are various metrics computed on behavior
+                if per_image = True, rows will be combinations of behavior sessions and image names
+    '''
+
+    # if the file exists for all sessions, load it
     cache_dir = get_behavior_stats_cache_dir(method=method, engaged_only=engaged_only, per_image=per_image)
-    filepath = os.path.join(cache_dir, 'all_sessions.h5')
-    if not os.path.exists(filepath):
-        behavior_stats.to_hdf(filepath, key='data')
+    all_sessions_filepath = os.path.join(cache_dir, 'all_sessions.h5')
+    if os.path.exists(all_sessions_filepath):
+        behavior_stats = pd.read_hdf(all_sessions_filepath, key='data')
+        if method == 'sdk':
+            behavior_stats.index.name = 'behavior_session_id'
+        # limit to the provided behavior sessions
+        if method != 'response_probability':
+            behavior_stats = behavior_stats.reset_index()
+            behavior_stats = behavior_stats[behavior_stats.behavior_session_id.isin(behavior_session_ids)]
+        problem_sessions = []
+
+    else:
+        from tqdm import tqdm
+        behavior_stats = pd.DataFrame()
+        problem_sessions = []
+        for behavior_session_id in tqdm(behavior_session_ids):
+            try:
+                # print('loading for', behavior_session_id)
+                stats = get_cached_behavior_stats(behavior_session_id, engaged_only=engaged_only, method=method, per_image=per_image)
+                behavior_stats = pd.concat([behavior_stats, stats])
+            except Exception as e:
+                print(e)
+                print('cant load stats for', behavior_session_id)
+                problem_sessions.append(behavior_session_id)
+
+        cache_dir = get_behavior_stats_cache_dir(method=method, engaged_only=engaged_only, per_image=per_image)
+        all_sessions_filepath = os.path.join(cache_dir, 'all_sessions.h5')
+        if not os.path.exists(all_sessions_filepath):
+            behavior_stats.to_hdf(all_sessions_filepath, key='data')
+
+    if method != 'response_probability':
+        print(len(behavior_stats.behavior_session_id.unique()), 'behavior sessions in behavior_stats table')
 
     return behavior_stats, problem_sessions
