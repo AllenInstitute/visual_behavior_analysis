@@ -1591,9 +1591,6 @@ def plot_coding_score_heatmap_remapped(cluster_meta, feature_matrix, sort_by='cl
     # get data from feature matrix for this set of cells
     coding_scores_sorted = feature_matrix.loc[cell_order].copy()
 
-    # Kyle's colors
-    # c_vals = ['#e53e3e', '#3182ce', '#805ad5',] #v6
-
     # remap coding scores to experience level colors
     if session_colors:
         coding_scores_remapped, coding_score_cmap, vmax = remap_coding_scores_to_session_colors(coding_scores_sorted)
