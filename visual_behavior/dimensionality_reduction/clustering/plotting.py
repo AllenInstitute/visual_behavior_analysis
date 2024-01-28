@@ -2073,9 +2073,11 @@ def plot_location_distribution_across_clusters_for_cre_lines(n_cells_table, loca
     axes_conditions = cluster_ids
     n_axes_conditions = len(axes_conditions)
     if len(locations) ==2:
-        fig_height = 2.8
+        fig_height = 2.2
     else:
         fig_height = 3*1+(0.2*len(locations))
+
+    fig_height = 2
     if sharex == False:
         fig_height = fig_height+1
 
@@ -2113,7 +2115,7 @@ def plot_location_distribution_across_clusters_for_cre_lines(n_cells_table, loca
             #         ax[i].set_xticks([])
             # plot asterix for significant comparisons
             if cluster_data[significance_col].any():
-                x_pos = cluster_data[metric].max()+0.02# xlocation slightly further to the right than max value
+                x_pos = cluster_data[metric].max()+0.02 # xlocation slightly further to the right than max value
                 # x_pos = data[metric].max()-0.01 # put star at max x value
                 ax[i].text(x_pos, len(locations)/2., '*', fontsize=24, color=sns.color_palette()[3],
                         horizontalalignment='center', verticalalignment='center')
@@ -2133,7 +2135,7 @@ def plot_location_distribution_across_clusters_for_cre_lines(n_cells_table, loca
     return ax
 
 
-def plot_cluster_metric_comparison_scatterplot(cluster_metrics, cluster_meta, x='layer_index', y='exp_mod_direction',
+def plot_cluster_metric_comparison_scatterplot(cluster_metrics, cluster_meta, y='layer_index', x='exp_mod_direction',
                                                hue='cre_line', save_dir=None, folder=None):
     '''
         Plot a scatterplot showing comparison of two metric values for each cre line / cluster combination
@@ -2155,19 +2157,25 @@ def plot_cluster_metric_comparison_scatterplot(cluster_metrics, cluster_meta, x=
     cluster_metrics = cluster_metrics.reset_index()  # reset so cre & cluster ID can be used in plot
     hue_order = np.sort(cluster_metrics[hue].unique())
     cre_line_colors = utils.get_cre_line_colors()
-    size = 'fraction_cells_cluster'
+    cluster_metrics['Cluster size'] = cluster_metrics['fraction_cells_cluster']
+    size = 'Cluster size'
+    if hue == 'cell_type':
+        cluster_metrics['Cell class'] = cluster_metrics['cell_type']
+        hue = 'Cell class'
 
-    figsize = (3, 3)
+    figsize = (3.5, 3.5)
     fig, ax = plt.subplots(figsize=figsize)
     ax = sns.scatterplot(data=cluster_metrics, x=x, y=y, hue=hue, hue_order=hue_order, palette=cre_line_colors,
                          size=size, sizes=(1, 250), alpha=0.8, linewidth=2, ax=ax)
     ax.set_ylim(-1, 1)
     ax.set_xlim(-1, 1)
     ax.legend(bbox_to_anchor=(1, 1), fontsize='x-small')  # labels=[utils.get_abbreviated_cell_type(cre_line) for cre_line in cre_lines])
-    if x == 'layer_index':
-        ax.set_xlabel('<- Lower --- Upper ->')
-    if y == 'exp_mod_direction':
-        ax.set_ylabel('<- Familiar --- Novel ->')
+    if y == 'layer_index':
+        ax.set_ylabel('<- Lower --- Upper ->')
+    if x == 'exp_mod_direction':
+        ax.set_xlabel('<- Familiar --- Novel ->')
+    ax.axvline(x=0, ymin=0, ymax=1, linestyle='--', color='gray')
+    ax.axhline(y=0, xmin=0, xmax=1, linestyle='--', color='gray')
 
     # reset index to plot cluster ID for each data point
     cluster_metrics = cluster_metrics.set_index(['cre_line', 'cluster_id'])
