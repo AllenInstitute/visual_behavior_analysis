@@ -362,6 +362,12 @@ def get_omission_modulation_index(stimulus_response_df, pre_omitted):
     pre_omitted = pre_omitted.reset_index()
     pre_omitted = pre_omitted[pre_omitted.pre_omitted]
 
+    post_omitted = sdf.groupby(['cell_specimen_id', 'post_omitted']).mean()[['mean_response']].rename(
+        columns={'mean_response': 'post_omission_response'})
+    post_omitted = post_omitted.reset_index()
+    post_omitted = post_omitted[post_omitted.post_omitted]
+
+    omitted = omitted.merge(post_omitted, on='cell_specimen_id')
     omitted = omitted.merge(pre_omitted, on='cell_specimen_id')
     omitted['omission_modulation_index'] = (omitted.omission_response - omitted.pre_omission_response) / (
         omitted.omission_response + omitted.pre_omission_response)
@@ -681,7 +687,7 @@ def get_cell_metrics_dir(interpolate=False, output_sampling_rate=None):
     """
     base_dir = r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/platform_paper_cache/cell_metrics'
     if interpolate:
-        save_dir = os.path.join(base_dir, 'interpolated_' + str(output_sampling_rate) + 'Hz')
+        save_dir = os.path.join(base_dir, 'interpolated_' + str(output_sampling_rate) + 'Hz_original')
     else:
         save_dir = os.path.join(base_dir, 'original_frame_rate')
     if not os.path.exists(save_dir):
@@ -922,12 +928,12 @@ def load_metrics_table_for_experiments(ophys_experiment_ids, condition, stimuli,
     problem_expts = pd.DataFrame()
     metrics_table = pd.DataFrame()
     if (isinstance(ophys_experiment_ids, str)) and (ophys_experiment_ids == 'all_experiments'):
-        try:
-            metrics_table = load_metrics_table_for_experiment(ophys_experiment_ids, condition, stimuli, session_subset,
+        # try:
+        metrics_table = load_metrics_table_for_experiment(ophys_experiment_ids, condition, stimuli, session_subset,
                                                               data_type=data_type, interpolate=interpolate,
                                                               output_sampling_rate=output_sampling_rate)
-        except BaseException:
-            print('problem loading all experiments metrics table')
+        # except BaseException:
+        #     print('problem loading all experiments metrics table')
     else:
         for ophys_experiment_id in tqdm(ophys_experiment_ids):
             try:
@@ -935,17 +941,59 @@ def load_metrics_table_for_experiments(ophys_experiment_ids, condition, stimuli,
                                                         data_type=data_type, interpolate=interpolate,
                                                         output_sampling_rate=output_sampling_rate)
                 metrics_table = pd.concat([metrics_table, tmp])
-            except Exception as e:
-                print('problem for experiment', ophys_experiment_id)
-                problem_expts.loc[i, 'ophys_experiment_id'] = ophys_experiment_id
-                problem_expts.loc[i, 'condition'] = condition
-                problem_expts.loc[i, 'stimuli'] = stimuli
-                problem_expts.loc[i, 'session_subset'] = session_subset
-                problem_expts.loc[i, 'data_type'] = data_type
-                problem_expts.loc[i, 'interpolate'] = interpolate
-                problem_expts.loc[i, 'output_sampling_rate'] = output_sampling_rate
-                problem_expts.loc[i, 'exception'] = e
-                i += 1
+            except:
+                # generate the table
+                print('cant load saved table, generating metrics table for', ophys_experiment_id)
+                # load dataset
+                dataset = loading.get_ophys_dataset(ophys_experiment_id, get_extended_stimulus_presentations=False)
+                # load stimulus_response_df from saved file or generate it if file doesnt exist
+                # event_type must be all so that we can filter as needed
+                time_window = [-3, 3.1]
+                stimulus_response_df = loading.get_stimulus_response_df(dataset, data_type=data_type, event_type='all',
+                                                                        time_window=time_window,
+                                                                        interpolate=interpolate,
+                                                                        output_sampling_rate=output_sampling_rate,
+                                                                        load_from_file=True)
+                # need try except because code will not always run, such as in the case of passive sessions (no trials that are 'engaged')
+                try:
+                    filepath = get_metrics_df_filepath(ophys_experiment_id, condition=condition,
+                                                       stimuli=stimuli, session_subset=session_subset,
+                                                       data_type=data_type, interpolate=interpolate,
+                                                       output_sampling_rate=output_sampling_rate)
+                    # regenerate metrics and save
+                    if condition == 'omissions':
+                        response_window_duration = 0.75
+                    else:
+                        response_window_duration = 0.5
+                    metrics_df = generate_cell_metrics_table(dataset,
+                                                             stimulus_response_df,
+                                                             data_type=data_type,
+                                                             condition=condition,
+                                                             session_subset=session_subset,
+                                                             stimuli=stimuli,
+                                                             time_window=time_window,
+                                                             output_sampling_rate=output_sampling_rate,
+                                                             response_window_duration=response_window_duration,
+                                                             interpolate=interpolate,
+                                                             )
+                    metrics_df.to_hdf(filepath, key='df')
+                    print('metrics generated for', data_type, condition, stimuli, session_subset,
+                          'interpolate:', interpolate)
+                    metrics_table = pd.concat([metrics_table, metrics_df])
+
+                except Exception as e:
+                    print('problem for experiment', ophys_experiment_id)
+                    print('could not generate metrics table for', data_type, condition, stimuli, session_subset,
+                          'interpolate:', interpolate)
+                    problem_expts.loc[i, 'ophys_experiment_id'] = ophys_experiment_id
+                    problem_expts.loc[i, 'condition'] = condition
+                    problem_expts.loc[i, 'stimuli'] = stimuli
+                    problem_expts.loc[i, 'session_subset'] = session_subset
+                    problem_expts.loc[i, 'data_type'] = data_type
+                    problem_expts.loc[i, 'interpolate'] = interpolate
+                    problem_expts.loc[i, 'output_sampling_rate'] = output_sampling_rate
+                    problem_expts.loc[i, 'exception'] = e
+                    i += 1
 
     save_metrics_loading_exceptions_log_file(problem_expts)
 
@@ -1150,13 +1198,13 @@ def get_descriptive_stats_for_conditions(metrics_table, condition, conditions=['
                    'lifetime_sparseness', 'mean_response',
                    'fraction_significant_p_value_gray_screen', 'fano_factor',
                    'reliability', 'running_modulation_index', 'hit_miss_index',
-                   'change_response', 'pre_change', 'pre_change_response',
+                   'change_response',  'pre_change_response',
                    'change_modulation_index']
     elif condition == 'omissions':
         metrics = ['cell_specimen_id', 'mouse_id', 'ophys_session_id', 'ophys_container_id', 'ophys_experiment_id',
                    'mean_response', 'fraction_significant_p_value_gray_screen', 'fano_factor',
                    'reliability', 'running_modulation_index', 'omitted',
-                   'omission_response', 'pre_omitted', 'pre_omission_response',
+                   'omission_response', 'pre_omission_response',
                    'omission_modulation_index', ]
 
     metrics_stats = metrics_table[metrics + conditions].groupby(conditions).describe()
@@ -1199,22 +1247,33 @@ def compute_experience_modulation_index(metrics_table, metric, cells_table):
     metric_data.columns = metric_data.columns.droplevel(0)
 
     # compute modulation indices
+    # Familiar vs novel, familiar vs novel +
     exp_level_1 = 'Familiar'
 
-    exp_level_2 = 'Novel 1'
+    exp_level_2 = 'Novel'
     metric_data[exp_level_2 + ' vs. ' + exp_level_1] = (metric_data[exp_level_2] - metric_data[exp_level_1]) / (
         metric_data[exp_level_2] + metric_data[exp_level_1])
-    exp_level_2 = 'Novel >1'
+    exp_level_2 = 'Novel +'
     metric_data[exp_level_2 + ' vs. ' + exp_level_1] = (metric_data[exp_level_2] - metric_data[exp_level_1]) / (
         metric_data[exp_level_2] + metric_data[exp_level_1])
 
-    exp_level_2 = 'Novel 1'
+    exp_level_2 = 'Novel'
     metric_data[exp_level_2 + ' % of ' + exp_level_1] = (metric_data[exp_level_2]) / (metric_data[exp_level_1])
-    exp_level_2 = 'Novel >1'
+    exp_level_2 = 'Novel +'
+    metric_data[exp_level_2 + ' % of ' + exp_level_1] = (metric_data[exp_level_2]) / (metric_data[exp_level_1])
+
+    # Novel vs Novel +
+    exp_level_1 = 'Novel +'
+
+    exp_level_2 = 'Novel'
+    metric_data[exp_level_2 + ' vs. ' + exp_level_1] = (metric_data[exp_level_2] - metric_data[exp_level_1]) / (
+        metric_data[exp_level_2] + metric_data[exp_level_1])
+
+    exp_level_2 = 'Novel'
     metric_data[exp_level_2 + ' % of ' + exp_level_1] = (metric_data[exp_level_2]) / (metric_data[exp_level_1])
 
     # add cell type
-    metric_data = metric_data.merge(cells_table[['cell_specimen_id', 'cell_type']], on='cell_specimen_id')
+    metric_data = metric_data.merge(cells_table[['cell_specimen_id', 'cell_type', 'layer', 'targeted_structure']], on='cell_specimen_id')
 
     return metric_data
 
