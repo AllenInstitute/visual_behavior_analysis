@@ -686,8 +686,9 @@ def get_cell_metrics_dir(interpolate=False, output_sampling_rate=None):
     :return:
     """
     base_dir = r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/platform_paper_cache/cell_metrics'
+    # base_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\platform_paper_cache\cell_metrics'
     if interpolate:
-        save_dir = os.path.join(base_dir, 'interpolated_' + str(output_sampling_rate) + 'Hz_original')
+        save_dir = os.path.join(base_dir, 'interpolated_' + str(output_sampling_rate) + 'Hz')
     else:
         save_dir = os.path.join(base_dir, 'original_frame_rate')
     if not os.path.exists(save_dir):
@@ -956,6 +957,7 @@ def load_metrics_table_for_experiments(ophys_experiment_ids, condition, stimuli,
                                                                         load_from_file=True)
                 # need try except because code will not always run, such as in the case of passive sessions (no trials that are 'engaged')
                 try:
+                    print('stim response df loaded, generating cell metrics')
                     filepath = get_metrics_df_filepath(ophys_experiment_id, condition=condition,
                                                        stimuli=stimuli, session_subset=session_subset,
                                                        data_type=data_type, interpolate=interpolate,
