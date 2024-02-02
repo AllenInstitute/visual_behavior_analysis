@@ -3670,61 +3670,38 @@ def plot_cluster_size(cluster_size_df, cre_line=None, shuffle_type=None, stats_t
     return ax
 
 
-def plot_cluster_size_and_probability_for_cluster(cluster_size_df, shuffle_probability_df, cluster_id, 
-                                                  y1 = 'probability', y2 = 'abs_cluster_size_diff', y1_lims= None, y2_lims=None, ax=None):
+def plot_cluster_size_for_cluster(cluster_size_df, cluster_id, 
+                                                  y = 'abs_cluster_size_diff', y_lims= None, ax=None):
 
     if ax is None:
         fig, ax = plt.subplots()
 
-    color1 = 'gray' # color for shuffle size difference
-    color2 = 'steelblue' # color for probability scale
-    # plot probability first
-
-    ax = sns.pointplot(data=shuffle_probability_df[shuffle_probability_df['cluster_id'] == cluster_id],
-                       x='cluster_id', y=y1, ax=ax, color=color2, linestyles='', fontsize=12)
+    color = 'gray' # color for shuffle size difference
+   
+    # plot size diff
+    ax = sns.barplot(data=cluster_size_df[cluster_size_df['cluster_id'] == cluster_id], x='cluster_id',
+                      y=y, color=color, ax=ax)
+    ax.axhline(0, color='gray')
     ax.set_xlabel('')
-    ax.set_ylabel('')
-    ax.set_yticklabels('')
-    if y1_lims is None:
-        y1_lims=[-0.1, 1.1] #arbitrary number that works
-    ax.set_ylim(y1_lims)
-    ax.set_xticks([0.5, 0])
+    if y_lims is None:
+        y_lims=[-50, 50] #arbitrary number will not work
+    ax.set_ylim(y_lims)
     ax.set_xlim([-1, 1])
-    ax.set_xticklabels('')
+    ax.set_xticks([1, 0])
+    ax.set_xticklabels('', fontsize=12)
+    ax.set_yticklabels(ax.get_yticklabels(), fontsize=12)
+    ax.set_title(f'cluster {cluster_id}', fontsize=12)
     ax.spines['top'].set_visible(False)
     ax.spines['bottom'].set_visible(False)
-
-    ax.set_yticklabels(np.round(ax.get_yticks(), 1), color=color2, fontsize=12)
-    ax.set_ylabel('probability', color=color2, fontsize=12)
-
-    # plot size diff
-    ax2 = ax.twinx()
-    ax2 = sns.barplot(data=cluster_size_df[cluster_size_df['cluster_id'] == cluster_id], x='cluster_id',
-                      y=y2, color=color1, ax=ax2)
-    ax2.axhline(0, color='gray')
-    ax2.set_xlabel('')
-    if y2_lims is None:
-        y2_lims=[-50, 50] #arbitrary number will not work
-    ax2.set_ylim(y2_lims)
-    ax2.set_xlim([-1, 1])
-    ax2.set_xticks([1, 0])
-    ax2.set_xticklabels('', fontsize=12)
-    ax2.set_yticklabels(ax.get_yticklabels(), fontsize=12)
-    # ax2.set_title(f'cluster {cluster_id}', fontsize=12)
-    ax2.spines['top'].set_visible(False)
-    ax2.spines['bottom'].set_visible(False)
-    # ax.spines['left'].set_visible(False)
-    # ax.spines['right'].set_visible(False)
-    ax2.set_ylabel('size vs. shuffle', color=color1, fontsize=12)
-    ax2.set_yticklabels(np.round(ax2.get_yticks(), 1), color=color1, fontsize=12)
+    ax.set_ylabel('size vs. shuffle', color=color, fontsize=12)
+    ax.set_yticklabels(np.round(ax.get_yticks(), 1), color=color, fontsize=12)
 
     ax.set_zorder(ax.get_zorder() + 1)
     ax.patch.set_visible(False)
 
     return ax
 
-
-def plot_cluster_size_and_probability(cluster_size_df, shuffle_probability_df, cre_line=None, shuffle_type=None,
+def plot_cluster_size_difference(cluster_size_df, cre_line=None, shuffle_type=None,
                                       ax=None, figsize=None, save_dir=None, folder=None):
     '''
     Function to plot cluster size and probability of cluster for each cluster id.
@@ -3761,8 +3738,7 @@ def plot_cluster_size_and_probability(cluster_size_df, shuffle_probability_df, c
 
     # set variables
         # y axis to plot
-    y1 = 'probability'
-    y2 = 'abs_cluster_size_diff' # can be normalized difference
+    y = 'probability'
 
     # y axis limits
     # for some reason sharey does not work with cluster size on this plot, so here I am trying to standardize y axis to cre across cluster ids
@@ -3773,10 +3749,133 @@ def plot_cluster_size_and_probability(cluster_size_df, shuffle_probability_df, c
 
     # plot cluster size first
     for i, cluster_id in enumerate(cluster_ids):
-        ax[cluster_id-1] = plot_cluster_size_and_probability_for_cluster(cluster_size_df, shuffle_probability_df, cluster_id, y1=y1, y2=y2, y2_lims=y2_lims, ax=ax[cluster_id-1])
+        ax[cluster_id-1] = plot_cluster_size_for_cluster(cluster_size_df, cluster_id, y=y, ax=ax[cluster_id-1])
 
     fig.subplots_adjust(hspace=1.2, wspace=0.6)
     plt.suptitle(cre_line, x=0.52, y=1.15)
+    if save_dir:
+        utils.save_figure(fig, figsize, save_dir=save_dir, folder=folder,
+                          fig_title = f'{shuffle_type}_prob_size' + cre_line[:3], formats = ['.png', '.pdf'])
+
+    return ax
+
+
+def plot_cluster_size_and_probability_for_cluster(cluster_size_df, shuffle_probability_df, cluster_id, 
+                                                  y1 = 'probability', y2 = 'abs_cluster_size_diff', y1_lims= None, y2_lims=None, ax=None):
+
+    if ax is None:
+        fig, ax = plt.subplots()
+
+    color1 = 'gray' # color for shuffle size difference
+    color2 = 'steelblue' # color for probability scale
+    # plot probability first
+
+    ax = sns.pointplot(data=shuffle_probability_df[shuffle_probability_df['cluster_id'] == cluster_id],
+                       x='cluster_id', y=y1, ax=ax, color=color2, linestyles='', markers='o', scale=1.5)
+    ax.set_xlabel('')
+    ax.set_xticks([0.5, 0])
+    ax.set_xlim([-1, 1])
+    ax.set_xticklabels('')
+
+    if y1_lims is None:
+        y1_lims=[-0.1, 1.1] #arbitrary number that works
+    ax.set_ylim(y1_lims)
+    
+    ax.spines['top'].set_visible(False)
+    ax.spines['bottom'].set_visible(False)
+
+   # ax.set_yticklabels(np.round(ax.get_yticks(), 1), color=color2, fontsize=12)
+    if cluster_id == 1:
+        ax.set_ylabel('probability', color=color2, fontsize=16)
+        ax.set_yticklabels(np.round(ax.get_yticks(), 1), color=color2, fontsize=16)
+    else:
+        ax.set_ylabel('')
+        ax.set_yticklabels('')
+
+    # plot size diff
+    ax2 = ax.twinx()
+    ax2 = sns.barplot(data=cluster_size_df[cluster_size_df['cluster_id'] == cluster_id], x='cluster_id',
+                      y=y2, color=color1, ax=ax2)
+    ax2.axhline(0, color='gray')
+    ax2.set_xlabel('')
+    if y2_lims is None:
+        y2_lims=[-50, 50] #arbitrary number will not work
+    ax2.set_ylim(y2_lims)
+    ax2.set_xlim([-1, 1])
+    ax2.set_xticks([1, 0])
+    ax2.set_xticklabels('')
+    ax2.set_title(f'cluster {cluster_id}', fontsize=16)
+    ax2.spines['top'].set_visible(False)
+    ax2.spines['bottom'].set_visible(False)
+    # ax.spines['left'].set_visible(False)
+    # ax.spines['right'].set_visible(False)
+    if cluster_id == 12:
+        ax2.set_ylabel('size difference', color=color1, fontsize=16)
+        ax2.set_yticklabels(np.round(ax2.get_yticks(), 1), color=color1, fontsize=16)
+    else:
+        ax2.set_ylabel('')
+        ax2.set_yticklabels('')
+
+    #ax.set_zorder(ax.get_zorder() + 1)
+    #ax.patch.set_visible(False)
+
+    return ax
+
+
+def plot_cluster_size_and_probability(cluster_size_df, shuffle_probability_df, cre_line=None, shuffle_type=None,
+                                      ax=None, figsize=None, save_dir=None, folder=None):
+    '''
+    Function to plot cluster size and probability of cluster for each cluster id.
+
+    :param cluster_size_df: dataframe with cluster size for each cluster
+    :param shuffle_probability_df: dataframe with probability of cluster for each cluster
+    :param cre_line: cre line to plot
+    :param shuffle_type: shuffle type to plot
+    :param ax: axes to plot on
+    :param figsize: figure size
+    :param save_dir: directory to save figure
+    :param folder: folder to save figure
+    :return:
+        ax: axes with plot'''
+    cluster_ids = cluster_size_df.cluster_id.unique()
+    if cre_line is not None:
+        if isinstance(cre_line, str):
+            cluster_size_df = cluster_size_df[cluster_size_df.cre_line == cre_line]
+            shuffle_probability_df = shuffle_probability_df[shuffle_probability_df.cre_line == cre_line]
+
+    # select which shuffle type to plot
+    if shuffle_type is not None:
+        cluster_size_df = cluster_size_df[cluster_size_df.shuffle_type == shuffle_type]
+        shuffle_probability_df = shuffle_probability_df[shuffle_probability_df.shuffle_type == shuffle_type]
+    
+    if figsize is None:
+        figsize = (2.5 * len(cluster_ids), 3)
+        if ax is None:
+            fig, ax = plt.subplots(1, len(cluster_ids), figsize=figsize, sharey='row')
+            ax = ax.ravel()
+    if ax is None:
+        fig, ax = plt.subplots(1, len(cluster_ids), figsize=figsize, sharey='row')
+        ax = ax.ravel()
+
+    # set variables
+        # y axis to plot
+    y1 = 'probability'
+    y2 = 'abs_cluster_size_diff' # can be normalized difference
+
+    # y axis limits
+    # for some reason sharey does not work with cluster size on this plot, so here I am trying to standardize y axis to cre across cluster ids
+    cluster_size_df[y2] = cluster_size_df[y2].replace(np.nan, 0)
+    y2_min = cluster_size_df.groupby('cluster_id').mean()[y2].min()
+    y2_max = cluster_size_df.groupby('cluster_id').mean()[y2].max()
+    y2_lims = [y2_min, y2_max]
+    
+
+    # plot cluster size first
+    for i, cluster_id in enumerate(cluster_ids):
+        ax[i] = plot_cluster_size_and_probability_for_cluster(cluster_size_df, shuffle_probability_df, cluster_id, y1=y1, y2=y2, y2_lims=y2_lims, ax=ax[cluster_id-1])
+    fig.subplots_adjust(hspace=1.2, wspace=0.6)
+    plt.suptitle(cre_line, x=0.52, y=1.15)
+    plt.tight_layout()
     if save_dir:
         utils.save_figure(fig, figsize, save_dir=save_dir, folder=folder,
                           fig_title = f'{shuffle_type}_prob_size' + cre_line[:3], formats = ['.png', '.pdf'])
