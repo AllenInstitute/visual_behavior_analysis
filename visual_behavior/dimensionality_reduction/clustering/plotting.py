@@ -3760,6 +3760,79 @@ def plot_cluster_size_difference(cluster_size_df, cre_line=None, shuffle_type=No
     return ax
 
 
+def plot_cluster_size_difference_for_shuffle(threshold, save_dir, pkl_filename):
+    '''
+    Load saved data file containing a dictionary with key for threshold, then within that key,
+    values are difference in cluster size between original and shuffled clusters for every iteration of the shuffle
+
+    threshold: threshold on SSE to use to determine whether shuffled clusters matches original clusters
+    save_dir: folder where pickle file containing shuffled data results is stored
+    pkl_filename: name of the file containing shuffled data results
+
+    Example data can be found here:
+    tmp_save_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\platform_paper_plots\figure_4\all_cre_clustering_082823_n_14\240101_SSE_general'
+    pkl_filename = 'Cluster_size_difference_for_Marina.pkl'
+    threshold = 0.1
+    '''
+    # load dict and turn into dataframe
+    cluster_size_difference_dict = pd.read_pickle(os.path.join(save_dir, pkl_filename))
+    cluster_size_diff = pd.DataFrame(cluster_size_difference_dict[threshold])
+
+    # make the plot
+    figsize = (20, 3)
+    fig, ax = plt.subplots(1, 3, figsize=figsize, sharex=True, sharey=True)
+    for i, cre_line in enumerate(np.sort(cluster_size_diff.cre_line.unique())):
+        ax[i] = sns.barplot(data=cluster_size_diff[cluster_size_diff.cre_line == cre_line],
+                            x='cluster_id', y='cluster_size_diff', color='gray', width=0.5, ax=ax[i])
+        ax[i].set_title(utils.convert_cre_line_to_cell_type(cre_line))
+        ax[i].set_xlabel('Cluster ID')
+        ax[i].set_ylabel('')
+        ax[i].set_ylim(-0.5, 1.1)
+    ax[0].set_ylabel('Difference in cluster size')
+    plt.subplots_adjust(hspace=0.2, wspace=0.15)
+
+    # save it
+    filename = 'difference_in_cluster_size_shuffle_control'
+    utils.save_figure(fig, figsize, save_dir, 'shuffle_figures', filename)
+
+
+def plot_cluster_probability_for_shuffle(threshold, save_dir, pkl_filename):
+    '''
+    Load saved data file containing a dictionary with key for threshold, then within that key,
+    values are difference in cluster size between original and shuffled clusters for every iteration of the shuffle
+
+    threshold: threshold on SSE to use to determine whether shuffled clusters matches original clusters
+    save_dir: folder where pickle file containing shuffled data results is stored
+    pkl_filename: name of the file containing shuffled data results
+
+    Example data can be found here:
+    tmp_save_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\platform_paper_plots\figure_4\all_cre_clustering_082823_n_14\240101_SSE_general'
+    pkl_filename = 'Probability_for_Marina.pkl'
+    threshold = 0.1
+    '''
+
+    # load dict and turn into dataframe
+    probability_dict = pd.read_pickle(os.path.join(save_dir, pkl_filename))
+    probability = pd.DataFrame(probability_dict[threshold])
+
+    # make the plot
+    figsize = (20, 3)
+    fig, ax = plt.subplots(1, 3, figsize=figsize, sharex=True, sharey=True)
+    for i, cre_line in enumerate(np.sort(probability.cre_line.unique())):
+        ax[i] = sns.barplot(data=probability[probability.cre_line == cre_line],
+                            x='cluster_id', y='probability', color='gray', width=0.5, ax=ax[i])
+        ax[i].set_title(utils.convert_cre_line_to_cell_type(cre_line))
+        ax[i].set_xlabel('Cluster ID')
+        ax[i].set_ylabel('')
+        ax[i].set_ylim(-0.1, 1.1)
+    ax[0].set_ylabel('Probability of cluster\nappearing in shuffle')
+    plt.subplots_adjust(hspace=0.2, wspace=0.15)
+
+    # save it
+    filename = 'cluster_probability_shuffle_control'
+    utils.save_figure(fig, figsize, save_dir, 'shuffle_control', filename)
+
+
 def plot_cluster_size_and_probability_for_cluster(cluster_size_df, shuffle_probability_df, cluster_id, 
                                                   y1 = 'probability', y2 = 'abs_cluster_size_diff', y1_lims= None, y2_lims=None, ax=None):
 
