@@ -651,7 +651,7 @@ def test_significant_metric_averages(data, metric, column_to_compare='experience
     for i, group in enumerate(groups):
         mapper[str(group)] = i
 
-    if  len(data[column_to_compare].unique())>2:
+    if len(data[column_to_compare].unique())>2:
         # create tukey table for multiple comparisons across all pairs that can be compared
         comp = mc.MultiComparison(data[metric], data[column_to_compare])
         post_hoc_res = comp.tukeyhsd()
@@ -710,7 +710,7 @@ def add_stats_to_plot_for_hues(data, metric, ax, ymax=None, xorder=None, x='expe
     return ax, tukey
 
 
-def add_stats_to_plot(data, metric, colors, ax, ymax=None, column_to_compare='experience_level'):
+def add_stats_to_plot(data, metric, ax, ymax=None, column_to_compare='experience_level', hue_only=False):
     """
     add stars to axis indicating across experience level statistics
     x-axis of plots must be experience_levels or cell_types
@@ -718,9 +718,18 @@ def add_stats_to_plot(data, metric, colors, ax, ymax=None, column_to_compare='ex
     data: metrics dataframe, each row is one cell_specimen_id in a given ophys_experiment
     metric: column in data representing metric values of interest
     column_to_compare: must be 'experience_level' or 'cell_type'
+    hue_only: if the axis only has one x value and the data are differentaited only by hue,
+                set this to True so that the stats are plotted in reasonable positions centered around x=0
+                (otherwise depends on there being x values)
     """
     # do anova across experience levels or cell types followed by post-hoc tukey
     anova, tukey = test_significant_metric_averages(data, metric, column_to_compare)
+
+    if hue_only:
+        tukey['x1'] = tukey['x1'] - 1
+        tukey['x2'] = tukey['x2'] - 1
+        tukey['x1'] = tukey['x1'] / 4
+        tukey['x2'] = tukey['x2'] / 4
 
     scale = 0.1
     fontsize = 12
@@ -734,35 +743,33 @@ def add_stats_to_plot(data, metric, colors, ax, ymax=None, column_to_compare='ex
     y2 = ytop * (1 + scale * 2)
     y2h = ytop * (1 + scale * 3)
 
-    if anova.pvalue < 0.05: # if something is significant, add some significance bars
-        for tindex, row in tukey.iterrows():
-            if row.x2 - row.x1 > 1: # if it is a comparison more than 2 x values away, put the significance bar higher
-                y = y2
-                yh = y2h
-            else: # if they are only one apart, put the bar on the lower level
-                y = y1
-                yh = y1h
-            if len(data[column_to_compare].unique())>2: # if more than 2 values, use the multiple corrections result
-                if row.reject:
-                    ax.plot([row.x1, row.x1, row.x2, row.x2], [y, yh, yh, y], 'k-')
-                    ax.text(np.mean([row.x1, row.x2]), yh, '*', fontsize=fontsize, horizontalalignment='center',
-                            verticalalignment='bottom')
-            elif len(data[column_to_compare].unique())==2: #  if there are only two values, use the p-value from anova
-                if row.one_way_anova_p_val<0.05:
-                    ax.plot([row.x1, row.x1, row.x2, row.x2], [y, yh, yh, y], 'k-')
-                    ax.text(np.mean([row.x1, row.x2]), yh, '*', fontsize=fontsize, horizontalalignment='center',
-                            verticalalignment='bottom')
-    else: # if nothing is significant, show that on the plot
-        if len(data[column_to_compare].unique()) > 2: # somewhat hard coded for 3 comparisons
+    for tindex, row in tukey.iterrows():
+        if (anova.pvalue < 0.05) and (row.reject): # if something is significant, add some significance bars
+            label = '*'
+            color = 'k'
+            alpha = 1
+        else:
+            label = ''
+            color = 'w'
+            alpha = 0
+        if row.x2 - row.x1 > 1: # if it is a comparison more than 2 x values away, put the significance bar higher
+            y = y2
+            yh = y2h
+        else: # if they are only one apart, put the bar on the lower level
             y = y1
             yh = y1h
-            ax.plot([0, 0, 1, 1, 1, 2, 2], [y, yh, yh, y, yh, yh, y], 'k-')
-            ax.text(.95, ytop * (1 + scale * 1.5), 'ns', color='k', fontsize=fontsize)
-        elif len(data[column_to_compare].unique()) == 2: # for two groups
-            y = y1
-            yh = y1h
-            ax.plot([0, 0, 1, 1,], [y, yh, yh, y,], 'k-')
-            ax.text(.45, ytop * (1 + scale * 1.5), 'ns', color='k', fontsize=fontsize)
+        if len(data[column_to_compare].unique())>2: # if more than 2 values, use the multiple corrections result
+            # if row.reject:
+            ax.plot([row.x1, row.x1, row.x2, row.x2], [y, yh, yh, y], linestyle='-', color=color, alpha=alpha)
+            ax.text(np.mean([row.x1, row.x2]), yh, label, fontsize=fontsize, horizontalalignment='center',
+                    verticalalignment='bottom')
+            # else:
+
+        elif len(data[column_to_compare].unique())==2: #  if there are only two values, use the p-value from anova
+            if row.one_way_anova_p_val<0.05:
+                ax.plot([row.x1, row.x1, row.x2, row.x2], [y, yh, yh, y], linestyle='-', color=color, alpha=alpha)
+                ax.text(np.mean([row.x1, row.x2]), yh, label, fontsize=fontsize, horizontalalignment='center',
+                        verticalalignment='bottom')
     ax.set_ylim(ymax=ytop * (1 + scale * 4)) # 3 works better for behavior plots
 
     return ax, tukey
@@ -894,7 +901,7 @@ def plot_metric_distribution_by_experience_no_cell_type(metrics_table, metric, e
             ax = sns.stripplot(data=ct_data, size=3, alpha=0.5, jitter=0.2,
                                x='experience_level', y=metric, palette=colors, ax=ax)
         # add stats to plot if only looking at experience levels
-        ax, tukey_table = add_stats_to_plot(ct_data, metric, 'white', ax, ymax=ymax)
+        ax, tukey_table = add_stats_to_plot(ct_data, metric, ax, ymax=ymax)
         # aggregate stats
         tukey_table['metric'] = metric
         tukey = pd.concat([tukey, tukey_table])
@@ -1036,7 +1043,7 @@ def plot_metric_distribution_by_experience(metrics_table, metric, event_type, da
             # add stats to plot for hues
             ax[i], tukey_table = add_stats_to_plot_for_hues(ct_data, metric, ax[i],
                                                             xorder=order, x='experience_level', hue=hue)
-            # ax[i], tukey_table = add_stats_to_plot(ct_data, metric, 'white', ax[i], ymax=ymax)
+            # ax[i], tukey_table = add_stats_to_plot(ct_data, metric, ax[i], ymax=ymax)
             # aggregate stats
             tukey_table['hue'] = hue
             tukey_table['metric'] = metric
@@ -1083,7 +1090,7 @@ def plot_metric_distribution_by_experience(metrics_table, metric, event_type, da
                 ax[i].set_ylim(ylims)
             ax[i].set_xlim(-0.5, len(order) - 0.5)
             # add stats to plot if only looking at experience levels
-            ax[i], tukey_table = add_stats_to_plot(ct_data, metric, 'white', ax[i], ymax=ymax)
+            ax[i], tukey_table = add_stats_to_plot(ct_data, metric, ax[i], ymax=ymax)
             # aggregate stats
             tukey_table['metric'] = metric
             tukey_table['cell_type'] = cell_type
@@ -1116,7 +1123,7 @@ def plot_metric_distribution_by_experience(metrics_table, metric, event_type, da
         else:
             ax[i].set_ylabel(metric)
 
-        if legend:
+        if legend and hue:
             ax[0].legend(fontsize='xx-small', title='', bbox_to_anchor=(1.6, 1))
 
     if horiz:
@@ -1286,7 +1293,7 @@ def plot_experience_modulation_index(metric_data, event_type, hue=None, plot_typ
             tukey = pd.DataFrame()
             ax[i], tukey_table = add_stats_to_plot_for_hues(ct_data, metric, ax[i],
                                                             xorder=xorder, x=x, hue=hue)
-            # ax[i], tukey_table = add_stats_to_plot(ct_data, metric, 'white', ax[i], ymax=ymax)
+            # ax[i], tukey_table = add_stats_to_plot(ct_data, metric, ax[i], ymax=ymax)
             # aggregate stats
             tukey_table['hue'] = hue
             tukey_table['metric'] = metric
@@ -2118,7 +2125,7 @@ def plot_behavior_metric_by_experience(stats, metric, title='', ylabel='', ylims
     if plot_stats:
         # stats dataframe to save
         tukey = pd.DataFrame()
-        ax, tukey_table = add_stats_to_plot(data, metric, 'white', ax, ymax=ymax)
+        ax, tukey_table = add_stats_to_plot(data, metric, ax, ymax=ymax)
         # aggregate stats
         tukey_table['metric'] = metric
         tukey = pd.concat([tukey, tukey_table])
@@ -2333,7 +2340,7 @@ def plot_prior_exposures_per_cell_type_for_novel_plus(platform_experiments, beha
 
     ymax = ax.get_ylim()[1]
     tukey = pd.DataFrame()
-    ax, tukey_table = add_stats_to_plot(exposures, 'prior_exposures_to_image_set', 'white', ax, ymax=ymax,
+    ax, tukey_table = add_stats_to_plot(exposures, 'prior_exposures_to_image_set', ax, ymax=ymax,
                                         column_to_compare='cell_type')
     # aggregate stats
     tukey_table['metric'] = 'prior_exposures_to_image_set'
