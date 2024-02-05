@@ -325,6 +325,10 @@ def load_running_speed(data, smooth=False, time=None):
     speed = calc_deriv(dx, time)  # speed is in deg/s
     speed = deg_to_dist(speed)  # converts speed to cm/s
 
+    # remove first values which is always high
+    speed = speed[1:]
+    time = time[1:]
+    
     if smooth:
         # running_speed_cm_per_sec = pd.rolling_mean(running_speed_cm_per_sec, window=6)
         raise NotImplementedError
