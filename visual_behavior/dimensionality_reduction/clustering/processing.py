@@ -87,7 +87,7 @@ def get_features_for_clustering():
     """
     get GLM features to use for clustering analysis
     """
-    features = ['images', 'omissions', 'task', 'behavioral']
+    features = ['all-images', 'omissions', 'task', 'behavioral']
     return features
 
 
