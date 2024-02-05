@@ -91,6 +91,14 @@ def get_features_for_clustering():
     return features
 
 
+def get_feature_labels_for_clustering():
+    """
+    get GLM feature names to use for labeling plots
+    """
+    feature_labels = ['images', 'omissions', 'behavior', 'task']
+    return feature_labels
+
+
 def get_cre_lines(cell_metadata):
     """
     get list of cre lines in cell_metadata and sort in reverse order so that Vip is first
@@ -1848,8 +1856,76 @@ def get_cre_line_stats_for_locations(cell_metadata, location='layer'):
     cre_stats = cre_stats.set_index(['cre_line', location])
     return cre_stats
 
+### metrics computed on GLM coding scores for all cells (does not require matching)
 
-### metrics computed on GLM coding scores ###
+def get_coding_metrics_unmatched(index_dropouts, index_value, index_name):
+    """
+    index_dropouts: dataframe, the dropout scores for a single cell, or average dropouts across cells
+                                formatted with rows = experience levels, cols = regressors
+    index_value: int, should be the cell_specimen_id corresponding to the input dropouts
+    index_name: str, is the column name corresponding to index_value, i.e. 'cell_specimen_id'
+
+    Returns
+    stats: dataframe, containing one row for each cell_specimen_id , with metrics as columns
+                        metrics are computed within each experience level
+    """
+    stats = pd.DataFrame(index=[index_value])
+    stats.index.name = index_name
+    # get dropout scores per cell
+    # get preferred regressor and experience level and save
+    dominant_feature = index_dropouts.stack().idxmax()[1]
+    dominant_experience_level = index_dropouts.stack().idxmax()[0]
+    stats.loc[index_value, 'dominant_feature'] = dominant_feature
+    stats.loc[index_value, 'dominant_experience_level'] = dominant_experience_level
+    # get selectivity for feature & experience level
+    # feature selectivity is ratio of largest dropout vs mean of all other dropous for the dominant experience level
+    order = np.argsort(index_dropouts.loc[dominant_experience_level])
+    values = index_dropouts.loc[dominant_experience_level].values[order[::-1]]
+    feature_selectivity = (values[0] - (np.mean(values[1:]))) / (values[0] + (np.mean(values[1:])))
+    # experience selectivity is ratio of largest and average of all other dropouts for the dominant feature
+    order = np.argsort(index_dropouts[dominant_feature])
+    values = index_dropouts[dominant_feature].values[order[::-1]]
+    experience_selectivity = (values[0] - (np.mean(values[1:]))) / (values[0] + (np.mean(values[1:])))
+    stats.loc[index_value, 'max_coding_score'] = index_dropouts.loc[dominant_experience_level][dominant_feature]
+    stats.loc[index_value, 'max_image_coding_score'] = index_dropouts.loc[dominant_experience_level]['images']
+    for experience_level in index_dropouts.index.values:
+        stats.loc[index_value, 'image_coding_'+experience_level] = index_dropouts.loc[experience_level]['images']
+    stats.loc[index_value, 'feature_selectivity'] = feature_selectivity
+    stats.loc[index_value, 'experience_selectivity'] = experience_selectivity
+    # get experience modulation indices
+    row = index_dropouts[dominant_feature]
+     # within session joint coding index
+    # get order and values of features for pref exp level
+    order = np.argsort(index_dropouts.loc[dominant_experience_level])
+    values = index_dropouts.loc[dominant_experience_level].values[order[::-1]]
+#     # joint coding index is first highest feature dropout relative to mean of all other features
+#     feature_sel_within_session = (values[0]-(np.mean(values[1:])))/(values[0]+(np.mean(values[1:])))
+    # joint coding index is first highest feature dropout relative to next highest
+    feature_sel_within_session = (values[0] - values[1]) / (values[0] + values[1])
+    # get across session switching index - ratio of pref exp & feature to next max exp & feature, excluding within session or feature comparisons
+    # get the max value
+    pref_cond_value = index_dropouts.loc[dominant_experience_level][dominant_feature]
+    # get the remaining columns after removing the max exp level and feature
+    non_pref_conditions = index_dropouts.drop(index=dominant_experience_level).drop(columns=dominant_feature)
+    stats.loc[index_value, 'feature_sel_within_session'] = feature_sel_within_session
+    return stats
+
+
+def get_cell_metrics_unmatched_cells(results_pivoted):
+    """
+    computes metrics on dropout scores for each cell, including experience level and feature selectivity
+    does not require cells to be matched, does not add cluster info
+    """
+    features = processing.get_feature_labels_for_clustering()
+    cell_metrics = pd.DataFrame()
+    for i, cell_specimen_id in enumerate(results_pivoted.cell_specimen_id.values):
+        cell_dropouts = results_pivoted[results_pivoted.cell_specimen_id == cell_specimen_id].groupby('experience_level').mean()[features]
+        stats = get_coding_metrics_unmatched(index_dropouts=cell_dropouts, index_value=cell_specimen_id, index_name='cell_specimen_id')
+        cell_metrics = pd.concat([cell_metrics, stats], sort=False)
+    return cell_metrics
+
+
+### metrics computed on GLM coding scores for cells matched across sessions ###
 
 def get_coding_metrics(index_dropouts, index_value, index_name):
     """
@@ -1940,7 +2016,6 @@ def get_cell_metrics(cluster_meta, results_pivoted):
         cell_metrics = pd.concat([cell_metrics, stats], sort=False)
     cell_metrics = cell_metrics.merge(cluster_meta, on='cell_specimen_id')
     return cell_metrics
-
 
 
 def get_coding_score_metrics_per_experience_level(cluster_meta, results_pivoted):
