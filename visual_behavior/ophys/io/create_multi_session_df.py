@@ -7,7 +7,7 @@ from visual_behavior.data_access import loading
 
 
 def get_multi_session_df(project_code, session_number, conditions, data_type, event_type,
-                         time_window=[-3, 3.1], interpolate=True, output_sampling_rate=30,
+                         time_window=[-2, 2.1], interpolate=True, output_sampling_rate=30,
                          response_window_duration=0.5, epoch_duration_mins=5,
                          use_extended_stimulus_presentations=False, overwrite=True):
     """
