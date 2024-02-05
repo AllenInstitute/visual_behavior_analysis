@@ -651,15 +651,14 @@ def get_extended_stimulus_presentations_table(stimulus_presentations, licks, rew
 
 
 def get_stimulus_response_df_filepath_for_experiment(ophys_experiment_id, data_type, event_type,
-                                                     interpolate=True, output_sampling_rate=30,
-                                                     epoch_duration_mins=5):
+                                                     interpolate=True, output_sampling_rate=30):
 
     filepath = os.path.join(get_stimulus_response_df_dir(interpolate, int(output_sampling_rate), event_type),
-                            str(ophys_experiment_id) + '_' + data_type + '_' + event_type + '_epoch_dur_' + str(epoch_duration_mins) + '.h5')
+                            str(ophys_experiment_id) + '_' + data_type + '_' + event_type + '.h5')
     return filepath
 
 
-def get_stimulus_response_df(dataset, time_window=[-3, 3.1], interpolate=True, output_sampling_rate=30,
+def get_stimulus_response_df(dataset, time_window=[-2, 2.1], interpolate=True, output_sampling_rate=30,
                              data_type='filtered_events', event_type='all', load_from_file=True, epoch_duration_mins=5):
     """
     Load a dataframe with stimulus aligned traces for all cells (or for a given behavior timeseries) using mindscope_utilities
@@ -700,8 +699,7 @@ def get_stimulus_response_df(dataset, time_window=[-3, 3.1], interpolate=True, o
     # load stimulus response df from file if it exists otherwise generate it
     ophys_experiment_id = dataset.ophys_experiment_id
     filepath = get_stimulus_response_df_filepath_for_experiment(ophys_experiment_id, data_type, event_type,
-                                                                interpolate=interpolate, output_sampling_rate=output_sampling_rate,
-                                                                epoch_duration_mins=epoch_duration_mins)
+                                                                interpolate=interpolate, output_sampling_rate=output_sampling_rate)
 
     if event_type == 'omissions':
         response_window_duration = 0.75
@@ -724,6 +722,8 @@ def get_stimulus_response_df(dataset, time_window=[-3, 3.1], interpolate=True, o
                                                         output_sampling_rate=output_sampling_rate,
                                                         response_window_duration=response_window_duration)
                 try:  # some experiments with lots of neurons cant save
+                    if os.path.exists(filepath): # remove it first in case there is a busted file there
+                        os.remove(filepath)
                     sdf.to_hdf(filepath, key='df')
                     print('saved response df to', filepath)
                 except BaseException:
