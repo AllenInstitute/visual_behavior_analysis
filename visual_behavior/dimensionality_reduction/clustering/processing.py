@@ -119,7 +119,8 @@ def get_cre_line_map(cre_line):
 
     cre_line_dict = {'Slc17a7-IRES2-Cre': 'Excitatory',
                      'Sst-IRES-Cre': 'SST inhibitory',
-                     'Vip-IRES-Cre': 'VIP inhibitory'}
+                     'Vip-IRES-Cre': 'VIP inhibitory',
+                     'all': 'all cells'}
 
     mapped_cre_line = cre_line_dict[cre_line]
     return mapped_cre_line
