@@ -715,7 +715,7 @@ def get_metrics_df_filepath(ophys_experiment_id, condition, stimuli, session_sub
 
 
 def generate_and_save_all_metrics_tables_for_experiment(ophys_experiment_id, data_type='events', interpolate=True, output_sampling_rate=30,
-                                                        time_window=[-3, 3.1], response_window_duration=0.5, overwrite=True):
+                                                        time_window=[-2, 2.1], response_window_duration=0.5, overwrite=True):
     """
     For a single ophys_experiment_id, creates trace and cell (stimulus locked) metrics
     for all possible combinations of scenarios one might want to analyze for a given data_type.
@@ -793,7 +793,7 @@ def generate_and_save_all_metrics_tables_for_experiment(ophys_experiment_id, dat
     # conditions to loop through
     conditions = ['changes', 'omissions', 'images']
     stimuli = ['all_images', 'pref_image']
-    session_subsets = ['full_session', 'engaged', 'disengaged']
+    session_subsets = ['full_session']
 
     # loop through all conditions, generate metrics and save
     metrics_df = pd.DataFrame()
@@ -929,12 +929,12 @@ def load_metrics_table_for_experiments(ophys_experiment_ids, condition, stimuli,
     problem_expts = pd.DataFrame()
     metrics_table = pd.DataFrame()
     if (isinstance(ophys_experiment_ids, str)) and (ophys_experiment_ids == 'all_experiments'):
-        # try:
-        metrics_table = load_metrics_table_for_experiment(ophys_experiment_ids, condition, stimuli, session_subset,
+        try:
+            metrics_table = load_metrics_table_for_experiment(ophys_experiment_ids, condition, stimuli, session_subset,
                                                               data_type=data_type, interpolate=interpolate,
                                                               output_sampling_rate=output_sampling_rate)
-        # except BaseException:
-        #     print('problem loading all experiments metrics table')
+        except BaseException:
+            print('problem loading all experiments metrics table')
     else:
         for ophys_experiment_id in tqdm(ophys_experiment_ids):
             try:
@@ -949,7 +949,7 @@ def load_metrics_table_for_experiments(ophys_experiment_ids, condition, stimuli,
                 dataset = loading.get_ophys_dataset(ophys_experiment_id, get_extended_stimulus_presentations=False)
                 # load stimulus_response_df from saved file or generate it if file doesnt exist
                 # event_type must be all so that we can filter as needed
-                time_window = [-3, 3.1]
+                time_window = [-2, 2.1]
                 stimulus_response_df = loading.get_stimulus_response_df(dataset, data_type=data_type, event_type='all',
                                                                         time_window=time_window,
                                                                         interpolate=interpolate,
@@ -978,6 +978,8 @@ def load_metrics_table_for_experiments(ophys_experiment_ids, condition, stimuli,
                                                              response_window_duration=response_window_duration,
                                                              interpolate=interpolate,
                                                              )
+                    if os.path.exists(filepath): # remove it first in case there is a busted file there
+                        os.remove(filepath)
                     metrics_df.to_hdf(filepath, key='df')
                     print('metrics generated for', data_type, condition, stimuli, session_subset,
                           'interpolate:', interpolate)
