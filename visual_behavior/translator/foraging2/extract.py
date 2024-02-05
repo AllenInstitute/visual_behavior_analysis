@@ -790,6 +790,10 @@ def get_running_speed(exp_data, smooth=False, time=None):
     # accel = calc_deriv(speed, time)
     # jerk = calc_deriv(accel, time)
 
+    # remove first values which is always high
+    speed = speed[1:]
+    time = time[1:]
+
     running_speed = pd.DataFrame({
         'time': time,
         'frame': range(len(time)),
