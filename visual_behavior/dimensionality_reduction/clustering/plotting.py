@@ -1607,8 +1607,9 @@ def plot_coding_score_heatmap_remapped(cluster_meta, feature_matrix, sort_by='cl
     new_labels = get_clean_labels_for_coding_scores_df(coding_scores_remapped, columns=False)
     coding_scores_remapped.index = new_labels
 
-    figsize = (12,5)
-    fig, ax = plt.subplots(figsize=figsize)
+    if ax is None:
+        figsize = (12,5)
+        fig, ax = plt.subplots(figsize=figsize)
 
     ax = sns.heatmap(coding_scores_remapped, cmap=coding_score_cmap, ax=ax, vmin=0, vmax=vmax,
                         robust=True, cbar=cbar, cbar_kws={"drawedges": False, "shrink": 0.7, "label": 'coding score'})
@@ -1684,7 +1685,7 @@ def plot_coding_score_heatmap_remapped(cluster_meta, feature_matrix, sort_by='cl
         if sort_by is None:
             sort_by = ''
         utils.save_figure(fig, figsize, save_dir, folder, 'feature_matrix_n_clusters_'+str(n_clusters)+'_remapped_'+sort_by+'_sort')
-
+    return ax
 
 def plot_fraction_cells_per_cluster_per_cre(cluster_meta, col_to_group='cre_line', save_dir=None, folder=None):
     '''
@@ -2133,7 +2134,7 @@ def plot_location_distribution_across_clusters_for_cre_lines(n_cells_table, loca
 
 
 def plot_cluster_metric_comparison_scatterplot(cluster_metrics, cluster_meta, y='layer_index', x='exp_mod_direction',
-                                               hue='cre_line', save_dir=None, folder=None):
+                                               hue='cell_type', save_dir=None, folder=None):
     '''
         Plot a scatterplot showing comparison of two metric values for each cre line / cluster combination
         x & y must be columns in cluster_metrics table
@@ -2153,29 +2154,29 @@ def plot_cluster_metric_comparison_scatterplot(cluster_metrics, cluster_meta, y=
 
     cluster_metrics = cluster_metrics.reset_index()  # reset so cre & cluster ID can be used in plot
     hue_order = np.sort(cluster_metrics[hue].unique())
-    cre_line_colors = utils.get_cre_line_colors()
+    cell_type_colors = utils.get_cell_type_colors()
     cluster_metrics['Cluster size'] = cluster_metrics['fraction_cells_cluster']
     size = 'Cluster size'
-    if hue == 'cell_type':
+    if hue in ['cre_line', 'cell_type']:
         cluster_metrics['Cell class'] = cluster_metrics['cell_type']
         hue = 'Cell class'
 
     figsize = (3.5, 3.5)
     fig, ax = plt.subplots(figsize=figsize)
-    ax = sns.scatterplot(data=cluster_metrics, x=x, y=y, hue=hue, hue_order=hue_order, palette=cre_line_colors,
+    ax = sns.scatterplot(data=cluster_metrics, x=x, y=y, hue=hue, hue_order=hue_order, palette=cell_type_colors,
                          size=size, sizes=(1, 250), alpha=0.8, linewidth=2, ax=ax)
     ax.set_ylim(-1, 1)
     ax.set_xlim(-1, 1)
     ax.legend(bbox_to_anchor=(1, 1), fontsize='x-small')  # labels=[utils.get_abbreviated_cell_type(cre_line) for cre_line in cre_lines])
     if y == 'layer_index':
         ax.set_ylabel('<- Lower --- Upper ->')
-    if x == 'exp_mod_direction':
+    if x in ['exp_mod_direction', 'experience_modulation']:
         ax.set_xlabel('<- Familiar --- Novel ->')
     ax.axvline(x=0, ymin=0, ymax=1, linestyle='--', color='gray')
     ax.axhline(y=0, xmin=0, xmax=1, linestyle='--', color='gray')
 
     # reset index to plot cluster ID for each data point
-    cluster_metrics = cluster_metrics.set_index(['cre_line', 'cluster_id'])
+    cluster_metrics = cluster_metrics.set_index([hue, 'cluster_id'])
     for index in cluster_metrics.index.values:
         cluster_id = index[1]
         x_pos = cluster_metrics.loc[index, x]
@@ -4499,6 +4500,45 @@ def plot_metric_distribution_for_dominant_feature_cluster_types_per_cre(metrics,
     filename = metric + '_distribution_for_cluster_types_per_cre_line'
     utils.save_figure(fig, figsize, os.path.join(save_dir, folder), 'metric_distributions', filename)
 
+
+def plot_metric_distribution_across_clusters_experience_levels(metrics_df, metric, ylabel=None,
+                                                               save_dir=None, folder=None, ax=None):
+    '''
+    Plots metric disributions as boxplots with cluster ID on x axis and metric value on y axis,
+    with one axis (row) per cre line, split & colored by experience levels
+
+    metrics_df: dataframe containing metric values with one row for each cell_specimen_id & experience level
+    metrics: string, name of column in metrics df to plot metrics for
+    '''
+    cre_lines = utils.get_cre_lines()
+    xorder = np.sort(metrics_df['cluster_id'].unique())
+    experience_levels = utils.get_experience_levels()
+    experience_level_colors = utils.get_experience_level_colors()
+
+    if ax is None:
+        figsize = (10, 9)
+        fig, ax = plt.subplots(3, 1, figsize=figsize, sharey=True, sharex=False)
+    for i, cre_line in enumerate(cre_lines):
+        data = metrics_df[metrics_df.cre_line == cre_line]
+        ax[i] = sns.boxplot(data=data, x='cluster_id', y=metric, order=xorder, showfliers=False,
+                            hue='experience_level', hue_order=experience_levels, palette=experience_level_colors,
+                            width=0.5, boxprops=dict(alpha=.7), ax=ax[i])
+        ax[i].get_legend().remove()
+        ax[i].set_title(utils.convert_cre_line_to_cell_type(cre_line))
+        ax[i].set_xlabel('')
+        ax[i].set_ylabel('')
+        ax[i].spines[['right', 'top']].set_visible(False)
+        ax[i].axhlines(y=0, xmin=0, xmax=1, linestyle='--', color='gray')
+    ax[1].set_ylabel(ylabel)
+    ax[i].set_xlabel('Cluster ID')
+    ax[i].legend(bbox_to_anchor=(1, 1), fontsize='xx-small', title_fontsize='xx-small')
+
+    plt.suptitle(ylabel, x=0.51, y=0.95)
+    plt.subplots_adjust(hspace=0.5)
+
+    if save_dir:
+        filename = metric + '_across_clusters_by_experience_level'
+        utils.save_figure(fig, figsize, save_dir, 'metric_distributions_for_clusters', filename)
 
 
 
