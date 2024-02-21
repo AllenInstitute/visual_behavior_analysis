@@ -457,7 +457,10 @@ def plot_coclustering_matrix_sorted_by_cluster_size(coclustering_matrices, clust
     if ax is provided, will plot on provided ax
     """
     coclustering_matrix = coclustering_matrices[cre_line]
-    cre_meta = cluster_meta[cluster_meta.cre_line == cre_line]
+    if cre_line != 'all':
+        cre_meta = cluster_meta[cluster_meta.cre_line == cre_line]
+    elif cre_line == 'all': 
+        cre_meta = cluster_meta.copy()
     cre_meta = cre_meta.sort_values(by='cluster_id')
     sorted_cell_specimen_ids = cre_meta.index.values
     # sort rows and cols of coclustering matrix by sorted cell_specimen_ids
@@ -483,7 +486,7 @@ def plot_coclustering_matrix_sorted_by_cluster_size(coclustering_matrices, clust
     sns.despine(ax=ax, bottom=False, top=False, left=False, right=False)
     if save_dir:
         filename = 'coclustering_matrix_sorted_by_cluster_size_' + cre_line.split('-')[0]+suffix
-        utils.save_figure(fig, figsize, save_dir, folder, filename, formats=['.png'])  # saving to PDF is super slow)
+        utils.save_figure(fig, figsize, save_dir, folder, filename, formats=['.png', '.pdf'])  # saving to PDF is super slow)
     return ax
 
 
@@ -630,12 +633,13 @@ def plot_within_cluster_correlations(cluster_meta, sort_order=None, spearman=Fal
     # add line at 0
     ax.axhline(y=0, xmin=0, xmax=1, color='grey', linestyle='--')
     ax.set_title(title)
+    ax.set_xticklabels(np.arange(1, n_clusters+1))
     ax.set_ylabel('correlation')
     ax.set_xlabel('cluster #')
     ax.set_ylim(-1.1, 1.1)
     if save_dir:
         utils.save_figure(fig, figsize, save_dir, folder,
-                          'within_cluster_correlations' + suffix)
+                          'within_cluster_correlations' + suffix, formats=['.png', '.pdf'])
     return ax
 
 
@@ -2894,7 +2898,7 @@ def plot_gap_statistic(gap_statistic, cre_lines=None, n_clusters_cre=None, tag='
         plt.tight_layout()
 
         if save_dir:
-            utils.save_figure(fig, figsize, save_dir, folder, 'Gap_' + suffix )
+            utils.save_figure(fig, figsize, save_dir, folder, 'Gap_' + suffix, formats=['.png', '.pdf'])
 
 
 def plot_gap_statistic_with_sem(gap_statistics, cre_lines=None, n_clusters_cre=None, tag='', save_dir=None, folder=None):
@@ -2939,7 +2943,7 @@ def plot_gap_statistic_with_sem(gap_statistics, cre_lines=None, n_clusters_cre=N
         plt.tight_layout()
 
         if save_dir:
-            utils.save_figure(fig, figsize, save_dir, folder, 'Gap_' + suffix )
+            utils.save_figure(fig, figsize, save_dir, folder, 'Gap_' + suffix, formats=['.png', '.pdf'] )
 
 
 def plot_eigengap_values(eigenvalues_cre, cre_lines, n_clusters_cre=None, save_dir=None, folder=None):
@@ -2956,7 +2960,7 @@ def plot_eigengap_values(eigenvalues_cre, cre_lines, n_clusters_cre=None, save_d
         suffix = cre_line
         title = processing.get_cre_line_map(cre_line)  # get a more interpretable cell type name
 
-        figsize = (10, 4)
+        figsize = (8, 4)
         fig, ax = plt.subplots(1, 2, figsize=figsize)
         ax[0].plot(np.arange(1, len(eigenvalues) + 1), eigenvalues, '-o')
         # ax[0].grid()
@@ -2969,14 +2973,14 @@ def plot_eigengap_values(eigenvalues_cre, cre_lines, n_clusters_cre=None, save_d
         ax[1].set_ylabel('Eigengap value \n(difference)')
         ax[1].set_xlabel('Eigen number')
         ax[1].set_xlim([0, 20])
-        ax[1].set_ylim([0, 0.20])
+        ax[1].set_ylim([0, 0.10])
         # ax[1].grid()
         ax[1].axvline(x=n_clusters, ymin=0, ymax=1, linestyle='--', color='gray')
         plt.suptitle(title)
         plt.tight_layout()
 
         if save_dir:
-            utils.save_figure(fig, figsize, save_dir, folder, 'eigengap' + suffix)
+            utils.save_figure(fig, figsize, save_dir, folder, 'eigengap' + suffix, formats=['.png', '.pdf'] )
 
 
 def plot_fraction_cells_per_cluster_per_location_horiz(cluster_meta, save_dir=None, folder=None):
@@ -3987,6 +3991,77 @@ def plot_matched_clusters_heatmap(SSE_mapping, mean_dropout_scores_unstacked, me
         mean_dropout_df = all_clusters_means_dict[cluster_id].loc[features]  # order regressors in a specific order
         ax[i] = sns.heatmap(mean_dropout_df, cmap=hm_color, vmin=0, vmax=1,
                             ax=ax[i], cbar=cbar, cbar_kws={'label': 'coding score'})
+
+        if abbreviate_features:
+            # set yticks to abbreviated feature labels
+            feature_abbreviations = get_abbreviated_features(mean_dropout_df.index.values)
+            ax[i].set_yticklabels(feature_abbreviations, rotation=0)
+        else:
+            ax[i].set_yticklabels(mean_dropout_df.index.values, rotation=0, fontsize=14)
+        if abbreviate_experience:
+            # set xticks to abbreviated experience level labels
+            exp_level_abbreviations = get_abbreviated_experience_levels(mean_dropout_df.columns.values)
+            ax[i].set_xticklabels(exp_level_abbreviations, rotation=90)
+        else:
+            ax[i].set_xticklabels(mean_dropout_df.columns.values, rotation=90, fontsize=14)
+        ax[i].set_ylim(0, mean_dropout_df.shape[0])
+        # invert y axis so images is always on top
+        ax[i].invert_yaxis()
+        ax[i].set_xlabel('')
+        ax[i].set_ylabel('')
+        ax[i].set_title(f'cluster {cluster_id}')
+        if small_fontsize:
+            ax[i] = standardize_axes_fontsize(ax[i])
+
+    # shuffle_type_dict = {'experience': 'cell id shuffle',
+    #                     'experience_within_cell': 'exp label shuffle'}
+
+    # plt.suptitle(cre_line + ' ' + shuffle_type_dict[shuffle_type])
+    fig.subplots_adjust(hspace=1.2, wspace=0.6)
+    # plt.tight_layout()
+    if cre_line is None:
+        cre_line_suffix = 'all'
+    else:
+        cre_line_suffix = cre_line[:3]
+
+    if save_dir:
+        utils.save_figure(fig, figsize, save_dir, folder,
+                          f'{metric}_{shuffle_type}dropout_matched_clusters' + cre_line_suffix, formats = ['.png', '.pdf'])
+
+
+def plot_matched_clusters_heatmap_remapped(SSE_mapping, mean_dropout_scores_unstacked, metric='mean', shuffle_type=None,
+                                  cre_line=None, abbreviate_features=True, abbreviate_experience=True, small_fontsize=False,
+                                  cbar=False, save_dir=None, folder=None, figsize=None):
+    ''' This function needs work to be able to plot the heatmap with the remapped colors. It is not working yet.'''
+    all_clusters_means_dict = processing.get_matched_clusters_means_dict(SSE_mapping,
+                                                                         mean_dropout_scores_unstacked,
+                                                                         metric=metric, shuffle_type=shuffle_type,
+                                                                         cre_line=cre_line)
+    cluster_ids = all_clusters_means_dict.keys()
+    if figsize is None:
+        figsize = (3.5 * len(cluster_ids), 2)
+
+    fig, ax = plt.subplots(1, len(cluster_ids), figsize=figsize, sharex='row', sharey='row')
+    ax = ax.ravel()
+
+    for i, cluster_id in enumerate(cluster_ids):
+        if all_clusters_means_dict[cluster_id].sum().sum() == 0:
+            hm_color = 'Greys'
+        else:
+            hm_color = 'Blues'
+        features = processing.get_features_for_clustering()
+        mean_dropout_df = all_clusters_means_dict[cluster_id].loc[features]  # order regressors in a specific order
+        cre_line_means = get_cre_line_means(feature_matrix, cluster_meta)
+
+        cre_line_means_remapped, coding_score_cmap, vmax = remap_coding_scores_to_session_colors(cre_line_means)
+        cre_line_means_remapped = cre_line_means_remapped.T.copy()
+
+        # relabel dataframe indices to be abbreviated
+        new_labels = get_clean_labels_for_coding_scores_df(cre_line_means_remapped, columns=False)
+        cre_line_means_remapped.index = new_labels
+
+        plot_cre_line_means_heatmap(cre_line_means_remapped, coding_score_cmap, vmax, colorbar=False,
+                                save_dir=save_dir, folder=folder, ax=None)
 
         if abbreviate_features:
             # set yticks to abbreviated feature labels
