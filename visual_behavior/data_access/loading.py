@@ -73,8 +73,8 @@ def get_platform_analysis_cache_dir():
 
 def get_production_cache_dir():
     """Get directory containing a manifest file that includes all VB production data, including failed experiments"""
-    # cache_dir = r'/allen/programs/mindscope/workgroups/learning/ophys/learning_project_cache'
-    cache_dir = r'\\allen\programs\mindscope\workgroups\learning\ophys\learning_project_cache'
+    cache_dir = r'/allen/programs/mindscope/workgroups/learning/ophys/learning_project_cache'
+    # cache_dir = r'\\allen\programs\mindscope\workgroups\learning\ophys\learning_project_cache'
     return cache_dir
 
 
@@ -580,6 +580,8 @@ def get_stimulus_response_df(dataset, time_window=[-2, 2.1], interpolate=True, o
                                 Note that including invalid ROIs will result in some cell traces being NaNs because traces are not computed for some types of invalid ROIs
     """
     import mindscope_utilities.visual_behavior_ophys.data_formatting as vb_ophys
+    # from brain_observatory_utilities.datasets.optical_physiology.data_formatting import get_stimulus_response_df
+
     # load stimulus response df from file if it exists otherwise generate it
     ophys_experiment_id = dataset.ophys_experiment_id
     filepath = get_stimulus_response_df_filepath_for_experiment(ophys_experiment_id, data_type, event_type,
@@ -831,12 +833,6 @@ def get_ophys_dataset(ophys_experiment_id, exclude_invalid_rois=True, load_from_
     Returns:
         object -- BehaviorOphysSession or BehaviorOphysDataset instance, which inherits attributes & methods from SDK BehaviorOphysSession
     """
-
-    id_type = from_lims.get_id_type(ophys_experiment_id)
-    if id_type != 'ophys_experiment_id':
-        warnings.warn('It looks like you passed an id of type {} instead of an ophys_experiment_id'.format(id_type))
-
-    assert id_type == 'ophys_experiment_id', "The passed ID type is {}. It must be an ophys_experiment_id".format(id_type)
 
     if load_from_lims:
         print('loading from lims, exclude_invalid_rois =', exclude_invalid_rois)
@@ -2772,22 +2768,21 @@ def add_superficial_deep_to_experiments_table(experiments_table):
     return experiments_table
 
 
-def get_file_name_for_multi_session_df(data_type, event_type, mouse_id, ophys_container_id, conditions):
+def get_file_name_for_multi_session_df(data_type, event_type, mouse_id, conditions):
 
     mouse_id = 'mouse_id_'+str(mouse_id)
-    ophys_container_id = 'container_id_'+str(ophys_container_id)
     if len(conditions) == 6:
-        filename = event_type + '_' + data_type + '_' + mouse_id + '_' + ophys_container_id + '_' + conditions[1] + '_' + conditions[2] + '_' + conditions[3] + '_' + conditions[4] + '_' + conditions[5] + '.h5'
+        filename = event_type + '_' + data_type + '_' + mouse_id + '_' +  conditions[1] + '_' + conditions[2] + '_' + conditions[3] + '_' + conditions[4] + '_' + conditions[5] + '.h5'
     elif len(conditions) == 5:
-        filename = event_type + '_' + data_type + '_' + mouse_id + '_' + ophys_container_id + '_' + conditions[1] + '_' + conditions[2] + '_' + conditions[3] + '_' + conditions[4] + '.h5'
+        filename = event_type + '_' + data_type + '_' + mouse_id + '_' + conditions[1] + '_' + conditions[2] + '_' + conditions[3] + '_' + conditions[4] + '.h5'
     elif len(conditions) == 4:
-        filename = event_type + '_' + data_type + '_' + mouse_id + '_' + ophys_container_id + '_' + conditions[1] + '_' + conditions[2] + '_' + conditions[3] + '.h5'
+        filename = event_type + '_' + data_type + '_' + mouse_id + '_' + conditions[1] + '_' + conditions[2] + '_' + conditions[3] + '.h5'
     elif len(conditions) == 3:
-        filename = event_type + '_' + data_type + '_' + mouse_id + '_' + ophys_container_id + '_' + conditions[1] + '_' + conditions[2] + '.h5'
+        filename = event_type + '_' + data_type + '_' + mouse_id + '_' + conditions[1] + '_' + conditions[2] + '.h5'
     elif len(conditions) == 2:
-        filename = event_type + '_' + data_type + '_' + mouse_id + '_' + ophys_container_id + '_' + conditions[1] + '.h5'
+        filename = event_type + '_' + data_type + '_' + mouse_id + '_' + conditions[1] + '.h5'
     elif len(conditions) == 1:
-        filename = event_type + '_' + data_type + '_' + mouse_id + '_' + ophys_container_id + '_' + conditions[0] + '.h5'
+        filename = event_type + '_' + data_type + '_' + mouse_id + '_' + conditions[0] + '.h5'
 
     return filename
 
@@ -2811,9 +2806,13 @@ def load_multi_session_df(data_type, event_type, conditions, interpolate=True, o
     #                                                                            'LearningmFISHDevelopment',
     #                                                                            'omFISHGad2Meso'])]
     ## This one loads from SDK
-    experiments_table = utilities.get_mFISH_projects_experiments_table()
+    # experiments_table = utilities.get_mFISH_projects_experiments_table()
     # This one loads from file as currently configured
     # experiments_table = get_filtered_ophys_experiment_table()
+
+    save_dir = get_production_cache_dir()
+    saved_filepath = os.path.join(save_dir, 'mFISH_project_expts.csv')
+    experiments_table = pd.read_csv(saved_filepath, index_col=0)
 
     print(len(experiments_table), 'expts in expt table')
     mouse_ids = experiments_table.mouse_id.unique()
@@ -2821,16 +2820,16 @@ def load_multi_session_df(data_type, event_type, conditions, interpolate=True, o
     for mouse_id in mouse_ids:
         print('mouse_id:', mouse_id)
         experiments = experiments_table[(experiments_table.mouse_id == mouse_id)]
-        for ophys_container_id in np.sort(experiments.ophys_container_id.unique()):
-            try:
-                filename = get_file_name_for_multi_session_df(data_type, event_type, mouse_id, ophys_container_id, conditions)
-                multi_session_df_dir = get_multi_session_df_dir(interpolate=interpolate, output_sampling_rate=output_sampling_rate, event_type=event_type)
-                filepath = os.path.join(multi_session_df_dir, filename)
-                df = pd.read_hdf(filepath, key='df')
-                multi_session_df = pd.concat([multi_session_df, df])
-            except Exception as e:
-                # print(e)
-                print('no multi_session_df for', mouse_id, ophys_container_id)
+        # for ophys_container_id in np.sort(experiments.ophys_container_id.unique()):
+            # try:
+        filename = get_file_name_for_multi_session_df(data_type, event_type, mouse_id, conditions)
+        multi_session_df_dir = get_multi_session_df_dir(interpolate=interpolate, output_sampling_rate=output_sampling_rate, event_type=event_type)
+        filepath = os.path.join(multi_session_df_dir, filename)
+        df = pd.read_hdf(filepath, key='df')
+        multi_session_df = pd.concat([multi_session_df, df])
+            # except Exception as e:
+            #     # print(e)
+            #     print('no multi_session_df for', mouse_id, ophys_container_id)
     return multi_session_df
 
 

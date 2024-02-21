@@ -11,13 +11,13 @@ import visual_behavior.ophys.io.create_multi_session_df as io
 if __name__ == '__main__':
     # define args
     parser = argparse.ArgumentParser()
-    parser.add_argument('--ophys_container_id', type=str, help='ophys_container_id to use')
+    # parser.add_argument('--ophys_container_id', type=str, help='ophys_container_id to use')
     parser.add_argument('--mouse_id', type=str, help='mouse_id to use')
     args = parser.parse_args()
-    ophys_container_id = int(args.ophys_container_id)
+    # ophys_container_id = int(args.ophys_container_id)
     mouse_id = int(args.mouse_id)
 
-    print('mouse_id:', mouse_id, 'ophys_container_id:', ophys_container_id)
+    print('mouse_id:', mouse_id)
 
     # params for stim response df creation
     time_window = [-2, 2.1]
@@ -79,7 +79,7 @@ if __name__ == '__main__':
                 response_window_duration = 0.5
             print('creating multi_session_df for', data_type, event_type, conditions)
             try: # use try except so that it skips over any conditions that fail to generate for some reason
-                df = io.get_multi_session_df(mouse_id, ophys_container_id, conditions, data_type, event_type, ophys_experiment_ids=None,
+                df = io.get_multi_session_df(mouse_id, conditions, data_type, event_type, ophys_experiment_ids=None,
                                              time_window=time_window, interpolate=interpolate, output_sampling_rate=output_sampling_rate,
                                              response_window_duration=response_window_duration,
                                              use_extended_stimulus_presentations=use_extended_stimulus_presentations,
