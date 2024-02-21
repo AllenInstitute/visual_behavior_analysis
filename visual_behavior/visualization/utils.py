@@ -74,6 +74,15 @@ def get_cell_types():
     return cell_types
 
 
+def get_cell_type_colors():
+    '''
+    chosen to approximately match the cell type taxonomy colors for L2/3 E, Sst, Vip
+    '''
+    c = sns.color_palette('colorblind')
+    cell_type_colors = [c[2], c[1], c[4]]
+    return cell_type_colors
+
+
 def convert_cre_line_to_cell_type(cre_line):
     if cre_line == 'Slc17a7-IRES2-Cre':
         cell_type = 'Excitatory'
