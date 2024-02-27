@@ -78,6 +78,15 @@ def get_multi_session_df(project_code, session_number, conditions, data_type, ev
     # dont include Ai94 experiments because they makes things too slow
     # experiments_table = experiments_table[(experiments_table.reporter_line != 'Ai94(TITL-GCaMP6s)')]
 
+    # save_dir = r'/allen/programs/mindscope/workgroups/learning/ophys/learning_project_cache'
+    save_dir = r'\\allen\programs\mindscope\workgroups\learning\ophys\learning_project_cache'
+    experiments_table = pd.read_csv(os.path.join(save_dir, 'mFISH_project_expts.csv'), index_col=0)
+    # limit to non-failed experiments
+    experiments_table = experiments_table[(experiments_table.experiment_workflow_state.isin(['passed', 'qc'])) &
+                            (experiments_table.container_workflow_state != 'failed')]
+    # experiments_table = experiments_table.set_index('ophys_experiment_id')
+    print(len(experiments_table), 'experiments in experiments table')
+    print(len(experiments_table.mouse_id.unique()), 'mice in experiments table')
     # limit to platform paper experiments
     experiments_table = loading.get_platform_paper_experiment_table(add_extra_columns=True,
                                                                     limit_to_closest_active=True,
@@ -132,9 +141,8 @@ def get_multi_session_df(project_code, session_number, conditions, data_type, ev
                 # get stimulus_response_df
                 df = loading.get_stimulus_response_df(dataset, data_type=data_type, event_type=event_type, time_window=time_window,
                                                       interpolate=interpolate, output_sampling_rate=output_sampling_rate,
-                                                      load_from_file=True, epoch_duration_mins=epoch_duration_mins)
-                print('stim_response_df loaded, creating multi_session_df')
-                # print(len(df), 'length of stimulus_response_df')
+                                                      load_from_file=False)
+                print('stim response df loaded')
                 # use response_window duration from stim response df if it exists
                 if response_window_duration in df.keys():
                     response_window_duration = df.response_window_duration.values[0]
