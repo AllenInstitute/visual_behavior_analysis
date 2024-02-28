@@ -1,5 +1,5 @@
 import os
-import umap
+#import umap
 import random
 import numpy as np
 import pandas as pd
@@ -526,18 +526,24 @@ def plot_affinity_matrix(feature_matrix, cluster_meta, cre_line, n_clusters_cre,
     return ax
 
 
-def plot_umap_for_clusters(cluster_meta, feature_matrix, label_col='cluster_id', save_dir=None, folder=None):
+def plot_umap_for_clusters(cluster_meta, feature_matrix, label_col='cluster_id', cre_lines = ['all'], save_dir=None, folder=None):
     """
     plots umap for each cre line, colorized by metadata column provided as label_col
 
     label_col: column in cluster_meta to colorize points by
     """
-#    import umap
-    figsize = (15, 4)
-    fig, ax = plt.subplots(1, 3, figsize=figsize)
-    for i, cre_line in enumerate(get_cre_lines(cluster_meta)):
+    import umap.umap_ as umap
+    if cre_lines is None:
+        cre_lines = get_cre_lines(cluster_meta)
+    
+    figsize = (5*len(cre_lines), 4)
+    fig, ax = plt.subplots(1, len(cre_lines), figsize=figsize)
+    for i, cre_line in enumerate(cre_lines):
         # get number of unique values in label_col to color by
-        cre_meta = cluster_meta[cluster_meta.cre_line == cre_line]
+        if cre_line != 'all':
+            cre_meta = cluster_meta[cluster_meta.cre_line == cre_line]
+        else:
+            cre_meta = cluster_meta.copy()
         cre_csids = cre_meta.index.values
         n_cols = len(cre_meta[label_col].unique())
         palette = sns.color_palette('hls', n_cols)
@@ -4099,6 +4105,31 @@ def plot_matched_clusters_heatmap_remapped(SSE_mapping, mean_dropout_scores_unst
         utils.save_figure(fig, figsize, save_dir, folder,
                           f'{metric}_{shuffle_type}dropout_matched_clusters' + cre_line_suffix, formats = ['.png', '.pdf'])
 
+def plot_unraveled_clusters_mean(cre_line, cre_line_dfs, save_d=None, folder='', tag='', ax=None, figsize=(12,2)):
+    """
+    Plot the mean of the feature matrix for a given cre_line.
+
+    Args:
+    - cre_line (str): The cre_line for which to plot the mean feature matrix.
+    - cre_line_dfs (dict): A dictionary where keys are cre_lines and values are feature matrices.
+    - save_dir (str): The directory to save the plot.
+
+    Returns:
+    - None
+    """
+
+    feature_matrix = cre_line_dfs[cre_line]
+    data_means = feature_matrix.mean().unstack().loc[['all-images', 'omissions', 'behavioral', 'task']].stack().values
+    data_means = np.reshape(data_means, (1,12))
+    fig, ax = plt.subplots(1,1,figsize = (12, 2))
+    ax = sns.heatmap(data_means, cmap='Blues', vmax=.5, ax=ax)
+    ax.set_xticklabels('')
+    ax.set_yticklabels(['mean'], fontsize=16)
+    plt.tight_layout()
+    if save_dir is not None:
+        utils.save_figure(fig, figsize=(12,2), save_dir=save_dir, folder='', 
+                      fig_title=f'{cre_line}_mean_unraveled_dropout_scores')
+    
 
 def plot_unraveled_clusters(feature_matrix, cluster_df, sort_order=None, cre_line=None, save_dir=None, folder='', tag='',
                             ax=None, figsize=(4, 7), rename_columns=False):
