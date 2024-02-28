@@ -3381,6 +3381,66 @@ def plot_exp_level_preference_barplot(cluster_metrics, save_dir=None, folder=Non
         utils.save_figure(fig, figsize, save_dir, folder, 'exp_level_preference_barplot')
 
 
+def plot_variability_reduction(cre_lines, variability_df_with_clustered_column, save_dir):
+    '''
+    Plot the reduction in variability for clustered and unclustered data.
+
+    Args:
+    - cre_lines (list): List of CRE lines.
+    - variability_df_with_clustered_column (pd.DataFrame): DataFrame containing variability data.
+    This df can is the output of processing.get_sse_df_with_clustered_column
+    - save_dir (str): Directory to save the plot.
+
+    Returns:
+    - None
+    '''
+    from matplotlib.lines import Line2D
+    fig, ax = plt.subplots(1,1, figsize=(6,3))
+    x1 = [0.9, 1.9, 2.9]  # not clustered x location
+    x2 = [1.1, 2.1, 3.1]  # clustered x location
+    xticklabels = utils.get_cell_types()
+    labels = [Line2D([0],[0], marker='o', markersize=8, markerfacecolor='none', markeredgecolor='Grey', markeredgewidth=2, linewidth=0),
+              Line2D([0],[0], marker='o', markersize=12, color='Grey', linewidth=0 ),
+              Line2D([0],[0], marker='o', markersize=12, color='Black', linewidth=0)]
+
+    for c, cre_line in enumerate(cre_lines):
+        cre_tmp = variability_df_with_clustered_column[(variability_df_with_clustered_column.cre_line==cre_line)]
+        # plot clusters means
+        cluster_tmp = cre_tmp[cre_tmp.clustered==True]
+        y = cluster_tmp.groupby('cluster_id').mean().values
+        x = [x2[c]]*len(y)
+        ax.scatter(x=x, y=y, marker='o', s=40, facecolors='none', edgecolors='Grey', linewidth=2)
+        
+        # plot clustered mean
+        x = x2[c]
+        y = cluster_tmp['sse'].mean()
+        err = cluster_tmp['sse'].std()
+        ax.errorbar(x=x-0.1, y=y, yerr=err, marker='o', markersize=12, color='Grey', linewidth=2)
+
+        # plot not clustered mean
+        x = x1[c]
+        y = cre_tmp[(cre_tmp.clustered==False)]['sse'].mean()
+        err = cre_tmp[(cre_tmp.clustered==False)]['sse'].std()
+        ax.errorbar(x=x, y=y, yerr=err, marker='o', markersize=12, color='Black', linewidth=2)
+        
+        # add significance stars
+        ax.text(x1[c]-0.01, 0.85, s='***', fontsize=12, color='Black')
+        ax.plot([x1[c], x2[c]-0.1], [0.84, 0.84], color='Black', linewidth=1)
+    
+    ax.set_xticks([1,2,3])
+    ax.set_xticklabels(xticklabels)
+    ax.set_ylabel('mean SSE values')
+    ax.set_ylim([-0.1, 1])
+
+    ax.legend(labels, ['within cluster', 'clustered data', 'unclustered data'],
+              loc="center right", 
+              ncol=3,
+              bbox_to_anchor=[1.08, 1.15],
+              borderaxespad=0, fontsize=12)
+    if save_dir:
+        utils.save_figure(fig, figsize=(6,3), save_dir=save_dir, folder='', fig_title='Reduction_in_variability')
+
+
 def plot_cluster_percent_pie_legends(save_dir=None, folder=None):
     """
     Create dummy figures with colorbars & legends for experience level modulation, feature preference, etc.
