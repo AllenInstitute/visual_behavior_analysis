@@ -567,8 +567,12 @@ def get_feature_matrix_for_cre_line(feature_matrix, cell_metadata, cre_line, dro
     """
     limit feature_matrix to cell_specimen_ids for this cre line
     """
-    cre_cell_specimen_ids = cell_metadata[cell_metadata['cre_line'] == cre_line].index.values
-    feature_matrix_cre = feature_matrix.loc[cre_cell_specimen_ids].copy()
+    if cre_line == 'all':
+        feature_matrix_cre = feature_matrix.copy()
+    else:
+        cre_cell_specimen_ids = cell_metadata[cell_metadata['cre_line'] == cre_line].index.values
+        feature_matrix_cre = feature_matrix.loc[cre_cell_specimen_ids].copy()
+
     if dropna is True:
         feature_matrix_cre = feature_matrix_cre.dropna(axis=0)
     return feature_matrix_cre
@@ -2888,7 +2892,8 @@ def get_mean_dropout_scores_per_cluster(dropout_df, cluster_df=None, labels=None
 
 def compute_SSE(mean_dropout_df_original, mean_dropout_df_compare):
     '''
-    mean dropout_df should be computed with get_mean_dropout_scores_per_cluste function, stacked=True
+    Computes SSE value between original and shuffled clusters
+    mean dropout_df should be computed with get_mean_dropout_scores_per_cluster function, stacked=True
     returns:
     SSE_matrix, rows are original clusters, columns are compared clusters
     '''
@@ -2903,6 +2908,133 @@ def compute_SSE(mean_dropout_df_original, mean_dropout_df_compare):
         SSE_matrix.append(row)
 
     return SSE_matrix
+
+
+def compute_cluster_sse(feature_matrix):
+    '''
+    Computes Sum of Squared Error between each cell in feature matrix and the mean, to measure variability within clusters.
+    
+    INPUT: 
+    feature_matrix (pd.DataFrame): Dropout scores, rows are cell specimen ids.
+    
+    Returns:
+    SSE (np.ndarray): Array of SSE values between each cell and their mean.
+    '''
+    mean_values = feature_matrix.mean().values
+    SSE = np.sum(np.subtract(feature_matrix.values, mean_values)**2, axis=1)
+
+    return SSE
+
+
+def get_sse_df(feature_matrix, cluster_df, columns=['cluster_id', 'cre_line'], metric='sse'):
+    '''
+    Calculate the sum of squared errors (SSE) for each cluster in each cre_line. Create a dataframe to plot the results.
+    This allows to compare the variability within clusters across different cre_lines.
+
+    Args:
+    - feature_matrix (pd.DataFrame): DataFrame containing the features for each cell.
+    - cluster_df (pd.DataFrame): DataFrame with columns ['cre_line', 'cluster_id'] and cell specimen id as an index.
+    - columns (list): List of columns for the output DataFrame.
+    - metric (str): Metric to compute, currently supports only 'sse'. Option to add other metrics
+
+    Returns:
+    - pd.DataFrame: DataFrame containing the SSE values for each cluster in each cre_line.
+    '''
+    
+    variability_df = pd.DataFrame(columns=columns) # initialize empty dataframe
+    cre_lines = cluster_df['cre_line'].unique()
+    
+    columns = [*columns, metric]
+    
+    if 'cell_specimen_id' in cluster_df.columns:
+        cluster_df.set_index('cell_specimen_id', inplace=True)
+        
+    for cre_line in cre_lines:
+        cre_cluster_df = cluster_df[cluster_df['cre_line']==cre_line]
+        cre_cell_ids = cre_cluster_df.index.values
+        cre_feature_matrix = feature_matrix.loc[cre_cell_ids]
+        cluster_ids = np.sort(cre_cluster_df['cluster_id'].values)
+        for cluster_id in cluster_ids: # compute for each cluster id
+            cluster_cids = cre_cluster_df[cre_cluster_df['cluster_id']==cluster_id].index.values
+            cluster_feature_matrix = cre_feature_matrix.loc[cluster_cids]
+            if metric == 'sse':
+                values = compute_cluster_sse(cluster_feature_matrix)
+                
+            variability_df = variability_df.append(pd.DataFrame({'cre_line': [cre_line]*len(values), 
+                                   'cluster_id': [cluster_id]*len(values),
+                                   metric: values}, index=np.arange(len(values))),
+                                                   ignore_index=True)
+                                   
+        # compute for mean for clustered values
+        index = len(variability_df) 
+        variability_df.at[index, 'cre_line'] = cre_line
+        variability_df.at[index, 'cluster_id'] = 'clustered_mean'
+        variability_df.at[index, metric] = variability_df[variability_df['cre_line']==cre_line][metric].mean()
+        
+        # compute mean of unclustered values for each cre_line
+        if metric == 'sse':
+            value = np.mean(compute_cluster_sse(cre_feature_matrix))
+        index = len(variability_df)
+        variability_df.at[index, 'cre_line'] = cre_line
+        variability_df.at[index, 'cluster_id'] = 'unclustered_mean'
+        variability_df.at[index, metric] = value
+                
+    return variability_df
+
+
+def get_sse_df_with_clustered_column(feature_matrix, cluster_df, columns=['cluster_id', 'cre_line', 'clustered'], metric='sse'):
+    '''
+    Calculate the sum of squared errors (SSE) for each cluster in each cre_line.
+    This function has a column 'clustered' which indicates if the SSE is calculated based on clustered mean or not.
+    Having this column helps plotting the results in slightly different way than get_sse_df function.
+
+    Args:
+    - feature_matrix (pd.DataFrame): DataFrame containing the features for each cell.
+    - cluster_df (pd.DataFrame): DataFrame with columns ['cre_line', 'cluster_id'] and cell specimen id as an index.
+    - columns (list): List of columns for the output DataFrame.
+    - metric (str): Metric to compute, currently supports only 'sse'.
+
+    Returns:
+    - pd.DataFrame: DataFrame containing the SSE values for each cluster in each cre_line.
+    '''
+    
+    variability_df = pd.DataFrame(columns=columns)
+    cre_lines = np.sort(cluster_df['cre_line'].unique())
+    
+    columns = [*columns, metric]
+    
+    if 'cell_specimen_id' in cluster_df.columns:
+        cluster_df.set_index('cell_specimen_id', inplace=True)
+        
+    for cre_line in cre_lines:
+        cre_cluster_df = cluster_df[cluster_df['cre_line']==cre_line]
+        cre_cell_ids = cre_cluster_df.index.values
+        cre_feature_matrix = feature_matrix.loc[cre_cell_ids]
+        
+        cluster_ids = np.sort(cre_cluster_df['cluster_id'].values)
+        for cluster_id in cluster_ids: # clustered
+            cluster_cids = cre_cluster_df[cre_cluster_df['cluster_id']==cluster_id].index.values
+            cluster_feature_matrix = cre_feature_matrix.loc[cluster_cids]
+            if metric == 'sse':
+                values = compute_cluster_sse(cluster_feature_matrix)
+                
+            variability_df = variability_df.append(pd.DataFrame({'cre_line': [cre_line]*len(values), 
+                                   'cluster_id': [cluster_id]*len(values),
+                                    'clustered': [True]*len(values),
+                                   metric: values}, index=np.arange(len(values))),
+                                                   ignore_index=True)
+                                   
+            
+        if metric == 'sse': # not clustered
+            values = compute_cluster_sse(cre_feature_matrix)
+        variability_df = variability_df.append(pd.DataFrame({'cre_line': [cre_line]*len(values), 
+                                   'cluster_id': [np.nan]*len(values),
+                                    'clustered': [False]*len(values),
+                                   metric: values}, index=np.arange(len(values))),
+                                                   ignore_index=True)
+                
+        
+    return variability_df
 
 
 def get_sorted_cluster_ids(cluster_df):
