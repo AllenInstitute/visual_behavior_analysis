@@ -3381,7 +3381,7 @@ def plot_exp_level_preference_barplot(cluster_metrics, save_dir=None, folder=Non
         utils.save_figure(fig, figsize, save_dir, folder, 'exp_level_preference_barplot')
 
 
-def plot_variability_reduction(cre_lines, variability_df_with_clustered_column, save_dir):
+def plot_variability_reduction(cre_lines, variability_df_with_clustered_column, save_dir=None, folder=''):
     '''
     Plot the reduction in variability for clustered and unclustered data.
 
@@ -3438,7 +3438,47 @@ def plot_variability_reduction(cre_lines, variability_df_with_clustered_column, 
               bbox_to_anchor=[1.08, 1.15],
               borderaxespad=0, fontsize=12)
     if save_dir:
-        utils.save_figure(fig, figsize=(6,3), save_dir=save_dir, folder='', fig_title='Reduction_in_variability')
+        utils.save_figure(fig, figsize=(6,3), save_dir=save_dir, folder=folder, fig_title='Reduction_in_variability')
+
+
+def plot_mean_cre_variability(variability_df_with_clustered_column, save_dir=None, folder=''):
+    '''
+    Plot the mean variability by cell type for unclustered data.
+
+    Args:
+    - variability_df_with_clustered_column (pd.DataFrame): DataFrame containing variability data.
+    This df can is the output of processing.get_sse_df_with_clustered_column
+    - save_dir (str): Directory to save the plot.
+
+    Returns:
+    - None
+    '''
+    fig, ax = plt.subplots(1, 1, figsize=(3, 3))
+    tmp = variability_df_with_clustered_column[(variability_df_with_clustered_column.clustered==False)]
+    ax = sns.barplot(data=tmp, x='cre_line', y='sse', color='Grey', errwidth=2, capsize=0.1, ax=ax)
+    ax.set_xticklabels(['Excitatory', 'Sst', 'Vip'], rotation=45, fontsize=16)
+    ax.set_xlabel('')
+    ax.set_ylim([0, 0.75])
+    yticks = [0, 0.2, 0.4, 0.6]
+    ax.set_yticks(yticks)
+    ax.set_yticklabels(yticks, fontsize=16)
+    ax.set_ylabel('Mean variance', fontsize=16)
+    ax.spines['right'].set_visible(False)
+    ax.spines['top'].set_visible(False)
+
+    # add significance stars
+    ax.text(0.3, 0.56, s='***', fontsize=16, color='Black')
+    ax.plot([0, 1], [0.55, 0.55], color='Black', linewidth=2)
+
+    ax.text(1.3, 0.6, s='***', fontsize=16, color='Black')
+    ax.plot([1, 2], [0.59, 0.59], color='Black', linewidth=2)
+
+    ax.text(0.8, 0.72, s='n.s.', fontsize=16, color='Black')
+    ax.plot([0, 2], [0.7, 0.7], color='Black', linewidth=2)
+
+    if save_dir:
+        utils.save_figure(fig, figsize=(3, 3), save_dir=save_dir, folder=folder, fig_title='Mean_variability_by_cell_type')
+
 
 
 def plot_cluster_percent_pie_legends(save_dir=None, folder=None):
