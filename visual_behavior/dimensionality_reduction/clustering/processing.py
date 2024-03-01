@@ -601,6 +601,18 @@ def normalize_cluster_size(cluster_df):
     return grouped_df
 
 
+def extract_number(s):
+    import re
+    # Extract the number from the string using regular expression
+    match = re.search(r'\d+', s)
+    return int(match.group()) if match else 0
+
+
+def custom_sort(s):
+    # Use the extracted number for sorting
+    return extract_number(s)
+
+
 ### selecting # K ###
 
 def compute_inertia(a, X, metric='euclidean'):

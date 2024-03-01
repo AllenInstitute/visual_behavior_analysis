@@ -5035,3 +5035,73 @@ def plot_single_cell_tuning_curve_across_experience_levels(cell_specimen_id, ima
         filename = utils.convert_cre_line_to_cell_type(cre_line)+'_'+'cluster_'+str(cluster_id)+'_csid_'+str(cell_specimen_id)
         utils.save_figure(fig, figsize, os.path.join(save_dir, folder, 'tuning_curves'), 'single_cell_plots', filename)
         plt.close()
+
+
+
+def plot_significance_grid(df, rm_features=None, cre_lines=None, save_dir=None):
+    '''
+    Plot significance grid for each feature and CRE line.
+
+    Args:
+    - df (pd.DataFrame): DataFrame containing significance data.
+    - rm_features (list): List of features to analyze.
+    - cre_lines (list): List of CRE lines.
+    - save_dir (str): Directory to save the plots.
+
+    Returns:
+    - None
+    '''
+    from visual_behavior_glm import GLM_visualization_tools as gvt
+    exp_colors = gvt.project_colors()
+
+    if rm_features is None:
+        rm_features = df['metric'].unique()
+    if cre_lines is None:
+        cre_lines = df['CRE'].unique()
+        
+    for rm_f in rm_features:
+        for cre in cre_lines:
+            # Set up the grid plot
+            figsize = (10, 10)
+            fig, ax = plt.subplots(figsize=figsize)
+
+            comparison = np.unique([df[(df['CRE']==cre)]['pair1'].unique(), df[(df['CRE']==cre)]['pair2'].unique()])
+            comparison = sorted(comparison, key=processing.custom_sort)
+            xticklabels = []
+            for pair1 in comparison:
+                xticklabels.append(pair1)
+                yticklabels = []
+                for pair2 in comparison:
+                    exp_level = pair2.split(' ')[-1]
+                    yticklabels.append(pair2)
+                    subset = df[(df['metric']==rm_f) & (df['pair1']==pair1) & (df['pair2']==pair2) & (df['CRE']==cre)]
+                    
+                    # Plot the point with significance indicator
+                    if not subset.empty:
+                        marker = '*' if subset['significance'].values[0] else ''
+                        ax.scatter(subset['pair1'], subset['pair2'], marker=marker, color=exp_colors[exp_level], linewidths=6, label=f'{pair1}')
+                    
+            # Customize the plot
+            ax.grid(alpha=0.3)
+            ax.set_xticklabels(xticklabels, rotation=90)
+            plt.gca().invert_yaxis()
+            ax.legend('')
+            ax.set_xlabel('Cluster ID and exp level')
+            ax.set_ylabel('Cluster ID and exp level')
+            ax.set_title(f'Significance Level Grid Plot {cre} {rm_f}')
+            plt.tight_layout()
+            plt.show()
+            if save_dir:
+                filename = f'{rm_f}_{cre}_significance_grid'
+                utils.save_figure(fig, figsize, save_dir, fodler=folder, filename=filename, format=['png','.pdf']) 
+                plt.close()
+            # Save the plot
+            folder = 'cluster_comparisons_pref_image'
+            filename = f'{rm_f}_{cre}_significance_table_with_color.pdf'
+            figname = os.path.join(save_dir, folder, filename)
+            fig.savefig(figname)
+            
+            filename = f'{rm_f}_{cre}_significance_table_with_color.png'
+            figname = os.path.join(save_dir, folder, filename)
+            fig.savefig(figname)
+            plt.close()
