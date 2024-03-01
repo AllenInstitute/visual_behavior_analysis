@@ -3480,6 +3480,73 @@ def plot_mean_cre_variability(variability_df_with_clustered_column, save_dir=Non
         utils.save_figure(fig, figsize=(3, 3), save_dir=save_dir, folder=folder, fig_title='Mean_variability_by_cell_type')
 
 
+def plot_cluster_sizes_lineplot(grouped_df, palette=None, save_dir=None, folder=''):
+    '''
+    Plot the cluster sizes for each CRE line.
+
+    Args:
+    - grouped_df (pd.DataFrame): DataFrame containing clustered data.
+    output of processing.normalize_cluster_size
+    - palette (dict): Color palette for different CRE lines.
+    - save_dir (str): Directory to save the plot.
+
+    Returns:
+    - None
+    '''
+    if palette is None:
+        palette = utils.get_cre_line_colors()
+    fig, ax = plt.subplots(1, 1, figsize=(3, 3))
+    markersize = [14, 10, 10]
+    linewidth = [4, 2, 2]
+    ax = sns.pointplot(data=grouped_df, x='cluster_id', y='percentage',
+                       hue='cre_line', palette=palette, joinlinewidth=0.1, ax=ax, markersize=markersize, linewidth=linewidth)
+    ax.legend(ax.get_legend_handles_labels()[0], utils.get_cell_types(), fontsize=12)
+    ax.set_ylim([0, 40])
+    ax.set_xlabel('Cluster ID')
+    ax.set_ylabel('% of all cells')
+    ax.spines['right'].set_visible(False)
+    ax.spines['top'].set_visible(False)
+    if save_dir:
+        utils.save_figure(fig, figsize=(3, 3), save_dir=save_dir, folder=folder, fig_title='Cluster_sizes_cre')
+
+
+def plot_pie_chart_cluster_size(grouped_df, cre_lines=None, palette=None, explode_index=[0,1,1], save_dir=None, folder=''):
+    '''
+    Plot pie charts for cluster sizes for each CRE line.
+
+    Args:
+    - grouped_df (pd.DataFrame): DataFrame containing clustered data.
+    - cre_lines (list): List of CRE lines.
+    - palette (list): Color palette for different CRE lines.
+    - explode_index (list): List of indices to explode pie chart slices.
+    - save_dir (str): Directory to save the plot.
+
+    Returns:
+    - None
+    '''
+    if palette is None:
+        palette = utils.get_cre_line_colors()
+    if cre_lines is None:
+        cre_lines = np.sort(grouped_df.cre_line.unique())
+    fig, ax = plt.subplots(len(cre_lines), 1, figsize=(3, 9))
+    for c, cre_line in enumerate(cre_lines[::-1]):
+        cluster_ids = grouped_df[grouped_df.cre_line==cre_line]['cluster_id'].values
+        cluster_id_labels = [str(cluster_id) for cluster_id in cluster_ids]
+        sizes = grouped_df[grouped_df.cre_line==cre_line]['percentage'].values
+        explode = [0]*len(cluster_ids)
+        explode[explode_index[c]] = 0.1
+        colors = [(0.7, 0.7, 0.7)]*len(cluster_ids)
+        colors[explode_index[c]] = palette[::-1][c]
+        pie = ax[c].pie(sizes, explode=explode, labels=cluster_id_labels, colors=colors, startangle=90)
+        for w in pie[0]:
+            w.set_linewidth(1)
+            w.set_edgecolor('Grey')
+
+        ax[c].axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
+    if save_dir:
+        utils.save_figure(fig, figsize=(3, 9), save_dir=save_dir, folder=folder, fig_title='pie_chart_cluster_size')
+
+
 
 def plot_cluster_percent_pie_legends(save_dir=None, folder=None):
     """

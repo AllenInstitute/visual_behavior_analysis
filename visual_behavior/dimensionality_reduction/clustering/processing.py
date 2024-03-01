@@ -29,6 +29,7 @@ import visual_behavior_glm.GLM_clustering as glm_clust
 import visual_behavior_glm.GLM_params as glm_params
 from statsmodels.stats.proportion import proportion_confint
 from statsmodels.stats.proportion import multinomial_proportions_confint
+from visual_behavior.dimensionality_reduction.clustering import plotting as plotting
 
 
 import seaborn as sns
@@ -43,7 +44,6 @@ sns.set_context('notebook', font_scale=1.5, rc={'lines.markeredgewidth': 2})
 
 # import visual_behavior_glm.GLM_analysis_tools as gat  # to get recent glm results
 # import visual_behavior_glm.GLM_params as glm_params
-
 
 
 # utilities ###
@@ -137,8 +137,8 @@ def get_cre_line_map(cre_line):
 def get_experience_map(experience_level):
 
     experience_dict = {'Familiar': 'Familiar',
-                     'Novel 1': 'Novel',
-                     'Novel >1': 'Novel+'}
+                       'Novel 1': 'Novel',
+                       'Novel >1': 'Novel+'}
 
     mapped_exp_level = experience_dict[experience_level]
     return mapped_exp_level
@@ -576,6 +576,29 @@ def get_feature_matrix_for_cre_line(feature_matrix, cell_metadata, cre_line, dro
     if dropna is True:
         feature_matrix_cre = feature_matrix_cre.dropna(axis=0)
     return feature_matrix_cre
+
+
+def normalize_cluster_size(cluster_df):
+    '''
+    Normalize cluster size in each CRE line and calculate the percentage.
+
+    Args:
+    - cluster_df (pd.DataFrame): DataFrame containing original cluster labels.
+
+    Returns:
+    - pd.DataFrame: DataFrame with normalized cluster sizes and percentages for each CRE line and cluster ID.
+    '''
+    # Normalize cluster size in each CRE line
+    normalized_values = cluster_df.groupby('cre_line')['cluster_id'].value_counts(normalize=True).values
+
+    # Create DataFrame with each CRE and cluster ID
+    grouped_df = cluster_df.groupby(['cre_line','cluster_id']).count().reset_index()
+
+    # Add normalized percentage values
+    grouped_df['normalized'] = normalized_values
+    grouped_df['percentage'] = grouped_df['normalized'] * 100
+
+    return grouped_df
 
 
 ### selecting # K ###
@@ -1061,6 +1084,7 @@ def get_cluster_meta(cluster_labels, cell_metadata, feature_matrix, n_clusters_c
 
 ### run clustering on all cre lines ###
 
+
 def run_all_cre_clustering(feature_matrix, cells_table, n_clusters, save_dir, folder):
     cluster_meta_save_path = os.path.join(save_dir, 'cluster_meta_n_' + str(n_clusters) + '_clusters.h5')
 
@@ -1125,7 +1149,7 @@ def run_all_cre_clustering(feature_matrix, cells_table, n_clusters, save_dir, fo
 
         # add within cluster correlation
         cluster_meta = add_within_cluster_corr_to_cluster_meta(feature_matrix, cluster_meta,
-                                                                          use_spearmanr=True)
+                                                               use_spearmanr=True)
 
         # plot within cluster correlations
         plotting.plot_within_cluster_correlations(cluster_meta, sort_order=None, spearman=True,
@@ -1147,7 +1171,7 @@ def run_all_cre_clustering(feature_matrix, cells_table, n_clusters, save_dir, fo
 
     # if cluster_id is zero indexed, add one to it
     if 0 in cluster_meta.cluster_id.unique():
-        cluster_meta['cluster_id'] = [cluster_id+1 for cluster_id in cluster_meta.cluster_id.values]
+        cluster_meta['cluster_id'] = [cluster_id + 1 for cluster_id in cluster_meta.cluster_id.values]
 
     return cluster_meta
 
@@ -1651,7 +1675,7 @@ def get_fraction_cells_per_location(cluster_meta, location='layer'):
     n_cells_per_location_per_cluster = n_cells_per_location_per_cluster.fillna(value=0)
     # n_cells in each cluster for a given location divided by total n_cells in that location
     fraction_cells_per_location = n_cells_per_location_per_cluster / n_cells_per_location
-    fraction_cells_per_location = fraction_cells_per_location[locations] # sort by location order for convenience
+    fraction_cells_per_location = fraction_cells_per_location[locations]  # sort by location order for convenience
     return fraction_cells_per_location
 
 
@@ -1675,8 +1699,8 @@ def get_fraction_cells_relative_to_cluster_size(cluster_meta, location='layer'):
     # compute fraction of cells in each location in each cluster relative to overall fraction of cells per cluster
     locations = np.sort(cluster_meta[location].unique())
     for loc in locations:
-        fraction_cells['fraction_of_cluster_size_'+loc] = fraction_cells[loc]/fraction_cells.fraction_cells_cluster
-        fraction_cells = fraction_cells.rename(columns={loc: 'fraction_cells_'+loc})
+        fraction_cells['fraction_of_cluster_size_' + loc] = fraction_cells[loc] / fraction_cells.fraction_cells_cluster
+        fraction_cells = fraction_cells.rename(columns={loc: 'fraction_cells_' + loc})
     return fraction_cells
 
 
@@ -1705,18 +1729,19 @@ def get_n_cells_per_location_for_clusters(cluster_meta, location='layer'):
     n_cells_per_location_per_cluster = n_cells_per_location_per_cluster.fillna(value=0)
     # relabel to include location in column name
     for loc in locations:
-        n_cells_per_location = n_cells_per_location.rename(columns={loc: 'n_cells_total_'+loc})
-        n_cells_per_location_per_cluster = n_cells_per_location_per_cluster.rename(columns={loc: 'n_cells_'+loc})
+        n_cells_per_location = n_cells_per_location.rename(columns={loc: 'n_cells_total_' + loc})
+        n_cells_per_location_per_cluster = n_cells_per_location_per_cluster.rename(columns={loc: 'n_cells_' + loc})
     # create final df with all counts
     n_cells = n_cells_per_location_per_cluster.merge(n_cells_per_cluster, on=['cre_line', 'cluster_id'])
     n_cells = n_cells.reset_index().merge(n_cells_per_location, on='cre_line', how='left')
 
-    n_cells.columns.name = None # get rid of residual column index name
+    n_cells.columns.name = None  # get rid of residual column index name
     n_cells = n_cells.set_index(['cre_line', 'cluster_id'])
     return n_cells
 
 ### THIS IS THE FINAL FUNCTION TO USE FOR GETTING AREA / DEPTH DISTRIBUTIONS FOR CLUSTERS ###
 #### it compures all the possible metrics, including stats based on Alex's code ###
+
 
 def get_cluster_proportion_stats_for_locations(cluster_meta, location='layer'):
     """
@@ -1816,7 +1841,7 @@ def add_stats_for_location_comparison_to_cluster_proportion_stats(n_cells_table)
                 n_cells_table.loc[(cre_line, cluster_id), 'pvalue'] = np.NaN
                 n_cells_table.loc[(cre_line, cluster_id), 'significant'] = np.NaN
 
-        ### Benjamini Hochberg correction
+        # Benjamini Hochberg correction
         # isolate data just for one cre line and remove extra rows per cluster (p-values are the same for each location within a cluster)
         cre_data = n_cells_table.loc[(cre_line)].reset_index().drop_duplicates(subset=['cluster_id'])
         # sort by p-value within this cre line
@@ -1839,7 +1864,6 @@ def add_stats_for_location_comparison_to_cluster_proportion_stats(n_cells_table)
     return n_cells_table
 
 
-
 def get_cre_line_stats_for_locations(cell_metadata, location='layer'):
     """
     creates table with the number and fraction of cells in a given location (i.e. area/depth) in a given cre line
@@ -1856,12 +1880,13 @@ def get_cre_line_stats_for_locations(cell_metadata, location='layer'):
     n_cells_per_cre = cell_metadata.reset_index().groupby(['cre_line']).count()[['cell_specimen_id']]
     n_cells_per_cre = n_cells_per_cre.rename(columns={'cell_specimen_id': 'n_cells_total'})
     # fraction cells per cluster per cre line
-    cre_stats = n_cells_per_location.reset_index().merge(n_cells_per_cre.reset_index(), on=['cre_line'],  how='left')
+    cre_stats = n_cells_per_location.reset_index().merge(n_cells_per_cre.reset_index(), on=['cre_line'], how='left')
     cre_stats['fraction_cells_location'] = cre_stats['n_cells_location'] / cre_stats['n_cells_total']
     cre_stats = cre_stats.set_index(['cre_line', location])
     return cre_stats
 
-### metrics computed on GLM coding scores for all cells (does not require matching)
+# metrics computed on GLM coding scores for all cells (does not require matching)
+
 
 def get_coding_metrics_unmatched(index_dropouts, index_value, index_name):
     """
@@ -1894,12 +1919,12 @@ def get_coding_metrics_unmatched(index_dropouts, index_value, index_name):
     stats.loc[index_value, 'max_coding_score'] = index_dropouts.loc[dominant_experience_level][dominant_feature]
     stats.loc[index_value, 'max_image_coding_score'] = index_dropouts.loc[dominant_experience_level]['images']
     for experience_level in index_dropouts.index.values:
-        stats.loc[index_value, 'image_coding_'+experience_level] = index_dropouts.loc[experience_level]['images']
+        stats.loc[index_value, 'image_coding_' + experience_level] = index_dropouts.loc[experience_level]['images']
     stats.loc[index_value, 'feature_selectivity'] = feature_selectivity
     stats.loc[index_value, 'experience_selectivity'] = experience_selectivity
     # get experience modulation indices
     row = index_dropouts[dominant_feature]
-     # within session joint coding index
+    # within session joint coding index
     # get order and values of features for pref exp level
     order = np.argsort(index_dropouts.loc[dominant_experience_level])
     values = index_dropouts.loc[dominant_experience_level].values[order[::-1]]
@@ -1921,7 +1946,7 @@ def get_cell_metrics_unmatched_cells(results_pivoted):
     computes metrics on dropout scores for each cell, including experience level and feature selectivity
     does not require cells to be matched, does not add cluster info
     """
-    features = processing.get_feature_labels_for_clustering()
+    features = get_feature_labels_for_clustering()
     cell_metrics = pd.DataFrame()
     for i, cell_specimen_id in enumerate(results_pivoted.cell_specimen_id.values):
         cell_dropouts = results_pivoted[results_pivoted.cell_specimen_id == cell_specimen_id].groupby('experience_level').mean()[features]
@@ -1966,7 +1991,7 @@ def get_coding_metrics(index_dropouts, index_value, index_name):
     stats.loc[index_value, 'max_coding_score'] = index_dropouts.loc[dominant_experience_level][dominant_feature]
     stats.loc[index_value, 'max_image_coding_score'] = index_dropouts.loc[dominant_experience_level]['all-images']
     for experience_level in index_dropouts.index.values:
-        stats.loc[index_value, 'image_coding_'+experience_level] = index_dropouts.loc[experience_level]['all-images']
+        stats.loc[index_value, 'image_coding_' + experience_level] = index_dropouts.loc[experience_level]['all-images']
     stats.loc[index_value, 'feature_selectivity'] = feature_selectivity
     stats.loc[index_value, 'experience_selectivity'] = experience_selectivity
     # get experience modulation indices
@@ -1981,7 +2006,7 @@ def get_coding_metrics(index_dropouts, index_value, index_name):
     exp_mod_direction = (row['Novel'] - row['Familiar']) / (row['Novel'] + row['Familiar'])
     # persistence of exp mod is whether coding stays similar after repetition of novel session
 #     exp_mod_persistence = (row['Novel >1']-row['Novel 1'])/(row['Novel >1']+row['Novel 1'])
-    exp_mod_persistence = row['Novel +'] / row['Novel'] # make it an index
+    exp_mod_persistence = row['Novel +'] / row['Novel']  # make it an index
     stats.loc[index_value, 'exp_mod_direction'] = exp_mod_direction
     stats.loc[index_value, 'exp_mod_persistence'] = exp_mod_persistence
     # within session joint coding index
@@ -2046,7 +2071,7 @@ def get_coding_score_metrics_per_experience_level(cluster_meta, results_pivoted)
         cell_scores['dominant_feature'] = dominant_feature
         cell_scores['dominant_experience_level'] = dominant_experience_level
         # create boolean column for rows where the experience level is the one that has the max coding score
-        indices = cell_scores[(cell_scores.experience_level==dominant_experience_level)].index.values
+        indices = cell_scores[(cell_scores.experience_level == dominant_experience_level)].index.values
         cell_scores['pref_experience_level'] = False
         cell_scores.at[indices, 'pref_experience_level'] = True
         # move cell specimen id and exp level to front of df
@@ -2114,7 +2139,7 @@ def get_cluster_metrics_all_cre(cluster_meta, feature_matrix, results_pivoted):
         # get dropout scores for cells in this cluster in this cre line
         mean_dropout_df = np.abs(feature_matrix.loc[this_cluster_csids].mean().unstack())
         stats = get_coding_metrics(index_dropouts=mean_dropout_df.T, index_value=cluster_id,
-                                    index_name='cluster_id')
+                                   index_name='cluster_id')
         fraction_cells = len(this_cluster_csids) / float(len(cell_specimen_ids))
         stats['fraction_cells'] = fraction_cells
         stats['F_max'] = mean_dropout_df['Familiar'].max()
@@ -2290,7 +2315,7 @@ def generate_merged_table_of_model_free_metrics(data_type='filtered_events', ses
     import visual_behavior.ophys.response_analysis.cell_metrics as cm
 
     if save_dir is not None:
-        merged_model_free_metrics_table_filepath = os.path.join(save_dir, 'merged_model_free_metrics_table_'+data_type+'_'+inclusion_criteria+'.csv')
+        merged_model_free_metrics_table_filepath = os.path.join(save_dir, 'merged_model_free_metrics_table_' + data_type + '_' + inclusion_criteria + '.csv')
         print('filepath:', merged_model_free_metrics_table_filepath)
     else:
         print('no save_dir provided, cant save or load model free metrics table')
@@ -2298,7 +2323,7 @@ def generate_merged_table_of_model_free_metrics(data_type='filtered_events', ses
         print('loading model free metrics table')
         model_free_metrics = pd.read_csv(merged_model_free_metrics_table_filepath, index_col=0)
     else:
-        ### load model free metrics (one row per cell / experience level)
+        # load model free metrics (one row per cell / experience level)
 
         # all images
         condition = 'images'
@@ -2320,62 +2345,62 @@ def generate_merged_table_of_model_free_metrics(data_type='filtered_events', ses
         stimuli = 'all_images'
         change_response_metrics = cm.get_cell_metrics_for_conditions(data_type, condition, stimuli, session_subset, inclusion_criteria)
 
-        ### merge all tables together
+        # merge all tables together
 
         # rename metrics so its clear what they were computed on (i.e. images vs. omissions vs. changes)
-        model_free_metrics = pref_stim_response_metrics.rename(columns={'mean_response':'mean_response_pref_image',
-                                                        'reliability': 'reliability_pref_image',
-                                                        'fano_factor': 'fano_factor_pref_image',
-                                                        'running_modulation_index': 'running_modulation_pref_image',
-                                                        'fraction_significant_p_value_gray_screen':'fraction_significant_p_value_gray_screen_pref_image'})
+        model_free_metrics = pref_stim_response_metrics.rename(columns={'mean_response': 'mean_response_pref_image',
+                                                                        'reliability': 'reliability_pref_image',
+                                                                        'fano_factor': 'fano_factor_pref_image',
+                                                                        'running_modulation_index': 'running_modulation_pref_image',
+                                                                        'fraction_significant_p_value_gray_screen': 'fraction_significant_p_value_gray_screen_pref_image'})
 
         # select columns to keep
         model_free_metrics = model_free_metrics[['cell_specimen_id', 'experience_level', 'ophys_experiment_id',
                                                 'mean_response_pref_image', 'reliability_pref_image', 'fraction_significant_p_value_gray_screen_pref_image',
-                                                'fano_factor_pref_image', 'running_modulation_pref_image']]
+                                                 'fano_factor_pref_image', 'running_modulation_pref_image']]
 
         # rename and merge in all image metrics
-        tmp = response_metrics.rename(columns={'mean_response':'mean_response_all_images',
+        tmp = response_metrics.rename(columns={'mean_response': 'mean_response_all_images',
                                                'lifetime_sparseness': 'lifetime_sparseness_images',
-                                                'reliability': 'reliability_all_images',
-                                                'fano_factor': 'fano_factor_all_images',
-                                                'running_modulation_index': 'running_modulation_all_images',
+                                               'reliability': 'reliability_all_images',
+                                               'fano_factor': 'fano_factor_all_images',
+                                               'running_modulation_index': 'running_modulation_all_images',
                                                'fraction_significant_p_value_gray_screen': 'fraction_significant_p_value_gray_screen_all_images'})
-        model_free_metrics = model_free_metrics.merge(tmp[['cell_specimen_id', 'experience_level',  'ophys_experiment_id',
-                                                        'mean_response_all_images', 'lifetime_sparseness_images',
-                                                        'reliability_all_images', 'fraction_significant_p_value_gray_screen_all_images',
-                                                        'fano_factor_all_images', 'running_modulation_all_images']],
-                                                      on=['cell_specimen_id', 'experience_level',  'ophys_experiment_id'])
+        model_free_metrics = model_free_metrics.merge(tmp[['cell_specimen_id', 'experience_level', 'ophys_experiment_id',
+                                                           'mean_response_all_images', 'lifetime_sparseness_images',
+                                                           'reliability_all_images', 'fraction_significant_p_value_gray_screen_all_images',
+                                                           'fano_factor_all_images', 'running_modulation_all_images']],
+                                                      on=['cell_specimen_id', 'experience_level', 'ophys_experiment_id'])
 
         # merge in omission metrics for each exp level
-        tmp = omission_response_metrics.rename(columns={'mean_response':'mean_response_omissions',
+        tmp = omission_response_metrics.rename(columns={'mean_response': 'mean_response_omissions',
                                                         # 'post_omitted_response': 'mean_response_post_omissions',
                                                         'reliability': 'reliability_omissions',
                                                         'fano_factor': 'fano_factor_omissions',
                                                         'running_modulation_index': 'running_modulation_omissions',
                                                         'fraction_significant_p_value_gray_screen': 'fraction_significant_p_value_gray_screen_omissions'})
         model_free_metrics = model_free_metrics.merge(tmp[['cell_specimen_id', 'experience_level', 'ophys_experiment_id',
-                                                            'mean_response_omissions', #'mean_response_post_omissions',
+                                                           'mean_response_omissions',  # 'mean_response_post_omissions',
                                                            'reliability_omissions', 'fraction_significant_p_value_gray_screen_omissions',
-                                                            'fano_factor_omissions', 'running_modulation_omissions',
-                                                            'omission_modulation_index']],
+                                                           'fano_factor_omissions', 'running_modulation_omissions',
+                                                           'omission_modulation_index']],
                                                       on=['cell_specimen_id', 'experience_level', 'ophys_experiment_id'])
 
         # merge in change metrics for each exp level
-        tmp = change_response_metrics.rename(columns={'mean_response':'mean_response_changes',
+        tmp = change_response_metrics.rename(columns={'mean_response': 'mean_response_changes',
                                                       'pre_change_response': 'mean_response_pre_change',
                                                       'lifetime_sparseness': 'lifetime_sparseness_changes',
-                                                        'reliability': 'reliability_changes',
-                                                        'fano_factor': 'fano_factor_changes',
-                                                        'running_modulation_index': 'running_modulation_changes',
-                                                       'fraction_significant_p_value_gray_screen': 'fraction_significant_p_value_gray_screen_changes'})
-        model_free_metrics = model_free_metrics.merge(tmp[['cell_specimen_id', 'experience_level',  'ophys_experiment_id',
-                                                            'mean_response_changes', 'mean_response_pre_change',
-                                                            'lifetime_sparseness_changes',
-                                                            'reliability_changes', 'fraction_significant_p_value_gray_screen_changes',
-                                                            'fano_factor_changes', 'running_modulation_changes',
-                                                            'change_modulation_index', 'hit_miss_index']],
-                                                      on=['cell_specimen_id', 'experience_level',  'ophys_experiment_id'])
+                                                      'reliability': 'reliability_changes',
+                                                      'fano_factor': 'fano_factor_changes',
+                                                      'running_modulation_index': 'running_modulation_changes',
+                                                      'fraction_significant_p_value_gray_screen': 'fraction_significant_p_value_gray_screen_changes'})
+        model_free_metrics = model_free_metrics.merge(tmp[['cell_specimen_id', 'experience_level', 'ophys_experiment_id',
+                                                           'mean_response_changes', 'mean_response_pre_change',
+                                                           'lifetime_sparseness_changes',
+                                                           'reliability_changes', 'fraction_significant_p_value_gray_screen_changes',
+                                                           'fano_factor_changes', 'running_modulation_changes',
+                                                           'change_modulation_index', 'hit_miss_index']],
+                                                      on=['cell_specimen_id', 'experience_level', 'ophys_experiment_id'])
 
         # convert experience level
         model_free_metrics['experience_level'] = [utils.convert_experience_level(experience_level) for experience_level in model_free_metrics.experience_level.values]
@@ -2428,12 +2453,12 @@ def generate_coding_score_metrics_per_experience_level_table(cluster_meta, resul
 
         # merge coding scores tables
         merged_metrics = coding_scores_per_exp_level.merge(coding_score_metrics.reset_index()[['cell_specimen_id', 'dominant_feature_cluster',
-                                                                'dominant_experience_level_cluster']], on='cell_specimen_id', how='left')
+                                                                                               'dominant_experience_level_cluster']], on='cell_specimen_id', how='left')
         print(merged_metrics.experience_level.unique())
         # merge in metadata for each cell if cluster_meta is provided
         merged_metrics = merged_metrics.merge(cluster_meta.reset_index()[['cell_specimen_id', 'cre_line', 'cluster_id', 'targeted_structure',
-                                                'imaging_depth', 'binned_depth', 'area_binned_depth', 'project_code',
-                                                'mouse_id' ]], on='cell_specimen_id', how='left')
+                                                                          'imaging_depth', 'binned_depth', 'area_binned_depth', 'project_code',
+                                                                          'mouse_id' ]], on='cell_specimen_id', how='left')
 
         print(len(merged_metrics.cell_specimen_id.unique()), 'cells in merged coding score metrics per exp level table')
         if save_dir is not None:
@@ -2467,7 +2492,7 @@ def generate_merged_table_of_coding_score_and_model_free_metrics(cluster_meta, r
 
     # if metrics table already exists, load it, if not, generate and save it
     if save_dir is not None:
-        filename = 'merged_coding_score_and_model_free_metrics_table_'+data_type+'_'+inclusion_criteria+'.csv'
+        filename = 'merged_coding_score_and_model_free_metrics_table_' + data_type + '_' + inclusion_criteria + '.csv'
         merged_metrics_table_filepath = os.path.join(save_dir, filename)
     else:
         print('no save_dir provided, cant load or save metrics table')
@@ -2864,10 +2889,10 @@ def get_mean_dropout_scores_per_cluster(dropout_df, cluster_df=None, labels=None
     if sort and isinstance(cluster_df, pd.core.frame.DataFrame):
         cluster_ids = cluster_df['cluster_id'].value_counts().index.values  # sort cluster ids by size
     elif sort is False and isinstance(cluster_df, pd.core.frame.DataFrame):
-        cluster_ids = cluster_df['cluster_id'].unique() # sorts numerically not by cluster size
-    
+        cluster_ids = cluster_df['cluster_id'].unique()  # sorts numerically not by cluster size
+
     if sort is False and max_n_clusters is not None:
-        cluster_ids = np.arange(1, max_n_clusters+1)
+        cluster_ids = np.arange(1, max_n_clusters + 1)
 
     elif labels is not None:
         cluster_df = pd.DataFrame(data={'cluster_id': labels, 'cell_specimen_id': dropout_df.index.values})
@@ -2913,10 +2938,10 @@ def compute_SSE(mean_dropout_df_original, mean_dropout_df_compare):
 def compute_cluster_sse(feature_matrix):
     '''
     Computes Sum of Squared Error between each cell in feature matrix and the mean, to measure variability within clusters.
-    
+
     INPUT: 
     feature_matrix (pd.DataFrame): Dropout scores, rows are cell specimen ids.
-    
+
     Returns:
     SSE (np.ndarray): Array of SSE values between each cell and their mean.
     '''
@@ -2940,37 +2965,37 @@ def get_sse_df(feature_matrix, cluster_df, columns=['cluster_id', 'cre_line'], m
     Returns:
     - pd.DataFrame: DataFrame containing the SSE values for each cluster in each cre_line.
     '''
-    
-    variability_df = pd.DataFrame(columns=columns) # initialize empty dataframe
+
+    variability_df = pd.DataFrame(columns=columns)  # initialize empty dataframe
     cre_lines = cluster_df['cre_line'].unique()
-    
+
     columns = [*columns, metric]
-    
+
     if 'cell_specimen_id' in cluster_df.columns:
         cluster_df.set_index('cell_specimen_id', inplace=True)
-        
+
     for cre_line in cre_lines:
-        cre_cluster_df = cluster_df[cluster_df['cre_line']==cre_line]
+        cre_cluster_df = cluster_df[cluster_df['cre_line'] == cre_line]
         cre_cell_ids = cre_cluster_df.index.values
         cre_feature_matrix = feature_matrix.loc[cre_cell_ids]
         cluster_ids = np.sort(cre_cluster_df['cluster_id'].values)
-        for cluster_id in cluster_ids: # compute for each cluster id
-            cluster_cids = cre_cluster_df[cre_cluster_df['cluster_id']==cluster_id].index.values
+        for cluster_id in cluster_ids:  # compute for each cluster id
+            cluster_cids = cre_cluster_df[cre_cluster_df['cluster_id'] == cluster_id].index.values
             cluster_feature_matrix = cre_feature_matrix.loc[cluster_cids]
             if metric == 'sse':
                 values = compute_cluster_sse(cluster_feature_matrix)
-                
-            variability_df = variability_df.append(pd.DataFrame({'cre_line': [cre_line]*len(values), 
-                                   'cluster_id': [cluster_id]*len(values),
-                                   metric: values}, index=np.arange(len(values))),
+
+            variability_df = variability_df.append(pd.DataFrame({'cre_line': [cre_line] * len(values),
+                                                                 'cluster_id': [cluster_id] * len(values),
+                                                                 metric: values}, index=np.arange(len(values))),
                                                    ignore_index=True)
-                                   
+
         # compute for mean for clustered values
-        index = len(variability_df) 
+        index = len(variability_df)
         variability_df.at[index, 'cre_line'] = cre_line
         variability_df.at[index, 'cluster_id'] = 'clustered_mean'
-        variability_df.at[index, metric] = variability_df[variability_df['cre_line']==cre_line][metric].mean()
-        
+        variability_df.at[index, metric] = variability_df[variability_df['cre_line'] == cre_line][metric].mean()
+
         # compute mean of unclustered values for each cre_line
         if metric == 'sse':
             value = np.mean(compute_cluster_sse(cre_feature_matrix))
@@ -2978,7 +3003,7 @@ def get_sse_df(feature_matrix, cluster_df, columns=['cluster_id', 'cre_line'], m
         variability_df.at[index, 'cre_line'] = cre_line
         variability_df.at[index, 'cluster_id'] = 'unclustered_mean'
         variability_df.at[index, metric] = value
-                
+
     return variability_df
 
 
@@ -2997,43 +3022,41 @@ def get_sse_df_with_clustered_column(feature_matrix, cluster_df, columns=['clust
     Returns:
     - pd.DataFrame: DataFrame containing the SSE values for each cluster in each cre_line.
     '''
-    
+
     variability_df = pd.DataFrame(columns=columns)
     cre_lines = np.sort(cluster_df['cre_line'].unique())
-    
+
     columns = [*columns, metric]
-    
+
     if 'cell_specimen_id' in cluster_df.columns:
         cluster_df.set_index('cell_specimen_id', inplace=True)
-        
+
     for cre_line in cre_lines:
-        cre_cluster_df = cluster_df[cluster_df['cre_line']==cre_line]
+        cre_cluster_df = cluster_df[cluster_df['cre_line'] == cre_line]
         cre_cell_ids = cre_cluster_df.index.values
         cre_feature_matrix = feature_matrix.loc[cre_cell_ids]
-        
+
         cluster_ids = np.sort(cre_cluster_df['cluster_id'].values)
-        for cluster_id in cluster_ids: # clustered
-            cluster_cids = cre_cluster_df[cre_cluster_df['cluster_id']==cluster_id].index.values
+        for cluster_id in cluster_ids:  # clustered
+            cluster_cids = cre_cluster_df[cre_cluster_df['cluster_id'] == cluster_id].index.values
             cluster_feature_matrix = cre_feature_matrix.loc[cluster_cids]
             if metric == 'sse':
                 values = compute_cluster_sse(cluster_feature_matrix)
-                
-            variability_df = variability_df.append(pd.DataFrame({'cre_line': [cre_line]*len(values), 
-                                   'cluster_id': [cluster_id]*len(values),
-                                    'clustered': [True]*len(values),
-                                   metric: values}, index=np.arange(len(values))),
+
+            variability_df = variability_df.append(pd.DataFrame({'cre_line': [cre_line] * len(values),
+                                                                 'cluster_id': [cluster_id] * len(values),
+                                                                 'clustered': [True] * len(values),
+                                                                 metric: values}, index=np.arange(len(values))),
                                                    ignore_index=True)
-                                   
-            
-        if metric == 'sse': # not clustered
+
+        if metric == 'sse':  # not clustered
             values = compute_cluster_sse(cre_feature_matrix)
-        variability_df = variability_df.append(pd.DataFrame({'cre_line': [cre_line]*len(values), 
-                                   'cluster_id': [np.nan]*len(values),
-                                    'clustered': [False]*len(values),
-                                   metric: values}, index=np.arange(len(values))),
-                                                   ignore_index=True)
-                
-        
+        variability_df = variability_df.append(pd.DataFrame({'cre_line': [cre_line] * len(values),
+                                                             'cluster_id': [np.nan] * len(values),
+                                                             'clustered': [False] * len(values),
+                                                             metric: values}, index=np.arange(len(values))),
+                                               ignore_index=True)
+
     return variability_df
 
 
@@ -3113,7 +3136,7 @@ def get_cluster_probability_df(shuffle_type_probabilities, cre_line=None,
     shuffle_types = shuffle_type_probabilities.keys()
     # create empty df with columns to collect
     shuffle_type_probability_df = pd.DataFrame(columns=columns)
-   
+
     for shuffle_type in shuffle_types:
         if cre_line is None:
             cre_lines = [None]
@@ -3155,7 +3178,7 @@ def get_matched_cluster_labels(SSE_mapping):
             matched_id = SSE_mapping[n_boot][cluster_id]
             matched_ids.append(matched_id)
         matched_clusters[cluster_id] = matched_ids  # list of all matched IDs for each original cluster
-    return matched_clusters # dictionary of original cluster IDs and their matched IDs across all shuffle iterations
+    return matched_clusters  # dictionary of original cluster IDs and their matched IDs across all shuffle iterations
 
 
 def get_cluster_size_variance(SSE_mapping, cluster_df_shuffled, normalize=False, use_nan=False, adjust_to_expected_N=False):
@@ -3184,7 +3207,7 @@ def get_cluster_size_variance(SSE_mapping, cluster_df_shuffled, normalize=False,
 
             if matched_id_this_nb != -1:
                 # get number of cells per cluster for the cluster IDs in the shuffles using the matched ID for THIS shuffle iteration
-                
+
                 try:
                     cluster_sizes.append(shuffled_cluster_sizes_this_boot.loc[matched_id_this_nb])
                 except KeyError:
@@ -3449,11 +3472,13 @@ def get_variability_df(feature_matrix, cluster_df, columns=['cluster_id', 'cre_l
 
     return variability_df
 
-## Functions for response metric plots across clusters
+# Functions for response metric plots across clusters
+
+
 def add_significance(sample1, sample2, test='2ttest'):
-    
+
     from scipy import stats
-    if len(sample1)!=0 and len(sample2)!=0:
+    if len(sample1) != 0 and len(sample2) != 0:
 
         nan_mask = np.isnan(sample1)
         # Remove NaN values from the array
@@ -3474,22 +3499,20 @@ def add_significance(sample1, sample2, test='2ttest'):
             t, p = stats.mannwhitneyu(sample1_without_nans, sample2_without_nans)
 
         elif test == 'W':
-            try:            
-                diff = np.squeeze(sample1)- np.squeeze(sample2)
-                res = stats.wilcoxon(diff)# diff)
+            try:
+                diff = np.squeeze(sample1) - np.squeeze(sample2)
+                res = stats.wilcoxon(diff)  # diff)
                 t = res.statistic
                 p = res.pvalue
             except:
-                t=np.nan
-                p=np.nan
+                t = np.nan
+                p = np.nan
         else:
             print('Test was not recognized')
-            t=np.nan
-            p=np.nan
+            t = np.nan
+            p = np.nan
     else:
-        t=np.nan
-        p=np.nan
-        
-    return t,p
-    
+        t = np.nan
+        p = np.nan
 
+    return t, p
