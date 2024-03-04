@@ -5,14 +5,17 @@ import numpy as np
 import pandas as pd
 import matplotlib
 import matplotlib.pyplot as plt
+from matplotlib.lines import Line2D
 
 from scipy import signal
 from scipy.spatial.distance import cdist, pdist
+import re
 
 from sklearn.cluster import KMeans
 
 import visual_behavior.visualization.utils as utils
 import visual_behavior.data_access.loading as loading
+from visual_behavior_glm import GLM_visualization_tools as gvt   
 
 from visual_behavior_glm import GLM_clustering as glm_clust  # noqa E501
 
@@ -3394,7 +3397,6 @@ def plot_variability_reduction(cre_lines, variability_df_with_clustered_column, 
     Returns:
     - None
     '''
-    from matplotlib.lines import Line2D
     fig, ax = plt.subplots(1,1, figsize=(6,3))
     x1 = [0.9, 1.9, 2.9]  # not clustered x location
     x2 = [1.1, 2.1, 3.1]  # clustered x location
@@ -4428,7 +4430,7 @@ def plot_distribution(data_array1, data_array2, exp_level_1, exp_level_2,
         test: (str) test to use for significance, default='MW', other other options are 'ttest' and 'W' for within sample comparison
          suffix: (str) suffix to add to plot title, default='' '''
     
-    from visual_behavior_glm import GLM_visualization_tools as gvt    
+     
     if ax is None:
         fig, ax = plt.subplots(1,1)
     
@@ -5058,7 +5060,7 @@ def plot_significance_grid(df, rm_features=None, cre_lines=None, save_dir=None):
         rm_features = df['metric'].unique()
     if cre_lines is None:
         cre_lines = df['CRE'].unique()
-        
+
     for rm_f in rm_features:
         for cre in cre_lines:
             # Set up the grid plot
@@ -5105,3 +5107,110 @@ def plot_significance_grid(df, rm_features=None, cre_lines=None, save_dir=None):
             figname = os.path.join(save_dir, folder, filename)
             fig.savefig(figname)
             plt.close()
+
+
+
+def plot_kde_rugplot(ax, data, color, y_shift, linestyle='-'):
+    '''
+    Plot kernel density estimate and rug plot.
+
+    Args:
+    - ax (matplotlib.axes.Axes): Axes object for plotting.
+    - data (np.ndarray): Data to plot.
+    - color (str): Color for the plot.
+    - y_shift (float): Shift value for the plot.
+    - linestyle (str): Linestyle for the plot.
+
+    Returns:
+    - matplotlib.axes.Axes: Axes object with the plot.
+    '''
+    ax = sns.kdeplot(np.squeeze(data), color=color, linewidth=3, linestyle=linestyle, ax=ax)
+    ax.plot(data, [y_shift]*len(data), '|', color=color)
+    ax.set_yscale('linear')
+    return ax
+
+def plot_response_boxplot(ax, data, colors, patch_artist=True, widths=0.5):
+    '''
+    Plot boxplot for response data.
+
+    Args:
+    - ax (matplotlib.axes.Axes): Axes object for plotting.
+    - data (list): List of data arrays.
+    - colors (list): List of colors for the plot.
+    - patch_artist (bool): Whether to use patch artist for boxplot.
+    - widths (float): Width of the boxplot.
+
+    Returns:
+    - matplotlib.axes.Axes: Axes object with the plot.
+    '''
+    if ax is None:
+        fig, ax = plt.subplots(1, 1)
+    
+    data_without_nans = []
+    for d in data:
+        if len(d) != 0:
+            nan_mask = np.isnan(d)
+            data_without_nans.append(d[~nan_mask])
+
+    bplot = ax.boxplot(np.squeeze(data_without_nans).T, patch_artist=patch_artist, widths=widths)
+
+    for patch, color in zip(bplot['boxes'], colors):
+        patch.set_facecolor(color)
+
+    ax.set_yscale('log')
+    plt.tight_layout()
+    return ax
+
+def plot_cluster_rugplots(ax, cre_line, cluster_ids, exp_levels, rm_f, linestyles=None, test='MW', colors=[]):
+    '''
+    Plot cluster rug plots.
+
+    Args:
+    - ax (matplotlib.axes.Axes): Axes object for plotting.
+    - cre_line (str): CRE line.
+    - cluster_ids (list): List of cluster IDs.
+    - exp_levels (list): List of experience levels.
+    - rm_f (str): Feature to analyze.
+    - linestyles (list): List of linestyles for the plot.
+    - test (str): Statistical test to use.
+    - colors (list): List of colors for the plot.
+
+    Returns:
+    - matplotlib.axes.Axes: Axes object with the plot.
+    - dict: Dictionary containing the plotted data.
+    '''
+    custom_lines = []
+    labels = []
+    all_data = []
+    all_colors = []
+    colors = gvt.project_colors()
+    
+    y_shift_base = -0.01
+    xmin, xmax = [0, 0]
+    start = True
+    fontsize = 16
+
+    pattern = re.compile(r'response')
+    for cluster_id, exp_level, linestyle in zip(cluster_ids, exp_levels, linestyles):
+        data = processing.prepare_data(cluster_id, exp_level, cre_line, rm_f)
+
+        if len(data) > 1:
+            match = pattern.search(rm_f)
+            if match:
+                all_data.append(data)
+                all_colors.append(colors[exp_level])
+            else:
+                ax = plot_kde_rugplot(ax, data, colors[exp_level], y_shift_base, linestyle)
+            if start:
+                y_shift = ax.get_ylim()[0]
+                start = False
+            y_shift_base += y_shift
+
+            if not match:
+                xmin = min(min(data), xmin)
+                xmax = max(max(data), xmax)
+                ax.set_xlim([xmin, xmax * 1.2])
+
+            custom_lines.append(Line2D([0], [0], color=colors[exp_level], linestyle=linestyle, lw=4))
+            labels.append(f'Clust {cluster_id} {processing.get_experience_map(exp_level)}')
+

@@ -600,6 +600,26 @@ def normalize_cluster_size(cluster_df):
 
     return grouped_df
 
+def prepare_data(cluster_df, cluster_id, exp_level, rm_f, cre_line=None):
+    '''
+    Prepare data based on cluster_id, exp_level, and cre_line.
+
+    Args:
+    - cluster_df (pd.DataFrame): DataFrame containing original cluster labels.
+    - cluster_id (int): Cluster ID.
+    - exp_level (str): Experience level.
+    - cre_line (str): CRE line.
+    - rm_f (str): Feature to analyze.
+
+    Returns:
+    - np.ndarray: Prepared data.
+    '''
+    if cre_line is None:
+        tmp = cluster_df[cluster_df.cluster_id == cluster_id]
+    else:
+        tmp = cluster_df[(cluster_df.cluster_id == cluster_id) & (cluster_df.cre_line == cre_line)]
+    cids = tmp.cell_specimen_id.values
+    return tmp.loc[cids][[rm_f]][[(rm_f, exp_level)]].values
 
 def extract_number(s):
     import re
