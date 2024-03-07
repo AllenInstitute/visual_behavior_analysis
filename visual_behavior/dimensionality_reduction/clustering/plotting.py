@@ -5189,7 +5189,9 @@ def plot_cluster_rugplots(cluster_df, rm_unstacked, ax, cre_line, cluster_ids, e
     y_shift_base = -0.01
     xmin, xmax = [0, 0]
     start = True
-    fontsize = 16
+    # fontsize = 16
+    if linestyles is None:
+        linestyles = ['-']*len(cluster_ids)
 
     pattern = re.compile(r'response')
     for cluster_id, exp_level, linestyle in zip(cluster_ids, exp_levels, linestyles):
@@ -5215,4 +5217,31 @@ def plot_cluster_rugplots(cluster_df, rm_unstacked, ax, cre_line, cluster_ids, e
             custom_lines.append(Line2D([0], [0], color=colors[exp_level], linestyle=linestyle, lw=4))
             labels.append(f'Clust {cluster_id} {processing.get_experience_map(exp_level)}')
     return ax, data
+
+
+# plot the distribution of correlation values comparing each cell to each cluster, separated by whether the comparison is within or across clusters
+def plot_within_across_cluster_correlations(correlations_summary, save_dir=None, folder=None):
+    """
+    Plots the within and across cluster correlations, and the difference between them, for each cluster ID
+
+    correlations_summary: dataframe containing one row for each cell_specimen_id, with columns for the cluster_id the cell belongs to, 
+    the value of the correlation of that cell's coding scores with its cluster average, the average of the correlation of that cells coding score with every other cluster,
+    and the ratio and difference of within vs across cluster correlations
+    """
+    n_clusters=12
+    paired = sns.color_palette("Paired")
+    figsize = (8,5)
+    fig, ax = plt.subplots(figsize=figsize)
+    order = [int(cluster_id) for cluster_id in np.sort(correlations_summary.cluster_id.unique())]
+    ax = sns.pointplot(data=correlations_summary, x='cluster_id', y='within_cluster_correlation', order=order, color=paired[1], label='within cluster correlation', ax=ax)
+    ax = sns.pointplot(data=correlations_summary, x='cluster_id', y='across_cluster_correlation', order=order, color=paired[3], label='across cluster correlation', ax=ax)
+    #ax = sns.pointplot(data=correlations_summary, x='cluster_id', y='correlation_diff', order=order, color=paired[5], label='difference', ax=ax)
+    ax.legend(fontsize='small', bbox_to_anchor=(1,1))
+    ax.set_title('within vs across cluster correlation')
+    ax.set_ylabel('correlation')
+    ax.set_xlabel('cluster ID')
+    ax.set_ylim(-0.2, 1.1)
+
+    if save_dir: 
+        utils.save_figure(fig, figsize, save_dir, folder, 'within_across_cluster_correlation_'+str(n_clusters))
 

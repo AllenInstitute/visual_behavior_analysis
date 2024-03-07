@@ -1209,6 +1209,58 @@ def run_all_cre_clustering(feature_matrix, cells_table, n_clusters, save_dir, fo
     return cluster_meta
 
 
+def compute_within_and_across_cluster_correlations(feature_matrix, cluster_meta, save_dir=None):
+    '''
+    Computes the pearsons correlation coefficient of each cell's dropout scores with the average dropout score of each cluster
+    Creates a dataframe containing the correlation values for each cell_specimen_id with each cluster, including columns for the cell_specimen_id,
+    the cluster_id the cell belongs to, the cluster_id being compared, the pearson correlation, and a boolean for whether the cluster being compared is the cell's own cluster
+
+    feature_matrix: dataframe where rows are unique cell_specimen_ids and columns are dropout scores across experience levels
+    cluster_meta: dataframe with cell_specimen_ids as index and cluster metadata as cols, must include 'cluster_id'
+    Returns
+        correlations_df: dataframe with correlation values for each cell compared to each cluster
+    '''
+    correlation_list = []
+    clusters = cluster_meta['cluster_id'].unique()
+    n_clusters = len(clusters)
+    for cluster_id in clusters:
+        cluster_csids = cluster_meta[cluster_meta.cluster_id == cluster_id].index.values
+        # get average dropout scores for this cluster
+        cluster_dropouts = feature_matrix.loc[cluster_csids]
+        cluster_mean = cluster_dropouts.mean().values
+        # compute correlation of each cell in this cluster to the average
+        for cell_specimen_id in cluster_csids:
+            this_cell_coding_scores = feature_matrix.loc[cell_specimen_id].values
+            # loop through every other cluster and compute the correlation of this cell's coding scores with the average coding for each cluster
+            for cluster_id_to_compare in clusters:
+                if cluster_id == cluster_id_to_compare: 
+                    within_cluster = True
+                else: 
+                    within_cluster = False
+                cluster_csids = cluster_meta[cluster_meta.cluster_id == cluster_id_to_compare].index.values
+                # get average dropout scores for this cluster
+                cluster_dropouts = feature_matrix.loc[cluster_csids]
+                cluster_mean = cluster_dropouts.mean().values
+                corr_coeff_p = np.corrcoef(cluster_mean, this_cell_coding_scores)[0][1]
+                correlation_list.append([cell_specimen_id, cluster_id, cluster_id_to_compare, corr_coeff_p, within_cluster, n_clusters])
+    correlations_df = pd.DataFrame(correlation_list, columns=['cell_specimen_id', 'cluster_this_cell_belongs_to', 'cluster_id_to_compare', 'pearson_correlation', 'within_cluster', 'total_n_clusters'])
+    
+    if save_dir: 
+        correlations_df.to_hdf(os.path.join(save_dir, 'within_across_cluster_correlations_'+str(n_clusters)+'.h5'), key='df')
+    return correlations_df
+
+
+def get_summary_of_within_across_cluster_correlations(group):
+    within_cluster_correlation = group[group.within_cluster==True].pearson_correlation.values[0]
+    across_cluster_correlation = np.nanmean(group[group.within_cluster==False].pearson_correlation.values)
+    correlation_diff = within_cluster_correlation - across_cluster_correlation
+    correlation_ratio = within_cluster_correlation/across_cluster_correlation
+    return pd.Series({'cluster_id': int(group.cluster_this_cell_belongs_to.values[0]), 
+                    'within_cluster_correlation': within_cluster_correlation,
+                    'across_cluster_correlation': across_cluster_correlation,
+                    'correlation_diff': correlation_diff, 
+                    'correlation_ratio': correlation_ratio})
+
 ### older functions for computing area / depth frequencies across clusters, by MG ###
 
 def make_frequency_table(cluster_meta, groupby_columns=['binned_depth'], normalize=True):
