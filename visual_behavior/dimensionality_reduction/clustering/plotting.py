@@ -5053,7 +5053,6 @@ def plot_significance_grid(df, rm_features=None, cre_lines=None, save_dir=None):
     Returns:
     - None
     '''
-    from visual_behavior_glm import GLM_visualization_tools as gvt
     exp_colors = gvt.project_colors()
 
     if rm_features is None:
@@ -5161,11 +5160,13 @@ def plot_response_boxplot(ax, data, colors, patch_artist=True, widths=0.5):
     plt.tight_layout()
     return ax
 
-def plot_cluster_rugplots(ax, cre_line, cluster_ids, exp_levels, rm_f, linestyles=None, test='MW', colors=[]):
+def plot_cluster_rugplots(cluster_df, rm_unstacked, ax, cre_line, cluster_ids, exp_levels, rm_f, linestyles=None, test='MW', colors=[]):
     '''
     Plot cluster rug plots.
 
     Args:
+    - cluster_df (pd.DataFrame): DataFrame containing cluster id data.
+    - rm_unstacked (pd.DataFrame): DataFrame containing unstacked response metric data.
     - ax (matplotlib.axes.Axes): Axes object for plotting.
     - cre_line (str): CRE line.
     - cluster_ids (list): List of cluster IDs.
@@ -5192,7 +5193,7 @@ def plot_cluster_rugplots(ax, cre_line, cluster_ids, exp_levels, rm_f, linestyle
 
     pattern = re.compile(r'response')
     for cluster_id, exp_level, linestyle in zip(cluster_ids, exp_levels, linestyles):
-        data = processing.prepare_data(cluster_id, exp_level, cre_line, rm_f)
+        data = processing.prepare_data(cluster_df, rm_unstacked, cluster_id=cluster_id, exp_level=exp_level, cre_line=cre_line, rm_f=rm_f)
 
         if len(data) > 1:
             match = pattern.search(rm_f)
@@ -5213,4 +5214,5 @@ def plot_cluster_rugplots(ax, cre_line, cluster_ids, exp_levels, rm_f, linestyle
 
             custom_lines.append(Line2D([0], [0], color=colors[exp_level], linestyle=linestyle, lw=4))
             labels.append(f'Clust {cluster_id} {processing.get_experience_map(exp_level)}')
+    return ax, data
 
