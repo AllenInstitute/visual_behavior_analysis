@@ -223,7 +223,7 @@ def clean_cluster_meta(cluster_meta):
     """
     # get clusters with <5 cells
     tmp = cluster_meta.groupby(['cre_line', 'cluster_id']).count()
-    locs_to_drop = tmp[tmp.labels < 5].index
+    locs_to_drop = tmp[tmp.labels <= 5].index
     # remove them from cluster_meta
     inds_to_drop = []
     for loc_to_drop in locs_to_drop:
