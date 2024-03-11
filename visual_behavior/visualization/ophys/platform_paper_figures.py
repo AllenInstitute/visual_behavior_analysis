@@ -730,8 +730,11 @@ def add_stats_to_plot(data, metric, ax, ymax=None, column_to_compare='experience
         tukey['x2'] = tukey['x2'] - 1
         tukey['x1'] = tukey['x1'] / 4
         tukey['x2'] = tukey['x2'] / 4
+        dist = 0.5
+    else:
+        dist = 1
 
-    scale = 0.1
+    scale = 0.05 # 0.1
     fontsize = 12
 
     if ymax is None:
@@ -740,8 +743,8 @@ def add_stats_to_plot(data, metric, ax, ymax=None, column_to_compare='experience
         ytop = ymax
     y1 = ytop
     y1h = ytop * (1 + scale)
-    y2 = ytop * (1 + scale * 2)
-    y2h = ytop * (1 + scale * 3)
+    y2 = ytop * (1 + (scale * 3))
+    y2h = ytop * (1 + (scale * 4))
 
     for tindex, row in tukey.iterrows():
         if (anova.pvalue < 0.05) and (row.reject): # if something is significant, add some significance bars
@@ -752,7 +755,7 @@ def add_stats_to_plot(data, metric, ax, ymax=None, column_to_compare='experience
             label = ''
             color = 'w'
             alpha = 0
-        if row.x2 - row.x1 > 1: # if it is a comparison more than 2 x values away, put the significance bar higher
+        if np.abs(row.x2 - row.x1) > 0.25: # if it is a comparison more than 2 x values away, put the significance bar higher
             y = y2
             yh = y2h
         else: # if they are only one apart, put the bar on the lower level
@@ -770,7 +773,7 @@ def add_stats_to_plot(data, metric, ax, ymax=None, column_to_compare='experience
                 ax.plot([row.x1, row.x1, row.x2, row.x2], [y, yh, yh, y], linestyle='-', color=color, alpha=alpha)
                 ax.text(np.mean([row.x1, row.x2]), yh, label, fontsize=fontsize, horizontalalignment='center',
                         verticalalignment='bottom')
-    ax.set_ylim(ymax=ytop * (1 + scale * 4)) # 3 works better for behavior plots
+    ax.set_ylim(ymax=ytop * (1 + (scale * 6))) # 3 works better for behavior plots
 
     return ax, tukey
 
@@ -1484,7 +1487,7 @@ def addSpan(ax, amin, amax, color='k', alpha=0.3, axtype='x'):
         ax.axhspan(amin, amax, facecolor=color, edgecolor='none', alpha=alpha, linewidth=0)
 
 
-def add_stim_color_span(dataset, ax, xlim=None, color=None, label_changes=False, label_omissions=False):
+def add_stim_color_span(dataset, ax, xlim=None, color=None, label_changes=True, label_omissions=True):
     """
     adds a vertical span for all stimulus presentations contained within xlim
     xlim is a time in seconds during a behavior session
