@@ -95,7 +95,7 @@ def get_feature_labels_for_clustering():
     """
     get GLM feature names to use for labeling plots
     """
-    feature_labels = ['images', 'omissions', 'behavior', 'task']
+    feature_labels = ['images', 'omissions', 'task', 'behavior']
     return feature_labels
 
 
