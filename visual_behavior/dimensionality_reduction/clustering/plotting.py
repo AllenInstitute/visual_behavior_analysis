@@ -1,18 +1,21 @@
 import os
-import umap
+#import umap
 import random
 import numpy as np
 import pandas as pd
 import matplotlib
 import matplotlib.pyplot as plt
+from matplotlib.lines import Line2D
 
 from scipy import signal
 from scipy.spatial.distance import cdist, pdist
+import re
 
 from sklearn.cluster import KMeans
 
 import visual_behavior.visualization.utils as utils
 import visual_behavior.data_access.loading as loading
+from visual_behavior_glm import GLM_visualization_tools as gvt   
 
 from visual_behavior_glm import GLM_clustering as glm_clust  # noqa E501
 
@@ -526,18 +529,24 @@ def plot_affinity_matrix(feature_matrix, cluster_meta, cre_line, n_clusters_cre,
     return ax
 
 
-def plot_umap_for_clusters(cluster_meta, feature_matrix, label_col='cluster_id', save_dir=None, folder=None):
+def plot_umap_for_clusters(cluster_meta, feature_matrix, label_col='cluster_id', cre_lines = ['all'], save_dir=None, folder=None):
     """
     plots umap for each cre line, colorized by metadata column provided as label_col
 
     label_col: column in cluster_meta to colorize points by
     """
-#    import umap
-    figsize = (15, 4)
-    fig, ax = plt.subplots(1, 3, figsize=figsize)
-    for i, cre_line in enumerate(get_cre_lines(cluster_meta)):
+    import umap.umap_ as umap
+    if cre_lines is None:
+        cre_lines = get_cre_lines(cluster_meta)
+    
+    figsize = (5*len(cre_lines), 4)
+    fig, ax = plt.subplots(1, len(cre_lines), figsize=figsize)
+    for i, cre_line in enumerate(cre_lines):
         # get number of unique values in label_col to color by
-        cre_meta = cluster_meta[cluster_meta.cre_line == cre_line]
+        if cre_line != 'all':
+            cre_meta = cluster_meta[cluster_meta.cre_line == cre_line]
+        else:
+            cre_meta = cluster_meta.copy()
         cre_csids = cre_meta.index.values
         n_cols = len(cre_meta[label_col].unique())
         palette = sns.color_palette('hls', n_cols)
@@ -3386,6 +3395,172 @@ def plot_exp_level_preference_barplot(cluster_metrics, save_dir=None, folder=Non
         utils.save_figure(fig, figsize, save_dir, folder, 'exp_level_preference_barplot')
 
 
+def plot_variability_reduction(cre_lines, variability_df_with_clustered_column, save_dir=None, folder=''):
+    '''
+    Plot the reduction in variability for clustered and unclustered data.
+
+    Args:
+    - cre_lines (list): List of CRE lines.
+    - variability_df_with_clustered_column (pd.DataFrame): DataFrame containing variability data.
+    This df can is the output of processing.get_sse_df_with_clustered_column
+    - save_dir (str): Directory to save the plot.
+
+    Returns:
+    - None
+    '''
+    fig, ax = plt.subplots(1,1, figsize=(6,3))
+    x1 = [0.9, 1.9, 2.9]  # not clustered x location
+    x2 = [1.1, 2.1, 3.1]  # clustered x location
+    xticklabels = utils.get_cell_types()
+    labels = [Line2D([0],[0], marker='o', markersize=8, markerfacecolor='none', markeredgecolor='Grey', markeredgewidth=2, linewidth=0),
+              Line2D([0],[0], marker='o', markersize=12, color='Grey', linewidth=0 ),
+              Line2D([0],[0], marker='o', markersize=12, color='Black', linewidth=0)]
+
+    for c, cre_line in enumerate(cre_lines):
+        cre_tmp = variability_df_with_clustered_column[(variability_df_with_clustered_column.cre_line==cre_line)]
+        # plot clusters means
+        cluster_tmp = cre_tmp[cre_tmp.clustered==True]
+        y = cluster_tmp.groupby('cluster_id').mean().values
+        x = [x2[c]]*len(y)
+        ax.scatter(x=x, y=y, marker='o', s=40, facecolors='none', edgecolors='Grey', linewidth=2)
+        
+        # plot clustered mean
+        x = x2[c]
+        y = cluster_tmp['sse'].mean()
+        err = cluster_tmp['sse'].std()
+        ax.errorbar(x=x-0.1, y=y, yerr=err, marker='o', markersize=12, color='Grey', linewidth=2)
+
+        # plot not clustered mean
+        x = x1[c]
+        y = cre_tmp[(cre_tmp.clustered==False)]['sse'].mean()
+        err = cre_tmp[(cre_tmp.clustered==False)]['sse'].std()
+        ax.errorbar(x=x, y=y, yerr=err, marker='o', markersize=12, color='Black', linewidth=2)
+        
+        # add significance stars
+        ax.text(x1[c]-0.01, 0.85, s='***', fontsize=12, color='Black')
+        ax.plot([x1[c], x2[c]-0.1], [0.84, 0.84], color='Black', linewidth=1)
+    
+    ax.set_xticks([1,2,3])
+    ax.set_xticklabels(xticklabels)
+    ax.set_ylabel('mean SSE values')
+    ax.set_ylim([-0.1, 1])
+
+    ax.legend(labels, ['within cluster', 'clustered data', 'unclustered data'],
+              loc="center right", 
+              ncol=3,
+              bbox_to_anchor=[1.08, 1.15],
+              borderaxespad=0, fontsize=12)
+    if save_dir:
+        utils.save_figure(fig, figsize=(6,3), save_dir=save_dir, folder=folder, fig_title='Reduction_in_variability')
+
+
+def plot_mean_cre_variability(variability_df_with_clustered_column, save_dir=None, folder=''):
+    '''
+    Plot the mean variability by cell type for unclustered data.
+
+    Args:
+    - variability_df_with_clustered_column (pd.DataFrame): DataFrame containing variability data.
+    This df can is the output of processing.get_sse_df_with_clustered_column
+    - save_dir (str): Directory to save the plot.
+
+    Returns:
+    - None
+    '''
+    fig, ax = plt.subplots(1, 1, figsize=(3, 3))
+    tmp = variability_df_with_clustered_column[(variability_df_with_clustered_column.clustered==False)]
+    ax = sns.barplot(data=tmp, x='cre_line', y='sse', color='Grey', errwidth=2, capsize=0.1, ax=ax)
+    ax.set_xticklabels(['Excitatory', 'Sst', 'Vip'], rotation=45, fontsize=16)
+    ax.set_xlabel('')
+    ax.set_ylim([0, 0.75])
+    yticks = [0, 0.2, 0.4, 0.6]
+    ax.set_yticks(yticks)
+    ax.set_yticklabels(yticks, fontsize=16)
+    ax.set_ylabel('Mean variance', fontsize=16)
+    ax.spines['right'].set_visible(False)
+    ax.spines['top'].set_visible(False)
+
+    # add significance stars
+    ax.text(0.3, 0.56, s='***', fontsize=16, color='Black')
+    ax.plot([0, 1], [0.55, 0.55], color='Black', linewidth=2)
+
+    ax.text(1.3, 0.6, s='***', fontsize=16, color='Black')
+    ax.plot([1, 2], [0.59, 0.59], color='Black', linewidth=2)
+
+    ax.text(0.8, 0.72, s='n.s.', fontsize=16, color='Black')
+    ax.plot([0, 2], [0.7, 0.7], color='Black', linewidth=2)
+
+    if save_dir:
+        utils.save_figure(fig, figsize=(3, 3), save_dir=save_dir, folder=folder, fig_title='Mean_variability_by_cell_type')
+
+
+def plot_cluster_sizes_lineplot(grouped_df, palette=None, save_dir=None, folder=''):
+    '''
+    Plot the cluster sizes for each CRE line.
+
+    Args:
+    - grouped_df (pd.DataFrame): DataFrame containing clustered data.
+    output of processing.normalize_cluster_size
+    - palette (dict): Color palette for different CRE lines.
+    - save_dir (str): Directory to save the plot.
+
+    Returns:
+    - None
+    '''
+    if palette is None:
+        palette = utils.get_cre_line_colors()
+    fig, ax = plt.subplots(1, 1, figsize=(3, 3))
+    markersize = [14, 10, 10]
+    linewidth = [4, 2, 2]
+    ax = sns.pointplot(data=grouped_df, x='cluster_id', y='percentage',
+                       hue='cre_line', palette=palette, joinlinewidth=0.1, ax=ax, markersize=markersize, linewidth=linewidth)
+    ax.legend(ax.get_legend_handles_labels()[0], utils.get_cell_types(), fontsize=12)
+    ax.set_ylim([0, 40])
+    ax.set_xlabel('Cluster ID')
+    ax.set_ylabel('% of all cells')
+    ax.spines['right'].set_visible(False)
+    ax.spines['top'].set_visible(False)
+    if save_dir:
+        utils.save_figure(fig, figsize=(3, 3), save_dir=save_dir, folder=folder, fig_title='Cluster_sizes_cre')
+
+
+def plot_pie_chart_cluster_size(grouped_df, cre_lines=None, palette=None, explode_index=[0,1,1], save_dir=None, folder=''):
+    '''
+    Plot pie charts for cluster sizes for each CRE line.
+
+    Args:
+    - grouped_df (pd.DataFrame): DataFrame containing clustered data.
+    - cre_lines (list): List of CRE lines.
+    - palette (list): Color palette for different CRE lines.
+    - explode_index (list): List of indices to explode pie chart slices.
+    - save_dir (str): Directory to save the plot.
+
+    Returns:
+    - None
+    '''
+    if palette is None:
+        palette = utils.get_cre_line_colors()
+    if cre_lines is None:
+        cre_lines = np.sort(grouped_df.cre_line.unique())
+    fig, ax = plt.subplots(len(cre_lines), 1, figsize=(3, 9))
+    for c, cre_line in enumerate(cre_lines[::-1]):
+        cluster_ids = grouped_df[grouped_df.cre_line==cre_line]['cluster_id'].values
+        cluster_id_labels = [str(cluster_id) for cluster_id in cluster_ids]
+        sizes = grouped_df[grouped_df.cre_line==cre_line]['percentage'].values
+        explode = [0]*len(cluster_ids)
+        explode[explode_index[c]] = 0.1
+        colors = [(0.7, 0.7, 0.7)]*len(cluster_ids)
+        colors[explode_index[c]] = palette[::-1][c]
+        pie = ax[c].pie(sizes, explode=explode, labels=cluster_id_labels, colors=colors, startangle=90)
+        for w in pie[0]:
+            w.set_linewidth(1)
+            w.set_edgecolor('Grey')
+
+        ax[c].axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
+    if save_dir:
+        utils.save_figure(fig, figsize=(3, 9), save_dir=save_dir, folder=folder, fig_title='pie_chart_cluster_size')
+
+
+
 def plot_cluster_percent_pie_legends(save_dir=None, folder=None):
     """
     Create dummy figures with colorbars & legends for experience level modulation, feature preference, etc.
@@ -4110,6 +4285,31 @@ def plot_matched_clusters_heatmap_remapped(SSE_mapping, mean_dropout_scores_unst
         utils.save_figure(fig, figsize, save_dir, folder,
                           f'{metric}_{shuffle_type}dropout_matched_clusters' + cre_line_suffix, formats = ['.png', '.pdf'])
 
+def plot_unraveled_clusters_mean(cre_line, cre_line_dfs, save_d=None, folder='', tag='', ax=None, figsize=(12,2)):
+    """
+    Plot the mean of the feature matrix for a given cre_line.
+
+    Args:
+    - cre_line (str): The cre_line for which to plot the mean feature matrix.
+    - cre_line_dfs (dict): A dictionary where keys are cre_lines and values are feature matrices.
+    - save_dir (str): The directory to save the plot.
+
+    Returns:
+    - None
+    """
+
+    feature_matrix = cre_line_dfs[cre_line]
+    data_means = feature_matrix.mean().unstack().loc[['all-images', 'omissions', 'behavioral', 'task']].stack().values
+    data_means = np.reshape(data_means, (1,12))
+    fig, ax = plt.subplots(1,1,figsize = (12, 2))
+    ax = sns.heatmap(data_means, cmap='Blues', vmax=.5, ax=ax)
+    ax.set_xticklabels('')
+    ax.set_yticklabels(['mean'], fontsize=16)
+    plt.tight_layout()
+    if save_dir is not None:
+        utils.save_figure(fig, figsize=(12,2), save_dir=save_dir, folder='', 
+                      fig_title=f'{cre_line}_mean_unraveled_dropout_scores')
+    
 
 def plot_unraveled_clusters(feature_matrix, cluster_df, sort_order=None, cre_line=None, save_dir=None, folder='', tag='',
                             ax=None, figsize=(4, 7), rename_columns=False):
@@ -4241,7 +4441,7 @@ def plot_distribution(data_array1, data_array2, exp_level_1, exp_level_2,
         test: (str) test to use for significance, default='MW', other other options are 'ttest' and 'W' for within sample comparison
          suffix: (str) suffix to add to plot title, default='' '''
     
-    from visual_behavior_glm import GLM_visualization_tools as gvt    
+     
     if ax is None:
         fig, ax = plt.subplots(1,1)
     
@@ -4848,3 +5048,211 @@ def plot_single_cell_tuning_curve_across_experience_levels(cell_specimen_id, ima
         filename = utils.convert_cre_line_to_cell_type(cre_line)+'_'+'cluster_'+str(cluster_id)+'_csid_'+str(cell_specimen_id)
         utils.save_figure(fig, figsize, os.path.join(save_dir, folder, 'tuning_curves'), 'single_cell_plots', filename)
         plt.close()
+
+
+
+def plot_significance_grid(df, rm_features=None, cre_lines=None, save_dir=None):
+    '''
+    Plot significance grid for each feature and CRE line.
+
+    Args:
+    - df (pd.DataFrame): DataFrame containing significance data.
+    - rm_features (list): List of features to analyze.
+    - cre_lines (list): List of CRE lines.
+    - save_dir (str): Directory to save the plots.
+
+    Returns:
+    - None
+    '''
+    exp_colors = gvt.project_colors()
+
+    if rm_features is None:
+        rm_features = df['metric'].unique()
+    if cre_lines is None:
+        cre_lines = df['CRE'].unique()
+
+    for rm_f in rm_features:
+        for cre in cre_lines:
+            # Set up the grid plot
+            figsize = (10, 10)
+            fig, ax = plt.subplots(figsize=figsize)
+
+            comparison = np.unique([df[(df['CRE']==cre)]['pair1'].unique(), df[(df['CRE']==cre)]['pair2'].unique()])
+            comparison = sorted(comparison, key=processing.custom_sort)
+            xticklabels = []
+            for pair1 in comparison:
+                xticklabels.append(pair1)
+                yticklabels = []
+                for pair2 in comparison:
+                    exp_level = pair2.split(' ')[-1]
+                    yticklabels.append(pair2)
+                    subset = df[(df['metric']==rm_f) & (df['pair1']==pair1) & (df['pair2']==pair2) & (df['CRE']==cre)]
+                    
+                    # Plot the point with significance indicator
+                    if not subset.empty:
+                        marker = '*' if subset['significance'].values[0] else ''
+                        ax.scatter(subset['pair1'], subset['pair2'], marker=marker, color=exp_colors[exp_level], linewidths=6, label=f'{pair1}')
+                    
+            # Customize the plot
+            ax.grid(alpha=0.3)
+            ax.set_xticklabels(xticklabels, rotation=90)
+            plt.gca().invert_yaxis()
+            ax.legend('')
+            ax.set_xlabel('Cluster ID and exp level')
+            ax.set_ylabel('Cluster ID and exp level')
+            ax.set_title(f'Significance Level Grid Plot {cre} {rm_f}')
+            plt.tight_layout()
+            plt.show()
+            if save_dir:
+                filename = f'{rm_f}_{cre}_significance_grid'
+                utils.save_figure(fig, figsize, save_dir, fodler=folder, filename=filename, format=['png','.pdf']) 
+                plt.close()
+            # Save the plot
+            folder = 'cluster_comparisons_pref_image'
+            filename = f'{rm_f}_{cre}_significance_table_with_color.pdf'
+            figname = os.path.join(save_dir, folder, filename)
+            fig.savefig(figname)
+            
+            filename = f'{rm_f}_{cre}_significance_table_with_color.png'
+            figname = os.path.join(save_dir, folder, filename)
+            fig.savefig(figname)
+            plt.close()
+
+
+
+def plot_kde_rugplot(ax, data, color, y_shift, linestyle='-'):
+    '''
+    Plot kernel density estimate and rug plot.
+
+    Args:
+    - ax (matplotlib.axes.Axes): Axes object for plotting.
+    - data (np.ndarray): Data to plot.
+    - color (str): Color for the plot.
+    - y_shift (float): Shift value for the plot.
+    - linestyle (str): Linestyle for the plot.
+
+    Returns:
+    - matplotlib.axes.Axes: Axes object with the plot.
+    '''
+    ax = sns.kdeplot(np.squeeze(data), color=color, linewidth=3, linestyle=linestyle, ax=ax)
+    ax.plot(data, [y_shift]*len(data), '|', color=color)
+    ax.set_yscale('linear')
+    return ax
+
+def plot_response_boxplot(ax, data, colors, patch_artist=True, widths=0.5):
+    '''
+    Plot boxplot for response data.
+
+    Args:
+    - ax (matplotlib.axes.Axes): Axes object for plotting.
+    - data (list): List of data arrays.
+    - colors (list): List of colors for the plot.
+    - patch_artist (bool): Whether to use patch artist for boxplot.
+    - widths (float): Width of the boxplot.
+
+    Returns:
+    - matplotlib.axes.Axes: Axes object with the plot.
+    '''
+    if ax is None:
+        fig, ax = plt.subplots(1, 1)
+    
+    data_without_nans = []
+    for d in data:
+        if len(d) != 0:
+            nan_mask = np.isnan(d)
+            data_without_nans.append(d[~nan_mask])
+
+    bplot = ax.boxplot(np.squeeze(data_without_nans).T, patch_artist=patch_artist, widths=widths)
+
+    for patch, color in zip(bplot['boxes'], colors):
+        patch.set_facecolor(color)
+
+    ax.set_yscale('log')
+    plt.tight_layout()
+    return ax
+
+def plot_cluster_rugplots(cluster_df, rm_unstacked, ax, cre_line, cluster_ids, exp_levels, rm_f, linestyles=None, test='MW', colors=[]):
+    '''
+    Plot cluster rug plots.
+
+    Args:
+    - cluster_df (pd.DataFrame): DataFrame containing cluster id data.
+    - rm_unstacked (pd.DataFrame): DataFrame containing unstacked response metric data.
+    - ax (matplotlib.axes.Axes): Axes object for plotting.
+    - cre_line (str): CRE line.
+    - cluster_ids (list): List of cluster IDs.
+    - exp_levels (list): List of experience levels.
+    - rm_f (str): Feature to analyze.
+    - linestyles (list): List of linestyles for the plot.
+    - test (str): Statistical test to use.
+    - colors (list): List of colors for the plot.
+
+    Returns:
+    - matplotlib.axes.Axes: Axes object with the plot.
+    - dict: Dictionary containing the plotted data.
+    '''
+    custom_lines = []
+    labels = []
+    all_data = []
+    all_colors = []
+    colors = gvt.project_colors()
+    
+    y_shift_base = -0.01
+    xmin, xmax = [0, 0]
+    start = True
+    # fontsize = 16
+    if linestyles is None:
+        linestyles = ['-']*len(cluster_ids)
+
+    pattern = re.compile(r'response')
+    for cluster_id, exp_level, linestyle in zip(cluster_ids, exp_levels, linestyles):
+        data = processing.prepare_data(cluster_df, rm_unstacked, cluster_id=cluster_id, exp_level=exp_level, cre_line=cre_line, rm_f=rm_f)
+
+        if len(data) > 1:
+            match = pattern.search(rm_f)
+            if match:
+                all_data.append(data)
+                all_colors.append(colors[exp_level])
+            else:
+                ax = plot_kde_rugplot(ax, data, colors[exp_level], y_shift_base, linestyle)
+            if start:
+                y_shift = ax.get_ylim()[0]
+                start = False
+            y_shift_base += y_shift
+
+            if not match:
+                xmin = min(min(data), xmin)
+                xmax = max(max(data), xmax)
+                ax.set_xlim([xmin, xmax * 1.2])
+
+            custom_lines.append(Line2D([0], [0], color=colors[exp_level], linestyle=linestyle, lw=4))
+            labels.append(f'Clust {cluster_id} {processing.get_experience_map(exp_level)}')
+    return ax, data
+
+
+# plot the distribution of correlation values comparing each cell to each cluster, separated by whether the comparison is within or across clusters
+def plot_within_across_cluster_correlations(correlations_summary, save_dir=None, folder=None):
+    """
+    Plots the within and across cluster correlations, and the difference between them, for each cluster ID
+
+    correlations_summary: dataframe containing one row for each cell_specimen_id, with columns for the cluster_id the cell belongs to, 
+    the value of the correlation of that cell's coding scores with its cluster average, the average of the correlation of that cells coding score with every other cluster,
+    and the ratio and difference of within vs across cluster correlations
+    """
+    n_clusters=12
+    paired = sns.color_palette("Paired")
+    figsize = (8,5)
+    fig, ax = plt.subplots(figsize=figsize)
+    order = [int(cluster_id) for cluster_id in np.sort(correlations_summary.cluster_id.unique())]
+    ax = sns.pointplot(data=correlations_summary, x='cluster_id', y='within_cluster_correlation', order=order, color=paired[1], label='within cluster correlation', ax=ax)
+    ax = sns.pointplot(data=correlations_summary, x='cluster_id', y='across_cluster_correlation', order=order, color=paired[3], label='across cluster correlation', ax=ax)
+    #ax = sns.pointplot(data=correlations_summary, x='cluster_id', y='correlation_diff', order=order, color=paired[5], label='difference', ax=ax)
+    ax.legend(fontsize='small', bbox_to_anchor=(1,1))
+    ax.set_title('within vs across cluster correlation')
+    ax.set_ylabel('correlation')
+    ax.set_xlabel('cluster ID')
+    ax.set_ylim(-0.2, 1.1)
+
+    if save_dir: 
+        utils.save_figure(fig, figsize, save_dir, folder, 'within_across_cluster_correlation_'+str(n_clusters))
+
