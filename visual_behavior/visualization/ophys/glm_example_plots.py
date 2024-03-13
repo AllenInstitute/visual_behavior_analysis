@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 import visual_behavior.visualization.utils as utils
 import visual_behavior.data_access.loading as loading
 import visual_behavior.visualization.ophys.summary_figures as sf
+import visual_behavior.visualization.ophys.platform_paper_figures as ppf
 
 import mindscope_utilities.general_utilities as ms_utils
 
@@ -81,6 +82,7 @@ def plot_kernel_activations(dataset, start_time, duration_seconds, kernel='omiss
     xlim_seconds = [start_time, start_time + duration_seconds]
 
     stim_table = dataset.stimulus_presentations.copy()
+    trials = dataset.trials.copy()
     # get all images & assign colors (image colors wont be used if a color is provided or if label_changes is True)
     images = np.sort(stim_table[stim_table.omitted == False].image_name.unique())
     image_colors = sns.color_palette("hls", len(images))
@@ -594,15 +596,18 @@ def get_stimulus_response_dfs_for_kernel_windows(dataset, kernels, frame_rate):
 
 def plot_kernels_and_traces_for_cell(cell_specimen_id, dataset,
                                      image_sdf, omission_sdf, change_sdf,
-                                     cell_weights, run_params, save_dir=None):
+                                     weights_df, kernels, save_dir=None):
     """
     plots the average reponse and kernel weights for each kernel type for a given cell
+    Must use `get_stimulus_response_dfs_for_kernel_windows` to get image omission and change stimulus response dfs
+    weights_df and kernels can be obtained using `load_GLM_outputs`
     """
 
     cre_line = utils.get_abbreviated_cell_type(dataset.metadata['cre_line'])
 
     # get weights for example cell
-    identifier = str(dataset.ophys_experiment_id) + '_' + str(cell_specimen_id)
+    ophys_experiment_id = dataset.ophys_experiment_id
+    identifier = str(ophys_experiment_id) + '_' + str(cell_specimen_id)
     cell_weights = weights_df[weights_df.identifier == identifier]
 
     # limit stim response dfs to this cell & relevant conditions
@@ -612,7 +617,6 @@ def plot_kernels_and_traces_for_cell(cell_specimen_id, dataset,
     misses_cdf = change_sdf[(change_sdf.cell_specimen_id == cell_specimen_id) & (change_sdf.miss == True)]
 
     exp_weights = cell_weights.copy()
-    kernels = run_params['kernels']
 
     # GLM output is all resampled to 30Hz now
     frame_rate = 31
@@ -642,7 +646,7 @@ def plot_kernels_and_traces_for_cell(cell_specimen_id, dataset,
         ax[i].set_title(feature)
         ax[i].set_xlabel('Time (s)')
         ax[i].set_ylabel('')
-        ax[i].set_ylim(-0.01, 0.18)
+        # ax[i].set_ylim(-0.01, 0.18)
         # ax[i].get_legend().remove()
         ax_to_share = i
         i += 1
@@ -658,8 +662,7 @@ def plot_kernels_and_traces_for_cell(cell_specimen_id, dataset,
     # all other kernels
     figsize = (16, 2.5)
     fig, ax = plt.subplots(1, len(features[8:]) + 1, figsize=figsize, sharey=True,
-                           gridspec_kw={
-                               'width_ratios': [1, 3, 2.25, 2.25, 2, 2, 2, ]})  # match axes widths to kernel durations
+                           gridspec_kw={'width_ratios': [1, 3, 2.25, 2.25, 2, 2, 2, ]})  # match axes widths to kernel durations
     # first axis is all-images
     i = 0
     image_weights = []
@@ -680,7 +683,7 @@ def plot_kernels_and_traces_for_cell(cell_specimen_id, dataset,
     ax[i].set_title('images')
     ax[i].set_xlabel('Time (s)')
     ax[i].set_ylabel('')
-    ax[i].set_ylim(-0.01, 0.18)
+    # ax[i].set_ylim(-0.01, 0.18)
 
     for i, feature in enumerate(features[8:]):
         i += 1
@@ -759,7 +762,7 @@ def plot_coding_scores_for_cell(cell_specimen_id, ophys_experiment_id, results_p
 
 
 
-if __main__:
+if __name__ == '__main__':
 
     import visual_behavior_glm.GLM_fit_dev as gfd
     import visual_behavior_glm.GLM_visualization_tools as gvt
@@ -798,7 +801,7 @@ if __main__:
 
     start_time = 2318  # 1500, 1450, 2550, 2320
     duration_seconds = 19.5
-    plot_behavior_and_physio_timeseries_GLM(dataset, start_time, duration_seconds, save_dir=save_dir)
+    plot_behavior_timeseries_and_GLM_kernel_activations(dataset, start_time, duration_seconds, save_dir=save_dir)
 
 
     ### Plot kernels and coding scores for a specific cell
