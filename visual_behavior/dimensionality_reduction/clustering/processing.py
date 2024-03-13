@@ -223,7 +223,7 @@ def clean_cluster_meta(cluster_meta):
     """
     # get clusters with <5 cells
     tmp = cluster_meta.groupby(['cre_line', 'cluster_id']).count()
-    locs_to_drop = tmp[tmp.labels < 5].index
+    locs_to_drop = tmp[tmp.labels <= 5].index
     # remove them from cluster_meta
     inds_to_drop = []
     for loc_to_drop in locs_to_drop:
@@ -3556,6 +3556,53 @@ def get_variability_df(feature_matrix, cluster_df, columns=['cluster_id', 'cre_l
                                                ignore_index=True)
 
     return variability_df
+
+
+def create_and_save_cluster_meta(coclustering_df, n_clusters, feature_matrix, cells_table_matched, cluster_meta_filename=None):
+    '''
+    INPUT:
+    coclustering_df: (pd.DataFrame) of coclustering results
+    n_clusters: (int) number of clusters
+    feature_matrix: (pd.DataFrame) of dropout scores
+    cells_table_matched: (pd.DataFrame) of cell metadata
+    cluster_meta_filename: (str) filename to save the cluster meta file
+    '''
+    from sklearn.cluster import AgglomerativeClustering
+    X = coclustering_df.values
+    cluster = AgglomerativeClustering(n_clusters=n_clusters, affinity='euclidean', linkage='average')
+    labels = cluster.fit_predict(X)
+    cell_specimen_ids = coclustering_df.index.values
+
+    # make dictionary with labels for each cell specimen ID in this cre line
+    labels_dict = {'labels': labels, 'cell_specimen_id': cell_specimen_ids}
+
+    # turn it into a dataframe
+    labels_df = pd.DataFrame(data=labels_dict, columns=['labels', 'cell_specimen_id'])
+
+    # get new cluster_ids based on size of clusters and add to labels_df
+    cluster_size_order = labels_df['labels'].value_counts().index.values
+
+    # translate between original labels and new IDs based on cluster size
+    labels_df['cluster_id'] = [np.where(cluster_size_order == label)[0][0] for label in labels_df.labels.values]
+
+    # concatenate with df for all cre lines
+    cluster_labels = labels_df.copy()
+    cluster_labels['cluster_id'] = cluster_labels['cluster_id'].copy() + 1
+
+    # add metadata to cluster labels
+    cell_metadata = get_cell_metadata_for_feature_matrix(feature_matrix, cells_table_matched)
+
+    cluster_meta = cluster_labels[['cell_specimen_id', 'cluster_id', 'labels']].merge(cell_metadata, on='cell_specimen_id')
+    cluster_meta = cluster_meta.set_index('cell_specimen_id')
+
+    # annotate & clean cluster metadata
+    cluster_meta = clean_cluster_meta(cluster_meta)  # drop cluster IDs with fewer than 5 cells in them
+
+    # save cluster meta file
+    if cluster_meta_filename is not None:
+        cluster_meta.to_hdf(cluster_meta_filename, key='df')
+        print('Created and saved cluster_meta file.')
+    return cluster_meta
 
 # Functions for response metric plots across clusters
 
