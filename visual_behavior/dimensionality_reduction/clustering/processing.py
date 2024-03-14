@@ -2778,10 +2778,11 @@ def shuffle_dropout_score(df_dropout, shuffle_type='all', separate_cre_lines=Fal
 
                     df_shuffled_cre = df_shuffled_cre_again.copy()
             
+            else:
+                print('no such shuffle type..')
+                df_shuffled = None
+            
             df_shuffled = df_shuffled.append(df_shuffled_cre)
-        else:
-            print('no such shuffle type..')
-            df_shuffled = None
  # get cids for each cre line
             # 
     else:
