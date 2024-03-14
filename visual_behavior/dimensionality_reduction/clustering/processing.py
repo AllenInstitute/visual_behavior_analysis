@@ -680,7 +680,6 @@ def compute_gap(clustering, data, k_max=5, n_boots=20, reference_shuffle='all', 
                 reference = np.random.rand(*data.shape) * -1
             else:
                 reference_df = shuffle_dropout_score(data, shuffle_type=reference_shuffle, separate_cre_lines=separate_cre_lines)
-                print(len(reference_df))
                 reference = reference_df.values
 
             clustering.n_clusters = k
@@ -2713,7 +2712,6 @@ def shuffle_dropout_score(df_dropout, shuffle_type='all', separate_cre_lines=Fal
         df_shuffled = pd.DataFrame()
         for cre_line in cre_lines:
             cids = select_cre_cids(df_dropout.index.values, cre_line)
-            print(len(cids))
             df_cre = df_dropout.loc[cids].copy()
             df_shuffled_cre= df_cre.copy()
             regressors = df_cre.columns.levels[0].values
@@ -3745,3 +3743,22 @@ def add_significance(sample1, sample2, test='2ttest'):
         p = np.nan
 
     return t, p
+
+
+
+def get_cluster_info(cre_line, cluster_df):
+    """
+    Calculate unique mouse IDs in each cluster and unique cluster IDs in each mouse.
+
+    Args:
+    - cre_line (str): CRE line to process.
+    - cluster_df (DataFrame): DataFrame containing cluster information.
+
+    Returns:
+    - unique_mouse_per_cluster (Series): Series with unique mouse IDs in each cluster.
+    - unique_cluster_per_mouse (Series): Series with unique cluster IDs in each mouse.
+    """
+    tmp = cluster_df[cluster_df.cre_line_x == cre_line]
+    unique_mouse_per_cluster = tmp.groupby('cluster_id')['mouse_id'].nunique()
+    unique_cluster_per_mouse = tmp.groupby('mouse_id')['cluster_id'].nunique()
+    return unique_mouse_per_cluster, unique_cluster_per_mouse
