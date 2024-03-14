@@ -641,7 +641,7 @@ def compute_inertia(a, X, metric='euclidean'):
     return np.mean(W)
 
 
-def compute_gap(clustering, data, k_max=5, n_boots=20, reference_shuffle='all', metric='euclidean'):
+def compute_gap(clustering, data, k_max=5, n_boots=20, reference_shuffle='all', metric='euclidean', separate_cre_lines=False):
     '''
     Computes gap statistic between clustered data (ondata inertia) and null hypothesis (reference intertia).
 
@@ -652,6 +652,7 @@ def compute_gap(clustering, data, k_max=5, n_boots=20, reference_shuffle='all', 
     :param reference: (str) what type of shuffle to use, shuffle_dropout_scores,
             None is use random normal distribution
     :param metric: (str) type of distance to use, default = 'euclidean'
+    :param separate_cre_lines: (bool) whether or not to shuffle within cre lines. Set to True if feature matrix consists of multiple cre lines.
     :return:
     gap: array of gap values that are the difference between two inertias
     reference_inertia: array of log of reference inertia
@@ -678,7 +679,8 @@ def compute_gap(clustering, data, k_max=5, n_boots=20, reference_shuffle='all', 
             if reference_shuffle is None:
                 reference = np.random.rand(*data.shape) * -1
             else:
-                reference_df = shuffle_dropout_score(data, shuffle_type=reference_shuffle)
+                reference_df = shuffle_dropout_score(data, shuffle_type=reference_shuffle, separate_cre_lines=separate_cre_lines)
+                print(len(reference_df))
                 reference = reference_df.values
 
             clustering.n_clusters = k
@@ -819,7 +821,7 @@ def load_silhouette_scores(glm_version, feature_matrix, cell_metadata, save_dir,
 
 
 def load_gap_statistic(glm_version, feature_matrix, cell_metadata, save_dir=None,
-                       metric='euclidean', shuffle_type='all', k_max=25, n_boots=20):
+                       metric='euclidean', shuffle_type='all', k_max=25, n_boots=20, separate_cre_lines=False):
     """
        if gap statistic was computed and file exists in save_dir, load it
        otherwise run spectral clustering n_boots times, for a range of 1 to k_max clusters
@@ -840,7 +842,7 @@ def load_gap_statistic(glm_version, feature_matrix, cell_metadata, save_dir=None
         for cre_line in get_cre_lines(cell_metadata):
             feature_matrix_cre = get_feature_matrix_for_cre_line(feature_matrix, cell_metadata, cre_line)
             X = feature_matrix_cre.values
-            feature_matrix_cre_shuffled = shuffle_dropout_score(feature_matrix_cre, shuffle_type=shuffle_type)
+            feature_matrix_cre_shuffled = shuffle_dropout_score(feature_matrix_cre, shuffle_type=shuffle_type, separate_cre_lines=separate_cre_lines)
             reference = feature_matrix_cre_shuffled.values
             # create an instance of Spectral clustering object
             sc = SpectralClustering()
@@ -2680,7 +2682,19 @@ def build_stats_table(metrics_df, metrics_columns=None, dropna=True, pivot=False
     return stats_table
 
 
-def shuffle_dropout_score(df_dropout, shuffle_type='all'):
+def select_cre_cids(cids, cre_line):
+    '''
+    get cell specimen ids for a given cre line
+    cids: list of cids
+    cre_line: str, cre line to get cell specimen ids for
+    returns: list of cell specimen ids for the given cre line
+    '''
+    cells_table = loading.get_cell_table()
+    all_cre_line_ids = cells_table[cells_table['cre_line'] == cre_line]['cell_specimen_id'].values
+    cre_line_ids = np.intersect1d(cids, all_cre_line_ids)
+    return cre_line_ids
+
+def shuffle_dropout_score(df_dropout, shuffle_type='all', separate_cre_lines=False):
     '''
     Shuffles dataframe with dropout scores from GLM.
     shuffle_type: str, default='all', other options= 'experience', 'regressors', 'experience_within_cell',
@@ -2689,71 +2703,153 @@ def shuffle_dropout_score(df_dropout, shuffle_type='all'):
     Returns:
         df_shuffled (pd. Dataframe) of shuffled dropout scores
     '''
-    df_shuffled = df_dropout.copy()
-    regressors = df_dropout.columns.levels[0].values
-    experience_levels = df_dropout.columns.levels[1].values
-    if shuffle_type == 'all':
-        print('shuffling all data')
-        for column in df_dropout.columns:
-            df_shuffled[column] = df_dropout[column].sample(frac=1).values
+    if separate_cre_lines:
+        print('shuffle_dropout_score function: Feature matrix consists of multiple cre lines, going to shuffle dropout scores within cre lines, and combined them afterwards.')
+        # adding this if statement to amke sure that even if dropouts cores are clustered with all cre lines, the shuffle only happens within cre lines
+        # there is better ways of doing it, but for now, this is the easiest way to do it ira 2021-07-20
+        cre_lines = ['Slc17a7-IRES2-Cre', 'Sst-IRES-Cre', 'Vip-IRES-Cre']
+        print('using within cre line shuffle to create reference data for gap statistic. Cre lines are hardcoded [Slc17a7-IRES2-Cre, Sst-IRES-Cre, Vip-IRES-Cre]')
+        
+        df_shuffled = pd.DataFrame()
+        for cre_line in cre_lines:
+            cids = select_cre_cids(df_dropout.index.values, cre_line)
+            print(len(cids))
+            df_cre = df_dropout.loc[cids].copy()
+            df_shuffled_cre= df_cre.copy()
+            regressors = df_cre.columns.levels[0].values
+            experience_levels = df_cre.columns.levels[1].values
 
-    elif shuffle_type == 'experience':
-        print('shuffling data across experience')
-        assert np.shape(df_dropout.columns.levels)[
-            0] == 2, 'df should have two level column structure, 1 - regressors, 2 - experience'
-        for experience_level in experience_levels:
-            randomized_cids = df_dropout.sample(frac=1).index.values
-            for i, cid in enumerate(randomized_cids):
-                for regressor in regressors:
-                    df_shuffled.iloc[i][(regressor, experience_level)] = df_dropout.loc[cid][(regressor, experience_level)]
+            if shuffle_type == 'all':
+                print('shuffling all data')
+                for column in df_cre.columns:
+                    df_shuffled_cre[column] = df_cre[column].sample(frac=1).values
 
-    elif shuffle_type == 'regressors':
-        print('shuffling data across regressors')
-        assert np.shape(df_dropout.columns.levels)[
-            0] == 2, 'df should have two level column structure, 1 - regressors, 2 - experience'
-        for regressor in regressors:
-            randomized_cids = df_dropout.sample(frac=1).index.values
-            for i, cid in enumerate(randomized_cids):
+            elif shuffle_type == 'experience':
+                print('shuffling data across experience')
+                assert np.shape(df_cre.columns.levels)[
+                    0] == 2, 'df should have two level column structure, 1 - regressors, 2 - experience'
                 for experience_level in experience_levels:
-                    df_shuffled.iloc[i][(regressor, experience_level)] = df_dropout.loc[cid][(regressor, experience_level)]
+                    randomized_cids = df_cre.sample(frac=1).index.values
+                    for i, cid in enumerate(randomized_cids):
+                        for regressor in regressors:
+                            df_shuffled_cre.iloc[i][(regressor, experience_level)] = df_cre.loc[cid][(regressor, experience_level)]
 
-    elif shuffle_type == 'experience_within_cell':
-        print('shuffling data across experience within each cell')
-        cids = df_dropout.index.values
-        experience_level_shuffled = experience_levels.copy()
-        for cid in cids:
-            np.random.shuffle(experience_level_shuffled)
-            for j, experience_level in enumerate(experience_level_shuffled):
+            elif shuffle_type == 'regressors':
+                print('shuffling data across regressors')
+                assert np.shape(df_cre.columns.levels)[
+                    0] == 2, 'df should have two level column structure, 1 - regressors, 2 - experience'
                 for regressor in regressors:
-                    df_shuffled.loc[cid][(regressor, experience_levels[j])] = df_dropout.loc[cid][(regressor,
-                                                                                                   experience_level)]
-    elif shuffle_type == 'full_experience':
-        print('shuffling data across experience fully (cell id and experience level)')
-        assert np.shape(df_dropout.columns.levels)[
-            0] == 2, 'df should have two level column structure, 1 - regressors, 2 - experience'
-        # Shuffle cell ids first
-        for experience_level in experience_levels:
-            randomized_cids = df_dropout.sample(frac=1).index.values
-            for i, cid in enumerate(randomized_cids):
-                for regressor in regressors:
-                    df_shuffled.iloc[i][(regressor, experience_level)] = df_dropout.loc[cid][
-                        (regressor, experience_level)]
-        # Shuffle experience labels
-        df_shuffled_again = df_shuffled.copy(deep=True)
-        cids = df_shuffled.index.values
-        experience_level_shuffled = experience_levels.copy()
-        for cid in cids:
-            np.random.shuffle(experience_level_shuffled)
-            for j, experience_level in enumerate(experience_level_shuffled):
-                for regressor in regressors:
-                    df_shuffled_again.loc[cid][(regressor, experience_levels[j])] = df_shuffled.loc[cid][(regressor,
-                                                                                                          experience_level)]
+                    randomized_cids = df_cre.sample(frac=1).index.values
+                    for i, cid in enumerate(randomized_cids):
+                        for experience_level in experience_levels:
+                            df_shuffled_cre.iloc[i][(regressor, experience_level)] = df_cre.loc[cid][(regressor, experience_level)]
 
-        df_shuffled = df_shuffled_again.copy()
+            elif shuffle_type == 'experience_within_cell':
+                print('shuffling data across experience within each cell')
+                cids = df_cre.index.values
+                experience_level_shuffled = experience_levels.copy()
+                for cid in cids:
+                    np.random.shuffle(experience_level_shuffled)
+                    for j, experience_level in enumerate(experience_level_shuffled):
+                        for regressor in regressors:
+                            df_shuffled_cre.loc[cid][(regressor, experience_levels[j])] = df_cre.loc[cid][(regressor,
+                                                                                                    experience_level)]
+            elif shuffle_type == 'full_experience':
+                print('shuffling data across experience fully (cell id and experience level)')
+                assert np.shape(df_cre.columns.levels)[
+                    0] == 2, 'df should have two level column structure, 1 - regressors, 2 - experience'
+                # Shuffle cell ids first
+                for experience_level in experience_levels:
+                    randomized_cids = df_cre.sample(frac=1).index.values
+                    for i, cid in enumerate(randomized_cids):
+                        for regressor in regressors:
+                            df_shuffled_cre.iloc[i][(regressor, experience_level)] = df_cre.loc[cid][
+                            (   regressor, experience_level)]
+                    # Shuffle experience labels
+                    df_shuffled_cre_again = df_shuffled_cre.copy(deep=True)
+                    cids = df_shuffled_cre.index.values
+                    experience_level_shuffled = experience_levels.copy()
+                    for cid in cids:
+                        np.random.shuffle(experience_level_shuffled)
+                        for j, experience_level in enumerate(experience_level_shuffled):
+                            for regressor in regressors:
+                                df_shuffled_cre_again.loc[cid][(regressor, experience_levels[j])] = df_shuffled_cre.loc[cid][(regressor,
+                                                                                                            experience_level)]
 
+                    df_shuffled_cre = df_shuffled_cre_again.copy()
+            
+            df_shuffled = df_shuffled.append(df_shuffled_cre)
+        else:
+            print('no such shuffle type..')
+            df_shuffled = None
+ # get cids for each cre line
+            # 
     else:
-        print('no such shuffle type..')
-        df_shuffled = None
+        df_shuffled = df_dropout.copy()
+        regressors = df_dropout.columns.levels[0].values
+        experience_levels = df_dropout.columns.levels[1].values
+        if shuffle_type == 'all':
+            print('shuffling all data')
+            for column in df_dropout.columns:
+                df_shuffled[column] = df_dropout[column].sample(frac=1).values
+
+        elif shuffle_type == 'experience':
+            print('shuffling data across experience')
+            assert np.shape(df_dropout.columns.levels)[
+                0] == 2, 'df should have two level column structure, 1 - regressors, 2 - experience'
+            for experience_level in experience_levels:
+                randomized_cids = df_dropout.sample(frac=1).index.values
+                for i, cid in enumerate(randomized_cids):
+                    for regressor in regressors:
+                        df_shuffled.iloc[i][(regressor, experience_level)] = df_dropout.loc[cid][(regressor, experience_level)]
+
+        elif shuffle_type == 'regressors':
+            print('shuffling data across regressors')
+            assert np.shape(df_dropout.columns.levels)[
+                0] == 2, 'df should have two level column structure, 1 - regressors, 2 - experience'
+            for regressor in regressors:
+                randomized_cids = df_dropout.sample(frac=1).index.values
+                for i, cid in enumerate(randomized_cids):
+                    for experience_level in experience_levels:
+                        df_shuffled.iloc[i][(regressor, experience_level)] = df_dropout.loc[cid][(regressor, experience_level)]
+
+        elif shuffle_type == 'experience_within_cell':
+            print('shuffling data across experience within each cell')
+            cids = df_dropout.index.values
+            experience_level_shuffled = experience_levels.copy()
+            for cid in cids:
+                np.random.shuffle(experience_level_shuffled)
+                for j, experience_level in enumerate(experience_level_shuffled):
+                    for regressor in regressors:
+                        df_shuffled.loc[cid][(regressor, experience_levels[j])] = df_dropout.loc[cid][(regressor,
+                                                                                                    experience_level)]
+        elif shuffle_type == 'full_experience':
+            print('shuffling data across experience fully (cell id and experience level)')
+            assert np.shape(df_dropout.columns.levels)[
+                0] == 2, 'df should have two level column structure, 1 - regressors, 2 - experience'
+            # Shuffle cell ids first
+            for experience_level in experience_levels:
+                randomized_cids = df_dropout.sample(frac=1).index.values
+                for i, cid in enumerate(randomized_cids):
+                    for regressor in regressors:
+                        df_shuffled.iloc[i][(regressor, experience_level)] = df_dropout.loc[cid][
+                            (regressor, experience_level)]
+            # Shuffle experience labels
+            df_shuffled_again = df_shuffled.copy(deep=True)
+            cids = df_shuffled.index.values
+            experience_level_shuffled = experience_levels.copy()
+            for cid in cids:
+                np.random.shuffle(experience_level_shuffled)
+                for j, experience_level in enumerate(experience_level_shuffled):
+                    for regressor in regressors:
+                        df_shuffled_again.loc[cid][(regressor, experience_levels[j])] = df_shuffled.loc[cid][(regressor,
+                                                                                                            experience_level)]
+
+            df_shuffled = df_shuffled_again.copy()
+
+        else:
+            print('no such shuffle type..')
+            df_shuffled = None
     return df_shuffled
 
 
