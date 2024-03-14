@@ -3002,10 +3002,11 @@ def plot_cluster_info(cre_lines, cluster_df, save_dir=None, folder=''):
     - base_dir (str): Base directory to save figures.
     """
     for cre_line in cre_lines:
-        unique_mouse_per_cluster, unique_cluster_per_mouse = processing.get_cluster_info(cre_line, cluster_df)
+        unique_mouse_per_cluster, unique_cluster_per_mouse, unique_equipment_per_cluster, unique_clusters_per_equipment = processing.get_cluster_info(cre_line, cluster_df)
 
-        figsize = (5, 7)
-        fig, ax = plt.subplots(2, 1, figsize=figsize)
+        figsize = (7, 7)
+        fig, ax = plt.subplots(2, 2, figsize=figsize)
+        ax = ax.ravel()
         unique_mouse_per_cluster.plot(kind='bar', color='grey', ax=ax[0])
         ax[0].set_xlabel('Cluster ID')
         ax[0].set_ylabel('Number of Mice')
@@ -3016,6 +3017,16 @@ def plot_cluster_info(cre_lines, cluster_df, save_dir=None, folder=''):
         ax[1].set_ylabel('Number of Unique \nCluster IDs')
         ax[1].set_yticks(np.round(ax[1].get_yticks(), 1))
         ax[1].set_xlabel('Animal ID')
+
+        unique_equipment_per_cluster.plot(kind='bar', color='grey', ax=ax[2], fontsize=10)
+        ax[2].set_ylabel('Number of Unique \nrigs')
+        ax[2].set_yticks(np.round(ax[2].get_yticks(), 1))
+        ax[2].set_xlabel('Cluster ID')
+
+        unique_clusters_per_equipment.plot(kind='bar', color='grey', ax=ax[3], fontsize=10)
+        ax[3].set_ylabel('Number of Unique \nCluster IDs')
+        ax[3].set_yticks(np.round(ax[3].get_yticks(), 1))
+        ax[3].set_xlabel('equipment name')
 
         plt.tight_layout()
         if save_dir:

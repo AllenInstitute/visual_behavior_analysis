@@ -3758,7 +3758,9 @@ def get_cluster_info(cre_line, cluster_df):
     - unique_mouse_per_cluster (Series): Series with unique mouse IDs in each cluster.
     - unique_cluster_per_mouse (Series): Series with unique cluster IDs in each mouse.
     """
-    tmp = cluster_df[cluster_df.cre_line_x == cre_line]
+    tmp = cluster_df[cluster_df.cre_line == cre_line]
     unique_mouse_per_cluster = tmp.groupby('cluster_id')['mouse_id'].nunique()
     unique_cluster_per_mouse = tmp.groupby('mouse_id')['cluster_id'].nunique()
-    return unique_mouse_per_cluster, unique_cluster_per_mouse
+    unique_equipment_per_cluster= tmp.groupby('cluster_id')['equipment_name'].nunique()
+    unique_clusters_per_equipment= tmp.groupby('equipment_name')['cluster_id'].nunique()
+    return unique_mouse_per_cluster, unique_cluster_per_mouse, unique_equipment_per_cluster, unique_clusters_per_equipment
