@@ -851,14 +851,14 @@ def load_gap_statistic(glm_version, feature_matrix, cell_metadata, save_dir=None
     return gap_statistic
 
 
-def load_eigengap(glm_version, feature_matrix, cell_metadata, save_dir=None, k_max=25):
+def load_eigengap(glm_version, feature_matrix, cell_metadata=None, cre_line='', save_dir=None, k_max=25):
     """
            if eigengap values were computed and file exists in save_dir, load it
            otherwise run get_eigenDecomposition for a range of 1 to k_max clusters
            returns dictionary of eigengap for each cre line = [nb_clusters, eigenvalues, eigenvectors]
            # this doesnt actually take too long, so might not be a huge need to save files besides records
            """
-    eigengap_filename = 'eigengap_' + glm_version + '_' + 'kmax' + str(k_max) + '.pkl'
+    eigengap_filename = 'eigengap_' + glm_version + '_' + 'kmax' + str(k_max) + (cre_line) +'.pkl'
     eigengap_path = os.path.join(save_dir, eigengap_filename)
     if os.path.exists(eigengap_path):
         print('loading eigengap values scores from', eigengap_path)
@@ -868,15 +868,24 @@ def load_eigengap(glm_version, feature_matrix, cell_metadata, save_dir=None, k_m
         print('done.')
     else:
         eigengap = {}
-        for cre_line in get_cre_lines(cell_metadata):
-            feature_matrix_cre = get_feature_matrix_for_cre_line(feature_matrix, cell_metadata, cre_line)
-            X = feature_matrix_cre.values
+        if cre_line == 'all':
+            X = feature_matrix.values
             sc = SpectralClustering(2)  # N of clusters does not impact affinity matrix
             # but you can obtain affinity matrix only after fitting, thus some N of clusters must be provided.
             sc.fit(X)
             A = sc.affinity_matrix_
             eigenvalues, eigenvectors, nb_clusters = get_eigenDecomposition(A, max_n_clusters=k_max)
             eigengap[cre_line] = [nb_clusters, eigenvalues, eigenvectors]
+        else:
+            for cre_line in get_cre_lines(cell_metadata):
+                feature_matrix_cre = get_feature_matrix_for_cre_line(feature_matrix, cell_metadata, cre_line)
+                X = feature_matrix_cre.values
+                sc = SpectralClustering(2)  # N of clusters does not impact affinity matrix
+                # but you can obtain affinity matrix only after fitting, thus some N of clusters must be provided.
+                sc.fit(X)
+                A = sc.affinity_matrix_
+                eigenvalues, eigenvectors, nb_clusters = get_eigenDecomposition(A, max_n_clusters=k_max)
+                eigengap[cre_line] = [nb_clusters, eigenvalues, eigenvectors]
         save_clustering_results(eigengap, filename_string=eigengap_filename, path=save_dir)
     return eigengap
 
