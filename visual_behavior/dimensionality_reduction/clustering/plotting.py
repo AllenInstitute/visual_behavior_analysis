@@ -535,7 +535,7 @@ def plot_umap_for_clusters(cluster_meta, feature_matrix, label_col='cluster_id',
 
     label_col: column in cluster_meta to colorize points by
     """
-    import umap.umap_ as umap
+    import umap
     if cre_lines is None:
         cre_lines = get_cre_lines(cluster_meta)
     
