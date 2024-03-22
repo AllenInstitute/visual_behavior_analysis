@@ -2146,9 +2146,7 @@ def get_coding_score_metrics(cluster_meta, results_pivoted):
     return cell_metrics
 
 
-def generate_coding_score_metrics_table(cluster_meta, results_pivoted, data_type='filtered_events',
-                                                                 inclusion_criteria='platform_experiment_table',
-                                                                 save_dir=None):
+def generate_coding_score_metrics_table(cluster_meta, results_pivoted, save_dir=None):
     '''
     generate table of coding score metrics across experience levels per matched cell
 
@@ -2163,20 +2161,20 @@ def generate_coding_score_metrics_table(cluster_meta, results_pivoted, data_type
 
     # if metrics table already exists, load it, if not, generate and save it
     if save_dir is not None:
-        filename = 'coding_score_metrics_table_' + data_type + '_' + inclusion_criteria + '.csv'
+        filename = 'coding_score_metrics_table.csv'
         coding_metrics_table_filepath = os.path.join(save_dir, filename)
     else:
         print('no save_dir provided, cant load or save metrics table')
     if (save_dir is not None) and (os.path.exists(coding_metrics_table_filepath)):
         print('loading coding score metrics table')
-        metrics = pd.read_csv(coding_metrics_table_filepath, index_col=0)
+        coding_score_metrics = pd.read_csv(coding_metrics_table_filepath, index_col=0)
     else:
 
         coding_score_metrics = get_coding_score_metrics(cluster_meta, results_pivoted)
 
-        print(len(coding_score_metrics.index.values, 'cells in coding score metrics table')
+        print(len(coding_score_metrics.index.values), 'cells in coding score metrics table')
         if save_dir is not None:
-            metrics.to_csv(coding_metrics_table_filepath)
+            coding_score_metrics.to_csv(coding_metrics_table_filepath)
             print('coding score metrics table saved')
 
     return coding_score_metrics
