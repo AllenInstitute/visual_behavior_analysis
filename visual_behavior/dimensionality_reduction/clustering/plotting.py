@@ -535,7 +535,7 @@ def plot_umap_for_clusters(cluster_meta, feature_matrix, label_col='cluster_id',
 
     label_col: column in cluster_meta to colorize points by
     """
-    import umap.umap_ as umap
+    import umap
     if cre_lines is None:
         cre_lines = get_cre_lines(cluster_meta)
     
@@ -1712,16 +1712,12 @@ def plot_fraction_cells_per_cluster_per_cre(cluster_meta, col_to_group='cre_line
     for i, cre_line in enumerate(utils.get_cre_lines()):
         cre_data = n_cells_per_cluster[n_cells_per_cluster.cre_line == cre_line]
         order = np.sort(cluster_meta.cluster_id.unique())
-        # order = cre_data.sort_values(by='fraction_per_cluster')['cluster_id'][::-1]
+        print(len(cre_data), len(order))
         ax[i] = sns.barplot(data=cre_data, x='cluster_id', order=order, y='fraction_per_cluster',
                             color='gray', width=0.5, ax=ax[i])
         ax[i].set_ylabel('')
         ax[i].set_xlabel('')
-        # ax[i].set_ylim(0, 0.3)
         ax[i].set_title(utils.convert_cre_line_to_cell_type(cre_line))
-        # # dotted gray lines every 3rd cluster
-        # for x in [2.5, 5.5, 8.5]:
-        #     ax[i].axvline(x=x, ymin=0, color='gray', linestyle='--', linewidth=1)
 
     ax[1].set_ylabel('Fraction cells in each cluster')
     ax[i].set_xlabel('Cluster ID')
@@ -1858,62 +1854,56 @@ def plot_population_averages_for_conditions_multi_row(multi_session_df, data_typ
     i = 0
     for r, row in enumerate(row_conditions):
         for a, axis in enumerate(axes_conditions):
-            # try:
-            for c, hue in enumerate(hue_conditions):
-                cdf = sdf[(sdf[axes_column] == axis) & (sdf[hue_column] == hue) & (sdf[row_column] == row)]
-                traces = cdf.mean_trace.values
-                ax[i] = utils.plot_mean_trace(np.asarray(traces), timestamps, ylabel=ylabel,
-                                              legend_label=hue, color=palette[c], interval_sec=interval_sec,
-                                              xlim_seconds=xlim_seconds, ax=ax[i])
-            ax[i] = utils.plot_flashes_on_trace(ax[i], timestamps, change=change, omitted=omitted, alpha=0.25)
-            if omitted:
-                omission_color = sns.color_palette()[9]
-                ax[i].axvline(x=0, ymin=0, ymax=1, linestyle='--', color=omission_color)
-            if title == 'metadata':
-                metadata_string = utils.get_container_metadata_string(
-                    utils.get_metadata_for_row_of_multi_session_df(cdf))
-                ax[i].set_title(metadata_string)
-            else:
-                if axes_column == 'experience_level':
-                    title_colors = utilities.get_experience_level_colors()
-                    ax[i].set_title(axis, color=title_colors[i], fontsize=20)
+            try:
+                for c, hue in enumerate(hue_conditions):
+                    cdf = sdf[(sdf[axes_column] == axis) & (sdf[hue_column] == hue) & (sdf[row_column] == row)]
+                    traces = cdf.mean_trace.values
+                    ax[i] = utils.plot_mean_trace(np.asarray(traces), timestamps, ylabel=ylabel,
+                                                  legend_label=hue, color=palette[c], interval_sec=interval_sec,
+                                                  xlim_seconds=xlim_seconds, ax=ax[i])
+                ax[i] = utils.plot_flashes_on_trace(ax[i], timestamps, change=change, omitted=omitted, alpha=0.25)
+                if omitted:
+                    omission_color = sns.color_palette()[9]
+                    ax[i].axvline(x=0, ymin=0, ymax=1, linestyle='--', color=omission_color)
+                if title == 'metadata':
+                    metadata_string = utils.get_container_metadata_string(
+                        utils.get_metadata_for_row_of_multi_session_df(cdf))
+                    ax[i].set_title(metadata_string)
                 else:
-                    ax[i].set_title(axis)
-            if title:  # overwrite title if one is provided
-                ax[i].set_title(title)
-            ax[i].set_xlim(xlim_seconds)
-            ax[i].set_xlabel(xlabel)
-            if sharey:
-                ax[i].set_ylabel('')
-            else:
-                ax[i].set_ylabel(ylabel)
-            if sharex:
-                ax[i].set_xlabel('')
-            else:
+                    if axes_column == 'experience_level':
+                        title_colors = utilities.get_experience_level_colors()
+                        ax[i].set_title(axis, color=title_colors[i], fontsize=20)
+                    else:
+                        ax[i].set_title(axis)
+                if title:  # overwrite title if one is provided
+                    ax[i].set_title(title)
+                ax[i].set_xlim(xlim_seconds)
                 ax[i].set_xlabel(xlabel)
+                if sharey:
+                    ax[i].set_ylabel('')
+                else:
+                    ax[i].set_ylabel(ylabel)
+                if sharex:
+                    ax[i].set_xlabel('')
+                else:
+                    ax[i].set_xlabel(xlabel)
 
-            # ### specific to cluster plots, comment for all else
-            n_cre = len(sdf[(sdf[row_column] == row)].cell_specimen_id.unique())
-            n_cluster = len(cdf.cell_specimen_id.unique())
-            fraction = str(int(n_cluster/float(n_cre)* 100))
-            ax[i].set_title('cluster '+str(axis)+' (n='+str(n_cluster)+')')
+                # ### specific to cluster plots, comment for all else
+                # n_cre = len(sdf[(sdf[axes_column] == axis)].cell_specimen_id.unique())
+                # n_cluster = len(cdf.cell_specimen_id.unique())
+                # fraction = str(int(n_cluster/float(n_cre)* 100))
+                # if axes_column == 'cluster_id':
+                #     ax[i].set_title('cluster '+str(row+1)+' ('+fraction+'%)')
+                # if row_column == 'cluster_id':
+                #     ax[i].set_title('cluster '+str(row+1)+' ('+fraction+'%)')
 
-            # if axes_column == 'cluster_id':
-            #     ax[i].set_title('Cluster ' + str(axis))
-            # if row_column == 'cluster_id':
-            #     ax[i].set_title('Cluster ' + str(row))
-            # except:
-            #     print('no data for', axis, hue)
+                if axes_column == 'cluster_id':
+                    ax[i].set_title('Cluster ' + str(row + 1))
+                if row_column == 'cluster_id':
+                    ax[i].set_title('Cluster ' + str(row + 1))
+            except:
+                print('no data for', axis, hue)
             i += 1
-
-
-        # if sharey:
-        #     for x in np.arange(0, i)[::n_axes_conditions]:
-        #         ax[x].set_ylabel(ylabel)
-        # if sharex:
-        #     for x in np.arange(n_row_conditions, n_row_conditions + n_axes_conditions + 1):
-        #         ax[x].set_ylabel(xlabel)
-                # ax[0].legend(loc='upper right', fontsize='x-small') # title='passive', title_fontsize='xx-small')
 
         if axes_column == 'cre_line':
             # ax[0].set_title('Excitatory\ncluster 1'+' ('+fraction+'%)')
@@ -1924,22 +1914,17 @@ def plot_population_averages_for_conditions_multi_row(multi_session_df, data_typ
             ax[1].set_title('Sst\ncluster 1')
             ax[2].set_title('Vip\ncluster 1')
 
-        if row_column == 'cre_line':
-            ax[0].set_ylabel('Excitatory\n'+ylabel)
-            ax[len(axes_conditions)].set_ylabel('Sst\n'+ylabel)
-            ax[(len(axes_conditions)*2)].set_ylabel('Vip\n'+ylabel)
-
-    if sharex == True:
-        for a in range(len(axes_conditions)):
-            ax[(len(axes_conditions)*2)+a].set_xlabel(xlabel)
-
+        if sharey:
+            for x in np.arange(0, i)[::n_axes_conditions]:
+                ax[x].set_ylabel(ylabel)
+        if sharex:
+            for x in np.arange(n_row_conditions, n_row_conditions + n_axes_conditions + 1):
+                ax[x].set_ylabel(xlabel)
+                # ax[0].legend(loc='upper right', fontsize='x-small') # title='passive', title_fontsize='xx-small')
 
     if suptitle is not None:
         plt.suptitle(suptitle, x=0.52, y=1.04, fontsize=18)
-    if sharey is not False:
-        fig.subplots_adjust(wspace=0.3, hspace=0.75)
-    else:
-        fig.subplots_adjust(wspace=wspace, hspace=0.75)
+    fig.subplots_adjust(wspace=wspace, hspace=0.75)
     if save_dir:
         fig_title = 'population_average_' + axes_column + '_' + row_column + '_' + hue_column + suffix
         utils.save_figure(fig, figsize, save_dir, folder, fig_title)
@@ -2894,20 +2879,24 @@ def plot_gap_statistic(gap_statistic, cre_lines=None, n_clusters_cre=None, tag='
     for cre_line in cre_lines:
 
         suffix = cre_line + '_' + tag
-        n_clusters = n_clusters_cre[cre_line]
-        x = len(gap_statistic[cre_line]['gap'])
+        if cre_line == 'all':
+            n_clusters = n_clusters_cre
+            data = gap_statistic
+        else:
+            n_clusters = n_clusters_cre[cre_line]
+            data = gap_statistic[cre_line]
 
         figsize = (8, 4)
         fig, ax = plt.subplots(1, 2, figsize=figsize)
-
-        ax[0].plot(np.arange(1, x + 1), gap_statistic[cre_line]['reference_inertia'], 'o-')
-        ax[0].plot(np.arange(1, x + 1), gap_statistic[cre_line]['ondata_inertia'], 'o-')
+        x = len(data['gap'])
+        ax[0].plot(np.arange(1, x + 1), data['reference_inertia'], 'o-')
+        ax[0].plot(np.arange(1, x + 1), data['ondata_inertia'], 'o-')
         ax[0].legend(['reference inertia', 'ondata intertia'])
         ax[0].set_ylabel('Natural log of euclidean \ndistance values')
         ax[0].set_xlabel('Number of clusters')
         ax[0].axvline(x=n_clusters, ymin=0, ymax=1, linestyle='--', color='gray')
 
-        ax[1].plot(np.arange(1, x + 1), gap_statistic[cre_line]['gap'], 'o-')
+        ax[1].plot(np.arange(1, x + 1), data['gap'], 'o-')
         ax[1].set_ylabel('Gap statistic')
         ax[1].set_xlabel('Number of clusters')
         ax[1].axvline(x=n_clusters, ymin=0, ymax=1, linestyle='--', color='gray')
@@ -3001,6 +2990,49 @@ def plot_eigengap_values(eigenvalues_cre, cre_lines, n_clusters_cre=None, save_d
 
         if save_dir:
             utils.save_figure(fig, figsize, save_dir, folder, 'eigengap' + suffix, formats=['.png', '.pdf'] )
+
+
+def plot_cluster_info(cre_lines, cluster_df, save_dir=None, folder=''):
+    """
+    Plot cluster information for each CRE line.
+
+    Args:
+    - cre_lines (list): List of CRE lines to process.
+    - cluster_df (DataFrame): DataFrame containing cluster information.
+    - base_dir (str): Base directory to save figures.
+    """
+    for cre_line in cre_lines:
+        unique_mouse_per_cluster, unique_cluster_per_mouse, unique_equipment_per_cluster, unique_clusters_per_equipment = processing.get_cluster_info(cre_line, cluster_df)
+
+        figsize = (7, 7)
+        fig, ax = plt.subplots(2, 2, figsize=figsize)
+        ax = ax.ravel()
+        unique_mouse_per_cluster.plot(kind='bar', color='grey', ax=ax[0])
+        ax[0].set_xlabel('Cluster ID')
+        ax[0].set_ylabel('Number of Mice')
+        ax[0].set_yticks(np.round(ax[0].get_yticks(), 1))
+        ax[0].set_title(processing.get_cre_line_map(cre_line))
+
+        unique_cluster_per_mouse.plot(kind='bar', color='grey', ax=ax[1], fontsize=10)
+        ax[1].set_ylabel('Number of Unique \nCluster IDs')
+        ax[1].set_yticks(np.round(ax[1].get_yticks(), 1))
+        ax[1].set_xlabel('Animal ID')
+
+        unique_equipment_per_cluster.plot(kind='bar', color='grey', ax=ax[2], fontsize=10)
+        ax[2].set_ylabel('Number of Unique \nrigs')
+        ax[2].set_yticks(np.round(ax[2].get_yticks(), 1))
+        ax[2].set_xlabel('Cluster ID')
+
+        unique_clusters_per_equipment.plot(kind='bar', color='grey', ax=ax[3], fontsize=10)
+        ax[3].set_ylabel('Number of Unique \nCluster IDs')
+        ax[3].set_yticks(np.round(ax[3].get_yticks(), 1))
+        ax[3].set_xlabel('equipment name')
+
+        plt.tight_layout()
+        if save_dir:
+            fig_title = f'mouse_id_cluster_id_control_{cre_line}'
+            utils.save_figure(fig, figsize, save_dir=save_dir, folder=folder, fig_title=fig_title, formats=['.png', '.pdf'])
+
 
 
 def plot_fraction_cells_per_cluster_per_location_horiz(cluster_meta, save_dir=None, folder=None):
