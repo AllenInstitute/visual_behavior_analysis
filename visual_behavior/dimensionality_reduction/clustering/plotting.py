@@ -535,12 +535,14 @@ def plot_umap_for_clusters(cluster_meta, feature_matrix, label_col='cluster_id',
 
     label_col: column in cluster_meta to colorize points by
     """
+
+    assert len(cluster_meta) == feature_matrix.shape[0], 'cluster_meta and feature_matrix must have same number of rows'
     import umap
     if cre_lines is None:
         cre_lines = get_cre_lines(cluster_meta)
     
     figsize = (5*len(cre_lines), 4)
-    fig, ax = plt.subplots(1, len(cre_lines), figsize=figsize)
+    fig, axes = plt.subplots(1, len(cre_lines), figsize=figsize)
     for i, cre_line in enumerate(cre_lines):
         # get number of unique values in label_col to color by
         if cre_line != 'all':
@@ -561,11 +563,15 @@ def plot_umap_for_clusters(cluster_meta, feature_matrix, label_col='cluster_id',
         umap_df['x'] = u[:, 0]
         umap_df['y'] = u[:, 1]
         umap_df['labels'] = labels
-        ax[i] = sns.scatterplot(data=umap_df, x='x', y='y', hue='labels', size=1, ax=ax[i], palette=palette)
-        ax[i].set_xlabel('UMAP 0')
-        ax[i].set_ylabel('UMAP 1')
-        ax[i].legend(fontsize='x-small', title=label_col, title_fontsize='x-small', bbox_to_anchor=(1, 1))
-        ax[i].set_title(get_cell_type_for_cre_line(cre_line, cluster_meta))
+        if cre_line is 'all':
+            ax=axes
+        else:
+            ax=ax[i]
+        ax = sns.scatterplot(data=umap_df, x='x', y='y', hue='labels', size=1, ax=ax, palette=palette)
+        ax.set_xlabel('UMAP 0')
+        ax.set_ylabel('UMAP 1')
+        ax.legend(fontsize='x-small', title=label_col, title_fontsize='x-small', bbox_to_anchor=(1, 1))
+        ax.set_title(get_cell_type_for_cre_line(cre_line, cluster_meta))
     fig.tight_layout()
     if save_dir:
         utils.save_figure(fig, figsize, save_dir, folder, 'UMAP_' + label_col)
