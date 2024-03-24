@@ -39,7 +39,7 @@ if __name__ == "__main__":
         output=f'{stdout_location}/{Slurm.JOB_ARRAY_MASTER_ID}_{Slurm.JOB_ARRAY_ID}.out',
     )
 
-    for ii, ophys_experiment_id in enumerate(ophys_experiment_ids):
+    for ii, ophys_experiment_id in enumerate(ophys_experiment_ids[759:]):
         args_to_pass = '--ophys_experiment_id {}'.format(ophys_experiment_id)
         print('experiment ID = {}, number {} of {}'.format(ophys_experiment_id, ii + 1, len(ophys_experiment_ids)))
         job_title = 'experiment_{}'.format(ophys_experiment_id)
