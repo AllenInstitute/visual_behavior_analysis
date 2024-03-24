@@ -2054,7 +2054,7 @@ def get_coding_score_metrics_unmatched_cells(results_pivoted):
 
 ### metrics computed on GLM coding scores for cells matched across sessions ###
 
-def get_coding_metrics_for_cell(index_dropouts, index_value, index_name):
+def get_coding_metrics_for_condition(index_dropouts, index_value, index_name):
     """
     Computes a variety of metrics on dropout scores for some condition (ex: one cell or one cluster)
     including selectivity across features or experience levels, within and across sessions,
@@ -2142,7 +2142,7 @@ def get_coding_score_metrics(cluster_meta, results_pivoted):
     cell_metrics = pd.DataFrame()
     for i, cell_specimen_id in enumerate(cluster_meta.index.values):
         cell_dropouts = results_pivoted[results_pivoted.cell_specimen_id == cell_specimen_id].groupby('experience_level').mean()[get_features_for_clustering()]
-        stats = get_coding_metrics_for_cell(index_dropouts=cell_dropouts, index_value=cell_specimen_id, index_name='cell_specimen_id')
+        stats = get_coding_metrics_for_condition(index_dropouts=cell_dropouts, index_value=cell_specimen_id, index_name='cell_specimen_id')
         cell_metrics = pd.concat([cell_metrics, stats], sort=False)
     cell_metrics = cell_metrics.merge(cluster_meta, on='cell_specimen_id')
     return cell_metrics
@@ -2194,10 +2194,13 @@ def get_coding_score_metrics_per_experience_level(cluster_meta, results_pivoted)
         coding_scores: dataframe with one row per cell per experience level, and columns for the coding scores for each feature,
                         plus information about the preferred feature and experience level for that cell
     '''
+    # keep ophys expt id column
+    results_pivoted['ophys_experiment_id'] = [int(index.split('_')[0]) for index in results_pivoted.index.values]
+
     coding_score_metrics = pd.DataFrame()
     for i, cell_specimen_id in enumerate(cluster_meta.index.values):
         cell_scores = results_pivoted[results_pivoted.cell_specimen_id == cell_specimen_id].reset_index().drop(columns='identifier')
-        cell_scores_grid = cell_scores.groupby('experience_level').mean()[get_features_for_clustering()]
+        cell_scores_grid = cell_scores.groupby(['experience_level', 'ophys_experiment_id']).mean()[get_features_for_clustering()]
         # determine which experience level & feature gives largest coding score
         dominant_feature = cell_scores_grid.stack().idxmax()[1]
         dominant_experience_level = cell_scores_grid.stack().idxmax()[0]
@@ -2225,7 +2228,6 @@ def get_cluster_metrics(cluster_meta, feature_matrix, results_pivoted):
     returns dataframe with one row per cre line & cluster, with unique columns for metrics
     """
     cre_lines = np.sort(cluster_meta.cre_line.unique())
-    cell_metrics = get_coding_score_metrics(cluster_meta, results_pivoted)
     cluster_metrics = pd.DataFrame()
     for cre_line in cre_lines:
         # get cell specimen ids for this cre line
@@ -2241,7 +2243,7 @@ def get_cluster_metrics(cluster_meta, feature_matrix, results_pivoted):
             this_cluster_csids = cre_cluster_ids[cre_cluster_ids['cluster_id'] == cluster_id].index.values
             # get dropout scores for cells in this cluster in this cre line
             mean_dropout_df = np.abs(feature_matrix_cre.loc[this_cluster_csids].mean().unstack())
-            stats = get_coding_metrics(index_dropouts=mean_dropout_df.T, index_value=cluster_id,
+            stats = get_coding_metrics_for_condition(index_dropouts=mean_dropout_df.T, index_value=cluster_id,
                                        index_name='cluster_id')
             fraction_cre = len(this_cluster_csids) / float(len(cre_cell_specimen_ids))
             stats['fraction_cre'] = fraction_cre
@@ -2252,7 +2254,7 @@ def get_cluster_metrics(cluster_meta, feature_matrix, results_pivoted):
             stats['abs_max'] = mean_dropout_df.max().max()
             cluster_metrics = pd.concat([cluster_metrics, stats])
     cluster_metrics = cluster_metrics.reset_index()
-    n_cells = cell_metrics.groupby(['cre_line', 'cluster_id']).count()[['labels']].rename(
+    n_cells = cluster_meta.groupby(['cre_line', 'cluster_id']).count()[['labels']].rename(
         columns={'labels': 'n_cells_cluster'})
     cluster_metrics = cluster_metrics.merge(n_cells, on=['cre_line', 'cluster_id'])
     cluster_metrics = cluster_metrics.set_index(['cre_line', 'cluster_id'])
@@ -2274,7 +2276,7 @@ def get_cluster_metrics_all_cre(cluster_meta, feature_matrix, results_pivoted):
         this_cluster_csids = cluster_meta[cluster_meta['cluster_id'] == cluster_id].index.values
         # get dropout scores for cells in this cluster in this cre line
         mean_dropout_df = np.abs(feature_matrix.loc[this_cluster_csids].mean().unstack())
-        stats = get_coding_metrics(index_dropouts=mean_dropout_df.T, index_value=cluster_id,
+        stats = get_coding_metrics_for_condition(index_dropouts=mean_dropout_df.T, index_value=cluster_id,
                                    index_name='cluster_id')
         fraction_cells = len(this_cluster_csids) / float(len(cell_specimen_ids))
         stats['fraction_cells'] = fraction_cells
@@ -2570,14 +2572,14 @@ def generate_coding_score_metrics_per_experience_level_table(cluster_meta, resul
         print('no save_dir provided, cant load or save coding score metrics per exp level table')
     if (save_dir is not None) and (os.path.exists(coding_score_metrics_per_exp_level_filepath)):
         print('loading coding score metrics per experience level table')
-        metrics = pd.read_csv(coding_score_metrics_per_exp_level_filepath, index_col=0)
+        merged_metrics = pd.read_csv(coding_score_metrics_per_exp_level_filepath, index_col=0)
     else:
         # get coding scores per exp level from results_pivoted
         coding_scores_per_exp_level = get_coding_score_metrics_per_experience_level(cluster_meta, results_pivoted)
         print(coding_scores_per_exp_level.experience_level.unique())
 
         # get coding score metrics for each cell (metrics computed across experience levels, one row per cell)
-        coding_score_metrics = get_coding_score_metrics(cluster_meta, results_pivoted)
+        coding_score_metrics = generate_coding_score_metrics_table(cluster_meta, results_pivoted, save_dir)
         coding_score_metrics['experience_level'] = coding_score_metrics.dominant_experience_level
 
         # merge coding score metrics per experience level with select coding score metrics per cell
@@ -2587,9 +2589,13 @@ def generate_coding_score_metrics_per_experience_level_table(cluster_meta, resul
         coding_score_metrics['dominant_feature_cluster'] = coding_score_metrics.dominant_feature
         coding_score_metrics['dominant_experience_level_cluster'] = coding_score_metrics.dominant_experience_level
 
+        # make sure important columns are ints before merging
+        coding_scores_per_exp_level['ophys_experiment_id'] = coding_scores_per_exp_level[
+            ['ophys_experiment_id']].astype('int32')
         # merge coding scores tables
-        merged_metrics = coding_scores_per_exp_level.merge(coding_score_metrics.reset_index()[['cell_specimen_id', 'dominant_feature_cluster',
-                                                                                               'dominant_experience_level_cluster']], on='cell_specimen_id', how='left')
+        merged_metrics = coding_scores_per_exp_level.merge(coding_score_metrics.reset_index()[['cell_specimen_id', 'ophys_experiment_id',
+                                                                                               'dominant_feature_cluster',
+                                                                                               'dominant_experience_level_cluster']], on=['cell_specimen_id', 'ophys_experiment_id'], how='left')
         print(merged_metrics.experience_level.unique())
         # merge in metadata for each cell if cluster_meta is provided
         merged_metrics = merged_metrics.merge(cluster_meta.reset_index()[['cell_specimen_id', 'cre_line', 'cluster_id', 'targeted_structure',
@@ -2641,7 +2647,7 @@ def generate_merged_table_of_coding_score_and_model_free_metrics(cluster_meta, r
 
         coding_score_per_experience_metrics = generate_coding_score_metrics_per_experience_level_table(cluster_meta, results_pivoted, save_dir)
 
-        metrics = coding_score_per_experience_metrics.merge(model_free_metrics, on=['cell_specimen_id', 'experience_level'], how='left')
+        metrics = coding_score_per_experience_metrics.merge(model_free_metrics, on=['cell_specimen_id', 'experience_level', 'ophys_experiment_id'], how='left')
 
         print(len(metrics.cell_specimen_id.unique()), 'cells in merged coding score and model free metrics table')
         if save_dir is not None:
