@@ -8,7 +8,7 @@ from allensdk.brain_observatory.behavior.behavior_project_cache import VisualBeh
 python_file = r"/home/marinag/visual_behavior_analysis/scripts/create_multi_session_df.py"
 
 # conda environment to use
-conda_environment = 'visual_behavior_sdk'
+conda_environment = 'visual_behavior_sdk_new'
 
 # build the python path
 # this assumes that the environments are saved in the user's home directory in a folder called 'anaconda3'
@@ -29,7 +29,6 @@ cache = bpc.from_s3_cache(cache_dir=cache_dir)
 print(cache_dir)
 
 experiments_table = cache.get_ophys_experiment_table()
-# experiments_table = experiments_table[(experiments_table.session_number==4)&(experiments_table.project_code=='VisualBehaviorMultiscope')]
 
 # call the `sbatch` command to run the jobs.
 for project_code in experiments_table.project_code.unique():
