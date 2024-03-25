@@ -902,9 +902,13 @@ def load_metrics_table_for_experiment(ophys_experiment_id, condition, stimuli, s
 
     :return: metrics table
     """
+    # try:
     filepath = get_metrics_df_filepath(ophys_experiment_id, condition, stimuli, session_subset,
                                        data_type=data_type, interpolate=interpolate, output_sampling_rate=output_sampling_rate)
     metrics_table = pd.read_hdf(filepath, key='df')
+    # except:
+    #     print('could not load metrics table from', filepath)
+    #     metrics_table = None
     return metrics_table
 
 
