@@ -744,37 +744,37 @@ def generate_and_save_all_metrics_tables_for_experiment(ophys_experiment_id, dat
     session_subset = 'full_session'
     stimuli = 'full_session'
 
-    try:
-        filepath = get_metrics_df_filepath(ophys_experiment_id, condition=condition,
-                                           stimuli=stimuli, session_subset=session_subset,
-                                           data_type=data_type, interpolate=interpolate,
-                                           output_sampling_rate=output_sampling_rate)
-        if overwrite:
-            if os.path.exists(filepath):  # if file exists, delete it
-                os.remove(filepath)
-                print('h5 file exists for', ophys_experiment_id, ' - overwriting')
-            # regenerate metrics   and save
-            trace_metrics = generate_trace_metrics_table(ophys_experiment_id, data_type)
-            trace_metrics.to_hdf(filepath, key='df')
-            print('trace metrics saved for', ophys_experiment_id)
-        else:  # if you dont want to overwrite
-            if os.path.exists(filepath):  # and the file already exists
-                pass  # do nothing
-            else:  # otherwise
-                # generate metrics and save
-                trace_metrics = generate_trace_metrics_table(ophys_experiment_id, data_type)
-                trace_metrics.to_hdf(filepath, key='df')
-                print('trace metrics saved for', ophys_experiment_id)
-    except Exception as e:
-        print('metrics not generated for trace_metrics for experiment', ophys_experiment_id)
-        print(e)
-        problem_expts.loc[i, 'ophys_experiment_id'] = ophys_experiment_id
-        problem_expts.loc[i, 'condition'] = condition
-        problem_expts.loc[i, 'stimuli'] = stimuli
-        problem_expts.loc[i, 'session_subset'] = session_subset
-        problem_expts.loc[i, 'data_type'] = data_type
-        problem_expts.loc[i, 'exception'] = e
-        i += 1
+    # try:
+    #     filepath = get_metrics_df_filepath(ophys_experiment_id, condition=condition,
+    #                                        stimuli=stimuli, session_subset=session_subset,
+    #                                        data_type=data_type, interpolate=interpolate,
+    #                                        output_sampling_rate=output_sampling_rate)
+    #     if overwrite:
+    #         if os.path.exists(filepath):  # if file exists, delete it
+    #             os.remove(filepath)
+    #             print('h5 file exists for', ophys_experiment_id, ' - overwriting')
+    #         # regenerate metrics   and save
+    #         trace_metrics = generate_trace_metrics_table(ophys_experiment_id, data_type)
+    #         trace_metrics.to_hdf(filepath, key='df')
+    #         print('trace metrics saved for', ophys_experiment_id)
+    #     else:  # if you dont want to overwrite
+    #         if os.path.exists(filepath):  # and the file already exists
+    #             pass  # do nothing
+    #         else:  # otherwise
+    #             # generate metrics and save
+    #             trace_metrics = generate_trace_metrics_table(ophys_experiment_id, data_type)
+    #             trace_metrics.to_hdf(filepath, key='df')
+    #             print('trace metrics saved for', ophys_experiment_id)
+    # except Exception as e:
+    #     print('metrics not generated for trace_metrics for experiment', ophys_experiment_id)
+    #     print(e)
+    #     problem_expts.loc[i, 'ophys_experiment_id'] = ophys_experiment_id
+    #     problem_expts.loc[i, 'condition'] = condition
+    #     problem_expts.loc[i, 'stimuli'] = stimuli
+    #     problem_expts.loc[i, 'session_subset'] = session_subset
+    #     problem_expts.loc[i, 'data_type'] = data_type
+    #     problem_expts.loc[i, 'exception'] = e
+    #     i += 1
 
     # event locked response metrics ###
 
