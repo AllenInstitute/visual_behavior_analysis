@@ -54,11 +54,17 @@ except Exception as e:
     warnings.warn(warn_string)
 
 
-# function inputs
-# ophys_experiment_id
-# ophys_session_id
-# behavior_session_id
-# ophys_container_id
+
+def limit_stimulus_presentations_to_change_detection(stimulus_presentations):
+    '''
+    if column 'stimulus_block_name' is in stimulus_presentations table (as in SDK v2.16.0),
+    limit stimulus presentations table to the change detection block
+    '''
+    if 'stimulus_block_name' in stimulus_presentations:
+        stimulus_presentations = stimulus_presentations[
+            stimulus_presentations.stimulus_block_name.str.contains('change_detection')]
+    return stimulus_presentations
+
 
 def get_flagged_ophys_experiment_ids():
     '''
@@ -948,7 +954,7 @@ def get_ophys_dataset(ophys_experiment_id, include_invalid_rois=False, load_from
     if get_extended_stimulus_presentations:
         # add extended stimulus presentations
         dataset.extended_stimulus_presentations = get_extended_stimulus_presentations_table(
-            dataset.stimulus_presentations.copy(),
+            limit_stimulus_presentations_to_change_detection(dataset.stimulus_presentations),
             dataset.licks, dataset.rewards,
             dataset.running_speed, dataset.eye_tracking)
     if get_behavior_movie_timestamps:
@@ -1076,13 +1082,13 @@ def get_behavior_dataset(behavior_session_id, from_lims=False, from_nwb=True,
     if get_extended_stimulus_presentations:
         # add extended stimulus presentations
         dataset.extended_stimulus_presentations = get_extended_stimulus_presentations_table(
-            dataset.stimulus_presentations.copy(),
+            limit_stimulus_presentations_to_change_detection(dataset.stimulus_presentations),
             dataset.licks, dataset.rewards,
             dataset.running_speed, behavior_session_id=dataset.metadata['behavior_session_id'])
 
     if (get_extended_trials == True) and (get_extended_stimulus_presentations == False):
         dataset.extended_stimulus_presentations = get_extended_stimulus_presentations_table(
-            dataset.stimulus_presentations.copy(),
+            limit_stimulus_presentations_to_change_detection(dataset.stimulus_presentations),
             dataset.licks, dataset.rewards,
             dataset.running_speed, behavior_session_id=dataset.metadata['behavior_session_id'])
         dataset.extended_trials = get_extended_trials_table(dataset.trials, dataset.extended_stimulus_presentations)
@@ -1207,7 +1213,7 @@ def get_extended_stimulus_presentations_for_session(session):
     Calculates additional information for each stimulus presentation
     '''
     import visual_behavior.ophys.dataset.stimulus_processing as sp
-    stimulus_presentations_pre = session.stimulus_presentations
+    stimulus_presentations_pre = limit_stimulus_presentations_to_change_detection(session.stimulus_presentations)
     change_times = session.trials['change_time'].values
     change_times = change_times[~np.isnan(change_times)]
     extended_stimulus_presentations = sp.get_extended_stimulus_presentations(

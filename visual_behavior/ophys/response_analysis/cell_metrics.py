@@ -685,8 +685,7 @@ def get_cell_metrics_dir(interpolate=False, output_sampling_rate=None):
     :param output_sampling_rate: sampling rate used to create interpolated traces; if interpolate is False, output_sampling_rate is None
     :return:
     """
-    base_dir = r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/platform_paper_cache/cell_metrics'
-    # base_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\platform_paper_cache\cell_metrics'
+    base_dir = os.path.join(loading.get_platform_analysis_cache_dir(), 'cell_metrics')
     if interpolate:
         save_dir = os.path.join(base_dir, 'interpolated_' + str(output_sampling_rate) + 'Hz')
     else:
