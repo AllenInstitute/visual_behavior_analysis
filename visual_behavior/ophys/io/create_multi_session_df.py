@@ -71,28 +71,18 @@ def get_multi_session_df(project_code, session_number, conditions, data_type, ev
         get_pref_stim = False
     print('get_pref_stim', get_pref_stim)
 
-    # cache_dir = loading.get_platform_analysis_cache_dir()
-    # cache = VisualBehaviorOphysProjectCache.from_s3_cache(cache_dir=cache_dir)
-    # print(cache_dir)
-    # experiments_table = cache.get_ophys_experiment_table()
+    cache_dir = loading.get_platform_analysis_cache_dir()
+    cache = VisualBehaviorOphysProjectCache.from_s3_cache(cache_dir=cache_dir)
+    print(cache_dir)
+    experiments_table = cache.get_ophys_experiment_table()
     # dont include Ai94 experiments because they makes things too slow
     # experiments_table = experiments_table[(experiments_table.reporter_line != 'Ai94(TITL-GCaMP6s)')]
 
-    # # save_dir = r'/allen/programs/mindscope/workgroups/learning/ophys/learning_project_cache'
-    # save_dir = r'\\allen\programs\mindscope\workgroups\learning\ophys\learning_project_cache'
-    # experiments_table = pd.read_csv(os.path.join(save_dir, 'mFISH_project_expts.csv'), index_col=0)
-    # # limit to non-failed experiments
-    # experiments_table = experiments_table[(experiments_table.experiment_workflow_state.isin(['passed', 'qc'])) &
-    #                         (experiments_table.container_workflow_state != 'failed')]
-    # experiments_table = experiments_table.set_index('ophys_experiment_id')
-    # print(len(experiments_table), 'experiments in experiments table')
-    # print(len(experiments_table.mouse_id.unique()), 'mice in experiments table')
     # limit to platform paper experiments
-    experiments_table = loading.get_platform_paper_experiment_table(add_extra_columns=True,
-                                                                    limit_to_closest_active=True,
-                                                                    include_4x2_data=False)
-
-    print(len(experiments_table), 'platform expts')
+    # experiments_table = loading.get_platform_paper_experiment_table(add_extra_columns=True,
+    #                                                                 limit_to_closest_active=True,
+    #                                                                 include_4x2_data=False)
+    # print(len(experiments_table), 'platform expts')
 
     print(experiments_table.session_number.unique(), 'session numbers')
     # session_number = int(session_number)
@@ -141,7 +131,7 @@ def get_multi_session_df(project_code, session_number, conditions, data_type, ev
                 # get stimulus_response_df
                 df = loading.get_stimulus_response_df(dataset, data_type=data_type, event_type=event_type, time_window=time_window,
                                                       interpolate=interpolate, output_sampling_rate=output_sampling_rate,
-                                                      load_from_file=False)
+                                                      load_from_file=True)
                 print('stim response df loaded')
                 # use response_window duration from stim response df if it exists
                 if response_window_duration in df.keys():
@@ -167,7 +157,7 @@ def get_multi_session_df(project_code, session_number, conditions, data_type, ev
                                                  df.mean_pupil_area.values]
                 if 'pre_change' in conditions:
                     df = df[df.pre_change.isnull() == False]
-                # print(len(df), 'length of stimulus_response_df after filtering')
+                print(len(df), 'length of stimulus_response_df after filtering')
                 # get params for mean df creation from stimulus_response_df
                 output_sampling_rate = df.output_sampling_rate.values[0]
                 print('generating mean response df')
