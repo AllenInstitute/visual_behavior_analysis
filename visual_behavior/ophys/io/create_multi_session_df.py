@@ -1,7 +1,7 @@
 import os
 import pandas as pd
 
-# from allensdk.brain_observatory.behavior.behavior_project_cache import VisualBehaviorOphysProjectCache
+from allensdk.brain_observatory.behavior.behavior_project_cache import VisualBehaviorOphysProjectCache
 import visual_behavior.ophys.response_analysis.utilities as ut
 from visual_behavior.data_access import loading
 
