@@ -981,6 +981,7 @@ def load_metrics_table_for_experiments(ophys_experiment_ids, condition, stimuli,
                                                              response_window_duration=response_window_duration,
                                                              interpolate=interpolate,
                                                              )
+                    metrics_df['ophys_experiment_id'] = ophys_experiment_id
                     if os.path.exists(filepath): # remove it first in case there is a busted file there
                         os.remove(filepath)
                     metrics_df.to_hdf(filepath, key='df')
