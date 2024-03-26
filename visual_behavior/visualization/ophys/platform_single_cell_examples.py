@@ -18,7 +18,7 @@ import visual_behavior_glm.GLM_params as glm_params
 
 # formatting
 sns.set_context('notebook', font_scale=1.5, rc={'lines.markeredgewidth': 2})
-sns.set_style('white', {'axes.spines.right': False, 'axes.spines.top': False})
+# sns.set_style('white', {'axes.spines.right': False, 'axes.spines.top': False})
 sns.set_palette('deep')
 
 
@@ -324,3 +324,6 @@ def plot_matched_roi_and_traces_example_GLM(cell_metadata, cell_dropouts, cell_w
         print('saving plot for', cell_specimen_id)
         utils.save_figure(fig, figsize, save_dir, folder, str(cell_specimen_id) + '_' + metadata_string + '_' + data_type)
         print('saved')
+
+
+

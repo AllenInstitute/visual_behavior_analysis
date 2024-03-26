@@ -9,7 +9,7 @@ parser.add_argument('--scriptname', type=str, default='create_cell_metrics_table
 
 if __name__ == "__main__":
     args = parser.parse_args()
-    python_executable = "{}/anaconda2/envs/{}/bin/python".format(os.path.expanduser('~'), args.env)
+    python_executable = "{}/anaconda3/envs/{}/bin/python".format(os.path.expanduser('~'), args.env)
     python_file = os.path.join(os.getcwd(), args.scriptname)
 
     # define the job record output folder

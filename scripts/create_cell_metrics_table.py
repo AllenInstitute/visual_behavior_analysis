@@ -11,7 +11,7 @@ if __name__ == '__main__':
     ophys_experiment_id = args.ophys_experiment_id
 
     interpolate = True
-    time_window = [-3, 3.1]
+    time_window = [-2, 2.1]
     response_window_duration = 0.5
 
     for data_type in ['events', 'filtered_events', 'dff']:

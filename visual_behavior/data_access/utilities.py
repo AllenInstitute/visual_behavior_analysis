@@ -1408,6 +1408,45 @@ def add_stimulus_phase_to_behavior_sessions(behavior_sessions):
     return behavior_sessions
 
 
+def add_behavior_stage_to_behavior_sessions(behavior_sessions):
+    """
+    creates a column 'behavior_stage' based on session type and other metadata, values of which are:
+       ['gratings_static_training', 'gratings_flashed_training',
+       'familiar_images_training', 'familiar_images_ophys',
+       'familiar_images_ophys_passive', 'novel_images_ophys',
+       'novel_images_ophys_passive']
+    """
+    # get rid of sessions with no experience level
+    if len(behavior_sessions[behavior_sessions.experience_level.isnull()]) > 0:
+        bsid = behavior_sessions[behavior_sessions.experience_level == 'None'].index.values[0]
+        behavior_sessions = behavior_sessions.drop(index=bsid)
+    # create new behavior stage label
+    behavior_sessions['phase'] = ['training' if 'TRAINING' in session_type else 'ophys' for session_type in
+                                  behavior_sessions.session_type.values]
+    behavior_sessions['stimulus_type'] = ['gratings' if 'gratings' in session_type else 'images' for session_type in
+                                          behavior_sessions.session_type.values]
+    behavior_sessions['exp_level'] = [exp_level.split(' ')[0].lower() for exp_level in
+                                      behavior_sessions.experience_level.values]
+    behavior_sessions['exp_level'] = [exp_level + '_images' if 'gratings' not in exp_level else 'gratings' for exp_level
+                                      in behavior_sessions.exp_level.values]
+    # add static vs. flashed
+    for i, behavior_session in enumerate(behavior_sessions.index.values):
+        row = behavior_sessions.iloc[i]
+        if ('gratings' in row.session_type) and ('flashed' in row.session_type):
+            behavior_sessions.at[behavior_session, 'exp_level'] = row.exp_level + '_flashed'
+        if ('gratings' in row.session_type) and ('flashed' not in row.session_type):
+            behavior_sessions.at[behavior_session, 'exp_level'] = row.exp_level + '_static'
+    behavior_sessions['engagement'] = ['_passive' if 'passive' in session_type else '' for session_type in
+                                       behavior_sessions.session_type.values]
+
+    behavior_sessions['behavior_stage'] = None
+    for i, behavior_session in enumerate(behavior_sessions.index.values):
+        row = behavior_sessions.iloc[i]
+        behavior_sessions.at[behavior_session, 'behavior_stage'] = row.exp_level + '_' + row.phase + row.engagement
+
+    return behavior_sessions
+
+
 def add_experience_level_to_behavior_sessions(behavior_sessions):
     """
     adds a column to behavior_sessions table that contains a string indicating whether a session had
@@ -1421,7 +1460,7 @@ def add_experience_level_to_behavior_sessions(behavior_sessions):
     behavior_sessions['experience_level'] = 'None'
 
     # ophys sessions 1,2,3 = Familiar
-    indices = behavior_sessions[behavior_sessions.session_number.isin([1, 2, 3])].index.values
+    indices = behavior_sessions[behavior_sessions.session_number.isin([0, 1, 2, 3])].index.values
     behavior_sessions.loc[indices, 'experience_level'] = 'Familiar'
 
     # ophys session 4 with no prior exposures to image set = Novel
@@ -1675,8 +1714,10 @@ def dateformat(exp_date):
     """
     reformat date of acquisition for accurate sorting by date
     """
-    from datetime import datetime
-    date = int(datetime.strptime(exp_date, '%Y-%m-%d  %H:%M:%S.%f').strftime('%Y%m%d'))
+    # from datetime import datetime
+    # date = int(datetime.strptime(exp_date, '%Y-%m-%d  %H:%M:%S.%f').strftime('%Y%m%d'))
+    from dateutil import parser
+    date = parser.parse(str(exp_date)).strftime('%Y%m%d')
     return date
 
 
@@ -1922,7 +1963,7 @@ def value_counts(df, conditions=['cell_type', 'experience_level', 'mouse_id']):
     return counts
 
 
-def count_mice_expts_containers_cells(df, conditions_to_group=['cell_type', 'experience_level']):
+def count_mice_expts_containers_cells(df, conditions_to_group=['cell_type', 'experience_level'], include_matched_cells=True):
     """
     count the number of mice, sessions, experiments, containers, and cells in input dataframe
     input dataframe is typically ophys_cells_table merged with ophys_experiment_table
@@ -1936,16 +1977,23 @@ def count_mice_expts_containers_cells(df, conditions_to_group=['cell_type', 'exp
     containers = value_counts(df, conditions=conditions_to_group + ['ophys_container_id'])
     cells = value_counts(df, conditions=conditions_to_group + ['cell_specimen_id'])
 
-    matched_cells = limit_to_last_familiar_second_novel_active(df)
-    matched_cells = limit_to_cell_specimen_ids_matched_in_all_experience_levels(matched_cells)
-    matched_cells = value_counts(matched_cells, conditions=conditions_to_group + ['cell_specimen_id'])
-    matched_cells = matched_cells.rename(columns={'n_cell_specimen_id': 'n_matched_cells'})
+    if include_matched_cells:
+        try:
+            matched_cells = limit_to_last_familiar_second_novel_active(df)
+            matched_cells = limit_to_cell_specimen_ids_matched_in_all_experience_levels(matched_cells)
+            matched_cells = value_counts(matched_cells, conditions=conditions_to_group + ['cell_specimen_id'])
+            matched_cells = matched_cells.rename(columns={'n_cell_specimen_id': 'n_matched_cells'})
+        except Exception as e:
+            print(e)
+            include_matched_cells = False
+            print('could not compute matched cells because input dataframe was not limited to platform paper experiments')
 
     counts = mice.merge(sessions, on=conditions_to_group)
     counts = counts.merge(experiments, on=conditions_to_group)
     counts = counts.merge(containers, on=conditions_to_group)
     counts = counts.merge(cells, on=conditions_to_group)
-    counts = counts.merge(matched_cells, on=conditions_to_group)
+    if include_matched_cells:
+        counts = counts.merge(matched_cells, on=conditions_to_group)
     return counts
 
 
@@ -1971,8 +2019,23 @@ def annotate_epoch_df(epoch_df):
     # add experience epoch column
     def merge_experience_epoch(row):
         epoch_num = str(int(row.epoch + 1))  # index at 1 not 0
-        if len(epoch_num) == 1:
-            epoch_num = '0' + str(epoch_num)
+        # if len(epoch_num) == 1:
+        #     epoch_num = '0' + str(epoch_num)
+        return row.experience_level + ' epoch ' + epoch_num
+
+    epoch_df['experience_epoch'] = epoch_df[['experience_level', 'epoch']].apply(axis=1, func=merge_experience_epoch)
+
+    return epoch_df
+def annotate_epoch_df(epoch_df):
+    """
+    adds 'experience_epoch' column which is a conjunction of experience level and epoch #
+    """
+
+    # add experience epoch column
+    def merge_experience_epoch(row):
+        epoch_num = str(int(row.epoch + 1))  # index at 1 not 0
+        # if len(epoch_num) == 1:
+        #     epoch_num = '0' + str(epoch_num)
         return row.experience_level + ' epoch ' + epoch_num
 
     epoch_df['experience_epoch'] = epoch_df[['experience_level', 'epoch']].apply(axis=1, func=merge_experience_epoch)

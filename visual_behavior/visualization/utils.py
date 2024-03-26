@@ -21,7 +21,7 @@ def get_single_cell_plots_dir():
     return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/single_cell_plots'
 
 
-def save_figure(fig, figsize, save_dir, folder, fig_title, formats=['.png', '.pdf']):
+def save_figure(fig, figsize, save_dir, folder, fig_title, formats=['.png']):
     fig_dir = os.path.join(save_dir, folder)
     if not os.path.exists(fig_dir):
         os.mkdir(fig_dir)
@@ -74,6 +74,15 @@ def get_cell_types():
     return cell_types
 
 
+def get_cell_type_colors():
+    '''
+    chosen to approximately match the cell type taxonomy colors for L2/3 E, Sst, Vip
+    '''
+    c = sns.color_palette('colorblind')
+    cell_type_colors = [c[2], c[1], c[4]]
+    return cell_type_colors
+
+
 def convert_cre_line_to_cell_type(cre_line):
     if cre_line == 'Slc17a7-IRES2-Cre':
         cell_type = 'Excitatory'
@@ -82,6 +91,25 @@ def convert_cre_line_to_cell_type(cre_line):
     elif cre_line == 'Vip-IRES-Cre':
         cell_type = 'Vip Inhibitory'
     return cell_type
+
+
+def get_abbreviated_cell_type(cre_line):
+    """
+    returns 3 letter cell type name (i.e. 'Exc', 'Sst', 'Vip')
+    :param cre_line:
+    :return:
+    """
+    return convert_cre_line_to_cell_type(cre_line)[:3]
+
+
+def get_abbreviated_experience_levels():
+    """
+    converts experience level names (ex: 'Novel +') into short hand versions (ex: 'N+')
+    abbreviated names are returned in the same order as provided in experience_levels
+    """
+    #exp_level_abbreviations = [exp_level.split(' ')[0][0] if len(exp_level.split(' ')) == 1 else exp_level.split(' ')[0][0] + exp_level.split(' ')[1][:2] for exp_level in experience_levels]
+    exp_level_abbreviations = ['F', 'N', 'N+']
+    return exp_level_abbreviations
 
 
 def get_experience_level_colors():
@@ -98,8 +126,18 @@ def get_experience_level_colors():
     purples = sns.color_palette('Purples_r', 6)[:5][::2]
 
     colors = [reds[0], blues[0], purples[0]]
+    # colors = [blues[0], reds[0],  purples[0]]
 
     return colors
+
+
+def color_xaxis_labels_by_experience(ax):
+    """
+    iterates through x-axis tick labels and sets them to experience level colors in an alternating way,
+    assuming that the labels are in [F, N, N+]
+    """
+    c_vals = get_experience_level_colors()
+    [t.set_color(i) for (i,t) in zip([c_vals[0], c_vals[1], c_vals[2]], ax.xaxis.get_ticklabels())]
 
 
 def lighter(color, percent):
@@ -135,12 +173,19 @@ def get_stimulus_color_map(as_rgb=False):
     black = np.array([0, 0, 0]).astype(np.uint8)
 
     stimulus_color_map = {
+        'gratings': (0.5, 0.5, 0.5),
         'gratings_static': (0.25, 0.25, 0.25),
         'gratings_flashed': (0.5, 0.5, 0.5),
+        'gratings_training': (0.5, 0.5, 0.5),
+        'familiar': session_number_colors[0],
+        'novel': session_number_colors[3],
         'images_A': session_number_colors[0],
+        'images_A_ophys': session_number_colors[0],
         'images_A_passive': session_number_colors[2],
+        'images_A_training': sns.color_palette('Reds_r', 6)[:5][::2][1],
         'images_A_habituation': session_number_colors[0],
         'images_B': session_number_colors[3],
+        'images_B_ophys': session_number_colors[3],
         'images_B_passive': session_number_colors[5],
         'images_B_habituation': session_number_colors[3],
         'images_G': session_number_colors_GH[0],
@@ -157,6 +202,40 @@ def get_stimulus_color_map(as_rgb=False):
 
     return stimulus_color_map
 
+
+def get_stimulus_phase_color_map(as_rgb=False):
+    session_number_colors = get_colors_for_session_numbers()
+    session_number_colors_GH = get_colors_for_session_numbers_GH()
+    white = np.array([1, 1, 1]).astype(np.uint8)
+
+    training_scale = 0.7
+    passive_scale = 0.4
+
+    stimulus_phase_color_map = {
+        'gratings_static_training': (0.4, 0.4, 0.4),
+        'gratings_flashed_training': (0.7, 0.7, 0.7),
+        'images_A_training': (session_number_colors[0] + (white - session_number_colors[0]) * training_scale),
+        'images_A_habituation_ophys': (session_number_colors[0] + (white - session_number_colors[0]) * training_scale),
+        'images_A_ophys': session_number_colors[0],
+        'images_A_passive_ophys': (session_number_colors[0] + (white - session_number_colors[0]) * passive_scale),
+        'images_B_training': (session_number_colors[3] + (white - session_number_colors[3]) * training_scale),
+        'images_B_habituation_ophys': (session_number_colors[3] + (white - session_number_colors[3]) * training_scale),
+        'images_B_ophys': session_number_colors[3],
+        'images_B_passive_ophys': (session_number_colors[3] + (white - session_number_colors[3]) * passive_scale),
+        'images_G_training': (session_number_colors_GH[0] + (white - session_number_colors_GH[0]) * training_scale),
+        'images_G_habituation_ophys': (session_number_colors_GH[0] + (white - session_number_colors_GH[0]) * training_scale),
+        'images_G_ophys': session_number_colors_GH[0],
+        'images_G_passive_ophys': (session_number_colors_GH[0] + (white - session_number_colors_GH[0]) * passive_scale),
+        'images_H_ophys': session_number_colors_GH[3],
+        'images_H_passive_ophys': (session_number_colors_GH[3] + (white - session_number_colors_GH[3]) * passive_scale),
+    }
+
+    if as_rgb:
+        for key in list(stimulus_phase_color_map.keys()):
+            stimulus_phase_color_map[key] = np.floor(
+                np.array([x for x in list(stimulus_phase_color_map[key])]) * 255).astype(np.uint8)
+
+    return stimulus_phase_color_map
 
 def get_stimulus_phase_color_map(as_rgb=False):
     session_number_colors = get_colors_for_session_numbers()
@@ -285,12 +364,36 @@ def get_location_color(location, project_code):
     return location_colors[location]
 
 
-# def lighter(color, percent):
-#     color = color * 255
-#     color = np.array(color)
-#     white = np.array([255, 255, 255])
-#     return color + (white * percent)
-#
+def get_behavior_stage_color_map(as_rgb=False):
+    """
+    create colormap, as rgb or [0,1], corresponding to behavior stages defined in add_behavior_stage_to_behavior_sessions
+    (ex: ['gratings_static_training', 'gratings_flashed_training', 'familiar_images_training', )
+
+    """
+    session_number_colors = get_colors_for_session_numbers()
+    white = np.array([1, 1, 1]).astype(np.uint8)
+
+    training_scale = 0.7
+    passive_scale = 0.4
+
+    behavior_stage_color_map = {
+        'gratings_static_training': (0.7, 0.7, 0.7),
+        'gratings_flashed_training': (0.4, 0.4, 0.4),
+        'familiar_images_training': (session_number_colors[0] + (white - session_number_colors[0]) * training_scale),
+        'familiar_images_ophys': session_number_colors[0],
+        'familiar_images_ophys_passive': (
+        session_number_colors[0] + (white - session_number_colors[0]) * passive_scale),
+        'novel_images_ophys': session_number_colors[3],
+        'novel_images_ophys_passive': (session_number_colors[3] + (white - session_number_colors[3]) * passive_scale),
+    }
+
+    if as_rgb:
+        for key in list(behavior_stage_color_map.keys()):
+            behavior_stage_color_map[key] = np.floor(
+                np.array([x for x in list(behavior_stage_color_map[key])]) * 255).astype(np.uint8)
+
+    return behavior_stage_color_map
+
 
 def make_color_transparent(rgb_color, background_rgb=[255, 255, 255], alpha=0.5):
     return [alpha * c1 + (1 - alpha) * c2
@@ -399,6 +502,26 @@ def plot_mean_trace(traces, timestamps, ylabel='dF/F', legend_label=None, color=
         ax.set_xlim(xlim_seconds)
         ax.set_xlabel('time (sec)')
         ax.set_ylabel(ylabel)
+    sns.despine(ax=ax)
+    return ax
+
+
+def plot_mean_trace_from_mean_df(cell_data, ylabel='dF/F', xlabel='time (s)', legend_label=None, color='k', interval_sec=1,
+                                 xlims=[-4, 4],  ax=None, plot_sem=True, width=3):
+
+    xlim = [0, xlims[1] + np.abs(xlims[0])]
+    if ax is None:
+        fig, ax = plt.subplots()
+    trace = cell_data.mean_trace.values[0]
+    timestamps = cell_data.trace_timestamps.values[0]
+    sem = cell_data.sem_trace.values[0]
+    ax.plot(timestamps, trace, label=legend_label, linewidth=width, color=color)
+    if plot_sem:
+        ax.fill_between(timestamps, trace + sem, trace - sem, alpha=0.5, color=color)
+    ax.set_xticks(np.arange(int(timestamps[0]), int(timestamps[-1]) + 1, interval_sec))
+    ax.set_xlim(xlims)
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
     sns.despine(ax=ax)
     return ax
 
