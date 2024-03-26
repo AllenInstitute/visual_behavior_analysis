@@ -28,7 +28,7 @@ def get_pref_image_for_cell_specimen_ids(stimulus_response_df):
     returns a dataframe with index cell_specimen_id and column pref_image indicating
     which image_name evoked the largest response for each cell
     """
-    pref_images = stimulus_response_df.groupby(['cell_specimen_id', 'image_name']).mean().reset_index().groupby(
+    pref_images = stimulus_response_df.groupby(['cell_specimen_id', 'image_name']).mean(numeric_only=True).reset_index().groupby(
         'cell_specimen_id').apply(get_pref_image_for_group)
     return pref_images
 
@@ -49,7 +49,7 @@ def add_pref_image(stimulus_response_df, pref_images):
         pref_image_name = pref_images.loc[cell_specimen_id].pref_image
         indices = stimulus_response_df[(stimulus_response_df.cell_specimen_id == cell_specimen_id) & (
             stimulus_response_df.image_name == pref_image_name)].index
-        stimulus_response_df.at[indices, 'pref_image'] = True
+        stimulus_response_df.loc[indices, 'pref_image'] = True
     return stimulus_response_df
 
 
@@ -71,7 +71,7 @@ def get_non_pref_image_for_cell_specimen_ids(stimulus_response_df):
     returns a dataframe with index cell_specimen_id and column non_pref_image indicating
     which image_name evoked the smallest response for each cell
     """
-    non_pref_images = stimulus_response_df.groupby(['cell_specimen_id', 'image_name']).mean().reset_index().groupby(
+    non_pref_images = stimulus_response_df.groupby(['cell_specimen_id', 'image_name']).mean(numeric_only=True).reset_index().groupby(
         'cell_specimen_id').apply(get_non_pref_image_for_group)
     return non_pref_images
 
@@ -92,7 +92,7 @@ def add_non_pref_image(stimulus_response_df, non_pref_images):
         non_pref_image_name = non_pref_images.loc[cell_specimen_id].non_pref_image
         indices = stimulus_response_df[(stimulus_response_df.cell_specimen_id == cell_specimen_id) & (
             stimulus_response_df.image_name == non_pref_image_name)].index
-        stimulus_response_df.at[indices, 'non_pref_image'] = True
+        stimulus_response_df.loc[indices, 'non_pref_image'] = True
     return stimulus_response_df
 
 
@@ -117,10 +117,10 @@ def get_image_selectivity_index_pref_non_pref(stimulus_response_df):
     returns a dataframe with index cell_specimen_id and column 'image_selectivity_index'
     """
     pref_image_df = stimulus_response_df[stimulus_response_df.pref_image]
-    mean_response_pref_image = pref_image_df.groupby(['cell_specimen_id']).mean()[['mean_response']]
+    mean_response_pref_image = pref_image_df.groupby(['cell_specimen_id']).mean(numeric_only=True)[['mean_response']]
 
     non_pref_image_df = stimulus_response_df[stimulus_response_df.non_pref_image]
-    mean_response_non_pref_image = non_pref_image_df.groupby(['cell_specimen_id']).mean()[['mean_response']]
+    mean_response_non_pref_image = non_pref_image_df.groupby(['cell_specimen_id']).mean(numeric_only=True)[['mean_response']]
 
     image_selectivity_index = (mean_response_pref_image - mean_response_non_pref_image) / (
         mean_response_pref_image + mean_response_non_pref_image)
@@ -135,10 +135,10 @@ def get_image_selectivity_index_one_vs_all(stimulus_response_df):
     returns a dataframe with index cell_specimen_id and column 'image_selectivity_index_one_vs_all'
     """
     pref_image_df = stimulus_response_df[stimulus_response_df.pref_image]
-    mean_response_pref_image = pref_image_df.groupby(['cell_specimen_id']).mean()[['mean_response']]
+    mean_response_pref_image = pref_image_df.groupby(['cell_specimen_id']).mean(numeric_only=True)[['mean_response']]
 
     non_pref_images_df = stimulus_response_df[(stimulus_response_df.pref_image == False)]
-    mean_response_non_pref_images = non_pref_images_df.groupby(['cell_specimen_id']).mean()[['mean_response']]
+    mean_response_non_pref_images = non_pref_images_df.groupby(['cell_specimen_id']).mean(numeric_only=True)[['mean_response']]
 
     image_selectivity_index = (mean_response_pref_image - mean_response_non_pref_images) / (
         mean_response_pref_image + mean_response_non_pref_images)
@@ -185,7 +185,7 @@ def get_lifetime_sparseness_for_cell_specimen_ids(stimulus_response_df):
     computes lifetime sparseness across images for each cell_specimen_id in the stimulus_response_df
     returns a dataframe with index cell_specimen_id and column lifetime_sparseness for each cell
     """
-    lifetime_sparseness_df = stimulus_response_df.groupby(['cell_specimen_id', 'image_name']).mean().reset_index().groupby('cell_specimen_id').apply(get_lifetime_sparseness_for_group)
+    lifetime_sparseness_df = stimulus_response_df.groupby(['cell_specimen_id', 'image_name']).mean(numeric_only=True).reset_index().groupby('cell_specimen_id').apply(get_lifetime_sparseness_for_group)
     return lifetime_sparseness_df
 
 
@@ -194,7 +194,7 @@ def get_mean_response_cell_specimen_ids(stimulus_response_df):
     takes stimulus_response_df (with any filtering criteria applied, such as limited to pref image),
     and computes the average response across all stimulus_presentations for each cell_specimen_id
     """
-    mean_responses = stimulus_response_df.groupby(['cell_specimen_id']).mean()[['mean_response']]
+    mean_responses = stimulus_response_df.groupby(['cell_specimen_id']).mean(numeric_only=True)[['mean_response']]
     return mean_responses
 
 
@@ -298,7 +298,7 @@ def get_running_modulation_index_for_cell_specimen_ids(stimulus_response_df):
     called 'running' that is True if mean_running_speed is >2 cm/s otherwise False
     """
     stimulus_response_df = add_running_to_df(stimulus_response_df)
-    running_modulation_index = stimulus_response_df.groupby(['cell_specimen_id', 'running']).mean()[['mean_response']].reset_index().groupby('cell_specimen_id').apply(get_running_modulation_index_for_group)
+    running_modulation_index = stimulus_response_df.groupby(['cell_specimen_id', 'running']).mean(numeric_only=True)[['mean_response']].reset_index().groupby('cell_specimen_id').apply(get_running_modulation_index_for_group)
     running_modulation_index['running_modulation_index'] = [np.nan if len(index) == 0 else index[0] for index in running_modulation_index.running_modulation_index.values]
     return running_modulation_index
 
@@ -319,7 +319,7 @@ def get_hit_miss_modulation_index(stimulus_response_df):
     returns a dataframe with column 'hit_miss_index' with computed value for each cell_specimen_id in stimulus_response_df
     """
     stimulus_response_df['hit'] = [True if (stimulus_response_df.iloc[row].is_change and stimulus_response_df.iloc[row].licked) else False for row in range(len(stimulus_response_df))]
-    hit_miss_index = stimulus_response_df.groupby(['cell_specimen_id', 'hit']).mean()[['mean_response']].reset_index().groupby('cell_specimen_id').apply(get_hit_miss_modulation_index_for_group)
+    hit_miss_index = stimulus_response_df.groupby(['cell_specimen_id', 'hit']).mean(numeric_only=True)[['mean_response']].reset_index().groupby('cell_specimen_id').apply(get_hit_miss_modulation_index_for_group)
     hit_miss_index['hit_miss_index'] = [np.nan if len(index) == 0 else index[0] for index in hit_miss_index.hit_miss_index.values]
     return hit_miss_index
 
@@ -330,12 +330,12 @@ def get_change_modulation_index(stimulus_response_df):
     if stimulus_response_df has been limited to pref_stim, metric will be for pref stim only
     """
     sdf = stimulus_response_df.copy()
-    change = sdf.groupby(['cell_specimen_id', 'is_change']).mean()[['mean_response']].rename(
+    change = sdf.groupby(['cell_specimen_id', 'is_change']).mean(numeric_only=True)[['mean_response']].rename(
         columns={'mean_response': 'change_response'})
     change = change.reset_index()
     change = change[change.is_change]
 
-    pre_change = sdf.groupby(['cell_specimen_id', 'pre_change']).mean()[['mean_response']].rename(
+    pre_change = sdf.groupby(['cell_specimen_id', 'pre_change']).mean(numeric_only=True)[['mean_response']].rename(
         columns={'mean_response': 'pre_change_response'})
     pre_change = pre_change.reset_index()
     pre_change = pre_change[pre_change.pre_change]
@@ -352,17 +352,17 @@ def get_omission_modulation_index(stimulus_response_df, pre_omitted):
     compute the diff over the sum of the omission to pre-omission image response for each cell in stimulus_response_df
     """
     sdf = stimulus_response_df.copy()
-    omitted = sdf.groupby(['cell_specimen_id', 'omitted']).mean()[['mean_response']].rename(
+    omitted = sdf.groupby(['cell_specimen_id', 'omitted']).mean(numeric_only=True)[['mean_response']].rename(
         columns={'mean_response': 'omission_response'})
     omitted = omitted.reset_index()
     omitted = omitted[omitted.omitted]
 
-    pre_omitted = pre_omitted.groupby(['cell_specimen_id', 'pre_omitted']).mean()[['mean_response']].rename(
+    pre_omitted = pre_omitted.groupby(['cell_specimen_id', 'pre_omitted']).mean(numeric_only=True)[['mean_response']].rename(
         columns={'mean_response': 'pre_omission_response'})
     pre_omitted = pre_omitted.reset_index()
     pre_omitted = pre_omitted[pre_omitted.pre_omitted]
 
-    post_omitted = sdf.groupby(['cell_specimen_id', 'post_omitted']).mean()[['mean_response']].rename(
+    post_omitted = sdf.groupby(['cell_specimen_id', 'post_omitted']).mean(numeric_only=True)[['mean_response']].rename(
         columns={'mean_response': 'post_omission_response'})
     post_omitted = post_omitted.reset_index()
     post_omitted = post_omitted[post_omitted.post_omitted]
@@ -393,7 +393,7 @@ def get_population_coupling_for_cell_specimen_ids(traces):
     pc_list = []
     for cell_specimen_id in cell_specimen_ids:
         cell_trace = traces.loc[cell_specimen_id][trace_column]
-        population_trace = traces.loc[cell_specimen_ids[cell_specimen_ids != cell_specimen_id]][trace_column].mean()
+        population_trace = traces.loc[cell_specimen_ids[cell_specimen_ids != cell_specimen_id]][trace_column].mean(numeric_only=True)
         r, p_value = pearsonr(cell_trace, population_trace)
 
         pc_list.append([cell_specimen_id, r, p_value])
@@ -1247,7 +1247,7 @@ def compute_experience_modulation_index(metrics_table, metric, cells_table):
     print(len(metric_data.ophys_experiment_id.unique()), 'experiments in metric_data after merging with cells_table')
 
     # groupby cell and session number then average across multiple sessions of the same type for each cell
-    metric_data = metric_data.groupby(['cell_specimen_id', 'experience_level']).mean()[[metric]]
+    metric_data = metric_data.groupby(['cell_specimen_id', 'experience_level']).mean(numeric_only=True)[[metric]]
     # unstack to get metric for each session number
     metric_data = metric_data.unstack()
     # get rid of multi index column name

@@ -776,8 +776,8 @@ def add_early_late_block_ratio_for_fdf(fdf, repeat=1, pref_stim=True):
 
     data['early_late_block_ratio'] = np.nan
     for cell in data.cell.unique():
-        first_blocks = data[(data.cell == cell) & (data.block_set.isin([0, 1]))].mean_response.mean()
-        last_blocks = data[(data.cell == cell) & (data.block_set.isin([2, 3]))].mean_response.mean()
+        first_blocks = data[(data.cell == cell) & (data.block_set.isin([0, 1]))].mean_response.mean(numeric_only=True)
+        last_blocks = data[(data.cell == cell) & (data.block_set.isin([2, 3]))].mean_response.mean(numeric_only=True)
         index = (last_blocks - first_blocks) / (last_blocks + first_blocks)
         ratio = first_blocks / last_blocks
         indices = data[data.cell == cell].index
@@ -826,7 +826,7 @@ def get_running_speed_ophys_time(running_speed, timestamps_ophys):
     for i, ophys_time in enumerate(timestamps_ophys):
         run_df = running_speed[running_speed.ophys_time == ophys_time]
         if len(run_df) > 0:
-            run_speed = run_df.running_speed.mean()
+            run_speed = run_df.running_speed.mean(numeric_only=True)
         else:
             run_speed = np.nan
         running_speed_ophys_time[i] = run_speed
