@@ -89,7 +89,7 @@ if __name__ == '__main__':
                                              time_window=time_window, interpolate=interpolate, output_sampling_rate=output_sampling_rate,
                                              response_window_duration=response_window_duration,
                                              use_extended_stimulus_presentations=use_extended_stimulus_presentations,
-                                             epoch_duration_mins=epoch_duration_mins, overwrite=True)
+                                             epoch_duration_mins=epoch_duration_mins, overwrite=False)
             except Exception as e:
                 print('failed to create multi_session_df for', data_type, event_type, conditions)
                 print(e)
