@@ -273,7 +273,6 @@ def get_reliability_for_cell_specimen_ids(stimulus_response_df, frame_rate, time
     """
 
     reliability = stimulus_response_df.groupby(['cell_specimen_id']).apply(compute_reliability, frame_rate, time_window, response_window_duration)
-    reliability = reliability.drop(columns=['correlation_values'])
     return reliability
 
 
@@ -403,7 +402,7 @@ def get_population_coupling_for_cell_specimen_ids(traces):
     pc_list = []
     for cell_specimen_id in cell_specimen_ids:
         cell_trace = traces.loc[cell_specimen_id][trace_column]
-        population_trace = traces.loc[cell_specimen_ids[cell_specimen_ids != cell_specimen_id]][trace_column].mean(numeric_only=True)
+        population_trace = traces.loc[cell_specimen_ids[cell_specimen_ids != cell_specimen_id]][trace_column].mean()
         r, p_value = pearsonr(cell_trace, population_trace)
 
         pc_list.append([cell_specimen_id, r, p_value])
@@ -486,10 +485,9 @@ def generate_trace_metrics_table(ophys_experiment_id, data_type='events', save=F
     ophys_frame_rate = dataset.metadata['ophys_frame_rate']
     trace_metrics = get_trace_metrics(traces, data_type, ophys_frame_rate)
 
-    # # get population coupling across all cells full dff traces
-    # population_coupling = get_population_coupling_for_cell_specimen_ids(traces)
-    #
-    # trace_metrics = trace_metrics.merge(population_coupling, on='cell_specimen_id')
+    # get population coupling across all cells full dff traces
+    population_coupling = get_population_coupling_for_cell_specimen_ids(traces)
+    trace_metrics = trace_metrics.merge(population_coupling, on='cell_specimen_id')
 
     trace_metrics['ophys_experiment_id'] = ophys_experiment_id
 
@@ -868,7 +866,7 @@ def generate_and_save_all_metrics_tables_for_experiment(ophys_experiment_id, dat
                     problem_expts.loc[i, 'exception'] = e
                     i += 1
 
-    save_metrics_generation_exceptions_log_file(problem_expts)
+    # save_metrics_generation_exceptions_log_file(problem_expts)
 
 
 def save_metrics_generation_exceptions_log_file(problem_expts):
