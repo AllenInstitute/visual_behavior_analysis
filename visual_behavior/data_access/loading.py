@@ -63,6 +63,9 @@ def limit_stimulus_presentations_to_change_detection(stimulus_presentations):
     if 'stimulus_block_name' in stimulus_presentations:
         stimulus_presentations = stimulus_presentations[
             stimulus_presentations.stimulus_block_name.str.contains('change_detection')]
+        # change a few columns from type Boolean to bool (they were previously Boolean so they could contain NaNs for non-change detection stim blocks)
+        stimulus_presentations['omitted'] = stimulus_presentations.omitted.astype('bool')
+        stimulus_presentations['is_image_novel'] = stimulus_presentations.is_image_novel.astype('bool')
     return stimulus_presentations
 
 
