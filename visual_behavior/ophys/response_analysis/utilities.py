@@ -1,4 +1,5 @@
 import os
+import warnings
 import numpy as np
 import pandas as pd
 import seaborn as sns
@@ -340,7 +341,10 @@ def compute_reliability_vectorized(traces):
     lower_tri_inds = np.where(np.tril(np.ones([m, m]), k=-1))
     # Take the lower triangle values from the corrmat and averge them
     correlation_values = list(corrmat[lower_tri_inds[0], lower_tri_inds[1]])
-    reliability = np.nanmean(correlation_values)
+    # I expect to see RuntimeWarnings in this block
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", category=RuntimeWarning)
+        reliability = np.nanmean(correlation_values)
     return reliability, correlation_values
 
 
@@ -352,12 +356,15 @@ def compute_reliability(group, window=[-3, 3], response_window_duration=0.5, fra
     response_window = [onset, onset + (int(response_window_duration * frame_rate))]
     traces = group['trace'].values
     traces = np.vstack(traces)
-    if traces.shape[0] > 5:
-        traces = traces[:, response_window[0]:response_window[1]]  # limit to response window
-        reliability, correlation_values = compute_reliability_vectorized(traces)
-    else:
-        reliability = np.nan
-        correlation_values = []
+    # I expect to see RuntimeWarnings in this block
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", category=RuntimeWarning)
+        if traces.shape[0] > 5:
+            traces = traces[:, response_window[0]:response_window[1]]  # limit to response window
+            reliability, correlation_values = compute_reliability_vectorized(traces)
+        else:
+            reliability = np.nan
+            correlation_values = []
     return pd.Series({'reliability': reliability, 'correlation_values': correlation_values})
 
 
@@ -568,8 +575,11 @@ def annotate_mean_df_with_fano_factor(mean_df):
     for idx in mean_df.index:
         mean_responses = mean_df.iloc[idx].mean_responses
         sd = np.nanstd(mean_responses)
-        mean_response = np.nanmean(mean_responses)
-        fano_factor = np.abs((sd * 2) / mean_response)  # take abs value to account for negative mean_response
+        # I expect to see RuntimeWarnings in this block
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=RuntimeWarning)
+            mean_response = np.nanmean(mean_responses)
+            fano_factor = np.abs((sd * 2) / mean_response)  # take abs value to account for negative mean_response
         ff_list.append(fano_factor)
     mean_df['fano_factor'] = ff_list
     return mean_df

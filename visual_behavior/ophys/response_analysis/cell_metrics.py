@@ -1,4 +1,5 @@
 import os
+import warnings
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
@@ -216,8 +217,11 @@ def get_fano_factor(group):
     """
     mean_responses = group.mean_response.values
     sd = np.nanstd(mean_responses)
-    mean_response = np.nanmean(mean_responses)
-    fano_factor = np.abs((sd ** 2) / mean_response)
+    # I expect to see RuntimeWarnings in this block
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", category=RuntimeWarning)
+        mean_response = np.nanmean(mean_responses)
+        fano_factor = np.abs((sd ** 2) / mean_response)
     return pd.Series({'fano_factor': fano_factor})
 
 
@@ -238,7 +242,10 @@ def compute_reliability_vectorized(traces):
     lower_tri_inds = np.where(np.tril(np.ones([m, m]), k=-1))
     # Take the lower triangle values from the corrmat and averge them
     correlation_values = list(corrmat[lower_tri_inds[0], lower_tri_inds[1]])
-    reliability = np.nanmean(correlation_values)
+    # I expect to see RuntimeWarnings in this block
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", category=RuntimeWarning)
+        reliability = np.nanmean(correlation_values)
     return reliability, correlation_values
 
 
@@ -266,7 +273,7 @@ def get_reliability_for_cell_specimen_ids(stimulus_response_df, frame_rate, time
     """
 
     reliability = stimulus_response_df.groupby(['cell_specimen_id']).apply(compute_reliability, frame_rate, time_window, response_window_duration)
-    # reliability = reliability.drop(columns=['correlation_values'])
+    reliability = reliability.drop(columns=['correlation_values'])
     return reliability
 
 
@@ -287,7 +294,10 @@ def get_running_modulation_index_for_group(group):
     """
     running = group[group.running].mean_response.values
     not_running = group[group.running == False].mean_response.values
-    running_modulation_index = (running - not_running) / (running + not_running)
+    # I expect to see RuntimeWarnings in this block
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", category=RuntimeWarning)
+        running_modulation_index = (running - not_running) / (running + not_running)
     return pd.Series({'running_modulation_index': running_modulation_index})
 
 
