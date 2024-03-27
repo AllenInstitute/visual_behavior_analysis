@@ -728,6 +728,8 @@ def get_stimulus_response_df(dataset, time_window=[-2, 2.1], interpolate=True, o
     filepath = get_stimulus_response_df_filepath_for_experiment(ophys_experiment_id, data_type, event_type,
                                                                 interpolate=interpolate, output_sampling_rate=output_sampling_rate)
 
+    # NOTE: 0.75 s window will only be used for calculaing mean response if event_type is 'omissions'!
+    # if event_type = 'all', response window defaults to 0.5
     if event_type == 'omissions':
         response_window_duration = 0.75
     else:
@@ -779,6 +781,8 @@ def get_stimulus_response_df(dataset, time_window=[-2, 2.1], interpolate=True, o
         stimulus_presentations = dataset.extended_stimulus_presentations.copy()
     else:
         stimulus_presentations = data_formatting.get_annotated_stimulus_presentations(dataset, epoch_duration_mins=epoch_duration_mins)
+    # limit to change detection block & change Boolean cols to bool
+    stimulus_presentations = limit_stimulus_presentations_to_change_detection(stimulus_presentations)
     sdf = sdf.merge(stimulus_presentations, on='stimulus_presentations_id')
     # print(len(sdf), 'length of sdf AFTER merging with stim presentations')
     return sdf
