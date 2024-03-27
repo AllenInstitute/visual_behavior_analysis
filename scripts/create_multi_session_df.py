@@ -47,7 +47,7 @@ if __name__ == '__main__':
 
     # event types corresponding to the above physio conditions - must be in same sequential order
     # physio_event_types_for_conditions = ['all']
-    physio_event_types_for_conditions = ['all', 'omissions', 'all', 'all', 'all', 'changes']
+    # physio_event_types_for_conditions = ['all', 'omissions', 'all', 'all', 'all', 'changes']
                                           # 'all', 'all', 'changes', 'changes', 'changes', 'all']
 
 
@@ -62,7 +62,7 @@ if __name__ == '__main__':
                             # ['ophys_experiment_id', 'omitted', 'pre_omitted'],
                            ]
 
-    behavior_event_types_for_conditions = ['all', 'omissions', 'omissions', 'all', 'changes', 'changes',]
+    # behavior_event_types_for_conditions = ['all', 'omissions', 'omissions', 'all', 'changes', 'changes',]
                                            # 'all', 'all', 'all']
 
 
@@ -77,7 +77,8 @@ if __name__ == '__main__':
     for data_type in physio_data_types:
         for i, conditions in enumerate(physio_conditions):
             print(conditions)
-            event_type = physio_event_types_for_conditions[i]
+            # event_type = physio_event_types_for_conditions[i]
+            event_type = 'all'
             print(event_type)
             if 'omitted' in conditions:
                 response_window_duration = 0.75
@@ -99,7 +100,8 @@ if __name__ == '__main__':
     for data_type in behavior_data_types:
         for i, conditions in enumerate(behavior_conditions):
             print(conditions)
-            event_type = behavior_event_types_for_conditions[i]
+            # event_type = behavior_event_types_for_conditions[i]
+            event_type = 'all'
             print(event_type)
             if 'omitted' in conditions:
                 response_window_duration = 0.75
@@ -112,7 +114,7 @@ if __name__ == '__main__':
                                              output_sampling_rate=output_sampling_rate,
                                              response_window_duration=response_window_duration,
                                              use_extended_stimulus_presentations=use_extended_stimulus_presentations,
-                                             overwrite=True)
+                                             overwrite=False)
             except Exception as e:
                 print('failed to create multi_session_df for', data_type, event_type, conditions)
                 print(e)
