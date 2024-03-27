@@ -40,7 +40,7 @@ def deploy_get_behavior_summary_for_all_sessions():
     # problem_sessions = pd.read_csv(os.path.join(save_dir, 'problem_behavior_sessions.csv'))
     # behavior_session_ids = problem_sessions.behavior_session_id.values
 
-    methods = ['response_probability', 'stimulus_based', 'trial_based', 'sdk']
+    methods = ['sdk', 'response_probability', 'stimulus_based', 'trial_based']
     for method in methods:
         for behavior_session_id in behavior_session_ids:
             print('deploying job for bsid {}'.format(behavior_session_id))
