@@ -14,9 +14,11 @@ import warnings
 
 from . import database as db
 
-from visual_behavior.ophys.sync.sync_dataset import Dataset
 from visual_behavior.data_access import loading
 import visual_behavior.visualization.behavior as behavior
+from visual_behavior.ophys.sync.sync_dataset import Dataset
+
+import mindscope_utilities.visual_behavior_ophys.data_formatting as data_formatting
 
 
 def flatten_list(in_list):
@@ -1098,7 +1100,7 @@ def get_behavior_stats(behavior_session_id, method='stimulus_based', engaged_onl
     output_dict = {'behavior_session_id': behavior_session_id}
     print('getting metrics for behavior_session_id:', behavior_session_id)
     session = loading.get_behavior_dataset(behavior_session_id, from_nwb=True,
-                                           get_extended_stimulus_presentations=True, get_extended_trials=True)
+                                           get_extended_stimulus_presentations=False, get_extended_trials=True)
     try:
         if method == 'trial_based':
 
@@ -1154,7 +1156,8 @@ def get_behavior_stats(behavior_session_id, method='stimulus_based', engaged_onl
 
         elif method == 'stimulus_based':
 
-            stimulus_presentations = annotate_stimuli(session, inplace=False)
+            # stimulus_presentations = annotate_stimuli(session, inplace=False)
+            stimulus_presentations = data_formatting.annotate_stimuli(session, inplace=False)
             print(len(stimulus_presentations), 'total stimulus presentations')
 
             if engaged_only == True: # 2/3 rewards / min threshold
@@ -1332,7 +1335,8 @@ def cache_response_probability(behavior_session_id, engaged_only=True):
 
     # get stimulus presentations and annotate
     dataset = loading.get_behavior_dataset(behavior_session_id)
-    stimulus_presentations = annotate_stimuli(dataset)
+    # stimulus_presentations = annotate_stimuli(dataset)
+    stimulus_presentations = data_formatting.annotate_stimuli(dataset, inplace=False)
 
     if engaged_only:
         stimulus_presentations = stimulus_presentations[stimulus_presentations.engagement_state == 'engaged']
