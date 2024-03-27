@@ -422,7 +422,7 @@ def get_mean_df(response_df, conditions=['cell', 'change_image_name'], frame_rat
         reliability = rdf.groupby(conditions).apply(compute_reliability, window, response_window_duration, frame_rate)
         reliability = reliability.reset_index()
         mdf['reliability'] = reliability.reliability
-        mdf['correlation_values'] = reliability.correlation_values
+        # mdf['correlation_values'] = reliability.correlation_values
         # print('done computing reliability')
     except Exception as e:
         print('failed to compute reliability')
