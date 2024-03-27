@@ -61,11 +61,28 @@ def limit_stimulus_presentations_to_change_detection(stimulus_presentations):
     limit stimulus presentations table to the change detection block
     '''
     if 'stimulus_block_name' in stimulus_presentations:
-        stimulus_presentations = stimulus_presentations[
-            stimulus_presentations.stimulus_block_name.str.contains('change_detection')]
+        stimulus_presentations = stimulus_presentations[stimulus_presentations.stimulus_block_name.str.contains('change_detection')]
         # change a few columns from type Boolean to bool (they were previously Boolean so they could contain NaNs for non-change detection stim blocks)
-        stimulus_presentations['omitted'] = stimulus_presentations.omitted.astype('bool')
-        stimulus_presentations['is_image_novel'] = stimulus_presentations.is_image_novel.astype('bool')
+        stimulus_presentations = convert_boolean_cols_to_bool(stimulus_presentations)
+    return stimulus_presentations
+
+
+def convert_boolean_cols_to_bool(stimulus_presentations):
+    '''
+    For any dataframe containing columns derived from the stimulus_presentations table,
+    go through all columns and identify those that are type boolean (which occurs when the column has NaNs and bools)
+    and convert NaNs to False then set dtype to bool.
+
+    This is needed because many operations fail on columns of type boolean.
+    Some columns in stimulus_presentations are boolean in new SDK outputs because of the new stimulus_blocks,
+    as many values specific to change_detection task are set to NaN in other stimulus blocks, which
+    means that the entire column gets the dtype boolean instead of bool.
+    '''
+    for column in stimulus_presentations.columns.values:
+        if stimulus_presentations[column].dtype == 'boolean':
+            # remove NaNs and make bool
+            stimulus_presentations.loc[stimulus_presentations[stimulus_presentations[column].isnull()].index, column] = False
+            stimulus_presentations[column] = stimulus_presentations[column].astype('bool')
     return stimulus_presentations
 
 
