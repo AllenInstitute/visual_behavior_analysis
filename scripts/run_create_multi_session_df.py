@@ -30,6 +30,7 @@ print(cache_dir)
 
 experiments_table = cache.get_ophys_experiment_table()
 experiments_table = experiments_table[(experiments_table.reporter_line != 'Ai94(TITL-GCaMP6s)')]
+experiments_table = experiments_table[experiments_table.project_code=='VisualBehavior']
 print(experiments_table.project_code.unique())
 
 # call the `sbatch` command to run the jobs.
