@@ -29,7 +29,8 @@ cache = bpc.from_s3_cache(cache_dir=cache_dir)
 print(cache_dir)
 
 experiments_table = cache.get_ophys_experiment_table()
-experiments_table = experiments_table[(experiments_table.reporter_line != 'Ai94(TITL-GCaMP6s)')].copy()
+experiments_table = experiments_table[(experiments_table.reporter_line != 'Ai94(TITL-GCaMP6s)')]
+print(experiments_table.project_code.unique())
 
 # call the `sbatch` command to run the jobs.
 for project_code in experiments_table.project_code.unique():
