@@ -14,6 +14,7 @@ from allensdk.brain_observatory.behavior.behavior_project_cache import VisualBeh
 # cache_dir = loading.get_platform_analysis_cache_dir()
 # cache = bpc.from_s3_cache(cache_dir=cache_dir)
 # experiments_table = cache.get_ophys_experiment_table()
+# experiments_table = experiments_table[(experiments_table.reporter_line != 'Ai94(TITL-GCaMP6s)')].copy()
 # ophys_experiment_ids = experiments_table.index.values
 # print(cache_dir)
 # print(len(ophys_experiment_ids))
