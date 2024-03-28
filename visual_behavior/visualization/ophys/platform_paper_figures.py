@@ -1500,6 +1500,7 @@ def add_stim_color_span(dataset, ax, xlim=None, color=None, label_changes=True, 
     alpha = 0.3
     # get stim table
     stim_table = dataset.stimulus_presentations.copy()
+    stim_table = loading.limit_stimulus_presentations_to_change_detection(stim_table)
     # remove omissions because they dont get labeled
     #     stim_table = stim_table[stim_table.omitted == False].copy()
     # get all images & assign colors (image colors wont be used if a color is provided or if label_changes is True)
@@ -1507,11 +1508,11 @@ def add_stim_color_span(dataset, ax, xlim=None, color=None, label_changes=True, 
     image_colors = sns.color_palette("hls", len(images))
     # limit to time window if provided
     if xlim is not None:
-        stim_table = stim_table[(stim_table.start_time >= xlim[0]) & (stim_table.stop_time <= xlim[1])]
+        stim_table = stim_table[(stim_table.start_time >= xlim[0]) & (stim_table.end_time <= xlim[1])]
     # loop through stimulus presentations and add a span with appropriate color
     for idx in stim_table.index:
         start_time = stim_table.loc[idx]['start_time']
-        stop_time = stim_table.loc[idx]['stop_time']
+        end_time = stim_table.loc[idx]['end_time']
         image_name = stim_table.loc[idx]['image_name']
         image_index = stim_table.loc[idx]['image_index']
         if image_name == 'omitted':
@@ -1530,7 +1531,7 @@ def add_stim_color_span(dataset, ax, xlim=None, color=None, label_changes=True, 
                     image_color = image_colors[image_index]
                 else:
                     image_color = color
-            addSpan(ax, start_time, stop_time, color=image_color, alpha=alpha)
+            addSpan(ax, start_time, end_time, color=image_color, alpha=alpha)
     return ax
 
 

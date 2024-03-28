@@ -82,12 +82,13 @@ def plot_kernel_activations(dataset, start_time, duration_seconds, kernel='omiss
     xlim_seconds = [start_time, start_time + duration_seconds]
 
     stim_table = dataset.stimulus_presentations.copy()
+    stim_table = loading.limit_stimulus_presentations_to_change_detection(stim_table)
     trials = dataset.trials.copy()
     # get all images & assign colors (image colors wont be used if a color is provided or if label_changes is True)
     images = np.sort(stim_table[stim_table.omitted == False].image_name.unique())
     image_colors = sns.color_palette("hls", len(images))
     # limit to time window
-    stim_table = stim_table[(stim_table.start_time >= xlim_seconds[0]) & (stim_table.stop_time <= xlim_seconds[1])]
+    stim_table = stim_table[(stim_table.start_time >= xlim_seconds[0]) & (stim_table.end_time <= xlim_seconds[1])]
     images = stim_table[stim_table.image_name != 'omitted'].image_name.unique()
 
     # get timestamps & frames for this window
@@ -133,7 +134,7 @@ def plot_kernel_activations(dataset, start_time, duration_seconds, kernel='omiss
             ax.plot(kernel_trace_timestamps, kernel_trace, color='k')
         if stim_table.loc[idx]['is_change']:
             # index into trials table to see if this change was a hit or not
-            is_hit = trials[trials.change_frame == stim_table.loc[idx].start_frame - 1].hit.values[0]
+            is_hit = trials[trials.change_frame == stim_table.loc[idx].start_frame].hit.values[0]
             # get task kernel length
             len_task_kernel = 2.25
             if (kernel == 'hits') and (is_hit == True):
@@ -637,6 +638,8 @@ def plot_kernels_and_traces_for_cell(cell_specimen_id, dataset,
         ax[i] = utils.plot_flashes_on_trace(ax[i], t_array, change=False, omitted=False, alpha=0.2)
         # image_name = image_names[i]
         st = dataset.stimulus_presentations.copy()
+        st = loading.limit_stimulus_presentations_to_change_detection(st)
+        stim_table
         image_name = st[st.image_index == i].image_name.values[0]
         this_image_sdf = image_cdf[image_cdf.image_name == image_name]
         ax[i] = utils.plot_mean_trace(this_image_sdf.trace.values, this_image_sdf.trace_timestamps.values[0],
@@ -676,6 +679,7 @@ def plot_kernels_and_traces_for_cell(cell_specimen_id, dataset,
     ax[i] = utils.plot_flashes_on_trace(ax[i], t_array, change=False, omitted=False, alpha=0.2)
     # image_name = image_names[i]
     st = dataset.stimulus_presentations.copy()
+    st = loading.limit_stimulus_presentations_to_change_detection(st)
     ax[i] = utils.plot_mean_trace(image_cdf.trace.values, image_cdf.trace_timestamps.values[0],
                                   ylabel='event magnitude', legend_label='data', color=color, interval_sec=0.5,
                                   xlim_seconds=[t_array[0], t_array[-1]], plot_sem=True, ax=ax[i])
