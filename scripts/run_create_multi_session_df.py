@@ -1,4 +1,5 @@
 import os
+import numpy as np
 from simple_slurm import Slurm
 
 import visual_behavior.data_access.loading as loading
