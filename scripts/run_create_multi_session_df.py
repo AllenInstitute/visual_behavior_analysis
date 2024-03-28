@@ -30,11 +30,12 @@ print(cache_dir)
 
 experiments_table = cache.get_ophys_experiment_table()
 experiments_table = experiments_table[(experiments_table.reporter_line != 'Ai94(TITL-GCaMP6s)')]
-experiments_table = experiments_table[experiments_table.project_code=='VisualBehavior']
-print(experiments_table.project_code.unique())
+# experiments_table = experiments_table[experiments_table.project_code=='VisualBehavior']
+project_codes = np.sort(experiments_table.project_code.unique())
+print(project_codes)
 
 # call the `sbatch` command to run the jobs.
-for project_code in experiments_table.project_code.unique():
+for project_code in project_codes:
     print(project_code)
     for session_number in experiments_table.session_number.unique():
 

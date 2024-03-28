@@ -76,10 +76,8 @@ if __name__ == '__main__':
     # conditions = ['cell_specimen_id', 'omitted', 'epoch']
     for data_type in physio_data_types:
         for i, conditions in enumerate(physio_conditions):
-            print(conditions)
             # event_type = physio_event_types_for_conditions[i]
             event_type = 'all'
-            print(event_type)
             if 'omitted' in conditions:
                 response_window_duration = 0.75
             else:
