@@ -11,15 +11,15 @@ parser.add_argument('--scriptname', type=str, default='create_cell_metrics_table
 
 
 from allensdk.brain_observatory.behavior.behavior_project_cache import VisualBehaviorOphysProjectCache as bpc
-cache_dir = loading.get_platform_analysis_cache_dir()
-cache = bpc.from_s3_cache(cache_dir=cache_dir)
-experiments_table = cache.get_ophys_experiment_table()
-ophys_experiment_ids = experiments_table.index.values
-print(cache_dir)
-print(len(ophys_experiment_ids))
-
-# experiments_table = loading.get_platform_paper_experiment_table()
+# cache_dir = loading.get_platform_analysis_cache_dir()
+# cache = bpc.from_s3_cache(cache_dir=cache_dir)
+# experiments_table = cache.get_ophys_experiment_table()
 # ophys_experiment_ids = experiments_table.index.values
+# print(cache_dir)
+# print(len(ophys_experiment_ids))
+
+experiments_table = loading.get_platform_paper_experiment_table()
+ophys_experiment_ids = experiments_table.index.values
 
 if __name__ == "__main__":
     args = parser.parse_args()
