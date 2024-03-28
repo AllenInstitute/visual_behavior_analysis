@@ -789,14 +789,14 @@ def generate_and_save_all_metrics_tables_for_experiment(ophys_experiment_id, dat
     # get data to compute metrics
     # set get_extended_stimulus_presentations to True if metrics need columns not already included in output of
     # loading.get_stimulus_response_df()
-    dataset = loading.get_ophys_dataset(ophys_experiment_id, get_extended_stimulus_presentations=False)
-
-    # load stimulus_response_df from saved file or generate it if file doesnt exist
-    # event_type must be all so that we can filter as needed
-    stimulus_response_df = loading.get_stimulus_response_df(dataset, data_type=data_type, event_type='all', time_window=time_window,
-                                                            interpolate=interpolate, output_sampling_rate=output_sampling_rate,
-                                                            load_from_file=True)
-    stimulus_response_df = loading.convert_boolean_cols_to_bool(stimulus_response_df)
+    # dataset = loading.get_ophys_dataset(ophys_experiment_id, get_extended_stimulus_presentations=False)
+    #
+    # # load stimulus_response_df from saved file or generate it if file doesnt exist
+    # # event_type must be all so that we can filter as needed
+    # stimulus_response_df = loading.get_stimulus_response_df(dataset, data_type=data_type, event_type='all', time_window=time_window,
+    #                                                         interpolate=interpolate, output_sampling_rate=output_sampling_rate,
+    #                                                         load_from_file=True)
+    # stimulus_response_df = loading.convert_boolean_cols_to_bool(stimulus_response_df)
 
     # conditions to loop through
     conditions = ['omissions', 'images', 'changes']
@@ -806,6 +806,8 @@ def generate_and_save_all_metrics_tables_for_experiment(ophys_experiment_id, dat
     # loop through all conditions, generate metrics and save
     metrics_df = pd.DataFrame()
     for condition in conditions:
+        if condition == 'omissions':
+            stimuli = ['all_images']
         for stimulus in stimuli:
             for session_subset in session_subsets:
                 # need try except because code will not always run, such as in the case of passive sessions (no trials that are 'engaged')
@@ -818,6 +820,18 @@ def generate_and_save_all_metrics_tables_for_experiment(ophys_experiment_id, dat
                         if os.path.exists(filepath):  # and file exists, delete it
                             os.remove(filepath)
                             print('h5 file exists for', ophys_experiment_id, ' - overwriting')
+                        # load dataset and sdf
+                        dataset = loading.get_ophys_dataset(ophys_experiment_id)
+                        # load stimulus_response_df from saved file or generate it if file doesnt exist
+                        # event_type must be all so that we can filter as needed
+                        stimulus_response_df = loading.get_stimulus_response_df(dataset, data_type=data_type,
+                                                                                event_type='all',
+                                                                                time_window=time_window,
+                                                                                interpolate=interpolate,
+                                                                                output_sampling_rate=output_sampling_rate,
+                                                                                load_from_file=True)
+                        stimulus_response_df = loading.convert_boolean_cols_to_bool(stimulus_response_df)
+
                         # regenerate metrics and save
                         metrics_df = generate_cell_metrics_table(dataset,
                                                                  stimulus_response_df,
@@ -836,6 +850,17 @@ def generate_and_save_all_metrics_tables_for_experiment(ophys_experiment_id, dat
                         if os.path.exists(filepath):  # and the file already exists
                             pass  # do nothing
                         else:  # otherwise
+                            # load dataset and sdf
+                            dataset = loading.get_ophys_dataset(ophys_experiment_id)
+                            # load stimulus_response_df from saved file or generate it if file doesnt exist
+                            # event_type must be all so that we can filter as needed
+                            stimulus_response_df = loading.get_stimulus_response_df(dataset, data_type=data_type,
+                                                                                    event_type='all',
+                                                                                    time_window=time_window,
+                                                                                    interpolate=interpolate,
+                                                                                    output_sampling_rate=output_sampling_rate,
+                                                                                    load_from_file=True)
+                            stimulus_response_df = loading.convert_boolean_cols_to_bool(stimulus_response_df)
                             # generate metrics and save
                             metrics_df = generate_cell_metrics_table(dataset,
                                                                      stimulus_response_df,
