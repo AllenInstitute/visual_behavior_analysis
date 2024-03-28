@@ -19,6 +19,7 @@ from allensdk.brain_observatory.behavior.behavior_project_cache import VisualBeh
 # print(len(ophys_experiment_ids))
 
 experiments_table = loading.get_platform_paper_experiment_table()
+experiments_table = experiments_table[(experiments_table.reporter_line != 'Ai94(TITL-GCaMP6s)')].copy()
 ophys_experiment_ids = experiments_table.index.values
 
 if __name__ == "__main__":
