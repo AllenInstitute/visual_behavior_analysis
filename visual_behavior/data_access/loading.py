@@ -3552,6 +3552,10 @@ def get_multi_session_df_for_conditions(data_type, event_type, conditions, inclu
                                                                 remove_flagged=True)
 
     # merge in metadata
+    # first convert experience level labels
+    import visual_behavior.visualization.utils as utils
+    experiments_table['experience_level'] = [utils.convert_experience_level(experience_level) for experience_level in
+                                                 experiments_table.experience_level.values]
     multi_session_df = multi_session_df.merge(experiments_table, on='ophys_experiment_id')
     multi_session_df = multi_session_df.reset_index(drop=True)
 
