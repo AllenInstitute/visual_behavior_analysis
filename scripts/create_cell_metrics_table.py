@@ -9,6 +9,7 @@ if __name__ == '__main__':
                         help="Experiment ID to process")
     args = parser.parse_args()
     ophys_experiment_id = args.ophys_experiment_id
+    print('generating cell metrics for', ophys_experiment_id)
 
     interpolate = True
     time_window = [-2, 2.1]

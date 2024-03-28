@@ -164,8 +164,10 @@ def compute_lifetime_sparseness(image_responses):
     # ls = (1 - (((np.sum(image_responses) / N) ** 2) / (np.sum(image_responses ** 2 / N)))) / (1 - (1 / N))
     # emulated from https://github.com/AllenInstitute/visual_coding_2p_analysis/blob/master/visual_coding_2p_analysis/natural_scenes_events.py
     # formulated similar to Froudarakis et al., 2014
-    ls = ((1 - (1 / N) * ((np.power(image_responses.sum(axis=0), 2)) / (np.power(image_responses, 2).sum(axis=0)))) / (
-        1 - (1 / N)))
+    # I expect to see RuntimeWarnings in this block
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", category=RuntimeWarning)
+        ls = ((1 - (1 / N) * ((np.power(image_responses.sum(axis=0), 2)) / (np.power(image_responses, 2).sum(axis=0)))) / (1 - (1 / N)))
     return ls
 
 
@@ -317,7 +319,10 @@ def get_hit_miss_modulation_index_for_group(group):
     """
     hit = group[group.hit].mean_response.values
     miss = group[group.hit == False].mean_response.values
-    hit_miss_index = (hit - miss) / (hit + miss)
+    # I expect to see RuntimeWarnings in this block
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", category=RuntimeWarning)
+        hit_miss_index = (hit - miss) / (hit + miss)
     return pd.Series({'hit_miss_index': hit_miss_index})
 
 
@@ -744,59 +749,59 @@ def generate_and_save_all_metrics_tables_for_experiment(ophys_experiment_id, dat
     :return: saves files to save_dir defined in get_metrics_df_filepath()
     """
 
-    i = 0
-    problem_expts = pd.DataFrame()
+    # i = 0
+    # problem_expts = pd.DataFrame()
 
     # trace metrics ###
     condition = 'traces'
     session_subset = 'full_session'
     stimuli = 'full_session'
 
-    # try:
-    #     filepath = get_metrics_df_filepath(ophys_experiment_id, condition=condition,
-    #                                        stimuli=stimuli, session_subset=session_subset,
-    #                                        data_type=data_type, interpolate=interpolate,
-    #                                        output_sampling_rate=output_sampling_rate)
-    #     if overwrite:
-    #         if os.path.exists(filepath):  # if file exists, delete it
-    #             os.remove(filepath)
-    #             print('h5 file exists for', ophys_experiment_id, ' - overwriting')
-    #         # regenerate metrics   and save
-    #         trace_metrics = generate_trace_metrics_table(ophys_experiment_id, data_type)
-    #         trace_metrics.to_hdf(filepath, key='df')
-    #         print('trace metrics saved for', ophys_experiment_id)
-    #     else:  # if you dont want to overwrite
-    #         if os.path.exists(filepath):  # and the file already exists
-    #             pass  # do nothing
-    #         else:  # otherwise
-    #             # generate metrics and save
-    #             trace_metrics = generate_trace_metrics_table(ophys_experiment_id, data_type)
-    #             trace_metrics.to_hdf(filepath, key='df')
-    #             print('trace metrics saved for', ophys_experiment_id)
-    # except Exception as e:
-    #     print('metrics not generated for trace_metrics for experiment', ophys_experiment_id)
-    #     print(e)
-    #     problem_expts.loc[i, 'ophys_experiment_id'] = ophys_experiment_id
-    #     problem_expts.loc[i, 'condition'] = condition
-    #     problem_expts.loc[i, 'stimuli'] = stimuli
-    #     problem_expts.loc[i, 'session_subset'] = session_subset
-    #     problem_expts.loc[i, 'data_type'] = data_type
-    #     problem_expts.loc[i, 'exception'] = e
-    #     i += 1
+    try:
+        filepath = get_metrics_df_filepath(ophys_experiment_id, condition=condition,
+                                           stimuli=stimuli, session_subset=session_subset,
+                                           data_type=data_type, interpolate=interpolate,
+                                           output_sampling_rate=output_sampling_rate)
+        # if overwrite:
+        if os.path.exists(filepath):  # if file exists, delete it
+            os.remove(filepath)
+            print('h5 file exists for', ophys_experiment_id, ' - overwriting')
+        # regenerate metrics   and save
+        trace_metrics = generate_trace_metrics_table(ophys_experiment_id, data_type)
+        trace_metrics.to_hdf(filepath, key='df')
+        print('trace metrics saved for', ophys_experiment_id)
+        # else:  # if you dont want to overwrite
+        #     if os.path.exists(filepath):  # and the file already exists
+        #         pass  # do nothing
+        #     else:  # otherwise
+        #         # generate metrics and save
+        #         trace_metrics = generate_trace_metrics_table(ophys_experiment_id, data_type)
+        #         trace_metrics.to_hdf(filepath, key='df')
+        #         print('trace metrics saved for', ophys_experiment_id)
+    except Exception as e:
+        print('metrics not generated for trace_metrics for experiment', ophys_experiment_id)
+        print(e)
+        # problem_expts.loc[i, 'ophys_experiment_id'] = ophys_experiment_id
+        # problem_expts.loc[i, 'condition'] = condition
+        # problem_expts.loc[i, 'stimuli'] = stimuli
+        # problem_expts.loc[i, 'session_subset'] = session_subset
+        # problem_expts.loc[i, 'data_type'] = data_type
+        # problem_expts.loc[i, 'exception'] = e
+        # i += 1
 
     # event locked response metrics ###
 
     # get data to compute metrics
     # set get_extended_stimulus_presentations to True if metrics need columns not already included in output of
     # loading.get_stimulus_response_df()
-    # dataset = loading.get_ophys_dataset(ophys_experiment_id, get_extended_stimulus_presentations=False)
-    #
-    # # load stimulus_response_df from saved file or generate it if file doesnt exist
-    # # event_type must be all so that we can filter as needed
-    # stimulus_response_df = loading.get_stimulus_response_df(dataset, data_type=data_type, event_type='all', time_window=time_window,
-    #                                                         interpolate=interpolate, output_sampling_rate=output_sampling_rate,
-    #                                                         load_from_file=True)
-    # stimulus_response_df = loading.convert_boolean_cols_to_bool(stimulus_response_df)
+    dataset = loading.get_ophys_dataset(ophys_experiment_id, get_extended_stimulus_presentations=False)
+
+    # load stimulus_response_df from saved file or generate it if file doesnt exist
+    # event_type must be all so that we can filter as needed
+    stimulus_response_df = loading.get_stimulus_response_df(dataset, data_type=data_type, event_type='all', time_window=time_window,
+                                                            interpolate=interpolate, output_sampling_rate=output_sampling_rate,
+                                                            load_from_file=True)
+    stimulus_response_df = loading.convert_boolean_cols_to_bool(stimulus_response_df)
 
     # conditions to loop through
     conditions = ['omissions', 'images', 'changes']
@@ -820,17 +825,6 @@ def generate_and_save_all_metrics_tables_for_experiment(ophys_experiment_id, dat
                         if os.path.exists(filepath):  # and file exists, delete it
                             os.remove(filepath)
                             print('h5 file exists for', ophys_experiment_id, ' - overwriting')
-                        # load dataset and sdf
-                        dataset = loading.get_ophys_dataset(ophys_experiment_id)
-                        # load stimulus_response_df from saved file or generate it if file doesnt exist
-                        # event_type must be all so that we can filter as needed
-                        stimulus_response_df = loading.get_stimulus_response_df(dataset, data_type=data_type,
-                                                                                event_type='all',
-                                                                                time_window=time_window,
-                                                                                interpolate=interpolate,
-                                                                                output_sampling_rate=output_sampling_rate,
-                                                                                load_from_file=True)
-                        stimulus_response_df = loading.convert_boolean_cols_to_bool(stimulus_response_df)
 
                         # regenerate metrics and save
                         metrics_df = generate_cell_metrics_table(dataset,
@@ -845,22 +839,12 @@ def generate_and_save_all_metrics_tables_for_experiment(ophys_experiment_id, dat
                                                                  interpolate=interpolate,
                                                                  )
                         metrics_df.to_hdf(filepath, key='df')
-                        print('metrics generated for', data_type, condition, stimulus, session_subset, 'interpolate:', interpolate)
+                        print('metrics generated for', ophys_experiment_id, data_type, condition, stimulus, session_subset, 'interpolate:', interpolate)
                     else:  # if you dont want to overwrite
                         if os.path.exists(filepath):  # and the file already exists
                             pass  # do nothing
                         else:  # otherwise
-                            # load dataset and sdf
-                            dataset = loading.get_ophys_dataset(ophys_experiment_id)
-                            # load stimulus_response_df from saved file or generate it if file doesnt exist
-                            # event_type must be all so that we can filter as needed
-                            stimulus_response_df = loading.get_stimulus_response_df(dataset, data_type=data_type,
-                                                                                    event_type='all',
-                                                                                    time_window=time_window,
-                                                                                    interpolate=interpolate,
-                                                                                    output_sampling_rate=output_sampling_rate,
-                                                                                    load_from_file=True)
-                            stimulus_response_df = loading.convert_boolean_cols_to_bool(stimulus_response_df)
+
                             # generate metrics and save
                             metrics_df = generate_cell_metrics_table(dataset,
                                                                      stimulus_response_df,
@@ -874,22 +858,22 @@ def generate_and_save_all_metrics_tables_for_experiment(ophys_experiment_id, dat
                                                                      interpolate=interpolate,
                                                                      )
                             metrics_df.to_hdf(filepath, key='df')
-                            print('metrics generated for', data_type, condition, stimulus, session_subset, 'interpolate:', interpolate)
-
+                            print('metrics generated for', ophys_experiment_id, data_type, condition, stimulus, session_subset, 'interpolate:', interpolate)
+                            print('metrics saved to', filepath)
                 except Exception as e:
                     print('metrics not generated for experiment_id', ophys_experiment_id,
                           'data_type', data_type, 'interpolate', interpolate,
                           'condition', condition, 'stimulus', stimulus,
                           'session_subset', session_subset)
                     print(e)
-                    problem_expts.loc[i, 'ophys_experiment_id'] = ophys_experiment_id
-                    problem_expts.loc[i, 'condition'] = condition
-                    problem_expts.loc[i, 'stimuli'] = stimulus
-                    problem_expts.loc[i, 'session_subset'] = session_subset
-                    problem_expts.loc[i, 'data_type'] = data_type
-                    problem_expts.loc[i, 'interpolate'] = interpolate
-                    problem_expts.loc[i, 'exception'] = e
-                    i += 1
+                    # problem_expts.loc[i, 'ophys_experiment_id'] = ophys_experiment_id
+                    # problem_expts.loc[i, 'condition'] = condition
+                    # problem_expts.loc[i, 'stimuli'] = stimulus
+                    # problem_expts.loc[i, 'session_subset'] = session_subset
+                    # problem_expts.loc[i, 'data_type'] = data_type
+                    # problem_expts.loc[i, 'interpolate'] = interpolate
+                    # problem_expts.loc[i, 'exception'] = e
+                    # i += 1
 
     # save_metrics_generation_exceptions_log_file(problem_expts)
 
