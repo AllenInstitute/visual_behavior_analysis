@@ -804,17 +804,21 @@ def generate_and_save_all_metrics_tables_for_experiment(ophys_experiment_id, dat
     stimulus_response_df = loading.convert_boolean_cols_to_bool(stimulus_response_df)
 
     # conditions to loop through
-    conditions = ['omissions', 'images', 'changes']
-    stimuli = ['all_images', 'pref_image']
+    # conditions = ['omissions', 'images', 'changes']
+    # stimuli = ['all_images', 'pref_image']
+    # session_subsets = ['full_session']
+
+    conditions = ['images', 'changes']
+    stimuli = ['pref_image']
     session_subsets = ['full_session']
 
     # loop through all conditions, generate metrics and save
     metrics_df = pd.DataFrame()
     for condition in conditions:
-        if condition == 'omissions':
-            stimuli = ['all_images']
         for stimulus in stimuli:
             for session_subset in session_subsets:
+                if condition == 'omissions':
+                    stimulus = 'all_images'
                 # need try except because code will not always run, such as in the case of passive sessions (no trials that are 'engaged')
                 try:
                     filepath = get_metrics_df_filepath(ophys_experiment_id, condition=condition,
