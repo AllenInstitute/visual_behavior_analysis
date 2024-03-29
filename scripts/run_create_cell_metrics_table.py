@@ -8,6 +8,7 @@ from simple_slurm import Slurm
 parser = argparse.ArgumentParser(description='run cell metrics generation functions on the cluster')
 parser.add_argument('--env', type=str, default='visual_behavior_sdk_new', metavar='name of conda environment to use')
 parser.add_argument('--scriptname', type=str, default='create_cell_metrics_table.py', metavar='name of script to run (must be in same folder)')
+args = parser.parse_args()
 
 python_executable = "{}/anaconda3/envs/{}/bin/python".format(os.path.expanduser('~'), args.env)
 python_file = os.path.join(os.getcwd(), args.scriptname)
@@ -33,7 +34,7 @@ for ii, ophys_experiment_id in enumerate(ophys_experiment_ids):
     args_to_pass = '--ophys_experiment_id {}'.format(ophys_experiment_id)
     print('experiment ID = {}, number {} of {}'.format(ophys_experiment_id, ii + 1, len(ophys_experiment_ids)))
     job_title = 'experiment_{}'.format(ophys_experiment_id)
-    args = parser.parse_args()
+
 
     # instantiate a Slurm object
     slurm = Slurm(
