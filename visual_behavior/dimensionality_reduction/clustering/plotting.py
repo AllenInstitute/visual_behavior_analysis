@@ -3351,6 +3351,41 @@ def plot_cell_counts_per_location(cluster_meta, save_dir=None, folder=None, ax=N
     return ax
 
 
+def plot_experience_modulation(coding_score_metrics, metric='experience_modulation', save_dir=None, folder=''):
+    """
+    Plot the experience modulation metric for different clusters.
+
+    Parameters:
+    - coding_score_metrics (DataFrame): DataFrame containing the coding score metrics.
+    - metric (str): The metric to use for plotting. Default is 'experience_modulation'.
+    - save_dir (str): Directory to save the plot. If None, the plot is not saved.
+    - folder (str): Folder name within save_dir to save the plot. Ignored if save_dir is None.
+
+    Returns:
+    - fig, ax: The matplotlib figure and axis objects for the plot.
+    """
+    cell_types = utils.get_cell_types()
+    cell_type_colors = utils.get_cell_type_colors()
+    xorder = np.sort(coding_score_metrics.cluster_id.unique())
+
+    figsize = (9, 3)
+    fig, ax = plt.subplots(figsize=figsize)
+    ax = sns.boxplot(data=coding_score_metrics, x='cluster_id', y=metric, order=xorder,
+                     hue='cell_type', hue_order=cell_types, palette=cell_type_colors,
+                     showfliers=False, width=0.6, boxprops=dict(alpha=.7), ax=ax)
+    ax.set_title('Experience modulation')
+    ax.set_xlabel('cluster ID')
+    ax.set_ylabel('<- Familiar --- Novel ->')
+    ax.spines[['right', 'top']].set_visible(False)
+    ax.axhline(y=0, xmin=0, xmax=1, linestyle='--', color='gray', linewidth=0.8)
+    ax.legend(bbox_to_anchor=(1, 1), fontsize='xx-small', title_fontsize='xx-small')
+
+    if save_dir:
+        utils.save_figure(fig, figsize, save_dir, folder, 'fraction_cells_per_cluster_per_cre_per_layer')
+
+    return ax
+
+
 def plot_number_mice_per_cluster(cluster_meta, save_dir=None, folder=None):
     n_mice = cluster_meta.groupby(['cre_line', 'cluster_id', 'mouse_id']).count().reset_index().groupby(['cre_line', 'cluster_id']).count().rename(columns={'mouse_id': 'n_mice'})[['n_mice']]
     n_mice = n_mice.reset_index()
