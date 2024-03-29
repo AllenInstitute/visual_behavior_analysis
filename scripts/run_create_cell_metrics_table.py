@@ -17,7 +17,7 @@ python_file = os.path.join(os.getcwd(), args.scriptname)
 stdout_location = r"/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/cluster_jobs/cell_metrics"
 
 from allensdk.brain_observatory.behavior.behavior_project_cache import VisualBehaviorOphysProjectCache as bpc
-# cache_dir = loading.get_platform_analysis_cache_dir()
+cache_dir = loading.get_platform_analysis_cache_dir()
 cache = bpc.from_s3_cache(cache_dir=cache_dir)
 experiments_table = cache.get_ophys_experiment_table()
 experiments_table = experiments_table[(experiments_table.reporter_line != 'Ai94(TITL-GCaMP6s)')]
