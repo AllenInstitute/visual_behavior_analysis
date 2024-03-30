@@ -35,14 +35,21 @@ def get_glm_model_fit_cell_results_df(ophys_experiment_id):
     '''
     platform_cache_dir = loading.get_platform_analysis_cache_dir()
     glm_version = '24_events_all_L2_optimize_by_session'
-    fit_filepath = os.path.join(platform_cache_dir, 'glm_results', glm_version, 'model_fits', str(ophys_experiment_id) + '.h5')
+    fit_filepath = os.path.join(platform_cache_dir, 'glm_results', glm_version, 'model_fits', str(ophys_experiment_id))
     if os.path.exists(fit_filepath):
         cell_results_df = pd.read_hdf(fit_filepath, key='df')
     else:
         glm = GLM(ophys_experiment_id, glm_version, log_results=False, log_weights=False, use_previous_fit=True,
                   recompute=False, use_inputs=False, inputs=None, NO_DROPOUTS=False, TESTING=False)
+        # cell results df
         cell_results_df = glm.cell_results_df.copy()
-        cell_results_df.to_hdf(fit_filepath, key='df')
+        cell_results_df.to_hdf(fit_filepath+'_cell_results_df.h5', key='df')
+        # results df
+        results_df = glm.results.copy()
+        results_df.to_hdf(fit_filepath + 'results_df.h5', key='df')
+        # dropouts
+        dropouts = glm.fit['dropouts'].copy()
+        pd.to_pickle(dropouts, fit_filepath + '_dropouts.pkl')
     return cell_results_df
 
 
@@ -52,6 +59,10 @@ def plot_glm_model_fit_examples(ophys_experiment_id):
     '''
     import visual_behavior_glm.GLM_schematic_plots as gsm
     glm_version = '24_events_all_L2_optimize_by_session'
+    # get run params
+    platform_cache_dir = loading.get_platform_analysis_cache_dir()
+    run_params = pd.read_pickle(os.path.join(platform_cache_dir, 'glm_results', glm_version + '_run_params.pkl'))
+    # initialize GLM object
     glm = GLM(ophys_experiment_id, glm_version, log_results=False, log_weights=False, use_previous_fit=True,
                 recompute=False, use_inputs=False, inputs=None, NO_DROPOUTS=False, TESTING=False)
 
