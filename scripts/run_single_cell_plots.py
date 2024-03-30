@@ -17,7 +17,8 @@ container_ids = loading.get_ophys_container_ids(platform_paper_only=True, add_ex
 if __name__ == "__main__":
     args = parser.parse_args()
     python_executable = "{}/anaconda3/envs/{}/bin/python".format(os.path.expanduser('~'), args.env)
-    python_file = os.path.join(os.getcwd(), args.scriptname)
+    python_file = r"/home/marinag/visual_behavior_analysis/scripts/create_single_cell_plots.py"
+    # python_file = os.path.join(os.getcwd(), args.scriptname)
 
     # define the job record output folder
     stdout_location = r"/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/cluster_jobs/paper_figures"
