@@ -619,3 +619,14 @@ def get_conditions_string(data_type, conditions):
         conditions_string = data_type + '_' + conditions[0]
 
     return conditions_string
+
+
+def get_start_end_time_for_period_with_omissions_and_change(stimulus_presentations, n_flashes=16):
+    st = stimulus_presentations.copy()
+    indices = st[st.omitted].index.values[10:] # start from the 10th omission
+    for idx in indices:
+        subset = st.loc[idx:idx+n_flashes-6] #from 4 flashes before omission to 2 flashes before end of window
+        if subset.is_change.any():
+            start_time = st.loc[idx-4].start_time
+            end_time = start_time+(0.75*n_flashes)
+    return [start_time, end_time]

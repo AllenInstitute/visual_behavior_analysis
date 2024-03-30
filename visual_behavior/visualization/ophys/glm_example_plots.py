@@ -10,17 +10,66 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import visual_behavior.visualization.utils as utils
 import visual_behavior.data_access.loading as loading
+import visual_behavior.data_access.processing as processing
 import visual_behavior.visualization.ophys.summary_figures as sf
 import visual_behavior.visualization.ophys.platform_paper_figures as ppf
 
 import mindscope_utilities.general_utilities as ms_utils
 
 import visual_behavior_glm.GLM_params as glm_params
+from visual_behavior_glm.glm import GLM
 
 # formatting
 sns.set_context('notebook', font_scale=1.5, rc={'lines.markeredgewidth': 2})
 # sns.set_style('white', {'axes.spines.right': False, 'axes.spines.top': False})
 sns.set_palette('deep')
+
+
+
+def get_glm_model_fit_cell_results_df(ophys_experiment_id):
+    '''
+    Load GLM object and extract cell_results_df which contains model fits, then save it
+    If cell_results_df is already saved, then load it
+    :param ophys_experiment_id
+    :return: cell_results_df, table of model fits
+    '''
+    platform_cache_dir = loading.get_platform_analysis_cache_dir()
+    glm_version = '24_events_all_L2_optimize_by_session'
+    fit_filepath = os.path.join(platform_cache_dir, 'glm_results', glm_version, 'model_fits', str(ophys_experiment_id) + '.h5')
+    if os.path.exists(fit_filepath):
+        cell_results_df = pd.read_hdf(fit_filepath, key='df')
+    else:
+        glm = GLM(ophys_experiment_id, glm_version, log_results=False, log_weights=False, use_previous_fit=True,
+                  recompute=False, use_inputs=False, inputs=None, NO_DROPOUTS=False, TESTING=False)
+        cell_results_df = glm.cell_results_df.copy()
+        cell_results_df.to_hdf(fit_filepath, key='df')
+    return cell_results_df
+
+
+def plot_glm_model_fit_examples(ophys_experiment_id):
+    '''
+    load GLM object then plot example cells
+    '''
+    import visual_behavior_glm.GLM_schematic_plots as gsm
+    glm_version = '24_events_all_L2_optimize_by_session'
+    glm = GLM(ophys_experiment_id, glm_version, log_results=False, log_weights=False, use_previous_fit=True,
+                recompute=False, use_inputs=False, inputs=None, NO_DROPOUTS=False, TESTING=False)
+
+    # get time window with an omission and a change
+    times = utils.get_start_end_time_for_period_with_omissions_and_change(glm.session.stimulus_presentations.copy(), n_flashes=16)
+
+    # get high SNR traces
+    traces = processing.compute_robust_snr_on_dataframe(glm.session.dff_traces)
+    if len(traces)<15:
+        n_cells = len(traces)
+    else:
+        n_cells = 15
+    cell_specimen_ids = traces.sort_values(by='robust_snr', ascending=False).index.values[:n_cells]
+
+    # plot examples
+    for cell_specimen_id in cell_specimen_ids:
+        gsm.plot_glm_example(glm, cell_specimen_id, run_params, times=times, savefig=True)
+
 
 
 def load_GLM_outputs(glm_version, experiments_table, cells_table, glm_output_dir=None):

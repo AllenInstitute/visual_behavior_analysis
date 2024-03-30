@@ -7,7 +7,7 @@ from visual_behavior.data_access import utilities as utilities
 from simple_slurm import Slurm
 
 parser = argparse.ArgumentParser(description='run cell plots generation functions on the cluster')
-parser.add_argument('--env', type=str, default='visual_behavior_sdk', metavar='name of conda environment to use')
+parser.add_argument('--env', type=str, default='visual_behavior_sdk_new', metavar='name of conda environment to use')
 parser.add_argument('--scriptname', type=str, default='create_single_cell_plots.py', metavar='name of script to run (must be in same folder)')
 
 
