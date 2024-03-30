@@ -958,12 +958,18 @@ def load_metrics_table_for_experiments(ophys_experiment_ids, condition, stimuli,
             print('problem loading all experiments metrics table')
     else:
         for ophys_experiment_id in tqdm(ophys_experiment_ids):
-            try:
-                tmp = load_metrics_table_for_experiment(ophys_experiment_id, condition, stimuli, session_subset,
-                                                        data_type=data_type, interpolate=interpolate,
-                                                        output_sampling_rate=output_sampling_rate)
+            # try:
+                # tmp = load_metrics_table_for_experiment(ophys_experiment_id, condition, stimuli, session_subset,
+                #                                         data_type=data_type, interpolate=interpolate,
+                #                                         output_sampling_rate=output_sampling_rate)
+            filepath = get_metrics_df_filepath(ophys_experiment_id, condition, stimuli, session_subset,
+                                               data_type=data_type, interpolate=interpolate,
+                                               output_sampling_rate=output_sampling_rate)
+            print('attempting to load', filepath)
+            if os.path.exists(filepath):
+                tmp = pd.read_hdf(filepath, key='df')
                 metrics_table = pd.concat([metrics_table, tmp])
-            except:
+            else:
                 # generate the table
                 print('cant load saved table, generating metrics table for', ophys_experiment_id)
                 # load dataset
