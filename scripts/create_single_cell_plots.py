@@ -12,6 +12,9 @@ import visual_behavior.visualization.ophys.glm_example_plots as gep
 from visual_behavior.dimensionality_reduction.clustering import processing
 from visual_behavior.dimensionality_reduction.clustering import plotting
 
+from allensdk.brain_observatory.behavior.behavior_project_cache import VisualBehaviorOphysProjectCache as bpc
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--ophys_container_id", type=int,
@@ -20,6 +23,9 @@ if __name__ == '__main__':
     ophys_container_id = args.ophys_container_id
     print('ophys_container_id:', ophys_container_id)
 
+    cache_dir = loading.get_platform_analysis_cache_dir()
+    cache = bpc.from_s3_cache(cache_dir=cache_dir)
+    print(cache_dir)
     experiments_table = cache.get_ophys_experiment_table()
     ophys_experiment_ids = experiments_table[experiments_table.ophys_container_id==ophys_container_id].index.values
 

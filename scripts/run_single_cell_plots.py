@@ -10,8 +10,6 @@ parser = argparse.ArgumentParser(description='run cell plots generation function
 parser.add_argument('--env', type=str, default='visual_behavior_sdk_new', metavar='name of conda environment to use')
 parser.add_argument('--scriptname', type=str, default='create_single_cell_plots.py', metavar='name of script to run (must be in same folder)')
 
-
-
 container_ids = loading.get_ophys_container_ids(platform_paper_only=True, add_extra_columns=True)
 
 if __name__ == "__main__":
