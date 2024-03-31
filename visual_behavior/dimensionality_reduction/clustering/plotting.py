@@ -3386,6 +3386,54 @@ def plot_experience_modulation(coding_score_metrics, metric='experience_modulati
     return ax
 
 
+def plot_cluster_depth_distributi_by_ncre_lines(n_cells_table, metric, xorder, hue, hue_order, significance_col, save_dir=None, folder=''):
+    """
+    Plot the data for each CRE line.
+
+    Parameters:
+    - n_cells_table (DataFrame): DataFrame containing the cell data.
+    - metric (str): The metric to use for plotting.
+    - xorder (array-like): Order of the x-axis.
+    - hue (str): Hue for the plot.
+    - hue_order (array-like): Order of the hue.
+    - significance_col (str): Column indicating significance.
+    - save_dir (str): Directory to save the plot. If None, the plot is not saved.
+    - folder (str): Folder name within save_dir to save the plot. Ignored if save_dir is None.
+
+    Returns:
+    - fig, ax: The matplotlib figure and axis objects for the plot.
+    """
+    figsize = (5, 5)
+    fig, ax = plt.subplots(3, 1, figsize=figsize, sharey=True, sharex=True)
+    for i, cre_line in enumerate(utils.get_cre_lines()):
+        cre_data = n_cells_table[n_cells_table.cre_line == cre_line]
+
+        ax[i] = sns.barplot(data=cre_data, x='cluster_id', order=xorder, y=metric,
+                            hue=hue, hue_order=hue_order, palette='gray', width=0.7, ax=ax[i])
+        ax[i].get_legend().remove()
+        ax[i].set_ylabel('')
+        ax[i].set_xlabel('')
+        ax[i].set_title(utils.convert_cre_line_to_cell_type(cre_line))
+
+        for x_loc, cluster_id in enumerate(xorder): 
+            cre_cluster_data = cre_data[cre_data['cluster_id']==cluster_id]
+            if cre_cluster_data[significance_col].any(): 
+                y_loc = cre_cluster_data[metric].max()-0.015
+                ax[i].text(x_loc, y_loc, '*', fontsize=24, color=sns.color_palette()[3],
+                            horizontalalignment='center', verticalalignment='center')
+
+    ax[1].set_ylabel('Fraction cells in each depth')
+    ax[i].set_xlabel('Cluster ID')
+    ax[0].legend(loc='upper right', fontsize='xx-small', title_fontsize='xx-small')
+    sns.despine(fig=fig, top=True, right=True, left=False, bottom=False, offset=None, trim=False)
+
+    plt.subplots_adjust(hspace=0.5)
+
+    if save_dir:
+        utils.save_figure(fig, figsize, save_dir, folder, 'fraction_cells_per_cluster_per_cre_per_layer')
+
+    return ax
+
 def plot_number_mice_per_cluster(cluster_meta, save_dir=None, folder=None):
     n_mice = cluster_meta.groupby(['cre_line', 'cluster_id', 'mouse_id']).count().reset_index().groupby(['cre_line', 'cluster_id']).count().rename(columns={'mouse_id': 'n_mice'})[['n_mice']]
     n_mice = n_mice.reset_index()
