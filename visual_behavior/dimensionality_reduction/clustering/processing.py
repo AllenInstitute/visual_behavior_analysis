@@ -19,6 +19,7 @@ from sklearn.metrics import pairwise_distances
 from sklearn.cluster import SpectralClustering
 
 import visual_behavior.data_access.loading as loading
+from allensdk.brain_observatory.behavior.behavior_project_cache import VisualBehaviorOphysProjectCache
 import visual_behavior.data_access.utilities as utilities
 import visual_behavior.visualization.utils as utils
 
@@ -30,6 +31,9 @@ import visual_behavior_glm.GLM_params as glm_params
 from statsmodels.stats.proportion import proportion_confint
 from statsmodels.stats.proportion import multinomial_proportions_confint
 from visual_behavior.dimensionality_reduction.clustering import plotting as plotting
+
+cache_dir = loading.get_platform_analysis_cache_dir()
+cache = VisualBehaviorOphysProjectCache.from_s3_cache(cache_dir=cache_dir)
 
 
 import seaborn as sns
@@ -3820,3 +3824,116 @@ def get_cluster_info(cre_line, cluster_df):
     unique_equipment_per_cluster= tmp.groupby('cluster_id')['equipment_name'].nunique()
     unique_clusters_per_equipment= tmp.groupby('equipment_name')['cluster_id'].nunique()
     return unique_mouse_per_cluster, unique_cluster_per_mouse, unique_equipment_per_cluster, unique_clusters_per_equipment
+
+
+def get_cell_specimen_ids_matched_in_x_sessions(cells_table, x_sessions=3):
+    """
+    identifies cell_specimen_ids that are matched in at least x number of sessions in the input dataframe
+    limit dataframe to a specific subset of session types to identify cells matched in that session type
+    input dataframe must have column 'cell_specimen_id', such as in ophys_cells_table
+    x_sessions: minimum number of sessions a cell has to be matched in
+    """
+    x_sessions = 3
+    session_counts = cells_table.groupby(['cell_specimen_id']).count()[['ophys_session_id']]
+    cells_in_x_sessions = session_counts[session_counts.ophys_session_id >= x_sessions]
+    print('checking session counts:', cells_in_x_sessions.ophys_session_id.values[:20])
+    cell_specimen_ids_in_x_sessions = cells_in_x_sessions.index.unique()
+    print(len(cell_specimen_ids_in_x_sessions), 'cell_specimen_ids in at least', x_sessions, 'sessions')
+
+    return cell_specimen_ids_in_x_sessions
+
+
+def add_familiar_active_session_number(cells_table):
+    """
+    limit to familiar active sessions, then add a column indicating the order of sessions relative to the first familiar active session
+    input dataframe must have columns 'cell_specimen_id', 'date_of_acquisition', 'passive', and 'experience_level;
+    and have only one row per cell_specimen_id - ophys_experiment_id combination
+    """
+    # limit to familiar active sessions only
+    cells_table = limit_to_familiar_active_sessions(cells_table)
+    # add a column indicating the session order 
+    cells_table['familiar_active_session_number'] = np.nan
+    cells_table = cells_table.sort_values(by=['cell_specimen_id', 'date_of_acquisition'])
+    cells_table = cells_table.reset_index() # important to reset index so the following row assignment works properly
+    for row in cells_table.index.values: 
+        row_data = cells_table.loc[row]
+        csid = row_data.cell_specimen_id
+        this_session_id = row_data.ophys_session_id
+        sorted_sessions = cells_table[cells_table.cell_specimen_id==csid].sort_values(by='date_of_acquisition')
+        all_sessions = sorted_sessions.ophys_session_id.values
+        session_number = np.where(all_sessions==this_session_id)[0][0]+1
+        cells_table.at[row, 'familiar_active_session_number'] = int(session_number)
+    print(len(cells_table.cell_specimen_id.unique()), 'familiar active cell_specimen_ids')
+    print(len(cells_table.familiar_active_session_number.unique()), 'familiar active session numbers')
+    return cells_table
+
+def replace_experience_level_with_familiar_active_number(df):
+    '''
+    will go through every row in df and add the familiar active sesssion number to 'experience_level' column 
+    limit to only familiar active session numbers first to prevent this from getting weird
+    '''
+     # add familiar active session number
+    df = add_familiar_active_session_number(df)
+
+    # add familiar active session number to experience level
+    df['experience_level'] = [df.iloc[row].experience_level + ' ' + str(int(df.iloc[row].familiar_active_session_number)) for row in range(len(df))]
+    print('experience_levels: ', df['experience_level'].unique())
+    return df
+    
+
+def limit_to_familiar_active_sessions(df):
+    """
+    takes any input dataframe with 'experience_level' and 'passive' columns and removes everything that isnt 
+    experience_level=Familiar with passive=False
+    """
+    # limit to active familiar session only
+    df = df[(df.experience_level=='Familiar') & (df.passive==False)].copy()
+    print(len(df.cell_specimen_id.unique()), 'familiar active cell_specimen_ids')
+    return df
+
+
+def get_cells_matched_in_3_familiar_active_sessions():
+    """
+    returns a version of ophys_cells_table with 4x2 and Ai94 data removed,
+    a new column called "familiar_active_session_number" that gives the order of familiar sessions after passive ones have been removed
+    limits to cells matched in the first 3 familiar active sessions
+    and modifies "experience_level" column to include the familiar active session number (ex: Familiar 1, Familiar 2, etc)
+    """
+    cache_dir = loading.get_platform_analysis_cache_dir()
+    cache = VisualBehaviorOphysProjectCache.from_s3_cache(cache_dir=cache_dir)
+    experiment_table = cache.get_ophys_experiment_table()
+    # remove 4x2 and GC6s
+    experiment_table = experiment_table[(experiment_table.project_code != 'VisualBehaviorMultiscope4areasx2d')]
+    experiment_table = experiment_table[(experiment_table.reporter_line != 'Ai94(TITL-GCaMP6s)')]
+    print(len(experiment_table), 'experiments')
+
+    familiar_expts = experiment_table[(experiment_table.experience_level=='Familiar') & (experiment_table.passive==False)]
+    print(len(familiar_expts), 'familiar active experiments')
+    print(familiar_expts.experience_level.unique())
+    print(familiar_expts.session_type.unique())
+
+    cells_table = cache.get_ophys_cells_table()
+    # merge in metadata, which also limits cells_table to the experiments in familiar_expts above (without 4x2 and Ai94)
+    cells_table = cells_table.reset_index().merge(familiar_expts, on='ophys_experiment_id')
+    # remove experiment that does not have GLM results
+    cells_table = cells_table[cells_table.ophys_experiment_id!=856938751]
+    print(len(cells_table.ophys_experiment_id.unique()), 'experiments in filtered cells table')
+
+    # add familiar active session number
+    familiar_cells = add_familiar_active_session_number(cells_table)
+
+    # get cells that are in at least 3 sessions of this type
+    matched_csids = get_cell_specimen_ids_matched_in_x_sessions(familiar_cells, x_sessions=3)
+    matched_cells = familiar_cells[familiar_cells.cell_specimen_id.isin(matched_csids)]
+    print(matched_cells.experience_level.unique())
+    print(matched_cells.session_type.unique())
+
+    # limit to the first 3 familiar active sessions
+    matched_cells = matched_cells[matched_cells.familiar_active_session_number <= 3]
+    print(len(matched_cells.cell_specimen_id.unique()), 'familiar active cell_specimen_ids in the first 3 sessions')
+    print(len(matched_cells.familiar_active_session_number.unique()), 'familiar active session numbers')
+
+    # add familiar active session number to experience level
+    matched_cells = replace_experience_level_with_familiar_active_number(matched_cells)
+    
+    return matched_cells
