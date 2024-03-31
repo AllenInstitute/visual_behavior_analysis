@@ -5377,3 +5377,39 @@ def plot_within_across_cluster_correlations(correlations_summary, save_dir=None,
     if save_dir: 
         utils.save_figure(fig, figsize, save_dir, folder, 'within_across_cluster_correlation_'+str(n_clusters))
 
+
+
+def plot_response_metrics_boxplot_by_cre(response_metrics, cre_lines, n_clusters, experience_levels, experience_level_colors):
+    """
+    Plot running modulation for different cell types and experience levels.
+    
+    Parameters:
+    - response_metrics (DataFrame): DataFrame containing response metrics
+    - cre_lines (list): List of CRE lines
+    - n_clusters (int): Number of clusters
+    - experience_levels (list): List of experience levels
+    - experience_level_colors (dict): Dictionary mapping experience levels to colors
+    """
+    metric = 'running_modulation_all_images'
+    order = np.arange(0, n_clusters+1, 1)
+    figsize = (10, 9)
+    fig, ax = plt.subplots(len(cre_lines), 1, figsize=figsize, sharey=True, sharex=False)
+    
+    for i, cre_line in enumerate(cre_lines):
+        data = response_metrics[response_metrics.cre_line==cre_line]
+        ax[i] = sns.boxplot(data=data, x='cluster_id', y=metric, order=order, showfliers=False,
+                            hue='experience_level', hue_order=experience_levels, palette=experience_level_colors, 
+                            width=0.5, boxprops=dict(alpha=.7), ax=ax[i])
+        ax[i].set_title(utils.convert_cre_line_to_cell_type(cre_line))
+        ax[i].get_legend().remove()
+        ax[i].set_xlabel('')
+        ax[i].set_ylabel('Run modulation')
+        ax[i].set_xticks(order+1)
+        ax[i].set_xlim((0.5, n_clusters+0.5))
+        ax[i].spines[['right', 'top']].set_visible(False)
+    
+    ax[i].set_xlabel('cluster ID')  
+    ax[i].legend(bbox_to_anchor=(1,1), fontsize='xx-small', title_fontsize='xx-small')
+    plt.suptitle('Run modulation index - all images', x=0.51, y=0.95)
+    plt.subplots_adjust(hspace=0.5)
+
