@@ -1585,7 +1585,7 @@ def plot_cluster_means_remapped(feature_matrix, cluster_meta, save_dir=None, fol
         utils.save_figure(fig, figsize, save_dir, folder, 'cluster_means_remapped')
     return ax
 
-def plot_mean_cluster_heatmaps_remapped(feature_matrix, cluster_meta, clusters, save_dir=None, folder=None):
+def plot_mean_cluster_heatmaps_remapped(feature_matrix, cluster_meta, cre_line, clusters, save_dir=None, folder=None):
     """
     Plot mean cluster heatmaps with remapped coding scores.
 
@@ -1601,7 +1601,7 @@ def plot_mean_cluster_heatmaps_remapped(feature_matrix, cluster_meta, clusters, 
     """
 
     feature_matrix_remapped, remapped_cmap, vmax = remap_coding_scores_to_session_colors(feature_matrix)
-    figsize = (35, 1.7)
+    figsize = (2*len(clusters), 4)
     fig, ax = plt.subplots(1, len(clusters), figsize=figsize, sharex=True, sharey=True)
     ax = ax.ravel()
 
@@ -1616,10 +1616,12 @@ def plot_mean_cluster_heatmaps_remapped(feature_matrix, cluster_meta, clusters, 
         # set title and labels
         ax[i].set_title('cluster ' + str(cluster_id) + '\n' + str(fraction) + '%, n=' + str(len(this_cluster_csids)))
         ax[i].set_xlabel('')
-
+    cell_type = processing.get_cell_type_for_cre_line(cre_line)
+    fig.suptitle(cell_type)
     plt.subplots_adjust(hspace=0.6, wspace=0.25)
+    plt.tight_layout()
     if save_dir:
-        utils.save_figure(fig, figsize, save_dir, folder, 'mean_cluster_heatmaps_remapped_'+str(n_clusters))
+        utils.save_figure(fig, figsize, save_dir, folder, 'mean_cluster_heatmaps_remapped_'+str(len(clusters))+cell_type)
 
 
 
