@@ -1585,6 +1585,43 @@ def plot_cluster_means_remapped(feature_matrix, cluster_meta, save_dir=None, fol
         utils.save_figure(fig, figsize, save_dir, folder, 'cluster_means_remapped')
     return ax
 
+def plot_mean_cluster_heatmaps_remapped(feature_matrix, cluster_meta, clusters, save_dir=None, folder=None):
+    """
+    Plot mean cluster heatmaps with remapped coding scores.
+
+    Parameters:
+    - feature_matrix_remapped (DataFrame): DataFrame containing remapped coding scores
+    - remapped_cmap (str or Colormap): Colormap for the heatmap
+    - vmax (float): Maximum value for the heatmap color scale
+    - cluster_meta (DataFrame): DataFrame containing cluster metadata
+    - clusters (list): List of cluster IDs
+    - n_clusters_to_plot (int): Number of clusters to plot
+    - save_dir (str, optional): Directory to save the figure
+    - folder (str, optional): Folder name for saving the figure
+    """
+
+    feature_matrix_remapped, remapped_cmap, vmax = remap_coding_scores_to_session_colors(feature_matrix)
+    figsize = (35, 1.7)
+    fig, ax = plt.subplots(1, len(clusters), figsize=figsize, sharex=True, sharey=True)
+    ax = ax.ravel()
+
+    # loop through clusters in sorted order
+    for i, cluster_id in enumerate(clusters):
+        this_cluster_csids = cluster_meta[cluster_meta.cluster_id==cluster_id].index.values
+        mean_dropout_df = feature_matrix_remapped.loc[this_cluster_csids].mean().unstack()
+        ax[i] = sns.heatmap(mean_dropout_df, cmap=remapped_cmap, vmin=0, vmax=vmax, ax=ax[i], cbar=False, cbar_kws={'label': 'coding score'})
+        # fraction is number of cells in this cluster vs all cells in this cre line
+        fraction_cluster = len(this_cluster_csids) / float(len(cluster_meta))
+        fraction = np.round(fraction_cluster * 100, 1)
+        # set title and labels
+        ax[i].set_title('cluster ' + str(cluster_id) + '\n' + str(fraction) + '%, n=' + str(len(this_cluster_csids)))
+        ax[i].set_xlabel('')
+
+    plt.subplots_adjust(hspace=0.6, wspace=0.25)
+    if save_dir:
+        utils.save_figure(fig, figsize, save_dir, folder, 'mean_cluster_heatmaps_remapped_'+str(n_clusters))
+
+
 
 def plot_coding_score_heatmap_remapped(cluster_meta, feature_matrix, sort_by='cluster_id', session_colors=True,
                                     save_dir=None, folder=None, ax=None):
@@ -5379,7 +5416,7 @@ def plot_within_across_cluster_correlations(correlations_summary, save_dir=None,
 
 
 
-def plot_response_metrics_boxplot_by_cre(response_metrics, cre_lines, n_clusters, experience_levels, experience_level_colors):
+def plot_response_metrics_boxplot_by_cre(response_metrics, metric = None, cre_lines=None, n_clusters=12, experience_levels=None, experience_level_colors=None):
     """
     Plot running modulation for different cell types and experience levels.
     
@@ -5390,7 +5427,15 @@ def plot_response_metrics_boxplot_by_cre(response_metrics, cre_lines, n_clusters
     - experience_levels (list): List of experience levels
     - experience_level_colors (dict): Dictionary mapping experience levels to colors
     """
-    metric = 'running_modulation_all_images'
+    if experience_level_colors is None:
+        experience_level_colors = utils.get_experience_level_colors() 
+
+    if experience_levels is None:
+        experience_levels = utils.utils.get_experience_levels()
+
+    if cre_lines is None:
+        cre_lines = utils.get_cre_lines()
+
     order = np.arange(0, n_clusters+1, 1)
     figsize = (10, 9)
     fig, ax = plt.subplots(len(cre_lines), 1, figsize=figsize, sharey=True, sharex=False)
@@ -5403,13 +5448,13 @@ def plot_response_metrics_boxplot_by_cre(response_metrics, cre_lines, n_clusters
         ax[i].set_title(utils.convert_cre_line_to_cell_type(cre_line))
         ax[i].get_legend().remove()
         ax[i].set_xlabel('')
-        ax[i].set_ylabel('Run modulation')
+        ax[i].set_ylabel(metric.replace("_", " "))
         ax[i].set_xticks(order+1)
         ax[i].set_xlim((0.5, n_clusters+0.5))
         ax[i].spines[['right', 'top']].set_visible(False)
     
     ax[i].set_xlabel('cluster ID')  
     ax[i].legend(bbox_to_anchor=(1,1), fontsize='xx-small', title_fontsize='xx-small')
-    plt.suptitle('Run modulation index - all images', x=0.51, y=0.95)
+    plt.suptitle(metric.replace("_", " "), x=0.51, y=0.95)
     plt.subplots_adjust(hspace=0.5)
 
