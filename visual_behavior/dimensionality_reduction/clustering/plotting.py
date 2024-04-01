@@ -1626,7 +1626,7 @@ def plot_mean_cluster_heatmaps_remapped(feature_matrix, cluster_meta, cre_line, 
         vmax = 1
         remapped_cmap = utils.get_experience_level_cmap()[experience_index]
     
-    figsize = (2*len(clusters), 4)
+    figsize = (2.5*len(clusters), 1.7)
     fig, ax = plt.subplots(1, len(clusters), figsize=figsize, sharex=True, sharey=True)
     ax = ax.ravel()
 
@@ -1642,7 +1642,7 @@ def plot_mean_cluster_heatmaps_remapped(feature_matrix, cluster_meta, cre_line, 
         ax[i].set_title('cluster ' + str(cluster_id) + '\n' + str(fraction) + '%, n=' + str(len(this_cluster_csids)))
         ax[i].set_xlabel('')
     cell_type = processing.get_cell_type_for_cre_line(cre_line)
-    fig.suptitle(cell_type)
+    fig.suptitle(cell_type, x=0.46, y=1.5)
     plt.subplots_adjust(hspace=0.6, wspace=0.25)
     plt.tight_layout()
     if save_dir:
