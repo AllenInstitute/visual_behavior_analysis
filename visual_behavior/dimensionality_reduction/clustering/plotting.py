@@ -1601,7 +1601,7 @@ def plot_cluster_means_remapped(feature_matrix, cluster_meta, session_colors=Tru
         utils.save_figure(fig, figsize, save_dir, folder, 'cluster_means_remapped')
     return ax
 
-def plot_mean_cluster_heatmaps_remapped(feature_matrix, cluster_meta, cre_line, clusters, save_dir=None, folder=None):
+def plot_mean_cluster_heatmaps_remapped(feature_matrix, cluster_meta, cre_line, clusters, session_colors=True, experience_index=None, save_dir=None, folder=None):
     """
     Plot mean cluster heatmaps with remapped coding scores.
 
@@ -1616,7 +1616,16 @@ def plot_mean_cluster_heatmaps_remapped(feature_matrix, cluster_meta, cre_line, 
     - folder (str, optional): Folder name for saving the figure
     """
 
-    feature_matrix_remapped, remapped_cmap, vmax = remap_coding_scores_to_session_colors(feature_matrix)
+    if session_colors:
+        assert experience_index is None, "session_colors must be False to use experience_index"
+
+    if session_colors:
+        feature_matrix_remapped, remapped_cmap, vmax = remap_coding_scores_to_session_colors(feature_matrix)
+    else:
+        feature_matrix_remapped = feature_matrix.copy()
+        vmax = 1
+        remapped_cmap = utils.get_experience_level_cmap()[experience_index]
+    
     figsize = (2*len(clusters), 4)
     fig, ax = plt.subplots(1, len(clusters), figsize=figsize, sharex=True, sharey=True)
     ax = ax.ravel()
