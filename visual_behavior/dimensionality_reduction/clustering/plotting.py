@@ -1501,7 +1501,7 @@ def plot_cre_line_means_heatmap(cre_line_means, cmap, vmax, colorbar=False,
 
     return ax
 
-def plot_cre_line_means_remapped(feature_matrix, cluster_meta, save_dir=None, folder=None):
+def plot_cre_line_means_remapped(feature_matrix, cluster_meta, session_colors=True, experience_index=None, save_dir=None, folder=None):
     """
     Get the average coding score values for each cre line, remap the colormap to use session colors,
     Translate the dataframe so that cre lines are columns and rows are feature-experience combos,
@@ -1509,7 +1509,15 @@ def plot_cre_line_means_remapped(feature_matrix, cluster_meta, save_dir=None, fo
     """
     cre_line_means = get_cre_line_means(feature_matrix, cluster_meta)
 
-    cre_line_means_remapped, coding_score_cmap, vmax = remap_coding_scores_to_session_colors(cre_line_means)
+    if session_colors:
+        assert experience_index is None, 'Use only one of session_colors or experience_index'
+    
+    if session_colors:
+        cre_line_means_remapped, coding_score_cmap, vmax = remap_coding_scores_to_session_colors(cre_line_means)
+    else:
+        cre_line_means_remapped = cre_line_means.copy()
+        coding_score_cmap = utils.get_experience_level_cmap()[experience_index]
+        vmax = 1
     cre_line_means_remapped = cre_line_means_remapped.T.copy()
 
     # relabel dataframe indices to be abbreviated
@@ -1520,7 +1528,7 @@ def plot_cre_line_means_remapped(feature_matrix, cluster_meta, save_dir=None, fo
                                 save_dir=save_dir, folder=folder, ax=None)
 
 
-def plot_cluster_means_heatmap(cluster_means, cmap, vmax, colorbar=False, ax=None):
+def plot_cluster_means_heatmap(cluster_means, cmap, vmax, colorbar=False, ax=None, session_colors=True):
     """
     plots a heatmap of cluster mean value with a given colormap and vmax
     cluster_means: dataframe with clusters as columns and feature-experience combinations as rows
@@ -1554,22 +1562,30 @@ def plot_cluster_means_heatmap(cluster_means, cmap, vmax, colorbar=False, ax=Non
     ax.text(s=features[3], x=12.28, y=10.5, rotation=rotation, color='black', fontsize=fontsize, va='center', ha='left')
 
     # colorize y axis labels
-    color_yaxis_labels_by_experience(ax)
+    if session_colors:
+        color_yaxis_labels_by_experience(ax)
 
     return ax
 
 
-def plot_cluster_means_remapped(feature_matrix, cluster_meta, save_dir=None, folder=None, ax=None):
+def plot_cluster_means_remapped(feature_matrix, cluster_meta, session_colors=True, experience_index=None, save_dir=None, folder=None, ax=None):
     """
     Get the average coding score values for each cluster, remap the colormap to use session colors,
     Translate the dataframe so that clusters are columns and rows are feature-experience combos,
     abbreviate the labels for aesthetics, then plot
     """
+
+    if session_colors:
+        assert experience_index is None, 'Use only one of session_colors or experience_index'
     # compute cluster means
     cluster_means = get_cluster_means(feature_matrix, cluster_meta)
     # remap to session colors
-    cluster_means_remapped, coding_score_cmap, vmax = remap_coding_scores_to_session_colors(cluster_means)
-    # translate the df so clusters are cols and feature-exp are rows
+    if session_colors:
+        cluster_means_remapped, coding_score_cmap, vmax = remap_coding_scores_to_session_colors(cluster_means)
+    else:
+        cluster_means_remapped = cluster_means.copy()
+        coding_score_cmap = utils.get_experience_level_cmap()[experience_index]
+        vmax = 1
     cluster_means_remapped = cluster_means_remapped.T.copy()
     # relabel dataframe indices to be abbreviated
     new_labels = get_clean_labels_for_coding_scores_df(cluster_means_remapped, columns=False)
@@ -1578,7 +1594,7 @@ def plot_cluster_means_remapped(feature_matrix, cluster_meta, save_dir=None, fol
     if ax is None:
         figsize = (8,5)
         fig, ax = plt.subplots(figsize=figsize)
-    ax = plot_cluster_means_heatmap(cluster_means_remapped, coding_score_cmap, vmax, colorbar=False, ax=ax)
+    ax = plot_cluster_means_heatmap(cluster_means_remapped, coding_score_cmap, vmax, colorbar=False, ax=ax, session_colors=session_colors)
     ax.set_yticklabels(new_labels, rotation=0)
     # save
     if save_dir:
