@@ -1625,7 +1625,7 @@ def plot_mean_cluster_heatmaps_remapped(feature_matrix, cluster_meta, cre_line, 
 
 
 
-def plot_coding_score_heatmap_remapped(cluster_meta, feature_matrix, sort_by='cluster_id', session_colors=True,
+def plot_coding_score_heatmap_remapped(cluster_meta, feature_matrix, sort_by='cluster_id', session_colors=True, experience_index=None,
                                     save_dir=None, folder=None, ax=None):
     """
     Plot heatmap of all cells coding scores, sorted by cluster_id (or some other column of cluster_meta)
@@ -1636,7 +1636,10 @@ def plot_coding_score_heatmap_remapped(cluster_meta, feature_matrix, sort_by='cl
     orient: 'horiz' or 'vert'; whether to orient the plot vertically (cells on y axis, coding socres on x) or horizontally (cells on x axis, coding scores on y)
     session_colors: if True, will plot the coding score values using the color of the experience level for that coding score
                     if False, default colormap will be used ("Blues_r")
+    experience_index: index of the experience level in the color map to use for coloring the heatmap
     """
+    if session_colors:
+        assert experience_index is None, "session_colors must be False to use experience_index"
 
     if sort_by is not None:
         sorted_cluster_meta = cluster_meta.sort_values(by=sort_by)
@@ -1654,8 +1657,9 @@ def plot_coding_score_heatmap_remapped(cluster_meta, feature_matrix, sort_by='cl
         coding_scores_remapped, coding_score_cmap, vmax = remap_coding_scores_to_session_colors(coding_scores_sorted)
         cbar = False
     else:
+        coding_scores_remapped = coding_scores_sorted.copy()
         vmax = 1
-        coding_score_cmap = 'Blues'
+        coding_score_cmap = utils.get_experience_level_cmap()[experience_index]
         cbar = True
 
     # translate so rows are feature-exp combos and columns are cells
@@ -1916,7 +1920,7 @@ def plot_population_averages_for_conditions_multi_row(multi_session_df, data_typ
                     ax[i].set_title(metadata_string)
                 else:
                     if axes_column == 'experience_level':
-                        title_colors = utilities.get_experience_level_colors()
+                        title_colors = utils.get_experience_level_colors()
                         ax[i].set_title(axis, color=title_colors[i], fontsize=20)
                     else:
                         ax[i].set_title(axis)
@@ -4093,8 +4097,8 @@ def plot_cluster_size_difference(cluster_size_df, cre_line=None, shuffle_type=No
 
     # y axis limits
     # for some reason sharey does not work with cluster size on this plot, so here I am trying to standardize y axis to cre across cluster ids
-    y2_min = cluster_size_df.groupby('cluster_id').min()[y2].min()
-    y2_max = cluster_size_df.groupby('cluster_id').max()[y2].max()
+    y2_min = cluster_size_df.groupby('cluster_id').min()[y].min()
+    y2_max = cluster_size_df.groupby('cluster_id').max()[y].max()
     y2_lims = [y2_min, y2_max]
     
 
@@ -4397,7 +4401,8 @@ def plot_matched_clusters_heatmap_remapped(SSE_mapping, mean_dropout_scores_unst
             hm_color = 'Blues'
         features = processing.get_features_for_clustering()
         mean_dropout_df = all_clusters_means_dict[cluster_id].loc[features]  # order regressors in a specific order
-        cre_line_means = get_cre_line_means(feature_matrix, cluster_meta)
+        print('not working yet')
+        cre_line_means = processing.get_cre_line_means(feature_matrix, cluster_meta) 
 
         cre_line_means_remapped, coding_score_cmap, vmax = remap_coding_scores_to_session_colors(cre_line_means)
         cre_line_means_remapped = cre_line_means_remapped.T.copy()
@@ -4445,7 +4450,7 @@ def plot_matched_clusters_heatmap_remapped(SSE_mapping, mean_dropout_scores_unst
         utils.save_figure(fig, figsize, save_dir, folder,
                           f'{metric}_{shuffle_type}dropout_matched_clusters' + cre_line_suffix, formats = ['.png', '.pdf'])
 
-def plot_unraveled_clusters_mean(cre_line, cre_line_dfs, save_d=None, folder='', tag='', ax=None, figsize=(12,2)):
+def plot_unraveled_clusters_mean(cre_line, cre_line_dfs, save_dir=None, folder='', tag='', ax=None, figsize=(12,2)):
     """
     Plot the mean of the feature matrix for a given cre_line.
 
