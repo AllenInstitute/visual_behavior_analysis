@@ -125,8 +125,8 @@ def get_experience_level_colors():
     blues = sns.color_palette('Blues_r', 6)[:5][::2]
     purples = sns.color_palette('Purples_r', 6)[:5][::2]
 
-    colors = [reds[0], blues[0], purples[0]]
-    # colors = [blues[0], reds[0],  purples[0]]
+    # colors = [reds[0], blues[0], purples[0]]
+    colors = [blues[0], reds[0],  purples[0]] # changing red to be Novel and blue to be Familiar
 
     return colors
 
