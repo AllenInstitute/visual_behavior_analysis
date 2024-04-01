@@ -1710,11 +1710,11 @@ def plot_coding_score_heatmap_remapped(cluster_meta, feature_matrix, sort_by='cl
         # ax.set_xlim(ax.get_xlim())
         ax2.set_xlim(0, coding_scores_remapped.shape[1])
         ax2.set_xticks([0, coding_scores_remapped.shape[1]])
-        ax2.set_xticklabels((0, coding_scores_remapped.shape[1]), rotation=0)
+        ax2.set_xticklabels((1, coding_scores_remapped.shape[1]+1), rotation=0)
     else:
         ax.set_xlim(0, coding_scores_remapped.shape[1])
         ax.set_xticks([0, coding_scores_remapped.shape[1]])
-        ax.set_xticklabels((0, coding_scores_remapped.shape[1]), rotation=0)
+        ax.set_xticklabels((1, coding_scores_remapped.shape[1]+1), rotation=0)
         ax.set_xlabel('cells')
 
     # plot a line at the division point between clusters
