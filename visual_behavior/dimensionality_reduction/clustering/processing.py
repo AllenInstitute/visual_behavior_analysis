@@ -1215,7 +1215,7 @@ def run_all_cre_clustering(feature_matrix, cells_table, n_clusters, save_dir, fo
         cluster_meta_save_path = os.path.join(save_dir, 'cluster_meta_n_' + str(n_clusters) + '_clusters.h5')
         cluster_data = cluster_meta.reset_index()[
             ['cell_specimen_id', 'ophys_experiment_id', 'cre_line', 'cluster_id', 'labels',
-             'within_cluster_correlation_p', 'within_cluster_correlation_s']]
+             'within_cluster_correlation_p', 'within_cluster_correlation_s']] # looks like there is only 'within_cluster_corelation' in cluster_meta
         cluster_data.to_hdf(cluster_meta_save_path, key='df', format='table')
 
     # if cluster_id is zero indexed, add one to it
