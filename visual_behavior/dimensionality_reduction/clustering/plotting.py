@@ -1472,7 +1472,7 @@ def color_yaxis_labels_by_experience(ax):
         ], ax.yaxis.get_ticklabels())]
 
 
-def plot_cre_line_means_heatmap(cre_line_means, cmap, vmax, colorbar=False,
+def plot_cre_line_means_heatmap(cre_line_means, cmap, vmax, session_colors=True, colorbar=False,
                                 save_dir=None, folder=None, ax=None):
     """
     plots a heatmap of mean coding score values for each cre line with a given colormap and vmax
@@ -1491,8 +1491,9 @@ def plot_cre_line_means_heatmap(cre_line_means, cmap, vmax, colorbar=False,
     for y in [3, 6, 9]:
         ax.axhline(y=y, xmin=0, xmax=cre_line_means.shape[0], color='gray', linestyle='--', linewidth=1)
 
-    # colorize y axis labels
-    color_yaxis_labels_by_experience(ax)
+    if session_colors:
+        # colorize y axis labels
+        color_yaxis_labels_by_experience(ax)
     # rotate labels
     ax.set_yticklabels(cre_line_means.index, rotation=0)
 
@@ -1524,7 +1525,7 @@ def plot_cre_line_means_remapped(feature_matrix, cluster_meta, session_colors=Tr
     new_labels = get_clean_labels_for_coding_scores_df(cre_line_means_remapped, columns=False)
     cre_line_means_remapped.index = new_labels
 
-    plot_cre_line_means_heatmap(cre_line_means_remapped, coding_score_cmap, vmax, colorbar=False,
+    plot_cre_line_means_heatmap(cre_line_means_remapped, coding_score_cmap, vmax, session_colors, colorbar=False,
                                 save_dir=save_dir, folder=folder, ax=None)
 
 
@@ -1553,13 +1554,14 @@ def plot_cluster_means_heatmap(cluster_means, cmap, vmax, colorbar=False, ax=Non
     fontsize = 12
     rotation = -90
     features = processing.get_features_for_clustering()
+    x_loc = cluster_means.shape[1]+.25
     for i,feature in enumerate(features):
         if feature == 'all-images':
             features[i] = 'images'
-    ax.text(s=features[0], x=12.25, y=1.5, rotation=rotation, color='black', fontsize=fontsize, va='center', ha='left')
-    ax.text(s=features[1], x=12.28, y=4.4, rotation=rotation, color='black', fontsize=fontsize, va='center', ha='left')
-    ax.text(s=features[2], x=12.25, y=7.5, rotation=rotation, color='black', fontsize=fontsize, va='center', ha='left')
-    ax.text(s=features[3], x=12.28, y=10.5, rotation=rotation, color='black', fontsize=fontsize, va='center', ha='left')
+    ax.text(s=features[0], x=x_loc, y=1.5, rotation=rotation, color='black', fontsize=fontsize, va='center', ha='left')
+    ax.text(s=features[1], x=x_loc, y=4.4, rotation=rotation, color='black', fontsize=fontsize, va='center', ha='left')
+    ax.text(s=features[2], x=x_loc, y=7.5, rotation=rotation, color='black', fontsize=fontsize, va='center', ha='left')
+    ax.text(s=features[3], x=x_loc, y=10.5, rotation=rotation, color='black', fontsize=fontsize, va='center', ha='left')
 
     # colorize y axis labels
     if session_colors:
@@ -4406,7 +4408,7 @@ def plot_matched_clusters_heatmap(SSE_mapping, mean_dropout_scores_unstacked, me
 
 def plot_matched_clusters_heatmap_remapped(SSE_mapping, mean_dropout_scores_unstacked, metric='mean', shuffle_type=None,
                                   cre_line=None, abbreviate_features=True, abbreviate_experience=True, small_fontsize=False,
-                                  cbar=False, save_dir=None, folder=None, figsize=None):
+                                  session_colors=True, save_dir=None, folder=None, figsize=None):
     ''' This function needs work to be able to plot the heatmap with the remapped colors. It is not working yet.'''
     all_clusters_means_dict = processing.get_matched_clusters_means_dict(SSE_mapping,
                                                                          mean_dropout_scores_unstacked,
@@ -4436,7 +4438,7 @@ def plot_matched_clusters_heatmap_remapped(SSE_mapping, mean_dropout_scores_unst
         new_labels = get_clean_labels_for_coding_scores_df(cre_line_means_remapped, columns=False)
         cre_line_means_remapped.index = new_labels
 
-        plot_cre_line_means_heatmap(cre_line_means_remapped, coding_score_cmap, vmax, colorbar=False,
+        plot_cre_line_means_heatmap(cre_line_means_remapped, coding_score_cmap, vmax, session_colors, colorbar=False,
                                 save_dir=save_dir, folder=folder, ax=None)
 
         if abbreviate_features:
