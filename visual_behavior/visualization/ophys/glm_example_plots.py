@@ -16,14 +16,36 @@ import visual_behavior.visualization.ophys.platform_paper_figures as ppf
 
 import mindscope_utilities.general_utilities as ms_utils
 
-import visual_behavior_glm.GLM_params as glm_params
 from visual_behavior_glm.glm import GLM
+import visual_behavior_glm.GLM_params as glm_params
+import visual_behavior_glm.GLM_schematic_plots as gsp
+import visual_behavior_glm.GLM_visualization_tools as gvt
+
 
 # formatting
 sns.set_context('notebook', font_scale=1.5, rc={'lines.markeredgewidth': 2})
 # sns.set_style('white', {'axes.spines.right': False, 'axes.spines.top': False})
 sns.set_palette('deep')
 
+
+def load_glm_model_fit_results(ophys_experiment_id):
+    '''
+    Load cell_results_df, results, and dropouts from pre-saved files derived from GLM object
+    :param ophys_experiment_id:
+    :return:
+    '''
+    # load GLM fit results
+    fits_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\platform_paper_cache_new\glm_results\24_events_all_L2_optimize_by_session\model_fits'
+    filename = [file for file in os.listdir(fits_dir) if str(ophys_experiment_id) in file and 'cell_results_df.h5' in file]
+    cell_results_df = pd.read_hdf(os.path.join(fits_dir, filename[0]), key='df', index_col=0)
+    # all results
+    filename = [file for file in os.listdir(fits_dir) if str(ophys_experiment_id) in file and 'results_df.h5' in file and 'cell' not in file]
+    results = pd.read_hdf(os.path.join(fits_dir, filename[0]), key='df', index_col=0)
+    # coding score results
+    filename = [file for file in os.listdir(fits_dir) if str(ophys_experiment_id) in file and 'dropouts.pkl' in file]
+    dropouts = pd.read_pickle(os.path.join(fits_dir, filename[0]))
+
+    return cell_results_df, results, dropouts
 
 
 def get_glm_model_fit_cell_results_df(ophys_experiment_id):
@@ -35,27 +57,30 @@ def get_glm_model_fit_cell_results_df(ophys_experiment_id):
     '''
     platform_cache_dir = loading.get_platform_analysis_cache_dir()
     glm_version = '24_events_all_L2_optimize_by_session'
-    fit_filepath = os.path.join(platform_cache_dir, 'glm_results', glm_version, 'model_fits', str(ophys_experiment_id))
+    fit_filepath_start = os.path.join(platform_cache_dir, 'glm_results', glm_version, 'model_fits', str(ophys_experiment_id))
+    fit_filepath = os.path.join(fit_filepath_start, '_cell_results_df.h5')
     if os.path.exists(fit_filepath):
+        print('file exists, loading')
         cell_results_df = pd.read_hdf(fit_filepath, key='df')
     else:
+        print('creating GLM object & saving results')
         glm = GLM(ophys_experiment_id, glm_version, log_results=False, log_weights=False, use_previous_fit=True,
                   recompute=False, use_inputs=False, inputs=None, NO_DROPOUTS=False, TESTING=False)
         # cell results df
         cell_results_df = glm.cell_results_df.copy()
-        cell_results_df.to_hdf(fit_filepath+'_cell_results_df.h5', key='df')
+        cell_results_df.to_hdf(fit_filepath_start + '_cell_results_df.h5', key='df')
         # results df
         results_df = glm.results.copy()
-        results_df.to_hdf(fit_filepath + 'results_df.h5', key='df')
+        results_df.to_hdf(fit_filepath_start + '_results_df.h5', key='df')
         # dropouts
         dropouts = glm.fit['dropouts'].copy()
-        pd.to_pickle(dropouts, fit_filepath + '_dropouts.pkl')
+        pd.to_pickle(dropouts, fit_filepath_start + '_dropouts.pkl')
     return cell_results_df
 
 
-def plot_glm_model_fit_examples(ophys_experiment_id):
+def plot_glm_model_fit_examples_with_GLM_class(ophys_experiment_id):
     '''
-    load GLM object then plot example cells
+    load GLM object then plot example cells using GLM repo plotting code
     '''
     import visual_behavior_glm.GLM_schematic_plots as gsm
     glm_version = '24_events_all_L2_optimize_by_session'
@@ -64,14 +89,14 @@ def plot_glm_model_fit_examples(ophys_experiment_id):
     run_params = pd.read_pickle(os.path.join(platform_cache_dir, 'glm_results', glm_version + '_run_params.pkl'))
     # initialize GLM object
     glm = GLM(ophys_experiment_id, glm_version, log_results=False, log_weights=False, use_previous_fit=True,
-                recompute=False, use_inputs=False, inputs=None, NO_DROPOUTS=False, TESTING=False)
+              recompute=False, use_inputs=False, inputs=None, NO_DROPOUTS=False, TESTING=False)
 
     # get time window with an omission and a change
     times = utils.get_start_end_time_for_period_with_omissions_and_change(glm.session.stimulus_presentations.copy(), n_flashes=16)
 
     # get high SNR traces
     traces = processing.compute_robust_snr_on_dataframe(glm.session.dff_traces)
-    if len(traces)<15:
+    if len(traces) < 15:
         n_cells = len(traces)
     else:
         n_cells = 15
@@ -82,6 +107,155 @@ def plot_glm_model_fit_examples(ophys_experiment_id):
         gsm.plot_glm_example(glm, cell_specimen_id, run_params, times=times, savefig=True)
 
 
+def plot_model_fits_example_cell(cell_specimen_id, dataset, cell_results_df, dropouts, results, kernel=None, include_events=True,
+                                 times=None, save_dir=None):
+    '''
+    For one cell, plot the cell trace, model fits, and model fits with a specific kernel (such as all-images or omissions) removed
+    Inputs are attributes of the GLM class in visual_behavior_glm repo, either derived by instantiating the GLM class,
+    or by loading cell_results_df and dropouts from pre-saved files for the experiment in the dataset provided.
+
+
+    :param cell_specimen_id:
+    :param dataset: AllenSDK BehaviorOphysExperiment instance
+    :param cell_results_df: table of model fits for each cell in the experiment
+    :param dropouts: dropout scores table from GLM class or saved files
+    :param kernel: kernel to drop for model fit with kernel removed
+    :param include_events: if True, plot events, if False, plot dFF
+    :param times: tuple of start and end times within the session to plot the trace & fits over
+    :param save_dir: directory to save the plot to
+    :return:
+    '''
+
+    # get model fits for one cell
+    fit = cell_results_df[cell_results_df.cell_specimen_id == cell_specimen_id]
+
+    # filter stim presentations to get change detection block with omitted column as bool
+    stimulus_presentations = dataset.stimulus_presentations.copy()
+    stimulus_presentations = loading.limit_stimulus_presentations_to_change_detection(stimulus_presentations)
+    if times is None:
+        # get times for plot by finding a time period with an omission and a change
+        times = utils.get_start_end_time_for_period_with_omissions_and_change(stimulus_presentations, n_flashes=16)
+
+    # do the plot
+    figsize = (8, 3)
+    fig, ax = plt.subplots(figsize=figsize)
+
+    # time to use for extracting the trace in the relvant time window
+    time_vec = (fit['fit_trace_timestamps'] > times[0]) & (fit['fit_trace_timestamps'] < times[1])
+    cell_index = np.where(cell_results_df.cell_specimen_id.unique() == cell_specimen_id)[0][0]
+
+    # add stimulus, change, and omission times to plot
+    stim = stimulus_presentations.query('start_time > @times[0] & start_time < @times[1]')
+    stim = stim[(stim.omitted == False) & (stim.is_change == False)]
+    for index, time in enumerate(stim['start_time'].values):
+        ax.axvspan(time, time + 0.25, color='k', alpha=.1)
+    change = stimulus_presentations.query('start_time > @times[0] & start_time < @times[1]')
+    change = change[change.is_change]
+    for index, time in enumerate(change['start_time'].values):
+        ax.axvspan(time, time + 0.25, color=gvt.project_colors()['schematic_change'], alpha=.5, edgecolor=None)
+    omission = stimulus_presentations.query('start_time > @times[0] & start_time < @times[1]')
+    omission = omission[omission.omitted]
+    for index, time in enumerate(omission['start_time'].values):
+        ax.axvline(time, color=gvt.project_colors()['schematic_omission'], linewidth=1.5, linestyle='--')
+
+    style = gsp.get_example_style()
+    # Plot Filtered event trace
+    if include_events:
+        suffix = '_events'
+        ax.plot(fit['fit_trace_timestamps'][time_vec],
+                fit['events'][time_vec],
+                style['events'], label='events',
+                linewidth=style['trace_linewidth'],
+                color='gray')
+        ax.spines['right'].set_visible(False)
+    else:
+        # Plot df/f
+        suffix = '_dff'
+        ax2 = ax.twinx()
+        ax2.plot(fit['fit_trace_timestamps'][time_vec],
+                 fit['dff'][time_vec],
+                 style['dff'], label='dF/F', color='gray',
+                 linewidth=style['trace_linewidth'], alpha=.6)
+        ax2.set_ylabel('dF/F')
+        ax2.legend(loc='upper left', fontsize=12)
+        ax2.spines['right'].set_visible(True)
+
+    # Plot Model fits
+    ax.plot(fit['fit_trace_timestamps'][time_vec],
+            dropouts['Full']['full_model_train_prediction'][time_vec, cell_index],
+            style['model'], label='full model', linewidth=style['trace_linewidth'], color='lightcoral')
+
+    if kernel is not None:
+        cs = np.round(results.loc[cell_specimen_id]
+                      [kernel + '__dropout'] * -1, 3)
+        dropout = cs * 100
+        ax.plot(fit['fit_trace_timestamps'][time_vec],
+                dropouts[kernel]['full_model_train_prediction'][time_vec, cell_index], '-',
+                label='without ' + kernel + ' kernels\n' + str(
+                    np.round(dropout, 1)) + '% reduction in VE\n' + kernel + ' coding score: ' + str(cs),
+                linewidth=style['trace_linewidth'], color='limegreen')
+
+    # Clean up plot
+    ax.legend(loc='upper right', fontsize=12)
+    ax.set_ylabel('Calcium events', fontsize=style['fs1'])
+    ax.set_xlabel('Time in session (s)', fontsize=style['fs1'])
+    ax.spines['top'].set_visible(False)
+    ax.tick_params(axis='x', labelsize=style['fs2'])
+    ax.tick_params(axis='y', labelsize=style['fs2'])
+    # ax.set_ylim(-0.035,.9)
+    ax.set_xlim(times)
+    ax.set_title('csid: ' + str(cell_specimen_id))
+
+    if save_dir:
+        if kernel is not None:
+            suffix = suffix + '_' + kernel + '_dropout'
+        else:
+            suffix = suffix
+        m = dataset.metadata.copy()
+        filename = str(m['ophys_experiment_id']) + '_' + m['cre_line'].split('-')[0] + '_' + str(
+            cell_specimen_id) + '_model_fit' + suffix
+        utils.save_figure(fig, figsize, save_dir, 'example_model_fits', filename)
+
+
+def plot_glm_model_fits_examples_for_experiment(ophys_experiment_id, save_dir=None):
+    '''
+    Loads dataset object & GLM model fits and plots the cell trace, model fit, and model fit with images or omissions removed
+    for the 10 cells with highest SNR in the provided experiment
+    '''
+    import visual_behavior.data_access.processing as data_access_processing
+
+    # load dataset & filter stim presentations
+    dataset = loading.get_ophys_dataset(ophys_experiment_id)
+
+    # get GLM results
+    cell_results_df, results, dropouts = load_glm_model_fit_results(ophys_experiment_id)
+
+    # get high SNR traces
+    traces = data_access_processing.compute_robust_snr_on_dataframe(dataset.dff_traces)
+    if len(traces) < 10:
+        n_cells = len(traces)
+    else:
+        n_cells = 10
+    cell_specimen_ids = traces.sort_values(by='robust_snr', ascending=False).index.values[:n_cells]
+
+    for cell_specimen_id in cell_specimen_ids:
+        # cell_specimen_id = cell_specimen_ids[0]
+
+        plot_model_fits_example_cell(cell_specimen_id, dataset, cell_results_df, dropouts, results,
+                                     None, include_events=True, save_dir=save_dir)
+        plot_model_fits_example_cell(cell_specimen_id, dataset, cell_results_df, dropouts, results,
+                                     'all-images', include_events=True, save_dir=save_dir)
+        plot_model_fits_example_cell(cell_specimen_id, dataset, cell_results_df, dropouts, results,
+                                     'omissions', include_events=True, save_dir=save_dir)
+        plot_model_fits_example_cell(cell_specimen_id, dataset, cell_results_df, dropouts, results,
+                                     None, include_events=False, save_dir=save_dir)
+        plot_model_fits_example_cell(cell_specimen_id, dataset, cell_results_df, dropouts, results,
+                                     'all-images', include_events=False, save_dir=save_dir)
+        plot_model_fits_example_cell(cell_specimen_id, dataset, cell_results_df, dropouts, results,
+                                     'omissions', include_events=False, save_dir=save_dir)
+
+
+####### old loading function #########
 
 def load_GLM_outputs(glm_version, experiments_table, cells_table, glm_output_dir=None):
     """
@@ -224,9 +398,10 @@ def plot_kernel_activations(dataset, start_time, duration_seconds, kernel='omiss
 
     return ax
 
+
 def plot_behavior_timeseries_and_GLM_kernel_activations(dataset, start_time, duration_seconds=20,
-                                            label_stim_times_on_all_rows=False,
-                                            save_dir=None, ax=None):
+                                                        label_stim_times_on_all_rows=False,
+                                                        save_dir=None, ax=None):
     """
     For a given period of time in an ophys or behavior session,
     plot the stimulus times, licks and rewards on the top row,
@@ -616,9 +791,7 @@ def plot_matched_roi_and_traces_example_GLM(cell_metadata, cell_dropouts, cell_w
         print('saved')
 
 
-
 ####### plot kernels and average responses for individual cell examples #######
-
 
 
 def get_stimulus_response_dfs_for_kernel_windows(dataset, kernels, frame_rate):
@@ -634,23 +807,23 @@ def get_stimulus_response_dfs_for_kernel_windows(dataset, kernels, frame_rate):
     t_array = get_t_array_for_kernel(kernels, 'image0', frame_rate)
     window = [t_array[0], t_array[-1]]
     idf = loading.get_stimulus_response_df(dataset, time_window=window, interpolate=True, output_sampling_rate=30,
-                                            data_type='filtered_events', event_type='all', load_from_file=True)
+                                           data_type='filtered_events', event_type='all', load_from_file=True)
 
     # omissions
     t_array = get_t_array_for_kernel(kernels, 'omissions', frame_rate)
     window = [t_array[0], t_array[-1]]
     odf = loading.get_stimulus_response_df(dataset, time_window=window, interpolate=True, output_sampling_rate=30,
-                                            data_type='filtered_events', event_type='omissions', load_from_file=True)
+                                           data_type='filtered_events', event_type='omissions', load_from_file=True)
 
     # hits and misses
     t_array = get_t_array_for_kernel(kernels, 'hits', frame_rate)
     window = [t_array[0], t_array[-1]]
     cdf = loading.get_stimulus_response_df(dataset, time_window=window, interpolate=True, output_sampling_rate=30,
-                                            data_type='filtered_events', event_type='changes', load_from_file=True)
+                                           data_type='filtered_events', event_type='changes', load_from_file=True)
 
-    image_sdf = idf[(idf.is_change == False) & (idf.omitted==False)]
-    omission_sdf = odf[ (odf.omitted==True)]
-    change_sdf = cdf[(cdf.is_change==True)]
+    image_sdf = idf[(idf.is_change == False) & (idf.omitted == False)]
+    omission_sdf = odf[ (odf.omitted == True)]
+    change_sdf = cdf[(cdf.is_change == True)]
 
     return image_sdf, omission_sdf, change_sdf
 
@@ -791,8 +964,6 @@ def plot_kernels_and_traces_for_cell(cell_specimen_id, dataset,
         utils.save_figure(fig, figsize, save_dir, 'kernel_example_plots', title_string + '_other_kernels')
 
 
-
-
 ######## coding scores plots ###########
 
 def plot_coding_scores_for_cell(cell_specimen_id, ophys_experiment_id, results_pivoted, save_dir=None):
@@ -800,30 +971,26 @@ def plot_coding_scores_for_cell(cell_specimen_id, ophys_experiment_id, results_p
     Creates barplot of coding scores for a single cell in a single experiment and saves it
     '''
 
-    identifier = str(ophys_experiment_id)+'_'+str(cell_specimen_id)
+    identifier = str(ophys_experiment_id) + '_' + str(cell_specimen_id)
     # get dropouts just for one cell
     cell_dropouts = results_pivoted[results_pivoted.identifier == identifier]
 
-        # which features to plot
+    # which features to plot
     coding_score_features = ['image0', 'image1', 'image2', 'image3', 'image4', 'image5', 'image6', 'image7', 'all-images',
-        'omissions', 'hits', 'misses', 'task', 'running', 'pupil', 'licks', 'behavioral']
+                             'omissions', 'hits', 'misses', 'task', 'running', 'pupil', 'licks', 'behavioral']
 
-    figsize = (3,6)
+    figsize = (3, 6)
     fig, ax = plt.subplots(figsize=figsize)
     # get dropouts just for one cell
-    ax = sns.barplot(data=np.abs(cell_dropouts[coding_score_features]), orient='h', color='gray', ax=ax) #color=sns.color_palette('Blues_r')[0], ax=ax)
+    ax = sns.barplot(data=np.abs(cell_dropouts[coding_score_features]), orient='h', color='gray', ax=ax)  # color=sns.color_palette('Blues_r')[0], ax=ax)
     ax.set_xlabel('Coding score')
-    ax.set_title('var_exp_full = '+str(np.round(cell_dropouts.variance_explained_full.values[0], 3)))
+    ax.set_title('var_exp_full = ' + str(np.round(cell_dropouts.variance_explained_full.values[0], 3)))
 
     if save_dir:
         cre_line = utils.get_abbreviated_cell_type(cell_dropouts.cre_line.values[0])
-        title_string = 'oeid_'+str(ophys_experiment_id)+'_csid_'+str(cell_specimen_id)+'_'+cre_line
+        title_string = 'oeid_' + str(ophys_experiment_id) + '_csid_' + str(cell_specimen_id) + '_' + cre_line
         fig.suptitle(title_string, x=0.5, y=1., fontsize=14)
-        utils.save_figure(fig, figsize, save_dir, 'kernel_example_plots', title_string+'_coding_scores')
-
-
-
-
+        utils.save_figure(fig, figsize, save_dir, 'kernel_example_plots', title_string + '_coding_scores')
 
 
 if __name__ == '__main__':
@@ -834,16 +1001,16 @@ if __name__ == '__main__':
 
     import visual_behavior.visualization.ophys.platform_paper_figures as ppf
 
-    ### load metadata tables for platform experiments
+    # load metadata tables for platform experiments
     platform_experiments = loading.get_platform_paper_experiment_table(limit_to_closest_active=True)
     cells_table = loading.get_cell_table(platform_paper_only=True)
 
-    print(len(platform_experiments)) # should be 402
+    print(len(platform_experiments))  # should be 402
 
     # save directory
     save_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\platform_paper_plots\figure_3'
 
-    ### load GLM results for platform paper experiments
+    # load GLM results for platform paper experiments
 
     # Define model version
     glm_version = '24_events_all_L2_optimize_by_session'
@@ -857,8 +1024,7 @@ if __name__ == '__main__':
     # weights limited to platform expts
     weights_df = weights_df[weights_df.ophys_experiment_id.isin(platform_experiments.index.values)]
 
-
-    ### Plot kernel activations for specfic experiment
+    # Plot kernel activations for specfic experiment
 
     ophys_experiment_id = 808621034
     dataset = loading.get_ophys_dataset(ophys_experiment_id)
@@ -867,8 +1033,7 @@ if __name__ == '__main__':
     duration_seconds = 19.5
     plot_behavior_timeseries_and_GLM_kernel_activations(dataset, start_time, duration_seconds, save_dir=save_dir)
 
-
-    ### Plot kernels and coding scores for a specific cell
+    # Plot kernels and coding scores for a specific cell
     cell_specimen_id = 1086501664
     ophys_experiment_id = 849233396
     identifier = str(ophys_experiment_id) + '_' + str(cell_specimen_id)

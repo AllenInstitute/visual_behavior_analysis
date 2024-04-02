@@ -113,7 +113,7 @@ def get_cell_type_for_cre_line(cre_line, cell_metadata=None):
     gets cell_type label for a given cre_line using info in cell_metadata table or hardcoded lookup dictionary
     cell_metadata is a table similar to ophys_cells_table from SDK but can have additional columns based on clustering results
     """
-    if cre_line=='all':
+    if cre_line == 'all':
         return 'all cells'
     elif cell_metadata is not None:
         cell_type = cell_metadata[cell_metadata.cre_line == cre_line].cell_type.values[0]
@@ -594,13 +594,14 @@ def normalize_cluster_size(cluster_df):
     normalized_values = cluster_df.groupby('cre_line')['cluster_id'].value_counts(normalize=True).values
 
     # Create DataFrame with each CRE and cluster ID
-    grouped_df = cluster_df.groupby(['cre_line','cluster_id']).count().reset_index()
+    grouped_df = cluster_df.groupby(['cre_line', 'cluster_id']).count().reset_index()
 
     # Add normalized percentage values
     grouped_df['normalized'] = normalized_values
     grouped_df['percentage'] = grouped_df['normalized'] * 100
 
     return grouped_df
+
 
 def prepare_data(cluster_df, rm_unstacked, cluster_id, exp_level, rm_f, cre_line=None):
     '''
@@ -623,6 +624,7 @@ def prepare_data(cluster_df, rm_unstacked, cluster_id, exp_level, rm_f, cre_line
         tmp = cluster_df[(cluster_df.cluster_id == cluster_id) & (cluster_df.cre_line == cre_line)]
     cids = tmp.cell_specimen_id.values
     return rm_unstacked.loc[cids][[rm_f]][[(rm_f, exp_level)]].values
+
 
 def extract_number(s):
     import re
@@ -860,7 +862,7 @@ def load_eigengap(glm_version, feature_matrix, cell_metadata=None, cre_line='', 
            returns dictionary of eigengap for each cre line = [nb_clusters, eigenvalues, eigenvectors]
            # this doesnt actually take too long, so might not be a huge need to save files besides records
            """
-    eigengap_filename = 'eigengap_' + glm_version + '_' + 'kmax' + str(k_max) + (cre_line) +'.pkl'
+    eigengap_filename = 'eigengap_' + glm_version + '_' + 'kmax' + str(k_max) + (cre_line) + '.pkl'
     eigengap_path = os.path.join(save_dir, eigengap_filename)
     if os.path.exists(eigengap_path):
         print('loading eigengap values scores from', eigengap_path)
@@ -1245,9 +1247,9 @@ def compute_within_and_across_cluster_correlations(feature_matrix, cluster_meta,
             this_cell_coding_scores = feature_matrix.loc[cell_specimen_id].values
             # loop through every other cluster and compute the correlation of this cell's coding scores with the average coding for each cluster
             for cluster_id_to_compare in clusters:
-                if cluster_id == cluster_id_to_compare: 
+                if cluster_id == cluster_id_to_compare:
                     within_cluster = True
-                else: 
+                else:
                     within_cluster = False
                 cluster_csids = cluster_meta[cluster_meta.cluster_id == cluster_id_to_compare].index.values
                 # get average dropout scores for this cluster
@@ -1256,24 +1258,25 @@ def compute_within_and_across_cluster_correlations(feature_matrix, cluster_meta,
                 corr_coeff_p = np.corrcoef(cluster_mean, this_cell_coding_scores)[0][1]
                 correlation_list.append([cell_specimen_id, cluster_id, cluster_id_to_compare, corr_coeff_p, within_cluster, n_clusters])
     correlations_df = pd.DataFrame(correlation_list, columns=['cell_specimen_id', 'cluster_this_cell_belongs_to', 'cluster_id_to_compare', 'pearson_correlation', 'within_cluster', 'total_n_clusters'])
-    
-    if save_dir: 
-        correlations_df.to_hdf(os.path.join(save_dir, 'within_across_cluster_correlations_'+str(n_clusters)+'.h5'), key='df')
+
+    if save_dir:
+        correlations_df.to_hdf(os.path.join(save_dir, 'within_across_cluster_correlations_' + str(n_clusters) + '.h5'), key='df')
     return correlations_df
 
 
 def get_summary_of_within_across_cluster_correlations(group):
-    within_cluster_correlation = group[group.within_cluster==True].pearson_correlation.values[0]
-    across_cluster_correlation = np.nanmean(group[group.within_cluster==False].pearson_correlation.values)
+    within_cluster_correlation = group[group.within_cluster == True].pearson_correlation.values[0]
+    across_cluster_correlation = np.nanmean(group[group.within_cluster == False].pearson_correlation.values)
     correlation_diff = within_cluster_correlation - across_cluster_correlation
-    correlation_ratio = within_cluster_correlation/across_cluster_correlation
-    return pd.Series({'cluster_id': int(group.cluster_this_cell_belongs_to.values[0]), 
-                    'within_cluster_correlation': within_cluster_correlation,
-                    'across_cluster_correlation': across_cluster_correlation,
-                    'correlation_diff': correlation_diff, 
-                    'correlation_ratio': correlation_ratio})
+    correlation_ratio = within_cluster_correlation / across_cluster_correlation
+    return pd.Series({'cluster_id': int(group.cluster_this_cell_belongs_to.values[0]),
+                      'within_cluster_correlation': within_cluster_correlation,
+                      'across_cluster_correlation': across_cluster_correlation,
+                      'correlation_diff': correlation_diff,
+                      'correlation_ratio': correlation_ratio})
 
 ### older functions for computing area / depth frequencies across clusters, by MG ###
+
 
 def make_frequency_table(cluster_meta, groupby_columns=['binned_depth'], normalize=True):
     '''
@@ -2244,7 +2247,7 @@ def get_cluster_metrics(cluster_meta, feature_matrix, results_pivoted):
             # get dropout scores for cells in this cluster in this cre line
             mean_dropout_df = np.abs(feature_matrix_cre.loc[this_cluster_csids].mean().unstack())
             stats = get_coding_metrics_for_condition(index_dropouts=mean_dropout_df.T, index_value=cluster_id,
-                                       index_name='cluster_id')
+                                                     index_name='cluster_id')
             fraction_cre = len(this_cluster_csids) / float(len(cre_cell_specimen_ids))
             stats['fraction_cre'] = fraction_cre
             stats['cre_line'] = cre_line
@@ -2277,7 +2280,7 @@ def get_cluster_metrics_all_cre(cluster_meta, feature_matrix, results_pivoted):
         # get dropout scores for cells in this cluster in this cre line
         mean_dropout_df = np.abs(feature_matrix.loc[this_cluster_csids].mean().unstack())
         stats = get_coding_metrics_for_condition(index_dropouts=mean_dropout_df.T, index_value=cluster_id,
-                                   index_name='cluster_id')
+                                                 index_name='cluster_id')
         fraction_cells = len(this_cluster_csids) / float(len(cell_specimen_ids))
         stats['fraction_cells'] = fraction_cells
         stats['F_max'] = mean_dropout_df['Familiar'].max()
@@ -2749,6 +2752,7 @@ def select_cre_cids(cids, cre_line):
     cre_line_ids = np.intersect1d(cids, all_cre_line_ids)
     return cre_line_ids
 
+
 def shuffle_dropout_score(df_dropout, shuffle_type='all', separate_cre_lines=False):
     '''
     Shuffles dataframe with dropout scores from GLM.
@@ -2764,12 +2768,12 @@ def shuffle_dropout_score(df_dropout, shuffle_type='all', separate_cre_lines=Fal
         # there is better ways of doing it, but for now, this is the easiest way to do it ira 2021-07-20
         cre_lines = ['Slc17a7-IRES2-Cre', 'Sst-IRES-Cre', 'Vip-IRES-Cre']
         print('using within cre line shuffle to create reference data for gap statistic. Cre lines are hardcoded [Slc17a7-IRES2-Cre, Sst-IRES-Cre, Vip-IRES-Cre]')
-        
+
         df_shuffled = pd.DataFrame()
         for cre_line in cre_lines:
             cids = select_cre_cids(df_dropout.index.values, cre_line)
             df_cre = df_dropout.loc[cids].copy()
-            df_shuffled_cre= df_cre.copy()
+            df_shuffled_cre = df_cre.copy()
             regressors = df_cre.columns.levels[0].values
             experience_levels = df_cre.columns.levels[1].values
 
@@ -2807,7 +2811,7 @@ def shuffle_dropout_score(df_dropout, shuffle_type='all', separate_cre_lines=Fal
                     for j, experience_level in enumerate(experience_level_shuffled):
                         for regressor in regressors:
                             df_shuffled_cre.loc[cid][(regressor, experience_levels[j])] = df_cre.loc[cid][(regressor,
-                                                                                                    experience_level)]
+                                                                                                           experience_level)]
             elif shuffle_type == 'full_experience':
                 print('shuffling data across experience fully (cell id and experience level)')
                 assert np.shape(df_cre.columns.levels)[
@@ -2818,7 +2822,7 @@ def shuffle_dropout_score(df_dropout, shuffle_type='all', separate_cre_lines=Fal
                     for i, cid in enumerate(randomized_cids):
                         for regressor in regressors:
                             df_shuffled_cre.iloc[i][(regressor, experience_level)] = df_cre.loc[cid][
-                            (   regressor, experience_level)]
+                                (   regressor, experience_level)]
                     # Shuffle experience labels
                     df_shuffled_cre_again = df_shuffled_cre.copy(deep=True)
                     cids = df_shuffled_cre.index.values
@@ -2828,17 +2832,17 @@ def shuffle_dropout_score(df_dropout, shuffle_type='all', separate_cre_lines=Fal
                         for j, experience_level in enumerate(experience_level_shuffled):
                             for regressor in regressors:
                                 df_shuffled_cre_again.loc[cid][(regressor, experience_levels[j])] = df_shuffled_cre.loc[cid][(regressor,
-                                                                                                            experience_level)]
+                                                                                                                              experience_level)]
 
                     df_shuffled_cre = df_shuffled_cre_again.copy()
-            
+
             else:
                 print('no such shuffle type..')
                 df_shuffled = None
-            
+
             df_shuffled = df_shuffled.append(df_shuffled_cre)
  # get cids for each cre line
-            # 
+            #
     else:
         df_shuffled = df_dropout.copy()
         regressors = df_dropout.columns.levels[0].values
@@ -2877,7 +2881,7 @@ def shuffle_dropout_score(df_dropout, shuffle_type='all', separate_cre_lines=Fal
                 for j, experience_level in enumerate(experience_level_shuffled):
                     for regressor in regressors:
                         df_shuffled.loc[cid][(regressor, experience_levels[j])] = df_dropout.loc[cid][(regressor,
-                                                                                                    experience_level)]
+                                                                                                       experience_level)]
         elif shuffle_type == 'full_experience':
             print('shuffling data across experience fully (cell id and experience level)')
             assert np.shape(df_dropout.columns.levels)[
@@ -2898,7 +2902,7 @@ def shuffle_dropout_score(df_dropout, shuffle_type='all', separate_cre_lines=Fal
                 for j, experience_level in enumerate(experience_level_shuffled):
                     for regressor in regressors:
                         df_shuffled_again.loc[cid][(regressor, experience_levels[j])] = df_shuffled.loc[cid][(regressor,
-                                                                                                            experience_level)]
+                                                                                                              experience_level)]
 
             df_shuffled = df_shuffled_again.copy()
 
@@ -3078,7 +3082,7 @@ def get_mapped_SSE_values(matrix, threshold=1, ):
     collect SSE values for plotting for each cluster id
     Input:
     matrix: (np.array) SSE matrix (n clusters by n clusters), can be any other matrix (correlation, etc)
-    threshold: (int) a value, abov which the matrix will not find an optimally similar cluster. This is necessary because 
+    threshold: (int) a value, abov which the matrix will not find an optimally similar cluster. This is necessary because
         min values do not always reflect a true match, but rather a match that is better than all other matches.
 
     Returns:
@@ -3175,7 +3179,7 @@ def compute_cluster_sse(feature_matrix):
     '''
     Computes Sum of Squared Error between each cell in feature matrix and the mean, to measure variability within clusters.
 
-    INPUT: 
+    INPUT:
     feature_matrix (pd.DataFrame): Dropout scores, rows are cell specimen ids.
 
     Returns:
@@ -3787,7 +3791,7 @@ def add_significance(sample1, sample2, test='2ttest'):
                 res = stats.wilcoxon(diff)  # diff)
                 t = res.statistic
                 p = res.pvalue
-            except:
+            except BaseException:
                 t = np.nan
                 p = np.nan
         else:
@@ -3799,7 +3803,6 @@ def add_significance(sample1, sample2, test='2ttest'):
         p = np.nan
 
     return t, p
-
 
 
 def get_cluster_info(cre_line, cluster_df):
@@ -3817,6 +3820,6 @@ def get_cluster_info(cre_line, cluster_df):
     tmp = cluster_df[cluster_df.cre_line == cre_line]
     unique_mouse_per_cluster = tmp.groupby('cluster_id')['mouse_id'].nunique()
     unique_cluster_per_mouse = tmp.groupby('mouse_id')['cluster_id'].nunique()
-    unique_equipment_per_cluster= tmp.groupby('cluster_id')['equipment_name'].nunique()
-    unique_clusters_per_equipment= tmp.groupby('equipment_name')['cluster_id'].nunique()
+    unique_equipment_per_cluster = tmp.groupby('cluster_id')['equipment_name'].nunique()
+    unique_clusters_per_equipment = tmp.groupby('equipment_name')['cluster_id'].nunique()
     return unique_mouse_per_cluster, unique_cluster_per_mouse, unique_equipment_per_cluster, unique_clusters_per_equipment
