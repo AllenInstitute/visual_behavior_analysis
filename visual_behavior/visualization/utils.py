@@ -114,10 +114,10 @@ def get_abbreviated_experience_levels():
 
 def get_experience_level_colors():
     """
-    get color map corresponding to Familiar, Novel 1 and Novel >1
-    Familiar = red
-    Novel 1 = blue
-    Novel >1 = lighter blue
+    get color values corresponding to Familiar, Novel 1 and Novel >1
+    Familiar = blue
+    Novel 1 = red
+    Novel >1 = purple
     """
     import seaborn as sns
 
@@ -125,8 +125,40 @@ def get_experience_level_colors():
     blues = sns.color_palette('Blues_r', 6)[:5][::2]
     purples = sns.color_palette('Purples_r', 6)[:5][::2]
 
-    colors = [reds[0], blues[0], purples[0]]
-    # colors = [blues[0], reds[0],  purples[0]]
+    # colors = [reds[0], blues[0], purples[0]]
+    colors = [blues[0], reds[0],  purples[0]] # changing red to be Novel and blue to be Familiar
+
+    return colors
+
+
+def get_one_experience_level_colors():
+    """
+    get color values corresponding to Familiar, Novel 1 and Novel >1
+    Familiar = blue
+    Novel 1 = red
+    Novel >1 = purple
+    """
+    import seaborn as sns
+
+    reds = sns.color_palette('Reds_r', 4)[:3]
+    blues = sns.color_palette('Blues_r', 4)[:3]
+    purples = sns.color_palette('Purples_r', 4)[:3]
+
+    # colors = [reds[0], blues[0], purples[0]]
+    colors = [blues, reds,  purples] # changing red to be Novel and blue to be Familiar
+
+    return colors
+
+
+def get_experience_level_cmap():
+    """
+    get color map corresponding to Familiar, Novel 1 and Novel >1
+    Familiar = blue
+    Novel 1 = red
+    Novel >1 = purple
+    """
+
+    colors = ['Blues', 'Reds',  'Purples'] 
 
     return colors
 

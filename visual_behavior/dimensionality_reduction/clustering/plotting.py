@@ -1472,7 +1472,7 @@ def color_yaxis_labels_by_experience(ax):
         ], ax.yaxis.get_ticklabels())]
 
 
-def plot_cre_line_means_heatmap(cre_line_means, cmap, vmax, colorbar=False,
+def plot_cre_line_means_heatmap(cre_line_means, cmap, vmax, session_colors=True, colorbar=False,
                                 save_dir=None, folder=None, ax=None):
     """
     plots a heatmap of mean coding score values for each cre line with a given colormap and vmax
@@ -1491,8 +1491,9 @@ def plot_cre_line_means_heatmap(cre_line_means, cmap, vmax, colorbar=False,
     for y in [3, 6, 9]:
         ax.axhline(y=y, xmin=0, xmax=cre_line_means.shape[0], color='gray', linestyle='--', linewidth=1)
 
-    # colorize y axis labels
-    color_yaxis_labels_by_experience(ax)
+    if session_colors:
+        # colorize y axis labels
+        color_yaxis_labels_by_experience(ax)
     # rotate labels
     ax.set_yticklabels(cre_line_means.index, rotation=0)
 
@@ -1501,7 +1502,7 @@ def plot_cre_line_means_heatmap(cre_line_means, cmap, vmax, colorbar=False,
 
     return ax
 
-def plot_cre_line_means_remapped(feature_matrix, cluster_meta, save_dir=None, folder=None):
+def plot_cre_line_means_remapped(feature_matrix, cluster_meta, session_colors=True, experience_index=None, save_dir=None, folder=None):
     """
     Get the average coding score values for each cre line, remap the colormap to use session colors,
     Translate the dataframe so that cre lines are columns and rows are feature-experience combos,
@@ -1509,18 +1510,26 @@ def plot_cre_line_means_remapped(feature_matrix, cluster_meta, save_dir=None, fo
     """
     cre_line_means = get_cre_line_means(feature_matrix, cluster_meta)
 
-    cre_line_means_remapped, coding_score_cmap, vmax = remap_coding_scores_to_session_colors(cre_line_means)
+    if session_colors:
+        assert experience_index is None, 'Use only one of session_colors or experience_index'
+    
+    if session_colors:
+        cre_line_means_remapped, coding_score_cmap, vmax = remap_coding_scores_to_session_colors(cre_line_means)
+    else:
+        cre_line_means_remapped = cre_line_means.copy()
+        coding_score_cmap = utils.get_experience_level_cmap()[experience_index]
+        vmax = 1
     cre_line_means_remapped = cre_line_means_remapped.T.copy()
 
     # relabel dataframe indices to be abbreviated
     new_labels = get_clean_labels_for_coding_scores_df(cre_line_means_remapped, columns=False)
     cre_line_means_remapped.index = new_labels
 
-    plot_cre_line_means_heatmap(cre_line_means_remapped, coding_score_cmap, vmax, colorbar=False,
+    plot_cre_line_means_heatmap(cre_line_means_remapped, coding_score_cmap, vmax, session_colors, colorbar=False,
                                 save_dir=save_dir, folder=folder, ax=None)
 
 
-def plot_cluster_means_heatmap(cluster_means, cmap, vmax, colorbar=False, ax=None):
+def plot_cluster_means_heatmap(cluster_means, cmap, vmax, colorbar=False, ax=None, session_colors=True):
     """
     plots a heatmap of cluster mean value with a given colormap and vmax
     cluster_means: dataframe with clusters as columns and feature-experience combinations as rows
@@ -1545,31 +1554,40 @@ def plot_cluster_means_heatmap(cluster_means, cmap, vmax, colorbar=False, ax=Non
     fontsize = 12
     rotation = -90
     features = processing.get_features_for_clustering()
+    x_loc = cluster_means.shape[1]+.25
     for i,feature in enumerate(features):
         if feature == 'all-images':
             features[i] = 'images'
-    ax.text(s=features[0], x=12.25, y=1.5, rotation=rotation, color='black', fontsize=fontsize, va='center', ha='left')
-    ax.text(s=features[1], x=12.28, y=4.4, rotation=rotation, color='black', fontsize=fontsize, va='center', ha='left')
-    ax.text(s=features[2], x=12.25, y=7.5, rotation=rotation, color='black', fontsize=fontsize, va='center', ha='left')
-    ax.text(s=features[3], x=12.28, y=10.5, rotation=rotation, color='black', fontsize=fontsize, va='center', ha='left')
+    ax.text(s=features[0], x=x_loc, y=1.5, rotation=rotation, color='black', fontsize=fontsize, va='center', ha='left')
+    ax.text(s=features[1], x=x_loc, y=4.4, rotation=rotation, color='black', fontsize=fontsize, va='center', ha='left')
+    ax.text(s=features[2], x=x_loc, y=7.5, rotation=rotation, color='black', fontsize=fontsize, va='center', ha='left')
+    ax.text(s=features[3], x=x_loc, y=10.5, rotation=rotation, color='black', fontsize=fontsize, va='center', ha='left')
 
     # colorize y axis labels
-    color_yaxis_labels_by_experience(ax)
+    if session_colors:
+        color_yaxis_labels_by_experience(ax)
 
     return ax
 
 
-def plot_cluster_means_remapped(feature_matrix, cluster_meta, save_dir=None, folder=None, ax=None):
+def plot_cluster_means_remapped(feature_matrix, cluster_meta, session_colors=True, experience_index=None, save_dir=None, folder=None, ax=None):
     """
     Get the average coding score values for each cluster, remap the colormap to use session colors,
     Translate the dataframe so that clusters are columns and rows are feature-experience combos,
     abbreviate the labels for aesthetics, then plot
     """
+
+    if session_colors:
+        assert experience_index is None, 'Use only one of session_colors or experience_index'
     # compute cluster means
     cluster_means = get_cluster_means(feature_matrix, cluster_meta)
     # remap to session colors
-    cluster_means_remapped, coding_score_cmap, vmax = remap_coding_scores_to_session_colors(cluster_means)
-    # translate the df so clusters are cols and feature-exp are rows
+    if session_colors:
+        cluster_means_remapped, coding_score_cmap, vmax = remap_coding_scores_to_session_colors(cluster_means)
+    else:
+        cluster_means_remapped = cluster_means.copy()
+        coding_score_cmap = utils.get_experience_level_cmap()[experience_index]
+        vmax = 1
     cluster_means_remapped = cluster_means_remapped.T.copy()
     # relabel dataframe indices to be abbreviated
     new_labels = get_clean_labels_for_coding_scores_df(cluster_means_remapped, columns=False)
@@ -1578,15 +1596,110 @@ def plot_cluster_means_remapped(feature_matrix, cluster_meta, save_dir=None, fol
     if ax is None:
         figsize = (8,5)
         fig, ax = plt.subplots(figsize=figsize)
-    ax = plot_cluster_means_heatmap(cluster_means_remapped, coding_score_cmap, vmax, colorbar=False, ax=ax)
+    ax = plot_cluster_means_heatmap(cluster_means_remapped, coding_score_cmap, vmax, colorbar=False, ax=ax, session_colors=session_colors)
     ax.set_yticklabels(new_labels, rotation=0)
     # save
     if save_dir:
         utils.save_figure(fig, figsize, save_dir, folder, 'cluster_means_remapped')
     return ax
 
+def plot_mean_shuffled_feature_matrix(shuffled_feature_matrices, cluster_meta, session_colors=False, experience_index=None, save_dir=None, folder=''):
+    '''
+    Plot the mean of shuffled feature matrices for each cre line
+    Inputs:
+    - shuffled_feature_matrices (list of DataFrames): list of DataFrames containing shuffled feature matrices
+    - cluster_meta (DataFrame): DataFrame containing cluster metadata
 
-def plot_coding_score_heatmap_remapped(cluster_meta, feature_matrix, sort_by='cluster_id', session_colors=True,
+    '''
+    if session_colors:
+        assert experience_index is None, "session_colors must be False to use experience_index"
+    
+    cre_lines = np.sort(cluster_meta.cre_line.unique())
+    n_boots =np.arange(len(shuffled_feature_matrices))
+    figsize=(len(cre_lines) * 3, 2.5)
+
+    fig, ax = plt.subplots(1, len(cre_lines), figsize=figsize, sharey='row')
+    for c, cre_line in enumerate(cre_lines):
+        cluster_meta_cre = cluster_meta[cluster_meta.cre_line == cre_line]
+        cids = cluster_meta_cre.index.values
+        feature_matrix_cre = None
+        for n, n_boot in enumerate(n_boots):
+            if n == 0:
+                feature_matrix = shuffled_feature_matrices[n]
+                feature_matrix_cre = feature_matrix.loc[cids]
+            else:
+                feature_matrix = shuffled_feature_matrices[n]
+                feature_matrix_cre.append(feature_matrix.loc[cids], ignore_index=True)
+        
+        if session_colors:
+            feature_matrix_remapped, remapped_cmap, vmax = remap_coding_scores_to_session_colors(feature_matrix_cre)
+        else:
+            feature_matrix_remapped = feature_matrix.copy()
+            vmax = 1
+            remapped_cmap = utils.get_experience_level_cmap()[experience_index]
+
+        mean_feature_matrix = feature_matrix_remapped.mean().unstack()
+        features = processing.get_features_for_clustering()
+        mean_feature_matrix = mean_feature_matrix.loc[features]
+        ax[c] = sns.heatmap(mean_feature_matrix, cmap=remapped_cmap, ax=ax[c], vmin=0, vmax=vmax)
+        ax[c].set_title(processing.get_cell_type_for_cre_line(cre_line))
+    plt.suptitle('Cell ID shuffle', y=1.1)
+
+    if save_dir:
+        utils.save_figure(fig, figsize, save_dir, folder, 'mean_shuffled_feature_matrix_by_cre_line')
+    return ax
+
+
+def plot_mean_cluster_heatmaps_remapped(feature_matrix, cluster_meta, cre_line, clusters, session_colors=True, experience_index=None, save_dir=None, folder=None):
+    """
+    Plot mean cluster heatmaps with remapped coding scores.
+
+    Parameters:
+    - feature_matrix_remapped (DataFrame): DataFrame containing remapped coding scores
+    - remapped_cmap (str or Colormap): Colormap for the heatmap
+    - vmax (float): Maximum value for the heatmap color scale
+    - cluster_meta (DataFrame): DataFrame containing cluster metadata
+    - clusters (list): List of cluster IDs
+    - n_clusters_to_plot (int): Number of clusters to plot
+    - save_dir (str, optional): Directory to save the figure
+    - folder (str, optional): Folder name for saving the figure
+    """
+
+    if session_colors:
+        assert experience_index is None, "session_colors must be False to use experience_index"
+
+    if session_colors:
+        feature_matrix_remapped, remapped_cmap, vmax = remap_coding_scores_to_session_colors(feature_matrix)
+    else:
+        feature_matrix_remapped = feature_matrix.copy()
+        vmax = 1
+        remapped_cmap = utils.get_experience_level_cmap()[experience_index]
+    
+    figsize = (2.5*len(clusters), 1.7)
+    fig, ax = plt.subplots(1, len(clusters), figsize=figsize, sharex=True, sharey=True)
+    ax = ax.ravel()
+
+    # loop through clusters in sorted order
+    for i, cluster_id in enumerate(clusters):
+        this_cluster_csids = cluster_meta[cluster_meta.cluster_id==cluster_id].index.values
+        mean_dropout_df = feature_matrix_remapped.loc[this_cluster_csids].mean().unstack()
+        ax[i] = sns.heatmap(mean_dropout_df, cmap=remapped_cmap, vmin=0, vmax=vmax, ax=ax[i], cbar=False, cbar_kws={'label': 'coding score'})
+        # fraction is number of cells in this cluster vs all cells in this cre line
+        fraction_cluster = len(this_cluster_csids) / float(len(cluster_meta))
+        fraction = np.round(fraction_cluster * 100, 1)
+        # set title and labels
+        ax[i].set_title('cluster ' + str(cluster_id) + '\n' + str(fraction) + '%, n=' + str(len(this_cluster_csids)))
+        ax[i].set_xlabel('')
+    cell_type = processing.get_cell_type_for_cre_line(cre_line)
+    fig.suptitle(cell_type, x=0.46, y=1.5)
+    plt.subplots_adjust(hspace=0.6, wspace=0.25)
+    plt.tight_layout()
+    if save_dir:
+        utils.save_figure(fig, figsize, save_dir, folder, 'mean_cluster_heatmaps_remapped_'+str(len(clusters))+cell_type)
+
+
+
+def plot_coding_score_heatmap_remapped(cluster_meta, feature_matrix, sort_by='cluster_id', session_colors=True, experience_index=None,
                                     save_dir=None, folder=None, ax=None):
     """
     Plot heatmap of all cells coding scores, sorted by cluster_id (or some other column of cluster_meta)
@@ -1597,7 +1710,10 @@ def plot_coding_score_heatmap_remapped(cluster_meta, feature_matrix, sort_by='cl
     orient: 'horiz' or 'vert'; whether to orient the plot vertically (cells on y axis, coding socres on x) or horizontally (cells on x axis, coding scores on y)
     session_colors: if True, will plot the coding score values using the color of the experience level for that coding score
                     if False, default colormap will be used ("Blues_r")
+    experience_index: index of the experience level in the color map to use for coloring the heatmap
     """
+    if session_colors:
+        assert experience_index is None, "session_colors must be False to use experience_index"
 
     if sort_by is not None:
         sorted_cluster_meta = cluster_meta.sort_values(by=sort_by)
@@ -1615,8 +1731,9 @@ def plot_coding_score_heatmap_remapped(cluster_meta, feature_matrix, sort_by='cl
         coding_scores_remapped, coding_score_cmap, vmax = remap_coding_scores_to_session_colors(coding_scores_sorted)
         cbar = False
     else:
+        coding_scores_remapped = coding_scores_sorted.copy()
         vmax = 1
-        coding_score_cmap = 'Blues'
+        coding_score_cmap = utils.get_experience_level_cmap()[experience_index]
         cbar = True
 
     # translate so rows are feature-exp combos and columns are cells
@@ -1671,11 +1788,11 @@ def plot_coding_score_heatmap_remapped(cluster_meta, feature_matrix, sort_by='cl
         # ax.set_xlim(ax.get_xlim())
         ax2.set_xlim(0, coding_scores_remapped.shape[1])
         ax2.set_xticks([0, coding_scores_remapped.shape[1]])
-        ax2.set_xticklabels((0, coding_scores_remapped.shape[1]), rotation=0)
+        ax2.set_xticklabels((1, coding_scores_remapped.shape[1]+1), rotation=0)
     else:
         ax.set_xlim(0, coding_scores_remapped.shape[1])
         ax.set_xticks([0, coding_scores_remapped.shape[1]])
-        ax.set_xticklabels((0, coding_scores_remapped.shape[1]), rotation=0)
+        ax.set_xticklabels((1, coding_scores_remapped.shape[1]+1), rotation=0)
         ax.set_xlabel('cells')
 
     # plot a line at the division point between clusters
@@ -1736,13 +1853,17 @@ def plot_fraction_cells_per_cluster_per_cre(cluster_meta, col_to_group='cre_line
 
 
 
-def plot_population_averages_for_clusters(multi_session_df, event_type, axes_column, hue_column,
-                                          xlim_seconds=None, interval_sec=1,
+def plot_population_averages_for_clusters(multi_session_df, event_type, axes_column, hue_column, session_colors=True, experience_index=None, legend=False,
+                                          xlim_seconds=None, interval_sec=1, 
                                           sharey=False, sharex=False,
                                           ylabel='Response', xlabel='Time (s)', suptitle=None,
                                           save_dir=None, folder=None, suffix='', ax=None):
 
-    palette = utils.get_experience_level_colors()
+    if session_colors:
+        assert experience_index is None, "session_colors must be False to use experience_index"
+        palette = utils.get_experience_level_colors()
+    else:
+        palette = utils.get_one_experience_level_colors()[experience_index]
 
     sdf = multi_session_df.copy()
     timestamps = sdf.trace_timestamps.values[0]
@@ -1762,6 +1883,7 @@ def plot_population_averages_for_clusters(multi_session_df, event_type, axes_col
     axes_conditions = np.sort(sdf[axes_column].unique())
     hue_conditions = np.sort(sdf[hue_column].unique())
     n_axes_conditions = len(axes_conditions)
+    legend_txt = multi_session_df['experience_level'].unique()
 
     if sharey == True:
         wspace = 0.2
@@ -1793,9 +1915,12 @@ def plot_population_averages_for_clusters(multi_session_df, event_type, axes_col
         except:
             print('no data for', axis, hue)
         i += 1
+        
     ax[0].set_ylabel('Response')
+    if legend:
+        plt.legend(legend_txt,bbox_to_anchor=(1, 1))
     if suptitle is not None:
-        plt.suptitle(suptitle, x=0.52, y=1.04, fontsize=18)
+        plt.suptitle(suptitle, x=0.52, y=1.3, fontsize=18)
     fig.subplots_adjust(wspace=wspace, hspace=0.75)
     if save_dir:
         fig_title = 'population_average_' + axes_column + '_' + hue_column + suffix
@@ -1877,7 +2002,7 @@ def plot_population_averages_for_conditions_multi_row(multi_session_df, data_typ
                     ax[i].set_title(metadata_string)
                 else:
                     if axes_column == 'experience_level':
-                        title_colors = utilities.get_experience_level_colors()
+                        title_colors = utils.get_experience_level_colors()
                         ax[i].set_title(axis, color=title_colors[i], fontsize=20)
                     else:
                         ax[i].set_title(axis)
@@ -3351,6 +3476,89 @@ def plot_cell_counts_per_location(cluster_meta, save_dir=None, folder=None, ax=N
     return ax
 
 
+def plot_experience_modulation(coding_score_metrics, metric='experience_modulation', save_dir=None, folder=''):
+    """
+    Plot the experience modulation metric for different clusters.
+
+    Parameters:
+    - coding_score_metrics (DataFrame): DataFrame containing the coding score metrics.
+    - metric (str): The metric to use for plotting. Default is 'experience_modulation'.
+    - save_dir (str): Directory to save the plot. If None, the plot is not saved.
+    - folder (str): Folder name within save_dir to save the plot. Ignored if save_dir is None.
+
+    Returns:
+    - fig, ax: The matplotlib figure and axis objects for the plot.
+    """
+    cell_types = utils.get_cell_types()
+    cell_type_colors = utils.get_cell_type_colors()
+    xorder = np.sort(coding_score_metrics.cluster_id.unique())
+
+    figsize = (9, 3)
+    fig, ax = plt.subplots(figsize=figsize)
+    ax = sns.boxplot(data=coding_score_metrics, x='cluster_id', y=metric, order=xorder,
+                     hue='cell_type', hue_order=cell_types, palette=cell_type_colors,
+                     showfliers=False, width=0.6, boxprops=dict(alpha=.7), ax=ax)
+    ax.set_title('Experience modulation')
+    ax.set_xlabel('cluster ID')
+    ax.set_ylabel('<- Familiar --- Novel ->')
+    ax.spines[['right', 'top']].set_visible(False)
+    ax.axhline(y=0, xmin=0, xmax=1, linestyle='--', color='gray', linewidth=0.8)
+    ax.legend(bbox_to_anchor=(1, 1), fontsize='xx-small', title_fontsize='xx-small')
+
+    if save_dir:
+        utils.save_figure(fig, figsize, save_dir, folder, 'fraction_cells_per_cluster_per_cre_per_layer')
+
+    return ax
+
+
+def plot_cluster_depth_distributi_by_ncre_lines(n_cells_table, metric, xorder, hue, hue_order, significance_col, save_dir=None, folder=''):
+    """
+    Plot the data for each CRE line.
+
+    Parameters:
+    - n_cells_table (DataFrame): DataFrame containing the cell data.
+    - metric (str): The metric to use for plotting.
+    - xorder (array-like): Order of the x-axis.
+    - hue (str): Hue for the plot.
+    - hue_order (array-like): Order of the hue.
+    - significance_col (str): Column indicating significance.
+    - save_dir (str): Directory to save the plot. If None, the plot is not saved.
+    - folder (str): Folder name within save_dir to save the plot. Ignored if save_dir is None.
+
+    Returns:
+    - fig, ax: The matplotlib figure and axis objects for the plot.
+    """
+    figsize = (5, 5)
+    fig, ax = plt.subplots(3, 1, figsize=figsize, sharey=True, sharex=True)
+    for i, cre_line in enumerate(utils.get_cre_lines()):
+        cre_data = n_cells_table[n_cells_table.cre_line == cre_line]
+
+        ax[i] = sns.barplot(data=cre_data, x='cluster_id', order=xorder, y=metric,
+                            hue=hue, hue_order=hue_order, palette='gray', width=0.7, ax=ax[i])
+        ax[i].get_legend().remove()
+        ax[i].set_ylabel('')
+        ax[i].set_xlabel('')
+        ax[i].set_title(utils.convert_cre_line_to_cell_type(cre_line))
+
+        for x_loc, cluster_id in enumerate(xorder): 
+            cre_cluster_data = cre_data[cre_data['cluster_id']==cluster_id]
+            if cre_cluster_data[significance_col].any(): 
+                y_loc = cre_cluster_data[metric].max()-0.015
+                ax[i].text(x_loc, y_loc, '*', fontsize=24, color=sns.color_palette()[3],
+                            horizontalalignment='center', verticalalignment='center')
+
+    ax[1].set_ylabel('Fraction cells in each depth')
+    ax[i].set_xlabel('Cluster ID')
+    ax[0].legend(loc='upper right', fontsize='xx-small', title_fontsize='xx-small')
+    sns.despine(fig=fig, top=True, right=True, left=False, bottom=False, offset=None, trim=False)
+
+    plt.subplots_adjust(hspace=0.5)
+
+    if save_dir:
+        utils.save_figure(fig, figsize, save_dir, folder, 'fraction_cells_per_cluster_per_cre_per_layer')
+
+    return ax
+
 def plot_number_mice_per_cluster(cluster_meta, save_dir=None, folder=None):
     n_mice = cluster_meta.groupby(['cre_line', 'cluster_id', 'mouse_id']).count().reset_index().groupby(['cre_line', 'cluster_id']).count().rename(columns={'mouse_id': 'n_mice'})[['n_mice']]
     n_mice = n_mice.reset_index()
@@ -3971,8 +4179,8 @@ def plot_cluster_size_difference(cluster_size_df, cre_line=None, shuffle_type=No
 
     # y axis limits
     # for some reason sharey does not work with cluster size on this plot, so here I am trying to standardize y axis to cre across cluster ids
-    y2_min = cluster_size_df.groupby('cluster_id').min()[y2].min()
-    y2_max = cluster_size_df.groupby('cluster_id').max()[y2].max()
+    y2_min = cluster_size_df.groupby('cluster_id').min()[y].min()
+    y2_max = cluster_size_df.groupby('cluster_id').max()[y].max()
     y2_lims = [y2_min, y2_max]
     
 
@@ -4255,7 +4463,7 @@ def plot_matched_clusters_heatmap(SSE_mapping, mean_dropout_scores_unstacked, me
 
 def plot_matched_clusters_heatmap_remapped(SSE_mapping, mean_dropout_scores_unstacked, metric='mean', shuffle_type=None,
                                   cre_line=None, abbreviate_features=True, abbreviate_experience=True, small_fontsize=False,
-                                  cbar=False, save_dir=None, folder=None, figsize=None):
+                                  session_colors=True, save_dir=None, folder=None, figsize=None):
     ''' This function needs work to be able to plot the heatmap with the remapped colors. It is not working yet.'''
     all_clusters_means_dict = processing.get_matched_clusters_means_dict(SSE_mapping,
                                                                          mean_dropout_scores_unstacked,
@@ -4275,7 +4483,8 @@ def plot_matched_clusters_heatmap_remapped(SSE_mapping, mean_dropout_scores_unst
             hm_color = 'Blues'
         features = processing.get_features_for_clustering()
         mean_dropout_df = all_clusters_means_dict[cluster_id].loc[features]  # order regressors in a specific order
-        cre_line_means = get_cre_line_means(feature_matrix, cluster_meta)
+        print('not working yet')
+        cre_line_means = processing.get_cre_line_means(feature_matrix, cluster_meta) 
 
         cre_line_means_remapped, coding_score_cmap, vmax = remap_coding_scores_to_session_colors(cre_line_means)
         cre_line_means_remapped = cre_line_means_remapped.T.copy()
@@ -4284,7 +4493,7 @@ def plot_matched_clusters_heatmap_remapped(SSE_mapping, mean_dropout_scores_unst
         new_labels = get_clean_labels_for_coding_scores_df(cre_line_means_remapped, columns=False)
         cre_line_means_remapped.index = new_labels
 
-        plot_cre_line_means_heatmap(cre_line_means_remapped, coding_score_cmap, vmax, colorbar=False,
+        plot_cre_line_means_heatmap(cre_line_means_remapped, coding_score_cmap, vmax, session_colors, colorbar=False,
                                 save_dir=save_dir, folder=folder, ax=None)
 
         if abbreviate_features:
@@ -4323,7 +4532,7 @@ def plot_matched_clusters_heatmap_remapped(SSE_mapping, mean_dropout_scores_unst
         utils.save_figure(fig, figsize, save_dir, folder,
                           f'{metric}_{shuffle_type}dropout_matched_clusters' + cre_line_suffix, formats = ['.png', '.pdf'])
 
-def plot_unraveled_clusters_mean(cre_line, cre_line_dfs, save_d=None, folder='', tag='', ax=None, figsize=(12,2)):
+def plot_unraveled_clusters_mean(cre_line, cre_line_dfs, save_dir=None, folder='', tag='', ax=None, figsize=(12,2)):
     """
     Plot the mean of the feature matrix for a given cre_line.
 
@@ -5293,4 +5502,48 @@ def plot_within_across_cluster_correlations(correlations_summary, save_dir=None,
 
     if save_dir: 
         utils.save_figure(fig, figsize, save_dir, folder, 'within_across_cluster_correlation_'+str(n_clusters))
+
+
+
+def plot_response_metrics_boxplot_by_cre(response_metrics, metric = None, cre_lines=None, n_clusters=12, experience_levels=None, experience_level_colors=None):
+    """
+    Plot running modulation for different cell types and experience levels.
+    
+    Parameters:
+    - response_metrics (DataFrame): DataFrame containing response metrics
+    - cre_lines (list): List of CRE lines
+    - n_clusters (int): Number of clusters
+    - experience_levels (list): List of experience levels
+    - experience_level_colors (dict): Dictionary mapping experience levels to colors
+    """
+    if experience_level_colors is None:
+        experience_level_colors = utils.get_experience_level_colors() 
+
+    if experience_levels is None:
+        experience_levels = utils.utils.get_experience_levels()
+
+    if cre_lines is None:
+        cre_lines = utils.get_cre_lines()
+
+    order = np.arange(0, n_clusters+1, 1)
+    figsize = (10, 9)
+    fig, ax = plt.subplots(len(cre_lines), 1, figsize=figsize, sharey=True, sharex=False)
+    
+    for i, cre_line in enumerate(cre_lines):
+        data = response_metrics[response_metrics.cre_line==cre_line]
+        ax[i] = sns.boxplot(data=data, x='cluster_id', y=metric, order=order, showfliers=False,
+                            hue='experience_level', hue_order=experience_levels, palette=experience_level_colors, 
+                            width=0.5, boxprops=dict(alpha=.7), ax=ax[i])
+        ax[i].set_title(utils.convert_cre_line_to_cell_type(cre_line))
+        ax[i].get_legend().remove()
+        ax[i].set_xlabel('')
+        ax[i].set_ylabel(metric.replace("_", " "))
+        ax[i].set_xticks(order+1)
+        ax[i].set_xlim((0.5, n_clusters+0.5))
+        ax[i].spines[['right', 'top']].set_visible(False)
+    
+    ax[i].set_xlabel('cluster ID')  
+    ax[i].legend(bbox_to_anchor=(1,1), fontsize='xx-small', title_fontsize='xx-small')
+    plt.suptitle(metric.replace("_", " "), x=0.51, y=0.95)
+    plt.subplots_adjust(hspace=0.5)
 
