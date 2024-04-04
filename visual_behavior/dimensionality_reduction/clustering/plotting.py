@@ -1603,6 +1603,52 @@ def plot_cluster_means_remapped(feature_matrix, cluster_meta, session_colors=Tru
         utils.save_figure(fig, figsize, save_dir, folder, 'cluster_means_remapped')
     return ax
 
+def plot_mean_shuffled_feature_matrix(shuffled_feature_matrices, cluster_meta, session_colors=False, experience_index=None, save_dir=None, folder=''):
+    '''
+    Plot the mean of shuffled feature matrices for each cre line
+    Inputs:
+    - shuffled_feature_matrices (list of DataFrames): list of DataFrames containing shuffled feature matrices
+    - cluster_meta (DataFrame): DataFrame containing cluster metadata
+
+    '''
+    if session_colors:
+        assert experience_index is None, "session_colors must be False to use experience_index"
+    
+    cre_lines = np.sort(cluster_meta.cre_line.unique())
+    n_boots =len(shuffled_feature_matrices)
+    figsize=(len(cre_lines) * 3, 2.5)
+
+    fig, ax = plt.subplots(1, len(cre_lines), figsize=figsize, sharey='row')
+    for c, cre_line in enumerate(cre_lines):
+        cluster_meta_cre = cluster_meta[cluster_meta.cre_line == cre_line]
+        cids = cluster_meta_cre.index.values
+        feature_matrix_cre = None
+        for n, n_boot in enumerate(n_boots):
+            if n == 0:
+                feature_matrix = shuffled_feature_matrices[n]
+                feature_matrix_cre = feature_matrix.loc[cids]
+            else:
+                feature_matrix = shuffled_feature_matrices[n]
+                feature_matrix_cre.append(feature_matrix.loc[cids], ignore_index=True)
+        
+        if session_colors:
+            feature_matrix_remapped, remapped_cmap, vmax = remap_coding_scores_to_session_colors(feature_matrix_cre)
+        else:
+            feature_matrix_remapped = feature_matrix.copy()
+            vmax = 1
+            remapped_cmap = utils.get_experience_level_cmap()[experience_index]
+
+        mean_feature_matrix = feature_matrix_remapped.mean().unstack()
+        features = processing.get_features_for_clustering()
+        mean_feature_matrix = mean_feature_matrix.loc[features]
+        ax[c] = sns.heatmap(mean_feature_matrix, cmap=remapped_cmap, ax=ax[c], vmin=0, vmax=vmax)
+        ax[c].set_title(processing.get_cell_type_for_cre_line(cre_line))
+    plt.suptitle('Cell ID shuffle', y=1.1)
+
+    if save_dir:
+        utils.save_figure(fig, figsize, save_dir, folder, 'mean_shuffled_feature_matrix_by_cre_line')
+    return ax
+
 def plot_mean_cluster_heatmaps_remapped(feature_matrix, cluster_meta, cre_line, clusters, session_colors=True, experience_index=None, save_dir=None, folder=None):
     """
     Plot mean cluster heatmaps with remapped coding scores.
@@ -1806,13 +1852,17 @@ def plot_fraction_cells_per_cluster_per_cre(cluster_meta, col_to_group='cre_line
 
 
 
-def plot_population_averages_for_clusters(multi_session_df, event_type, axes_column, hue_column,
-                                          xlim_seconds=None, interval_sec=1,
+def plot_population_averages_for_clusters(multi_session_df, event_type, axes_column, hue_column, session_colors=True, experience_index=None, legend=False,
+                                          xlim_seconds=None, interval_sec=1, 
                                           sharey=False, sharex=False,
                                           ylabel='Response', xlabel='Time (s)', suptitle=None,
                                           save_dir=None, folder=None, suffix='', ax=None):
 
-    palette = utils.get_experience_level_colors()
+    if session_colors:
+        assert experience_index is None, "session_colors must be False to use experience_index"
+        palette = utils.get_experience_level_colors()
+    else:
+        palette = utils.get_one_experience_level_colors()[experience_index]
 
     sdf = multi_session_df.copy()
     timestamps = sdf.trace_timestamps.values[0]
@@ -1832,6 +1882,7 @@ def plot_population_averages_for_clusters(multi_session_df, event_type, axes_col
     axes_conditions = np.sort(sdf[axes_column].unique())
     hue_conditions = np.sort(sdf[hue_column].unique())
     n_axes_conditions = len(axes_conditions)
+    legend_txt = multi_session_df['experience_level'].unique()
 
     if sharey == True:
         wspace = 0.2
@@ -1863,9 +1914,12 @@ def plot_population_averages_for_clusters(multi_session_df, event_type, axes_col
         except:
             print('no data for', axis, hue)
         i += 1
+        
     ax[0].set_ylabel('Response')
+    if legend:
+        plt.legend(legend_txt,bbox_to_anchor=(1, 1))
     if suptitle is not None:
-        plt.suptitle(suptitle, x=0.52, y=1.04, fontsize=18)
+        plt.suptitle(suptitle, x=0.52, y=1.3, fontsize=18)
     fig.subplots_adjust(wspace=wspace, hspace=0.75)
     if save_dir:
         fig_title = 'population_average_' + axes_column + '_' + hue_column + suffix
