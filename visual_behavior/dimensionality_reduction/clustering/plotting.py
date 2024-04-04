@@ -871,11 +871,11 @@ def plot_std_dropout_heatmap_for_cre_lines(dropouts, cluster_meta, save_dir=None
         utils.save_figure(fig, figsize, save_dir, folder, 'standard_deviation_dropout_heatmaps')
 
 
-def plot_clusters(dropout_df, cluster_df=None, plot_difference=False, mean_response_df=None, save_plots=False, path=None):
+def plot_clusters(dropout_df, cluster_meta=None, plot_difference=False, mean_response_df=None, save_plots=False, path=None):
     '''
     Plots heatmaps and descriptors of clusters.
     dropout_df: dataframe of dropout scores, n cells by n regressors by experience level
-    cluster_df: df with cluster id and cell specimen id columns
+    cluster_meta: df with cluster id and cell specimen id columns
     plot_difference: Boolean to plot difference (cluster - population) of mean dropout scores on the heatmap
     mean_response_df: dataframe with mean responseswith cell specimen id, timestamps, and mean_response columns
 
@@ -884,7 +884,7 @@ def plot_clusters(dropout_df, cluster_df=None, plot_difference=False, mean_respo
 
     # Set up the variables
 
-    cluster_ids = cluster_df['cluster_id'].value_counts().index.values  # sort cluster ids by size
+    cluster_ids = cluster_meta['cluster_id'].value_counts().index.values  # sort cluster ids by size
     n_clusters = len(cluster_ids)
     palette = utils.get_cre_line_colors()
     palette_exp = utils.get_experience_level_colors()
@@ -892,7 +892,7 @@ def plot_clusters(dropout_df, cluster_df=None, plot_difference=False, mean_respo
     areas = ['VISp', 'VISl']
 
     # get number of animals per cluster
-    # grouped_df = cluster_df.groupby('cluster_id')
+    # grouped_df = cluster_meta.groupby('cluster_id')
     # N_mice = grouped_df.agg({"mouse_id": "nunique"})
 
     # Set up figure
@@ -905,7 +905,7 @@ def plot_clusters(dropout_df, cluster_df=None, plot_difference=False, mean_respo
     for i, cluster_id in enumerate(cluster_ids):
 
         # 1. Mean dropout scores
-        this_cluster_ids = cluster_df[cluster_df['cluster_id'] == cluster_id]['cell_specimen_id'].unique()
+        this_cluster_ids = cluster_meta[cluster_meta['cluster_id'] == cluster_id]['cell_specimen_id'].unique()
         mean_dropout_df = dropout_df.loc[this_cluster_ids].mean().unstack()
         if plot_difference is False:
             ax[i] = sns.heatmap(mean_dropout_df,
@@ -925,12 +925,12 @@ def plot_clusters(dropout_df, cluster_df=None, plot_difference=False, mean_respo
 
         # 2. By cre line
         # % of total cells in this cluster
-        within_cluster_df = \
-            cluster_df[cluster_df['cluster_id'] == cluster_id].drop_duplicates('cell_specimen_id').groupby(
+        within_cluster_meta = \
+            cluster_meta[cluster_meta['cluster_id'] == cluster_id].drop_duplicates('cell_specimen_id').groupby(
                 'cell_type').count()[['cluster_id']]
-        n_cells = within_cluster_df.sum().values[0]
-        all_df = cluster_df.drop_duplicates('cell_specimen_id').groupby('cell_type').count()[['cluster_id']]
-        fraction_cre = within_cluster_df / all_df
+        n_cells = within_cluster_meta.sum().values[0]
+        all_df = cluster_meta.drop_duplicates('cell_specimen_id').groupby('cell_type').count()[['cluster_id']]
+        fraction_cre = within_cluster_meta / all_df
         fraction_cre.sort_index(inplace=True)
         # add numerical column for sns.barplot
         fraction_cre['cell_type_index'] = np.arange(0, fraction_cre.shape[0])
@@ -956,11 +956,11 @@ def plot_clusters(dropout_df, cluster_df=None, plot_difference=False, mean_respo
         ax[i].set_xlabel('')
 
         # 3. Plot by depth
-        within_cluster_df = \
-            cluster_df[cluster_df['cluster_id'] == cluster_id].drop_duplicates('cell_specimen_id').groupby(
+        within_cluster_meta = \
+            cluster_meta[cluster_meta['cluster_id'] == cluster_id].drop_duplicates('cell_specimen_id').groupby(
                 'binned_depth').count()[['cluster_id']]
-        all_df = cluster_df.drop_duplicates('cell_specimen_id').groupby('binned_depth').count()[['cluster_id']]
-        fraction_depth = within_cluster_df / all_df
+        all_df = cluster_meta.drop_duplicates('cell_specimen_id').groupby('binned_depth').count()[['cluster_id']]
+        fraction_depth = within_cluster_meta / all_df
         fraction_depth.reset_index(inplace=True)
         ax[i + (len(cluster_ids) * 2)] = sns.barplot(data=fraction_depth,
                                                      x='binned_depth',
@@ -975,11 +975,11 @@ def plot_clusters(dropout_df, cluster_df=None, plot_difference=False, mean_respo
         ax[i + (len(cluster_ids) * 2)].set_xticklabels(depths, rotation=90)
 
         # 4. Plot by area
-        within_cluster_df = \
-            cluster_df[cluster_df['cluster_id'] == cluster_id].drop_duplicates('cell_specimen_id').groupby(
+        within_cluster_meta = \
+            cluster_meta[cluster_meta['cluster_id'] == cluster_id].drop_duplicates('cell_specimen_id').groupby(
                 'targeted_structure').count()[['cluster_id']]
-        all_df = cluster_df.drop_duplicates('cell_specimen_id').groupby('targeted_structure').count()[['cluster_id']]
-        fraction_area = within_cluster_df / all_df
+        all_df = cluster_meta.drop_duplicates('cell_specimen_id').groupby('targeted_structure').count()[['cluster_id']]
+        fraction_area = within_cluster_meta / all_df
         fraction_area.reset_index(inplace=True, drop=False)
 
         ax[i + (len(cluster_ids) * 3)] = sns.barplot(data=fraction_area,
@@ -998,8 +998,8 @@ def plot_clusters(dropout_df, cluster_df=None, plot_difference=False, mean_respo
 
         # axes_column = 'cluster_id'
         hue_column = 'experience_level'
-        hue_conditions = np.sort(cluster_df[hue_column].unique())
-        timestamps = cluster_df['trace_timestamps'][0]
+        hue_conditions = np.sort(cluster_meta[hue_column].unique())
+        timestamps = cluster_meta['trace_timestamps'][0]
         xlim_seconds = [-1, 1.5]
         change = False
         omitted = True
@@ -1007,8 +1007,8 @@ def plot_clusters(dropout_df, cluster_df=None, plot_difference=False, mean_respo
 
         for c, hue in enumerate(hue_conditions):
 
-            traces = cluster_df[(cluster_df['cluster_id'] == cluster_id) &
-                                (cluster_df[hue_column] == hue)].mean_trace.values
+            traces = cluster_meta[(cluster_meta['cluster_id'] == cluster_id) &
+                                (cluster_meta[hue_column] == hue)].mean_trace.values
             for t in range(0, np.shape(traces)[0]):
                 traces[t] = signal.resample(traces[t], len(timestamps))
             ax[i + (len(cluster_ids) * 4)] = utils.plot_mean_trace(np.asarray(traces),
@@ -1053,22 +1053,22 @@ def plot_clusters_columns_all_cre_lines(df, df_meta, labels_cre, multi_session_d
         cids = df_meta[df_meta['cre_line'] == cre_line]['cell_specimen_id']
         df_sel = df.loc[cids]
         labels = labels_cre[cre_line]
-        cluster_df = pd.DataFrame(index=df_sel.index, columns=['cluster_id'], data=labels)
-        cluster_df = cluster_df.merge(cells_table[['cell_specimen_id', 'cell_type', 'cre_line', 'experience_level',
+        cluster_meta = pd.DataFrame(index=df_sel.index, columns=['cluster_id'], data=labels)
+        cluster_meta = cluster_meta.merge(cells_table[['cell_specimen_id', 'cell_type', 'cre_line', 'experience_level',
                                                    'binned_depth', 'targeted_structure']], on='cell_specimen_id')
-        cluster_df = cluster_df.drop_duplicates(subset='cell_specimen_id')
-        cluster_df.reset_index(inplace=True)
+        cluster_meta = cluster_meta.drop_duplicates(subset='cell_specimen_id')
+        cluster_meta.reset_index(inplace=True)
 
         dropout_df = df_sel.copy()
 
-        cluster_mdf = multi_session_df.merge(cluster_df[['cell_specimen_id', 'cluster_id']],
+        cluster_mdf = multi_session_df.merge(cluster_meta[['cell_specimen_id', 'cluster_id']],
                                              on='cell_specimen_id',
                                              how='inner')
 
         # Set up the variables
 
-        # cluster_ids = cluster_df['cluster_id'].value_counts().index.values  # sort cluster ids by size
-        cluster_ids = cluster_df.groupby(['cluster_id']).count()[['cell_specimen_id']].sort_values(by='cell_specimen_id').index.values
+        # cluster_ids = cluster_meta['cluster_id'].value_counts().index.values  # sort cluster ids by size
+        cluster_ids = cluster_meta.groupby(['cluster_id']).count()[['cell_specimen_id']].sort_values(by='cell_specimen_id').index.values
         n_clusters = len(cluster_ids)
         # palette = utils.get_cre_line_colors()
         palette_exp = utils.get_experience_level_colors()
@@ -1076,7 +1076,7 @@ def plot_clusters_columns_all_cre_lines(df, df_meta, labels_cre, multi_session_d
         areas = ['VISp', 'VISl']
 
         # get number of animals per cluster
-        # grouped_df = cluster_df.groupby('cluster_id')
+        # grouped_df = cluster_meta.groupby('cluster_id')
         # N_mice = grouped_df.agg({"mouse_id": "nunique"})
 
         # Set up figure
@@ -1087,15 +1087,15 @@ def plot_clusters_columns_all_cre_lines(df, df_meta, labels_cre, multi_session_d
         for i, cluster_id in enumerate(cluster_ids[::-1]):
 
             # % of total cells in this cluster
-            within_cluster_df = cluster_df[cluster_df['cluster_id'] == cluster_id].drop_duplicates('cell_specimen_id').groupby(
+            within_cluster_meta = cluster_meta[cluster_meta['cluster_id'] == cluster_id].drop_duplicates('cell_specimen_id').groupby(
                 'cell_type').count()[['cluster_id']]
-            all_df = cluster_df.drop_duplicates('cell_specimen_id').groupby('cell_type').count()[['cluster_id']]
-            n_cells = within_cluster_df.cluster_id.values[0]
-            fraction = within_cluster_df / all_df
+            all_df = cluster_meta.drop_duplicates('cell_specimen_id').groupby('cell_type').count()[['cluster_id']]
+            n_cells = within_cluster_meta.cluster_id.values[0]
+            fraction = within_cluster_meta / all_df
             fraction = np.round(fraction.cluster_id.values[0] * 100, 1)
 
             # 1. Mean dropout scores
-            this_cluster_ids = cluster_df[cluster_df['cluster_id'] == cluster_id]['cell_specimen_id'].unique()
+            this_cluster_ids = cluster_meta[cluster_meta['cluster_id'] == cluster_id]['cell_specimen_id'].unique()
             mean_dropout_df = dropout_df.loc[this_cluster_ids].mean().unstack()
             ax[(i * n_cols)] = sns.heatmap(mean_dropout_df,
                                            cmap='RdBu',
@@ -1115,11 +1115,11 @@ def plot_clusters_columns_all_cre_lines(df, df_meta, labels_cre, multi_session_d
 
             # 3. Plot by depth
             n_col = 2
-            within_cluster_df = \
-                cluster_df[cluster_df['cluster_id'] == cluster_id].drop_duplicates('cell_specimen_id').groupby(
+            within_cluster_meta = \
+                cluster_meta[cluster_meta['cluster_id'] == cluster_id].drop_duplicates('cell_specimen_id').groupby(
                     'binned_depth').count()[['cluster_id']]
-            all_df = cluster_df.drop_duplicates('cell_specimen_id').groupby('binned_depth').count()[['cluster_id']]
-            fraction_depth = within_cluster_df / all_df
+            all_df = cluster_meta.drop_duplicates('cell_specimen_id').groupby('binned_depth').count()[['cluster_id']]
+            fraction_depth = within_cluster_meta / all_df
             fraction_depth.reset_index(inplace=True)
             ax[(i * n_cols) + n_col] = sns.barplot(data=fraction_depth, orient='h',
                                                    y='binned_depth',
@@ -1138,11 +1138,11 @@ def plot_clusters_columns_all_cre_lines(df, df_meta, labels_cre, multi_session_d
 
             # 4. Plot by area
             n_col = 3
-            within_cluster_df = \
-                cluster_df[cluster_df['cluster_id'] == cluster_id].drop_duplicates('cell_specimen_id').groupby(
+            within_cluster_meta = \
+                cluster_meta[cluster_meta['cluster_id'] == cluster_id].drop_duplicates('cell_specimen_id').groupby(
                     'targeted_structure').count()[['cluster_id']]
-            all_df = cluster_df.drop_duplicates('cell_specimen_id').groupby('targeted_structure').count()[['cluster_id']]
-            fraction_area = within_cluster_df / all_df
+            all_df = cluster_meta.drop_duplicates('cell_specimen_id').groupby('targeted_structure').count()[['cluster_id']]
+            fraction_area = within_cluster_meta / all_df
             fraction_area.reset_index(inplace=True, drop=False)
 
             ax[(i * n_cols) + n_col] = sns.barplot(data=fraction_area,
@@ -1218,22 +1218,22 @@ def plot_clusters_compact_all_cre_lines(df, df_meta, labels_cre, save_dir=None):
         # df_sel = df.loc[cids]
         df_sel = df[cre_line]
         labels = labels_cre[cre_line]
-        cluster_df = pd.DataFrame(index=df_sel.index, columns=['cluster_id'], data=labels)
-        cluster_df = cluster_df.merge(cells_table[['cell_specimen_id', 'cell_type', 'cre_line', 'experience_level',
+        cluster_meta = pd.DataFrame(index=df_sel.index, columns=['cluster_id'], data=labels)
+        cluster_meta = cluster_meta.merge(cells_table[['cell_specimen_id', 'cell_type', 'cre_line', 'experience_level',
                                                    'binned_depth', 'targeted_structure']], on='cell_specimen_id')
-        cluster_df = cluster_df.drop_duplicates(subset='cell_specimen_id')
-        cluster_df.reset_index(inplace=True)
+        cluster_meta = cluster_meta.drop_duplicates(subset='cell_specimen_id')
+        cluster_meta.reset_index(inplace=True)
 
         dropout_df = df_sel.copy()
 
         # Set up the variables
 
-        # cluster_ids = cluster_df['cluster_id'].value_counts().index.values  # sort cluster ids by size
-        cluster_ids = cluster_df.groupby(['cluster_id']).count()[['cell_specimen_id']].sort_values(by='cell_specimen_id').index.values
+        # cluster_ids = cluster_meta['cluster_id'].value_counts().index.values  # sort cluster ids by size
+        cluster_ids = cluster_meta.groupby(['cluster_id']).count()[['cell_specimen_id']].sort_values(by='cell_specimen_id').index.values
         n_clusters = len(cluster_ids)
 
         # get number of animals per cluster
-        # grouped_df = cluster_df.groupby('cluster_id')
+        # grouped_df = cluster_meta.groupby('cluster_id')
         # N_mice = grouped_df.agg({"mouse_id": "nunique"})
 
         # Set up figure
@@ -1244,15 +1244,15 @@ def plot_clusters_compact_all_cre_lines(df, df_meta, labels_cre, save_dir=None):
         for i, cluster_id in enumerate(cluster_ids[::-1]):
 
             # % of total cells in this cluster
-            within_cluster_df = cluster_df[cluster_df['cluster_id'] == cluster_id].drop_duplicates('cell_specimen_id').groupby(
+            within_cluster_meta = cluster_meta[cluster_meta['cluster_id'] == cluster_id].drop_duplicates('cell_specimen_id').groupby(
                 'cell_type').count()[['cluster_id']]
-            all_df = cluster_df.drop_duplicates('cell_specimen_id').groupby('cell_type').count()[['cluster_id']]
-            n_cells = within_cluster_df.cluster_id.values[0]
-            fraction = within_cluster_df / all_df
+            all_df = cluster_meta.drop_duplicates('cell_specimen_id').groupby('cell_type').count()[['cluster_id']]
+            n_cells = within_cluster_meta.cluster_id.values[0]
+            fraction = within_cluster_meta / all_df
             fraction = np.round(fraction.cluster_id.values[0] * 100, 1)
 
             # 1. Mean dropout scores
-            this_cluster_ids = cluster_df[cluster_df['cluster_id'] == cluster_id]['cell_specimen_id'].unique()
+            this_cluster_ids = cluster_meta[cluster_meta['cluster_id'] == cluster_id]['cell_specimen_id'].unique()
             mean_dropout_df = dropout_df.loc[this_cluster_ids].mean().unstack()
             ax[i] = sns.heatmap(mean_dropout_df,
                                 cmap='RdBu',
@@ -3123,17 +3123,17 @@ def plot_eigengap_values(eigenvalues_cre, cre_lines, n_clusters_cre=None, save_d
             utils.save_figure(fig, figsize, save_dir, folder, 'eigengap' + suffix, formats=['.png', '.pdf'] )
 
 
-def plot_cluster_info(cre_lines, cluster_df, save_dir=None, folder=''):
+def plot_cluster_info(cre_lines, cluster_meta, save_dir=None, folder=''):
     """
     Plot cluster information for each CRE line.
 
     Args:
     - cre_lines (list): List of CRE lines to process.
-    - cluster_df (DataFrame): DataFrame containing cluster information.
+    - cluster_meta (DataFrame): DataFrame containing cluster information.
     - base_dir (str): Base directory to save figures.
     """
     for cre_line in cre_lines:
-        unique_mouse_per_cluster, unique_cluster_per_mouse, unique_equipment_per_cluster, unique_clusters_per_equipment = processing.get_cluster_info(cre_line, cluster_df)
+        unique_mouse_per_cluster, unique_cluster_per_mouse, unique_equipment_per_cluster, unique_clusters_per_equipment = processing.get_cluster_info(cre_line, cluster_meta)
 
         figsize = (7, 7)
         fig, ax = plt.subplots(2, 2, figsize=figsize)
@@ -4558,16 +4558,16 @@ def plot_unraveled_clusters_mean(cre_line, cre_line_dfs, save_dir=None, folder='
                       fig_title=f'{cre_line}_mean_unraveled_dropout_scores')
     
 
-def plot_unraveled_clusters(feature_matrix, cluster_df, sort_order=None, cre_line=None, save_dir=None, folder='', tag='',
+def plot_unraveled_clusters(feature_matrix, cluster_meta, sort_order=None, cre_line=None, save_dir=None, folder='', tag='',
                             ax=None, figsize=(4, 7), rename_columns=False):
     '''function to plot unraveled clusters (not means).
     INPUT:
     feature_matrix: (pd.DataFrame) dataframe of dropout scores with cell_specimen_id as index
-    cluster_df: (pd.DataFrame) dataframe with cre_line, cell_specimen_id and cluster_id as columns
+    cluster_meta: (pd.DataFrame) dataframe with cre_line, cell_specimen_id and cluster_id as columns
     sort_order: either dictionary with cre_line as keys (then provide cre_line) or list/np.array of sorted clusters
                 default is None, then uses get_sorted_cluster_ids function to get clusters in descending size order
-                from cluster_df
-    cre_line: (str) if cluster_df and sort_order contain all cre_lines, you can select which one to plot, default=None
+                from cluster_meta
+    cre_line: (str) if cluster_meta and sort_order contain all cre_lines, you can select which one to plot, default=None
     save_dir: (str) if you wish to save figure, default=None
     save_dir: (str) if you wish to save figure, you can add a folder to the path, default=''
     tag: (str) when saving figure, this is a unique tag that will be added to figure name, default=''
@@ -4584,27 +4584,27 @@ def plot_unraveled_clusters(feature_matrix, cluster_df, sort_order=None, cre_lin
         fig, ax = plt.subplots(1, 1, figsize=figsize)
 
     if sort_order is None:
-        sort_order = processing.get_sorted_cluster_ids(cluster_df)
+        sort_order = processing.get_sorted_cluster_ids(cluster_meta)
 
     if cre_line is not None:
         sort_order = sort_order[cre_line]
-        cluster_df = cluster_df[cluster_df.cre_line == cre_line]
+        cluster_meta = cluster_meta[cluster_meta.cre_line == cre_line]
 
     # re name clusters after sorting by cluster size
     sorted_cluster_ids = {}
     for i, j in enumerate(sort_order):
         sorted_cluster_ids[j] = i + 1
 
-    cluster_df = cluster_df.replace({'cluster_id': sorted_cluster_ids})
+    cluster_meta = cluster_meta.replace({'cluster_id': sorted_cluster_ids})
 
-    if 'cell_specimen_id' in cluster_df.columns:
-        cluster_df = cluster_df.set_index('cell_specimen_id')
+    if 'cell_specimen_id' in cluster_meta.columns:
+        cluster_meta = cluster_meta.set_index('cell_specimen_id')
 
     if rename_columns is True:
         feature_matrix = feature_matrix.rename(columns={'Novel 1': 'Novel', 'Novel >1': 'Novel+'}, level=1)
 
-    cell_order = cluster_df.sort_values(by=['cluster_id']).index.values
-    label_values = cluster_df.sort_values(by=['cluster_id']).cluster_id.values
+    cell_order = cluster_meta.sort_values(by=['cluster_id']).index.values
+    label_values = cluster_meta.sort_values(by=['cluster_id']).cluster_id.values
 
     data = feature_matrix.loc[cell_order]
     ax = sns.heatmap(data.values, cmap='Blues', ax=ax, vmin=0, vmax=1,
@@ -5205,25 +5205,25 @@ def plot_image_tuning_curves_across_experience_for_cluster(each_image_mdf, clust
     for c, cre_line in enumerate(utils.get_cre_lines()):
 
         # get image responses for cells in this cluster for a given cre line
-        cluster_df = each_image_mdf[
+        cluster_meta = each_image_mdf[
             (each_image_mdf.cluster_id == cluster_id) & (each_image_mdf.cre_line == cre_line)].copy()
-        print(cre_line, len(cluster_df.cell_specimen_id.unique()))
+        print(cre_line, len(cluster_meta.cell_specimen_id.unique()))
 
-        if len(cluster_df) > 0:  # only plot if there are actually cells in this cluster for this cre line
+        if len(cluster_meta) > 0:  # only plot if there are actually cells in this cluster for this cre line
             # get preferred experience level for cluster
             pref_exp_level = \
             cluster_metrics[(cluster_metrics.cluster_id == cluster_id)].dominant_experience_level.values[0]
 
             if sort_by_pref_exp_level:
                 # get order of cells based on tuning in pref experience level
-                cell_list = get_cell_list_ordered_by_pref_image_index(cluster_df[cluster_df.experience_level == pref_exp_level])
+                cell_list = get_cell_list_ordered_by_pref_image_index(cluster_meta[cluster_meta.experience_level == pref_exp_level])
                 prefix = 'sort_by_pref_exp_level'
             else:
                 cell_list = None
                 prefix = 'sort_within_exp_level'
 
             for i, experience_level in enumerate(utils.get_new_experience_levels()):
-                df = cluster_df[cluster_df.experience_level == experience_level].copy()
+                df = cluster_meta[cluster_meta.experience_level == experience_level].copy()
                 ax[(c * 4) + i] = plot_tuning_curve_heatmap_for_cluster(df, cell_list=cell_list,
                                                                                  vmax=vmax, cmap='magma',
                                                                                  sup_title=None, title=None,
@@ -5418,12 +5418,12 @@ def plot_response_boxplot(ax, data, colors, patch_artist=True, widths=0.5):
     plt.tight_layout()
     return ax
 
-def plot_cluster_rugplots(cluster_df, rm_unstacked, ax, cre_line, cluster_ids, exp_levels, rm_f, linestyles=None, test='MW', colors=[]):
+def plot_cluster_rugplots(cluster_meta, rm_unstacked, ax, cre_line, cluster_ids, exp_levels, rm_f, linestyles=None, test='MW', colors=[]):
     '''
     Plot cluster rug plots.
 
     Args:
-    - cluster_df (pd.DataFrame): DataFrame containing cluster id data.
+    - cluster_meta (pd.DataFrame): DataFrame containing cluster id data.
     - rm_unstacked (pd.DataFrame): DataFrame containing unstacked response metric data.
     - ax (matplotlib.axes.Axes): Axes object for plotting.
     - cre_line (str): CRE line.
@@ -5453,7 +5453,7 @@ def plot_cluster_rugplots(cluster_df, rm_unstacked, ax, cre_line, cluster_ids, e
 
     pattern = re.compile(r'response')
     for cluster_id, exp_level, linestyle in zip(cluster_ids, exp_levels, linestyles):
-        data = processing.prepare_data(cluster_df, rm_unstacked, cluster_id=cluster_id, exp_level=exp_level, cre_line=cre_line, rm_f=rm_f)
+        data = processing.prepare_data(cluster_meta, rm_unstacked, cluster_id=cluster_id, exp_level=exp_level, cre_line=cre_line, rm_f=rm_f)
 
         if len(data) > 1:
             match = pattern.search(rm_f)

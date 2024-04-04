@@ -584,21 +584,21 @@ def get_feature_matrix_for_cre_line(feature_matrix, cell_metadata, cre_line, dro
     return feature_matrix_cre
 
 
-def normalize_cluster_size(cluster_df):
+def normalize_cluster_size(cluster_meta):
     '''
     Normalize cluster size in each CRE line and calculate the percentage.
 
     Args:
-    - cluster_df (pd.DataFrame): DataFrame containing original cluster labels.
+    - cluster_meta (pd.DataFrame): DataFrame containing original cluster labels.
 
     Returns:
     - pd.DataFrame: DataFrame with normalized cluster sizes and percentages for each CRE line and cluster ID.
     '''
     # Normalize cluster size in each CRE line
-    normalized_values = cluster_df.groupby('cre_line')['cluster_id'].value_counts(normalize=True).values
+    normalized_values = cluster_meta.groupby('cre_line')['cluster_id'].value_counts(normalize=True).values
 
     # Create DataFrame with each CRE and cluster ID
-    grouped_df = cluster_df.groupby(['cre_line','cluster_id']).count().reset_index()
+    grouped_df = cluster_meta.groupby(['cre_line','cluster_id']).count().reset_index()
 
     # Add normalized percentage values
     grouped_df['normalized'] = normalized_values
@@ -606,12 +606,12 @@ def normalize_cluster_size(cluster_df):
 
     return grouped_df
 
-def prepare_data(cluster_df, rm_unstacked, cluster_id, exp_level, rm_f, cre_line=None):
+def prepare_data(cluster_meta, rm_unstacked, cluster_id, exp_level, rm_f, cre_line=None):
     '''
     Prepare data based on cluster_id, exp_level, and cre_line.
 
     Args:
-    - cluster_df (pd.DataFrame): DataFrame containing original cluster labels.
+    - cluster_meta (pd.DataFrame): DataFrame containing original cluster labels.
     - rm_unstacked (pd.DataFrame): DataFrame containing unstacked response metric data.
     - cluster_id (int): Cluster ID.
     - exp_level (str): Experience level.
@@ -622,9 +622,9 @@ def prepare_data(cluster_df, rm_unstacked, cluster_id, exp_level, rm_f, cre_line
     - np.ndarray: Prepared data.
     '''
     if cre_line is None:
-        tmp = cluster_df[cluster_df.cluster_id == cluster_id]
+        tmp = cluster_meta[cluster_meta.cluster_id == cluster_id]
     else:
-        tmp = cluster_df[(cluster_df.cluster_id == cluster_id) & (cluster_df.cre_line == cre_line)]
+        tmp = cluster_meta[(cluster_meta.cluster_id == cluster_id) & (cluster_meta.cre_line == cre_line)]
     cids = tmp.cell_specimen_id.values
     return rm_unstacked.loc[cids][[rm_f]][[(rm_f, exp_level)]].values
 
@@ -3108,16 +3108,16 @@ def get_mapped_SSE_values(matrix, threshold=1, ):
     return cluster_mapping_SSE
 
 
-def get_mean_dropout_scores_per_cluster(dropout_df, cluster_df=None, labels=None, stacked=True, sort=False, max_n_clusters=None):
+def get_mean_dropout_scores_per_cluster(dropout_df, cluster_meta=None, labels=None, stacked=True, sort=False, max_n_clusters=None):
     '''
     INPUT:
     dropout_df: (pd.DataFrame) of GLM dropout scores (cell_specimen_ids by regressors x experience)
-    cluster_df: (pd.DataFrame), either provide this df, must contain columns 'cluster_id', 'cell_specimen_id'
+    cluster_meta: (pd.DataFrame), either provide this df, must contain columns 'cluster_id', 'cell_specimen_id'
     labels: (list, np.array) or provide this array, list or array of int indicating cells' cluster ids,
                             if provided, len(labels)==len(dropout_df)
     sort: boolean, if True, sorts clusters by size, if False, clusters are not sorted
 
-    Provide either cluster_df or labels. Cluster df must be df with 'cluster_id' and 'cell_specimen_id' columns,
+    Provide either cluster_meta or labels. Cluster df must be df with 'cluster_id' and 'cell_specimen_id' columns,
     labels can be np array or list of cluster ids
 
     if unstacked, returns dictionary of DataFrames for each cluster. This version is helpful for plotting
@@ -3126,22 +3126,22 @@ def get_mean_dropout_scores_per_cluster(dropout_df, cluster_df=None, labels=None
 
     Clusters are sorted by size.
     '''
-    if sort and isinstance(cluster_df, pd.core.frame.DataFrame):
-        cluster_ids = cluster_df['cluster_id'].value_counts().index.values  # sort cluster ids by size
-    elif sort is False and isinstance(cluster_df, pd.core.frame.DataFrame):
-        cluster_ids = cluster_df['cluster_id'].unique()  # sorts numerically not by cluster size
+    if sort and isinstance(cluster_meta, pd.core.frame.DataFrame):
+        cluster_ids = cluster_meta['cluster_id'].value_counts().index.values  # sort cluster ids by size
+    elif sort is False and isinstance(cluster_meta, pd.core.frame.DataFrame):
+        cluster_ids = cluster_meta['cluster_id'].unique()  # sorts numerically not by cluster size
 
     if sort is False and max_n_clusters is not None:
         cluster_ids = np.arange(1, max_n_clusters + 1)
 
     elif labels is not None:
-        cluster_df = pd.DataFrame(data={'cluster_id': labels, 'cell_specimen_id': dropout_df.index.values})
-        cluster_ids = cluster_df['cluster_id'].value_counts().index.values  # sort cluster ids by size
+        cluster_meta = pd.DataFrame(data={'cluster_id': labels, 'cell_specimen_id': dropout_df.index.values})
+        cluster_ids = cluster_meta['cluster_id'].value_counts().index.values  # sort cluster ids by size
 
     # new cluster ids will start with 1, and they will be sorted by cluster size
     mean_cluster = {}
     for i, cluster_id in enumerate(cluster_ids):
-        this_cluster_ids = cluster_df[cluster_df['cluster_id'] == cluster_id]['cell_specimen_id'].unique()
+        this_cluster_ids = cluster_meta[cluster_meta['cluster_id'] == cluster_id]['cell_specimen_id'].unique()
         if stacked is True:
             mean_dropout_df = dropout_df.loc[this_cluster_ids].mean()
             mean_cluster[cluster_id] = mean_dropout_df.values
@@ -3191,14 +3191,14 @@ def compute_cluster_sse(feature_matrix):
     return SSE
 
 
-def get_sse_df(feature_matrix, cluster_df, columns=['cluster_id', 'cre_line'], metric='sse'):
+def get_sse_df(feature_matrix, cluster_meta, columns=['cluster_id', 'cre_line'], metric='sse'):
     '''
     Calculate the sum of squared errors (SSE) for each cluster in each cre_line. Create a dataframe to plot the results.
     This allows to compare the variability within clusters across different cre_lines.
 
     Args:
     - feature_matrix (pd.DataFrame): DataFrame containing the features for each cell.
-    - cluster_df (pd.DataFrame): DataFrame with columns ['cre_line', 'cluster_id'] and cell specimen id as an index.
+    - cluster_meta (pd.DataFrame): DataFrame with columns ['cre_line', 'cluster_id'] and cell specimen id as an index.
     - columns (list): List of columns for the output DataFrame.
     - metric (str): Metric to compute, currently supports only 'sse'. Option to add other metrics
 
@@ -3207,20 +3207,20 @@ def get_sse_df(feature_matrix, cluster_df, columns=['cluster_id', 'cre_line'], m
     '''
 
     variability_df = pd.DataFrame(columns=columns)  # initialize empty dataframe
-    cre_lines = cluster_df['cre_line'].unique()
+    cre_lines = cluster_meta['cre_line'].unique()
 
     columns = [*columns, metric]
 
-    if 'cell_specimen_id' in cluster_df.columns:
-        cluster_df.set_index('cell_specimen_id', inplace=True)
+    if 'cell_specimen_id' in cluster_meta.columns:
+        cluster_meta.set_index('cell_specimen_id', inplace=True)
 
     for cre_line in cre_lines:
-        cre_cluster_df = cluster_df[cluster_df['cre_line'] == cre_line]
-        cre_cell_ids = cre_cluster_df.index.values
+        cre_cluster_meta = cluster_meta[cluster_meta['cre_line'] == cre_line]
+        cre_cell_ids = cre_cluster_meta.index.values
         cre_feature_matrix = feature_matrix.loc[cre_cell_ids]
-        cluster_ids = np.sort(cre_cluster_df['cluster_id'].values)
+        cluster_ids = np.sort(cre_cluster_meta['cluster_id'].values)
         for cluster_id in cluster_ids:  # compute for each cluster id
-            cluster_cids = cre_cluster_df[cre_cluster_df['cluster_id'] == cluster_id].index.values
+            cluster_cids = cre_cluster_meta[cre_cluster_meta['cluster_id'] == cluster_id].index.values
             cluster_feature_matrix = cre_feature_matrix.loc[cluster_cids]
             if metric == 'sse':
                 values = compute_cluster_sse(cluster_feature_matrix)
@@ -3247,7 +3247,7 @@ def get_sse_df(feature_matrix, cluster_df, columns=['cluster_id', 'cre_line'], m
     return variability_df
 
 
-def get_sse_df_with_clustered_column(feature_matrix, cluster_df, columns=['cluster_id', 'cre_line', 'clustered'], metric='sse'):
+def get_sse_df_with_clustered_column(feature_matrix, cluster_meta, columns=['cluster_id', 'cre_line', 'clustered'], metric='sse'):
     '''
     Calculate the sum of squared errors (SSE) for each cluster in each cre_line.
     This function has a column 'clustered' which indicates if the SSE is calculated based on clustered mean or not.
@@ -3255,7 +3255,7 @@ def get_sse_df_with_clustered_column(feature_matrix, cluster_df, columns=['clust
 
     Args:
     - feature_matrix (pd.DataFrame): DataFrame containing the features for each cell.
-    - cluster_df (pd.DataFrame): DataFrame with columns ['cre_line', 'cluster_id'] and cell specimen id as an index.
+    - cluster_meta (pd.DataFrame): DataFrame with columns ['cre_line', 'cluster_id'] and cell specimen id as an index.
     - columns (list): List of columns for the output DataFrame.
     - metric (str): Metric to compute, currently supports only 'sse'.
 
@@ -3264,21 +3264,21 @@ def get_sse_df_with_clustered_column(feature_matrix, cluster_df, columns=['clust
     '''
 
     variability_df = pd.DataFrame(columns=columns)
-    cre_lines = np.sort(cluster_df['cre_line'].unique())
+    cre_lines = np.sort(cluster_meta['cre_line'].unique())
 
     columns = [*columns, metric]
 
-    if 'cell_specimen_id' in cluster_df.columns:
-        cluster_df.set_index('cell_specimen_id', inplace=True)
+    if 'cell_specimen_id' in cluster_meta.columns:
+        cluster_meta.set_index('cell_specimen_id', inplace=True)
 
     for cre_line in cre_lines:
-        cre_cluster_df = cluster_df[cluster_df['cre_line'] == cre_line]
-        cre_cell_ids = cre_cluster_df.index.values
+        cre_cluster_meta = cluster_meta[cluster_meta['cre_line'] == cre_line]
+        cre_cell_ids = cre_cluster_meta.index.values
         cre_feature_matrix = feature_matrix.loc[cre_cell_ids]
 
-        cluster_ids = np.sort(cre_cluster_df['cluster_id'].values)
+        cluster_ids = np.sort(cre_cluster_meta['cluster_id'].values)
         for cluster_id in cluster_ids:  # clustered
-            cluster_cids = cre_cluster_df[cre_cluster_df['cluster_id'] == cluster_id].index.values
+            cluster_cids = cre_cluster_meta[cre_cluster_meta['cluster_id'] == cluster_id].index.values
             cluster_feature_matrix = cre_feature_matrix.loc[cluster_cids]
             if metric == 'sse':
                 values = compute_cluster_sse(cluster_feature_matrix)
@@ -3300,15 +3300,15 @@ def get_sse_df_with_clustered_column(feature_matrix, cluster_df, columns=['clust
     return variability_df
 
 
-def get_sorted_cluster_ids(cluster_df):
+def get_sorted_cluster_ids(cluster_meta):
     '''
     Maybe a reduntant function, but used to quickly get cluster ids that are sorted by size
     inputs:
-    cluster_df (pd.DataFrame) dataframe with column 'cluster_id' of rows = cells
+    cluster_meta (pd.DataFrame) dataframe with column 'cluster_id' of rows = cells
     returns:
     sorted_cluster_ids (np.array) of cluster ids sorted by size for plotting
     '''
-    sorted_cluster_ids = cluster_df.value_counts('cluster_id').index.values
+    sorted_cluster_ids = cluster_meta.value_counts('cluster_id').index.values
     return sorted_cluster_ids
 
 
@@ -3394,12 +3394,12 @@ def get_cluster_probability_df(shuffle_type_probabilities, cre_line=None,
                     value = shuffle_type_probabilities[shuffle_type][cre_line][cluster_id]
                 else:
                     value = shuffle_type_probabilities[shuffle_type][cluster_id]
-                # cluster_df = pd.DataFrame(data=[cre_line, cluster_id, shuffle_type, value], columns = columns)
-                cluster_df = pd.DataFrame({'cre_line': cre_line, 'cluster_id': cluster_id, 'shuffle_type': shuffle_type,
+                # cluster_meta = pd.DataFrame(data=[cre_line, cluster_id, shuffle_type, value], columns = columns)
+                cluster_meta = pd.DataFrame({'cre_line': cre_line, 'cluster_id': cluster_id, 'shuffle_type': shuffle_type,
                                            'probability': value},
                                           index=[0])
 
-                shuffle_type_probability_df = shuffle_type_probability_df.append(cluster_df, ignore_index=True)
+                shuffle_type_probability_df = shuffle_type_probability_df.append(cluster_meta, ignore_index=True)
 
     return shuffle_type_probability_df
 
@@ -3421,19 +3421,19 @@ def get_matched_cluster_labels(SSE_mapping):
     return matched_clusters  # dictionary of original cluster IDs and their matched IDs across all shuffle iterations
 
 
-def get_cluster_size_variance(SSE_mapping, cluster_df_shuffled, normalize=False, use_nan=False, adjust_to_expected_N=False):
+def get_cluster_size_variance(SSE_mapping, cluster_meta_shuffled, normalize=False, use_nan=False, adjust_to_expected_N=False):
     original_cluster_ids = SSE_mapping[0].keys()
     matched_ids = get_matched_cluster_labels(SSE_mapping)  # gets list of all matched IDs across shuffle iterations for
     # each original cluster, in the order of shuffle iterations
 
-    # cluster_df_shuffled is a dictionary with the cluster labels for each shuffle iteration
-    n_boots = cluster_df_shuffled.keys()
+    # cluster_meta_shuffled is a dictionary with the cluster labels for each shuffle iteration
+    n_boots = cluster_meta_shuffled.keys()
     all_cluster_sizes = {}
     for original_cluster_id in original_cluster_ids:
         cluster_sizes = []
         for n_boot in n_boots:
             # count how many cells there are in each cluster for each shuffle iteration
-            shuffled_cluster_sizes_this_boot = cluster_df_shuffled[n_boot].value_counts('cluster_id', normalize=normalize)
+            shuffled_cluster_sizes_this_boot = cluster_meta_shuffled[n_boot].value_counts('cluster_id', normalize=normalize)
             # this will be a list of cluster IDs and their sizes for a single shuffle iteration
             matched_id_this_nb = matched_ids[original_cluster_id][n_boot]
             # now get the size of the matched cluster in this iteration
@@ -3524,31 +3524,31 @@ def get_matched_clusters_means_dict(SSE_mapping, mean_dropout_scores_unstacked, 
     all_clusters_means_dict = {}
     for cluster_id in cluster_ids:
         # get dropout scores for matched clusters across each shuffle iteration
-        all_matched_cluster_df = pd.DataFrame(columns=columns)
+        all_matched_cluster_meta = pd.DataFrame(columns=columns)
         for n_boot in n_boots:
             matched_cluster_id = SSE_mapping[n_boot][cluster_id]
             if matched_cluster_id != -1:
-                all_matched_cluster_df = all_matched_cluster_df.append(
+                all_matched_cluster_meta = all_matched_cluster_meta.append(
                     mean_dropout_scores_unstacked[n_boot][matched_cluster_id])
 
-        all_matched_cluster_df = all_matched_cluster_df.reset_index().rename(columns={'index': 'regressor'})
+        all_matched_cluster_meta = all_matched_cluster_meta.reset_index().rename(columns={'index': 'regressor'})
 
         # create dummy df for unmatched clusters
         if cluster_id == 1:  # is this a typo? should it be -1 for unmatched clusters?
-            dummy_df = all_matched_cluster_df.groupby('regressor').mean().copy()
+            dummy_df = all_matched_cluster_meta.groupby('regressor').mean().copy()
             dummy_df[dummy_df > 0] = 0
         # compute metrics
-        if len(all_matched_cluster_df) >= 4:  # must be at least 4 matched clusters
+        if len(all_matched_cluster_meta) >= 4:  # must be at least 4 matched clusters
             if metric == 'mean':
-                all_clusters_means_dict[cluster_id] = all_matched_cluster_df.groupby('regressor').mean()
+                all_clusters_means_dict[cluster_id] = all_matched_cluster_meta.groupby('regressor').mean()
             elif metric == 'std':
-                all_clusters_means_dict[cluster_id] = all_matched_cluster_df.groupby('regressor').std()
+                all_clusters_means_dict[cluster_id] = all_matched_cluster_meta.groupby('regressor').std()
             elif metric == 'median':
-                all_clusters_means_dict[cluster_id] = all_matched_cluster_df.groupby('regressor').median()
+                all_clusters_means_dict[cluster_id] = all_matched_cluster_meta.groupby('regressor').median()
             else:
-                all_clusters_means_dict[cluster_id] = all_matched_cluster_df.groupby('regressor').apply(metric)
-        # elif all_matched_cluster_df.shape[0] == 4:
-        #    all_clusters_means_dict[cluster_id] = all_matched_cluster_df
+                all_clusters_means_dict[cluster_id] = all_matched_cluster_meta.groupby('regressor').apply(metric)
+        # elif all_matched_cluster_meta.shape[0] == 4:
+        #    all_clusters_means_dict[cluster_id] = all_matched_cluster_meta
         else:
             all_clusters_means_dict[cluster_id] = dummy_df
 
@@ -3663,11 +3663,11 @@ def compute_sse(feature_matrix):
     return SSE
 
 
-def get_variability_df(feature_matrix, cluster_df, columns=['cluster_id', 'cre_line', 'clustered'], metric='sse'):
+def get_variability_df(feature_matrix, cluster_meta, columns=['cluster_id', 'cre_line', 'clustered'], metric='sse'):
     '''
     INPUT:
     feature_matrix:
-    cluster_df: (pd.DataFrame) dataframe with columns ['cre_line', 'cluster_id'] and cell specimen id as an index
+    cluster_meta: (pd.DataFrame) dataframe with columns ['cre_line', 'cluster_id'] and cell specimen id as an index
     metric: (string)
 
     Returns:
@@ -3675,23 +3675,23 @@ def get_variability_df(feature_matrix, cluster_df, columns=['cluster_id', 'cre_l
     '''
 
     variability_df = pd.DataFrame(columns=columns)
-    cre_lines = np.sort(get_cre_lines(cluster_df))
+    cre_lines = np.sort(get_cre_lines(cluster_meta))
 
     columns = [*columns, metric]
 
-    if 'cell_specimen_id' in cluster_df.keys():
-        cluster_df.set_index('cell_specimen_id', inplace=True)
+    if 'cell_specimen_id' in cluster_meta.keys():
+        cluster_meta.set_index('cell_specimen_id', inplace=True)
 
     for cre_line in cre_lines:
         print(cre_line)
-        cre_cluster_df = cluster_df[cluster_df.cre_line == cre_line]
-        cre_cell_ids = cre_cluster_df.index.values
+        cre_cluster_meta = cluster_meta[cluster_meta.cre_line == cre_line]
+        cre_cell_ids = cre_cluster_meta.index.values
         cre_feature_matrix = feature_matrix.loc[cre_cell_ids]
 
-        cluster_ids = np.sort(cre_cluster_df['cluster_id'].values)
+        cluster_ids = np.sort(cre_cluster_meta['cluster_id'].values)
         # compute values for each cluster id
         for cluster_id in cluster_ids:
-            cluster_cids = cre_cluster_df[cre_cluster_df.cluster_id == cluster_id].index.values
+            cluster_cids = cre_cluster_meta[cre_cluster_meta.cluster_id == cluster_id].index.values
             cluster_feature_matrix = cre_feature_matrix.loc[cluster_cids]
             if metric == 'sse':
                 values = compute_sse(cluster_feature_matrix)
@@ -3806,19 +3806,19 @@ def add_significance(sample1, sample2, test='2ttest'):
 
 
 
-def get_cluster_info(cre_line, cluster_df):
+def get_cluster_info(cre_line, cluster_meta):
     """
     Calculate unique mouse IDs in each cluster and unique cluster IDs in each mouse.
 
     Args:
     - cre_line (str): CRE line to process.
-    - cluster_df (DataFrame): DataFrame containing cluster information.
+    - cluster_meta (DataFrame): DataFrame containing cluster information.
 
     Returns:
     - unique_mouse_per_cluster (Series): Series with unique mouse IDs in each cluster.
     - unique_cluster_per_mouse (Series): Series with unique cluster IDs in each mouse.
     """
-    tmp = cluster_df[cluster_df.cre_line == cre_line]
+    tmp = cluster_meta[cluster_meta.cre_line == cre_line]
     unique_mouse_per_cluster = tmp.groupby('cluster_id')['mouse_id'].nunique()
     unique_cluster_per_mouse = tmp.groupby('mouse_id')['cluster_id'].nunique()
     unique_equipment_per_cluster= tmp.groupby('cluster_id')['equipment_name'].nunique()
