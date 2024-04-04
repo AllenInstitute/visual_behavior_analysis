@@ -35,13 +35,14 @@ def load_glm_model_fit_results(ophys_experiment_id):
     :return:
     '''
     # load GLM fit results
-    fits_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\platform_paper_cache_new\glm_results\24_events_all_L2_optimize_by_session\model_fits'
+    platform_cache_dir = loading.get_platform_analysis_cache_dir()
+    fits_dir = os.path.join(platform_cache_dir, 'glm_results', 'model_fits')
     filename = [file for file in os.listdir(fits_dir) if str(ophys_experiment_id) in file and 'cell_results_df.h5' in file]
     cell_results_df = pd.read_hdf(os.path.join(fits_dir, filename[0]), key='df', index_col=0)
     # all results
     filename = [file for file in os.listdir(fits_dir) if str(ophys_experiment_id) in file and 'results_df.h5' in file and 'cell' not in file]
     results = pd.read_hdf(os.path.join(fits_dir, filename[0]), key='df', index_col=0)
-    # coding score results
+    # dropouts
     filename = [file for file in os.listdir(fits_dir) if str(ophys_experiment_id) in file and 'dropouts.pkl' in file]
     dropouts = pd.read_pickle(os.path.join(fits_dir, filename[0]))
 
@@ -57,8 +58,9 @@ def get_glm_model_fit_cell_results_df(ophys_experiment_id):
     '''
     platform_cache_dir = loading.get_platform_analysis_cache_dir()
     glm_version = '24_events_all_L2_optimize_by_session'
-    fit_filepath_start = os.path.join(platform_cache_dir, 'glm_results', glm_version, 'model_fits', str(ophys_experiment_id))
-    fit_filepath = os.path.join(fit_filepath_start, '_cell_results_df.h5')
+    fit_filepath_start = os.path.join(platform_cache_dir, 'glm_results', 'model_fits', str(ophys_experiment_id))
+    fit_filepath = os.path.join(fit_filepath_start + '_cell_results_df.h5')
+    print('filepath at', fit_filepath)
     if os.path.exists(fit_filepath):
         print('file exists, loading')
         cell_results_df = pd.read_hdf(fit_filepath, key='df')
@@ -75,6 +77,7 @@ def get_glm_model_fit_cell_results_df(ophys_experiment_id):
         # dropouts
         dropouts = glm.fit['dropouts'].copy()
         pd.to_pickle(dropouts, fit_filepath_start + '_dropouts.pkl')
+
     return cell_results_df
 
 
@@ -107,8 +110,9 @@ def plot_glm_model_fit_examples_with_GLM_class(ophys_experiment_id):
         gsm.plot_glm_example(glm, cell_specimen_id, run_params, times=times, savefig=True)
 
 
-def plot_model_fits_example_cell(cell_specimen_id, dataset, cell_results_df, dropouts, results, kernel=None, include_events=True,
-                                 times=None, save_dir=None):
+def plot_model_fits_example_cell(cell_specimen_id, dataset, cell_results_df, dropouts, results,
+                                 kernel=None, include_events=True,
+                                 times=None, save_dir=None, ax=None):
     '''
     For one cell, plot the cell trace, model fits, and model fits with a specific kernel (such as all-images or omissions) removed
     Inputs are attributes of the GLM class in visual_behavior_glm repo, either derived by instantiating the GLM class,
@@ -137,8 +141,9 @@ def plot_model_fits_example_cell(cell_specimen_id, dataset, cell_results_df, dro
         times = utils.get_start_end_time_for_period_with_omissions_and_change(stimulus_presentations, n_flashes=16)
 
     # do the plot
-    figsize = (8, 3)
-    fig, ax = plt.subplots(figsize=figsize)
+    if ax is None:
+        figsize = (8, 2.5)
+        fig, ax = plt.subplots(figsize=figsize)
 
     # time to use for extracting the trace in the relvant time window
     time_vec = (fit['fit_trace_timestamps'] > times[0]) & (fit['fit_trace_timestamps'] < times[1])
@@ -212,9 +217,11 @@ def plot_model_fits_example_cell(cell_specimen_id, dataset, cell_results_df, dro
         else:
             suffix = suffix
         m = dataset.metadata.copy()
-        filename = str(m['ophys_experiment_id']) + '_' + m['cre_line'].split('-')[0] + '_' + str(
-            cell_specimen_id) + '_model_fit' + suffix
+        filename = str(m['ophys_experiment_id']) + '_' + str(
+            cell_specimen_id) + '_' + m['cre_line'].split('-')[0] + '_model_fit' + suffix
         utils.save_figure(fig, figsize, save_dir, 'example_model_fits', filename)
+
+    return ax
 
 
 def plot_glm_model_fits_examples_for_experiment(ophys_experiment_id, save_dir=None):
@@ -222,37 +229,40 @@ def plot_glm_model_fits_examples_for_experiment(ophys_experiment_id, save_dir=No
     Loads dataset object & GLM model fits and plots the cell trace, model fit, and model fit with images or omissions removed
     for the 10 cells with highest SNR in the provided experiment
     '''
-    import visual_behavior.data_access.processing as data_access_processing
 
     # load dataset & filter stim presentations
     dataset = loading.get_ophys_dataset(ophys_experiment_id)
 
     # get GLM results
-    cell_results_df, results, dropouts = load_glm_model_fit_results(ophys_experiment_id)
+    cell_results_df, expt_results, dropouts = load_glm_model_fit_results(ophys_experiment_id)
 
     # get high SNR traces
-    traces = data_access_processing.compute_robust_snr_on_dataframe(dataset.dff_traces)
-    if len(traces) < 10:
-        n_cells = len(traces)
-    else:
-        n_cells = 10
-    cell_specimen_ids = traces.sort_values(by='robust_snr', ascending=False).index.values[:n_cells]
+    # traces = processing.compute_robust_snr_on_dataframe(dataset.dff_traces)
+    # if len(traces) < 10:
+    #     n_cells = len(traces)
+    # else:
+    #     n_cells = 10
+    # cell_specimen_ids = traces.sort_values(by='robust_snr', ascending=False).index.values[:n_cells]
+
+    # get high variance explained cells
+    cell_specimen_ids = expt_results[(expt_results['Full__avg_cv_adjvar_test_raw'] > 0.1)].index.values
 
     for cell_specimen_id in cell_specimen_ids:
         # cell_specimen_id = cell_specimen_ids[0]
 
-        plot_model_fits_example_cell(cell_specimen_id, dataset, cell_results_df, dropouts, results,
+        plot_model_fits_example_cell(cell_specimen_id, dataset, cell_results_df, dropouts, expt_results,
                                      None, include_events=True, save_dir=save_dir)
-        plot_model_fits_example_cell(cell_specimen_id, dataset, cell_results_df, dropouts, results,
+        plot_model_fits_example_cell(cell_specimen_id, dataset, cell_results_df, dropouts, expt_results,
                                      'all-images', include_events=True, save_dir=save_dir)
-        plot_model_fits_example_cell(cell_specimen_id, dataset, cell_results_df, dropouts, results,
+        plot_model_fits_example_cell(cell_specimen_id, dataset, cell_results_df, dropouts, expt_results,
                                      'omissions', include_events=True, save_dir=save_dir)
-        plot_model_fits_example_cell(cell_specimen_id, dataset, cell_results_df, dropouts, results,
+        plot_model_fits_example_cell(cell_specimen_id, dataset, cell_results_df, dropouts, expt_results,
                                      None, include_events=False, save_dir=save_dir)
-        plot_model_fits_example_cell(cell_specimen_id, dataset, cell_results_df, dropouts, results,
+        plot_model_fits_example_cell(cell_specimen_id, dataset, cell_results_df, dropouts, expt_results,
                                      'all-images', include_events=False, save_dir=save_dir)
-        plot_model_fits_example_cell(cell_specimen_id, dataset, cell_results_df, dropouts, results,
+        plot_model_fits_example_cell(cell_specimen_id, dataset, cell_results_df, dropouts, expt_results,
                                      'omissions', include_events=False, save_dir=save_dir)
+
 
 
 ####### old loading function #########
@@ -828,29 +838,32 @@ def get_stimulus_response_dfs_for_kernel_windows(dataset, kernels, frame_rate):
     return image_sdf, omission_sdf, change_sdf
 
 
-def plot_kernels_and_traces_for_cell(cell_specimen_id, dataset,
+def plot_image_kernels_and_traces_for_cell(cell_specimen_id, dataset,
                                      image_sdf, omission_sdf, change_sdf,
-                                     weights_df, kernels, save_dir=None):
+                                     weights_df, kernels, save_dir=None, ax=None):
     """
-    plots the average reponse and kernel weights for each kernel type for a given cell
+    plots the average reponse and kernel weights for each image
     Must use `get_stimulus_response_dfs_for_kernel_windows` to get image omission and change stimulus response dfs
     weights_df and kernels can be obtained using `load_GLM_outputs`
     """
 
-    cre_line = utils.get_abbreviated_cell_type(dataset.metadata['cre_line'])
+    # cre_line = utils.get_abbreviated_cell_type(dataset.metadata['cre_line'])
+    cre_line = dataset.metadata['cre_line'].split('-')[0]
 
     # get weights for example cell
     ophys_experiment_id = dataset.ophys_experiment_id
     identifier = str(ophys_experiment_id) + '_' + str(cell_specimen_id)
     cell_weights = weights_df[weights_df.identifier == identifier]
 
-    # limit stim response dfs to this cell & relevant conditions
+    # limit stim response dfs to this cell & relevant conditions (should already be limited to relevant ophys_experiment_id)
     image_cdf = image_sdf[(image_sdf.cell_specimen_id == cell_specimen_id)]
     omission_cdf = omission_sdf[(omission_sdf.cell_specimen_id == cell_specimen_id)]
     hits_cdf = change_sdf[(change_sdf.cell_specimen_id == cell_specimen_id) & (change_sdf.hit == True)]
     misses_cdf = change_sdf[(change_sdf.cell_specimen_id == cell_specimen_id) & (change_sdf.miss == True)]
 
-    exp_weights = cell_weights.copy()
+    # stimulus presentations
+    stimulus_presentations = dataset.stimulus_presentations.copy()
+    stimulus_presentations = loading.limit_stimulus_presentations_to_change_detection(stimulus_presentations)
 
     # GLM output is all resampled to 30Hz now
     frame_rate = 31
@@ -860,20 +873,19 @@ def plot_kernels_and_traces_for_cell(cell_specimen_id, dataset,
                 'omissions', 'hits', 'misses', 'running', 'pupil', 'licks', ]
 
     color = sns.color_palette()[0]
-    figsize = (15, 2.5)
-    fig, ax = plt.subplots(1, 8, figsize=figsize, sharey=True, )
+    if ax is None:
+        figsize = (14, 2.5)
+        fig, ax = plt.subplots(1, 8, figsize=figsize, sharey=True, )
+
     for i, feature in enumerate(features[:8]):  # first 8 are images
-        kernel_weights = exp_weights[feature + '_weights'].values[0]
+        kernel_weights = cell_weights[feature + '_weights'].values[0]
         # mean_image_weights = np.mean(image_weights, axis=0)
         # GLM output is all resampled to 30Hz now
         frame_rate = 31
         t_array = get_t_array_for_kernel(kernels, feature, frame_rate)
         ax[i] = utils.plot_flashes_on_trace(ax[i], t_array, change=False, omitted=False, alpha=0.2)
         # image_name = image_names[i]
-        st = dataset.stimulus_presentations.copy()
-        st = loading.limit_stimulus_presentations_to_change_detection(st)
-        stim_table
-        image_name = st[st.image_index == i].image_name.values[0]
+        image_name = stimulus_presentations[stimulus_presentations.image_index == i].image_name.values[0]
         this_image_sdf = image_cdf[image_cdf.image_name == image_name]
         ax[i] = utils.plot_mean_trace(this_image_sdf.trace.values, this_image_sdf.trace_timestamps.values[0],
                                       ylabel='event magnitude', legend_label='data', color=color, interval_sec=0.5,
@@ -889,21 +901,61 @@ def plot_kernels_and_traces_for_cell(cell_specimen_id, dataset,
     ax[0].legend(fontsize='x-small')
     ax[0].set_ylabel('Calcium events')
     ymin, ymax = ax[0].get_ylim()
+    for x in range(i)[1:]:
+        ax[x].set_yticklabels([])
 
     if save_dir:
-        title_string = 'oeid_' + str(ophys_experiment_id) + '_csid_' + str(cell_specimen_id) + '_' + cre_line
-        fig.suptitle(title_string, x=0.5, y=1.15)
-        utils.save_figure(fig, figsize, save_dir, 'kernel_example_plots', title_string + '_image_kernels')
+        title_string = str(ophys_experiment_id) + '_' + str(cell_specimen_id) + '_' + cre_line
+        fig.suptitle(title_string, x=0.5, y=1.15, fontsize=16)
+        utils.save_figure(fig, figsize, save_dir, 'example_model_fits', title_string + '_kernels_images')
 
+    return ax
+
+
+def plot_all_kernels_and_traces_for_cell(cell_specimen_id, dataset, image_sdf, omission_sdf, change_sdf,
+                                         weights_df, kernels, save_dir=None, ax=None):
+    """
+    plots the average reponse and kernel weights for each kernel type for a given cell
+    Must use `get_stimulus_response_dfs_for_kernel_windows` to get image omission and change stimulus response dfs
+    weights_df and kernels can be obtained using `load_GLM_outputs`
+    """
+
+    # cre_line = utils.get_abbreviated_cell_type(dataset.metadata['cre_line'])
+    cre_line = dataset.metadata['cre_line'].split('-')[0]
+
+    # get weights for example cell
+    ophys_experiment_id = dataset.ophys_experiment_id
+    identifier = str(ophys_experiment_id) + '_' + str(cell_specimen_id)
+    cell_weights = weights_df[weights_df.identifier == identifier]
+
+    # limit stim response dfs to this cell & relevant conditions (should already be limited to relevant ophys_experiment_id)
+    image_cdf = image_sdf[(image_sdf.cell_specimen_id == cell_specimen_id)]
+    omission_cdf = omission_sdf[(omission_sdf.cell_specimen_id == cell_specimen_id)]
+    hits_cdf = change_sdf[(change_sdf.cell_specimen_id == cell_specimen_id) & (change_sdf.hit == True)]
+    misses_cdf = change_sdf[(change_sdf.cell_specimen_id == cell_specimen_id) & (change_sdf.miss == True)]
+
+    # stimulus presentations
+    stimulus_presentations = dataset.stimulus_presentations.copy()
+    stimulus_presentations = loading.limit_stimulus_presentations_to_change_detection(stimulus_presentations)
+
+    # GLM output is all resampled to 30Hz now
+    frame_rate = 31
+
+    # which features to plot
+    features = ['image0', 'image1', 'image2', 'image3', 'image4', 'image5', 'image6', 'image7', 'omissions', 'hits', 'misses', 'running', 'pupil', 'licks', ]
+
+    color = sns.color_palette()[0]
     # all other kernels
-    figsize = (16, 2.5)
-    fig, ax = plt.subplots(1, len(features[8:]) + 1, figsize=figsize, sharey=True,
-                           gridspec_kw={'width_ratios': [1, 3, 2.25, 2.25, 2, 2, 2, ]})  # match axes widths to kernel durations
+    if ax is None:
+        figsize = (16, 2.5)
+        fig, ax = plt.subplots(1, len(features[8:]) + 1, figsize=figsize, sharey=True,
+                               gridspec_kw={'width_ratios': [1, 3, 2.25, 2.25, 2, 2, 2, ]})  # match axes widths to kernel durations
+    print('plotting other kernels')
     # first axis is all-images
     i = 0
     image_weights = []
     for feature in features[:8]:
-        kernel_weights = exp_weights[feature + '_weights'].values[0]
+        kernel_weights = cell_weights[feature + '_weights'].values[0]
         image_weights.append(kernel_weights)
     mean_image_weights = np.mean(image_weights, axis=0)
     # GLM output is all resampled to 30Hz now
@@ -911,8 +963,6 @@ def plot_kernels_and_traces_for_cell(cell_specimen_id, dataset,
     t_array = get_t_array_for_kernel(kernels, feature, frame_rate)
     ax[i] = utils.plot_flashes_on_trace(ax[i], t_array, change=False, omitted=False, alpha=0.2)
     # image_name = image_names[i]
-    st = dataset.stimulus_presentations.copy()
-    st = loading.limit_stimulus_presentations_to_change_detection(st)
     ax[i] = utils.plot_mean_trace(image_cdf.trace.values, image_cdf.trace_timestamps.values[0],
                                   ylabel='event magnitude', legend_label='data', color=color, interval_sec=0.5,
                                   xlim_seconds=[t_array[0], t_array[-1]], plot_sem=True, ax=ax[i])
@@ -924,7 +974,7 @@ def plot_kernels_and_traces_for_cell(cell_specimen_id, dataset,
 
     for i, feature in enumerate(features[8:]):
         i += 1
-        kernel_weights = exp_weights[feature + '_weights'].values[0]
+        kernel_weights = cell_weights[feature + '_weights'].values[0]
         if feature == 'omissions':
             n_frames_to_clip = int(kernels['omissions']['length'] * frame_rate) + 1
             kernel_weights = kernel_weights[:n_frames_to_clip]
@@ -936,37 +986,100 @@ def plot_kernels_and_traces_for_cell(cell_specimen_id, dataset,
                                           ylabel='event magnitude', legend_label='data', color=color, interval_sec=1,
                                           xlim_seconds=[t_array[0], t_array[-1]], plot_sem=True, ax=ax[i])
         elif feature == 'hits':
-            ax[i] = utils.plot_flashes_on_trace(ax[i], t_array, change=True, omitted=False, alpha=0.2)
-            ax[i] = utils.plot_mean_trace(hits_cdf.trace.values, hits_cdf.trace_timestamps.values[0],
-                                          ylabel='event magnitude', legend_label='data', color=color, interval_sec=1,
-                                          xlim_seconds=[t_array[0], t_array[-1]], plot_sem=True, ax=ax[i])
+            try:
+                ax[i] = utils.plot_flashes_on_trace(ax[i], t_array, change=True, omitted=False, alpha=0.2)
+                ax[i] = utils.plot_mean_trace(hits_cdf.trace.values, hits_cdf.trace_timestamps.values[0],
+                                              ylabel='event magnitude', legend_label='data', color=color, interval_sec=1,
+                                              xlim_seconds=[t_array[0], t_array[-1]], plot_sem=True, ax=ax[i])
+            except:
+                print('could not plot traces for', feature, ophys_experiment_id, cell_specimen_id)
         elif feature == 'misses':
-            ax[i] = utils.plot_flashes_on_trace(ax[i], t_array, change=True, omitted=False, alpha=0.2)
-            ax[i] = utils.plot_mean_trace(misses_cdf.trace.values, misses_cdf.trace_timestamps.values[0],
-                                          ylabel='event magnitude', legend_label='data', color=color, interval_sec=1,
-                                          xlim_seconds=[t_array[0], t_array[-1]], plot_sem=True, ax=ax[i])
-        ax[i].plot(t_array, kernel_weights, color=color, linestyle='--', label='model')
+            try:
+                ax[i] = utils.plot_flashes_on_trace(ax[i], t_array, change=True, omitted=False, alpha=0.2)
+                ax[i] = utils.plot_mean_trace(misses_cdf.trace.values, misses_cdf.trace_timestamps.values[0],
+                                              ylabel='event magnitude', legend_label='data', color=color, interval_sec=1,
+                                              xlim_seconds=[t_array[0], t_array[-1]], plot_sem=True, ax=ax[i])
+            except:
+                print('could not plot traces for', feature, ophys_experiment_id, cell_specimen_id)
+        try:
+            ax[i].plot(t_array, kernel_weights, color=color, linestyle='--', label='model')
+        except:
+            print('could not plot kernel weights for', feature, ophys_experiment_id, cell_specimen_id)
         ax[i].set_ylabel('')
         ax[i].set_title(feature)
         ax[i].set_xlabel('Time (s)')
-        ax[i].set_ylim(-0.01, 0.18)
+        # ax[i].set_ylim(-0.01, 0.18)
         # match ylims to image kernels
         # ax[i].set_ylim(ymin, ymax)
         # ax[i].get_shared_y_axes().join(ax[i + f], ax[ax_to_share])
         i += 1
-    ax[1].legend(fontsize='x-small')
+    ax[i-1].legend(fontsize='x-small')
     ax[0].set_ylabel('Calcium events')
+    for x in range(i)[1:]:
+        ax[x].set_yticklabels([])
     # except:
     #     print('could not plot GLM kernels for', experience_level)
     if save_dir:
-        title_string = 'oeid_' + str(ophys_experiment_id) + '_csid_' + str(cell_specimen_id) + '_' + cre_line
-        fig.suptitle(title_string, x=0.5, y=1.15)
-        utils.save_figure(fig, figsize, save_dir, 'kernel_example_plots', title_string + '_other_kernels')
+        title_string = str(ophys_experiment_id) + '_' + str(cell_specimen_id) + '_' + cre_line
+        fig.suptitle(title_string, x=0.5, y=1.02, fontsize=18)
+        utils.save_figure(fig, figsize, save_dir, 'example_model_fits', title_string + '_kernels_other')
+        plt.close()
+
+    return ax
+
+
+def plot_kernels_traces_and_dropouts_examples_for_experiment(ophys_experiment_id, run_params, all_results,
+                                                             results_pivoted, weights_df,
+                                                             use_var_exp=True, save_dir=None):
+    '''
+    Plot kernels and cell traces overlaid for high variance explained cells
+    Also plot (on separate axes) coding scores for the same cells
+    '''
+
+    if use_var_exp:  # get cells with high variance explained
+        print('filtering cells by variance explained')
+        expt_data = all_results[(all_results.variance_explained_full > 0.25) & (all_results.ophys_experiment_id == ophys_experiment_id)]
+        cell_specimen_ids = expt_data.cell_specimen_id.unique()
+        traces = []
+    else:  # get high SNR traces based on dff signal (this takes longer because you have to load dataset)
+        print('getting high SNR cells')
+        # load dataset & filter stim presentations
+        dataset = loading.get_ophys_dataset(ophys_experiment_id)
+        # get high SNR traces
+        traces = processing.compute_robust_snr_on_dataframe(dataset.dff_traces)
+
+        if len(traces) < 10:
+            n_cells = len(traces)
+        else:
+            n_cells = 10
+        cell_specimen_ids = traces.sort_values(by='robust_snr', ascending=False).index.values[:n_cells]
+        expt_data = all_results[(all_results.ophys_experiment_id == ophys_experiment_id)]
+
+    # generate the plots
+    cre_line = expt_data.cre_line.unique()[0].split('-')[0]
+    print(len(cell_specimen_ids), 'cells for ophys_experiment_id: ', ophys_experiment_id, ', cre:', cre_line)
+    if len(cell_specimen_ids) > 3:
+        if len(traces) == 0:  # o0nly get dataset if it hasnt already been loaded to get high SNR cells
+            # load dataset & filter stim presentations
+            dataset = loading.get_ophys_dataset(ophys_experiment_id)
+
+        # get stimulus response dfs for kernel lengths
+        kernels = run_params['kernels']
+        frame_rate = 31
+        image_sdf, omission_sdf, change_sdf = get_stimulus_response_dfs_for_kernel_windows(dataset, kernels, frame_rate)
+
+        # loop through cells and plot
+        for cell_specimen_id in cell_specimen_ids:
+            print('cell_specimen_id =', cell_specimen_id)
+            plot_image_kernels_and_traces_for_cell(cell_specimen_id, dataset, image_sdf, omission_sdf, change_sdf, weights_df, kernels, save_dir=save_dir)
+            plot_all_kernels_and_traces_for_cell(cell_specimen_id, dataset, image_sdf, omission_sdf, change_sdf, weights_df, kernels, save_dir=save_dir)
+
+            plot_coding_scores_for_cell(cell_specimen_id, ophys_experiment_id, results_pivoted, save_dir=save_dir)
 
 
 ######## coding scores plots ###########
 
-def plot_coding_scores_for_cell(cell_specimen_id, ophys_experiment_id, results_pivoted, save_dir=None):
+def plot_coding_scores_for_cell(cell_specimen_id, ophys_experiment_id, results_pivoted, save_dir=None, ax=None):
     '''
     Creates barplot of coding scores for a single cell in a single experiment and saves it
     '''
@@ -979,18 +1092,130 @@ def plot_coding_scores_for_cell(cell_specimen_id, ophys_experiment_id, results_p
     coding_score_features = ['image0', 'image1', 'image2', 'image3', 'image4', 'image5', 'image6', 'image7', 'all-images',
                              'omissions', 'hits', 'misses', 'task', 'running', 'pupil', 'licks', 'behavioral']
 
-    figsize = (3, 6)
-    fig, ax = plt.subplots(figsize=figsize)
+    if ax is None:
+        figsize = (3, 6)
+        fig, ax = plt.subplots(figsize=figsize)
     # get dropouts just for one cell
     ax = sns.barplot(data=np.abs(cell_dropouts[coding_score_features]), orient='h', color='gray', ax=ax)  # color=sns.color_palette('Blues_r')[0], ax=ax)
     ax.set_xlabel('Coding score')
     ax.set_title('var_exp_full = ' + str(np.round(cell_dropouts.variance_explained_full.values[0], 3)))
 
     if save_dir:
-        cre_line = utils.get_abbreviated_cell_type(cell_dropouts.cre_line.values[0])
-        title_string = 'oeid_' + str(ophys_experiment_id) + '_csid_' + str(cell_specimen_id) + '_' + cre_line
-        fig.suptitle(title_string, x=0.5, y=1., fontsize=14)
-        utils.save_figure(fig, figsize, save_dir, 'kernel_example_plots', title_string + '_coding_scores')
+        # cre_line = utils.get_abbreviated_cell_type(cell_dropouts.cre_line.values[0])
+        cre_line = cell_dropouts['cre_line'].values[0].split('-')[0]
+        title_string = str(ophys_experiment_id) + '_' + str(cell_specimen_id) + '_' + cre_line
+        fig.suptitle(title_string, x=0.5, y=1., fontsize=16)
+        utils.save_figure(fig, figsize, save_dir, 'example_model_fits', title_string + '_coding_scores')
+
+    return ax
+
+######## plot model fits, kernels, and coding scores in the same figure #######
+
+
+def plot_glm_example_cells_figure(ophys_experiment_id, run_params,
+                                  all_results, results_pivoted, weights_df,
+                                  cell_specimen_ids=None, use_var_exp=True, save_dir=None):
+
+
+    # load dataset & filter stim presentations
+    dataset = loading.get_ophys_dataset(ophys_experiment_id)
+
+    # get GLM results
+    cell_results_df, expt_results, dropouts = load_glm_model_fit_results(ophys_experiment_id)
+
+    if cell_specimen_ids is None: # if no cell specimen ids are provided,
+        # get cells to plot, either based on variance explained or trace SNR
+        if use_var_exp:  # get cells with high variance explained
+            filter_type = '_high_variance_explained'
+            print('filtering cells by variance explained')
+            expt_data = all_results[(all_results.variance_explained_full > 0.1) & (all_results.ophys_experiment_id == ophys_experiment_id)]
+            cell_specimen_ids = expt_data.cell_specimen_id.unique()
+            print('there are', len(cell_specimen_ids), 'cells with variance_explained_full > 0.1 in experiment', ophys_experiment_id)
+            traces = []
+        else:  # get high SNR traces based on dff signal (this takes longer because you have to load dataset)
+            filter_type = '_high_trace_snr'
+            print('getting high SNR cells')
+            # load dataset & filter stim presentations
+            dataset = loading.get_ophys_dataset(ophys_experiment_id)
+            # get high SNR traces
+            traces = processing.compute_robust_snr_on_dataframe(dataset.dff_traces)
+            cell_specimen_ids = traces.sort_values(by='robust_snr', ascending=False).index.values
+            expt_data = all_results[(all_results.ophys_experiment_id == ophys_experiment_id)]
+            print('there are', len(cell_specimen_ids), 'high SNR cells in experiment', ophys_experiment_id)
+        # limit to 10 cells per exp
+        if len(cell_specimen_ids) < 10:
+            n_cells = len(cell_specimen_ids)
+        else:
+            n_cells = 10
+        cell_specimen_ids = cell_specimen_ids[:n_cells]
+
+    if len(cell_specimen_ids) > 0:
+
+        print('loading stimulus response dfs')
+        # get stimulus response dfs for kernel lengths
+        kernels = run_params['kernels']
+        frame_rate = 31
+        image_sdf, omission_sdf, change_sdf = get_stimulus_response_dfs_for_kernel_windows(dataset, kernels, frame_rate)
+
+        print('generating figure')
+        # make multi panel figure
+        for cell_specimen_id in cell_specimen_ids:
+
+            figsize = [2 * 11, 2 * 8.5]
+            fig = plt.figure(figsize=figsize, facecolor='white')
+
+            ax = utils.placeAxesOnGrid(fig, dim=(1, 1), xspan=(0, 0.45), yspan=(0, 0.15))
+            ax = plot_model_fits_example_cell(cell_specimen_id, dataset, cell_results_df, dropouts, expt_results,
+                                            None, include_events=True, save_dir=None, ax=ax)
+            ax.set_xlabel('')
+
+            ax = utils.placeAxesOnGrid(fig, dim=(1, 1), xspan=(0, 0.45), yspan=(0.2, 0.35))
+            ax = plot_model_fits_example_cell(cell_specimen_id, dataset, cell_results_df, dropouts, expt_results,
+                                            kernel='all-images', include_events=True, save_dir=None, ax=ax)
+            ax.set_title('')
+            ax.set_xlabel('')
+
+            ax = utils.placeAxesOnGrid(fig, dim=(1, 1), xspan=(0, 0.45), yspan=(0.4, 0.55))
+            ax = plot_model_fits_example_cell(cell_specimen_id, dataset, cell_results_df, dropouts, expt_results,
+                                            kernel='omissions', include_events=True, save_dir=None, ax=ax)
+            ax.set_title('')
+
+            ax = utils.placeAxesOnGrid(fig, dim=(1, 1), xspan=(0.55, 1.0), yspan=(0, 0.15))
+            ax = plot_model_fits_example_cell(cell_specimen_id, dataset, cell_results_df, dropouts, expt_results,
+                                            kernel=None, include_events=False, save_dir=None, ax=ax)
+            ax.set_xlabel('')
+
+            ax = utils.placeAxesOnGrid(fig, dim=(1, 1), xspan=(0.55, 1.0), yspan=(0.2, 0.35))
+            ax = plot_model_fits_example_cell(cell_specimen_id, dataset, cell_results_df, dropouts, expt_results,
+                                            kernel='all-images', include_events=False, save_dir=None, ax=ax)
+            ax.set_title('')
+            ax.set_xlabel('')
+
+            ax = utils.placeAxesOnGrid(fig, dim=(1, 1), xspan=(0.55, 1.0), yspan=(0.4, 0.55))
+            ax = plot_model_fits_example_cell(cell_specimen_id, dataset, cell_results_df, dropouts, expt_results,
+                                            kernel='omissions', include_events=False, save_dir=None, ax=ax)
+            ax.set_title('')
+
+
+            ax = utils.placeAxesOnGrid(fig, dim=(1, 8), xspan=(0., 0.7), yspan=(0.65, 0.75), sharey=True)
+            ax = plot_image_kernels_and_traces_for_cell(cell_specimen_id, dataset, image_sdf, omission_sdf, change_sdf,
+                                                            weights_df, kernels, save_dir=None, ax=ax)
+
+            ax = utils.placeAxesOnGrid(fig, dim=(1, 7), xspan=(0., 0.7), yspan=(0.9, 1.0), sharey=True,)
+                                    #    gridspec_kw={'width_ratios': [1, 3, 2.25, 2.25, 2, 2, 2, ]})
+            ax = plot_all_kernels_and_traces_for_cell(cell_specimen_id, dataset, image_sdf, omission_sdf, change_sdf,
+                                                    weights_df, kernels, save_dir=None, ax=ax)
+
+            ax = utils.placeAxesOnGrid(fig, dim=(1, 1), xspan=(0.8, 1.0), yspan=(0.65, 1.0))
+            ax = plot_coding_scores_for_cell(cell_specimen_id, ophys_experiment_id, results_pivoted, save_dir=None, ax=ax)
+
+            if save_dir:
+                metadata_string = utils.get_metadata_string(dataset.metadata)
+                fig.suptitle(metadata_string, x=0.5, y=0.9, fontsize = 16)
+                cre_line = dataset.metadata['cre_line'].split('-')[0]
+                utils.save_figure(fig, figsize, save_dir, 'glm_model_fits_figures'+filter_type,
+                            str(ophys_experiment_id) + '_' + str(cell_specimen_id) + '_' + cre_line)
+
 
 
 if __name__ == '__main__':

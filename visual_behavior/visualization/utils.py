@@ -425,8 +425,7 @@ def placeAxesOnGrid(fig, dim=[1, 1], xspan=[0, 1], yspan=[0, 1], wspace=None, hs
 
     # NOTE: A cleaner way to do this is with list comprehension:
     # inner_ax = [[0 for ii in range(dim[1])] for ii in range(dim[0])]
-    inner_ax = dim[0] * [dim[1] * [
-        fig]]  # filling the list with figure objects prevents an error when it they are later replaced by axis handles
+    inner_ax = dim[0] * [dim[1] * [fig]]  # filling the list with figure objects prevents an error when it they are later replaced by axis handles
     inner_ax = np.array(inner_ax)
     idx = 0
     for row in range(dim[0]):
