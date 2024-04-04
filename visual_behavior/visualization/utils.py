@@ -131,6 +131,25 @@ def get_experience_level_colors():
     return colors
 
 
+def get_one_experience_level_colors():
+    """
+    get color values corresponding to Familiar, Novel 1 and Novel >1
+    Familiar = blue
+    Novel 1 = red
+    Novel >1 = purple
+    """
+    import seaborn as sns
+
+    reds = sns.color_palette('Reds_r', 4)[:3]
+    blues = sns.color_palette('Blues_r', 4)[:3]
+    purples = sns.color_palette('Purples_r', 4)[:3]
+
+    # colors = [reds[0], blues[0], purples[0]]
+    colors = [blues, reds,  purples] # changing red to be Novel and blue to be Familiar
+
+    return colors
+
+
 def get_experience_level_cmap():
     """
     get color map corresponding to Familiar, Novel 1 and Novel >1
