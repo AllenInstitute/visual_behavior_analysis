@@ -1615,7 +1615,7 @@ def plot_mean_shuffled_feature_matrix(shuffled_feature_matrices, cluster_meta, s
         assert experience_index is None, "session_colors must be False to use experience_index"
     
     cre_lines = np.sort(cluster_meta.cre_line.unique())
-    n_boots =len(shuffled_feature_matrices)
+    n_boots =np.arange(len(shuffled_feature_matrices))
     figsize=(len(cre_lines) * 3, 2.5)
 
     fig, ax = plt.subplots(1, len(cre_lines), figsize=figsize, sharey='row')
@@ -1648,6 +1648,7 @@ def plot_mean_shuffled_feature_matrix(shuffled_feature_matrices, cluster_meta, s
     if save_dir:
         utils.save_figure(fig, figsize, save_dir, folder, 'mean_shuffled_feature_matrix_by_cre_line')
     return ax
+
 
 def plot_mean_cluster_heatmaps_remapped(feature_matrix, cluster_meta, cre_line, clusters, session_colors=True, experience_index=None, save_dir=None, folder=None):
     """
