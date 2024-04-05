@@ -3534,7 +3534,7 @@ def get_matched_clusters_means_dict(SSE_mapping, mean_dropout_scores_unstacked, 
         all_matched_cluster_meta = all_matched_cluster_meta.reset_index().rename(columns={'index': 'regressor'})
 
         # create dummy df for unmatched clusters
-        if cluster_id == 1:  
+        if cluster_id == 1: # not a typo, first cluster 
             dummy_df = all_matched_cluster_meta.groupby('regressor').mean().copy()
             dummy_df[dummy_df > 0] = 0
         # compute metrics
@@ -3553,6 +3553,55 @@ def get_matched_clusters_means_dict(SSE_mapping, mean_dropout_scores_unstacked, 
             all_clusters_means_dict[cluster_id] = dummy_df
 
     return all_clusters_means_dict
+
+def sort_SSE_values(SSE_matrix, SSE_mapping):
+    """
+    Sort SSE values using original cluster sort.
+
+    Args:
+    - SSE_matrix: Dictionary containing SSE matrices for each bootstrap
+    - SSE_mapping: Dictionary containing cluster mappings for each bootstrap
+
+    Returns:
+    - SSE_matrix_sorted: DataFrame containing sorted SSE values
+    """
+    
+    cre_SSE_all = {}
+    
+    n_boots = list(SSE_mapping.keys())
+    cluster_ids = list(SSE_mapping[0].keys())
+    
+    # create a data frame to collect sorted SSE from all n_boots
+    SSE_matrix_sorted = pd.DataFrame(columns=['cluster_id', *cluster_ids])
+    
+    # run over all nboots and sort SSE using original cluster sort
+    for n in n_boots:
+        # Get matched map and SSE matrix for this n boot
+        SSE_df = pd.DataFrame(SSE_matrix[n])
+        SSE_map = SSE_mapping[n]
+        
+        # make a copy which will be used to store sorted SSE values
+        SSE_df_sorted = SSE_df.copy()
+        
+        # first sort SSE values
+        for i, cluster_id in enumerate(cluster_ids):
+            matched_cluster_id = SSE_map[cluster_id] # matched shuffled cluster id
+            
+            # copy matched SSE value to a new location in df
+            if matched_cluster_id != -1:
+                SSE_df_sorted.loc[i][:] = SSE_df.loc[matched_cluster_id - 1][:].values
+            else:
+                SSE_df_sorted.loc[i][:] = np.nan  # cluster was not matched, mean coding scores are nan
+        
+        # reset index and rename cluster id column
+        SSE_df_sorted = SSE_df_sorted.reset_index(drop=True)
+        SSE_df_sorted['cluster_id'] = np.arange(1, len(cluster_ids) + 1)
+        
+        # append to larger df with all n_boots
+        SSE_matrix_sorted = SSE_matrix_sorted.append(SSE_df_sorted, ignore_index=True)
+    
+    return SSE_matrix_sorted
+
 
 
 def get_corr_for_matched_clusters_dict(SSE_mapping, mean_shuffled_dropout_scores,
