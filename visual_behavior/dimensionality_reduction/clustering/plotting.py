@@ -5547,3 +5547,94 @@ def plot_response_metrics_boxplot_by_cre(response_metrics, metric = None, cre_li
     plt.suptitle(metric.replace("_", " "), x=0.51, y=0.95)
     plt.subplots_adjust(hspace=0.5)
 
+
+def plot_cluster_heatmaps_with_SSE_matrix(original_cluster_means, shuffled_cluster_means, SSE_matrix_sorted, session_colors=True, experience_index=None, save_dir=None, folder=None):
+    """
+    Plot cluster heatmaps with original and shuffled clusters, and a heatmap of mean SSE values.
+
+    Args:
+    - cluster_means: DataFrame containing original cluster means
+    - shuffled_cluster_means: DataFrame containing shuffled cluster means
+    - shuffled_clusters_dict: Dictionary containing shuffled clusters
+    - processing: Object with processing methods
+    - session_colors: If True, use session colors for heatmap coloring
+    - experience_index: Index for experience level coloring
+    - save_dir: Directory to save the figure
+    - folder: Folder name for saving the figure
+
+    Returns:
+    - fig: Figure object
+    """
+    import matplotlib.gridspec as gr
+    cluster_ids = original_cluster_means.index.values
+    n_clusters = len(cluster_ids)
+    majorlabels_fontsize=18
+    annot_fontsize=16
+
+    if session_colors:
+        assert experience_index is None, 'Use only one of session_colors or experience_index'
+    
+    if session_colors:
+        cluster_means_remapped, coding_score_cmap, vmax = remap_coding_scores_to_session_colors(original_cluster_means)
+        shuffled_cluster_means_remapped, coding_score_cmap, vmax = remap_coding_scores_to_session_colors(shuffled_cluster_means)
+    else:
+        cluster_means_remapped = original_cluster_means.copy()
+        shuffled_cluster_means_remapped = shuffled_cluster_means.copy()
+        coding_score_cmap = utils.get_experience_level_cmap()[experience_index]
+        vmax = 1
+    cluster_means_remapped = cluster_means_remapped.T.copy()
+    shuffled_cluster_means_remapped = shuffled_cluster_means_remapped.T.copy()
+
+    gs = gr.GridSpec(n_clusters+1, n_clusters+1, width_ratios=[2]*(n_clusters+1), height_ratios=[2]*(n_clusters+1))
+
+    figsize = (10, 10)
+    fig = plt.figure(figsize=figsize)
+
+    # plot original clusters
+    for i, cluster_id in enumerate(cluster_ids):
+        ax = fig.add_subplot(gs[0, i])
+        ax = sns.heatmap(cluster_means_remapped[cluster_id].unstack().loc[processing.get_features_for_clustering()],
+                        xticklabels=['F', 'N', 'N+'], yticklabels=['I', 'O', 'T', 'B'],
+                        cmap=coding_score_cmap, vmin=0, vmax=vmax, cbar=False, ax=ax)
+        if i != 0:
+            ax.set_yticklabels('')
+        else:
+            ax.set_ylabel('regressor', fontsize=16)
+            ax.set_yticklabels(ax.get_ymajorticklabels(), fontsize=10)
+        ax.set_xticklabels('')
+        ax.set_xlabel('')
+
+    # plot shuffled clusters
+    for i, cluster_id in enumerate(cluster_ids):
+        ax = fig.add_subplot(gs[cluster_id, n_clusters])
+        ax = sns.heatmap(shuffled_cluster_means_remapped[cluster_id].unstack().loc[processing.get_features_for_clustering()],
+                        xticklabels=['F', 'N', 'N+'], yticklabels=['I', 'O', 'T', 'B'],
+                        cmap=coding_score_cmap, vmin=0, vmax=vmax, cbar=False, ax=ax)
+        ax.set_yticklabels('')
+        ax.set_xlabel('')
+        ax.set_ylabel('')
+        if cluster_id != n_clusters:
+            ax.set_xticklabels('')
+        else:
+            ax.set_xlabel('exp level', fontsize=16)
+            ax.set_xticklabels(ax.get_xmajorticklabels(), fontsize=10)
+
+    # Plot SSE
+    SSE_mean = SSE_matrix_sorted.groupby('cluster_id').mean()        
+    labels = np.arange(1, len(SSE_mean)+1)
+    ax = fig.add_subplot(gs[1:, :n_clusters])
+    ax = sns.heatmap(SSE_mean, annot=True, cmap='Greys_r', annot_kws={"size": annot_fontsize},
+                    yticklabels=labels, xticklabels=labels, cbar=False, ax=ax)
+
+    ax.set_yticklabels(ax.get_ymajorticklabels(), fontsize=majorlabels_fontsize)
+    ax.set_ylabel(f'Shuffled clusters', fontsize=majorlabels_fontsize)
+    ax.set_xticklabels(ax.get_xmajorticklabels(), fontsize=majorlabels_fontsize)
+    ax.set_xlabel('Original clusters', fontsize=majorlabels_fontsize)
+
+    plt.tight_layout()
+    if save_dir:
+        fig_title = f'mean_SSE_heatmap_all_cells'
+        utils.save_figure(fig, figsize=figsize, save_dir=save_dir, folder=folder,
+                    fig_title=fig_title, formats=['.png'])
+
+    return fig
