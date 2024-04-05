@@ -3534,7 +3534,7 @@ def get_matched_clusters_means_dict(SSE_mapping, mean_dropout_scores_unstacked, 
         all_matched_cluster_meta = all_matched_cluster_meta.reset_index().rename(columns={'index': 'regressor'})
 
         # create dummy df for unmatched clusters
-        if cluster_id == 1:  # is this a typo? should it be -1 for unmatched clusters?
+        if cluster_id == 1:  
             dummy_df = all_matched_cluster_meta.groupby('regressor').mean().copy()
             dummy_df[dummy_df > 0] = 0
         # compute metrics
