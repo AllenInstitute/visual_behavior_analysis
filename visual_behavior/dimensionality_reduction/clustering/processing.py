@@ -3554,6 +3554,32 @@ def get_matched_clusters_means_dict(SSE_mapping, mean_dropout_scores_unstacked, 
 
     return all_clusters_means_dict
 
+
+def get_shuffled_cluster_means(shuffled_clusters_dict, n_clusters):
+    """
+    Convert shuffled_clusters_dict into a DataFrame of shuffled cluster means.
+
+    Args:
+    - shuffled_clusters_dict: Dictionary containing shuffled cluster means
+    - n_clusters: Number of clusters
+
+    Returns:
+    - shuffled_cluster_means: DataFrame containing shuffled cluster means
+    """
+    
+    shuffled_cluster_means = None
+    
+    for cluster_id in np.arange(1, n_clusters + 1):
+        if cluster_id == 1:
+            shuffled_cluster_means = pd.DataFrame(shuffled_clusters_dict[cluster_id].stack()).T
+        else:
+            shuffled_cluster_means = shuffled_cluster_means.append(pd.DataFrame(shuffled_clusters_dict[cluster_id].stack()).T)
+    
+    shuffled_cluster_means.index = np.arange(1, n_clusters + 1)
+    
+    return shuffled_cluster_means
+
+
 def sort_SSE_values(SSE_matrix, SSE_mapping):
     """
     Sort SSE values using original cluster sort.
