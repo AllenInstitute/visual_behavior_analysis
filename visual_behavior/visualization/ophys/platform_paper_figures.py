@@ -342,10 +342,10 @@ def plot_mean_response_by_epoch(df, metric='mean_response', horizontal=True, ymi
     if ax is None:
         format_fig = True
         if horizontal:
-            figsize = (13, 3.5)
+            figsize = (15, 3)
             fig, ax = plt.subplots(1, 3, figsize=figsize, sharex=False, sharey=False)
         else:
-            figsize = (15, 10)
+            figsize = (5, 8)
             fig, ax = plt.subplots(3, 1, figsize=figsize, sharex=True, sharey=False)
     else:
         format_fig = False
@@ -380,7 +380,7 @@ def plot_mean_response_by_epoch(df, metric='mean_response', horizontal=True, ymi
     if format_fig:
         if suptitle is not None:
             plt.suptitle(suptitle, x=0.52, y=1.01, fontsize=18)
-    plt.subplots_adjust(wspace=0.3)
+    plt.subplots_adjust(wspace=0.4, hspace=0.4)
     if save_dir:
         fig_title = metric + suffix
         utils.save_figure(fig, figsize, save_dir, folder, fig_title)
@@ -532,7 +532,7 @@ def plot_fraction_responsive_cells(multi_session_df, responsiveness_threshold=0.
                               hue_order=experience_levels, palette=palette, dodge=0, join=False, ax=ax[i])
         ax[i].set_xticklabels(experience_levels, rotation=90)
         ax[i].set_ylabel('')
-        ax[i].get_legend().remove()
+        # ax[i].get_legend().remove()
         ax[i].set_title(cell_type)
         ax[i].set_xlabel('')
         if ylim is None:
@@ -1054,14 +1054,14 @@ def plot_metric_distribution_by_experience(metrics_table, metric, event_type, da
             tukey = pd.concat([tukey, tukey_table])
         else:
             if plot_type == 'pointplot':
-                ax[i] = sns.pointplot(data=ct_data, x='experience_level', y=metric,
+                ax[i] = sns.pointplot(data=ct_data, x='experience_level', y=metric, hue=metric,
                                       palette=colors, ax=ax[i])
             elif plot_type == 'boxplot':
                 ax[i] = sns.boxplot(data=ct_data, x='experience_level', y=metric, width=0.4,
                                     palette=colors, fliersize=0, ax=ax[i])
             elif plot_type == 'violinplot':
                 ax[i] = sns.violinplot(data=ct_data, y=metric, x='experience_level', order=order,
-                                       palette=colors,  cut=0, ax=ax[i])
+                                       hue=metric, palette=colors,  cut=0, ax=ax[i])
                 for violin in ax[i].collections:
                     violin.set_alpha(0.75)
 

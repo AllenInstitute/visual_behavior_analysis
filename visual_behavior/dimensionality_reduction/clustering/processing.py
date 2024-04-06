@@ -539,9 +539,12 @@ def get_feature_matrix_for_clustering(dropouts, glm_version=None, save_dir=None)
     """
     takes matrix of dropout scores (values) for all cells in each experiment (rows)
     by GLM features (columns) and:
-        limits to features to use for clustering
-        takes absolute value of dropout scores
+        limit to features to use for clustering
+        take absolute value of dropout scores (so they are positive)
         pivots to get multi-index df of features per experience level for each cell (feature_matrix)
+            where each row is one cell and columns are coding scores for features used in clustering for each experience level
+
+    dropouts is often described as "results_pivoted" in notebooks
     """
 
     # pivot to get one column per feature per experience level
@@ -861,19 +864,19 @@ def load_gap_statistic(glm_version, feature_matrix, cell_metadata, save_dir=None
 
 def load_eigengap(glm_version, feature_matrix, cell_metadata=None, cre_line='', save_dir=None, k_max=25):
     """
-           if eigengap values were computed and file exists in save_dir, load it
-           otherwise run get_eigenDecomposition for a range of 1 to k_max clusters
-           returns dictionary of eigengap for each cre line = [nb_clusters, eigenvalues, eigenvectors]
-           # this doesnt actually take too long, so might not be a huge need to save files besides records
-           """
-    eigengap_filename = 'eigengap_' + glm_version + '_' + 'kmax' + str(k_max) + (cre_line) + '.pkl'
+    if eigengap values were computed and file exists in save_dir, load it
+    otherwise run get_eigenDecomposition for a range of 1 to k_max clusters
+    returns dictionary of eigengap for each cre line = [nb_clusters, eigenvalues, eigenvectors]
+    # this doesnt actually take too long, so might not be a huge need to save files besides records
+    """
+    eigengap_filename = 'eigengap_' + glm_version + '_' + 'kmax' + str(k_max) + '_' + (cre_line) + '.pkl'
     eigengap_path = os.path.join(save_dir, eigengap_filename)
     if os.path.exists(eigengap_path):
         print('loading eigengap values scores from', eigengap_path)
         with open(eigengap_path, 'rb') as f:
             eigengap = pickle.load(f)
             f.close()
-        print('done.')
+        print('done')
     else:
         eigengap = {}
         if cre_line == 'all':
@@ -1278,6 +1281,31 @@ def get_summary_of_within_across_cluster_correlations(group):
                       'across_cluster_correlation': across_cluster_correlation,
                       'correlation_diff': correlation_diff,
                       'correlation_ratio': correlation_ratio})
+
+
+def get_umap_results(feature_matrix, cluster_meta, save_dir, suffix=''):
+    '''
+    if umap results already exists in provided directory, load it. Otherwise generate and save.
+    '''
+
+    umap_results_file = os.path.join(save_dir, 'umap_results_df'+suffix+'.h5')
+    if os.path.exists(umap_results_file):
+        print('loading umap results from', umap_results_file)
+        umap_df = pd.read_hdf(umap_results_file, key='df')
+    else:
+        print('generating umap results')
+        import umap
+        X = feature_matrix.loc[cluster_meta.index.values]
+        fit = umap.UMAP()
+        u = fit.fit_transform(X)
+        umap_df = pd.DataFrame()
+        umap_df['x'] = u[:, 0]
+        umap_df['y'] = u[:, 1]
+        # save results
+        umap_df.to_hdf(umap_results_file, key='df')
+        print('umap results saved to', umap_results_file)
+    return umap_df
+
 
 ### older functions for computing area / depth frequencies across clusters, by MG ###
 
@@ -1959,7 +1987,7 @@ def add_stats_for_location_comparison_to_cluster_proportion_stats(n_cells_table)
         if len(passing_tests) > 0:
             last_index = cre_data[cre_data['pvalue'] < cre_data['imq']].tail(1).index.values[0]
             cre_data.at[last_index, 'bh_significant'] = True
-            cre_data.at[0:last_index, 'bh_significant'] = True
+            cre_data.loc[0:last_index, 'bh_significant'] = True
         # reset order of table and return
         cre_data = cre_data.sort_values(by='cluster_id').set_index('cluster_id')
         for cluster_id in cre_data.index.values:
@@ -2187,6 +2215,38 @@ def generate_coding_score_metrics_table(cluster_meta, results_pivoted, save_dir=
             print('coding score metrics table saved')
 
     return coding_score_metrics
+
+
+def generate_coding_score_metrics_table_all_cells(results_pivoted, save_dir=None):
+    '''
+    generate table of coding score metrics across experience levels for all cells (does not require them to be matched)
+
+    resulting merged table has one row per cell_specimen_id and ophys_experiment_id
+
+    results_pivoted: dataframe containing GLM coding scores for features used in clustering
+    save_dir: directory to save or load coding score metrics table from
+
+    '''
+
+    # if metrics table already exists, load it, if not, generate and save it
+    if save_dir is not None:
+        filename = 'all_coding_score_metrics_table.csv'
+        coding_metrics_table_filepath = os.path.join(save_dir, filename)
+    else:
+        print('no save_dir provided, cant load or save metrics table')
+    if (save_dir is not None) and (os.path.exists(coding_metrics_table_filepath)):
+        print('loading coding score metrics table')
+        all_coding_score_metrics = pd.read_csv(coding_metrics_table_filepath, index_col=0)
+    else:
+
+        all_coding_score_metrics = get_coding_score_metrics_unmatched_cells(results_pivoted)
+
+        print(len(all_coding_score_metrics.index.values), 'cells in coding score metrics table')
+        if save_dir is not None:
+            all_coding_score_metrics.to_csv(coding_metrics_table_filepath)
+            print('coding score metrics table saved')
+
+    return all_coding_score_metrics
 
 
 def get_coding_score_metrics_per_experience_level(cluster_meta, results_pivoted):
@@ -2663,6 +2723,36 @@ def generate_merged_table_of_coding_score_and_model_free_metrics(cluster_meta, r
 
     return metrics
 
+
+def restructure_results_to_get_coding_by_experience_for_matched_cells(glm_version, results_pivoted, matched_experiments, matched_cells):
+    # limit to matched cells
+    results_pivoted = results_pivoted[results_pivoted.ophys_experiment_id.isin(matched_experiments)].copy()
+    results_pivoted = results_pivoted[results_pivoted.cell_specimen_id.isin(matched_cells)].copy()
+
+    # drop duplicates
+    results_pivoted = results_pivoted.drop_duplicates(subset=['cell_specimen_id', 'experience_level'])
+    print(len(results_pivoted), 'len(results_pivoted) after dropping duplicates')
+
+    print(len(results_pivoted.cell_specimen_id.unique()), 'cells in results_pivoted after limiting to strictly matched cells')
+
+    # limit to features used for clustering
+    # features = processing.get_feature_labels_for_clustering()
+    features = ['all-images', 'omissions', 'task', 'behavioral']
+    features = [*features, 'ophys_experiment_id']
+    results_pivoted = limit_results_pivoted_to_features_for_clustering(results_pivoted, features)
+
+    # flip sign so coding scores are positive
+    results_pivoted = flip_sign_of_dropouts(results_pivoted, processing.get_features_for_clustering(), use_signed_weights=False)
+
+    results_pivoted = results_pivoted.rename(columns={'all-images': 'images', 'behavioral': 'behavior'})
+    # now drop ophys_experiment_id
+    results_pivoted = results_pivoted.drop(columns=['ophys_experiment_id'])
+
+    results_pivoted['experience_level'] = [utils.convert_experience_level(experience_level) for experience_level in results_pivoted.experience_level.values]
+
+    feature_matrix = get_feature_matrix_for_clustering(results_pivoted, glm_version, save_dir=save_dir)
+
+    return feature_matrix
 
 ### stats for comparison of coding scores across experience levels (and/or shuffle control) ###
 
@@ -3717,7 +3807,7 @@ def get_variability_df(feature_matrix, cluster_df, columns=['cluster_id', 'cre_l
     return variability_df
 
 
-def create_and_save_cluster_meta(coclustering_df, n_clusters, feature_matrix, cells_table_matched, cluster_meta_filename=None):
+def run_hierarchical_clustering_and_save_cluster_meta(coclustering_df, n_clusters, feature_matrix, cells_table_matched, cluster_meta_filename=None):
     '''
     INPUT:
     coclustering_df: (pd.DataFrame) of coclustering results

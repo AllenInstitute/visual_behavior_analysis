@@ -408,8 +408,11 @@ def get_population_coupling_for_cell_specimen_ids(traces):
     for cell_specimen_id in cell_specimen_ids:
         cell_trace = traces.loc[cell_specimen_id][trace_column]
         population_trace = traces.loc[cell_specimen_ids[cell_specimen_ids != cell_specimen_id]][trace_column].mean()
-        r, p_value = pearsonr(cell_trace, population_trace)
-
+        try:
+            r, p_value = pearsonr(cell_trace, population_trace)
+        except:
+            r = np.nan
+            p_value = np.nan
         pc_list.append([cell_specimen_id, r, p_value])
     columns = ['cell_specimen_id', 'population_coupling_r_value', 'population_coupling_p_value']
     population_coupling = pd.DataFrame(pc_list, columns=columns)
@@ -762,32 +765,26 @@ def generate_and_save_all_metrics_tables_for_experiment(ophys_experiment_id, dat
                                            stimuli=stimuli, session_subset=session_subset,
                                            data_type=data_type, interpolate=interpolate,
                                            output_sampling_rate=output_sampling_rate)
-        # if overwrite:
-        if os.path.exists(filepath):  # if file exists, delete it
-            os.remove(filepath)
-            print('h5 file exists for', ophys_experiment_id, ' - overwriting')
-        # regenerate metrics   and save
-        trace_metrics = generate_trace_metrics_table(ophys_experiment_id, data_type)
-        trace_metrics.to_hdf(filepath, key='df')
-        print('trace metrics saved for', ophys_experiment_id)
-        # else:  # if you dont want to overwrite
-        #     if os.path.exists(filepath):  # and the file already exists
-        #         pass  # do nothing
-        #     else:  # otherwise
-        #         # generate metrics and save
-        #         trace_metrics = generate_trace_metrics_table(ophys_experiment_id, data_type)
-        #         trace_metrics.to_hdf(filepath, key='df')
-        #         print('trace metrics saved for', ophys_experiment_id)
+        if overwrite:
+            if os.path.exists(filepath):  # if file exists, delete it
+                os.remove(filepath)
+                print('h5 file exists for', ophys_experiment_id, ' - overwriting')
+            # regenerate metrics   and save
+            trace_metrics = generate_trace_metrics_table(ophys_experiment_id, data_type)
+            trace_metrics.to_hdf(filepath, key='df')
+            print('trace metrics saved for', ophys_experiment_id)
+        else:  # if you dont want to overwrite
+            if os.path.exists(filepath):  # and the file already exists
+                pass  # do nothing
+            else:  # otherwise
+                # generate metrics and save
+                trace_metrics = generate_trace_metrics_table(ophys_experiment_id, data_type)
+                trace_metrics.to_hdf(filepath, key='df')
+                print('trace metrics saved for', ophys_experiment_id)
     except Exception as e:
         print('metrics not generated for trace_metrics for experiment', ophys_experiment_id)
         print(e)
-        # problem_expts.loc[i, 'ophys_experiment_id'] = ophys_experiment_id
-        # problem_expts.loc[i, 'condition'] = condition
-        # problem_expts.loc[i, 'stimuli'] = stimuli
-        # problem_expts.loc[i, 'session_subset'] = session_subset
-        # problem_expts.loc[i, 'data_type'] = data_type
-        # problem_expts.loc[i, 'exception'] = e
-        # i += 1
+
 
     # event locked response metrics ###
 
@@ -804,12 +801,8 @@ def generate_and_save_all_metrics_tables_for_experiment(ophys_experiment_id, dat
     stimulus_response_df = loading.convert_boolean_cols_to_bool(stimulus_response_df)
 
     # conditions to loop through
-    # conditions = ['omissions', 'images', 'changes']
-    # stimuli = ['all_images', 'pref_image']
-    # session_subsets = ['full_session']
-
-    conditions = ['images', 'changes']
-    stimuli = ['pref_image']
+    conditions = ['omissions', 'images', 'changes']
+    stimuli = ['all_images', 'pref_image']
     session_subsets = ['full_session']
 
     # loop through all conditions, generate metrics and save
@@ -971,40 +964,44 @@ def load_metrics_table_for_experiments(ophys_experiment_ids, condition, stimuli,
                 metrics_table = pd.concat([metrics_table, tmp])
             else:
                 # generate the table
-                print('cant load saved table, generating metrics table for', ophys_experiment_id)
-                # load dataset
-                dataset = loading.get_ophys_dataset(ophys_experiment_id, get_extended_stimulus_presentations=False)
-                # load stimulus_response_df from saved file or generate it if file doesnt exist
-                # event_type must be all so that we can filter as needed
-                time_window = [-2, 2.1]
-                stimulus_response_df = loading.get_stimulus_response_df(dataset, data_type=data_type, event_type='all',
-                                                                        time_window=time_window,
-                                                                        interpolate=interpolate,
-                                                                        output_sampling_rate=output_sampling_rate,
-                                                                        load_from_file=True)
-                # need try except because code will not always run, such as in the case of passive sessions (no trials that are 'engaged')
-                # try:
-                print('stim response df loaded, generating cell metrics')
-                filepath = get_metrics_df_filepath(ophys_experiment_id, condition=condition,
-                                                   stimuli=stimuli, session_subset=session_subset,
-                                                   data_type=data_type, interpolate=interpolate,
-                                                   output_sampling_rate=output_sampling_rate)
-                # regenerate metrics and save
-                if condition == 'omissions':
-                    response_window_duration = 0.75
+                if condition == 'traces':
+                    print('generating trace metrics for', ophys_experiment_id, data_type)
+                    metrics_df = generate_trace_metrics_table(ophys_experiment_id, data_type)
                 else:
-                    response_window_duration = 0.5
-                metrics_df = generate_cell_metrics_table(dataset,
-                                                         stimulus_response_df,
-                                                         data_type=data_type,
-                                                         condition=condition,
-                                                         session_subset=session_subset,
-                                                         stimuli=stimuli,
-                                                         time_window=time_window,
-                                                         output_sampling_rate=output_sampling_rate,
-                                                         response_window_duration=response_window_duration,
-                                                         interpolate=interpolate,
-                                                         )
+                    print('cant load saved table, generating metrics table for', ophys_experiment_id, data_type)
+                    # load dataset
+                    dataset = loading.get_ophys_dataset(ophys_experiment_id, get_extended_stimulus_presentations=False)
+                    # load stimulus_response_df from saved file or generate it if file doesnt exist
+                    # event_type must be all so that we can filter as needed
+                    time_window = [-2, 2.1]
+                    stimulus_response_df = loading.get_stimulus_response_df(dataset, data_type=data_type, event_type='all',
+                                                                            time_window=time_window,
+                                                                            interpolate=interpolate,
+                                                                            output_sampling_rate=output_sampling_rate,
+                                                                            load_from_file=True)
+                    # need try except because code will not always run, such as in the case of passive sessions (no trials that are 'engaged')
+                    # try:
+                    print('stim response df loaded, generating cell metrics')
+                    filepath = get_metrics_df_filepath(ophys_experiment_id, condition=condition,
+                                                       stimuli=stimuli, session_subset=session_subset,
+                                                       data_type=data_type, interpolate=interpolate,
+                                                       output_sampling_rate=output_sampling_rate)
+                    # regenerate metrics and save
+                    if condition == 'omissions':
+                        response_window_duration = 0.75
+                    else:
+                        response_window_duration = 0.5
+                    metrics_df = generate_cell_metrics_table(dataset,
+                                                             stimulus_response_df,
+                                                             data_type=data_type,
+                                                             condition=condition,
+                                                             session_subset=session_subset,
+                                                             stimuli=stimuli,
+                                                             time_window=time_window,
+                                                             output_sampling_rate=output_sampling_rate,
+                                                             response_window_duration=response_window_duration,
+                                                             interpolate=interpolate,
+                                                             )
                 metrics_df['ophys_experiment_id'] = ophys_experiment_id
                 if os.path.exists(filepath): # remove it first in case there is a busted file there
                     os.remove(filepath)
@@ -1142,7 +1139,7 @@ def get_cell_metrics_for_conditions(data_type, condition, stimuli, session_subse
     """
     Loads cell metrics for all experiments in the platform paper experiments table, merges with metadata, and limits based on provided inclusion_criteria
     :param data_type: 'dff', 'events', 'filtered_events'
-    :param condition: 'changes', 'omissions', 'images' or 'traces
+    :param condition: 'changes', 'omissions', 'images' or 'traces'
     :param stimuli: 'all_images', 'pref_image', or 'full_session' (for data_type='traces')
     :param session_subset: 'engaged', 'disengaged', 'full_session'
     :param inclusion_criteria: a string including any combination of the following:
