@@ -3147,7 +3147,7 @@ def get_mean_dropout_scores_per_cluster(dropout_df, cluster_meta=None, labels=No
             mean_cluster[cluster_id] = mean_dropout_df.values
         elif stacked is False:
             mean_dropout_df = dropout_df.loc[this_cluster_ids].mean().unstack()
-            mean_cluster[cluster_id] = mean_dropout_df
+            mean_cluster[cluster_id] = mean_dropout_df.loc[get_features_for_clustering()]
 
     if stacked is True:
         return (pd.DataFrame(mean_cluster))
@@ -3314,14 +3314,14 @@ def get_sorted_cluster_ids(cluster_meta):
 
 # compute difference between original cluster sizes and shuffled cluster sizes. Create a df.
 
-def get_cluster_size_differece_df(cre_original_cluster_sizes, shuffle_type_cluster_sizes, cre_line=None,
-                                  columns=['cre_line', 'cluster_id', 'shuffle_type', 'n_boot', 'cluster_size_diff',
+def get_cluster_size_differece_df(original_cluster_sizes, shuffled_cluster_sizes, cre_line=None,
+                                  columns=['cre_line', 'cluster_id', 'n_boot', 'cluster_size_diff',
                                            'abs_cluster_size_diff', 'og_cluster_size', 'shuffle_size'],):
     ''' in long format, either normalized or not normalized difference of shuffled clusters and original clusters.
     This function is not finished but it works for now.
 
     INPUT:
-    cre_original_cluster_sizes: dictionary cre_line: cluter_id: size
+    original_cluster_sizes: dictionary cre_line: cluter_id: size
     shuffle_type_cluster_sizes: dictionary shuffle_type: cre_line: cluster_id: n_boot: cluster size
     cre_line: str of cre line if you wish to use only one
     columns: list of str/columns for output df
@@ -3335,35 +3335,32 @@ def get_cluster_size_differece_df(cre_original_cluster_sizes, shuffle_type_clust
         cre_lines = [None]
     else:
         cre_lines = cre_line
-    shuffle_types = shuffle_type_cluster_sizes.keys()
     # create empty df with columns to collect
     cluster_size_difference_df = pd.DataFrame(columns=columns)
+    for cre_line in cre_lines:
 
-    for shuffle_type in shuffle_types:
-        for cre_line in cre_lines:
+        # number of clusters to iterate over in this cre line
+        if cre_line is not None:
+            cluster_ids = shuffled_cluster_sizes[cre_line].keys()
+        else:
+            cluster_ids = shuffled_cluster_sizes.keys()
 
-            # number of clusters to iterate over in this cre line
+        for cluster_id in cluster_ids:
             if cre_line is not None:
-                cluster_ids = shuffle_type_cluster_sizes[shuffle_type][cre_line].keys()
+                og_size = original_cluster_sizes[cre_line][cluster_id]
+                shuffled_sizes = shuffled_cluster_sizes[cre_line][cluster_id]
             else:
-                cluster_ids = shuffle_type_cluster_sizes[shuffle_type].keys()
-
-            for cluster_id in cluster_ids:
-                if cre_line is not None:
-                    og_size = cre_original_cluster_sizes[cre_line][cluster_id]
-                    shuffled_sizes = shuffle_type_cluster_sizes[shuffle_type][cre_line][cluster_id]
-                else:
-                    og_size = cre_original_cluster_sizes[cluster_id]
-                    shuffled_sizes = shuffle_type_cluster_sizes[shuffle_type][cluster_id]
-                cluster_size_diff = np.subtract(og_size, shuffled_sizes) / np.add(og_size, shuffled_sizes)
-                abs_cluster_size_diff = np.subtract(og_size, shuffled_sizes)
+                og_size = original_cluster_sizes[cluster_id]
+                shuffled_sizes = shuffled_cluster_sizes[cluster_id]
+            cluster_size_diff = np.subtract(og_size, shuffled_sizes) / np.add(og_size, shuffled_sizes)
+            abs_cluster_size_diff = np.subtract(og_size, shuffled_sizes)
 
                 # this part needs to be optimized. There should be a better way of adding values to dictionary without iteration
-                data = []
-                for n_boot, value in enumerate(cluster_size_diff):
-                    data.append([cre_line, cluster_id, shuffle_type, n_boot, value, abs_cluster_size_diff[n_boot], og_size, shuffled_sizes[n_boot]])
-                nb_df = pd.DataFrame(data, columns=columns)
-                cluster_size_difference_df = cluster_size_difference_df.append(nb_df, ignore_index=True)
+            data = []
+            for n_boot, value in enumerate(cluster_size_diff):
+                data.append([cre_line, cluster_id, n_boot, value, abs_cluster_size_diff[n_boot], og_size, shuffled_sizes[n_boot]])
+            nb_df = pd.DataFrame(data, columns=columns)
+            cluster_size_difference_df = cluster_size_difference_df.append(nb_df, ignore_index=True)
 
     return cluster_size_difference_df
 
@@ -3525,6 +3522,7 @@ def get_matched_clusters_means_dict(SSE_mapping, mean_dropout_scores_unstacked, 
     for cluster_id in cluster_ids:
         # get dropout scores for matched clusters across each shuffle iteration
         all_matched_cluster_meta = pd.DataFrame(columns=columns)
+        all_matched_cluster_meta
         for n_boot in n_boots:
             matched_cluster_id = SSE_mapping[n_boot][cluster_id]
             if matched_cluster_id != -1:
@@ -3571,13 +3569,20 @@ def get_shuffled_cluster_means(shuffled_clusters_dict, n_clusters):
     
     for cluster_id in np.arange(1, n_clusters + 1):
         if cluster_id == 1:
-            shuffled_cluster_means = pd.DataFrame(shuffled_clusters_dict[cluster_id].stack()).T
+            shuffled_cluster_means = pd.DataFrame(shuffled_clusters_dict[cluster_id].stack().loc[get_features_for_clustering()]).T
         else:
-            shuffled_cluster_means = shuffled_cluster_means.append(pd.DataFrame(shuffled_clusters_dict[cluster_id].stack()).T)
+            shuffled_cluster_means = shuffled_cluster_means.append(pd.DataFrame(shuffled_clusters_dict[cluster_id].stack().loc[get_features_for_clustering()]).T)
     
     shuffled_cluster_means.index = np.arange(1, n_clusters + 1)
     
     return shuffled_cluster_means
+
+def make_dict(matrix):
+    new_dict = {}
+    keys = np.arange(1, np.shape(matrix)[0]+1)
+    for row, key in enumerate(keys):
+        new_dict[key] = matrix[row]
+    return new_dict
 
 
 def sort_SSE_values(SSE_matrix, SSE_mapping):
@@ -3592,9 +3597,7 @@ def sort_SSE_values(SSE_matrix, SSE_mapping):
     - SSE_matrix_sorted: DataFrame containing sorted SSE values
     """
     
-    cre_SSE_all = {}
-    
-    n_boots = list(SSE_mapping.keys())
+    n_boots = list(SSE_matrix.keys())
     cluster_ids = list(SSE_mapping[0].keys())
     
     # create a data frame to collect sorted SSE from all n_boots
@@ -3603,7 +3606,7 @@ def sort_SSE_values(SSE_matrix, SSE_mapping):
     # run over all nboots and sort SSE using original cluster sort
     for n in n_boots:
         # Get matched map and SSE matrix for this n boot
-        SSE_df = pd.DataFrame(SSE_matrix[n])
+        SSE_df = pd.DataFrame(make_dict(SSE_matrix[n]))
         SSE_map = SSE_mapping[n]
         
         # make a copy which will be used to store sorted SSE values
@@ -3612,7 +3615,6 @@ def sort_SSE_values(SSE_matrix, SSE_mapping):
         # first sort SSE values
         for i, cluster_id in enumerate(cluster_ids):
             matched_cluster_id = SSE_map[cluster_id] # matched shuffled cluster id
-            
             # copy matched SSE value to a new location in df
             if matched_cluster_id != -1:
                 SSE_df_sorted.loc[i][:] = SSE_df.loc[matched_cluster_id - 1][:].values

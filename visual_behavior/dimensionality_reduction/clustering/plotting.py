@@ -4197,7 +4197,7 @@ def plot_cluster_size_difference(cluster_size_df, cre_line=None, shuffle_type=No
     return ax
 
 
-def plot_cluster_size_difference_for_shuffle(threshold, save_dir, pkl_filename):
+def plot_cluster_size_difference_for_shuffle(cluster_size_diff, save_dir=None, folder='',):
     '''
     Load saved data file containing a dictionary with key for threshold, then within that key,
     values are difference in cluster size between original and shuffled clusters for every iteration of the shuffle
@@ -4212,8 +4212,8 @@ def plot_cluster_size_difference_for_shuffle(threshold, save_dir, pkl_filename):
     threshold = 0.1
     '''
     # load dict and turn into dataframe
-    cluster_size_difference_dict = pd.read_pickle(os.path.join(save_dir, pkl_filename))
-    cluster_size_diff = pd.DataFrame(cluster_size_difference_dict[threshold])
+
+
 
     # make the plot
     figsize = (20, 3)
@@ -4229,8 +4229,9 @@ def plot_cluster_size_difference_for_shuffle(threshold, save_dir, pkl_filename):
     plt.subplots_adjust(hspace=0.2, wspace=0.15)
 
     # save it
-    filename = 'difference_in_cluster_size_shuffle_control'
-    utils.save_figure(fig, figsize, save_dir, 'shuffle_figures', filename)
+    if save_dir:
+        filename = 'difference_in_cluster_size_shuffle_control'
+        utils.save_figure(fig, figsize, save_dir, folder, filename)
 
 
 def plot_cluster_probability_for_shuffle(threshold, save_dir, pkl_filename):
