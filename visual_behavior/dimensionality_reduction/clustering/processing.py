@@ -3449,7 +3449,11 @@ def get_cluster_size_variance(SSE_mapping, cluster_meta_shuffled, normalize=Fals
                     cluster_sizes.append(shuffled_cluster_sizes_this_boot.loc[matched_id_this_nb])
                 except KeyError:
                     # print(shuffled_cluster_sizes_this_boot)
-                    break
+                    if use_nan is True: #testing
+                        cluster_sizes.append(np.nan)
+                    elif use_nan is False:
+                        cluster_sizes.append(0)
+                    # break
             else:
                 if use_nan is True:
                     cluster_sizes.append(np.nan)
