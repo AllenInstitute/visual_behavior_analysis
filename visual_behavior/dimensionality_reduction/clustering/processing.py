@@ -3466,7 +3466,7 @@ def get_cluster_size_variance(SSE_mapping, cluster_meta_shuffled, normalize=Fals
     return all_cluster_sizes
 
 
-def compute_probabilities(SSE_mapping):
+def compute_probabilities(SSE_mapping, shuffled_labels):
     ''' Computes probability of shuffle clusters to be mapped to an original cluster for N repetitions.
     INPUT:
     SSE_mapping (dict), nested dictionary of matched clusters. Keys = cluster ids, values = dictionary where keys
@@ -3477,29 +3477,43 @@ def compute_probabilities(SSE_mapping):
         during N number of shuffled (or nboots) from 0 to 1.
 
     '''
+    
     cluster_ids = SSE_mapping[0].keys()
-    cluster_count = count_cluster_frequency(SSE_mapping)
+    cluster_count = count_cluster_frequency(SSE_mapping, shuffled_labels)
     cluster_probabilities = {}
     for cluster_id in cluster_ids:
         cluster_probabilities[cluster_id] = np.sum(cluster_count[cluster_id]) / len(cluster_count[cluster_id])
     return cluster_probabilities
 
 
-def count_cluster_frequency(SSE_mapping):
+def count_cluster_frequency(SSE_mapping, shuffled_labels):
     cluster_ids = SSE_mapping[0].keys()
     n_boots = SSE_mapping.keys()
     cluster_count = {}
+    #loop over all cluster ids
     for cluster_id in cluster_ids:
         boolean_count = []
+        # for each n boot of the shuffle
         for n_boot in n_boots:
+            # count cells in each shuffled clsuter
+            tmp = shuffled_labels[n_boot].groupby('cluster_id').count()['cell_specimen_id']
+            # get matched cluster id
             matched_id = SSE_mapping[n_boot][cluster_id]
+            # if cluster was matched, append True, else False
             if matched_id != -1:
-                boolean_count.append(True)
+                try:
+                    n_cells = tmp[matched_id]
+                    if n_cells !=0: 
+                        boolean_count.append(True)
+                    else:
+                        boolean_count.append(False)
+                except: # KeyError
+                    #print(f'cluster {matched_id} not found in shuffle {n_boot}')
+                    boolean_count.append(False)
             else:
                 boolean_count.append(False)
         cluster_count[cluster_id] = boolean_count
     return cluster_count
-
 
 def get_matched_clusters_means_dict(SSE_mapping, mean_dropout_scores_unstacked, metric='mean', shuffle_type=None,
                                     cre_line=None):
