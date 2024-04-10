@@ -3036,7 +3036,7 @@ def get_CI_for_clusters(cluster_meta, columns_to_groupby=['targeted_structure', 
 
 #### shuffle control functions ###
 
-def get_cluster_mapping(matrix, threshold=1, ):
+def get_cluster_mapping(matrix, threshold=0.1, ):
     '''
     find clusters with most similar SSE, create a dictionaty of cluster maps.
 
