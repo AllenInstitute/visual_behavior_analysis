@@ -3365,40 +3365,40 @@ def get_cluster_size_differece_df(original_cluster_sizes, shuffled_cluster_sizes
     return cluster_size_difference_df
 
 
-def get_cluster_probability_df(shuffle_type_probabilities, cre_line=None,
-                               columns=['cre_line', 'cluster_id', 'shuffle_type', 'probability']):
+def get_cluster_probability_df(shuffle_probabilities, cre_lines=None,
+                               columns=['cre_line', 'cluster_id', 'probability']):
     ''' in long format, probabilities of shuffled clusters.
     This function is not finished but it works for now.'''
 
-    shuffle_types = shuffle_type_probabilities.keys()
     # create empty df with columns to collect
-    shuffle_type_probability_df = pd.DataFrame(columns=columns)
+    shuffle_probability_df = pd.DataFrame(columns=columns)
 
-    for shuffle_type in shuffle_types:
-        if cre_line is None:
-            cre_lines = [None]
-        else:
-            cre_lines = shuffle_type_probabilities[shuffle_type].keys()
-        for cre_line in cre_lines:
+    if cre_lines is None:
+        cre_lines = ['all']
+    else:
+        cre_lines = cre_lines.copy()
+
+    for cre_line in cre_lines:
 
             # number of clusters to iterate over in this cre line
-            if cre_line is not None:
-                cluster_ids = shuffle_type_probabilities[shuffle_type][cre_line].keys()
+            if cre_line != 'all':
+                cluster_ids = shuffle_probabilities[cre_line].keys()
             else:
-                cluster_ids = shuffle_type_probabilities[shuffle_type].keys()
+                cluster_ids = shuffle_probabilities.keys()
             for cluster_id in cluster_ids:
-                if cre_line is not None:
-                    value = shuffle_type_probabilities[shuffle_type][cre_line][cluster_id]
+                if cre_line != 'all':
+                    value = shuffle_probabilities[cre_line][cluster_id]
                 else:
-                    value = shuffle_type_probabilities[shuffle_type][cluster_id]
+                    value = shuffle_probabilities[cluster_id]
+            
                 # cluster_meta = pd.DataFrame(data=[cre_line, cluster_id, shuffle_type, value], columns = columns)
-                cluster_meta = pd.DataFrame({'cre_line': cre_line, 'cluster_id': cluster_id, 'shuffle_type': shuffle_type,
+                cluster_meta = pd.DataFrame({'cre_line': cre_line, 'cluster_id': cluster_id,
                                            'probability': value},
                                           index=[0])
 
-                shuffle_type_probability_df = shuffle_type_probability_df.append(cluster_meta, ignore_index=True)
+                shuffle_probability_df = shuffle_probability_df.append(cluster_meta, ignore_index=True)
 
-    return shuffle_type_probability_df
+    return shuffle_probability_df
 
 
 def get_matched_cluster_labels(SSE_mapping):
