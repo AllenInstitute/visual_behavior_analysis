@@ -4456,44 +4456,38 @@ def plot_matched_clusters_heatmap(SSE_mapping, mean_dropout_scores_unstacked, me
 
     if save_dir:
         utils.save_figure(fig, figsize, save_dir, folder,
-                          f'{metric}_{shuffle_type}dropout_matched_clusters' + cre_line_suffix, formats = ['.png', '.pdf'])
+                          f'{metric}_{shuffle_type}dropout_matched_clusters' + cre_line_suffix, formats = ['.png'])
 
 
-def plot_matched_clusters_heatmap_remapped(SSE_mapping, mean_dropout_scores_unstacked, metric='mean', shuffle_type=None,
-                                  cre_line=None, abbreviate_features=True, abbreviate_experience=True, small_fontsize=False,
+def plot_matched_clusters_heatmap_remapped(all_clusters_means_dict, abbreviate_features=True, abbreviate_experience=True, small_fontsize=False,
                                   session_colors=True, save_dir=None, folder=None, figsize=None):
     ''' This function needs work to be able to plot the heatmap with the remapped colors. It is not working yet.'''
-    all_clusters_means_dict = processing.get_matched_clusters_means_dict(SSE_mapping,
-                                                                         mean_dropout_scores_unstacked,
-                                                                         metric=metric, shuffle_type=shuffle_type,
-                                                                         cre_line=cre_line)
+
     cluster_ids = all_clusters_means_dict.keys()
     if figsize is None:
-        figsize = (3.5 * len(cluster_ids), 2)
+        figsize = (2.5 * len(cluster_ids), 1.8)
 
     fig, ax = plt.subplots(1, len(cluster_ids), figsize=figsize, sharex='row', sharey='row')
     ax = ax.ravel()
 
     for i, cluster_id in enumerate(cluster_ids):
-        if all_clusters_means_dict[cluster_id].sum().sum() == 0:
-            hm_color = 'Greys'
-        else:
-            hm_color = 'Blues'
+        
         features = processing.get_features_for_clustering()
         mean_dropout_df = all_clusters_means_dict[cluster_id].loc[features]  # order regressors in a specific order
-        print('not working yet')
-        cre_line_means = processing.get_cre_line_means(feature_matrix, cluster_meta) 
-
-        cre_line_means_remapped, coding_score_cmap, vmax = remap_coding_scores_to_session_colors(cre_line_means)
-        cre_line_means_remapped = cre_line_means_remapped.T.copy()
-
-        # relabel dataframe indices to be abbreviated
-        new_labels = get_clean_labels_for_coding_scores_df(cre_line_means_remapped, columns=False)
-        cre_line_means_remapped.index = new_labels
-
-        plot_cre_line_means_heatmap(cre_line_means_remapped, coding_score_cmap, vmax, session_colors, colorbar=False,
-                                save_dir=save_dir, folder=folder, ax=None)
-
+        
+        if session_colors:
+            flattened_mean = pd.DataFrame(mean_dropout_df.stack()).T
+            flattened_mean_remapped, coding_score_cmap, vmax = remap_coding_scores_to_session_colors(flattened_mean)
+            flattened_mean_remapped = flattened_mean_remapped.T.unstack().copy()
+        else:
+            flattened_mean_remapped = mean_dropout_df.copy()
+            coding_score_cmap = 'Greys'
+            vmax = 1
+        
+        ax[i] = sns.heatmap(flattened_mean_remapped, cmap=coding_score_cmap, vmin=0, vmax=vmax,
+                            ax=ax[i], cbar=False) # cbar_kws={'label': 'coding score'}
+        
+    
         if abbreviate_features:
             # set yticks to abbreviated feature labels
             feature_abbreviations = get_abbreviated_features(mean_dropout_df.index.values)
@@ -4515,20 +4509,11 @@ def plot_matched_clusters_heatmap_remapped(SSE_mapping, mean_dropout_scores_unst
         if small_fontsize:
             ax[i] = standardize_axes_fontsize(ax[i])
 
-    # shuffle_type_dict = {'experience': 'cell id shuffle',
-    #                     'experience_within_cell': 'exp label shuffle'}
-
-    # plt.suptitle(cre_line + ' ' + shuffle_type_dict[shuffle_type])
     fig.subplots_adjust(hspace=1.2, wspace=0.6)
-    # plt.tight_layout()
-    if cre_line is None:
-        cre_line_suffix = 'all'
-    else:
-        cre_line_suffix = cre_line[:3]
-
     if save_dir:
         utils.save_figure(fig, figsize, save_dir, folder,
-                          f'{metric}_{shuffle_type}dropout_matched_clusters' + cre_line_suffix, formats = ['.png', '.pdf'])
+                          f'mean_dropout_matched_clusters', formats = ['.png'])
+
 
 def plot_unraveled_clusters_mean(cre_line, cre_line_dfs, save_dir=None, folder='', tag='', ax=None, figsize=(12,2)):
     """
