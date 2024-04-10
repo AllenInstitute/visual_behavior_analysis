@@ -4224,8 +4224,8 @@ def plot_cluster_size_difference_for_shuffle(cluster_size_diff, save_dir=None, f
         ax[i].set_title(utils.convert_cre_line_to_cell_type(cre_line))
         ax[i].set_xlabel('Cluster ID')
         ax[i].set_ylabel('')
-        ax[i].set_ylim(-0.5, 1.1)
-    ax[0].set_ylabel('Difference in cluster size')
+        ax[i].set_ylim(-0.7, 1.1)
+    ax[0].set_ylabel('Difference in cluster size\n(normalized to pupulation size)')
     plt.subplots_adjust(hspace=0.2, wspace=0.15)
 
     # save it
