@@ -63,7 +63,7 @@ def limit_stimulus_presentations_to_change_detection(stimulus_presentations):
     if 'stimulus_block_name' in stimulus_presentations:
         stimulus_presentations = stimulus_presentations[stimulus_presentations.stimulus_block_name.str.contains('change_detection')]
         # change a few columns from type Boolean to bool (they were previously Boolean so they could contain NaNs for non-change detection stim blocks)
-        stimulus_presentations = convert_boolean_cols_to_bool(stimulus_presentations)
+        # stimulus_presentations = convert_boolean_cols_to_bool(stimulus_presentations)
     return stimulus_presentations
 
 
@@ -78,7 +78,6 @@ def convert_boolean_cols_to_bool(stimulus_presentations):
     as many values specific to change_detection task are set to NaN in other stimulus blocks, which
     means that the entire column gets the dtype boolean instead of bool.
     '''
-    stimulus_presentations.convert_dtypes()
     for column in stimulus_presentations.columns.values:
         if stimulus_presentations[column].dtype == 'boolean':
             # remove NaNs and make bool
