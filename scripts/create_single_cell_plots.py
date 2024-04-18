@@ -31,6 +31,7 @@ if __name__ == '__main__':
     ophys_experiment_ids = experiments_table[experiments_table.ophys_container_id==ophys_container_id].index.values
 
     # get GLM results
+    glm_version = '24_events_all_L2_optimize_by_session'
     results_pivoted = pd.read_hdf(os.path.join(platform_cache_dir, 'glm_results', 'platform_results_pivoted.h5'), key='df')
     weights_df = pd.read_hdf(os.path.join(platform_cache_dir, 'glm_results', 'platform_results_weights_df.h5'), key='df')
     run_params = pd.read_pickle(os.path.join(platform_cache_dir, 'glm_results', glm_version + '_run_params.pkl'))
