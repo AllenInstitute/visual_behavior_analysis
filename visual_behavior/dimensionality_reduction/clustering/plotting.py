@@ -1732,7 +1732,8 @@ def plot_mean_shuffled_feature_matrix(shuffled_feature_matrices, cluster_meta, s
     return ax
 
 
-def plot_mean_cluster_heatmaps_remapped(feature_matrix, cluster_meta, cre_line=None, session_colors=True, experience_index=None, save_dir=None, folder=None):
+def plot_mean_cluster_heatmaps_remapped(feature_matrix, cluster_meta, cre_line=None, session_colors=True, experience_index=None,
+                                        sort_by='cluster_id', save_dir=None, folder=None):
     """
     Plot mean cluster heatmaps with remapped coding scores.
 
@@ -1743,6 +1744,7 @@ def plot_mean_cluster_heatmaps_remapped(feature_matrix, cluster_meta, cre_line=N
     - cluster_meta (DataFrame): DataFrame containing cluster metadata
     - clusters (list): List of cluster IDs
     - n_clusters_to_plot (int): Number of clusters to plot
+    - sort_by (str): options are 'cluster_id' and 'cluster_size'
     - save_dir (str, optional): Directory to save the figure
     - folder (str, optional): Folder name for saving the figure
     """
@@ -1752,7 +1754,11 @@ def plot_mean_cluster_heatmaps_remapped(feature_matrix, cluster_meta, cre_line=N
         cell_type = processing.get_cell_type_for_cre_line(cre_line)
     else:
         cell_type = 'all matched cells'
-    clusters = np.sort(cluster_meta.cluster_id.unique())
+
+    if sort_by == 'cluster_size':
+        clusters = cluster_meta['cluster_id'].value_counts().index.values
+    elif sort_by == 'cluster_id':
+        clusters = np.sort(cluster_meta.cluster_id.unique())
 
     if session_colors:
         assert experience_index is None, "session_colors must be False to use experience_index"
@@ -1784,7 +1790,7 @@ def plot_mean_cluster_heatmaps_remapped(feature_matrix, cluster_meta, cre_line=N
     plt.subplots_adjust(hspace=0.6, wspace=0.25)
     plt.tight_layout()
     if save_dir:
-        utils.save_figure(fig, figsize, save_dir, folder, 'mean_cluster_heatmaps_remapped_'+str(len(clusters))+cell_type)
+        utils.save_figure(fig, figsize, save_dir, folder, 'mean_cluster_heatmaps_remapped_'+cell_type)
 
 
 
@@ -1927,6 +1933,7 @@ def plot_coding_score_heatmap_remapped(cluster_meta, feature_matrix, sort_by='cl
         utils.save_figure(fig, figsize, save_dir, folder, 'feature_matrix_n_clusters_'+str(n_clusters)+'_remapped_'+sort_by+'_sort')
     return ax
 
+
 def plot_fraction_cells_per_cluster_per_cre(cluster_meta, col_to_group='cre_line', save_dir=None, folder=None):
     '''
     plots the fraction of cells in each cre line belonging to each cluster as a barplot
@@ -1956,6 +1963,35 @@ def plot_fraction_cells_per_cluster_per_cre(cluster_meta, col_to_group='cre_line
         utils.save_figure(fig, figsize, save_dir, folder, 'fraction_cells_per_cluster_per_cre')
 
 
+def plot_fraction_and_number_cells_per_cluster_per_cre(cluster_meta, save_dir=None, folder=None):
+    '''
+    plots the number and fraction of cells belonging to each cluster within each cre line as a barplot with a twin axis,
+    sorted by overall size of clusters within each cre line, with one plot per cre line
+    '''
+    n_cells_per_cluster = processing.get_fraction_cells_per_cluster_per_group(cluster_meta, col_to_group='cre_line')
+
+    for i, cre_line in enumerate(utils.get_cre_lines()):
+
+        cre_data = n_cells_per_cluster[n_cells_per_cluster.cre_line == cre_line]
+        order = cre_data.sort_values(by='fraction_per_cluster', ascending=False).cluster_id.values
+
+        # fraction of cells per cluster
+        figsize = (0.5 * len(order), 2)
+        fig, ax = plt.subplots(figsize=figsize)
+        ax = sns.barplot(data=cre_data, x='cluster_id', order=order, y='fraction_per_cluster', color='gray', width=0.5, ax=ax)
+        ax.set_ylabel('Fraction of cells')
+        ax.set_xlabel('Cluster ID')
+
+        ax2 = ax.twinx()
+        ax2 = sns.barplot(data=cre_data, x='cluster_id', order=order, y='n_cells_cluster', color='gray', width=0.5, ax=ax2)
+        ax2.set_ylabel('Number of cells')
+
+        ax.set_title(utils.convert_cre_line_to_cell_type(cre_line))
+        sns.despine(fig=fig, top=True, right=False, left=False, bottom=False, offset=None, trim=False)
+
+        if save_dir:
+            utils.save_figure(fig, figsize, save_dir, folder, 'number_and_fraction_cells_per_cluster_' + cre_line.split('-')[0])
+
 
 def plot_population_averages_for_clusters(multi_session_df, event_type, axes_column, hue_column,
                                           session_colors=True, experience_index=None, legend=False,
@@ -1969,6 +2005,8 @@ def plot_population_averages_for_clusters(multi_session_df, event_type, axes_col
         palette = utils.get_experience_level_colors()
     else:
         palette = utils.get_one_experience_level_colors()[experience_index]
+
+
 
     sdf = multi_session_df.copy()
     timestamps = sdf.trace_timestamps.values[0]
@@ -1990,7 +2028,9 @@ def plot_population_averages_for_clusters(multi_session_df, event_type, axes_col
     if not scale_x:
         scale = 1
 
-    axes_conditions = np.sort(sdf[axes_column].unique())
+    # plot in order of overall cluster size
+    axes_conditions = sdf['cluster_id'].value_counts().index.values
+    # axes_conditions = np.sort(sdf[axes_column].unique())
     hue_conditions = np.sort(sdf[hue_column].unique())
     n_axes_conditions = len(axes_conditions)
     legend_txt = multi_session_df['experience_level'].unique()
@@ -2019,6 +2059,7 @@ def plot_population_averages_for_clusters(multi_session_df, event_type, axes_col
                 omission_color = sns.color_palette()[9]
                 ax[i].axvline(x=0, ymin=0, ymax=1, linestyle='--', color=omission_color)
             ax[i].set_xlim(xlim_seconds)
+            ax[i].xaxis.set_tick_params(labelsize=14)
             if sharex:
                 ax[i].set_xlabel('')
             else:
@@ -2028,6 +2069,7 @@ def plot_population_averages_for_clusters(multi_session_df, event_type, axes_col
         except:
             print('no data for', axis, hue)
         i += 1
+
 
     ax[0].set_ylabel(ylabel)
     if sharex:
@@ -3638,7 +3680,8 @@ def plot_experience_modulation(coding_score_metrics, metric='experience_modulati
     return ax
 
 
-def plot_cluster_depth_distribution_by_cre_lines(n_cells_table, metric, xorder, hue, hue_order, significance_col, save_dir=None, folder=''):
+def plot_cluster_depth_distribution_by_cre_lines(cluster_meta, location, metric,
+                                                 ylabel='Fraction cells', save_dir=None, folder=''):
     """
     Plot the data for each CRE line.
 
@@ -3655,13 +3698,36 @@ def plot_cluster_depth_distribution_by_cre_lines(n_cells_table, metric, xorder, 
     Returns:
     - fig, ax: The matplotlib figure and axis objects for the plot.
     """
+
+    n_cells_table = processing.get_cluster_proportion_stats_for_locations(cluster_meta, location=location)
+    n_cells_table = n_cells_table.reset_index()
+
+    xorder = np.sort(n_cells_table.cluster_id.unique())
+    significance_col = 'bh_significant'
+
+    hue = location
+    if hue == 'binned_depth':
+        hue_order = np.sort(n_cells_table[hue].unique())
+    else:
+        hue_order = np.sort(n_cells_table[hue].unique())[::-1]
+
+    if 'n_cells' in metric:
+        sharey = False
+    else:
+        sharey = True
+    if len(hue_order)>2:
+        palette = sns.color_palette('gray', 6)
+        fontsize = 9
+    else:
+        palette = 'gray'
+        fontsize = 'xx-small'
     figsize = (5, 5)
-    fig, ax = plt.subplots(3, 1, figsize=figsize, sharey=True, sharex=True)
+    fig, ax = plt.subplots(3, 1, figsize=figsize, sharey=sharey, sharex=True)
     for i, cre_line in enumerate(utils.get_cre_lines()):
         cre_data = n_cells_table[n_cells_table.cre_line == cre_line]
 
         ax[i] = sns.barplot(data=cre_data, x='cluster_id', order=xorder, y=metric,
-                            hue=hue, hue_order=hue_order, palette='gray', width=0.7, ax=ax[i])
+                            hue=hue, hue_order=hue_order, palette=palette, width=0.7, ax=ax[i])
         ax[i].get_legend().remove()
         ax[i].set_ylabel('')
         ax[i].set_xlabel('')
@@ -3669,22 +3735,89 @@ def plot_cluster_depth_distribution_by_cre_lines(n_cells_table, metric, xorder, 
 
         for x_loc, cluster_id in enumerate(xorder): 
             cre_cluster_data = cre_data[cre_data['cluster_id']==cluster_id]
-            if cre_cluster_data[significance_col].any(): 
+            if cre_cluster_data[significance_col].any():
                 y_loc = cre_cluster_data[metric].max()-0.015
                 ax[i].text(x_loc, y_loc, '*', fontsize=24, color=sns.color_palette()[3],
                             horizontalalignment='center', verticalalignment='center')
 
-    ax[1].set_ylabel('Fraction cells in each depth')
+    ax[1].set_ylabel(ylabel)
     ax[i].set_xlabel('Cluster ID')
-    ax[0].legend(loc='upper right', fontsize='xx-small', title_fontsize='xx-small')
+    ax[0].legend(loc='upper right', fontsize=fontsize, title_fontsize=fontsize)
     sns.despine(fig=fig, top=True, right=True, left=False, bottom=False, offset=None, trim=False)
 
     plt.subplots_adjust(hspace=0.5)
 
     if save_dir:
-        utils.save_figure(fig, figsize, save_dir, folder, 'fraction_cells_per_cluster_per_cre_per_layer')
+        utils.save_figure(fig, figsize, save_dir, folder, metric+'_'+location)
 
     return ax
+
+
+def plot_cluster_depth_distribution_by_cre_line_separately(cluster_meta, location,
+                                                            metric='fraction_cells_location', ylabel='Fraction cells',
+                                                            save_dir=None, folder=''):
+    """
+    Barplot of fraction or number of cells in each cluster within each cre line,
+    with separate figures for each cre line
+    (in contrast with 'plot_cluster_depth_distribution_by_cre_lines' function which plots all cre in same figure)
+
+    Parameters:
+    - cluster_meta (DataFrame): DataFrame containing cell metadata, including 'cluster_id', 'layer', 'targeted_structure', etc
+    - location (str): column in cluster_meta to compute fraction or number of cells across, such as 'layer', 'targeted_structure', 'binned_depth'
+    - metric (str): The metric to use for plotting on y axis, can be 'fraction_cells_location', or 'n_cells_location'
+    - save_dir (str): Directory to save the plot. If None, the plot is not saved.
+    - folder (str): Folder name within save_dir to save the plot. Ignored if save_dir is None.
+
+    Returns:
+    - fig, ax: The matplotlib figure and axis objects for the plot.
+    """
+
+    n_cells_table = processing.get_cluster_proportion_stats_for_locations(cluster_meta, location=location)
+    n_cells_table = n_cells_table.reset_index()
+
+    hue = location
+    hue_order = np.sort(n_cells_table[hue].unique())[::-1]
+
+    significance_col = 'bh_significant'
+
+    if len(hue_order)>2:
+        palette = sns.color_palette('gray', 6)
+        fontsize = 9
+    else:
+        palette = 'gray'
+        fontsize = 'xx-small'
+
+    # generate plot per cre line
+    for i, cre_line in enumerate(utils.get_cre_lines()):
+
+        cre_data = n_cells_table[n_cells_table.cre_line == cre_line]
+        # sort by cluster size
+        order = cre_data.drop_duplicates('cluster_id').sort_values(by='fraction_cells_cluster', ascending=False).cluster_id.values
+
+        # fraction of cells per cluster
+        figsize = (0.5 * len(order), 2)
+        fig, ax = plt.subplots(figsize=figsize)
+        ax = sns.barplot(data=cre_data, x='cluster_id', order=order, y=metric,
+                            hue=hue, hue_order=hue_order, palette=palette, width=0.5, ax=ax)
+        ax.set_ylabel(ylabel)
+        ax.set_xlabel('Cluster ID')
+
+
+        # significance
+        for x_loc, cluster_id in enumerate(order):
+            cre_cluster_data = cre_data[cre_data['cluster_id']==cluster_id]
+            if cre_cluster_data[significance_col].any():
+                y_loc = cre_cluster_data[metric].max()
+                ax.text(x_loc, y_loc, '*', fontsize=24, color=sns.color_palette()[3],
+                            horizontalalignment='center', verticalalignment='center')
+
+        ax.set_title(utils.convert_cre_line_to_cell_type(cre_line))
+        ax.legend(loc='upper right', fontsize=fontsize, title_fontsize=fontsize)
+        sns.despine(fig=fig, top=True, right=True, left=False, bottom=False, offset=None, trim=False)
+
+        if save_dir:
+            utils.save_figure(fig, figsize, save_dir, folder, metric+'_'+location+'_'+cre_line.split('-')[0])
+
 
 def plot_number_mice_per_cluster(cluster_meta, save_dir=None, folder=None):
     n_mice = cluster_meta.groupby(['cre_line', 'cluster_id', 'mouse_id']).count().reset_index().groupby(['cre_line', 'cluster_id']).count().rename(columns={'mouse_id': 'n_mice'})[['n_mice']]
