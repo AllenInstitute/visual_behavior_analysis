@@ -52,6 +52,8 @@ if __name__ == '__main__':
         # get dataset for this experiment
         dataset = loading.get_ophys_dataset(ophys_experiment_id)
 
+        print(dataset.stimulus_presentations.dtypes)
+
         # get start time using function to optimize events in window
         times = utils.get_start_end_time_for_period_with_omissions_and_change(dataset.stimulus_presentations, n_flashes=20)
         start_time = times[0]
