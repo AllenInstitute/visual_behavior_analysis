@@ -26,7 +26,7 @@ if __name__ == '__main__':
     # get metadata
     platform_cache_dir = loading.get_platform_analysis_cache_dir()
     cache = bpc.from_s3_cache(cache_dir=platform_cache_dir)
-    print(cache_dir)
+    print(platform_cache_dir)
     experiments_table = cache.get_ophys_experiment_table()
     ophys_experiment_ids = experiments_table[experiments_table.ophys_container_id==ophys_container_id].index.values
 
