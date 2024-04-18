@@ -52,6 +52,23 @@ sns.set_context('notebook', font_scale=1.5, rc={'lines.markeredgewidth': 2})
 
 # utilities ###
 
+
+def set_negative_one_values_to_zero(results_pivoted):
+    '''
+    For some reason it appears that regressors with zero variance explained relative to full model are set to -1 sometimes
+    This causes plots of coding scores to look totally wrong
+    This function flips them to zero so that things are accurate
+    '''
+    features = ['image0', 'image1', 'image2', 'image3', 'image4', 'image5', 'image6', 'image7',
+                    'omissions', 'hits', 'misses', 'running', 'pupil', 'licks', ]
+
+    tmp = results_pivoted.loc[:, features]
+    tmp[tmp==-1.0] = 0
+    results_pivoted[features] = tmp
+    return results_pivoted
+
+
+
 def get_multi_session_df_for_omissions():
     """
     loads multi-session omission response dataframe for events, only closest familiar and novel active

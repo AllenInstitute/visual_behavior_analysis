@@ -61,6 +61,8 @@ def convert_experience_level(experience_level):
         new_experience_level = 'Novel +'
     elif experience_level == 'Familiar':
         new_experience_level = experience_level
+    else: 
+        new_experience_level = experience_level 
     return new_experience_level
 
 
@@ -432,7 +434,8 @@ def make_color_transparent(rgb_color, background_rgb=[255, 255, 255], alpha=0.5)
             for (c1, c2) in zip(rgb_color, background_rgb)]
 
 
-def placeAxesOnGrid(fig, dim=[1, 1], xspan=[0, 1], yspan=[0, 1], wspace=None, hspace=None, sharex=False, sharey=False):
+def placeAxesOnGrid(fig, dim=[1, 1], xspan=[0, 1], yspan=[0, 1], wspace=None, hspace=None,
+                    sharex=False, sharey=False, width_ratios=None, height_ratios=None):
     '''
     Takes a figure with a gridspec defined and places an array of sub-axes on a portion of the gridspec
 
@@ -451,9 +454,9 @@ def placeAxesOnGrid(fig, dim=[1, 1], xspan=[0, 1], yspan=[0, 1], wspace=None, hs
     outer_grid = gridspec.GridSpec(100, 100)
     inner_grid = gridspec.GridSpecFromSubplotSpec(dim[0], dim[1],
                                                   subplot_spec=outer_grid[int(100 * yspan[0]):int(100 * yspan[1]),
-                                                                          # flake8: noqa: E999
-                                                                          int(100 * xspan[0]):int(100 * xspan[1])], wspace=wspace,
-                                                  hspace=hspace)  # flake8: noqa: E999
+                                                  int(100 * xspan[0]):int(100 * xspan[1])],
+                                                  wspace=wspace, hspace=hspace,
+                                                  width_ratios = width_ratios, height_ratios = height_ratios)  # flake8: noqa: E999
 
     # NOTE: A cleaner way to do this is with list comprehension:
     # inner_ax = [[0 for ii in range(dim[1])] for ii in range(dim[0])]
@@ -462,6 +465,8 @@ def placeAxesOnGrid(fig, dim=[1, 1], xspan=[0, 1], yspan=[0, 1], wspace=None, hs
     idx = 0
     for row in range(dim[0]):
         for col in range(dim[1]):
+
+
             if row > 0 and sharex == True:
                 share_x_with = inner_ax[0][col]
             else:
@@ -471,6 +476,9 @@ def placeAxesOnGrid(fig, dim=[1, 1], xspan=[0, 1], yspan=[0, 1], wspace=None, hs
                 share_y_with = inner_ax[row][0]
             else:
                 share_y_with = None
+
+            if row > 0 and sharey == 'col':
+                share_y_with = inner_ax[0][col]
 
             inner_ax[row][col] = plt.Subplot(fig, inner_grid[idx], sharex=share_x_with, sharey=share_y_with)
             fig.add_subplot(inner_ax[row, col])

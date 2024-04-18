@@ -23,23 +23,69 @@ if __name__ == '__main__':
     ophys_container_id = args.ophys_container_id
     print('ophys_container_id:', ophys_container_id)
 
-    cache_dir = loading.get_platform_analysis_cache_dir()
-    cache = bpc.from_s3_cache(cache_dir=cache_dir)
+    # get metadata
+    platform_cache_dir = loading.get_platform_analysis_cache_dir()
+    cache = bpc.from_s3_cache(cache_dir=platform_cache_dir)
     print(cache_dir)
     experiments_table = cache.get_ophys_experiment_table()
     ophys_experiment_ids = experiments_table[experiments_table.ophys_container_id==ophys_container_id].index.values
 
+    # get GLM results
+    results_pivoted = pd.read_hdf(os.path.join(platform_cache_dir, 'glm_results', 'platform_results_pivoted.h5'), key='df')
+    weights_df = pd.read_hdf(os.path.join(platform_cache_dir, 'glm_results', 'platform_results_weights_df.h5'), key='df')
+    run_params = pd.read_pickle(os.path.join(platform_cache_dir, 'glm_results', glm_version + '_run_params.pkl'))
+    kernels = run_params['kernels']
+
+    # where to save figures
+    save_dir = r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/platform_paper_figures_final/figure_3'
+
+
     for ophys_experiment_id in ophys_experiment_ids:
         print('loading model fits & generating plots for', ophys_experiment_id)
         # load and save GLM model fits
-        cdf = gep.get_glm_model_fit_cell_results_df(ophys_experiment_id)
+        # cdf = gep.get_glm_model_fit_cell_results_df(ophys_experiment_id)
         # plot example plots
-        gep.plot_glm_model_fit_examples(ophys_experiment_id)
+        # gep.plot_glm_model_fit_examples(ophys_experiment_id)
+
+        # get dataset for this experiment
+        dataset = loading.get_ophys_dataset(ophys_experiment_id)
+
+        # get start time using function to optimize events in window
+        times = utils.get_start_end_time_for_period_with_omissions_and_change(dataset.stimulus_presentations, n_flashes=20)
+        start_time = times[0]
+        duration_seconds = times[-1] - times[0]
+        # plot kernel activations
+        gep.plot_behavior_timeseries_and_GLM_kernel_activations(dataset, start_time, duration_seconds, save_dir=save_dir)
+
+        # get cell info
+        cell_index = 0
+        expt_dropouts = results_pivoted[results_pivoted.ophys_experiment_id == ophys_experiment_id]
+        cell_specimen_id_1 = expt_dropouts.sort_values(by='variance_explained_full', ascending=False).cell_specimen_id.values[cell_index]
+        cell_specimen_id_2 = expt_dropouts.sort_values(by='behavioral', ascending=True).cell_specimen_id.values[cell_index]
+
+        gep.plot_glm_methods_with_example_cells(ophys_experiment_id, cell_specimen_id_1, cell_specimen_id_2,
+                                                weights_df, results_pivoted, kernels, save_dir=save_dir)
+
+        ### plot model fits, kernels, & coding scores
+
+        # get stimulus response dfs for kernel lengths
+        kernels = run_params['kernels']
+        image_sdf, omission_sdf, change_sdf = gep.get_stimulus_response_dfs_for_kernel_windows(dataset, kernels, frame_rate=31)
+
+        # generate the plot for high variance cells
+
+        high_var_cells = expt_dropouts.sort_values(by='variance_explained_full', ascending=False).cell_specimen_id.values
+        if high_var_cells < 20:
+            n_cells = len(high_var_cells)
+        else:
+            n_cells = 20
+        for cell_specimen_id in high_var_cells[:20]:
+            gep.plot_model_fits_and_kernels_for_example_cell(ophys_experiment_id, cell_specimen_id,
+                                                                 dataset, image_sdf, omission_sdf, change_sdf,
+                                                                 results_pivoted, weights_df, kernels, save_dir=save_dir)
 
 
-
-
-    ### first plot cell ROI and change and omission triggered averages across sessions
+        ### first plot cell ROI and change and omission triggered averages across sessions
     #
     # use_events = True
     # filter_events = True

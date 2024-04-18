@@ -110,9 +110,220 @@ def plot_glm_model_fit_examples_with_GLM_class(ophys_experiment_id):
         gsm.plot_glm_example(glm, cell_specimen_id, run_params, times=times, savefig=True)
 
 
+def get_n_rows_and_ratios_for_stim_window(stim_table, xlim_seconds):
+    stim_table = stim_table[(stim_table.start_time >= xlim_seconds[0]) & (stim_table.end_time <= xlim_seconds[1])]
+    n_images = len(stim_table[stim_table.image_name != 'omitted'].image_name.unique())
+    n_rows = n_images + 7  # there are 6 non image kernels (omissions, hit, miss, lick, run, pupil), plus a top row for stim times
+
+    # set height ratios depending on how many rows there are
+    height_ratios = [1.5]  # top row is larger for stim, licks & rewards
+    for x in range(n_images + 6):  # 6 non-image kernels
+        height_ratios.append(1)
+
+    return n_rows, height_ratios
+
+
+def plot_kernel_for_feature(cell_weights, feature, kernels, ax):
+    # defaults
+    change = False
+    omitted = False
+
+    # plot kernel
+    kernel_weights = cell_weights[feature + '_weights'].values[0]
+    t_array = get_t_array_for_kernel(kernels, feature, frame_rate=31)
+    ax.plot(t_array, kernel_weights, color='k')
+
+    # plot stim, change, or omission durations
+    if (feature == 'hit') or (feature == 'miss'):
+        change = True
+    if feature == 'omissions':
+        omitted = True
+    ax = utils.plot_flashes_on_trace(ax, t_array, change, omitted, alpha=0.2)
+
+    ax.set_xlim(t_array[0], t_array[-1])
+
+    return ax
+
+
+
+def plot_coding_score_for_feature(cell_dropouts, feature, ax):
+
+    ax.barh(y=0, width=np.abs(cell_dropouts[feature].values), height=0.75)
+    ax.set_ylim(-1, 1)
+    ax.set_xlim(0,1)
+
+    return ax
+
+
+
+def plot_kernels_for_cell(cell_weights, cell_dropouts, kernels, dataset, xlim_seconds, save_dir=None, ax=None):
+    """
+    Plots kernel weights for an example cell, using the kernels present in a given time window during the session,
+    defined by xlim_seconds
+    """
+
+    # get stimulus information
+    stim_table = dataset.stimulus_presentations.copy()
+    stim_table = loading.limit_stimulus_presentations_to_change_detection(stim_table)
+    all_images = np.sort(stim_table[stim_table.image_name != 'omitted'].image_name.unique())
+
+    # if no xlims are provided, use the whole session
+    if xlim_seconds is None:
+        xlim_seconds = [stim_table.start_time.values[0], stim_table.end_time.values[-1]]
+
+    # limit to time window
+    stim_table = stim_table[(stim_table.start_time >= xlim_seconds[0]) & (stim_table.end_time <= xlim_seconds[1])]
+
+    # get n_rows and height ratios based on how many images are in this window
+    n_rows, height_ratios = get_n_rows_and_ratios_for_stim_window(stim_table, xlim_seconds)
+
+    if ax is None:
+        figsize = (2, 0.5*n_rows)
+        fig, ax = plt.subplots(n_rows, 1, figsize=figsize, sharex=False, sharey='col', gridspec_kw={'height_ratios': height_ratios})
+
+    # get kernel indices for the images in this window
+    images_in_window = []
+    for idx in stim_table.index:
+        image_name = stim_table.loc[idx]['image_name']
+        if (image_name not in images_in_window) and (image_name != 'omitted'):
+            images_in_window.append(image_name)
+
+    i = 1
+    # plot kernels for images in this window
+    for image in images_in_window:
+        kernel_image_index = np.where(all_images == image)[0][0]
+        image_kernel = 'image' + str(kernel_image_index)
+        ax[i] = plot_kernel_for_feature(cell_weights, feature=image_kernel, kernels=kernels, ax=ax[i])
+        i += 1
+
+    # plot all other kernels
+    ax[i] = plot_kernel_for_feature(cell_weights, feature='omissions', kernels=kernels, ax=ax[i])
+    i += 1
+    ax[i] = plot_kernel_for_feature(cell_weights, feature='hits', kernels=kernels, ax=ax[i])
+    i += 1
+    ax[i] = plot_kernel_for_feature(cell_weights, feature='misses', kernels=kernels, ax=ax[i])
+    i += 1
+    ax[i] = plot_kernel_for_feature(cell_weights, feature='licks', kernels=kernels, ax=ax[i])
+    i += 1
+    ax[i] = plot_kernel_for_feature(cell_weights, feature='running', kernels=kernels, ax=ax[i])
+    i += 1
+    ax[i] = plot_kernel_for_feature(cell_weights, feature='pupil', kernels=kernels, ax=ax[i])
+
+    for i in range(n_rows):
+        ax[i].tick_params(which='both', bottom=False, top=False, right=False, left=False,
+                               labelbottom=False, labeltop=False, labelright=False, labelleft=False)
+        ax[i].spines[['right', 'top', 'bottom', 'left']].set_visible(False)
+        ax[i].set_yticklabels([])
+        ax[i].set_xticklabels([])
+
+    ax[i].tick_params(which='both', bottom=False, top=False, right=False, left=False,
+                         labelbottom=False, labeltop=False, labelright=False, labelleft=False)
+    # ylims = ax[i][0].get_ylim()
+    # ax[i][0].set_yticks([np.round(ylim, 2) for ylim in ylims])
+    # ax[i][0].set_yticklabels([np.round(ylim, 2) for ylim in ylims], fontsize=10)
+    # ax[i][0].set_ylabel('Weight', fontsize=12)
+    # ax[i][0].set_xlabel('Time (s)')
+
+
+    # ax[i].set_xlabel('Weights')
+
+    plt.subplots_adjust(hspace=0, wspace=0.1)
+
+    if save_dir:
+        folder = 'coding_score_examples'
+        utils.save_figure(fig, figsize, save_dir, folder, metadata_string + '_' + str(int(start_time))+'_kernels')
+    return ax
+
+
+def plot_glm_methods_with_example_cells(ophys_experiment_id, cell_specimen_id_1, cell_specimen_id_2,
+                                                weights_df, results_pivoted, kernels, save_dir=None):
+    '''
+    Plot multi-panel figure with:
+     kernel support for a window of time during which there is one omission and one change
+     kernels for 2 example cells
+     coding scores for 2 example cells
+     model fit for 2 example cells during same time window as kernel support plot
+    '''
+
+    dataset = loading.get_ophys_dataset(ophys_experiment_id)
+
+    # get GLM results
+    cell_results_df, expt_results, expt_dropouts = load_glm_model_fit_results(ophys_experiment_id)
+
+    # get start time using function to optimize events in window
+    n_flashes = 16
+    times = utils.get_start_end_time_for_period_with_omissions_and_change(dataset.stimulus_presentations, n_flashes)
+    xlim_seconds = [times[0], times[-1]]
+    start_time = times[0]
+    duration_seconds = n_flashes * 0.75
+
+    # limit to time window
+    stim_table = loading.limit_stimulus_presentations_to_change_detection(dataset.stimulus_presentations)
+    stim_table = stim_table[(stim_table.start_time >= xlim_seconds[0]) & (stim_table.end_time <= xlim_seconds[1])]
+
+    # get n_rows and height ratios based on how many images are in this window
+    n_rows, height_ratios = get_n_rows_and_ratios_for_stim_window(stim_table, xlim_seconds)
+
+    figsize = [2 * 11, 2 * 8.5]
+    fig = plt.figure(figsize=figsize, facecolor='white')
+
+    ax = utils.placeAxesOnGrid(fig, dim=(n_rows, 1), xspan=(0, 0.4), yspan=(0, 0.45), sharex=True, height_ratios=height_ratios)
+    ax = plot_behavior_timeseries_and_GLM_kernel_activations(dataset, start_time, duration_seconds, ax=ax)
+
+    # cell 1 data
+    identifier = str(ophys_experiment_id) + '_' + str(cell_specimen_id_1)
+    cell_weights = weights_df[weights_df.identifier == identifier]
+    cell_dropouts = results_pivoted[results_pivoted.identifier == identifier]
+
+    # model fits - cell 1
+    ax = utils.placeAxesOnGrid(fig, dim=(1, 1), xspan=(0, 0.4), yspan=(0.65, 0.75), wspace=0.2)
+    ax = plot_model_fits_example_cell(cell_specimen_id_1, dataset, cell_results_df, expt_dropouts, expt_results, None, include_events=True, times=times, as_panel=True, ax=ax)
+    ax.set_ylabel('Cell 1')
+
+    # kernels - cell 1
+    ax = utils.placeAxesOnGrid(fig, dim=(n_rows, 1), xspan=(0.47, 0.55), yspan=(0, 0.45), sharex=False, sharey='col', height_ratios=height_ratios, hspace=0.05)
+    ax = plot_kernels_for_cell(cell_weights, cell_dropouts, kernels, dataset, xlim_seconds, ax=ax)
+    ax[1].set_title('Cell 1')
+
+    # coding scores - cell 1
+    ax = utils.placeAxesOnGrid(fig, dim=(1, 1), xspan=(0.47, 0.55), yspan=(0.47, 0.55))
+    ax = plot_coding_score_components_for_cell(cell_specimen_id_1, ophys_experiment_id, results_pivoted, ax=ax)
+    ax.set_title('')
+    ax.set_ylim(0, 1)
+
+    # cell 2 data
+    identifier = str(ophys_experiment_id) + '_' + str(cell_specimen_id_2)
+    cell_weights = weights_df[weights_df.identifier == identifier]
+    cell_dropouts = results_pivoted[results_pivoted.identifier == identifier]
+
+    # model fits cell 2
+    ax = utils.placeAxesOnGrid(fig, dim=(1, 1), xspan=(0, 0.4), yspan=(0.8, 0.9))
+    ax = plot_model_fits_example_cell(cell_specimen_id_2, dataset, cell_results_df, expt_dropouts, expt_results, None, include_events=True, times=times, as_panel=True, ax=ax)
+    ax.set_ylabel('Cell 2')
+
+    # kernels - cell 2
+    ax = utils.placeAxesOnGrid(fig, dim=(n_rows, 1), xspan=(0.57, 0.64), yspan=(0, 0.45), sharex=False, sharey='col', height_ratios=height_ratios, hspace=0.05)
+    ax = plot_kernels_for_cell(cell_weights, cell_dropouts, kernels, dataset, xlim_seconds, ax=ax)
+    ax[1].set_title('Cell 2')
+
+    # coding scores - cell 2
+    ax = utils.placeAxesOnGrid(fig, dim=(1, 1), xspan=(0.57, 0.64), yspan=(0.47, 0.55))
+    ax = plot_coding_score_components_for_cell(cell_specimen_id_2, ophys_experiment_id, results_pivoted, ax=ax)
+    ax.set_title('')
+    ax.set_ylim(0, 1)
+    ax.set_ylabel('')
+    ax.set_yticklabels([])
+
+
+    if save_dir:
+        folder = 'glm_methods_cell_examples'
+        metadata_string = utils.get_metadata_string(dataset.metadata)
+        utils.save_figure(fig, figsize, save_dir, folder, metadata_string + '_' + str(int(start_time)) + '_' + str(cell_specimen_id_1) + '_' + str(cell_specimen_id_2))
+
+
 def plot_model_fits_example_cell(cell_specimen_id, dataset, cell_results_df, dropouts, results,
-                                 kernel=None, include_events=True,
-                                 times=None, save_dir=None, ax=None):
+                                 kernel=None, include_events=True, times=None,
+                                 as_panel=False, save_dir=None, ax=None):
     '''
     For one cell, plot the cell trace, model fits, and model fits with a specific kernel (such as all-images or omissions) removed
     Inputs are attributes of the GLM class in visual_behavior_glm repo, either derived by instantiating the GLM class,
@@ -201,15 +412,26 @@ def plot_model_fits_example_cell(cell_specimen_id, dataset, cell_results_df, dro
                 linewidth=style['trace_linewidth'], color='limegreen')
 
     # Clean up plot
-    ax.legend(loc='upper right', fontsize=12)
-    ax.set_ylabel('Calcium events', fontsize=style['fs1'])
-    ax.set_xlabel('Time in session (s)', fontsize=style['fs1'])
-    ax.spines['top'].set_visible(False)
-    ax.tick_params(axis='x', labelsize=style['fs2'])
-    ax.tick_params(axis='y', labelsize=style['fs2'])
+    if as_panel:
+        # ax.legend(loc='upper right', fontsize=8)
+        # ax.tick_params(axis='both', which='both', labelsize=8)
+        # ax.set_ylabel('Calcium\nevents', fontsize=12)
+        ax.set_xlabel('')
+        ax.spines[['top', 'bottom', 'left', 'right']].set_visible(False)
+        ax.tick_params(which='both', bottom=False, top=False, right=False, left=False,
+                             labelbottom=False, labeltop=False, labelright=False, labelleft=False)
+        ax.set_title('')
+    else:
+        ax.legend(loc='upper right', fontsize=12)
+        ax.set_ylabel('Calcium events', fontsize=style['fs1'])
+        ax.set_xlabel('Time in session (s)', fontsize=style['fs1'])
+        ax.spines['top'].set_visible(False)
+        ax.tick_params(axis='x', labelsize=style['fs2'])
+        ax.tick_params(axis='y', labelsize=style['fs2'])
+        ax.set_title('csid: ' + str(cell_specimen_id))
     # ax.set_ylim(-0.035,.9)
     ax.set_xlim(times)
-    ax.set_title('csid: ' + str(cell_specimen_id))
+
 
     if save_dir:
         if kernel is not None:
@@ -404,7 +626,7 @@ def plot_kernel_activations(dataset, start_time, duration_seconds, kernel='omiss
                 ax.plot(kernel_trace_timestamps, kernel_trace, color='gray', linewidth=0.5)
 
     # label y axis with kernel name
-    ax.set_ylabel(kernel, rotation=0, horizontalalignment='right', verticalalignment='center')
+    ax.set_ylabel(kernel, rotation=0, horizontalalignment='left', verticalalignment='center')
 
     return ax
 
@@ -431,6 +653,19 @@ def plot_behavior_timeseries_and_GLM_kernel_activations(dataset, start_time, dur
     # get limits for this time window
     # xlim_seconds = [start_time - (duration_seconds / 4.), start_time + duration_seconds * 2]
     xlim_seconds = [start_time, start_time + duration_seconds]
+
+    stim_table = loading.limit_stimulus_presentations_to_change_detection(dataset.stimulus_presentations)
+
+    # get kernel indices for the images in this window
+    stim_table = stim_table[(stim_table.start_time >= xlim_seconds[0]) & (stim_table.end_time <= xlim_seconds[1])]
+    images_in_window = []
+    for idx in stim_table.index:
+        image_name = stim_table.loc[idx]['image_name']
+        if (image_name not in images_in_window) and (image_name != 'omitted'):
+            images_in_window.append(image_name)
+
+    # get number of rows and height ratios depending on how many images are in this window
+    n_rows, height_ratios = get_n_rows_and_ratios_for_stim_window(stim_table, xlim_seconds)
 
     # get behavior events & timeseries to plot
     lick_timestamps = dataset.licks.timestamps.values
@@ -464,11 +699,10 @@ def plot_behavior_timeseries_and_GLM_kernel_activations(dataset, start_time, dur
     pupil_diameter = pupil_diameter[start_ind:stop_ind]
     pupil_timestamps = pupil_timestamps[start_ind:stop_ind]
 
-    n_rows = 10
-    figsize = (10, 6)
-    fig, ax = plt.subplots(n_rows, 1, figsize=figsize, sharex=True,
-                           gridspec_kw={'height_ratios': [1.5, 1, 1, 1, 1, 1, 1, 1, 1.5, 1.5, ]})
-    ax = ax.ravel()
+    if ax is None:
+        figsize = (10, 6)
+        fig, ax = plt.subplots(n_rows, 1, figsize=figsize, sharex=True, gridspec_kw={'height_ratios':height_ratios})
+        ax = ax.ravel()
 
     colors = sns.color_palette()
 
@@ -479,28 +713,42 @@ def plot_behavior_timeseries_and_GLM_kernel_activations(dataset, start_time, dur
     ax[0].set_yticklabels([])
     ax[0].set_ylim(-3, 0)
     # ax[0].legend(bbox_to_anchor=(0, 0.529))
-    ax[0].legend(bbox_to_anchor=(0, 0.529))
+    ax[0].legend(loc='upper right', fontsize='xx-small') #bbox_to_anchor=(0.0, 0.6), fontsize='x-small')
     # ax[0].set_ylabel('stimulus & behavior events')
 
     # next axes are the kernel timings
-    ax[1] = plot_kernel_activations(dataset, start_time, duration_seconds, kernel='image 1', ax=ax[1])
-    ax[2] = plot_kernel_activations(dataset, start_time, duration_seconds, kernel='image 2', ax=ax[2])
-    ax[3] = plot_kernel_activations(dataset, start_time, duration_seconds, kernel='image 3', ax=ax[3])
-    ax[4] = plot_kernel_activations(dataset, start_time, duration_seconds, kernel='omissions', ax=ax[4])
-    ax[5] = plot_kernel_activations(dataset, start_time, duration_seconds, kernel='hits', ax=ax[5])
-    ax[6] = plot_kernel_activations(dataset, start_time, duration_seconds, kernel='misses', ax=ax[6])
-    ax[7] = plot_kernel_activations(dataset, start_time, duration_seconds, kernel='licks', ax=ax[7])
-    for i in range(1, 8):
-        ax[i].set_ylim(-0.2, 1.2)
+    i = 1
+    for image in images_in_window:
+        ax[i] = plot_kernel_activations(dataset, start_time, duration_seconds, kernel='image '+str(i), ax=ax[i])
+        i+= 1
+
+    ax[i] = plot_kernel_activations(dataset, start_time, duration_seconds, kernel='omissions', ax=ax[i])
+    i+=1
+
+    ax[i] = plot_kernel_activations(dataset, start_time, duration_seconds, kernel='hits', ax=ax[i])
+    i+=1
+
+    ax[i] = plot_kernel_activations(dataset, start_time, duration_seconds, kernel='misses', ax=ax[i])
+    i+=1
+
+    ax[i] = plot_kernel_activations(dataset, start_time, duration_seconds, kernel='licks', ax=ax[i])
+    i+=1
+
+    for x in range(1, i):
+        ax[x].set_ylim(-0.2, 1.2)
 
     # now plot running and pupil as continuous variables
-    ax[8].plot(running_timestamps, running_speed, label='running_speed', color='k')
-    ax[8].set_ylabel('running', rotation=0, horizontalalignment='right', verticalalignment='center')
-    ax[8].set_ylim(ymin=-8)
+    ax[i].plot(running_timestamps, running_speed, label='running_speed', color='k')
+    ax[i].set_ylabel('running', rotation=0, horizontalalignment='left', verticalalignment='center')
+    ax[i].yaxis.set_label_position("right")
+    ax[i].set_ylim(ymin=-8)
+    i+=1
 
-    ax[9].plot(pupil_timestamps, pupil_diameter, label='pupil_diameter', color='k')
-    ax[9].set_ylabel('pupil', rotation=0, horizontalalignment='right', verticalalignment='center')
-    ax[9].set_xticks(np.arange(xlim_seconds[0], xlim_seconds[1], 4))
+    ax[i].plot(pupil_timestamps, pupil_diameter, label='pupil_diameter', color='k')
+    ax[i].set_ylabel('pupil', rotation=0, horizontalalignment='left',  verticalalignment='center')
+    ax[i].yaxis.set_label_position("right")
+    ax[i].set_xticks(np.arange(xlim_seconds[0], xlim_seconds[1], 4))
+    i+=1
 
     # remove ticks everywhere but bottom row + set xlim for all axes
     i = n_rows - 1
@@ -511,7 +759,8 @@ def plot_behavior_timeseries_and_GLM_kernel_activations(dataset, start_time, dur
                           labelbottom=False, labeltop=False, labelright=False, labelleft=True)
         ax[i].spines[['right', 'top', 'bottom', 'left']].set_visible(False)
         ax[i].set_yticklabels([])
-        # ax[i].yaxis.set_label_position("right")()
+        # flip all ylabels to the right side
+        ax[i].yaxis.set_label_position("right")
         if label_stim_times_on_all_rows:
             ax[i] = ppf.add_stim_color_span(dataset, ax[i], xlim=xlim_seconds)
     # bottom row has ticks for timestamps
@@ -520,15 +769,15 @@ def plot_behavior_timeseries_and_GLM_kernel_activations(dataset, start_time, dur
 
     # add title to top row
     metadata_string = utils.get_metadata_string(dataset.metadata)
-    plt.suptitle(metadata_string + '\nEncoding model features', x=0.5, y=1.05, fontsize=18)
-    # ax[0].set_title('Encoding model features')
 
+    ax[0].set_title(metadata_string + '\nEncoding model features')
+    # plt.suptitle(metadata_string + '\nEncoding model features', x=0.5, y=1.05, fontsize=18)
+    # ax[0].set_title('Encoding model features'
     plt.subplots_adjust(hspace=0, wspace=0.9)
 
     if save_dir:
         folder = 'behavior_physio_timeseries_GLM_kernels'
-        utils.save_figure(fig, figsize, save_dir, folder, metadata_string + '_' + str(int(start_time)),
-                          formats=['.png'])
+        utils.save_figure(fig, figsize, save_dir, folder, metadata_string + '_' + str(int(start_time)))
     return ax
 
 
@@ -913,11 +1162,11 @@ def plot_image_kernels_and_traces_for_cell(cell_specimen_id, dataset,
 
 
 def plot_all_kernels_and_traces_for_cell(cell_specimen_id, dataset, image_sdf, omission_sdf, change_sdf,
-                                         weights_df, kernels, save_dir=None, ax=None):
+                                         weights_df, kernels, show_cell_response=True, save_dir=None, ax=None):
     """
     plots the average reponse and kernel weights for each kernel type for a given cell
     Must use `get_stimulus_response_dfs_for_kernel_windows` to get image omission and change stimulus response dfs
-    weights_df and kernels can be obtained using `load_GLM_outputs`
+    weights_df and kernels can be obtained using `load_GLM_outputs` or by loading files directly from the cache
     """
 
     # cre_line = utils.get_abbreviated_cell_type(dataset.metadata['cre_line'])
@@ -962,10 +1211,10 @@ def plot_all_kernels_and_traces_for_cell(cell_specimen_id, dataset, image_sdf, o
     frame_rate = 31
     t_array = get_t_array_for_kernel(kernels, feature, frame_rate)
     ax[i] = utils.plot_flashes_on_trace(ax[i], t_array, change=False, omitted=False, alpha=0.2)
-    # image_name = image_names[i]
-    ax[i] = utils.plot_mean_trace(image_cdf.trace.values, image_cdf.trace_timestamps.values[0],
-                                  ylabel='event magnitude', legend_label='data', color=color, interval_sec=0.5,
-                                  xlim_seconds=[t_array[0], t_array[-1]], plot_sem=True, ax=ax[i])
+    if show_cell_response:
+        ax[i] = utils.plot_mean_trace(image_cdf.trace.values, image_cdf.trace_timestamps.values[0],
+                                      ylabel='event magnitude', legend_label='data', color=color, interval_sec=0.5,
+                                      xlim_seconds=[t_array[0], t_array[-1]], plot_sem=True, ax=ax[i])
     ax[i].plot(t_array, mean_image_weights, color=color, linestyle='--', label='model')
     ax[i].set_title('images')
     ax[i].set_xlabel('Time (s)')
@@ -982,13 +1231,15 @@ def plot_all_kernels_and_traces_for_cell(cell_specimen_id, dataset, image_sdf, o
         t_array = get_t_array_for_kernel(kernels, feature, frame_rate)
         if feature == 'omissions':
             ax[i] = utils.plot_flashes_on_trace(ax[i], t_array, change=False, omitted=True, alpha=0.2)
-            ax[i] = utils.plot_mean_trace(omission_cdf.trace.values, omission_cdf.trace_timestamps.values[0],
+            if show_cell_response:
+                ax[i] = utils.plot_mean_trace(omission_cdf.trace.values, omission_cdf.trace_timestamps.values[0],
                                           ylabel='event magnitude', legend_label='data', color=color, interval_sec=1,
                                           xlim_seconds=[t_array[0], t_array[-1]], plot_sem=True, ax=ax[i])
         elif feature == 'hits':
             try:
                 ax[i] = utils.plot_flashes_on_trace(ax[i], t_array, change=True, omitted=False, alpha=0.2)
-                ax[i] = utils.plot_mean_trace(hits_cdf.trace.values, hits_cdf.trace_timestamps.values[0],
+                if show_cell_response:
+                    ax[i] = utils.plot_mean_trace(hits_cdf.trace.values, hits_cdf.trace_timestamps.values[0],
                                               ylabel='event magnitude', legend_label='data', color=color, interval_sec=1,
                                               xlim_seconds=[t_array[0], t_array[-1]], plot_sem=True, ax=ax[i])
             except:
@@ -996,13 +1247,15 @@ def plot_all_kernels_and_traces_for_cell(cell_specimen_id, dataset, image_sdf, o
         elif feature == 'misses':
             try:
                 ax[i] = utils.plot_flashes_on_trace(ax[i], t_array, change=True, omitted=False, alpha=0.2)
-                ax[i] = utils.plot_mean_trace(misses_cdf.trace.values, misses_cdf.trace_timestamps.values[0],
+                if show_cell_response:
+                    ax[i] = utils.plot_mean_trace(misses_cdf.trace.values, misses_cdf.trace_timestamps.values[0],
                                               ylabel='event magnitude', legend_label='data', color=color, interval_sec=1,
                                               xlim_seconds=[t_array[0], t_array[-1]], plot_sem=True, ax=ax[i])
             except:
                 print('could not plot traces for', feature, ophys_experiment_id, cell_specimen_id)
         try:
             ax[i].plot(t_array, kernel_weights, color=color, linestyle='--', label='model')
+
         except:
             print('could not plot kernel weights for', feature, ophys_experiment_id, cell_specimen_id)
         ax[i].set_ylabel('')
@@ -1015,15 +1268,11 @@ def plot_all_kernels_and_traces_for_cell(cell_specimen_id, dataset, image_sdf, o
         i += 1
     ax[i-1].legend(fontsize='x-small')
     ax[0].set_ylabel('Calcium events')
-    for x in range(i)[1:]:
-        ax[x].set_yticklabels([])
-    # except:
-    #     print('could not plot GLM kernels for', experience_level)
+
     if save_dir:
         title_string = str(ophys_experiment_id) + '_' + str(cell_specimen_id) + '_' + cre_line
-        fig.suptitle(title_string, x=0.5, y=1.02, fontsize=18)
+        plt.suptitle(title_string, x=0.5, y=1.15, fontsize=18)
         utils.save_figure(fig, figsize, save_dir, 'example_model_fits', title_string + '_kernels_other')
-        plt.close()
 
     return ax
 
@@ -1108,6 +1357,38 @@ def plot_coding_scores_for_cell(cell_specimen_id, ophys_experiment_id, results_p
         utils.save_figure(fig, figsize, save_dir, 'example_model_fits', title_string + '_coding_scores')
 
     return ax
+
+
+def plot_coding_score_components_for_cell(cell_specimen_id, ophys_experiment_id, results_pivoted, save_dir=None, ax=None):
+    '''
+    Creates barplot of coding scores for a single cell in a single experiment and saves it
+    '''
+
+    identifier = str(ophys_experiment_id) + '_' + str(cell_specimen_id)
+    # get dropouts just for one cell
+    cell_dropouts = results_pivoted[results_pivoted.identifier == identifier]
+
+    # which features to plot
+    main_coding_score_features = ['all-images', 'omissions', 'task', 'behavioral']
+
+    if ax is None:
+        figsize = (3, 2)
+        fig, ax = plt.subplots(figsize=figsize)
+    # get dropouts just for one cell
+    ax = sns.barplot(data=np.abs(cell_dropouts[main_coding_score_features]), orient='v', color='gray', ax=ax)  # color=sns.color_palette('Blues_r')[0], ax=ax)
+    ax.set_ylabel('Coding score')
+    ax.set_title('var_exp_full = ' + str(np.round(cell_dropouts.variance_explained_full.values[0], 3)))
+    ax.set_xticklabels(main_coding_score_features, rotation=45, horizontalalignment='right')
+
+    if save_dir:
+        # cre_line = utils.get_abbreviated_cell_type(cell_dropouts.cre_line.values[0])
+        cre_line = cell_dropouts['cre_line'].values[0].split('-')[0]
+        title_string = str(ophys_experiment_id) + '_' + str(cell_specimen_id) + '_' + cre_line
+        fig.suptitle(title_string, x=0.5, y=1., fontsize=16)
+        utils.save_figure(fig, figsize, save_dir, 'example_model_fits', title_string + '_coding_scores')
+
+    return ax
+
 
 ######## plot model fits, kernels, and coding scores in the same figure #######
 
@@ -1216,6 +1497,223 @@ def plot_glm_example_cells_figure(ophys_experiment_id, run_params,
                 utils.save_figure(fig, figsize, save_dir, 'glm_model_fits_figures'+filter_type,
                             str(ophys_experiment_id) + '_' + str(cell_specimen_id) + '_' + cre_line)
 
+
+def plot_model_fits_and_kernels_for_example_cell(ophys_experiment_id, cell_specimen_id, dataset,
+                                                     image_sdf, omission_sdf, change_sdf,
+                                                     results_pivoted, weights_df, kernels, save_dir=None):
+    '''
+    Create multi panel figure with:
+        cell events trace + model fit
+        cell events trace + model fit with images removed
+        cell events trace + model fit with omissions removed
+        cell dff trace + model fit
+        cell dff trace + model fit with images removed
+        cell dff trace + model fit with omissions removed
+        kernels for this cell
+        coding scores for this cell
+    '''
+
+    # get GLM results
+    cell_results_df, expt_results, dropouts = load_glm_model_fit_results(ophys_experiment_id)
+
+    # plot figuregep.
+    figsize = [2 * 11, 2 * 8.5]
+    fig = plt.figure(figsize=figsize, facecolor='white')
+
+    ax = utils.placeAxesOnGrid(fig, dim=(1, 1), xspan=(0, 0.45), yspan=(0, 0.15))
+    ax = plot_model_fits_example_cell(cell_specimen_id, dataset, cell_results_df, dropouts, expt_results, None, include_events=True, save_dir=None, ax=ax)
+    ax.set_xlabel('')
+
+    ax = utils.placeAxesOnGrid(fig, dim=(1, 1), xspan=(0, 0.45), yspan=(0.2, 0.35))
+    ax = plot_model_fits_example_cell(cell_specimen_id, dataset, cell_results_df, dropouts, expt_results, kernel='all-images', include_events=True, save_dir=None, ax=ax)
+    ax.set_title('')
+    ax.set_xlabel('')
+
+    ax = utils.placeAxesOnGrid(fig, dim=(1, 1), xspan=(0, 0.45), yspan=(0.4, 0.55))
+    ax = plot_model_fits_example_cell(cell_specimen_id, dataset, cell_results_df, dropouts, expt_results, kernel='omissions', include_events=True, save_dir=None, ax=ax)
+    ax.set_title('')
+
+    ax = utils.placeAxesOnGrid(fig, dim=(1, 1), xspan=(0.55, 1.0), yspan=(0, 0.15))
+    ax = plot_model_fits_example_cell(cell_specimen_id, dataset, cell_results_df, dropouts, expt_results, kernel=None, include_events=False, save_dir=None, ax=ax)
+    ax.set_xlabel('')
+
+    ax = utils.placeAxesOnGrid(fig, dim=(1, 1), xspan=(0.55, 1.0), yspan=(0.2, 0.35))
+    ax = plot_model_fits_example_cell(cell_specimen_id, dataset, cell_results_df, dropouts, expt_results, kernel='all-images', include_events=False, save_dir=None, ax=ax)
+    ax.set_title('')
+    ax.set_xlabel('')
+
+    ax = utils.placeAxesOnGrid(fig, dim=(1, 1), xspan=(0.55, 1.0), yspan=(0.4, 0.55))
+    ax = plot_model_fits_example_cell(cell_specimen_id, dataset, cell_results_df, dropouts, expt_results, kernel='omissions', include_events=False, save_dir=None, ax=ax)
+    ax.set_title('')
+
+    ax = utils.placeAxesOnGrid(fig, dim=(1, 8), xspan=(0., 0.7), yspan=(0.65, 0.75), sharey=True)
+    ax = plot_image_kernels_and_traces_for_cell(cell_specimen_id, dataset, image_sdf, omission_sdf, change_sdf, weights_df, kernels, save_dir=None, ax=ax)
+
+    ax = utils.placeAxesOnGrid(fig, dim=(1, 7), xspan=(0., 0.7), yspan=(0.9, 1.0), sharey=True, )
+    ax = plot_all_kernels_and_traces_for_cell(cell_specimen_id, dataset,
+                                              image_sdf, omission_sdf, change_sdf,
+                                              weights_df, kernels, show_cell_response=False, save_dir=None, ax=ax)
+
+    ax = utils.placeAxesOnGrid(fig, dim=(1, 1), xspan=(0.8, 1.0), yspan=(0.65, 1.0))
+    ax = plot_coding_scores_for_cell(cell_specimen_id, ophys_experiment_id, results_pivoted, save_dir=None, ax=ax)
+
+    metadata_string = utils.get_metadata_string(dataset.metadata)
+    fig.suptitle(metadata_string, x=0.5, y=0.9, fontsize=16)
+
+    if save_dir:
+        folder = 'glm_model_fits_figures'
+        metadata_string = utils.get_metadata_string(dataset.metadata)
+        utils.save_figure(fig, figsize, save_dir, folder, metadata_string + '_' + str(cell_specimen_id))
+
+
+
+##### plot weights of all cells plus population averages #######
+
+def plot_weights_and_coding_score_heatmaps_for_experience_levels(kernel, weights_df, run_params, row_condition='cre_line', col_condition='experience_level', vmax=0.002, xlabel='Time (s)',
+                                                                 save_dir=None, folder=None):
+    '''
+    Plot a heatmap of kernel weights and coding scores for all cells
+    Default values results in a figure with experience levels as columns and cre lines as rows
+
+    kernel: str, name of kernel to plot, must be column in weights_df
+    weights_df: dataframe of kernel weights for all cells & cell types
+    run_params: dict of run param values, including kernel durations
+    row_condition: column in weights_df to iterate over for rows
+    col_condition: column in weights_df to iterate over for columns
+    vmax: value of max and min weights to plot
+    xlabel: string to label xaxis with
+    '''
+
+    # get weights for this kernel
+    kernel_weights = weights_df[[kernel + '_weights', kernel, row_condition, col_condition]]
+
+    # conditions to iterate over
+    row_conditions = np.sort(kernel_weights[row_condition].unique())
+    col_conditions = np.sort(kernel_weights[col_condition].unique())
+
+    # get timestamps and intervals for xticklabels
+    timestamps = np.arange(run_params['kernels'][kernel]['offset'], run_params['kernels'][kernel]['offset'] + run_params['kernels'][kernel]['length'], 1 / 31.)
+    timestamps = np.round(timestamps, 2)
+    if 'image' in kernel:
+        timestamps = timestamps[:-1]
+    if np.max(timestamps) <= 1:
+        interval_sec = 0.5
+    else:
+        interval_sec = 1
+    xlim_seconds = [timestamps[0], timestamps[-1]]
+
+    # settings for population average plot
+    if kernel == 'omissions':
+        omitted = True
+    else:
+        omitted = False
+    if (kernel == 'hits') or (kernel == 'misses'):
+        change = True
+    else:
+        change = False
+    palette = utils.get_experience_level_colors()
+
+    # coding score colormap
+    import matplotlib
+    cmap = matplotlib.colormaps.get_cmap('Blues')
+    cmap.set_under('black')
+
+    # create plot
+    figsize = [16, 5]
+    fig = plt.figure(figsize=figsize, facecolor='white')
+    # loop through experience levels
+    for c, col in enumerate(col_conditions):
+        col_weights = kernel_weights[kernel_weights[col_condition] == col]
+
+        # create axes for this experience level
+        xspan = ((c * .1) * 2.5, ((c * .1) * 2.5) + 0.19)
+        print(xspan)
+        ax = utils.placeAxesOnGrid(fig, dim=(len(row_conditions), 2), xspan=xspan, yspan=(0, 1), wspace=0, hspace=0, sharex='col', sharey='row', width_ratios=[8, 1])
+
+        # loop through cre lines
+        for r, row in enumerate(row_conditions):
+            row_weights = col_weights[col_weights[row_condition] == row]
+            row_weights = row_weights.sort_values(by=kernel)
+            row_weights = row_weights.dropna()
+
+            # weights
+            data = pd.DataFrame(np.vstack(row_weights[kernel + '_weights'].values), columns=timestamps)
+            cbar_weights = ax[r][0].imshow(data.values, aspect='auto', cmap='PRGn', vmin=-vmax, vmax=vmax, extent=[timestamps[0], timestamps[-1], 0, np.shape(data)[0]])
+            ax[r][0].set_yticks([0, len(data)])
+            ax[r][0].set_yticklabels([len(data), ''])
+            if c == 0:
+                ax[r][0].set_ylabel(utils.convert_cre_line_to_cell_type(row))
+                ax[r][0].set_ylabel(utils.convert_cre_line_to_cell_type(row).split(' ')[0])
+            else:
+                ax[r][0].set_ylabel('')
+            if r < 2:
+                ax[r][0].set_xticklabels([])
+            else:
+                ax[r][0].set_xticks(np.arange(timestamps[0], timestamps[-1], interval_sec))
+                ax[r][0].set_xlabel(xlabel)
+
+            # coding scores
+            row_weights = col_weights[col_weights[row_condition] == row]
+            row_weights = row_weights.sort_values(by=kernel, ascending=True)
+            # data = pd.DataFrame(np.sqrt(row_weights[kernel].values))
+            coding_scores = row_weights[kernel].values
+            coding_scores = np.sqrt(coding_scores[:, np.newaxis] * -1)
+            cbar_coding = ax[r][1].imshow(coding_scores, aspect='auto', cmap=cmap, vmin=1e-10, vmax=1)
+            ax[r][1].set_yticks([0, len(data)])
+            ax[r][1].set_xticks([])
+            ax[r][1].set_yticklabels([])
+            # ax[r][1].set_ylabel(utils.convert_cre_line_to_cell_type(row))
+            ax[r][1].set_xticklabels([])
+
+        ax[0][0].set_title(utils.convert_experience_level(col), color=palette[c])
+
+    last_x_val = ((c * .1) * 2.5) + 0.2
+    xspan = (last_x_val, last_x_val + 0.02)
+    # weights colorbar
+    cax = utils.placeAxesOnGrid(fig, dim=(1, 1), xspan=xspan, yspan=(0.4, 0.6))
+    color_bar = fig.colorbar(cbar_weights, cax=cax)
+    color_bar.ax.set_title('Weight', fontsize=16, loc='left')
+    # color_bar.set_clim(zlims[0], zlims[1])
+    color_bar.ax.tick_params(axis='both', labelsize=14)
+    # coding scores colorbar
+    cax = utils.placeAxesOnGrid(fig, dim=(1, 1), xspan=xspan, yspan=(0.8, 1))
+    color_bar = fig.colorbar(cbar_coding, cax=cax, extend='min')
+    color_bar.ax.set_title('Coding \nscore', fontsize=16, loc='left')
+    color_bar.set_ticks([0, .5, 1])
+    color_bar.ax.tick_params(axis='both', labelsize=14)
+
+    # create axes for population averages
+    c += 1
+    xspan = (((c * .1) * 2.5) + 0.04, ((c * .1) * 2.5) + 0.23)
+    print(xspan)
+    ax = utils.placeAxesOnGrid(fig, dim=(len(row_conditions), 1), xspan=xspan, yspan=(0, 1), wspace=0, hspace=0, sharex='col')
+
+    # plot population average kernels for each cre line & experience level
+    for r, row in enumerate(row_conditions):
+        for c, col in enumerate(col_conditions):
+            # get weights for this cre line & experience level
+            condition_weights = kernel_weights[(kernel_weights[row_condition] == row) & (kernel_weights[col_condition] == col)]
+            condition_weights = condition_weights.dropna()
+            traces = np.vstack(np.asarray(condition_weights[kernel + '_weights']))
+            # plot average trace
+            ax[r] = utils.plot_mean_trace(traces, timestamps, ylabel='Kernel weights', legend_label=col, color=palette[c], interval_sec=interval_sec, xlim_seconds=xlim_seconds, ax=ax[r])
+            ax[r] = utils.plot_flashes_on_trace(ax[r], timestamps, change=change, omitted=omitted)
+            # ax.legend(loc='upper right', fontsize='xx-small')
+        ax[r].set_xlim(xlim_seconds)
+        ax[r].yaxis.set_label_position("right")
+        ax[r].yaxis.tick_right()
+        if r < 2:
+            ax[r].set_xlabel('')
+            ax[r].set_xticks([])
+        if r != 1:
+            ax[r].set_ylabel('')
+        sns.despine(ax=ax[r], left=True, bottom=False, right=False, )
+    ax[0].set_title('Average weights')
+    ax[r].set_xlabel(xlabel)
+
+    plt.suptitle(kernel + ' kernels', x=0.5, y=1)
+    if save_dir:
+        utils.save_figure(fig, figsize, save_dir, 'weight_heatmaps', kernel)
 
 
 if __name__ == '__main__':

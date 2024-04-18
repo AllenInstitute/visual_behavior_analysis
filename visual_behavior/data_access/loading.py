@@ -81,7 +81,8 @@ def convert_boolean_cols_to_bool(stimulus_presentations):
     for column in stimulus_presentations.columns.values:
         if stimulus_presentations[column].dtype == 'boolean':
             # remove NaNs and make bool
-            stimulus_presentations.loc[stimulus_presentations[stimulus_presentations[column].isnull()].index, column] = False
+            row_ids = stimulus_presentations[stimulus_presentations[column].isnull()].index
+            stimulus_presentations.loc[row_ids, column] = False
             stimulus_presentations[column] = stimulus_presentations[column].astype('bool')
     return stimulus_presentations
 
@@ -128,8 +129,8 @@ def get_platform_analysis_cache_dir():
     This is the cache directory to use for all platform paper analysis
     This cache contains NWB files downloaded directly from AWS
     """
-    # return '/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/platform_paper_cache_new'
-    return r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\platform_paper_cache_new'
+    return '/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/platform_paper_cache_new'
+    # return r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\platform_paper_cache_new'
 
   
 def get_production_cache_dir():
