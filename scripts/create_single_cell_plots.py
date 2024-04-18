@@ -61,14 +61,6 @@ if __name__ == '__main__':
         # plot kernel activations
         gep.plot_behavior_timeseries_and_GLM_kernel_activations(dataset, start_time, duration_seconds, save_dir=save_dir)
 
-        # get cell info
-        cell_index = 0
-        expt_dropouts = results_pivoted[results_pivoted.ophys_experiment_id == ophys_experiment_id]
-        cell_specimen_id_1 = expt_dropouts.sort_values(by='variance_explained_full', ascending=False).cell_specimen_id.values[cell_index]
-        cell_specimen_id_2 = expt_dropouts.sort_values(by='behavioral', ascending=True).cell_specimen_id.values[cell_index]
-
-        gep.plot_glm_methods_with_example_cells(ophys_experiment_id, cell_specimen_id_1, cell_specimen_id_2,
-                                                weights_df, results_pivoted, kernels, save_dir=save_dir)
 
         ### plot model fits, kernels, & coding scores
 
@@ -88,8 +80,18 @@ if __name__ == '__main__':
                                                                  dataset, image_sdf, omission_sdf, change_sdf,
                                                                  results_pivoted, weights_df, kernels, save_dir=save_dir)
 
+        try:
+            # get cell info
+            cell_index = 0
+            expt_dropouts = results_pivoted[results_pivoted.ophys_experiment_id == ophys_experiment_id]
+            cell_specimen_id_1 = expt_dropouts.sort_values(by='variance_explained_full', ascending=False).cell_specimen_id.values[cell_index]
+            cell_specimen_id_2 = expt_dropouts.sort_values(by='behavioral', ascending=True).cell_specimen_id.values[cell_index]
 
-        ### first plot cell ROI and change and omission triggered averages across sessions
+            gep.plot_glm_methods_with_example_cells(ophys_experiment_id, cell_specimen_id_1, cell_specimen_id_2, weights_df, results_pivoted, kernels, save_dir=save_dir)
+        except Exception as e:
+            print(e)
+
+            ### first plot cell ROI and change and omission triggered averages across sessions
     #
     # use_events = True
     # filter_events = True
