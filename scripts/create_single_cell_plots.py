@@ -5,6 +5,7 @@ import argparse
 
 import visual_behavior.data_access.loading as loading
 import visual_behavior.data_access.utilities as utilities
+import visual_behavior.visualization.utils as utils
 import visual_behavior.visualization.ophys.platform_paper_figures as ppf
 import visual_behavior.visualization.ophys.platform_single_cell_examples as psc
 import visual_behavior.visualization.ophys.glm_example_plots as gep
