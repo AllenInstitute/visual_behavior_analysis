@@ -78,6 +78,7 @@ def convert_boolean_cols_to_bool(stimulus_presentations):
     as many values specific to change_detection task are set to NaN in other stimulus blocks, which
     means that the entire column gets the dtype boolean instead of bool.
     '''
+    stimulus_presentations.convert_dtypes()
     for column in stimulus_presentations.columns.values:
         if stimulus_presentations[column].dtype == 'boolean':
             # remove NaNs and make bool
