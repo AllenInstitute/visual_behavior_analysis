@@ -61,7 +61,6 @@ if __name__ == '__main__':
         # plot kernel activations
         gep.plot_behavior_timeseries_and_GLM_kernel_activations(dataset, start_time, duration_seconds, save_dir=save_dir)
 
-
         ### plot model fits, kernels, & coding scores
 
         # get stimulus response dfs for kernel lengths

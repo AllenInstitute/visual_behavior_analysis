@@ -29,7 +29,8 @@ def save_figure(fig, figsize, save_dir, folder, fig_title, formats=['.png']):
     mpl.rcParams['pdf.fonttype'] = 42
     fig.set_size_inches(figsize)
     for f in formats:
-        fig.savefig(filename + f, transparent=True, orientation='landscape', bbox_inches='tight', dpi=300, facecolor=fig.get_facecolor())
+        fig.savefig(filename + f, bbox_inches="tight", transparent=True, pad_inches=1,
+                    orientation='landscape', dpi=300, facecolor=fig.get_facecolor())
 
 
 def get_colors_for_session_numbers():

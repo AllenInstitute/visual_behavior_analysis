@@ -63,7 +63,7 @@ def limit_stimulus_presentations_to_change_detection(stimulus_presentations):
     if 'stimulus_block_name' in stimulus_presentations:
         stimulus_presentations = stimulus_presentations[stimulus_presentations.stimulus_block_name.str.contains('change_detection')]
         # change a few columns from type Boolean to bool (they were previously Boolean so they could contain NaNs for non-change detection stim blocks)
-        # stimulus_presentations = convert_boolean_cols_to_bool(stimulus_presentations)
+        stimulus_presentations = convert_boolean_cols_to_bool(stimulus_presentations)
     return stimulus_presentations
 
 
@@ -129,8 +129,8 @@ def get_platform_analysis_cache_dir():
     This is the cache directory to use for all platform paper analysis
     This cache contains NWB files downloaded directly from AWS
     """
-    return '/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/platform_paper_cache_new'
-    # return r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\platform_paper_cache_new'
+    # return '/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/platform_paper_cache_new'
+    return r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\platform_paper_cache_new'
 
   
 def get_production_cache_dir():

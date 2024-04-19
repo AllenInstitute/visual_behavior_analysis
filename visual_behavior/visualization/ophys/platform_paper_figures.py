@@ -174,7 +174,7 @@ def plot_population_averages_for_conditions(multi_session_df, data_type, event_t
             ax[1].set_ylabel(ylabel)
             ax[i].set_xlabel(xlabel)
     if legend:
-        ax[i].legend(loc='upper center', fontsize='x-small', bbox_to_anchor=(1.3,1))
+        ax[i].legend(loc='upper center', fontsize='x-small', bbox_to_anchor=(1.5,1))
 
     if project_code:
         if suptitle is None:
@@ -182,6 +182,7 @@ def plot_population_averages_for_conditions(multi_session_df, data_type, event_t
     if suptitle:
         plt.suptitle(suptitle, x=0.52, y=1.3, fontsize=18)
     fig.subplots_adjust(hspace=0.4, wspace=0.4)
+    plt.rcParams["savefig.bbox"] = "tight"
     if save_dir:
         fig_title = 'population_average_' + axes_column + '_' + hue_column + suffix
         utils.save_figure(fig, figsize, save_dir, folder, fig_title)
@@ -532,7 +533,7 @@ def plot_fraction_responsive_cells(multi_session_df, responsiveness_threshold=0.
                               hue_order=experience_levels, palette=palette, dodge=0, join=False, ax=ax[i])
         ax[i].set_xticklabels(experience_levels, rotation=90)
         ax[i].set_ylabel('')
-        # ax[i].get_legend().remove()
+        ax[i].get_legend().remove()
         ax[i].set_title(cell_type)
         ax[i].set_xlabel('')
         if ylim is None:
@@ -1012,7 +1013,7 @@ def plot_metric_distribution_by_experience(metrics_table, metric, event_type, da
         if hue:
             if plot_type == 'pointplot':
                 dodge = 0.1 * (len(ct_data[hue].unique()))
-                ax[i] = sns.pointplot(data=ct_data, y=metric, x='experience_level', order=order, dodge=dodge, join=False,
+                ax[i] = sns.pointplot(data=ct_data, y=metric, x='experience_level', order=order, dodge=dodge, linestyle=None,
                                       hue=hue, hue_order=hue_order, palette='gray', ax=ax[i])
             elif plot_type == 'boxplot':
                 ax[i] = sns.boxplot(data=ct_data, y=metric, x='experience_level', order=order, fliersize=0,
@@ -1058,10 +1059,10 @@ def plot_metric_distribution_by_experience(metrics_table, metric, event_type, da
                                       palette=colors, ax=ax[i])
             elif plot_type == 'boxplot':
                 ax[i] = sns.boxplot(data=ct_data, x='experience_level', y=metric, width=0.4,
-                                    palette=colors, fliersize=0, ax=ax[i])
+                                    hue='experience_level', palette=colors, fliersize=0, legend=False, ax=ax[i])
             elif plot_type == 'violinplot':
                 ax[i] = sns.violinplot(data=ct_data, y=metric, x='experience_level', order=order,
-                                       hue=metric, palette=colors,  cut=0, ax=ax[i])
+                                       hue=metric, palette=colors,  cut=0, ax=ax[i])                        
                 for violin in ax[i].collections:
                     violin.set_alpha(0.75)
 
@@ -1116,6 +1117,7 @@ def plot_metric_distribution_by_experience(metrics_table, metric, event_type, da
 
         # ax[i].set_xticklabels(utils.get_abbreviated_experience_levels(), rotation=0)
         # utils.color_xaxis_labels_by_experience(ax[i])
+        ax[i].set_xticks(ax[i].get_xticks().tolist())
         ax[i].set_xticklabels(new_experience_levels, rotation=90,)  # ha='right')
 
         if ylabel:
@@ -1176,13 +1178,13 @@ def plot_metric_distribution_all_conditions(metrics_table, metric, event_type, d
                                            add_zero_line=add_zero_line, event_type=event_type, data_type=data_type,
                                            ylabel=ylabel, ylims=ylims, save_dir=save_dir, ax=None)
 
-    # # per project code, average over areas & depths
-    # for project_code in metrics_table.project_code.unique():
-    #     df = metrics_table[metrics_table.project_code == project_code]
-    #
-    #     plot_metric_distribution_by_experience(df, metric, stripplot=False, pointplot=True, event_type=event_type, data_type=data_type,
-    #                                            suffix=project_code, add_zero_line=add_zero_line,
-    #                                            ylabel=ylabel, ylims=ylims, save_dir=save_dir, ax=None)
+    # per project code, average over areas & depths
+    for project_code in metrics_table.project_code.unique():
+        df = metrics_table[metrics_table.project_code == project_code]
+
+        plot_metric_distribution_by_experience(df, metric, stripplot=False, pointplot=True, event_type=event_type, data_type=data_type,
+                                               suffix=project_code, add_zero_line=add_zero_line,
+                                               ylabel=ylabel, ylims=ylims, save_dir=save_dir, ax=None)
 
     # full dataset, for each area and depth
     if data_type in ['dff', 'events', 'filtered_events']:
@@ -1351,12 +1353,12 @@ def change_width(ax, new_value):
 # heatmaps ##########################
 
 def plot_cell_response_heatmap(data, timestamps, xlabel='time after change (s)', vmax=0.05,
-                               microscope='Multiscope', cbar=True, ax=None):
+                               microscope='Multiscope', cbar=True, cbar_label='Response', ax=None):
     if ax is None:
         fig, ax = plt.subplots()
     ax = sns.heatmap(data, cmap='binary', linewidths=0, linecolor='white', square=False,
                      vmin=0, vmax=vmax, robust=True, cbar=cbar,
-                     cbar_kws={"drawedges": False, "shrink": 0.7, "label": 'response'}, ax=ax)
+                     cbar_kws={"drawedges": False, "shrink": 0.7, "label": cbar_label}, ax=ax)
 
     zero_index = np.where(timestamps == 0)[0][0]
     ax.vlines(x=zero_index, ymin=0, ymax=len(data), color='gray', linestyle='--')
@@ -1384,7 +1386,7 @@ def plot_cell_response_heatmap(data, timestamps, xlabel='time after change (s)',
 def plot_response_heatmaps_for_conditions(multi_session_df, timestamps, data_type, event_type,
                                           row_condition, col_condition, cols_to_sort_by=None, suptitle=None,
                                           microscope=None, vmax=0.05, xlim_seconds=None, xlabel='time (s)',
-                                          match_cells=False, cbar=True,
+                                          match_cells=False, cbar=True, cbar_label='Avg. calcium events',
                                           save_dir=None, folder=None, suffix='', ax=None):
     sdf = multi_session_df.copy()
 
@@ -1405,11 +1407,11 @@ def plot_response_heatmaps_for_conditions(multi_session_df, timestamps, data_typ
         for c, col in enumerate(col_conditions):
 
             if row == 'Excitatory':
-                vmax = 0.005 #0.01
+                vmax = 0.005
             elif row == 'Vip Inhibitory':
-                vmax = 0.01#0.02
+                vmax = 0.01
             elif row == 'Sst Inhibitory':
-                vmax = 0.015#30.03
+                vmax = 0.015
             else:
                 vmax = 0.02
 
@@ -1430,11 +1432,14 @@ def plot_response_heatmaps_for_conditions(multi_session_df, timestamps, data_typ
             n_cells = len(data)
 
             ax[i] = plot_cell_response_heatmap(data, timestamps, vmax=vmax, xlabel=xlabel, cbar=cbar,
-                                               microscope=microscope, ax=ax[i])
+                                               microscope=microscope, cbar_label=cbar_label, ax=ax[i])
             ax[i].set_title(row + '\n' + str(col))
             if col_condition == 'experience_level':
                 colors = utils.get_experience_level_colors()
-                ax[i].set_title(col, color=colors[c])
+                if r == 0:
+                    ax[i].set_title(col, color=colors[c])
+                else:
+                    ax[i].set_title('')
             # label y with total number of cells
             ax[i].set_yticks([0, n_cells])
             ax[i].set_yticklabels([0, n_cells], fontsize=14)

@@ -2562,10 +2562,15 @@ def generate_merged_table_of_model_free_metrics(data_type='filtered_events', ses
         stimuli = 'all_images'
         omission_response_metrics = cm.get_cell_metrics_for_conditions(data_type, condition, stimuli, session_subset, inclusion_criteria)
 
-        # changes
+                # changes
         condition = 'changes'
         stimuli = 'all_images'
         change_response_metrics = cm.get_cell_metrics_for_conditions(data_type, condition, stimuli, session_subset, inclusion_criteria)
+
+        # changes
+        condition = 'changes'
+        stimuli = 'pref_image'
+        pref_image_change_response_metrics = cm.get_cell_metrics_for_conditions(data_type, condition, stimuli, session_subset, inclusion_criteria)
 
         # merge all tables together
 
@@ -2623,6 +2628,20 @@ def generate_merged_table_of_model_free_metrics(data_type='filtered_events', ses
                                                            'fano_factor_changes', 'running_modulation_changes',
                                                            'change_modulation_index', 'hit_miss_index']],
                                                       on=['cell_specimen_id', 'experience_level', 'ophys_experiment_id'])
+
+        # merge in change metrics for each exp level
+        tmp = pref_image_change_response_metrics.rename(columns={'mean_response': 'mean_response_changes_pref_image', 'pre_change_response': 'mean_response_pre_change_pref_image',
+                                                                 'lifetime_sparseness': 'lifetime_sparseness_changes_pref_image',
+                                                                 'reliability': 'reliability_changes_pref_image', 'fano_factor': 'fano_factor_changes_pref_image',
+                                                                 'running_modulation_index': 'running_modulation_changes_pref_image',
+                                                                 'fraction_significant_p_value_gray_screen': 'fraction_significant_p_value_gray_screen_changes_pref_image',
+                                                                 'change_modulation_index': 'change_modulation_index_pref_image',
+                                                                 'hit_miss_index': 'hit_miss_index_pref_image'})
+        model_free_metrics = model_free_metrics.merge(tmp[['cell_specimen_id', 'experience_level', 'ophys_experiment_id', 'mean_response_changes_pref_image', 'mean_response_pre_change_pref_image',
+                                                           'lifetime_sparseness_changes_pref_image', 'reliability_changes_pref_image', 'fraction_significant_p_value_gray_screen_changes_pref_image', 'fano_factor_changes_pref_image',
+                                                           'running_modulation_changes_pref_image', 'change_modulation_index_pref_image', 'hit_miss_index_pref_image', ]],
+                                                      on=['cell_specimen_id', 'experience_level', 'ophys_experiment_id'])
+
 
         # convert experience level
         model_free_metrics['experience_level'] = [utils.convert_experience_level(experience_level) for experience_level in model_free_metrics.experience_level.values]
