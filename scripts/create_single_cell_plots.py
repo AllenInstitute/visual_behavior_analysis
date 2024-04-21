@@ -59,7 +59,7 @@ if __name__ == '__main__':
         start_time = times[0]
         duration_seconds = times[-1] - times[0]
         # plot kernel activations
-        gep.plot_behavior_timeseries_and_GLM_kernel_activations(dataset, start_time, duration_seconds, save_dir=save_dir)
+        # gep.plot_behavior_timeseries_and_GLM_kernel_activations(dataset, start_time, duration_seconds, save_dir=save_dir)
 
         ### plot model fits, kernels, & coding scores
 
@@ -70,11 +70,11 @@ if __name__ == '__main__':
         # generate the plot for high variance cells
         expt_results = results_pivoted[results_pivoted.ophys_experiment_id == ophys_experiment_id]
         high_var_cells = expt_results.sort_values(by='variance_explained_full', ascending=False).cell_specimen_id.values
-        if high_var_cells < 20:
+        if len(high_var_cells) < 20:
             n_cells = len(high_var_cells)
         else:
             n_cells = 20
-        for cell_specimen_id in high_var_cells[:20]:
+        for cell_specimen_id in high_var_cells[:n_cells]:
             gep.plot_model_fits_and_kernels_for_example_cell(ophys_experiment_id, cell_specimen_id,
                                                                  dataset, image_sdf, omission_sdf, change_sdf,
                                                                  results_pivoted, weights_df, kernels, save_dir=save_dir)
