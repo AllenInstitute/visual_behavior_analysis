@@ -323,10 +323,12 @@ def plot_mean_response_by_epoch(df, metric='mean_response', horizontal=True, ymi
     cell_types = utils.get_cell_types()
     experience_levels = utils.get_new_experience_levels()
 
-    # df = df[df.epoch <= max_epoch]
+    df = df[df.epoch <= max_epoch]
     max_n_sessions = len(df.epoch.unique())
 
+    experience_epoch = np.sort(df[df.experience_level==experience_levels[0]].experience_epoch.unique())
     experience_epoch = np.sort(df.experience_epoch.unique())
+    experience_epoch = np.sort(df.epoch.unique())
     print(experience_epoch)
     # experience_epoch = ['Familiar epoch 1', 'Familiar epoch 2', 'Familiar epoch 3',
     #                      'Familiar epoch 4', 'Familiar epoch 5', 'Familiar epoch 6',
@@ -337,7 +339,8 @@ def plot_mean_response_by_epoch(df, metric='mean_response', horizontal=True, ymi
 
     # print(experience_epoch)
     xticks = np.arange(0, len(experience_epoch), 1)
-    xticklabels = [experience_epoch.split(' ')[1] for experience_epoch in experience_epoch]
+    xticklabels = np.arange(0, len(experience_epoch), 1)+1
+    # xticklabels = [experience_epoch.split(' ')[1] for experience_epoch in experience_epoch]
 
     palette = utils.get_experience_level_colors()
     if ax is None:
@@ -355,7 +358,7 @@ def plot_mean_response_by_epoch(df, metric='mean_response', horizontal=True, ymi
         try:
             print(cell_type)
             data = df[df.cell_type == cell_type]
-            ax[i] = sns.pointplot(data=data, x='experience_epoch', y=metric, hue='experience_level', hue_order=experience_levels,
+            ax[i] = sns.pointplot(data=data, x='epoch', y=metric, hue='experience_level', hue_order=experience_levels,
                                   order=experience_epoch, palette=palette, ax=ax[i], estimator=estimator)
 
             if ymin is not None:
@@ -1055,14 +1058,13 @@ def plot_metric_distribution_by_experience(metrics_table, metric, event_type, da
             tukey = pd.concat([tukey, tukey_table])
         else:
             if plot_type == 'pointplot':
-                ax[i] = sns.pointplot(data=ct_data, x='experience_level', y=metric, hue=metric,
-                                      palette=colors, ax=ax[i])
+                ax[i] = sns.pointplot(data=ct_data, x='experience_level', y=metric, palette=colors, ax=ax[i])
             elif plot_type == 'boxplot':
                 ax[i] = sns.boxplot(data=ct_data, x='experience_level', y=metric, width=0.4,
-                                    hue='experience_level', palette=colors, fliersize=0, legend=False, ax=ax[i])
+                                    palette=colors, fliersize=0, legend=False, ax=ax[i])
             elif plot_type == 'violinplot':
                 ax[i] = sns.violinplot(data=ct_data, y=metric, x='experience_level', order=order,
-                                       hue=metric, palette=colors,  cut=0, ax=ax[i])                        
+                                       palette=colors,  cut=0, ax=ax[i])
                 for violin in ax[i].collections:
                     violin.set_alpha(0.75)
 
@@ -1182,7 +1184,7 @@ def plot_metric_distribution_all_conditions(metrics_table, metric, event_type, d
     for project_code in metrics_table.project_code.unique():
         df = metrics_table[metrics_table.project_code == project_code]
 
-        plot_metric_distribution_by_experience(df, metric, stripplot=False, pointplot=True, event_type=event_type, data_type=data_type,
+        plot_metric_distribution_by_experience(df, metric, plot_type='pointplot', event_type=event_type, data_type=data_type,
                                                suffix=project_code, add_zero_line=add_zero_line,
                                                ylabel=ylabel, ylims=ylims, save_dir=save_dir, ax=None)
 
