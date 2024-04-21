@@ -79,11 +79,17 @@ def convert_boolean_cols_to_bool(stimulus_presentations):
     means that the entire column gets the dtype boolean instead of bool.
     '''
     for column in stimulus_presentations.columns.values:
-        if stimulus_presentations[column].dtype == 'boolean':
-            # remove NaNs and make bool
-            row_ids = stimulus_presentations[stimulus_presentations[column].isnull()].index
-            stimulus_presentations.loc[row_ids, column] = False
-            stimulus_presentations[column] = stimulus_presentations[column].astype('bool')
+        try:
+            if type(stimulus_presentations[column].dtype).__name__ == 'BooleanDtype':
+                row_ids = stimulus_presentations[stimulus_presentations[column].isnull()].index
+                stimulus_presentations.loc[row_ids, column] = False
+                stimulus_presentations[column] = stimulus_presentations[column].astype('bool')
+        except:
+            if stimulus_presentations[column].dtype == 'boolean':
+                # remove NaNs and make bool
+                row_ids = stimulus_presentations[stimulus_presentations[column].isnull()].index
+                stimulus_presentations.loc[row_ids, column] = False
+                stimulus_presentations[column] = stimulus_presentations[column].astype('bool')
     return stimulus_presentations
 
 
@@ -961,11 +967,11 @@ def get_ophys_dataset(ophys_experiment_id, include_invalid_rois=False, load_from
         object -- BehaviorOphysSession or BehaviorOphysDataset instance, which inherits attributes & methods from SDK BehaviorOphysSession
     """
 
-    id_type = from_lims.get_id_type(ophys_experiment_id)
-    if id_type != 'ophys_experiment_id':
-        warnings.warn('It looks like you passed an id of type {} instead of an ophys_experiment_id'.format(id_type))
-
-    assert id_type == 'ophys_experiment_id', "The passed ID type is {}. It must be an ophys_experiment_id".format(id_type)
+    # id_type = from_lims.get_id_type(ophys_experiment_id)
+    # if id_type != 'ophys_experiment_id':
+    #     warnings.warn('It looks like you passed an id of type {} instead of an ophys_experiment_id'.format(id_type))
+    #
+    # assert id_type == 'ophys_experiment_id', "The passed ID type is {}. It must be an ophys_experiment_id".format(id_type)
 
     if load_from_lims:
         dataset = BehaviorOphysExperiment.from_lims(int(ophys_experiment_id))
