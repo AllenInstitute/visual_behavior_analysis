@@ -68,8 +68,8 @@ if __name__ == '__main__':
         image_sdf, omission_sdf, change_sdf = gep.get_stimulus_response_dfs_for_kernel_windows(dataset, kernels, frame_rate=31)
 
         # generate the plot for high variance cells
-
-        high_var_cells = expt_dropouts.sort_values(by='variance_explained_full', ascending=False).cell_specimen_id.values
+        expt_results = results_pivoted[results_pivoted.ophys_experiment_id == ophys_experiment_id]
+        high_var_cells = expt_results.sort_values(by='variance_explained_full', ascending=False).cell_specimen_id.values
         if high_var_cells < 20:
             n_cells = len(high_var_cells)
         else:
