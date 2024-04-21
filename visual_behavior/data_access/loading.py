@@ -2996,8 +2996,8 @@ def load_multi_session_df(data_type, event_type, conditions, inclusion_criteria,
                 experiments = experiments[experiments.session_type != 'OPHYS_2_images_B_passive']
             for session_type in tqdm(np.sort(filtered_session_types)):
                 try:
-                    filename = get_file_name_for_multi_session_df(data_type, event_type, project_code, session_type, conditions,
-                                                                  epoch_duration_mins)
+                    filename = get_file_name_for_multi_session_df(data_type, event_type, project_code, session_type,
+                                                                  conditions, epoch_duration_mins)
                     df = pd.read_hdf(os.path.join(multi_session_df_dir, filename), key='df')
                     multi_session_df = pd.concat([multi_session_df, df])
                 except BaseException:
