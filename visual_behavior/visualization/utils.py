@@ -670,3 +670,20 @@ def get_start_end_time_for_period_with_omissions_and_change(stimulus_presentatio
             start_time = st.loc[idx-4].start_time
             end_time = start_time+(0.75*n_flashes)
     return [start_time, end_time]
+
+def get_experiments_matched_across_project_codes(df):
+    '''
+    To compare response properties across project codes, you need to limit to the areas & depths that are matched
+    between Scientifica (which only imaged in VISp at specific depths per cre line) and Multiscope (which imaged
+    across VISp and VISl at multiple depths per cre line)
+
+    df = any dataframe containing metadata about area, depth, and cell type, that includes ophys_experiment_id as a column
+    '''
+    df = df[df.targeted_structure=='VISp']
+    exc_oeids_upper = list(df[(df.cell_type=='Excitatory') & (df.binned_depth==175)].ophys_experiment_id.unique())
+    exc_oeids_lower = list(df[(df.cell_type=='Excitatory') & (df.binned_depth==375)].ophys_experiment_id.unique())
+    sst_oeids = list(df[(df.cell_type=='Sst Inhibitory') & (df.binned_depth==275)].ophys_experiment_id.unique())
+    vip_oeids = list(df[(df.cell_type=='Vip Inhibitory') & (df.binned_depth==175)].ophys_experiment_id.unique())
+
+    matched_oeids = exc_oeids_upper + exc_oeids_lower + sst_oeids + vip_oeids
+    return matched_oeids
