@@ -135,8 +135,8 @@ def get_platform_analysis_cache_dir():
     This is the cache directory to use for all platform paper analysis
     This cache contains NWB files downloaded directly from AWS
     """
-    return '/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/platform_paper_cache_new'
-    # return r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\platform_paper_cache_new'
+    # return '/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/platform_paper_cache_new'
+    return r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\platform_paper_cache_new'
 
   
 def get_production_cache_dir():
@@ -193,7 +193,7 @@ def get_ophys_glm_dir():
 def get_stimulus_response_df_dir(interpolate=True, output_sampling_rate=30, event_type='all'):
     base_dir = get_platform_analysis_cache_dir()
     if interpolate:
-        save_dir = os.path.join(base_dir, 'stimulus_response_dfs', 'interpolate_' + str(output_sampling_rate) + 'Hz')
+        save_dir = os.path.join(base_dir, 'stimulus_response_dfs', 'interpolate_' + str(int(output_sampling_rate)) + 'Hz')
     else:
         save_dir = os.path.join(base_dir, 'stimulus_response_dfs', 'original_frame_rate')
     if not os.path.exists(save_dir):
@@ -687,7 +687,7 @@ def get_extended_stimulus_presentations_table(stimulus_presentations, licks, rew
 def get_stimulus_response_df_filepath_for_experiment(ophys_experiment_id, data_type, event_type,
                                                      interpolate=True, output_sampling_rate=30):
 
-    filepath = os.path.join(get_stimulus_response_df_dir(interpolate, int(output_sampling_rate), event_type),
+    filepath = os.path.join(get_stimulus_response_df_dir(interpolate, output_sampling_rate, event_type),
                             str(ophys_experiment_id) + '_' + data_type + '_' + event_type + '.h5')
     return filepath
 
