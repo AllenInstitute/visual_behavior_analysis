@@ -180,7 +180,11 @@ def plot_population_averages_for_conditions(multi_session_df, data_type, event_t
         if suptitle is None:
             suptitle = 'population average - ' + data_type + ' response - ' + project_code[14:]
     if suptitle:
-        plt.suptitle(suptitle, x=0.52, y=1.3, fontsize=18)
+        if horizontal:
+            y = 1.3
+        else:
+            y = 0.97
+        plt.suptitle(suptitle, x=0.52, y=y, fontsize=18)
     fig.subplots_adjust(hspace=0.4, wspace=0.4)
     plt.rcParams["savefig.bbox"] = "tight"
     if save_dir:
@@ -729,13 +733,13 @@ def add_stats_to_plot(data, metric, ax, ymax=None, column_to_compare='experience
     # do anova across experience levels or cell types followed by post-hoc tukey
     anova, tukey = test_significant_metric_averages(data, metric, column_to_compare)
 
-    if hue_only:
+    if hue_only: # makes things from -0.25 to 0.25
         tukey['x1'] = tukey['x1'] - 1
         tukey['x2'] = tukey['x2'] - 1
         tukey['x1'] = tukey['x1'] / 4
         tukey['x2'] = tukey['x2'] / 4
-        dist = 0.5
-    else:
+        dist = 0.25
+    else: # x pos is 0, 1, 2
         dist = 1
 
     scale = 0.05 # 0.1
@@ -745,11 +749,16 @@ def add_stats_to_plot(data, metric, ax, ymax=None, column_to_compare='experience
         ytop = ax.get_ylim()[1]
     else:
         ytop = ymax
-    y1 = ytop
-    y1h = ytop * (1 + scale)
-    y2 = ytop * (1 + (scale * 3))
-    y2h = ytop * (1 + (scale * 4))
+    if ytop > 1:
+        second_bar_scale = 6
+    else:
+        second_bar_scale = 4
+    y1 = ytop * (1 + scale)
+    y1h = ytop * (1 + scale * 2)
+    y2 = ytop * (1 + (scale * second_bar_scale))
+    y2h = ytop * (1 + (scale * (second_bar_scale+1)))
 
+    top = [ytop]
     for tindex, row in tukey.iterrows():
         if (anova.pvalue < 0.05) and (row.reject): # if something is significant, add some significance bars
             label = '*'
@@ -759,25 +768,27 @@ def add_stats_to_plot(data, metric, ax, ymax=None, column_to_compare='experience
             label = ''
             color = 'w'
             alpha = 0
-        if np.abs(row.x2 - row.x1) > 0.25: # if it is a comparison more than 2 x values away, put the significance bar higher
+        # if row.x2 - row.x1 > 1:
+        if np.abs(row.x2 - row.x1) > dist: # if it is a comparison more than 2 x values away, put the significance bar higher
             y = y2
             yh = y2h
         else: # if they are only one apart, put the bar on the lower level
             y = y1
             yh = y1h
         if len(data[column_to_compare].unique())>2: # if more than 2 values, use the multiple corrections result
-            # if row.reject:
-            ax.plot([row.x1, row.x1, row.x2, row.x2], [y, yh, yh, y], linestyle='-', color=color, alpha=alpha)
-            ax.text(np.mean([row.x1, row.x2]), yh, label, fontsize=fontsize, horizontalalignment='center',
-                    verticalalignment='bottom')
-            # else:
-
+            if row.reject:
+                ax.plot([row.x1, row.x1, row.x2, row.x2], [y, yh, yh, y], linestyle='-', color=color, alpha=alpha)
+                ax.text(np.mean([row.x1, row.x2]), yh, label, fontsize=fontsize, horizontalalignment='center',
+                        verticalalignment='bottom')
+                top.append(yh)
         elif len(data[column_to_compare].unique())==2: #  if there are only two values, use the p-value from anova
             if row.one_way_anova_p_val<0.05:
                 ax.plot([row.x1, row.x1, row.x2, row.x2], [y, yh, yh, y], linestyle='-', color=color, alpha=alpha)
                 ax.text(np.mean([row.x1, row.x2]), yh, label, fontsize=fontsize, horizontalalignment='center',
                         verticalalignment='bottom')
-    ax.set_ylim(ymax=ytop * (1 + (scale * 6))) # 3 works better for behavior plots
+                top.append(yh)
+    # ax.set_ylim(ymax=ytop * (1 + (scale * 7))) # 3 works better for behavior plots
+    ax.set_ylim(ymax = np.amax(top) * (1 + scale*2))  # 3 works better for behavior plots
 
     return ax, tukey
 
@@ -947,7 +958,7 @@ def plot_metric_distribution_by_experience_no_cell_type(metrics_table, metric, e
 def plot_metric_distribution_by_experience(metrics_table, metric, event_type, data_type, hue=None,
                                            plot_type='pointplot', legend=True, show_containers=False,
                                            add_zero_line=False, ylabel=None, ylims=None, horiz=False,
-                                           save_dir=None, ax=None, suffix=''):
+                                           suptitle=None, save_dir=None, ax=None, suffix=''):
     """
     plot metric distribution across experience levels for each cell_type in metrics_table, with stats across experience levels
     if hue is provided, plots will be split by hue column and stats will be done on hue column differences instead of across experience levels
@@ -978,7 +989,7 @@ def plot_metric_distribution_by_experience(metrics_table, metric, event_type, da
         suffix = '_' + hue + '_' + plot_type + suffix
     else:
         suffix = '_experience_level_' + plot_type + suffix
-    if ('modulation_index' in metric) and (ylims is None):
+    if ('index' in metric) and (ylims is None):
         if plot_type == 'pointplot':
             ylims = [-0.5, 0.5]
         else:
@@ -1016,7 +1027,7 @@ def plot_metric_distribution_by_experience(metrics_table, metric, event_type, da
         if hue:
             if plot_type == 'pointplot':
                 dodge = 0.1 * (len(ct_data[hue].unique()))
-                ax[i] = sns.pointplot(data=ct_data, y=metric, x='experience_level', order=order, dodge=dodge, linestyle=None,
+                ax[i] = sns.pointplot(data=ct_data, y=metric, x='experience_level', order=order, dodge=dodge, join=False,
                                       hue=hue, hue_order=hue_order, palette='gray', ax=ax[i])
             elif plot_type == 'boxplot':
                 ax[i] = sns.boxplot(data=ct_data, y=metric, x='experience_level', order=order, fliersize=0,
@@ -1135,7 +1146,8 @@ def plot_metric_distribution_by_experience(metrics_table, metric, event_type, da
 
     if horiz:
         ax[0].set_ylabel(ylabel)
-
+    if suptitle:
+        plt.suptitle(suptitle, x=0.52, y=0.98, fontsize=16)
     fig.subplots_adjust(hspace=0.4, wspace=0.4)
     if save_dir:
         folder = 'metric_distributions'
@@ -1156,7 +1168,7 @@ def plot_metric_distribution_by_experience(metrics_table, metric, event_type, da
 
 
 def plot_metric_distribution_all_conditions(metrics_table, metric, event_type, data_type, ylabel='metric',
-                                            ylims=(0, 1), add_zero_line=True, save_dir=None):
+                                            ylims=(0, 1), add_zero_line=True, remove_outliers=False, save_dir=None):
     """
     generates pointplots of the mean +/- CI values of provided metric with experience level on x axis and either area or depth as hue
     plots for entire dataset as well as each project code individually, and saves to a folder called 'metrics_distributions' in save_dir
@@ -1180,13 +1192,14 @@ def plot_metric_distribution_all_conditions(metrics_table, metric, event_type, d
                                            add_zero_line=add_zero_line, event_type=event_type, data_type=data_type,
                                            ylabel=ylabel, ylims=ylims, save_dir=save_dir, ax=None)
 
-    # per project code, average over areas & depths
-    for project_code in metrics_table.project_code.unique():
-        df = metrics_table[metrics_table.project_code == project_code]
-
-        plot_metric_distribution_by_experience(df, metric, plot_type='pointplot', event_type=event_type, data_type=data_type,
-                                               suffix=project_code, add_zero_line=add_zero_line,
-                                               ylabel=ylabel, ylims=ylims, save_dir=save_dir, ax=None)
+    # # per project code, average over areas & depths
+    # for project_code in metrics_table.project_code.unique():
+    #     df = metrics_table[metrics_table.project_code == project_code]
+    #     if remove_outliers:
+    #         df = df[df[metric]<np.percentile(df[metric].values, 99.7)]
+    #     plot_metric_distribution_by_experience(df, metric, plot_type='pointplot', event_type=event_type, data_type=data_type,
+    #                                            suffix=project_code, add_zero_line=add_zero_line,
+    #                                            ylabel=ylabel, ylims=ylims, save_dir=save_dir, ax=None)
 
     # full dataset, for each area and depth
     if data_type in ['dff', 'events', 'filtered_events']:
@@ -1198,7 +1211,8 @@ def plot_metric_distribution_all_conditions(metrics_table, metric, event_type, d
         # only look at VisualBehaviorMultiscope for area depth comparisons
         data = metrics_table[metrics_table.project_code == 'VisualBehaviorMultiscope']
         if 'response' in metric:
-            data = data[data[metric]<np.percentile(data[metric], 98)]
+            if remove_outliers:
+                data = data[data[metric]<np.percentile(data[metric], 99.7)]
             plot_types = ['pointplot']
         else:
             plot_types = ['violinplot', 'pointplot']
@@ -1228,7 +1242,7 @@ def plot_metric_distribution_all_conditions(metrics_table, metric, event_type, d
 
 
 def plot_experience_modulation_index(metric_data, event_type, hue=None, plot_type='pointplot', ylims=(-1, 1),
-                                     include_all_comparisons=True, save_dir=None):
+                                     suptitle=None, suffix='', include_all_comparisons=True, save_dir=None):
     """
     plots experience modulation for some event_type, which is the mean repsonse in familiar vs. novel 1 over the sum,
     and the mean response in novel 1 vs. novel >1 over the sum, giving a value between -1 and 1
@@ -1246,14 +1260,14 @@ def plot_experience_modulation_index(metric_data, event_type, hue=None, plot_typ
                             'cell_type', 'targeted_structure', 'layer']]
         xorder = ['Novel vs. Familiar', 'Novel + vs. Familiar', 'Novel vs. Novel +']
         fig_width = 2.4
-        suffix = '_all_comparisons'
+        suffix = suffix+'_all_comparisons'
     else:
         value_vars = ['Novel vs. Familiar', 'Novel + vs. Familiar', ]
         data = metric_data[['cell_specimen_id', 'Novel vs. Familiar', 'Novel + vs. Familiar',
                             'cell_type', 'targeted_structure', 'layer']]
         xorder = ['Novel vs. Familiar', 'Novel + vs. Familiar']
         fig_width = 1.8
-        suffix = ''
+        suffix = suffix
 
     if hue:
         data = data.melt(id_vars=['cell_specimen_id', 'cell_type', hue], var_name='comparison', value_vars=value_vars)
@@ -1333,6 +1347,9 @@ def plot_experience_modulation_index(metric_data, event_type, hue=None, plot_typ
     if xorder == ['Novel vs. Familiar', 'Novel + vs. Familiar']:
         ax[0].set_ylabel('<- F --- N ->', fontsize=12)
         ax[2].set_ylabel('<- F --- N ->', fontsize=12)
+
+    if suptitle:
+        plt.suptitle(suptitle, x=0.52, y=0.98, fontsize=16)
     fig.subplots_adjust(hspace=0.4, wspace=0.4)
     if save_dir:
         filename = 'experience_modulation_' + event_type + '_' + plot_type + suffix
