@@ -32,11 +32,63 @@ def save_figure(fig, figsize, save_dir, folder, fig_title, formats=['.png']):
         fig.savefig(filename + f, bbox_inches="tight", transparent=True,
                     orientation='landscape', dpi=300, facecolor=fig.get_facecolor())
 
+def placeAxesOnGrid(fig, dim=[1, 1], xspan=[0, 1], yspan=[0, 1], wspace=None, hspace=None,
+                    sharex=False, sharey=False, width_ratios=None, height_ratios=None):
+    '''
+    Takes a figure with a gridspec defined and places an array of sub-axes on a portion of the gridspec
+
+    Takes as arguments:
+        fig: figure handle - required
+        dim: number of rows and columns in the subaxes - defaults to 1x1
+        xspan: fraction of figure that the subaxes subtends in the x-direction (0 = left edge, 1 = right edge)
+        yspan: fraction of figure that the subaxes subtends in the y-direction (0 = top edge, 1 = bottom edge)
+        wspace and hspace: white space between subaxes in vertical and horizontal directions, respectively
+
+    returns:
+        subaxes handles
+    '''
+    import matplotlib.gridspec as gridspec
+
+    outer_grid = gridspec.GridSpec(100, 100)
+    inner_grid = gridspec.GridSpecFromSubplotSpec(dim[0], dim[1],
+                                                  subplot_spec=outer_grid[int(100 * yspan[0]):int(100 * yspan[1]),
+                                                  int(100 * xspan[0]):int(100 * xspan[1])],
+                                                  wspace=wspace, hspace=hspace,
+                                                  width_ratios = width_ratios, height_ratios = height_ratios)  # flake8: noqa: E999
+
+    # NOTE: A cleaner way to do this is with list comprehension:
+    # inner_ax = [[0 for ii in range(dim[1])] for ii in range(dim[0])]
+    inner_ax = dim[0] * [dim[1] * [fig]]  # filling the list with figure objects prevents an error when it they are later replaced by axis handles
+    inner_ax = np.array(inner_ax)
+    idx = 0
+    for row in range(dim[0]):
+        for col in range(dim[1]):
+
+
+            if row > 0 and sharex == True:
+                share_x_with = inner_ax[0][col]
+            else:
+                share_x_with = None
+
+            if col > 0 and sharey == True:
+                share_y_with = inner_ax[row][0]
+            else:
+                share_y_with = None
+
+            if row > 0 and sharey == 'col':
+                share_y_with = inner_ax[0][col]
+
+            inner_ax[row][col] = plt.Subplot(fig, inner_grid[idx], sharex=share_x_with, sharey=share_y_with)
+            fig.add_subplot(inner_ax[row, col])
+            idx += 1
+
+    inner_ax = np.array(inner_ax).squeeze().tolist()  # remove redundant dimension
+    return inner_ax
 
 def get_colors_for_session_numbers():
     reds = sns.color_palette('Reds_r', 6)[:5][::2]
     blues = sns.color_palette('Blues_r', 6)[:5][::2]
-    return reds + blues
+    return blues + reds
 
 
 def get_colors_for_session_numbers_GH():
@@ -45,10 +97,13 @@ def get_colors_for_session_numbers_GH():
     return purples + greens
 
 
-def get_experience_levels():
+def get_old_experience_levels():
     experience_levels = ['Familiar', 'Novel 1', 'Novel >1']
     return experience_levels
 
+def get_experience_levels():
+    experience_levels = ['Familiar', 'Novel', 'Novel +']
+    return experience_levels
 
 def get_new_experience_levels():
     experience_levels = ['Familiar', 'Novel', 'Novel +']
@@ -209,11 +264,16 @@ def get_stimulus_color_map(as_rgb=False):
 
     stimulus_color_map = {
         'gratings': (0.5, 0.5, 0.5),
-        'gratings_static': (0.25, 0.25, 0.25),
-        'gratings_flashed': (0.5, 0.5, 0.5),
+        'images': session_number_colors[0],
+        # 'gratings_static': (0.5, 0.5, 0.5),
+        # 'gratings_flashed': (0.25, 0.25, 0.25),
         'gratings_training': (0.5, 0.5, 0.5),
+        'gratings_static': (0.6, 0.6, 0.6),
+        'gratings_flashed': (0.4, 0.4, 0.4),
         'familiar': session_number_colors[0],
         'novel': session_number_colors[3],
+        'familiar_images': session_number_colors[0],
+        'novel_images': session_number_colors[3],
         'images_A': session_number_colors[0],
         'images_A_ophys': session_number_colors[0],
         'images_A_passive': session_number_colors[2],
@@ -412,7 +472,7 @@ def get_behavior_stage_color_map(as_rgb=False):
     passive_scale = 0.4
 
     behavior_stage_color_map = {
-        'gratings_static_training': (0.7, 0.7, 0.7),
+        'gratings_static_training': (0.6, 0.6, 0.6),
         'gratings_flashed_training': (0.4, 0.4, 0.4),
         'familiar_images_training': (session_number_colors[0] + (white - session_number_colors[0]) * training_scale),
         'familiar_images_ophys': session_number_colors[0],
@@ -430,63 +490,38 @@ def get_behavior_stage_color_map(as_rgb=False):
     return behavior_stage_color_map
 
 
+def get_ophys_stage_color_map(as_rgb=False):
+    session_number_colors = get_colors_for_session_numbers()
+    gh_colors = get_colors_for_session_numbers_GH()
+    white = np.array([1, 1, 1]).astype(np.uint8)
+
+    passive_scale = 0.6
+    active_not_in_dataset_scale = 0.4
+
+    ophys_stage_color_map = {
+        'familiar_images_in_dataset': session_number_colors[0],
+        'familiar_images': (
+                    session_number_colors[0] + (white - session_number_colors[0]) * active_not_in_dataset_scale),
+        'familiar_images_passive': (session_number_colors[0] + (white - session_number_colors[0]) * passive_scale),
+
+        'novel_images_first_novel_in_dataset': session_number_colors[3],
+
+        'novel_images_in_dataset': session_number_colors[3],
+        'novel_images': (session_number_colors[3] + (white - session_number_colors[3]) * active_not_in_dataset_scale),
+        'novel_images_passive': (session_number_colors[3] + (white - session_number_colors[3]) * passive_scale),
+    }
+
+    if as_rgb:
+        for key in list(ophys_stage_color_map.keys()):
+            ophys_stage_color_map[key] = np.floor(
+                np.array([x for x in list(ophys_stage_color_map[key])]) * 255).astype(np.uint8)
+
+    return ophys_stage_color_map
+
+
 def make_color_transparent(rgb_color, background_rgb=[255, 255, 255], alpha=0.5):
     return [alpha * c1 + (1 - alpha) * c2
             for (c1, c2) in zip(rgb_color, background_rgb)]
-
-
-def placeAxesOnGrid(fig, dim=[1, 1], xspan=[0, 1], yspan=[0, 1], wspace=None, hspace=None,
-                    sharex=False, sharey=False, width_ratios=None, height_ratios=None):
-    '''
-    Takes a figure with a gridspec defined and places an array of sub-axes on a portion of the gridspec
-
-    Takes as arguments:
-        fig: figure handle - required
-        dim: number of rows and columns in the subaxes - defaults to 1x1
-        xspan: fraction of figure that the subaxes subtends in the x-direction (0 = left edge, 1 = right edge)
-        yspan: fraction of figure that the subaxes subtends in the y-direction (0 = top edge, 1 = bottom edge)
-        wspace and hspace: white space between subaxes in vertical and horizontal directions, respectively
-
-    returns:
-        subaxes handles
-    '''
-    import matplotlib.gridspec as gridspec
-
-    outer_grid = gridspec.GridSpec(100, 100)
-    inner_grid = gridspec.GridSpecFromSubplotSpec(dim[0], dim[1],
-                                                  subplot_spec=outer_grid[int(100 * yspan[0]):int(100 * yspan[1]),
-                                                  int(100 * xspan[0]):int(100 * xspan[1])],
-                                                  wspace=wspace, hspace=hspace,
-                                                  width_ratios = width_ratios, height_ratios = height_ratios)  # flake8: noqa: E999
-
-    # NOTE: A cleaner way to do this is with list comprehension:
-    # inner_ax = [[0 for ii in range(dim[1])] for ii in range(dim[0])]
-    inner_ax = dim[0] * [dim[1] * [fig]]  # filling the list with figure objects prevents an error when it they are later replaced by axis handles
-    inner_ax = np.array(inner_ax)
-    idx = 0
-    for row in range(dim[0]):
-        for col in range(dim[1]):
-
-
-            if row > 0 and sharex == True:
-                share_x_with = inner_ax[0][col]
-            else:
-                share_x_with = None
-
-            if col > 0 and sharey == True:
-                share_y_with = inner_ax[row][0]
-            else:
-                share_y_with = None
-
-            if row > 0 and sharey == 'col':
-                share_y_with = inner_ax[0][col]
-
-            inner_ax[row][col] = plt.Subplot(fig, inner_grid[idx], sharex=share_x_with, sharey=share_y_with)
-            fig.add_subplot(inner_ax[row, col])
-            idx += 1
-
-    inner_ax = np.array(inner_ax).squeeze().tolist()  # remove redundant dimension
-    return inner_ax
 
 
 def plot_flashes_on_trace(ax, timestamps, change=None, omitted=False, alpha=0.075, facecolor='gray'):

@@ -359,16 +359,14 @@ def get_platform_paper_behavior_session_table(include_4x2_data=False, add_extra_
     cache_dir = get_platform_analysis_cache_dir()
     cache = bpc.from_s3_cache(cache_dir=cache_dir)
     behavior_sessions = cache.get_behavior_session_table()
-    # reset index to retain behavior_session_id during the below transformations
-    behavior_sessions = behavior_sessions.reset_index()
 
-    # add project codes to behavior sessions
-    experiments_table = cache.get_ophys_experiment_table()
-    behavior_sessions = utilities.add_project_code_to_behavior_sessions(behavior_sessions, experiments_table)
+    # add project codes to behavior sessions - not needed in AllenSDK 2.16.0
+    # experiments_table = cache.get_ophys_experiment_table()
+    # behavior_sessions = utilities.add_project_code_to_behavior_sessions(behavior_sessions, experiments_table)
 
-    # get rid of NaNs, documented in SDK#2218
-    behavior_sessions = behavior_sessions[behavior_sessions.session_type.isnull() == False]
-    print(len(behavior_sessions), 'sessions after removing NaN session types')
+    # get rid of NaNs, documented in SDK#2218 - not needed in AllenSDK 2.16.0
+    # behavior_sessions = behavior_sessions[behavior_sessions.session_type.isnull() == False]
+    # print(len(behavior_sessions), 'sessions after removing NaN session types')
 
     # remove 4x2 and Ai94 data
     if include_4x2_data:
@@ -382,11 +380,11 @@ def get_platform_paper_behavior_session_table(include_4x2_data=False, add_extra_
     if add_extra_columns:
         # overwrite session number and passive columns to patch for bug flagged in this SDK issue:
         # https://github.com/AllenInstitute/AllenSDK/issues/2251
-        behavior_sessions = utilities.add_session_number_to_experiment_table(behavior_sessions)
+        # behavior_sessions = utilities.add_session_number_to_experiment_table(behavior_sessions)
         behavior_sessions = utilities.add_passive_flag_to_ophys_experiment_table(behavior_sessions)
         behavior_sessions = utilities.add_cell_type_column(behavior_sessions)
         # add experience_level column
-        behavior_sessions = utilities.add_experience_level_to_behavior_sessions(behavior_sessions)
+        # behavior_sessions = utilities.add_experience_level_to_behavior_sessions(behavior_sessions)
         # add training stage (abbreviated session type) and first and last day of training stage
         behavior_sessions = utilities.add_first_last_day_of_stage_to_behavior_sessions(behavior_sessions)
         # add experiment phase (OPHYS vs TRAINING), and stimulus type (gratings_static, images_A, etc)
@@ -396,11 +394,11 @@ def get_platform_paper_behavior_session_table(include_4x2_data=False, add_extra_
         behavior_sessions = utilities.add_first_last_day_of_stimulus_to_behavior_sessions(behavior_sessions)
         # add stimulus phase column (ex: 'gratings_flashed_training', 'images_A_training', 'images_A_ophys')
         behavior_sessions = utilities.add_stimulus_phase_to_behavior_sessions(behavior_sessions)
+        behavior_sessions = utilities.add_behavior_stage_to_behavior_sessions(behavior_sessions)
+        behavior_sessions = utilities.add_stimulus_experience_level_to_behavior_sessions(behavior_sessions)
+
         # verify that nothing has been accidentally removed
         print(len(behavior_sessions), 'sessions after adding extra columns')
-
-    # reset the index to behavior_session_id
-    behavior_sessions = behavior_sessions.set_index('behavior_session_id')
 
     return behavior_sessions
 
@@ -3580,3 +3578,69 @@ def get_multi_session_df_for_conditions(data_type, event_type, conditions, inclu
           'experiments after filtering for inclusion criteria - ', inclusion_criteria)
 
     return multi_session_df
+
+
+def get_behavior_stats_from_stimulus_presentations(stimulus_presentations):
+    '''
+    takes annotated stimulus presentations and computes response rates for changes, non-changes, omission, post-omission
+    as well as dprime using catch trials (strict definition) and all non-changes that could change (less strict definition)
+
+    stimulus_presentations must include columns for 'could_change', 'post_omitted', and 'reward_rate',
+    in addition to the standard columns that are part of the stimulus_presentations attribute of the dataset object ('go', 'catch', etc.)
+    '''
+
+    import brain_observatory_utilities.utilities.trial_utilities as trial_utils
+
+    st = stimulus_presentations.copy()
+    # limit to engaged portions of session
+    st = st[st.engaged==True] # using Doug / Alex's threshold for engagement (2/3 rewards/min)
+    print(len(st), 'engaged trials')
+    # aggregate stats
+    stats_list = []
+    change_trials = st[st.is_change==True]
+    print(len(change_trials), 'change_trials during engaged portion')
+    if len(change_trials) > 0: # needs to be at least a few changes to calculate metrics
+        hit_rate = len(change_trials[change_trials.licked==True]) / float(len(change_trials))
+        stats_list.append(['change', hit_rate])
+
+        # catch_trials = st[(st.catch==True)]
+        # catch_fa_rate = len(catch_trials[catch_trials.licked==True])/len(catch_trials)
+        # stats_list.append(['catch', catch_fa_rate])
+
+        non_change = st[(st.is_change==False)&(st.omitted==False)&(st.auto_rewarded==False)&(st.n_after_change>5)]
+        non_change_fa_rate = len(non_change[non_change.licked==True])/len(non_change)
+        stats_list.append(['non_change', non_change_fa_rate]) # any non-change that isnt in consumption window
+
+        # non_change_aborted = st[(st.is_change==False)&(st.omitted==False)&(st.auto_rewarded==False)&(st.n_after_change>5)&(st.aborted==True)]
+        # aborted_fa_rate = len(non_change_aborted[non_change_aborted.licked==True])/len(non_change_aborted)
+        # stats_list.append(['aborted', aborted_fa_rate]) # any non-change that isnt in consumption window
+
+        could_change = st[(st.is_change==False)&(st.could_change==True)]
+        could_change_fa_rate = len(could_change[could_change.licked==True])/len(could_change)
+        stats_list.append(['could_change', could_change_fa_rate]) # non-changes that could have been a change based on criteria
+
+        omissions = st[(st.omitted==True)]
+        response_rate = len(omissions[omissions.licked==True])/len(omissions)
+        stats_list.append(['omission', response_rate])
+
+        post_omissions = st[(st.post_omitted==True)]
+        response_rate = len(post_omissions[post_omissions.licked==True])/len(post_omissions)
+        stats_list.append(['post-omission', response_rate])
+
+        # create df and add behavior session ID
+        behavior_stats = pd.DataFrame(stats_list, columns=['trial_type', 'response_probability'])
+
+        # add additional stats for this session
+        fraction_engaged = len(st[st.engaged])/len(stimulus_presentations)
+        behavior_stats['fraction_engaged'] = fraction_engaged
+        dprime_non_change = trial_utils.dprime(hit_rate, non_change_fa_rate)
+        behavior_stats['dprime_non_change'] = dprime_non_change
+        # dprime_aborted = trial_utils.dprime(hit_rate, aborted_fa_rate)
+        # behavior_stats['dprime_aborted'] = dprime_aborted
+        dprime_could_change = trial_utils.dprime(hit_rate, could_change_fa_rate)
+        behavior_stats['dprime_could_change'] = dprime_could_change
+    else:
+        print(len(change_trials), 'is too few change trials, cant calculate metrics')
+        behavior_stats = None
+    return behavior_stats
+
