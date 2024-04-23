@@ -95,8 +95,8 @@ if __name__ == '__main__':
 
     # params for stim response df creation
     time_window = [-2, 2.1]
-    interpolate = False
-    output_sampling_rate = None
+    interpolate = True
+    output_sampling_rate = 30
     use_extended_stimulus_presentations = False
     epoch_duration_mins = 5
 

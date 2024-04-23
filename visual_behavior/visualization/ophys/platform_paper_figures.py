@@ -128,7 +128,7 @@ def plot_population_averages_for_conditions(multi_session_df, data_type, event_t
         format_fig = True
         if horizontal:
             figsize = (4 * n_axes_conditions, 2)
-            # figsize = (6 * n_axes_conditions, 3) # for behavior timeseries
+            figsize = (6 * n_axes_conditions, 3) # for behavior timeseries
             fig, ax = plt.subplots(1, n_axes_conditions, figsize=figsize, sharey=False)
         else:
             # figsize = (2.5, 3 * n_axes_conditions) # for image response
@@ -743,8 +743,8 @@ def add_stats_to_plot(data, metric, ax, ymax=None, column_to_compare='experience
     else: # x pos is 0, 1, 2
         dist = 1
 
-    scale = 0.05 # 0.1
-    fontsize = 12
+    scale = 0.03#0.05 # 0.1
+    fontsize = 9
 
     if ymax is None:
         ytop = ax.get_ylim()[1]
@@ -790,7 +790,7 @@ def add_stats_to_plot(data, metric, ax, ymax=None, column_to_compare='experience
             else:
                 if show_ns:
                     ax.plot([row.x1, row.x1, row.x2, row.x2], [y, yh, yh, y], linestyle='-', color=color, alpha=alpha)
-                    ax.text(np.mean([row.x1, row.x2]), yh, 'ns', fontsize=fontsize, horizontalalignment='center',
+                    ax.text(np.mean([row.x1, row.x2]), yh*(1+scale), 'ns', fontsize=fontsize, horizontalalignment='center',
                             verticalalignment='bottom')
                     top.append(yh)
         elif len(data[column_to_compare].unique())==2: #  if there are only two values, use the p-value from anova
@@ -802,11 +802,11 @@ def add_stats_to_plot(data, metric, ax, ymax=None, column_to_compare='experience
             else:
                 if show_ns:
                     ax.plot([row.x1, row.x1, row.x2, row.x2], [y, yh, yh, y], linestyle='-', color=color, alpha=alpha)
-                    ax.text(np.mean([row.x1, row.x2]), yh, 'ns', fontsize=fontsize, horizontalalignment='center',
+                    ax.text(np.mean([row.x1, row.x2]), yh*(1+scale), 'ns', fontsize=fontsize, horizontalalignment='center',
                             verticalalignment='bottom')
                     top.append(yh)
     # ax.set_ylim(ymax=ytop * (1 + (scale * 7))) # 3 works better for behavior plots
-    ax.set_ylim(ymax = np.amax(top) * (1 + scale*2))  # 3 works better for behavior plots
+    ax.set_ylim(ymax = np.amax(top) * (1 + scale*3))  # 3 works better for behavior plots, 2 for regular
 
     return ax, tukey
 
@@ -852,7 +852,8 @@ def get_descriptive_stats_for_metric(data, metric, cols_to_groupby):
 
 
 def plot_metric_distribution_by_experience_no_cell_type(metrics_table, metric, event_type, data_type, hue=None, stripplot=False, pointplot=False,
-                                                        add_zero_line=False, ylabel=None, ylims=None, save_dir=None, ax=None, suffix=''):
+                                                        add_zero_line=False, show_ns=False, abbreviate_exp=False,
+                                                        ylabel=None, ylims=None, save_dir=None, ax=None, suffix=''):
     """
     plot metric distribution across experience levels in metrics_table, with stats across experience levels
     if hue is provided, plots will be split by hue column and stats will be done on hue column differences instead of across experience levels
@@ -869,6 +870,8 @@ def plot_metric_distribution_by_experience_no_cell_type(metrics_table, metric, e
                 if cell_type is 'Excitatory', only shows 25% of cells due to high density
     pointplot: Bool, if True, will use pointplot instead of boxplot and/or stripplot
     ylims: yaxis limits to use; if None, will use +/-1
+    abbreviate_exp: Boolean, if True, use single letter experience labels on x axis (F, N, N+) and color by experience
+                            if False, print out full name of each experience label on x axis
     save_dir: directory to save to. if None, plot will not be saved
     ax: axes to plot figures on
     """
@@ -937,7 +940,7 @@ def plot_metric_distribution_by_experience_no_cell_type(metrics_table, metric, e
             ax = sns.stripplot(data=ct_data, size=3, alpha=0.5, jitter=0.2,
                                x='experience_level', y=metric, palette=colors, ax=ax)
         # add stats to plot if only looking at experience levels
-        ax, tukey_table = add_stats_to_plot(ct_data, metric, ax, ymax=ymax)
+        ax, tukey_table = add_stats_to_plot(ct_data, metric, ax, ymax=ymax, show_ns=show_ns)
         # aggregate stats
         tukey_table['metric'] = metric
         tukey = pd.concat([tukey, tukey_table])
@@ -949,11 +952,17 @@ def plot_metric_distribution_by_experience_no_cell_type(metrics_table, metric, e
             ax.axhline(y=0, xmin=0, xmax=1, color='gray', linestyle='--')
         ax.set_title('')
         ax.set_xlabel('')
-        ax.set_xticklabels(new_experience_levels, rotation=90,)  # ha='right')
         if ylabel:
             ax.set_ylabel(ylabel)
         else:
             ax.set_ylabel(metric)
+        if abbreviate_exp:
+            ax.set_xticklabels(utils.get_abbreviated_experience_levels(), rotation=0)
+            utils.color_xaxis_labels_by_experience(ax)
+        else:
+            ax.set_xticks(ax.get_xticks().tolist())
+            ax.set_xticklabels(new_experience_levels, rotation=90,)  # ha='right')
+
 
     fig.subplots_adjust(hspace=0.4)
     if save_dir:
@@ -975,8 +984,8 @@ def plot_metric_distribution_by_experience_no_cell_type(metrics_table, metric, e
 
 def plot_metric_distribution_by_experience(metrics_table, metric, event_type, data_type, hue=None,
                                            plot_type='pointplot', legend=True, show_containers=False,
-                                           add_zero_line=False, ylabel=None, ylims=None, horiz=False,
-                                           suptitle=None, save_dir=None, ax=None, suffix=''):
+                                           add_zero_line=False, show_ns=False, ylabel=None, ylims=None, horiz=False,
+                                           abbreviate_exp=False, suptitle=None, save_dir=None, ax=None, suffix=''):
     """
     plot metric distribution across experience levels for each cell_type in metrics_table, with stats across experience levels
     if hue is provided, plots will be split by hue column and stats will be done on hue column differences instead of across experience levels
@@ -995,6 +1004,8 @@ def plot_metric_distribution_by_experience(metrics_table, metric, event_type, da
     show_containers: Bool, if True, plot gray lines connecting containers across experience levels
     ylims: yaxis limits to use; if None, will use +/-1
     horiz: Boolean, whether to plot the figure panels stacked horizontally or vertically
+    abbreviate_exp: Boolean, if True, use single letter experience labels on x axis (F, N, N+) and color by experience
+                            if False, print out full name of each experience label on x axis
     save_dir: directory to save to. if None, plot will not be saved
     ax: axes to plot figures on
     """
@@ -1090,7 +1101,7 @@ def plot_metric_distribution_by_experience(metrics_table, metric, event_type, da
                 ax[i] = sns.pointplot(data=ct_data, x='experience_level', y=metric, palette=colors, ax=ax[i])
             elif plot_type == 'boxplot':
                 ax[i] = sns.boxplot(data=ct_data, x='experience_level', y=metric, width=0.4,
-                                    palette=colors, fliersize=0, legend=False, ax=ax[i])
+                                    palette=colors, fliersize=0, ax=ax[i])
             elif plot_type == 'violinplot':
                 ax[i] = sns.violinplot(data=ct_data, y=metric, x='experience_level', order=order,
                                        palette=colors,  cut=0, ax=ax[i])
@@ -1125,7 +1136,7 @@ def plot_metric_distribution_by_experience(metrics_table, metric, event_type, da
                 ax[i].set_ylim(ylims)
             ax[i].set_xlim(-0.5, len(order) - 0.5)
             # add stats to plot if only looking at experience levels
-            ax[i], tukey_table = add_stats_to_plot(ct_data, metric, ax[i], ymax=ymax)
+            ax[i], tukey_table = add_stats_to_plot(ct_data, metric, ax[i], ymax=ymax, show_ns=show_ns)
             # aggregate stats
             tukey_table['metric'] = metric
             tukey_table['cell_type'] = cell_type
@@ -1146,10 +1157,12 @@ def plot_metric_distribution_by_experience(metrics_table, metric, event_type, da
         # ax[i].set_title('')
         ax[i].set_xlabel('')
 
-        # ax[i].set_xticklabels(utils.get_abbreviated_experience_levels(), rotation=0)
-        # utils.color_xaxis_labels_by_experience(ax[i])
-        ax[i].set_xticks(ax[i].get_xticks().tolist())
-        ax[i].set_xticklabels(new_experience_levels, rotation=90,)  # ha='right')
+        if abbreviate_exp:
+            ax[i].set_xticklabels(utils.get_abbreviated_experience_levels(), rotation=0)
+            utils.color_xaxis_labels_by_experience(ax[i])
+        else:
+            ax[i].set_xticks(ax[i].get_xticks().tolist())
+            ax[i].set_xticklabels(new_experience_levels, rotation=90,)  # ha='right')
 
         if ylabel:
             if horiz:
@@ -1166,7 +1179,7 @@ def plot_metric_distribution_by_experience(metrics_table, metric, event_type, da
         ax[0].set_ylabel(ylabel)
     if suptitle:
         plt.suptitle(suptitle, x=0.52, y=0.98, fontsize=16)
-    fig.subplots_adjust(hspace=0.4, wspace=0.4)
+    fig.subplots_adjust(hspace=0.4, wspace=0.2)
     if save_dir:
         folder = 'metric_distributions'
         filename = event_type + '_' + data_type + '_' + metric + '_distribution' + suffix

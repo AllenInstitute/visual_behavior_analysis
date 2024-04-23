@@ -1798,7 +1798,7 @@ def get_n_relative_to_first_novel(group):
     if 'Novel 1' in group.experience_level.values:
         novel_ind = np.where(group.experience_level == 'Novel 1')[0][0]
         n_relative_to_first_novel = np.arange(-novel_ind, len(group) - novel_ind, 1)
-    if 'Novel' in group.experience_level.values:
+    elif 'Novel' in group.experience_level.values:
         novel_ind = np.where(group.experience_level == 'Novel')[0][0]
         n_relative_to_first_novel = np.arange(-novel_ind, len(group) - novel_ind, 1)
     else:
