@@ -805,8 +805,8 @@ def add_stats_to_plot(data, metric, ax, ymax=None, column_to_compare='experience
                     ax.text(np.mean([row.x1, row.x2]), yh*(1+scale), 'ns', fontsize=fontsize, horizontalalignment='center',
                             verticalalignment='bottom')
                     top.append(yh)
-    # ax.set_ylim(ymax=ytop * (1 + (scale * 7))) # 3 works better for behavior plots
-    ax.set_ylim(ymax = np.amax(top) * (1 + scale*3))  # 3 works better for behavior plots, 2 for regular
+    # ax.set_ylim(ymax=ytop * (1 + (scale * 7))) # 3 works better for non-behavior plots
+    ax.set_ylim(ymax = np.amax(top) * (1 + scale*10))  # 3 works better for behavior plots, 2 for regular
 
     return ax, tukey
 
@@ -2204,6 +2204,7 @@ def plot_behavior_metric_by_experience(stats, metric, title='', ylabel='', ylims
         stats.to_csv(os.path.join(save_dir, folder, stats_filename + '_values.csv'))
     except BaseException:
         print('stats did not save for', metric)
+    return ax
 
 
 def plot_behavior_metric_across_stages(data, metric, ylabel=None, save_dir=None, folder=None, suffix=''):
@@ -2859,15 +2860,15 @@ def plot_response_probability_heatmaps_for_cohorts(behavior_sessions, save_dir=N
     novel_response_matrix = behavior.average_response_probability_across_sessions(novel_data, sort=True)
 
     ax[0] = sns.heatmap(familiar_response_matrix, cmap=cmap, vmin=0, vmax=1, square=True,
-                    cbar_kws={'label':'response probability', 'shrink':0.7}, ax=ax[0])
-    ax[0].set_xlabel('change image name')
-    ax[0].set_ylabel('initial image name')
+                    cbar_kws={'label':'Response probability', 'shrink':0.7}, ax=ax[0])
+    ax[0].set_xlabel('Change image')
+    ax[0].set_ylabel('Initial image')
     ax[0].set_title('image set A\nFamiliar images', color=colors[3])
 
     ax[1] = sns.heatmap(novel_response_matrix, cmap=cmap, vmin=0, vmax=1, square=True,
-                    cbar_kws={'label':'response probability', 'shrink':0.7}, ax=ax[1])
-    ax[1].set_xlabel('change image name')
-    ax[1].set_ylabel('initial image name')
+                    cbar_kws={'label':'Response probability', 'shrink':0.7}, ax=ax[1])
+    ax[1].set_xlabel('Change image')
+    ax[1].set_ylabel('Initial image')
     ax[1].set_title('image set B\nNovel images', color=colors[0])
 
 
@@ -2879,15 +2880,15 @@ def plot_response_probability_heatmaps_for_cohorts(behavior_sessions, save_dir=N
     novel_response_matrix = behavior.average_response_probability_across_sessions(novel_data, sort=True)
 
     ax[2] = sns.heatmap(familiar_response_matrix, cmap=cmap, vmin=0, vmax=1, square=True,
-                    cbar_kws={'label':'response probability', 'shrink':0.7}, ax=ax[2])
-    ax[2].set_xlabel('change image name')
-    ax[2].set_ylabel('initial image name')
+                    cbar_kws={'label':'Response probability', 'shrink':0.7}, ax=ax[2])
+    ax[2].set_xlabel('Change image')
+    ax[2].set_ylabel('Initial image')
     ax[2].set_title('image set B\nFamiliar images', color=colors[0])
 
     ax[3] = sns.heatmap(novel_response_matrix, cmap=cmap, vmin=0, vmax=1, square=True,
-                    cbar_kws={'label':'response probability', 'shrink':0.7}, ax=ax[3])
-    ax[3].set_xlabel('change image name')
-    ax[3].set_ylabel('initial image name')
+                    cbar_kws={'label':'Response probability', 'shrink':0.7}, ax=ax[3])
+    ax[3].set_xlabel('Change image')
+    ax[3].set_ylabel('Initial image')
     ax[3].set_title('image set A\nNovel images', color=colors[3])
 
     fig.tight_layout()

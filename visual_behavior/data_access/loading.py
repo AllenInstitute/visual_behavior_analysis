@@ -318,6 +318,11 @@ def get_platform_paper_experiment_table(add_extra_columns=True, limit_to_closest
     experiment_table = utilities.add_session_number_to_experiment_table(experiment_table)
     experiment_table = utilities.add_passive_flag_to_ophys_experiment_table(experiment_table)
 
+    # # convert experience level
+    # import visual_behavior.visualization.utils as utils
+    # experiment_table['experience_level'] = [utils.convert_experience_level(experience_level) for experience_level in
+    #                                             experiment_table.experience_level.values]
+
     if add_extra_columns:
         # add cell type and binned depth columms for plot labels
         experiment_table = utilities.add_cell_type_column(experiment_table)
@@ -335,8 +340,8 @@ def get_platform_paper_experiment_table(add_extra_columns=True, limit_to_closest
         experiment_table = utilities.add_last_familiar_active_column(experiment_table)
         experiment_table = utilities.add_second_novel_column(experiment_table)
         experiment_table = utilities.add_second_novel_active_column(experiment_table)
-        # add column that has a combination of experience level and exposure to omissions for familiar sessions,
-        # or exposure to image set for novel sessions
+        # # add column that has a combination of experience level and exposure to omissions for familiar sessions,
+        # # or exposure to image set for novel sessions
         experiment_table = utilities.add_experience_exposure_column(experiment_table)
 
     if limit_to_closest_active:

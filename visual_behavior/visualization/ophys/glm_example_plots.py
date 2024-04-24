@@ -251,8 +251,9 @@ def plot_glm_methods_with_example_cells(ophys_experiment_id, cell_specimen_id_1,
     cell_results_df, expt_results, expt_dropouts = load_glm_model_fit_results(ophys_experiment_id)
 
     # get start time using function to optimize events in window
-    n_flashes = 16
+    n_flashes = 30
     times = utils.get_start_end_time_for_period_with_omissions_and_change(dataset.stimulus_presentations, n_flashes)
+    times = [np.round(time) for time in times]
     xlim_seconds = [times[0], times[-1]]
     start_time = times[0]
     duration_seconds = n_flashes * 0.75
@@ -267,7 +268,7 @@ def plot_glm_methods_with_example_cells(ophys_experiment_id, cell_specimen_id_1,
     figsize = [2 * 11, 2 * 8.5]
     fig = plt.figure(figsize=figsize, facecolor='white')
 
-    ax = utils.placeAxesOnGrid(fig, dim=(n_rows, 1), xspan=(0, 0.4), yspan=(0, 0.45), sharex=True, height_ratios=height_ratios)
+    ax = utils.placeAxesOnGrid(fig, dim=(n_rows, 1), xspan=(0, 0.4), yspan=(0, 0.4), sharex=True, height_ratios=height_ratios)
     ax = plot_behavior_timeseries_and_GLM_kernel_activations(dataset, start_time, duration_seconds, ax=ax)
 
     # cell 1 data
@@ -277,16 +278,17 @@ def plot_glm_methods_with_example_cells(ophys_experiment_id, cell_specimen_id_1,
 
     # model fits - cell 1
     ax = utils.placeAxesOnGrid(fig, dim=(1, 1), xspan=(0, 0.4), yspan=(0.65, 0.75), wspace=0.2)
-    ax = plot_model_fits_example_cell(cell_specimen_id_1, dataset, cell_results_df, expt_dropouts, expt_results, None, include_events=True, times=times, as_panel=True, ax=ax)
+    ax = plot_model_fits_example_cell(cell_specimen_id_1, dataset, cell_results_df, expt_dropouts, expt_results,
+                                      kernel=None, n_flashes=n_flashes, include_events=True, times=times, as_panel=True, ax=ax)
     ax.set_ylabel('Cell 1')
 
     # kernels - cell 1
-    ax = utils.placeAxesOnGrid(fig, dim=(n_rows, 1), xspan=(0.47, 0.55), yspan=(0, 0.45), sharex=False, sharey='col', height_ratios=height_ratios, hspace=0.05)
+    ax = utils.placeAxesOnGrid(fig, dim=(n_rows, 1), xspan=(0.5, 0.57), yspan=(0, 0.4), sharex=False, sharey='col', height_ratios=height_ratios, hspace=0.05)
     ax = plot_kernels_for_cell(cell_weights, cell_dropouts, kernels, dataset, xlim_seconds, ax=ax)
     ax[1].set_title('Cell 1')
 
     # coding scores - cell 1
-    ax = utils.placeAxesOnGrid(fig, dim=(1, 1), xspan=(0.47, 0.55), yspan=(0.47, 0.55))
+    ax = utils.placeAxesOnGrid(fig, dim=(1, 1), xspan=(0.5, 0.57), yspan=(0.45, 0.53))
     ax = plot_coding_score_components_for_cell(cell_specimen_id_1, ophys_experiment_id, results_pivoted, ax=ax)
     ax.set_title('')
     ax.set_ylim(0, 1)
@@ -298,16 +300,17 @@ def plot_glm_methods_with_example_cells(ophys_experiment_id, cell_specimen_id_1,
 
     # model fits cell 2
     ax = utils.placeAxesOnGrid(fig, dim=(1, 1), xspan=(0, 0.4), yspan=(0.8, 0.9))
-    ax = plot_model_fits_example_cell(cell_specimen_id_2, dataset, cell_results_df, expt_dropouts, expt_results, None, include_events=True, times=times, as_panel=True, ax=ax)
+    ax = plot_model_fits_example_cell(cell_specimen_id_2, dataset, cell_results_df, expt_dropouts, expt_results,
+                                      kernel=None, n_flashes=n_flashes, include_events=True, times=times, as_panel=True, ax=ax)
     ax.set_ylabel('Cell 2')
 
     # kernels - cell 2
-    ax = utils.placeAxesOnGrid(fig, dim=(n_rows, 1), xspan=(0.57, 0.64), yspan=(0, 0.45), sharex=False, sharey='col', height_ratios=height_ratios, hspace=0.05)
+    ax = utils.placeAxesOnGrid(fig, dim=(n_rows, 1), xspan=(0.6, 0.67), yspan=(0, 0.4), sharex=False, sharey='col', height_ratios=height_ratios, hspace=0.05)
     ax = plot_kernels_for_cell(cell_weights, cell_dropouts, kernels, dataset, xlim_seconds, ax=ax)
     ax[1].set_title('Cell 2')
 
     # coding scores - cell 2
-    ax = utils.placeAxesOnGrid(fig, dim=(1, 1), xspan=(0.57, 0.64), yspan=(0.47, 0.55))
+    ax = utils.placeAxesOnGrid(fig, dim=(1, 1), xspan=(0.6, 0.67), yspan=(0.45, 0.53))
     ax = plot_coding_score_components_for_cell(cell_specimen_id_2, ophys_experiment_id, results_pivoted, ax=ax)
     ax.set_title('')
     ax.set_ylim(0, 1)
@@ -322,7 +325,7 @@ def plot_glm_methods_with_example_cells(ophys_experiment_id, cell_specimen_id_1,
 
 
 def plot_model_fits_example_cell(cell_specimen_id, dataset, cell_results_df, dropouts, results,
-                                 kernel=None, include_events=True, times=None,
+                                 kernel=None, include_events=True, times=None, n_flashes=16,
                                  as_panel=False, save_dir=None, ax=None):
     '''
     For one cell, plot the cell trace, model fits, and model fits with a specific kernel (such as all-images or omissions) removed
@@ -349,7 +352,9 @@ def plot_model_fits_example_cell(cell_specimen_id, dataset, cell_results_df, dro
     stimulus_presentations = loading.limit_stimulus_presentations_to_change_detection(stimulus_presentations)
     if times is None:
         # get times for plot by finding a time period with an omission and a change
-        times = utils.get_start_end_time_for_period_with_omissions_and_change(stimulus_presentations, n_flashes=16)
+        times = utils.get_start_end_time_for_period_with_omissions_and_change(stimulus_presentations,
+                                                                    n_flashes=n_flashes)
+        times = [int(time) for time in times]
 
     # do the plot
     if ax is None:
@@ -413,13 +418,13 @@ def plot_model_fits_example_cell(cell_specimen_id, dataset, cell_results_df, dro
 
     # Clean up plot
     if as_panel:
-        # ax.legend(loc='upper right', fontsize=8)
+        ax.legend(bbox_to_anchor=(1,1), fontsize=10)
         # ax.tick_params(axis='both', which='both', labelsize=8)
         # ax.set_ylabel('Calcium\nevents', fontsize=12)
-        ax.set_xlabel('')
+        # ax.set_xlabel('')
         ax.spines[['top', 'bottom', 'left', 'right']].set_visible(False)
-        ax.tick_params(which='both', bottom=False, top=False, right=False, left=False,
-                             labelbottom=False, labeltop=False, labelright=False, labelleft=False)
+        ax.tick_params(which='both', bottom=True, top=False, right=False, left=False,
+                             labelbottom=True, labeltop=False, labelright=False, labelleft=False)
         ax.set_title('')
     else:
         ax.legend(loc='upper right', fontsize=12)
@@ -431,6 +436,8 @@ def plot_model_fits_example_cell(cell_specimen_id, dataset, cell_results_df, dro
         ax.set_title('csid: ' + str(cell_specimen_id))
     # ax.set_ylim(-0.035,.9)
     ax.set_xlim(times)
+
+    ax.set_xticks(np.arange(times[0], times[1], 4))
 
 
     if save_dir:
@@ -1614,8 +1621,11 @@ def plot_weights_and_coding_score_heatmaps_for_experience_levels(kernel, weights
     palette = utils.get_experience_level_colors()
 
     # coding score colormap
-    import matplotlib
-    cmap = matplotlib.colormaps.get_cmap('Blues')
+    try: # newer version of mpl
+        import matplotlib
+        cmap = matplotlib.colormaps.get_cmap('Blues')
+    except: # older version
+        cmap = plt.get_cmap('Blues')
     cmap.set_under('black')
 
     # create plot
