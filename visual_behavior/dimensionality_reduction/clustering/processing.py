@@ -3497,18 +3497,17 @@ def count_cluster_frequency(SSE_mapping, shuffled_labels):
         for n_boot in n_boots:
             # count cells in each shuffled clsuter
             tmp = shuffled_labels[n_boot].groupby('cluster_id').count()['cell_specimen_id']
+            # reindex to match all cluster ids, if cluster is missing, set it to 0
+            tmp = tmp.reindex(np.arange(1,len(cluster_ids)+1)).replace(np.nan, 0)
             # get matched cluster id
             matched_id = SSE_mapping[n_boot][cluster_id]
             # if cluster was matched, append True, else False
             if matched_id != -1:
-                try:
-                    n_cells = tmp[matched_id]
-                    if n_cells !=0: 
-                        boolean_count.append(True)
-                    else:
-                        boolean_count.append(False)
-                except: # KeyError
-                    #print(f'cluster {matched_id} not found in shuffle {n_boot}')
+                n_cells = tmp[matched_id]
+                # cluster was matched but there were not cells from this cell type
+                if n_cells !=0: 
+                    boolean_count.append(True)
+                else:
                     boolean_count.append(False)
             else:
                 boolean_count.append(False)
