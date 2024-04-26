@@ -4197,7 +4197,7 @@ def plot_cluster_size_difference(cluster_size_df, cre_line=None, shuffle_type=No
     return ax
 
 
-def plot_cluster_size_difference_for_shuffle(cluster_size_diff, save_dir=None, folder='',):
+def plot_cluster_size_difference_for_shuffle(cluster_size_diff, y = 'cluster_size_diff', save_dir=None, folder='',):
     '''
     Load saved data file containing a dictionary with key for threshold, then within that key,
     values are difference in cluster size between original and shuffled clusters for every iteration of the shuffle
@@ -4217,20 +4217,30 @@ def plot_cluster_size_difference_for_shuffle(cluster_size_diff, save_dir=None, f
 
     # make the plot
     figsize = (20, 3)
-    fig, ax = plt.subplots(1, 3, figsize=figsize, sharex=True, sharey=True)
+    if y == 'cluster_size_diff':
+        sharey=True
+    else:
+        sharey=False
+    fig, ax = plt.subplots(1, 3, figsize=figsize, sharex=True, sharey=sharey)
     for i, cre_line in enumerate(np.sort(cluster_size_diff.cre_line.unique())):
-        ax[i] = sns.barplot(data=cluster_size_diff[cluster_size_diff.cre_line == cre_line],
-                            x='cluster_id', y='cluster_size_diff', color='gray', width=0.5, ax=ax[i])
+        data=cluster_size_diff[cluster_size_diff.cre_line == cre_line]
+        ax[i] = sns.barplot(data=data, x='cluster_id', y=y, color='gray', width=0.5, ax=ax[i])
         ax[i].set_title(utils.convert_cre_line_to_cell_type(cre_line))
         ax[i].set_xlabel('Cluster ID')
         ax[i].set_ylabel('')
-        ax[i].set_ylim(-0.7, 1.1)
-    ax[0].set_ylabel('Difference in cluster size\n(normalized to pupulation size)')
+        if y == 'cluster_size_diff':
+            ax[i].set_ylim(-1.1, 1.1)
+            ylabel = 'Difference in cluster size\n(normalized to pupulation size)'
+        elif y == 'abs_cluster_size_diff':
+            ax[i].set_ylim(data[y].min(), data[y].max())
+            ylabel = 'Absolute difference in cluster size'
+
+    ax[0].set_ylabel(ylabel)
     plt.subplots_adjust(hspace=0.2, wspace=0.15)
 
     # save it
     if save_dir:
-        filename = 'difference_in_cluster_size_shuffle_control'
+        filename = 'difference_in_cluster_size_shuffle_control ' + y
         utils.save_figure(fig, figsize, save_dir, folder, filename)
 
 

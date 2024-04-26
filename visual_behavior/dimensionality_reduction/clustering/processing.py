@@ -3342,23 +3342,23 @@ def get_cluster_size_differece_df(original_cluster_sizes, shuffled_cluster_sizes
         # number of clusters to iterate over in this cre line
         if cre_line is not None:
             cluster_ids = shuffled_cluster_sizes[cre_line].keys()
+            og_sizes = original_cluster_sizes[cre_line]
+            shuffled_sizes = shuffled_cluster_sizes[cre_line]
         else:
             cluster_ids = shuffled_cluster_sizes.keys()
+            og_sizes = original_cluster_sizes
+            shuffled_sizes = shuffled_cluster_sizes
 
         for cluster_id in cluster_ids:
-            if cre_line is not None:
-                og_size = original_cluster_sizes[cre_line][cluster_id]
-                shuffled_sizes = shuffled_cluster_sizes[cre_line][cluster_id]
-            else:
-                og_size = original_cluster_sizes[cluster_id]
-                shuffled_sizes = shuffled_cluster_sizes[cluster_id]
-            cluster_size_diff = np.subtract(og_size, shuffled_sizes) / np.add(og_size, shuffled_sizes)
-            abs_cluster_size_diff = np.subtract(og_size, shuffled_sizes)
+            og_size = og_sizes[cluster_id]
+            shuffled_size = shuffled_sizes[cluster_id]
+            cluster_size_diff = np.subtract(og_size, shuffled_size) / np.add(og_size, shuffled_size)
+            abs_cluster_size_diff = np.subtract(og_size, shuffled_size)
 
                 # this part needs to be optimized. There should be a better way of adding values to dictionary without iteration
             data = []
             for n_boot, value in enumerate(cluster_size_diff):
-                data.append([cre_line, cluster_id, n_boot, value, abs_cluster_size_diff[n_boot], og_size, shuffled_sizes[n_boot]])
+                data.append([cre_line, cluster_id, n_boot, value, abs_cluster_size_diff[n_boot], og_size, shuffled_size[n_boot]])
             nb_df = pd.DataFrame(data, columns=columns)
             cluster_size_difference_df = cluster_size_difference_df.append(nb_df, ignore_index=True)
 
