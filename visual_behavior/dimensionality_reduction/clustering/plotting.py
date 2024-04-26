@@ -4217,10 +4217,7 @@ def plot_cluster_size_difference_for_shuffle(cluster_size_diff, y = 'cluster_siz
 
     # make the plot
     figsize = (20, 3)
-    if y == 'cluster_size_diff':
-        sharey=True
-    else:
-        sharey=False
+    sharey = True
     fig, ax = plt.subplots(1, 3, figsize=figsize, sharex=True, sharey=sharey)
     for i, cre_line in enumerate(np.sort(cluster_size_diff.cre_line.unique())):
         data=cluster_size_diff[cluster_size_diff.cre_line == cre_line]
@@ -4228,12 +4225,8 @@ def plot_cluster_size_difference_for_shuffle(cluster_size_diff, y = 'cluster_siz
         ax[i].set_title(utils.convert_cre_line_to_cell_type(cre_line))
         ax[i].set_xlabel('Cluster ID')
         ax[i].set_ylabel('')
-        if y == 'cluster_size_diff':
-            ax[i].set_ylim(-1.1, 1.1)
-            ylabel = 'Difference in cluster size\n(normalized to pupulation size)'
-        elif y == 'abs_cluster_size_diff':
-            ax[i].set_ylim(data[y].min(), data[y].max())
-            ylabel = 'Absolute difference in cluster size'
+        # ax[i].set_ylim(data[y].min(), data[y].max())
+        ylabel = 'Difference in cluster size\n(normalized to pupulation size)'
 
     ax[0].set_ylabel(ylabel)
     plt.subplots_adjust(hspace=0.2, wspace=0.15)
