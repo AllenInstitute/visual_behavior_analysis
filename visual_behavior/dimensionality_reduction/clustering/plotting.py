@@ -489,7 +489,7 @@ def plot_coclustering_matrix_sorted_by_cluster_size(coclustering_matrices, clust
     sns.despine(ax=ax, bottom=False, top=False, left=False, right=False)
     if save_dir:
         filename = 'coclustering_matrix_sorted_by_cluster_size_' + cre_line.split('-')[0]+suffix
-        utils.save_figure(fig, figsize, save_dir, folder, filename, formats=['.png', '.pdf'])  # saving to PDF is super slow)
+        utils.save_figure(fig, figsize, save_dir, folder, filename, formats=['.png'])  # saving to PDF is super slow)
     return ax
 
 
@@ -1683,7 +1683,7 @@ def plot_mean_cluster_heatmaps_remapped(feature_matrix, cluster_meta, cre_line, 
     for i, cluster_id in enumerate(clusters):
         this_cluster_csids = cluster_meta[cluster_meta.cluster_id==cluster_id].index.values
         mean_dropout_df = feature_matrix_remapped.loc[this_cluster_csids].mean().unstack()
-        ax[i] = sns.heatmap(mean_dropout_df, cmap=remapped_cmap, vmin=0, vmax=vmax, ax=ax[i], cbar=False, cbar_kws={'label': 'coding score'})
+        ax[i] = sns.heatmap(mean_dropout_df.loc[processing.get_features_for_clustering()], cmap=remapped_cmap, vmin=0, vmax=vmax, ax=ax[i], cbar=False, cbar_kws={'label': 'coding score'})
         # fraction is number of cells in this cluster vs all cells in this cre line
         fraction_cluster = len(this_cluster_csids) / float(len(cluster_meta))
         fraction = np.round(fraction_cluster * 100, 1)
@@ -1923,7 +1923,7 @@ def plot_population_averages_for_clusters(multi_session_df, event_type, axes_col
         plt.suptitle(suptitle, x=0.52, y=1.3, fontsize=18)
     fig.subplots_adjust(wspace=wspace, hspace=0.75)
     if save_dir:
-        fig_title = 'population_average_' + axes_column + '_' + hue_column + suffix
+        fig_title = 'population_average_' + axes_column + '_' + hue_column + suffix + supt
         utils.save_figure(fig, figsize, save_dir, folder, fig_title)
 
     return ax

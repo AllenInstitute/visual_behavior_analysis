@@ -3143,11 +3143,11 @@ def get_mean_dropout_scores_per_cluster(dropout_df, cluster_meta=None, labels=No
     for i, cluster_id in enumerate(cluster_ids):
         this_cluster_ids = cluster_meta[cluster_meta['cluster_id'] == cluster_id]['cell_specimen_id'].unique()
         if stacked is True:
-            mean_dropout_df = dropout_df.loc[this_cluster_ids].mean()
+            mean_dropout_df = dropout_df.loc[this_cluster_ids].mean()[get_features_for_clustering()]
             mean_cluster[cluster_id] = mean_dropout_df.values
         elif stacked is False:
-            mean_dropout_df = dropout_df.loc[this_cluster_ids].mean().unstack()
-            mean_cluster[cluster_id] = mean_dropout_df.loc[get_features_for_clustering()]
+            mean_dropout_df = dropout_df.loc[this_cluster_ids].mean()[get_features_for_clustering()]
+            mean_cluster[cluster_id] = mean_dropout_df.unstack()
 
     if stacked is True:
         return (pd.DataFrame(mean_cluster))
