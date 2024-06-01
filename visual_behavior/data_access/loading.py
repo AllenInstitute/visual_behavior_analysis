@@ -348,6 +348,9 @@ def get_platform_paper_experiment_table(add_extra_columns=True, limit_to_closest
         experiment_table = utilities.limit_to_last_familiar_second_novel_active(experiment_table)
         experiment_table = utilities.limit_to_containers_with_all_experience_levels(experiment_table)
 
+    # remove familiar session that was actually novel
+    experiment_table = experiment_table[experiment_table.ophys_session_id!=919888953]
+
     return experiment_table
 
 
@@ -2970,6 +2973,8 @@ def load_multi_session_df(data_type, event_type, conditions, inclusion_criteria,
     cache_dir = get_platform_analysis_cache_dir()
     cache = bpc.from_s3_cache(cache_dir=cache_dir)
     experiments_table = cache.get_ophys_experiment_table()
+    # remove familiar session that was actually novel
+    experiment_table = experiment_table[experiment_table.ophys_session_id!=919888953]
     if exclude_passive_sessions:
         session_types = experiments_table.session_type.unique()
         filtered_session_types = [s for s in session_types if 'passive' not in s]
