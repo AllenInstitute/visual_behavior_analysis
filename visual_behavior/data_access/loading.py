@@ -3579,6 +3579,11 @@ def get_multi_session_df_for_conditions(data_type, event_type, conditions, inclu
     if 'containers_with_all_levels' in inclusion_criteria:
         multi_session_df = utilities.limit_to_containers_with_all_experience_levels(multi_session_df)
 
+
+    # remove familiar session that was actually novel (this should not be in the most recently released data v1.0.1)
+    # ophys_session_id = 919888953, SDK#2216, OPHYS_3 listed but novel image set susepcted to have been shown based on activity profile
+    multi_session_df = multi_session_df[multi_session_df.ophys_session_id!=919888953]
+
     print('there are', len(multi_session_df.ophys_experiment_id.unique()),
           'experiments after filtering for inclusion criteria - ', inclusion_criteria)
 
