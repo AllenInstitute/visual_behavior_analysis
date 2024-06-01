@@ -680,7 +680,8 @@ def compute_gap(clustering, data, k_max=5, n_boots=20, reference_shuffle='all', 
     :param reference: (str) what type of shuffle to use, shuffle_dropout_scores,
             None is use random normal distribution
     :param metric: (str) type of distance to use, default = 'euclidean'
-    :param separate_cre_lines: (bool) whether or not to shuffle within cre lines. Set to True if feature matrix consists of multiple cre lines.
+    :param separate_cre_lines: (bool) whether or not to shuffle within cre lines. 
+                                Set to True if feature matrix consists of multiple cre lines.
     :return:
     gap: array of gap values that are the difference between two inertias
     reference_inertia: array of log of reference inertia
@@ -4046,6 +4047,8 @@ def get_cells_matched_in_3_familiar_active_sessions():
     cells_table = cells_table.reset_index().merge(familiar_expts, on='ophys_experiment_id')
     # remove experiment that does not have GLM results
     cells_table = cells_table[cells_table.ophys_experiment_id!=856938751]
+    # remove familiar experiment that was actualy novel
+    cells_table = cells_table[cells_table.ophys_session_id!=919888953]
     print(len(cells_table.ophys_experiment_id.unique()), 'experiments in filtered cells table')
 
     # add familiar active session number

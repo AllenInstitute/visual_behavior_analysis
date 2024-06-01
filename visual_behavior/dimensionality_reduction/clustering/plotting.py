@@ -33,8 +33,8 @@ def get_abbreviated_experience_levels(experience_levels):
     converts experience level names (ex: 'Novel >1') into short hand versions (ex: 'N>1')
     abbreviated names are returned in the same order as provided in experience_levels
     """
-    #exp_level_abbreviations = [exp_level.split(' ')[0][0] if len(exp_level.split(' ')) == 1 else exp_level.split(' ')[0][0] + exp_level.split(' ')[1][:2] for exp_level in experience_levels]
-    exp_level_abbreviations = ['F', 'N', 'N+']
+    exp_level_abbreviations = [exp_level.split(' ')[0][0] if len(exp_level.split(' ')) == 1 else exp_level.split(' ')[0][0] + exp_level.split(' ')[1][:2] for exp_level in experience_levels]
+    # exp_level_abbreviations = ['F', 'N', 'N+']
     return exp_level_abbreviations
 
 
@@ -802,7 +802,10 @@ def plot_dropout_heatmap(cluster_meta, feature_matrix, cluster_id, cre_line=None
         this_cluster_csids = this_cluster_meta.index.values
 
     mean_dropout_df = feature_matrix.loc[this_cluster_csids].mean().unstack()
-    features = processing.get_features_for_clustering()
+    if 'all-images' in mean_dropout_df.index.values: 
+        features = processing.get_features_for_clustering()
+    else:
+        features = processing.get_feature_labels_for_clustering()
     mean_dropout_df = mean_dropout_df.loc[features]  # order regressors in a specific order
 
     if ax is None:
@@ -1777,8 +1780,12 @@ def plot_mean_cluster_heatmaps_remapped(feature_matrix, cluster_meta, cre_line=N
     # loop through clusters in sorted order
     for i, cluster_id in enumerate(clusters):
         this_cluster_csids = cluster_meta[cluster_meta.cluster_id==cluster_id].index.values
-        mean_dropout_df = feature_matrix_remapped.loc[this_cluster_csids].mean().unstack()
-        ax[i] = sns.heatmap(mean_dropout_df, cmap=remapped_cmap, vmin=0, vmax=vmax, ax=ax[i], cbar=False, cbar_kws={'label': 'coding score'})
+        # mean_dropout_df = feature_matrix_remapped.loc[this_cluster_csids].mean().unstack()
+        ax[i] = plot_dropout_heatmap(cluster_meta.loc[this_cluster_csids], feature_matrix_remapped.loc[this_cluster_csids],
+                        cluster_id, cre_line=None, cbar=False,
+                         abbreviate_features=False, abbreviate_experience=True,
+                         cluster_size_in_title=True, small_fontsize=False, ax=ax[i])
+        # ax[i] = sns.heatmap(mean_dropout_df, cmap=remapped_cmap, vmin=0, vmax=vmax, ax=ax[i], cbar=False, cbar_kws={'label': 'coding score'})
         # fraction is number of cells in this cluster vs all cells in this cre line
         fraction_cluster = len(this_cluster_csids) / float(len(cluster_meta))
         fraction = np.round(fraction_cluster * 100, 1)
@@ -1911,7 +1918,7 @@ def plot_coding_score_heatmap_remapped(cluster_meta, feature_matrix, sort_by='cl
     # label feature categories on left
     rotation = 0
     fontsize = 16
-    features = processing.get_features_for_clustering()
+    features = processing.get_feature_labels_for_clustering()
     for i, feature in enumerate(features):
         if feature == 'all-images':
             features[i] = 'images'
@@ -3645,7 +3652,7 @@ def plot_cell_counts_per_location(cluster_meta, save_dir=None, folder=None, ax=N
     return ax
 
 
-def plot_experience_modulation(coding_score_metrics, metric='experience_modulation', save_dir=None, folder=''):
+def plot_experience_modulation(coding_score_metrics, metric='experience_modulation', save_dir=None, folder='', suffix=''):
     """
     Plot the experience modulation metric for different clusters.
 
@@ -3662,11 +3669,14 @@ def plot_experience_modulation(coding_score_metrics, metric='experience_modulati
     cell_type_colors = utils.get_cell_type_colors()
     xorder = np.sort(coding_score_metrics.cluster_id.unique())
 
-    figsize = (9, 3)
+    if 'filtered' in suffix: 
+        figsize = (7, 3)
+    else:
+        figsize = (9, 3)
     fig, ax = plt.subplots(figsize=figsize)
     ax = sns.boxplot(data=coding_score_metrics, x='cluster_id', y=metric, order=xorder,
                      hue='cell_type', hue_order=cell_types, palette=cell_type_colors,
-                     showfliers=False, width=0.6, boxprops=dict(alpha=.7), ax=ax)
+                     showfliers=False, width=0.7, boxprops=dict(alpha=.7), ax=ax)
     ax.set_title('Experience modulation')
     ax.set_xlabel('cluster ID')
     ax.set_ylabel('<- Familiar --- Novel ->')
@@ -3675,7 +3685,7 @@ def plot_experience_modulation(coding_score_metrics, metric='experience_modulati
     ax.legend(bbox_to_anchor=(1, 1), fontsize='xx-small', title_fontsize='xx-small')
 
     if save_dir:
-        utils.save_figure(fig, figsize, save_dir, folder, 'fraction_cells_per_cluster_per_cre_per_layer')
+        utils.save_figure(fig, figsize, save_dir, folder, 'fraction_cells_per_cluster_per_cre_per_layer'+suffix)
 
     return ax
 

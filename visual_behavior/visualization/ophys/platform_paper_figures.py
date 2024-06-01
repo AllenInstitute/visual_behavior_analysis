@@ -2207,6 +2207,121 @@ def plot_behavior_metric_by_experience(stats, metric, title='', ylabel='', ylims
     return ax
 
 
+def plot_behavior_metric_by_experience_horiz(stats, metric, title='', xlabel='', xlims=None, best_image=True, show_containers=False,
+                                       stripplot=True, pointplot=True, plot_stats=False, show_ns=False, save_dir=None, folder=None, suffix='', ax=None):
+    """
+    plots average metric value across experience levels, using experience level colors for average, gray for individual points.
+    plots a stripplot of all datapoints and a pointplot of means by default. if pointplot is False, a boxplot will be shown.
+
+    stats should be a table of behavior metric values loaded using vba.utilities.get_behavior_stats_for_sessions()
+    metric is a column of the stats table
+
+    if stats table has a unique row for each image_name in each behavior session, all images will be included in the average,
+    unless best_image = True
+    if stats table does not have unique images, setting best_image to True will cause an error, as there are no images to filter
+
+    if best_image = True, will sort images by metric value within each experience level and select the top 2 images to plot
+    if show_containers = True, will plot a linked gray line for each individual container within the dataset
+    if show_ns = True, indicates whether results are non-significant on plot. otherwise only puts asterisk for significant results
+    returns axis handle
+    """
+    # experience_levels = utils.get_new_experience_levels()
+    # new_experience_levels = utils.get_new_experience_levels()
+    # colors = utils.get_experience_level_colors()
+
+    if xlims is None:
+        xmin = 0
+        xmax = None
+    else:
+        xmin = xlims[0]
+        xmax = xlims[1]
+
+    if best_image:
+        tmp = stats.copy()
+        tmp = tmp[tmp.image_name != 'omitted']
+
+        # sort images by metric value within each experience level
+        tmp = tmp.groupby(['experience_level', 'image_name']).mean()[[metric]].sort_values(by=['experience_level', metric])
+
+        best_familiar = tmp.loc['Familiar'].index.values[-2:]
+        best_novel = tmp.loc['Novel'].index.values[-2:]
+        best_novel_plus = tmp.loc['Novel +'].index.values[-2:]
+
+        # get data for images with highest metric value
+        familiar_stats = stats[(stats.experience_level == 'Familiar') & (stats.image_name.isin(best_familiar))]
+        novel_stats = stats[(stats.experience_level == 'Novel') & (stats.image_name.isin(best_novel))]
+        novel_plus_stats = stats[(stats.experience_level == 'Novel +') & (stats.image_name.isin(best_novel_plus))]
+
+        data = pd.concat([familiar_stats, novel_stats, novel_plus_stats])
+
+        suffix = suffix + '_best_image'
+
+    else:
+        data = stats.copy()
+
+    colors = utils.get_experience_level_colors()
+    # experience_levels = utils.get_experience_levels()
+    experience_levels = np.sort(data.experience_level.unique())
+
+    if ax is None:
+        figsize = (3.5, 2)
+        fig, ax = plt.subplots(1, 1, figsize=figsize)
+
+    if stripplot:
+        ax = sns.stripplot(data=data, y='experience_level', x=metric, order=experience_levels,
+                       orient='h', color='gray', dodge=True, jitter=0.1, size=2, ax=ax, zorder=0)
+    if show_containers:
+        for ophys_container_id in data.ophys_container_id.unique():
+            ax = sns.pointplot(data=data[data.ophys_container_id == ophys_container_id], y='experience_level', x=metric,
+                               order=experience_levels, join=True, orient='h', color='gray',
+                               markers='.', scale=0.15, errwidth=0.25, ax=ax)
+        suffix = suffix + '_containers'
+
+    if pointplot:
+        ax = sns.pointplot(data=data, y='experience_level', x=metric, order=experience_levels,
+                       orient='h', palette=colors, ax=ax)
+    else:
+        ax = sns.boxplot(data=data, y='experience_level', x=metric, order=experience_levels,
+                           orient='h', palette=colors, width=0.6, boxprops=dict(alpha=0.8), ax=ax)
+
+    # ax.set_ylim(-0.5, len(experience_levels)-0.5)
+    # ax.set_yticklabels(experience_levels, rotation=0)
+    # ax.invert_yaxis()
+    ax.set_ylabel('')
+    ax.set_xlabel('')
+    ax.set_title(title)
+    if xlabel is None:
+        xlabel = metric
+    ax.set_xlabel(xlabel)
+    # ax.legend(bbox_to_anchor=(1,1), fontsize='xx-small')
+
+    # add stats to plot if only looking at experience levels
+    if plot_stats:
+        # stats dataframe to save
+        tukey = pd.DataFrame()
+        ax, tukey_table = add_stats_to_plot(data, metric, ax, ymax=xmax, show_ns=show_ns)
+        # aggregate stats
+        tukey_table['metric'] = metric
+        tukey = pd.concat([tukey, tukey_table])
+
+    ax.set_xlim(xmin=xmin)
+
+    if save_dir:
+        utils.save_figure(fig, figsize, save_dir, folder, metric + '_horiz' + suffix)
+    stats_filename = metric + '_stats' + suffix
+    try:
+        if plot_stats:
+            print('saving_stats')
+            tukey.to_csv(os.path.join(save_dir, folder, stats_filename + '_tukey.csv'))
+        # save metric values
+        cols_to_groupby = ['experience_level']
+        stats = get_descriptive_stats_for_metric(data, metric, cols_to_groupby)
+        stats.to_csv(os.path.join(save_dir, folder, stats_filename + '_values.csv'))
+    except BaseException:
+        print('stats did not save for', metric)
+    return ax
+
+
 def plot_behavior_metric_across_stages(data, metric, ylabel=None, save_dir=None, folder=None, suffix=''):
     """
     generate boxplot of metric values across behavior stages (gratings flashed, gratings static, familiar, novel)
@@ -2416,6 +2531,60 @@ def plot_prior_exposures_per_cell_type_for_novel_plus(platform_experiments, beha
         stats = exposures.groupby(['cell_type', 'experience_level']).describe()[['prior_exposures_to_image_set']]
         stats.to_csv(os.path.join(save_dir, folder, 'stimulus_exposures_before_novel_plus_stats.csv'))
 
+
+def plot_prior_exposures_to_image_set_before_platform_ophys_sessions_horiz(platform_experiments, behavior_sessions, save_dir=None, folder=None, suffix='', ax=None):
+    """
+    Creates a boxplot showing the number of prior exposures to each image set for each experience level (Familiar, Novel, Novel +)
+    for the set of mice and sessions in platform_experiments
+    Boxplot is distribution of number of prior exposures across mice
+    """
+
+    # get the behavior sessions corresponding to the ophys sessions included in platform dataset
+    paper_ophys_behavior_sessions = behavior_sessions.loc[platform_experiments.behavior_session_id.unique()]
+    exposures = paper_ophys_behavior_sessions.set_index(['experience_level', 'mouse_id'])[['prior_exposures_to_image_set']].reset_index()
+
+    if ax is None:
+        figsize = (3.5, 2)
+        fig, ax = plt.subplots(figsize=figsize)
+
+    colors = utils.get_experience_level_colors()
+    experience_levels = np.sort(platform_experiments.experience_level.unique())
+
+    ax = sns.boxplot(data=exposures, y='experience_level', x='prior_exposures_to_image_set', orient='h',
+                     order=experience_levels, palette=colors, width=0.5, ax=ax)
+    ax.set_xlabel('# sessions')
+    ax.set_ylabel('')
+
+    stats = exposures.groupby(['experience_level']).describe()[['prior_exposures_to_image_set']]
+    stats.columns = stats.columns.droplevel(0)
+
+    # xticklabels = utils.get_new_experience_levels()
+    ax.set_yticklabels(experience_levels, rotation=0)
+    ax.set_title('Stimulus exposure')
+
+    for i, experience_level in enumerate(experience_levels):
+        x = int(np.round(stats.loc[experience_level]['mean'], 0))
+        if experience_level == 'Novel':
+            text = '0'
+            x = x + 4
+            i = 0.85
+            pos = 0.3
+        elif experience_level == 'Familiar':
+            x = x + 12
+            pos = 0.45
+            text = str(int(np.round(stats.loc[experience_level]['mean'], 0))) + '+/-' + str(int(np.round(stats.loc[experience_level]['std'], 0)))
+        else:
+            x = x + 8
+            pos = 0.15
+            text = str(int(np.round(stats.loc[experience_level]['mean'], 0))) + '+/-' + str(int(np.round(stats.loc[experience_level]['std'], 0)))
+        ax.text(x, i + pos, text, fontsize=14, rotation='horizontal')
+
+    if save_dir:
+        # save plot
+        utils.save_figure(fig, figsize, save_dir, folder, 'stimulus_exposures_before_platform_expts_boxplot_horiz' + suffix)
+        # save stats
+        stats = exposures.groupby(['experience_level']).describe()[['prior_exposures_to_image_set']]
+        stats.to_csv(os.path.join(save_dir, folder, 'stimulus_exposures_before_platform_expts_stats.csv'))
 
 def plot_total_stimulus_exposures(behavior_sessions, save_dir=None, folder=None, suffix='', ax=None):
     """
