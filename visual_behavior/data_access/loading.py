@@ -2974,7 +2974,7 @@ def load_multi_session_df(data_type, event_type, conditions, inclusion_criteria,
     cache = bpc.from_s3_cache(cache_dir=cache_dir)
     experiments_table = cache.get_ophys_experiment_table()
     # remove familiar session that was actually novel
-    experiment_table = experiment_table[experiment_table.ophys_session_id!=919888953]
+    experiments_table = experiments_table[experiments_table.ophys_session_id!=919888953]
     if exclude_passive_sessions:
         session_types = experiments_table.session_type.unique()
         filtered_session_types = [s for s in session_types if 'passive' not in s]

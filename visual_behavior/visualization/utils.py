@@ -21,7 +21,7 @@ def get_single_cell_plots_dir():
     return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/single_cell_plots'
 
 
-def save_figure(fig, figsize, save_dir, folder, fig_title, formats=['.png']):
+def save_figure(fig, figsize, save_dir, folder, fig_title, formats=['.png', '.pdf']):
     fig_dir = os.path.join(save_dir, folder)
     if not os.path.exists(fig_dir):
         os.mkdir(fig_dir)
@@ -698,7 +698,7 @@ def get_conditions_string(data_type, conditions):
 
 def get_start_end_time_for_period_with_omissions_and_change(stimulus_presentations, n_flashes=16):
     st = stimulus_presentations.copy()
-    indices = st[st.omitted].index.values[10:] # start from the 10th omission
+    indices = st[st.omitted].index.values[20:] # start from the 10th omission
     # get all start times for periods with an omission and change
     start_times = []
     for idx in indices: # loop through omission times

@@ -802,11 +802,13 @@ def plot_dropout_heatmap(cluster_meta, feature_matrix, cluster_id, cre_line=None
         this_cluster_csids = this_cluster_meta.index.values
 
     mean_dropout_df = feature_matrix.loc[this_cluster_csids].mean().unstack()
+    print(mean_dropout_df)
     if 'all-images' in mean_dropout_df.index.values: 
         features = processing.get_features_for_clustering()
     else:
         features = processing.get_feature_labels_for_clustering()
     mean_dropout_df = mean_dropout_df.loc[features]  # order regressors in a specific order
+    print(mean_dropout_df)
 
     if ax is None:
         fig, ax = plt.subplots(figsize=(2.5,2))
@@ -1638,7 +1640,7 @@ def plot_cluster_means_heatmap(cluster_means, cmap, vmax, colorbar=False, ax=Non
     # label feature categories on right
     fontsize = 12
     rotation = -90
-    features = processing.get_features_for_clustering()
+    features = processing.get_feature_labels_for_clustering()
     x_loc = cluster_means.shape[1]+.25
     for i,feature in enumerate(features):
         if feature == 'all-images':
@@ -1673,6 +1675,7 @@ def plot_cluster_means_remapped(feature_matrix, cluster_meta, session_colors=Tru
         cluster_means_remapped = cluster_means.copy()
         coding_score_cmap = utils.get_experience_level_cmap()[experience_index]
         vmax = 1
+
     cluster_means_remapped = cluster_means_remapped.T.copy()
     # relabel dataframe indices to be abbreviated
     new_labels = get_clean_labels_for_coding_scores_df(cluster_means_remapped, columns=False)
@@ -1735,7 +1738,8 @@ def plot_mean_shuffled_feature_matrix(shuffled_feature_matrices, cluster_meta, s
     return ax
 
 
-def plot_mean_cluster_heatmaps_remapped(feature_matrix, cluster_meta, cre_line=None, session_colors=True, experience_index=None,
+def plot_mean_cluster_heatmaps_remapped(feature_matrix, cluster_meta, cre_line=None, session_colors=True, 
+                                        experience_index=None, abbreviate_features=False, abbreviate_experience=False,
                                         sort_by='cluster_id', save_dir=None, folder=None):
     """
     Plot mean cluster heatmaps with remapped coding scores.
@@ -1780,18 +1784,40 @@ def plot_mean_cluster_heatmaps_remapped(feature_matrix, cluster_meta, cre_line=N
     # loop through clusters in sorted order
     for i, cluster_id in enumerate(clusters):
         this_cluster_csids = cluster_meta[cluster_meta.cluster_id==cluster_id].index.values
-        # mean_dropout_df = feature_matrix_remapped.loc[this_cluster_csids].mean().unstack()
-        ax[i] = plot_dropout_heatmap(cluster_meta.loc[this_cluster_csids], feature_matrix_remapped.loc[this_cluster_csids],
-                        cluster_id, cre_line=None, cbar=False,
-                         abbreviate_features=False, abbreviate_experience=True,
-                         cluster_size_in_title=True, small_fontsize=False, ax=ax[i])
-        # ax[i] = sns.heatmap(mean_dropout_df, cmap=remapped_cmap, vmin=0, vmax=vmax, ax=ax[i], cbar=False, cbar_kws={'label': 'coding score'})
+
+        mean_dropout_df = feature_matrix_remapped.loc[this_cluster_csids].mean().unstack()
+        if 'all-images' in mean_dropout_df.index.values: 
+            features = processing.get_features_for_clustering()
+        else:
+            features = processing.get_feature_labels_for_clustering()
+        mean_dropout_df = mean_dropout_df.loc[features]  # order regressors in a specific order
+
+        ax[i] = sns.heatmap(mean_dropout_df, cmap=remapped_cmap, vmin=0, vmax=vmax, ax=ax[i], cbar=False, cbar_kws={'label': 'coding score'})
+
+        # ax[i] = plot_dropout_heatmap(cluster_meta.loc[this_cluster_csids], feature_matrix_remapped.loc[this_cluster_csids],
+        #                 cluster_id, cre_line=None, cbar=False,
+        #                  abbreviate_features=False, abbreviate_experience=True,
+        #                  cluster_size_in_title=True, small_fontsize=False, ax=ax[i])
+
         # fraction is number of cells in this cluster vs all cells in this cre line
         fraction_cluster = len(this_cluster_csids) / float(len(cluster_meta))
         fraction = np.round(fraction_cluster * 100, 1)
         # set title and labels
         ax[i].set_title('cluster ' + str(cluster_id) + '\n' + str(fraction) + '%, n=' + str(len(this_cluster_csids)))
         ax[i].set_xlabel('')
+
+        if abbreviate_features:
+        # set yticks to abbreviated feature labels
+            feature_abbreviations = get_abbreviated_features(mean_dropout_df.index.values)
+            ax[i].set_yticklabels(feature_abbreviations, rotation=0)
+        else:
+            ax[i].set_yticklabels(mean_dropout_df.index.values, rotation=0, fontsize=14)
+        if abbreviate_experience:
+            # set xticks to abbreviated experience level labels
+            exp_level_abbreviations = get_abbreviated_experience_levels(mean_dropout_df.columns.values)
+            ax[i].set_xticklabels(exp_level_abbreviations, rotation=90)
+        else:
+            ax[i].set_xticklabels(mean_dropout_df.columns.values, rotation=90, fontsize=14)
 
     fig.suptitle(cell_type, x=0.46, y=1.5)
     plt.subplots_adjust(hspace=0.6, wspace=0.25)
@@ -2037,6 +2063,7 @@ def plot_population_averages_for_clusters(multi_session_df, event_type, axes_col
 
     # plot in order of overall cluster size
     axes_conditions = sdf['cluster_id'].value_counts().index.values
+    # axes_conditions = np.unique(sdf['cluster_id'].values)
     # axes_conditions = np.sort(sdf[axes_column].unique())
     hue_conditions = np.sort(sdf[hue_column].unique())
     n_axes_conditions = len(axes_conditions)
@@ -3677,7 +3704,7 @@ def plot_experience_modulation(coding_score_metrics, metric='experience_modulati
     ax = sns.boxplot(data=coding_score_metrics, x='cluster_id', y=metric, order=xorder,
                      hue='cell_type', hue_order=cell_types, palette=cell_type_colors,
                      showfliers=False, width=0.7, boxprops=dict(alpha=.7), ax=ax)
-    ax.set_title('Experience modulation')
+    ax.set_title('Novelty modulation')
     ax.set_xlabel('cluster ID')
     ax.set_ylabel('<- Familiar --- Novel ->')
     ax.spines[['right', 'top']].set_visible(False)
