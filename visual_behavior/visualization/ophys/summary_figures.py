@@ -90,8 +90,8 @@ def plot_roi_validation(roi_names,
         id = int(id)
         x = roi_df[roi_df.id == id]['x'].values[0]
         y = roi_df[roi_df.id == id]['y'].values[0]
-        valid = roi_df[roi_df.id == id]['valid'].values[0]
-        ax[0].imshow(roi_df[roi_df.id == id]['mask'].values[0])
+        valid = roi_df[roi_df.id == id]['valid_roi'].values[0]
+        ax[0].imshow(roi_df[roi_df.id == id]['mask_matrix'].values[0])
         ax[0].set_title(str(id) + ', ' + str(valid) + ', x: ' + str(x) + ', y: ' + str(y))
         ax[0].grid(False)
 

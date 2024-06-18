@@ -461,8 +461,8 @@ def plot_roi_masks(dataset, save=False):
 
     metrics = np.empty(len(dataset.cell_indices))
     metrics[:] = -1
-    cell_list = dataset.cell_indices
-    plot_metrics_mask(dataset, metrics, cell_list, 'roi masks', max_image=True, cmap='hls', ax=ax[1], save=False,
+    cell_list = dataset.valid_cell_indices
+    plot_metrics_mask(dataset.roi_mask_array, metrics, cell_list, 'roi masks', max_projection=None, cmap='hls', ax=ax[1], save=False,
                       colorbar=False)
 
     plt.suptitle(dataset.analysis_folder, fontsize=16, x=0.5, y=1., horizontalalignment='center')
@@ -555,7 +555,8 @@ def plot_experiment_summary_figure(analysis, save_dir=None):
     metrics = np.empty(len(analysis.dataset.cell_indices))
     metrics[:] = -1
     cell_list = analysis.dataset.cell_indices
-    plot_metrics_mask(analysis.dataset, metrics, cell_list, 'cell masks', max_image=True, cmap='hls', ax=ax, save=False,
+    max_projection = analysis.dataset.max_projection
+    plot_metrics_mask(analysis.dataset.roi_mask_array, metrics, cell_list, 'cell masks', max_projection=max_projection, cmap='hls', ax=ax, save=False,
                       colorbar=False)
     # ax.imshow(analysis.dataset.max_projection, cmap='gray', vmin=0, vmax=np.amax(analysis.dataset.max_projection))
     ax.set_title(analysis.dataset.experiment_id)

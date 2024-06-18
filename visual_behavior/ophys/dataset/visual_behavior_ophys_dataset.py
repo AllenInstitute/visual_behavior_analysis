@@ -59,17 +59,17 @@ class VisualBehaviorOphysDataset(object):
         self.cache_dir = self.get_cache_dir()
         self.roi_metrics = self.get_roi_metrics()
         self.append_omitted_to_stim_metadata = True
-        if self.roi_metrics.cell_specimen_id.values[0] is None:
-            self.cell_matching = False
-        else:
-            self.cell_matching = True
+        # if self.roi_metrics.cell_specimen_id.values[0] is None:
+        #     self.cell_matching = False
+        # else:
+        #     self.cell_matching = True
 
     def get_cache_dir(self):
         if self.cache_dir is None:
             if platform.system() == 'Linux':
-                cache_dir = r'/allen/aibs/informatics/swdb2018/visual_behavior'
+                cache_dir = r'/allen/programs/mindscope/workgroups/learning/ophys/learning_project_cache'
             else:
-                cache_dir = r'\\allen\aibs\informatics\swdb2018\visual_behavior'
+                cache_dir = r'\\allen\programs\mindscope\workgroups\learning\ophys\learning_project_cache'
 
             logger.info('using default cache_dir: {}'.format(cache_dir))
         else:
@@ -333,6 +333,15 @@ class VisualBehaviorOphysDataset(object):
 
     cell_indices = LazyLoadable('_cell_indices', get_cell_indices)
 
+    def get_valid_cell_indices(self):
+        roi_metrics = self.roi_metrics.copy()
+        valid_cell_indices = roi_metrics[roi_metrics.valid_roi == True].cell_index.values
+
+        self._valid_cell_indices = np.sort(valid_cell_indices)
+        return self._valid_cell_indices
+
+    valid_cell_indices = LazyLoadable('_valid_cell_indices', get_valid_cell_indices)
+
     def get_cell_specimen_id_for_cell_index(self, cell_index):
         roi_metrics = self.roi_metrics
         cell_specimen_id = roi_metrics[roi_metrics.cell_index == cell_index].id.values[0]
@@ -453,6 +462,7 @@ class VisualBehaviorOphysDataset(object):
         obj.get_roi_mask_array()
         obj.get_cell_specimen_ids()
         obj.get_cell_indices()
+        obj.get_valid_cell_indices()
         obj.get_max_projection()
         obj.get_average_image()
         obj.get_motion_correction()

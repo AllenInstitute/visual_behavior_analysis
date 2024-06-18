@@ -48,10 +48,12 @@ def save_dataframe_as_h5(df, name, analysis_dir):
 def get_cache_dir(cache_dir=None):
     if not cache_dir:
         if platform.system() == 'Linux':
-            cache_dir = r'/allen/programs/mindscope/workgroups/learning/learning_mFISH_production_analysis'
+            cache_dir = r'/allen/programs/mindscope/workgroups/learning/ophys/learning_project_cache'
+            # cache_dir = r'/allen/programs/mindscope/workgroups/learning/learning_mFISH_production_analysis'
             # cache_dir = r'/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/visual_behavior_production_analysis'
         else:
-            cache_dir = r'\\allen\programs\mindscope\workgroups\learning\learning_mFISH_production_analysis'
+            cache_dir = r'\\allen\programs\mindscope\workgroups\learning\ophys\learning_project_cache'
+            # cache_dir = r'\\allen\programs\mindscope\workgroups\learning\learning_mFISH_production_analysis'
             # cache_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\visual_behavior_production_analysis'
         return cache_dir
     else:
@@ -189,12 +191,12 @@ def get_processed_dir(lims_data):
     return processed_dir
 
 
-def get_segmentation_dir(lims_data):
-    processed_dir = get_processed_dir(lims_data)
-    segmentation_folder = [file for file in os.listdir(processed_dir) if 'segmentation' in file]
-    segmentation_folder.sort()
-    segmentation_dir = os.path.join(processed_dir, segmentation_folder[-1])
-    return segmentation_dir
+# def get_segmentation_dir(lims_data):
+#     processed_dir = get_processed_dir(lims_data)
+#     segmentation_folder = [file for file in os.listdir(processed_dir) if 'segmentation' in file]
+#     segmentation_folder.sort()
+#     segmentation_dir = os.path.join(processed_dir, segmentation_folder[-1])
+#     return segmentation_dir
 
 
 def get_stimulus_timestamps(timestamps):
@@ -477,7 +479,7 @@ def get_roi_locations(lims_data):
         else:
             mask = roi["mask"]
         roi_locations_list.append([roi["id"], roi["x"], roi["y"], roi["width"], roi["height"], roi["valid"], mask])
-    roi_locations = pd.DataFrame(data=roi_locations_list, columns=['id', 'x', 'y', 'width', 'height', 'valid', 'mask'])
+    roi_locations = pd.DataFrame(data=roi_locations_list, columns=['id', 'x', 'y', 'width', 'height', 'valid_roi', 'mask_matrix'])
     return roi_locations
 
 
@@ -494,32 +496,35 @@ def add_roi_ids_to_roi_metrics(roi_metrics, roi_locations):
 
 
 def get_roi_metrics(lims_data):
-    # objectlist.txt contains metrics associated with segmentation masks
-    segmentation_dir = get_segmentation_dir(lims_data)
-    roi_metrics = pd.read_csv(os.path.join(segmentation_dir, 'objectlist.txt'))
-    # get roi_locations and add unfiltered cell index
-    roi_locations = get_roi_locations(lims_data)
-    roi_names = np.sort(roi_locations.id.values)
-    roi_locations['unfiltered_cell_index'] = [np.where(roi_names == id)[0][0] for id in roi_locations.id.values]
-    # add cell ids to roi_metrics from roi_locations
-    roi_metrics = add_roi_ids_to_roi_metrics(roi_metrics, roi_locations)
-    # merge roi_metrics and roi_locations
-    roi_metrics['id'] = roi_metrics.roi_id.values
-    roi_metrics = pd.merge(roi_metrics, roi_locations, on='id')
-    unfiltered_roi_metrics = roi_metrics
-    # remove invalid roi_metrics
-    roi_metrics = roi_metrics[roi_metrics.valid == True]
-    # hack to get rid of cases with 2 rois at the same location
-    for roi_id in roi_metrics.roi_id.values:
-        roi_data = roi_metrics[roi_metrics.roi_id == roi_id]
-        if len(roi_data) > 1:
-            ind = roi_data.index
-            roi_metrics = roi_metrics.drop(index=ind.values)
-    # add filtered cell index
-    cell_index = [np.where(np.sort(roi_metrics.roi_id.values) == id)[0][0] for id in
-                  roi_metrics.roi_id.values]
-    roi_metrics['cell_index'] = cell_index
-    return roi_metrics, unfiltered_roi_metrics
+    roi_metrics = get_roi_locations(lims_data)
+    roi_metrics['roi_id'] = roi_metrics['id']
+
+    # # objectlist.txt contains metrics associated with segmentation masks
+    # segmentation_dir = get_segmentation_dir(lims_data)
+    # roi_metrics = pd.read_csv(os.path.join(segmentation_dir, 'objectlist.txt'))
+    # # get roi_locations and add unfiltered cell index
+    # roi_locations = get_roi_locations(lims_data)
+    # roi_names = np.sort(roi_locations.id.values)
+    # roi_locations['unfiltered_cell_index'] = [np.where(roi_names == id)[0][0] for id in roi_locations.id.values]
+    # # add cell ids to roi_metrics from roi_locations
+    # roi_metrics = add_roi_ids_to_roi_metrics(roi_metrics, roi_locations)
+    # # merge roi_metrics and roi_locations
+    # roi_metrics['id'] = roi_metrics.roi_id.values
+    # roi_metrics = pd.merge(roi_metrics, roi_locations, on='id')
+    # unfiltered_roi_metrics = roi_metrics
+    # # remove invalid roi_metrics
+    # roi_metrics = roi_metrics[roi_metrics.valid == True]
+    # # hack to get rid of cases with 2 rois at the same location
+    # for roi_id in roi_metrics.roi_id.values:
+    #     roi_data = roi_metrics[roi_metrics.roi_id == roi_id]
+    #     if len(roi_data) > 1:
+    #         ind = roi_data.index
+    #         roi_metrics = roi_metrics.drop(index=ind.values)
+    # # add filtered cell index
+    # cell_index = [np.where(np.sort(roi_metrics.roi_id.values) == id)[0][0] for id in
+    #               roi_metrics.roi_id.values]
+    # roi_metrics['cell_index'] = cell_index
+    return roi_metrics
 
 
 def save_roi_metrics(roi_metrics, lims_data):
@@ -621,7 +626,7 @@ def get_cell_specimen_ids_from_lims(mouse_id):
 
 
 def add_cell_specimen_ids_to_roi_metrics(lims_data, roi_metrics, cache_dir):
-    # roi_ids = get_roi_ids(roi_metrics)
+    roi_ids = get_roi_ids(roi_metrics)
     mouse_id = int(lims_data['external_specimen_id'])
     # Sql query lims to see if there are matching cell ids
     ids = get_cell_specimen_ids_from_lims(mouse_id)
@@ -646,13 +651,16 @@ def add_cell_specimen_ids_to_roi_metrics(lims_data, roi_metrics, cache_dir):
 
 def get_cell_specimen_ids(roi_metrics):
     roi_ids = get_roi_ids(roi_metrics)
-    if roi_metrics.cell_specimen_id.values[0] is None:
-        cell_specimen_ids = roi_ids
-    else:
-        # make sure cell_specimen_ids are retrieved in the same order as roi_ids, as these correspond to order of trace and roi maskindices
-        cell_specimen_ids = [int(roi_metrics[roi_metrics.roi_id == roi_id].cell_specimen_id.values[0]) for roi_id in
-                             roi_ids]
-        cell_specimen_ids = np.asarray(cell_specimen_ids)
+
+    # if roi_metrics.cell_specimen_id.values[0] is None:
+    #     cell_specimen_ids = roi_ids
+    # else:
+    # make sure cell_specimen_ids are retrieved in the same order as roi_ids, as these correspond to order of trace and roi maskindices
+    # cell_specimen_ids = [int(roi_metrics[roi_metrics.roi_id == roi_id].cell_specimen_id.values[0]) for roi_id in
+    #                      roi_ids]
+    # cell_specimen_ids = np.asarray(cell_specimen_ids)
+
+    cell_specimen_ids = roi_metrics.roi_id.values
     return cell_specimen_ids
 
 
@@ -672,30 +680,40 @@ def get_cell_index_for_cell_specimen_id(cell_specimen_id, cell_specimen_ids):
 
 
 def get_fov_dims(experiment_id):
-    from allensdk.brain_observatory.behavior.session_apis.data_io.behavior_ophys_lims_api import BehaviorOphysLimsApi
-    api = BehaviorOphysLimsApi(experiment_id)
-    image_metadata = api.get_metadata()
+    # from allensdk.brain_observatory.behavior.session_apis.data_io.behavior_ophys_lims_api import BehaviorOphysLimsApi
+    # api = BehaviorOphysLimsApi(experiment_id)
+    # image_metadata = api.get_metadata()
+
+    max_projection = get_max_projection(lims_data)
+
+    h = image_metadata['field_of_view_height']
+    w = image_metadata['field_of_view_width']
+
     return image_metadata
 
 
 def get_roi_masks(roi_metrics, lims_data):
     # make roi_dict with ids as keys and roi_mask_array
-    jin = get_input_extract_traces_json(lims_data)
+    # jin = get_input_extract_traces_json(lims_data)
+    # try:
+    #     h = jin["image"]["height"]
+    #     w = jin["image"]["width"]
+    # except Exception as e:
+    #     print(e)
+    #     image_metadata = get_fov_dims(lims_data['lims_id'].iloc[0])
+    #     h = image_metadata['field_of_view_height']
+    #     w = image_metadata['field_of_view_width']
 
-    try:
-        h = jin["image"]["height"]
-        w = jin["image"]["width"]
-    except Exception as e:
-        print(e)
-        image_metadata = get_fov_dims(lims_data['lims_id'].iloc[0])
-        h = image_metadata['field_of_view_height']
-        w = image_metadata['field_of_view_width']
+    # get size from max projection
+    size = get_max_projection(lims_data).shape
+    h = size[0]
+    w = size[1]
 
     cell_specimen_ids = get_cell_specimen_ids(roi_metrics)
     roi_masks = {}
     for i, id in enumerate(cell_specimen_ids):
         m = roi_metrics[roi_metrics.id == id].iloc[0]
-        mask = np.asarray(m['mask'])
+        mask = np.asarray(m['mask_matrix'])
         binary_mask = np.zeros((h, w), dtype=np.uint8)
         binary_mask[int(m.y):int(m.y) + int(m.height), int(m.x):int(m.x) + int(m.width)] = mask
         roi_masks[int(id)] = binary_mask
@@ -714,8 +732,8 @@ def get_corrected_fluorescence_traces(roi_metrics, lims_data):
                              str(get_lims_id(lims_data)) + '_demixed_traces.h5')
     g = h5py.File(file_path)
     corrected_fluorescence_traces = np.asarray(g['data'])
-    valid_roi_indices = np.sort(roi_metrics.unfiltered_cell_index.values)
-    corrected_fluorescence_traces = corrected_fluorescence_traces[valid_roi_indices]
+    # valid_roi_indices = np.sort(roi_metrics.unfiltered_cell_index.values)
+    # corrected_fluorescence_traces = corrected_fluorescence_traces[valid_roi_indices]
     return corrected_fluorescence_traces
 
 
@@ -733,24 +751,24 @@ def get_dff_traces(roi_metrics, lims_data):
     dff_traces = np.asarray(g['data'])
     #    print(dff_traces.shape)
     #    print(roi_metrics.unfiltered_cell_index)
-    valid_roi_indices = np.sort(roi_metrics.unfiltered_cell_index.values)
-    dff_traces = dff_traces[valid_roi_indices]
+    # valid_roi_indices = np.sort(roi_metrics.unfiltered_cell_index.values)
+    # dff_traces = dff_traces[valid_roi_indices]
     print(dff_traces.shape)
     # find cells with NaN traces
-    bad_cell_indices = []
-    final_dff_traces = []
-    for i, dff in enumerate(dff_traces):
-        if np.isnan(dff).any():
-            logger.info('NaN trace detected, removing cell_index: %d', i)
-            bad_cell_indices.append(i)
-        elif np.amax(dff) > 20:
-            logger.info('outlier trace detected, removing cell_index %d', i)
-            bad_cell_indices.append(i)
-        else:
-            final_dff_traces.append(dff)
-    dff_traces = np.asarray(final_dff_traces)
-    print(dff_traces.shape)
-    roi_metrics = roi_metrics[roi_metrics.cell_index.isin(bad_cell_indices) == False]
+    # bad_cell_indices = []
+    # final_dff_traces = []
+    # for i, dff in enumerate(dff_traces):
+    #     if np.isnan(dff).any():
+    #         logger.info('NaN trace detected, removing cell_index: %d', i)
+    #         bad_cell_indices.append(i)
+    #     elif np.amax(dff) > 20:
+    #         logger.info('outlier trace detected, removing cell_index %d', i)
+    #         bad_cell_indices.append(i)
+    #     else:
+    #         final_dff_traces.append(dff)
+    # dff_traces = np.asarray(final_dff_traces)
+    # print(dff_traces.shape)
+    # roi_metrics = roi_metrics[roi_metrics.cell_index.isin(bad_cell_indices) == False]
     # reset cell index after removing bad cells
     cell_index = [np.where(np.sort(roi_metrics.roi_id.values) == id)[0][0] for id in
                   roi_metrics.roi_id.values]
@@ -805,8 +823,10 @@ def save_motion_correction(motion_correction, lims_data):
 
 
 def get_max_projection(lims_data):
+    files = os.listdir(os.path.join(get_processed_dir(lims_data)))
+    max_image = [file for file in files if 'maximum_projection.png' in file]
     # max_projection = mpimg.imread(os.path.join(get_processed_dir(lims_data), 'max_downsample_4Hz_0.png'))
-    max_projection = mpimg.imread(os.path.join(get_segmentation_dir(lims_data), 'maxInt_a13a.png'))
+    max_projection = mpimg.imread(os.path.join(get_processed_dir(lims_data), max_image[0]))
     return max_projection
 
 
@@ -818,14 +838,18 @@ def save_max_projections(lims_data):
     # mpimg.imsave(os.path.join(get_analysis_dir(lims_data), 'max_intensity_projection.png'), arr=max_projection,
     #              cmap='gray')
     # contrast enhanced one
-    max_projection = mpimg.imread(os.path.join(get_segmentation_dir(lims_data), 'maxInt_a13a.png'))
+    files = os.listdir(os.path.join(get_processed_dir(lims_data)))
+    max_image = [file for file in files if 'maximum_projection.png' in file]
+    max_projection = mpimg.imread(os.path.join(get_processed_dir(lims_data), max_image[0]))
     save_data_as_h5(max_projection, 'max_projection', analysis_dir)
     mpimg.imsave(os.path.join(get_analysis_dir(lims_data), 'max_intensity_projection.png'), arr=max_projection,
                  cmap='gray')
 
 
 def get_average_image(lims_data):
-    average_image = mpimg.imread(os.path.join(get_segmentation_dir(lims_data), 'avgInt_a1X.png'))
+    files = os.listdir(os.path.join(get_processed_dir(lims_data)))
+    avg_image = [file for file in files if 'average_projection.png' in file]
+    average_image = mpimg.imread(os.path.join(get_processed_dir(lims_data), avg_image[0]))
     return average_image
 
 
@@ -854,7 +878,7 @@ def run_roi_validation(lims_data, cache_dir):
 
     roi_df = get_roi_locations(lims_data)
     roi_metrics, unfiltered_roi_metrics = get_roi_metrics(lims_data)
-    roi_metrics = add_cell_specimen_ids_to_roi_metrics(lims_data, roi_metrics, cache_dir)
+    # roi_metrics = add_cell_specimen_ids_to_roi_metrics(lims_data, roi_metrics, cache_dir)
     roi_masks = get_roi_masks(roi_metrics, lims_data)
     dff_traces, roi_metrics = get_dff_traces(roi_metrics, lims_data)
     # cell_specimen_ids = get_cell_specimen_ids(roi_metrics)
@@ -914,20 +938,24 @@ def convert_level_1_to_level_2(lims_id, cache_dir=None, plot_roi_validation=Fals
 
     pkl = get_pkl(lims_data)
     stimulus_timestamps = get_stimulus_timestamps(timestamps)
-    core_data = get_core_data(pkl, stimulus_timestamps)
-    save_core_data_components(core_data, lims_data, stimulus_timestamps)
+    try:
+        core_data = get_core_data(pkl, stimulus_timestamps)
+        save_core_data_components(core_data, lims_data, stimulus_timestamps)
 
-    metadata = get_metadata(lims_data, timestamps, core_data)
-    save_metadata(metadata, lims_data)
+        metadata = get_metadata(lims_data, timestamps, core_data)
+        save_metadata(metadata, lims_data)
 
-    trials = get_trials(core_data)
-    save_trials(trials, lims_data)
+        trials = get_trials(core_data)
+        save_trials(trials, lims_data)
+    except:
+        print('could not save core data for behavior task')
+
 
     stimulus_template, stimulus_metadata = get_visual_stimulus_data(pkl)
     save_visual_stimulus_data(stimulus_template, stimulus_metadata, lims_data)
 
-    roi_metrics, unfiltered_roi_metrics = get_roi_metrics(lims_data)
-    roi_metrics = add_cell_specimen_ids_to_roi_metrics(lims_data, roi_metrics, cache_dir)
+    roi_metrics = get_roi_metrics(lims_data)
+    # roi_metrics = add_cell_specimen_ids_to_roi_metrics(lims_data, roi_metrics, cache_dir)
 
     dff_traces, roi_metrics = get_dff_traces(roi_metrics, lims_data)
     save_dff_traces(dff_traces, roi_metrics, lims_data)
@@ -936,7 +964,7 @@ def convert_level_1_to_level_2(lims_id, cache_dir=None, plot_roi_validation=Fals
     save_roi_masks(roi_masks, lims_data)
 
     save_roi_metrics(roi_metrics, lims_data)
-    save_unfiltered_roi_metrics(unfiltered_roi_metrics, lims_data)
+    # save_unfiltered_roi_metrics(unfiltered_roi_metrics, lims_data)
 
     corrected_fluorescence_traces = get_corrected_fluorescence_traces(roi_metrics, lims_data)
     save_corrected_fluorescence_traces(corrected_fluorescence_traces, roi_metrics, lims_data)
