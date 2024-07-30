@@ -1,5 +1,6 @@
 import os
 import numpy as np
+import pandas as pd
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -21,7 +22,7 @@ def get_single_cell_plots_dir():
     return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/single_cell_plots'
 
 
-def save_figure(fig, figsize, save_dir, folder, fig_title, formats=['.png', '.pdf']):
+def save_figure(fig, figsize, save_dir, folder, fig_title, formats=['.png']):
     fig_dir = os.path.join(save_dir, folder)
     if not os.path.exists(fig_dir):
         os.mkdir(fig_dir)
@@ -63,7 +64,6 @@ def placeAxesOnGrid(fig, dim=[1, 1], xspan=[0, 1], yspan=[0, 1], wspace=None, hs
     idx = 0
     for row in range(dim[0]):
         for col in range(dim[1]):
-
 
             if row > 0 and sharex == True:
                 share_x_with = inner_ax[0][col]
@@ -108,6 +108,15 @@ def get_experience_levels():
 def get_new_experience_levels():
     experience_levels = ['Familiar', 'Novel', 'Novel +']
     return experience_levels
+
+# def get_abbreviated_experience_levels(experience_levels):
+#     """
+#     converts experience level names (ex: 'Novel >1') into short hand versions (ex: 'N>1')
+#     abbreviated names are returned in the same order as provided in experience_levels
+#     """
+#     exp_level_abbreviations = [exp_level.split(' ')[0][0] if len(exp_level.split(' ')) == 1 else exp_level.split(' ')[0][0] + exp_level.split(' ')[1][:2] for exp_level in experience_levels]
+#     # exp_level_abbreviations = ['F', 'N', 'N+']
+#     return exp_level_abbreviations
 
 
 def convert_experience_level(experience_level):
@@ -228,6 +237,15 @@ def color_xaxis_labels_by_experience(ax):
     """
     c_vals = get_experience_level_colors()
     [t.set_color(i) for (i,t) in zip([c_vals[0], c_vals[1], c_vals[2]], ax.xaxis.get_ticklabels())]
+
+
+def color_yaxis_labels_by_experience(ax):
+    """
+    iterates through x-axis tick labels and sets them to experience level colors in an alternating way,
+    assuming that the labels are in [F, N, N+]
+    """
+    c_vals = get_experience_level_colors()
+    [t.set_color(i) for (i,t) in zip([c_vals[0], c_vals[1], c_vals[2]], ax.yaxis.get_ticklabels())]
 
 
 def lighter(color, percent):
@@ -524,7 +542,7 @@ def make_color_transparent(rgb_color, background_rgb=[255, 255, 255], alpha=0.5)
             for (c1, c2) in zip(rgb_color, background_rgb)]
 
 
-def plot_flashes_on_trace(ax, timestamps, change=None, omitted=False, alpha=0.075, facecolor='gray'):
+def plot_flashes_on_trace(ax, timestamps, change=None, omitted=False, alpha=0.075, facecolor='gray', linewidth=1.5):
     """
     plot stimulus flash durations on the given axis according to the provided timestamps
     """
@@ -538,7 +556,7 @@ def plot_flashes_on_trace(ax, timestamps, change=None, omitted=False, alpha=0.07
     if omitted:
         array = np.arange((change_time + interval), end_time, interval)  # image array starts at the next interval
         # plot a dashed line where the stimulus time would have been
-        ax.axvline(x=change_time, ymin=0, ymax=1, linestyle='--', color=sns.color_palette()[9], linewidth=1.5)
+        ax.axvline(x=change_time, ymin=0, ymax=1, linestyle='--', color=sns.color_palette()[9], linewidth=linewidth)
     else:
         array = np.arange(change_time, end_time, interval)
     for i, vals in enumerate(array):
@@ -563,26 +581,26 @@ def plot_flashes_on_trace(ax, timestamps, change=None, omitted=False, alpha=0.07
     return ax
 
 
-def plot_mean_trace(traces, timestamps, ylabel='dF/F', legend_label=None, color='k', interval_sec=1, xlim_seconds=[-2, 2],
-                    plot_sem=True, ax=None):
+def plot_mean_trace(traces, timestamps, ylabel='dF/F', legend_label=None, color='k',
+                    interval_sec=1, xlim_seconds=[-2, 2], linewidth=2, plot_sem=True, ax=None):
     if ax is None:
         fig, ax = plt.subplots()
     if len(traces) > 0:
         trace = np.mean(traces, axis=0)
         sem = (np.std(traces)) / np.sqrt(float(len(traces)))
-        ax.plot(timestamps, trace, label=legend_label, linewidth=2, color=color)
+        ax.plot(timestamps, trace, label=legend_label, linewidth=linewidth, color=color)
         if plot_sem:
             ax.fill_between(timestamps, trace + sem, trace - sem, alpha=0.5, color=color)
         ax.set_xticks(np.arange(int(timestamps[0]), int(timestamps[-1]) + 1, interval_sec))
         ax.set_xlim(xlim_seconds)
-        ax.set_xlabel('time (sec)')
+        ax.set_xlabel('Time (sec)')
         ax.set_ylabel(ylabel)
     sns.despine(ax=ax)
     return ax
 
 
 def plot_mean_trace_from_mean_df(cell_data, ylabel='dF/F', xlabel='time (s)', legend_label=None, color='k', interval_sec=1,
-                                 xlims=[-4, 4],  ax=None, plot_sem=True, width=3):
+                                 xlims=[-4, 4],  ax=None, plot_sem=True, linewidth=3):
 
     xlim = [0, xlims[1] + np.abs(xlims[0])]
     if ax is None:
@@ -590,7 +608,7 @@ def plot_mean_trace_from_mean_df(cell_data, ylabel='dF/F', xlabel='time (s)', le
     trace = cell_data.mean_trace.values[0]
     timestamps = cell_data.trace_timestamps.values[0]
     sem = cell_data.sem_trace.values[0]
-    ax.plot(timestamps, trace, label=legend_label, linewidth=width, color=color)
+    ax.plot(timestamps, trace, label=legend_label, linewidth=linewidth, color=color)
     if plot_sem:
         ax.fill_between(timestamps, trace + sem, trace - sem, alpha=0.5, color=color)
     ax.set_xticks(np.arange(int(timestamps[0]), int(timestamps[-1]) + 1, interval_sec))
@@ -728,3 +746,61 @@ def get_experiments_matched_across_project_codes(df):
 
     matched_oeids = exc_oeids_upper + exc_oeids_lower + sst_oeids + vip_oeids
     return matched_oeids
+
+def save_reliable_matched_cells_and_containers_list(matched_cells_table, multi_session_df, event_type='changes'):
+    '''
+    saves a table of cell_specimen_ids and ophys_container_ids for cells that are
+    reliable and responsive over a defined threshold and matched across sessions
+
+    matched_cells_table: ophys_cells_table instance limited to platform paper experiments
+                    and cells matched in all 3 sessions
+    multi_session_df: dataframe containing trial averaged responses and response metrics for all cells
+                    can be aligned to changes, images or omissions
+    event_type: type of stimulus event that traces are aligned to and responsiveness is computed for
+                    can be one of ['changes', 'images', 'omissions]
+    '''
+
+
+    n_reliable_cells_threshold = 4
+
+    all_matched_reliable_cells = pd.DataFrame()
+    for cell_type in get_cell_types():
+        # set thresholds
+        if cell_type == 'Excitatory':
+            fraction_sig = 0.1
+            mean_response = 0.05
+        elif cell_type == 'Sst Inhibitory':
+            fraction_sig = 0.1
+            mean_response = 0.01
+        elif cell_type == 'Vip Inhibitory':
+            fraction_sig = 0.1
+            mean_response = 0.05
+
+        # get cells with reliability and mean response over threshold
+        reliable_cells = multi_session_df[(multi_session_df.fraction_significant_p_value_gray_screen>fraction_sig) &
+                (multi_session_df.mean_response > mean_response) &
+                (multi_session_df.cell_type==cell_type)]
+        # make sure they are matched across sessions
+        matched_reliable_cells = reliable_cells[reliable_cells.cell_specimen_id.isin(matched_cells_table.cell_specimen_id.unique())]
+        # make sure we only include containers with at least some # of reliable cells
+        containers = matched_reliable_cells.groupby('ophys_container_id').count().rename(columns={'cell_specimen_id': 'n_cells'})
+        ophys_container_ids = containers[containers.n_cells>=n_reliable_cells_threshold].index.values
+        matched_reliable_cells = matched_reliable_cells[matched_reliable_cells.ophys_container_id.isin(ophys_container_ids)]
+        # add the threshold values to table
+        matched_reliable_cells['fraction_significant_threshold'] = fraction_sig
+        matched_reliable_cells['mean_response_threshold'] = mean_response
+        # print out how many there are
+        print(cell_type)
+        print(len(matched_reliable_cells.ophys_container_id.unique()))
+        print(len(matched_reliable_cells.cell_specimen_id.unique()))
+        # aggregate
+        all_matched_reliable_cells = pd.concat([all_matched_reliable_cells, matched_reliable_cells])
+
+    # limit to relevant columns and save
+    all_matched_reliable_cells = all_matched_reliable_cells[['cell_specimen_id', 'ophys_container_id', 'ophys_experiment_id',
+                                                            'fraction_significant_threshold', 'mean_response_threshold']]
+    save_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\platform_paper_cache_new'
+    filename = 'reliable_matched_cells_and_containers_'+event_type+'.csv'
+    all_matched_reliable_cells.to_csv(os.path.join(save_dir, filename))
+
+    return all_matched_reliable_cells
