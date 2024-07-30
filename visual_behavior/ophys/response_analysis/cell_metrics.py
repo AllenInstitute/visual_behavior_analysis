@@ -1312,6 +1312,66 @@ def compute_experience_modulation_index(metrics_table, metric, cells_table):
     return metric_data
 
 
+def compute_experience_modulation_index_new(metrics_table, metric, cells_table):
+    """
+    computes the difference over the sum of metric value between Novel 1 and Familiar, and Novel >1 and Familiar
+
+    metrics_table: table of cell metrics, each row is one cell_specimen_id in one ophys_experiment,
+                    metrics_table is the output of get_cell_metrics_for_conditions()
+    metric: column in metrics table to compute index with
+    cells_table: cells metadata table
+    """
+
+    # get subset of data of interest
+    metric_data = metrics_table[['cell_specimen_id', 'ophys_experiment_id', metric]]
+    print(len(metric_data.ophys_experiment_id.unique()), 'experiments in metric_data before merging with cells_table')
+    print(len(metric_data.cell_specimen_id.unique()), 'cells in metric_data before merging with cells_table')
+
+    # merge in metadata for sessions to compare
+    metric_data = metric_data.merge(cells_table.reset_index()[['cell_specimen_id', 'ophys_experiment_id', 'experience_level']],
+                                    on=['cell_specimen_id', 'ophys_experiment_id'])
+    # metric_data = metric_data.drop_duplicates(subset='cell_specimen_id')
+    print(len(metric_data.ophys_experiment_id.unique()), 'experiments in metric_data after merging with cells_table')
+    print(len(metric_data.cell_specimen_id.unique()), 'cells in metric_data after merging with cells_table')
+
+    # groupby cell and session number then average across multiple sessions of the same type for each cell
+    metric_data = metric_data.groupby(['cell_specimen_id', 'experience_level']).mean(numeric_only=True)[[metric]]
+    # unstack to get metric for each session number
+    metric_data = metric_data.unstack()
+    # get rid of multi index column name
+    metric_data.columns = metric_data.columns.droplevel(0)
+
+    # compute modulation indices
+    # Familiar vs novel, familiar vs novel +
+    exp_level_1 = 'Familiar'
+
+    exp_level_2 = 'Novel'
+    metric_data['N F'] = (metric_data[exp_level_2] - metric_data[exp_level_1]) / (
+        metric_data[exp_level_2] + metric_data[exp_level_1])
+    exp_level_2 = 'Novel +'
+    metric_data['N+ F'] = (metric_data[exp_level_2] - metric_data[exp_level_1]) / (
+        metric_data[exp_level_2] + metric_data[exp_level_1])
+
+    exp_level_2 = 'Novel'
+    metric_data[exp_level_2 + ' % of ' + exp_level_1] = (metric_data[exp_level_2]) / (metric_data[exp_level_1])
+    exp_level_2 = 'Novel +'
+    metric_data[exp_level_2 + ' % of ' + exp_level_1] = (metric_data[exp_level_2]) / (metric_data[exp_level_1])
+
+    # Novel vs Novel +
+    exp_level_1 = 'Novel +'
+
+    exp_level_2 = 'Novel'
+    metric_data['N N+'] = (metric_data[exp_level_2] - metric_data[exp_level_1]) / (
+        metric_data[exp_level_2] + metric_data[exp_level_1])
+
+    exp_level_2 = 'Novel'
+    metric_data[exp_level_2 + ' % of ' + exp_level_1] = (metric_data[exp_level_2]) / (metric_data[exp_level_1])
+
+    # add cell type
+    metric_data = metric_data.merge(cells_table[['cell_specimen_id', 'ophys_experiment_id', 'cell_type', 'layer',
+                                                 'binned_depth', 'targeted_structure', 'project_code']], on='cell_specimen_id')
+
+    return metric_data
 if __name__ == '__main__':
 
     # set params
