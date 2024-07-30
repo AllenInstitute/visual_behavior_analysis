@@ -3509,6 +3509,28 @@ def get_data_dict(ophys_experiment_ids, data_types=None):
     return data_dict
 
 
+def get_dataset_dict_for_containers(ophys_container_ids, platform_experiments, dataset_dict=None):
+    '''
+    Loop through platform ophys experiments belonging to this container
+    and save dataset object to a dictionary
+    platform_experiments is the ophys_experiment_table limited to the experiments for the platform paper (one F, one N and one N+ per FOV)
+    if dataset_dict is None, a new dictionary will be created
+    if dataset_dict is provided, experiments will be added to it and returned
+    '''
+    if dataset_dict is None:
+        dataset_dict = {}
+    for ophys_container_id in ophys_container_ids:
+        ophys_experiment_ids = platform_experiments[
+            platform_experiments.ophys_container_id == ophys_container_id].sort_values(by='experience_level').index.values
+        expts_dict = {}
+        for i, ophys_experiment_id in enumerate(ophys_experiment_ids):
+            dataset = get_ophys_dataset(ophys_experiment_id)
+            expts_dict[ophys_experiment_id] = dataset
+        dataset_dict[ophys_container_id] = expts_dict
+
+    return dataset_dict
+
+
 def check_whether_multi_session_df_has_all_platform_experiments(multi_session_df):
     """
     Prints the number of experiments in the input dataframe compared to the platform paper experiments table
