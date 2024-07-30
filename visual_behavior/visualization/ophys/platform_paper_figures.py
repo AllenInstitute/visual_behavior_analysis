@@ -83,7 +83,7 @@ def plot_n_segmented_cells(multi_session_df, df_name, horizontal=True, save_dir=
 
 
 def plot_population_averages_for_conditions(multi_session_df, data_type, event_type, axes_column, hue_column,
-                                            project_code=None, timestamps=None, palette=None,
+                                            project_code=None, timestamps=None, palette=None, sharey=False,
                                             title=None, suptitle=None, xlabel='Time (s)', ylabel='Response',
                                             horizontal=True, xlim_seconds=None, interval_sec=1, legend=True,
                                             save_dir=None, folder=None, suffix='', ax=None):
@@ -110,7 +110,6 @@ def plot_population_averages_for_conditions(multi_session_df, data_type, event_t
         omitted = False
         change = False
 
-
     if hue_column == 'experience_level':
         hue_conditions = np.sort(sdf[hue_column].unique())
     else:
@@ -122,18 +121,30 @@ def plot_population_averages_for_conditions(multi_session_df, data_type, event_t
     # if there is only one axis condition, set n conditions for plotting to 2 so it can still iterate
     if len(axes_conditions) == 1:
         n_axes_conditions = 2
+        ax_to_xlabel = 1
     else:
         n_axes_conditions = len(axes_conditions)
+
+    # set plot size depending on what type of data it is
+    if data_type in ['running_speed', 'pupil_width', 'lick_rate']:
+        if horizontal:
+            figsize = (6 * n_axes_conditions, 3) # for behavior timeseries
+        else:
+            figsize = (2.5, 3 * n_axes_conditions) # for image response
+    else:
+        if horizontal:
+            figsize = (4 * n_axes_conditions, 2.5)
+        else:
+            figsize = (3, 3 * n_axes_conditions)  # for changes and omissions
+
+
     if ax is None:
         format_fig = True
         if horizontal:
-            figsize = (4 * n_axes_conditions, 2)
-            figsize = (6 * n_axes_conditions, 3) # for behavior timeseries
-            fig, ax = plt.subplots(1, n_axes_conditions, figsize=figsize, sharey=False)
+            suffix = suffix+'_horiz'
+            fig, ax = plt.subplots(1, n_axes_conditions, figsize=figsize, sharey=sharey)
         else:
-            # figsize = (2.5, 3 * n_axes_conditions) # for image response
-            figsize = (3, 3 * n_axes_conditions) # for changes and omissions
-            fig, ax = plt.subplots(n_axes_conditions, 1, figsize=figsize, sharex=True)
+            fig, ax = plt.subplots(n_axes_conditions, 1, figsize=figsize, sharex=sharey)
     else:
         format_fig = False
     for i, axis in enumerate(axes_conditions):
@@ -154,7 +165,7 @@ def plot_population_averages_for_conditions(multi_session_df, data_type, event_t
                 ax[i].set_title(metadata_string)
             else:
                 if axes_column == 'experience_level':
-                    title_colors = utilities.get_experience_level_colors()
+                    title_colors = utils.get_experience_level_colors()
                     ax[i].set_title(axis, color=title_colors[i], fontsize=20)
                 else:
                     ax[i].set_title(axis)
@@ -163,13 +174,16 @@ def plot_population_averages_for_conditions(multi_session_df, data_type, event_t
             ax[i].set_xlim(xlim_seconds)
             ax[i].set_xlabel(xlabel, fontsize=16)
             ax[i].set_ylabel('')
-            if not horizontal:
-                ax[i].set_xlabel('')
+            ax[i].set_xlabel('')
             ax[i].tick_params(axis='both', which='major', labelsize=14)
 
     if format_fig:
         if horizontal:
             ax[0].set_ylabel(ylabel)
+            if n_axes_conditions == 3: 
+                ax[1].set_xlabel(xlabel)
+            else: 
+                ax[0].set_xlabel(xlabel)
         else:
             ax[1].set_ylabel(ylabel)
             ax[i].set_xlabel(xlabel)
@@ -181,13 +195,15 @@ def plot_population_averages_for_conditions(multi_session_df, data_type, event_t
             suptitle = 'population average - ' + data_type + ' response - ' + project_code[14:]
     if suptitle:
         if horizontal:
-            y = 1.3
+            y = 1.1
         else:
             y = 0.97
-        plt.suptitle(suptitle, x=0.52, y=y, fontsize=18)
-    fig.subplots_adjust(hspace=0.4, wspace=0.4)
+        plt.suptitle(suptitle, x=0.51, y=y, fontsize=18)
+
     plt.rcParams["savefig.bbox"] = "tight"
     if save_dir:
+        plt.rcParams["savefig.bbox"] = "tight"
+        fig.subplots_adjust(hspace=0.4, wspace=0.3)
         fig_title = 'population_average_' + axes_column + '_' + hue_column + suffix
         utils.save_figure(fig, figsize, save_dir, folder, fig_title)
 
@@ -201,8 +217,8 @@ def plot_population_averages_for_cell_types_across_experience(multi_session_df, 
     # get important information
     experiments_table = loading.get_platform_paper_experiment_table()
     cell_types = np.sort(experiments_table.cell_type.unique())
-    # palette = utilities.get_experience_level_colors()
-    palette = [(0, 0, 0), (0, 0, 0), (0, 0, 0)]
+    palette = utils.get_experience_level_colors()
+    # palette = [(0, 0, 0), (0, 0, 0), (0, 0, 0)]
     # palette = [(.2, .2, .2), (.2, .2, .2), (.2, .2, .2)]
 
     # define plot axes
@@ -211,7 +227,7 @@ def plot_population_averages_for_cell_types_across_experience(multi_session_df, 
 
     if ax is None:
         format_fig = True
-        figsize = (10, 9)
+        figsize = (8,6)
         fig, ax = plt.subplots(3, 3, figsize=figsize, sharey='row', sharex='col')
         ax = ax.ravel()
     else:
@@ -222,16 +238,18 @@ def plot_population_averages_for_cell_types_across_experience(multi_session_df, 
         if format_fig:
             ax[i * 3:(i * 3 + 3)] = plot_population_averages_for_conditions(df, data_type, event_type,
                                                                             axes_column, hue_column,
-                                                                            horizontal=True,
+                                                                            horizontal=True, legend=False,
                                                                             xlim_seconds=xlim_seconds,
                                                                             interval_sec=interval_sec,
                                                                             palette=palette,
                                                                             ax=ax[i * 3:(i * 3 + 3)])
         else:
             ax[i] = plot_population_averages_for_conditions(df, data_type, event_type,
-                                                            axes_column, hue_column, horizontal=True,
+                                                            axes_column, hue_column, horizontal=True, legend=False,
                                                             xlim_seconds=xlim_seconds, interval_sec=interval_sec,
                                                             palette=palette, ax=ax[i])
+            ax[i].set_xlabel('')
+            ax[i].set_ylabel('')
 
     if format_fig:
         for i in [0, 3, 6]:
@@ -253,9 +271,13 @@ def plot_population_averages_for_cell_types_across_experience(multi_session_df, 
             for x in range(3):
                 ax[i][x].set_xlabel('')
 
+    ax[3].set_ylabel(ylabel)
+    ax[7].set_xlabel(xlabel)
+    plt.subplots_adjust(hspace=0.4, wspace=0.3)
+
     if save_dir:
         fig_title = 'population_average_cell_types_exp_levels' + suffix
-        utils.save_figure(fig, figsize, save_dir, folder, fig_title, formats=['.png', '.pdf'])
+        utils.save_figure(fig, figsize, save_dir, folder, fig_title, formats=['.png'])
 
     return ax
 
@@ -480,6 +502,27 @@ def get_timestamps_for_response_df_type(cache, experiment_id, df_name):
 # response metrics ########################
 
 
+def get_fraction_matched_cells(matched_cells_table, platform_cells_table, conditions=['cell_type', 'ophys_container_id']):
+    '''
+
+    Parameters
+    ----------
+    matched_cells_table: ophys_cells_table limited to cells matched in all 3 sessions
+    platform_cells_table: ophys_cells_table limited to containers included in platform dataset
+    conditions: columns in cells tables to groupby before quantifying
+
+    Returns
+    -------
+    table with fraction matched cells per condition
+    '''
+    total_cells = platform_cells_table.groupby(conditions).count()[['cell_specimen_id']].rename(columns={'cell_specimen_id': 'total_cells'})
+    matched_cells = matched_cells_table.groupby(conditions).count()[['cell_specimen_id']].rename(columns={'cell_specimen_id': 'matched_cells'})
+    fraction = total_cells.merge(matched_cells, on=conditions, how='left')  # need to use 'left' to prevent dropping of NaN values
+    # set sessions with no responsive cells (NaN) to zero
+    fraction['fraction_matched'] = fraction.matched_cells / fraction.total_cells
+    return fraction
+
+
 def get_fraction_responsive_cells(multi_session_df, conditions=['cell_type', 'experience_level'], responsiveness_threshold=0.1):
     """
     Computes the fraction of cells for each condition with fraction_significant_p_value_gray_screen > responsiveness_threshold
@@ -500,7 +543,7 @@ def get_fraction_responsive_cells(multi_session_df, conditions=['cell_type', 'ex
 
 
 def plot_fraction_responsive_cells(multi_session_df, responsiveness_threshold=0.1, horizontal=True, ylim=(0, 1),
-                                   ylabel=None, save_dir=None, folder=None, suffix='', format_fig=False, ax=None):
+                                   ylabel='Fraction responsive', save_dir=None, folder=None, suffix='', ax=None):
     """
     Plots the fraction of responsive cells across cre lines
     :param multi_session_df: dataframe of trial averaged responses for each cell for some set of conditions
@@ -523,7 +566,8 @@ def plot_fraction_responsive_cells(multi_session_df, responsiveness_threshold=0.
     palette = utils.get_experience_level_colors()
     if ax is None:
         if horizontal:
-            figsize = (9, 3)
+            suffix = suffix + '_horiz'
+            figsize = (9, 2)
             fig, ax = plt.subplots(1, 3, figsize=figsize, sharex=False)
         else:
             figsize = (2, 9)
@@ -547,14 +591,110 @@ def plot_fraction_responsive_cells(multi_session_df, responsiveness_threshold=0.
             ax[i].set_ylim(0, 1)
         else:
             ax[i].set_ylim(ylim)
-    if ylabel is None:
-        ax[1].set_ylabel('fraction\nresponsive')
+    if horizontal:
+        ax[0].set_ylabel(ylabel)
     else:
         ax[1].set_ylabel(ylabel)
     if save_dir:
-        fig.subplots_adjust(hspace=0.4, wspace=0.4)
+        fig.subplots_adjust(hspace=0.4, wspace=0.3)
         fig_title = 'fraction_responsive_cells_' + suffix
         utils.save_figure(fig, figsize, save_dir, folder, fig_title)
+    return ax
+
+
+def plot_percent_responsive_cells(multi_session_df, responsiveness_threshold=0.1, horizontal=True, ylim=(0, 100), stats_max=80,
+                                   ylabel='% responsive', save_dir=None, folder=None, suffix='', ax=None):
+    """
+    Plots the fraction of responsive cells across cre lines
+    :param multi_session_df: dataframe of trial averaged responses for each cell for some set of conditions
+    :param responsiveness_threshold: threshold on fraction_significant_p_value_gray_screen to determine whether a cell is responsive or not
+    :param horizontal: Bool, whether to plot axes horizontally or vertically
+    :param ylim: ylims of plot
+    :param stats_max: value at which to plot statistics labels
+    :param ylabel: string label for y axis of plot
+    :param save_dir: directory to save figures to. if None, will not save.
+    :param folder: folder within save_dir to save figures to
+    :param suffix: string starting with '_' to append to end of filename of saved plot
+    :return:
+    """
+    df = multi_session_df.copy()
+
+    experience_levels = np.sort(df.experience_level.unique())
+    cell_types = np.sort(df.cell_type.unique())
+
+    fraction_responsive = get_fraction_responsive_cells(df, conditions=['cell_type', 'experience_level', 'ophys_container_id', 'ophys_experiment_id'],
+                                                        responsiveness_threshold=responsiveness_threshold)
+    fraction_responsive = fraction_responsive.reset_index()
+
+    metric = 'percent_responsive'
+    fraction_responsive[metric] = fraction_responsive['fraction_responsive'] * 100
+
+    palette = utils.get_experience_level_colors()
+    if ax is None:
+        if horizontal:
+            suffix = suffix + '_horiz'
+            figsize = (6, 2.5)
+            fig, ax = plt.subplots(1, 3, figsize=figsize, sharex=False, sharey=True)
+        else:
+            figsize = (1.5, 6.5)
+            fig, ax = plt.subplots(3, 1, figsize=figsize, sharex=True)
+
+
+    tukey = pd.DataFrame()
+    for i, cell_type in enumerate(cell_types):
+        data = fraction_responsive[fraction_responsive.cell_type == cell_type]
+        # data[metric] = data['fraction_responsive']*100
+        print(cell_type, 'includes', len(data.ophys_container_id.unique()), 'containers')
+        for ophys_container_id in data.ophys_container_id.unique():
+            ax[i] = sns.pointplot(data=data[data.ophys_container_id == ophys_container_id], x='experience_level', y=metric,
+                                  color='gray', join=True, markers='.', scale=0.25, errwidth=0.25, ax=ax[i])
+        plt.setp(ax[i].collections, alpha=.3)  # for the markers
+        plt.setp(ax[i].lines, alpha=.3)
+        ax[i] = sns.pointplot(data=data, x='experience_level', y=metric, hue='experience_level',
+                              hue_order=experience_levels, palette=palette, dodge=0, join=False, markers='.',
+                              errorbar=('ci', 95), ax=ax[i])
+
+
+        ax[i].set_xticklabels(utils.get_abbreviated_experience_levels(), rotation=0)
+        # ax[i].set_xticklabels(experience_levels, rotation=90)
+        ax[i].set_ylabel('')
+        ax[i].get_legend().remove()
+        ax[i].set_title(cell_type)
+        ax[i].set_xlabel('')
+        if ylim is None:
+            ax[i].set_ylim(0, 100)
+        else:
+            ax[i].set_ylim(ylim)
+
+        # add stats to plot if only looking at experience levels
+        ax[i], tukey_table = add_stats_to_plot_yaxis(data, metric, ax[i], ymax=stats_max)
+        # aggregate stats
+        tukey_table['metric'] = metric
+        tukey_table['cell_type'] = cell_type
+        tukey = pd.concat([tukey, tukey_table])
+
+        ax[i].set_xlim((-0.4, 2.4))
+
+    if horizontal:
+        ax[0].set_ylabel(ylabel)
+    else:
+        ax[1].set_ylabel(ylabel)
+
+
+    if save_dir:
+        fig.subplots_adjust(hspace=0.4, wspace=0.2)
+        fig_title = 'percent_responsive_cells' + suffix
+        utils.save_figure(fig, figsize, save_dir, folder, fig_title)
+        # try:
+        print('saving_stats')
+        # save tukey
+        tukey.to_csv(os.path.join(save_dir, folder, fig_title + '_tukey.csv'))
+        # save descriptive stats
+        cols_to_groupby = ['cell_type', 'experience_level']
+        stats = get_descriptive_stats_for_metric(fraction_responsive, metric, cols_to_groupby)
+        stats.to_csv(os.path.join(save_dir, folder, fig_title + '_values.csv'))
+        # except BaseException:
+        #     print('STATS DID NOT SAVE FOR', metric)
     return ax
 
 
@@ -810,6 +950,146 @@ def add_stats_to_plot(data, metric, ax, ymax=None, column_to_compare='experience
 
     return ax, tukey
 
+def add_stats_to_plot_yaxis(data, metric, ax, ymax=None, column_to_compare='experience_level', hue_only=False):
+    """
+    add stars to axis indicating across experience level statistics
+    y-axis of plots must be experience_levels or cell_types
+
+    data: metrics dataframe, each row is one cell_specimen_id in a given ophys_experiment
+    metric: column in data representing metric values of interest
+    column_to_compare: must be 'experience_level' or 'cell_type'
+    hue_only: if the axis only has one x value and the data are differentiated only by hue,
+                set this to True so that the stats are plotted in reasonable positions centered around x=0
+                (otherwise depends on there being x values)
+    show_ns: Bool, whether or not to label non-significant results on the plot
+    """
+    # do anova across experience levels or cell types followed by post-hoc tukey
+    anova, tukey = test_significant_metric_averages(data, metric, column_to_compare)
+    if hue_only: # makes things from -0.25 to 0.25
+        tukey['x1'] = tukey['x1'] - 1
+        tukey['x2'] = tukey['x2'] - 1
+        tukey['x1'] = tukey['x1'] / 4
+        tukey['x2'] = tukey['x2'] / 4
+        dist = 0.25
+    else: # x pos is 0, 1, 2
+        dist = 1
+
+    scale = 0.03#0.05 # 0.1
+    fontsize = 15
+
+    if ymax is None:
+        ytop = ax.get_ylim()[1]
+    else:
+        ytop = ymax
+    if ytop > 1:
+        second_bar_scale = 6
+    else:
+        second_bar_scale = 4
+    y1 = ytop * (1 + scale)
+    y1h = ytop * (1 + scale * 2)
+    y2 = ytop * (1 + (scale * second_bar_scale))
+    y2h = ytop * (1 + (scale * (second_bar_scale+1)))
+
+    top = [ytop]
+    for tindex, row in tukey.iterrows():
+        if (anova.pvalue < 0.05) and (row.reject): # if something is significant, add some significance bars
+            label = '*'
+            color = 'k'
+            alpha = 1
+        if np.abs(row.x2 - row.x1) > dist: # if it is a comparison more than 2 x values away, put the significance bar higher
+            y = y2
+            yh = y2h
+        else: # if they are only one apart, put the bar on the lower level
+            y = y1
+            yh = y1h
+        if len(data[column_to_compare].unique())>2: # if more than 2 values, use the multiple corrections result
+            if row.reject:
+                ax.plot([row.x1+0.1, row.x1+0.1, row.x2-0.1, row.x2-0.1], [y, y, y, y], linestyle='-', color=color, alpha=alpha, clip_on=False)
+                # ax.annotate('*', xy=(xh, np.mean([row.x1, row.x2])), xycoords=ax.get_xaxis_transform(), ha="center", va="bottom",
+                #                fontsize=15, clip_on=False)
+                ax.text(np.mean([row.x1+scale*3, row.x2+scale*3]), yh+scale, label, fontsize=fontsize, horizontalalignment='center',
+                        verticalalignment='center', clip_on=False)
+                top.append(yh)
+        elif len(data[column_to_compare].unique())==2: #  if there are only two values, use the p-value from anova
+            if row.one_way_anova_p_val<0.05:
+                ax.plot([row.x1-0.1, row.x1-0.1, row.x2-0.1, row.x2-0.1], [y, y, y, y, ], linestyle='-', color=color, alpha=alpha, clip_on=False)
+                ax.text(np.mean([row.x1+0.2, row.x2+0.2]), yh+0.04, label, fontsize=fontsize, horizontalalignment='center',
+                        verticalalignment='bottom', clip_on=False)
+                top.append(yh)
+
+    return ax, tukey
+
+
+def add_stats_to_plot_xaxis(data, metric, ax, xmax=None, column_to_compare='experience_level',
+                      show_ns=False, hue_only=False):
+    """
+    add stars to axis indicating across experience level statistics
+    x-axis of plots must be experience_levels or cell_types
+
+    data: metrics dataframe, each row is one cell_specimen_id in a given ophys_experiment
+    metric: column in data representing metric values of interest
+    column_to_compare: must be 'experience_level' or 'cell_type'
+    hue_only: if the axis only has one x value and the data are differentaited only by hue,
+                set this to True so that the stats are plotted in reasonable positions centered around x=0
+                (otherwise depends on there being x values)
+    show_ns: Bool, whether or not to label non-significant results on the plot
+    """
+    # do anova across experience levels or cell types followed by post-hoc tukey
+    anova, tukey = test_significant_metric_averages(data, metric, column_to_compare)
+    if hue_only: # makes things from -0.25 to 0.25
+        tukey['x1'] = tukey['x1'] - 1
+        tukey['x2'] = tukey['x2'] - 1
+        tukey['x1'] = tukey['x1'] / 4
+        tukey['x2'] = tukey['x2'] / 4
+        dist = 0.25
+    else: # x pos is 0, 1, 2
+        dist = 1
+
+    scale = 0.03#0.05 # 0.1
+    fontsize = 15
+
+    if xmax is None:
+        xtop = ax.get_xlim()[1]
+    else:
+        xtop = xmax
+    if xtop > 1:
+        second_bar_scale = 6
+    else:
+        second_bar_scale = 4
+    x1 = xtop * (1 + scale)
+    x1h = xtop * (1 + scale * 2)
+    x2 = xtop * (1 + (scale * second_bar_scale))
+    x2h = xtop * (1 + (scale * (second_bar_scale+1)))
+
+    top = [xtop]
+    for tindex, row in tukey.iterrows():
+        if (anova.pvalue < 0.05) and (row.reject): # if something is significant, add some significance bars
+            label = '*'
+            color = 'k'
+            alpha = 1
+        if np.abs(row.x2 - row.x1) > dist: # if it is a comparison more than 2 x values away, put the significance bar higher
+            x = x2
+            xh = x2h
+        else: # if they are only one apart, put the bar on the lower level
+            x = x1
+            xh = x1h
+        if len(data[column_to_compare].unique())>2: # if more than 2 values, use the multiple corrections result
+            if row.reject:
+                ax.plot([x, x, x, x], [row.x1+0.1, row.x1+0.1, row.x2-0.1, row.x2-0.1], linestyle='-', color=color, alpha=alpha, clip_on=False)
+                # ax.annotate('*', xy=(xh, np.mean([row.x1, row.x2])), xycoords=ax.get_xaxis_transform(), ha="center", va="bottom",
+                #                fontsize=15, clip_on=False)
+                ax.text(xh+scale, np.mean([row.x1+scale*3, row.x2+scale*3]), label, fontsize=fontsize, horizontalalignment='center',
+                        verticalalignment='center', clip_on=False)
+                top.append(xh)
+        elif len(data[column_to_compare].unique())==2: #  if there are only two values, use the p-value from anova
+            if row.one_way_anova_p_val<0.05:
+                ax.plot([x, x, x, x], [row.x1-0.1, row.x1-0.1, row.x2-0.1, row.x2-0.1], linestyle='-', color=color, alpha=alpha, clip_on=False)
+                ax.text(xh+0.04, np.mean([row.x1+0.2, row.x2+0.2]), label, fontsize=fontsize, horizontalalignment='center',
+                        verticalalignment='bottom', clip_on=False)
+                top.append(xh)
+
+    return ax, tukey
+
 
 def get_ci_sem_for_grouped_metric(group):
     """
@@ -851,9 +1131,11 @@ def get_descriptive_stats_for_metric(data, metric, cols_to_groupby):
     return values
 
 
-def plot_metric_distribution_by_experience_no_cell_type(metrics_table, metric, event_type, data_type, hue=None, stripplot=False, pointplot=False,
-                                                        add_zero_line=False, show_ns=False, abbreviate_exp=False,
-                                                        ylabel=None, ylims=None, save_dir=None, ax=None, suffix=''):
+def plot_metric_distribution_by_experience_no_cell_type(metrics_table, metric, event_type, data_type, hue=None,
+                                                        stripplot=False, pointplot=True, boxplot=False,
+                                                        add_zero_line=False, show_ns=False, abbreviate_exp=True,
+                                                        show_containers=False, show_mice=False, horiz=False,
+                                                        title='', ylabel=None, ylims=None, save_dir=None, ax=None, suffix=''):
     """
     plot metric distribution across experience levels in metrics_table, with stats across experience levels
     if hue is provided, plots will be split by hue column and stats will be done on hue column differences instead of across experience levels
@@ -872,11 +1154,16 @@ def plot_metric_distribution_by_experience_no_cell_type(metrics_table, metric, e
     ylims: yaxis limits to use; if None, will use +/-1
     abbreviate_exp: Boolean, if True, use single letter experience labels on x axis (F, N, N+) and color by experience
                             if False, print out full name of each experience label on x axis
+    show_containers: Boolean, whether or not to plot each individual container's datapoints in gray, with a line joining those for the same FOV
+                typically used for physio event types
+    show_mice: Boolean, whether or not to plot each individual mouse's datapoints in gray, with a line joining those for the same mouse
+                    typically used for behavior event types
+
     save_dir: directory to save to. if None, plot will not be saved
     ax: axes to plot figures on
     """
     data = metrics_table.copy()
-    new_experience_levels = utils.get_new_experience_levels()
+    experience_levels = utils.get_new_experience_levels()
 
     if hue:
         if hue == 'targeted_structure':
@@ -906,62 +1193,128 @@ def plot_metric_distribution_by_experience_no_cell_type(metrics_table, metric, e
         # loc = 'upper left'
     order = np.sort(metrics_table['experience_level'].unique())
     colors = utils.get_experience_level_colors()
+    palette = utils.get_experience_level_colors()
+
+    if horiz:
+        x = metric
+        y = 'experience_level'
+    else:
+        y = metric
+        x = 'experience_level'
+
     if ax is None:
-        figsize = (2, 3)
-        fig, ax = plt.subplots(1, 1, figsize=figsize)
+        if horiz:
+            suffix = suffix + '_horiz'
+            figsize = (3, 2)
+            fig, ax = plt.subplots(1, 1, figsize=figsize)
+        else:
+            figsize = (2, 3)
+            fig, ax = plt.subplots(1, 1, figsize=figsize)
+
     # stats dataframe to save
     tukey = pd.DataFrame()
-    ct_data = data.copy()
     if hue:
         if pointplot:
-            ax = sns.pointplot(data=ct_data, y=metric, x='experience_level', order=order, dodge=0.3, join=False,
+            ax = sns.pointplot(data=data, y=y, x=x, order=order, dodge=0.3, join=False,
                                hue=hue, hue_order=hue_order, palette='gray', ax=ax)
+
         else:
-            ax = sns.boxplot(data=ct_data, y=metric, x='experience_level', order=order, cut=0,
+            ax = sns.boxplot(data=data, y=y, x=x, order=order, cut=0,
                              width=0.4, hue=hue, hue_order=hue_order, palette='gray', ax=ax)
         ax.legend(fontsize='xx-small', title='')  # , loc=loc)  # bbox_to_anchor=(1,1))
-        if ylims:
-            ax.set_ylim(ylims)
             # TBD add area or depth comparison stats / stats across hue variable
     else:
+        if show_containers:
+            print('table includes', len(data.ophys_container_id.unique()), 'containers')
+            for ophys_container_id in data.ophys_container_id.unique():
+                ax = sns.pointplot(data=data[data.ophys_container_id == ophys_container_id], x=x, y=y,
+                                   color='gray', join=True, markers='.', scale=0.25, errwidth=0.25, ax=ax)
+        if show_mice:
+            print('table includes', len(data.mouse_id.unique()), 'mice')
+            for mouse_id in data.mouse_id.unique():
+                ax = sns.pointplot(data=data[data.mouse_id == mouse_id], x=x, y=y,
+                                   color='gray', join=True, markers='.', scale=0.5, errwidth=0.25, ax=ax)
+            plt.setp(ax.collections, alpha=.7)  # for the markers
+            plt.setp(ax.lines, alpha=.7)
+
         if pointplot:
-            ax = sns.pointplot(data=ct_data, x='experience_level', y=metric,
-                               palette=colors, ax=ax)
+            # ax = sns.pointplot(data=data, x='experience_level', y=metric,
+            #                    palette=colors, ax=ax)
+            ax = sns.pointplot(data=data, x=x, y=y, hue='experience_level', scale=1.5, order=order,
+                                  hue_order=experience_levels, palette=palette, dodge=0, join=False, markers='.',
+                                  errorbar=('ci', 95), ax=ax)
+
         else:
-            ax = sns.boxplot(data=ct_data, x='experience_level', y=metric, width=0.4,
+            ax = sns.boxplot(data=data, x=x, y=y, width=0.4, order=order,
                              palette=colors, ax=ax)
         if stripplot:
-            ax = sns.boxplot(data=ct_data, x='experience_level', y=metric, width=0.4,
+            # add strip plot
+            ax = sns.stripplot(data=data, size=3, alpha=0.5, jitter=0.2, order=order,
+                               x=x, y=y, color='gray', ax=ax)
+        if boxplot:
+            ax = sns.boxplot(data=data, x=x, y=y, width=0.4, order=order,
                              color='white', ax=ax)
             # format to have black lines and transparent box face
             plt.setp(ax.artists, edgecolor='k', facecolor=[0, 0, 0, 0])
             plt.setp(ax.lines, color='k')
-            # add strip plot
-            ax = sns.stripplot(data=ct_data, size=3, alpha=0.5, jitter=0.2,
-                               x='experience_level', y=metric, palette=colors, ax=ax)
-        # add stats to plot if only looking at experience levels
-        ax, tukey_table = add_stats_to_plot(ct_data, metric, ax, ymax=ymax, show_ns=show_ns)
+
+
+        ax.get_legend().remove()
+        ax.set_title(title)
+
+        # if ylims and not horiz:
+        #     ax.set_ylim(ylims)
+        # elif ylims and horiz:
+        #     ax.set_xlim(ylims)
+        # ymin, ymax = ax.get_ylim()
+
+        if horiz: 
+            ax.set_xlim(xmin=ymin)
+            ax.set_ylim(-0.5, len(order) - 0.5)
+            ax, tukey_table = add_stats_to_plot_yaxis(data, metric, ax, ymax=ymax, hue_only=False)
+        else:
+            ax.set_ylim(ymin=ymin)
+            ax.set_xlim(-0.5, len(order) - 0.5)
+            # add stats to plot if only looking at experience levels
+            ax, tukey_table = add_stats_to_plot(data, metric, ax, ymax=ymax, show_ns=show_ns)
         # aggregate stats
         tukey_table['metric'] = metric
         tukey = pd.concat([tukey, tukey_table])
-        ax.set_ylim(ymin=ymin)
-        ax.set_xlim(-0.5, len(order) - 0.5)
+        print(tukey)
 
         # add line at y=0
         if add_zero_line:
-            ax.axhline(y=0, xmin=0, xmax=1, color='gray', linestyle='--')
+            if horiz:
+                ax.axvline(x=0, ymin=0, ymax=1, color='gray', linestyle='--')
+            else:
+                ax.axhline(y=0, xmin=0, xmax=1, color='gray', linestyle='--')
         ax.set_title('')
-        ax.set_xlabel('')
-        if ylabel:
-            ax.set_ylabel(ylabel)
+
+        if horiz:
+            ax.set_ylabel('')
+            if ylabel:
+                ax.set_xlabel(ylabel)
+            else:
+                ax.set_xlabel(metric)
+            if abbreviate_exp:
+                ax.set_yticklabels(utils.get_abbreviated_experience_levels(), rotation=0)
+                utils.color_yaxis_labels_by_experience(ax)
+            else:
+                ax.set_xticks(ax.get_xticks().tolist())
+                ax.set_xticklabels(experience_levels, rotation=90, )  # ha='right')
+            ax.invert_yaxis()
         else:
-            ax.set_ylabel(metric)
-        if abbreviate_exp:
-            ax.set_xticklabels(utils.get_abbreviated_experience_levels(), rotation=0)
-            utils.color_xaxis_labels_by_experience(ax)
-        else:
-            ax.set_xticks(ax.get_xticks().tolist())
-            ax.set_xticklabels(new_experience_levels, rotation=90,)  # ha='right')
+            ax.set_xlabel('')
+            if ylabel:
+                ax.set_ylabel(ylabel)
+            else:
+                ax.set_ylabel(metric)
+            if abbreviate_exp:
+                ax.set_xticklabels(utils.get_abbreviated_experience_levels(), rotation=0)
+                utils.color_xaxis_labels_by_experience(ax)
+            else:
+                ax.set_xticks(ax.get_xticks().tolist())
+                ax.set_xticklabels(experience_levels, rotation=90,)  # ha='right')
 
 
     fig.subplots_adjust(hspace=0.4)
@@ -1004,6 +1357,8 @@ def plot_metric_distribution_by_experience(metrics_table, metric, event_type, da
     show_containers: Bool, if True, plot gray lines connecting containers across experience levels
     ylims: yaxis limits to use; if None, will use +/-1
     horiz: Boolean, whether to plot the figure panels stacked horizontally or vertically
+    orient: 'h' or 'v', if 'h', and plot_type='violin', will plot violinplots rotated horizontally, and annotate according to orient_annot
+    orient_annot: tuple pair of strings to annotate left and right sides of x-axis when orient='h'
     abbreviate_exp: Boolean, if True, use single letter experience labels on x axis (F, N, N+) and color by experience
                             if False, print out full name of each experience label on x axis
     save_dir: directory to save to. if None, plot will not be saved
@@ -1043,7 +1398,7 @@ def plot_metric_distribution_by_experience(metrics_table, metric, event_type, da
     colors = utils.get_experience_level_colors()
     if ax is None:
         if horiz:
-            figsize = (7, 3)
+            figsize = (6, 2.5)
             fig, ax = plt.subplots(1, 3, figsize=figsize, sharex=False, sharey=True)
         else:
             figsize = (2, 9)
@@ -1053,6 +1408,12 @@ def plot_metric_distribution_by_experience(metrics_table, metric, event_type, da
     cell_types = utils.get_cell_types()
     for i, cell_type in enumerate(cell_types):
         ct_data = data[data.cell_type == cell_type]
+
+        if show_containers:
+            for ophys_container_id in ct_data.ophys_container_id.unique():
+                ax[i] = sns.pointplot(data=ct_data[ct_data.ophys_container_id == ophys_container_id], x='experience_level',
+                                      y=metric, color='gray', join=True, markers='.', scale=0.25, errwidth=0.25, ax=ax[i])
+
         if hue:
             if plot_type == 'pointplot':
                 dodge = 0.1 * (len(ct_data[hue].unique()))
@@ -1145,10 +1506,6 @@ def plot_metric_distribution_by_experience(metrics_table, metric, event_type, da
             ax[i].set_xlabel('')
             ax[i].set_ylabel('')
 
-        if show_containers:
-            for ophys_container_id in ct_data.ophys_container_id.unique():
-                ax[i] = sns.pointplot(data=ct_data[ct_data.ophys_container_id == ophys_container_id], x='experience_level',
-                                      y=metric, color='gray', join=True, markers='.', scale=0.25, errwidth=0.25, ax=ax[i])
 
         # add line at y=0
         if add_zero_line:
@@ -1177,9 +1534,11 @@ def plot_metric_distribution_by_experience(metrics_table, metric, event_type, da
 
     if horiz:
         ax[0].set_ylabel(ylabel)
+        ax[0].set_xlabel('')
+        ax[2].set_xlabel('')
     if suptitle:
         plt.suptitle(suptitle, x=0.52, y=0.98, fontsize=16)
-    fig.subplots_adjust(hspace=0.4, wspace=0.2)
+    fig.subplots_adjust(hspace=0.4, wspace=0.3)
     if save_dir:
         folder = 'metric_distributions'
         filename = event_type + '_' + data_type + '_' + metric + '_distribution' + suffix
@@ -1270,6 +1629,88 @@ def plot_metric_distribution_all_conditions(metrics_table, metric, event_type, d
         #     plot_metric_distribution_by_experience(df, metric, stripplot=False, pointplot=True, event_type=event_type, data_type=data_type,
         #                                            suffix=project_code, add_zero_line=add_zero_line,
         #                                            hue='layer', ylabel=ylabel, ylims=ylims, save_dir=save_dir, ax=None)
+
+
+def plot_modulation_index_distribution(metrics_table, metric, xlabel=None, xlims=(-1.1, 1.1), horiz=False,
+                                       annot=('left', 'right'), abbreviate_exp=True, suptitle=None,
+                                       save_dir=None, suffix=''):
+    colors = utils.get_experience_level_colors()
+    experience_levels = utils.get_experience_levels()
+
+    data = metrics_table.copy()
+
+    ax = None
+    if ax is None:
+        if horiz:
+            figsize = (6, 2.5)
+            fig, ax = plt.subplots(1, 3, figsize=figsize, sharex=False, sharey=True)
+        else:
+            figsize = (2, 6)
+            fig, ax = plt.subplots(3, 1, figsize=figsize, sharex=True, sharey=False)
+        ax = ax.ravel()
+    # stats dataframe to save
+    tukey = pd.DataFrame()
+    cell_types = utils.get_cell_types()
+    for i, cell_type in enumerate(cell_types):
+        ct_data = data[data.cell_type == cell_type]
+        ax[i] = sns.violinplot(data=ct_data, x=metric, y='experience_level', order=experience_levels, orient='h',
+                               palette=colors, alpha=0.5, cut=0, ax=ax[i])
+        # set title
+        ax[i].set_title(cell_type)
+        # set x and y axis properties
+        ax[i].set_ylabel('')
+        ax[i].set_xlabel('')
+        ax[i].set_xlim(xlims)
+        if abbreviate_exp:
+            ax[i].set_yticklabels(utils.get_abbreviated_experience_levels(), rotation=0)
+        # set alpha on violinplots
+        plt.setp(ax[i].collections, alpha=0.7)
+        # line at zero value
+        ax[i].axvline(x=0, ymin=0, ymax=1, color='gray', linestyle='--')
+
+        # add stats to plot
+        ax[i], tukey_table = add_stats_to_plot_xaxis(ct_data, metric, ax[i], xmax=xlims[1],
+                                                         column_to_compare='experience_level')
+        tukey_table['metric'] = metric
+        tukey_table['cell_type'] = cell_type
+        tukey = pd.concat([tukey, tukey_table])
+
+    if horiz:
+        ax[0].annotate(annot[0], xy=(-1.2, -0.05), xycoords=ax[0].get_xaxis_transform(), ha="right", va="center",
+                       fontsize=10)
+        ax[2].annotate(annot[1], xy=(1.2, -0.05), xycoords=ax[2].get_xaxis_transform(), ha="left", va="center",
+                       fontsize=10)
+        ax[1].set_xlabel(xlabel)
+    else:
+        ax[2].annotate('pre-change', xy=(-1.2, -0.05), xycoords=ax[2].get_xaxis_transform(), ha="right", va="center",
+                       fontsize=10)
+        ax[2].annotate('change', xy=(1.2, -0.05), xycoords=ax[2].get_xaxis_transform(), ha="left", va="center",
+                       fontsize=10)
+        ax[2].set_xlabel(xlabel)
+
+    if suptitle:
+        plt.suptitle(suptitle, x=0.52, y=0.98, fontsize=16)
+
+    fig.subplots_adjust(hspace=0.4, wspace=0.3)
+
+    if save_dir:
+        if horiz:
+            suffix = suffix + '_horiz'
+        folder = 'metric_distributions'
+        filename = metric + '_distribution' + suffix
+        stats_filename = metric + suffix
+        utils.save_figure(fig, figsize, save_dir, folder, filename)
+        try:
+            print('saving_stats')
+            # save tukey
+            tukey.to_csv(os.path.join(save_dir, folder, stats_filename + '_tukey.csv'))
+            # save descriptive stats
+            cols_to_groupby = ['cell_type', 'experience_level']
+            stats = get_descriptive_stats_for_metric(data, metric, cols_to_groupby)
+            stats.to_csv(os.path.join(save_dir, folder, stats_filename + '_values.csv'))
+        except BaseException:
+            print('STATS DID NOT SAVE FOR', metric)
+    return ax
 
 
 def plot_experience_modulation_index(metric_data, event_type, hue=None, plot_type='pointplot', ylims=(-1, 1),
@@ -1385,6 +1826,249 @@ def plot_experience_modulation_index(metric_data, event_type, hue=None, plot_typ
     if save_dir:
         filename = 'experience_modulation_' + event_type + '_' + plot_type + suffix
         utils.save_figure(fig, figsize, save_dir, 'metric_distributions', filename)
+
+
+def plot_experience_modulation_index_annotated(metrics_table, event_type, metric, cells_table,
+                                               horiz=False, xlims=(-1.1, 1.1), xlabel='Experience modulation',
+                                               suptitle=None, suffix='', save_dir=None, ax=None):
+    """
+    plots experience modulation for some event_type, which is the mean repsonse in familiar vs. novel 1 over the sum,
+    and the mean response in novel 1 vs. novel >1 over the sum, giving a value between -1 and 1
+    metric_data is the output of visual_behavior.ophys.response_analysis.cell_metrics.compute_experience_modulation_index()
+
+    :param metric_data:
+    :param event_type:
+    :param save_dir:
+    :return:
+    """
+
+    import visual_behavior.ophys.response_analysis.cell_metrics as cm
+
+    exp_mod = cm.compute_experience_modulation_index_new(metrics_table, metric, cells_table)
+    exp_mod = exp_mod.drop_duplicates(subset='cell_specimen_id')
+
+    value_vars = ['N F', 'N N+', 'N+ F']
+    data = exp_mod.melt(id_vars=['cell_specimen_id', 'cell_type'], var_name='comparison', value_vars=value_vars)
+    titles = ['Novel vs. Familiar', 'Novel vs. Novel +', 'Novel + vs. Familiar']
+
+    # if hue:
+    #     data = data.melt(id_vars=['cell_specimen_id', 'cell_type', hue], var_name='comparison', value_vars=value_vars)
+    # else:
+    #     data = data.melt(id_vars=['cell_specimen_id', 'cell_type'], var_name='comparison', value_vars=value_vars)
+
+    metric = 'value'
+    x = 'comparison'
+
+    cell_types = np.sort(data.cell_type.unique())
+
+    colors = utils.get_experience_level_colors()
+    if ax is None:
+        if horiz:
+            figsize = (8, 2.5)
+            fig, ax = plt.subplots(1, 3, figsize=figsize, sharex=False, sharey=True)
+        else:
+            figsize = (2, 6)
+            fig, ax = plt.subplots(3, 1, figsize=figsize, sharex=True, sharey=False)
+
+    tukey = pd.DataFrame()
+    for i, comparison in enumerate(value_vars):
+        ax[i] = sns.violinplot(data=data[data.comparison == comparison], x='value', y='cell_type', order=cell_types,
+                               color='gray', cut=0, ax=ax[i])
+        for violin in ax[i].collections:
+            violin.set_alpha(0.5)
+        ax[i].set_xlim(xlims)
+
+        ax[i].axvline(x=0, ymin=0, ymax=1, color='gray', linestyle='--')
+        ax[i].set_title(titles[i])
+        ax[i].set_xlabel('')
+        ax[i].set_ylabel('')
+        ax[i].set_yticklabels([cell_type[:3] for cell_type in cell_types])
+
+        annot = comparison.split(' ')
+
+        def get_color(c):
+            exp = annot[c]
+            if exp == 'F':
+                color = colors[0]
+            elif exp == 'N':
+                color = colors[1]
+            elif exp == 'N+':
+                color = colors[2]
+            return color
+
+        c = 0
+        ax[i].annotate(annot[c], xy=(-1.2, -0.1), xycoords=ax[i].get_xaxis_transform(), ha="right", va="center",
+                       color=get_color(c), fontsize=14)
+        c = 1
+        ax[i].annotate(annot[c], xy=(1.2, -0.1), xycoords=ax[i].get_xaxis_transform(), ha="left", va="center",
+                       color=get_color(c), fontsize=14)
+        # ax[i].set_xticklabels([x.split('.')[0] + '\n' + x.split('.')[1] for x in xorder], rotation=90, ha='center')
+
+        # add stats to plot
+        ax[i], tukey_table = add_stats_to_plot_xaxis(data[data.comparison == comparison], 'value', ax[i],
+                                                         xmax=xlims[1],
+                                                         column_to_compare='cell_type')
+        tukey_table['metric'] = metric
+        # tukey_table['cell_type'] = cell_type
+        tukey = pd.concat([tukey, tukey_table])
+
+    if horiz:
+
+        ax[1].set_xlabel(xlabel)
+    else:
+        # ax[2].annotate(annot[0], xy=(-1.2, -0.05), xycoords=ax[2].get_xaxis_transform(), ha="right", va="center", fontsize=10)
+        # ax[2].annotate(annot[1], xy=(1.2, -0.05), xycoords=ax[2].get_xaxis_transform(), ha="left", va="center", fontsize=10)
+        ax[2].set_xlabel(xlabel)
+
+    if suptitle:
+        plt.suptitle(suptitle, x=0.52, y=0.98, fontsize=16)
+
+    fig.subplots_adjust(hspace=0.5, wspace=0.4)
+
+    if save_dir:
+        if horiz:
+            suffix = suffix + '_horiz'
+        folder = 'metric_distributions'
+        filename = 'experience_modulation_annot_' + event_type + '_' + suffix
+        stats_filename = 'experience_modulation_' + event_type + '_' + suffix
+        utils.save_figure(fig, figsize, save_dir, folder, filename)
+        try:
+            print('saving_stats')
+            # save tukey
+            tukey.to_csv(os.path.join(save_dir, folder, stats_filename + '_tukey.csv'))
+            # save descriptive stats
+            cols_to_groupby = ['cell_type']
+            stats = get_descriptive_stats_for_metric(data, metric, cols_to_groupby)
+            stats.to_csv(os.path.join(save_dir, folder, stats_filename + '_values.csv'))
+        except BaseException:
+            print('STATS DID NOT SAVE FOR', metric)
+    return ax
+
+
+def plot_experience_modulation_index_annotated_by_cell_type(metrics_table, event_type, metric, cells_table,
+                                                            xlims=(-1.1, 1.1), xlabel='Experience modulation',
+                                                            all_comparisons=True, horiz=False,
+                                                            suptitle=None, suffix='', save_dir=None, ax=None):
+    """
+    plots experience modulation for some event_type, which is the mean repsonse in familiar vs. novel 1 over the sum,
+    and the mean response in novel 1 vs. novel >1 over the sum, giving a value between -1 and 1
+    metric_data is the output of visual_behavior.ophys.response_analysis.cell_metrics.compute_experience_modulation_index()
+
+    :param metric_data:
+    :param event_type:
+    :param save_dir:
+    :return:
+    """
+
+    import visual_behavior.ophys.response_analysis.cell_metrics as cm
+
+    exp_mod = cm.compute_experience_modulation_index_new(metrics_table, metric, cells_table)
+    exp_mod = exp_mod.drop_duplicates(subset='cell_specimen_id')
+
+    if all_comparisons:
+        value_vars = ['N F', 'N N+', 'N+ F'][::-1]
+        titles = ['Novel vs. Familiar', 'Novel vs. Novel +', 'Novel + vs. Familiar']
+    else:
+        value_vars = ['N F', 'N N+', ][::-1]
+        titles = ['Novel vs. Familiar', 'Novel vs. Novel +', ]
+    data = exp_mod.melt(id_vars=['cell_specimen_id', 'cell_type'], var_name='comparison', value_vars=value_vars)
+
+    metric = 'value'
+    x = 'comparison'
+
+    cell_types = np.sort(data.cell_type.unique())
+
+    colors = utils.get_experience_level_colors()
+    if ax is None:
+        if horiz:
+            figsize = (7, 2.5)
+            fig, ax = plt.subplots(1, 3, figsize=figsize, sharex=False, sharey=True)
+        else:
+            figsize = (2, 6)
+            fig, ax = plt.subplots(3, 1, figsize=figsize, sharex=True, sharey=False)
+
+    tukey = pd.DataFrame()
+    for i, cell_type in enumerate(cell_types):
+        ax[i] = sns.violinplot(data=data[data.cell_type == cell_type], x='value', y='comparison', order=value_vars,
+                               color='gray', cut=0, ax=ax[i])
+        for violin in ax[i].collections:
+            violin.set_alpha(0.5)
+        ax[i].set_xlim(xlims)
+
+        ax[i].axvline(x=0, ymin=0, ymax=1, color='gray', linestyle='--')
+        ax[i].set_title(cell_type)
+        ax[i].set_xlabel('')
+        ax[i].set_ylabel('')
+        ax[i].set_yticklabels('')
+
+        for x, comparison in enumerate(value_vars):
+            annot = comparison.split(' ')
+
+            def get_color(c):
+                exp = annot[c]
+                if exp == 'F':
+                    color = colors[0]
+                elif exp == 'N':
+                    color = colors[1]
+                elif exp == 'N+':
+                    color = colors[2]
+                return color
+
+            if all_comparisons:
+                xy_0 = (-1.5, x / 3 + 0.15)
+                xy_1 = (1.6, x / 3 + 0.15)
+            else:
+                xy_0 = (-1.45, x / 2 + 0.25)
+                xy_1 = (1.18, x / 2 + 0.25)
+            c = 1
+            ax[i].annotate(annot[c], xy=xy_0, xycoords=ax[i].get_xaxis_transform(), ha="center", va="center",
+                           color=get_color(c), fontsize=14)
+            c = 0
+            ax[i].annotate(annot[c], xy=xy_1, xycoords=ax[i].get_xaxis_transform(), ha="center", va="center",
+                           color=get_color(c), fontsize=14)
+            # ax[i].set_xticklabels([x.split('.')[0] + '\n' + x.split('.')[1] for x in xorder], rotation=90, ha='center')
+
+        if len(value_vars) > 2:
+            # add stats to plot
+            ax[i], tukey_table = add_stats_to_plot_xaxis(data[data.cell_type == cell_type], 'value', ax[i],
+                                                             xmax=xlims[1],
+                                                             column_to_compare='comparison')
+            tukey_table['metric'] = metric
+            tukey_table['cell_type'] = cell_type
+            tukey = pd.concat([tukey, tukey_table])
+
+        ax[i].invert_yaxis()
+
+    if horiz:
+        ax[1].set_xlabel(xlabel)
+    else:
+        # ax[2].annotate(annot[0], xy=(-1.2, -0.05), xycoords=ax[2].get_xaxis_transform(), ha="right", va="center", fontsize=10)
+        # ax[2].annotate(annot[1], xy=(1.2, -0.05), xycoords=ax[2].get_xaxis_transform(), ha="left", va="center", fontsize=10)
+        ax[2].set_xlabel(xlabel)
+
+    if suptitle:
+        plt.suptitle(suptitle, x=0.52, y=0.98, fontsize=16)
+
+    fig.subplots_adjust(hspace=0.5, wspace=0.45)
+
+    if save_dir:
+        if horiz:
+            suffix = suffix + '_horiz'
+        folder = 'metric_distributions'
+        filename = 'experience_modulation_annot_' + event_type + '_' + suffix
+        stats_filename = 'experience_modulation_' + event_type + '_' + suffix
+        utils.save_figure(fig, figsize, save_dir, folder, filename)
+        try:
+            print('saving_stats')
+            # save tukey
+            tukey.to_csv(os.path.join(save_dir, folder, stats_filename + '_tukey.csv'))
+            # save descriptive stats
+            cols_to_groupby = ['cell_type']
+            stats = get_descriptive_stats_for_metric(data, metric, cols_to_groupby)
+            stats.to_csv(os.path.join(save_dir, folder, stats_filename + '_values.csv'))
+        except BaseException:
+            print('STATS DID NOT SAVE FOR', metric)
+    return ax
 
 
 def change_width(ax, new_value):
@@ -1542,7 +2226,7 @@ def addSpan(ax, amin, amax, color='k', alpha=0.3, axtype='x'):
         ax.axhspan(amin, amax, facecolor=color, edgecolor='none', alpha=alpha, linewidth=0)
 
 
-def add_stim_color_span(dataset, ax, xlim=None, color=None, label_changes=True, label_omissions=True):
+def add_stim_color_span(dataset, ax, xlim=None, color=None, label_changes=True, label_omissions=True, annotate_changes=False):
     """
     adds a vertical span for all stimulus presentations contained within xlim
     xlim is a time in seconds during a behavior session
@@ -1578,6 +2262,10 @@ def add_stim_color_span(dataset, ax, xlim=None, color=None, label_changes=True, 
                 if stim_table.loc[idx]['is_change']:  # if its a change, make it blue with higher alpha
                     image_color = sns.color_palette()[0]
                     alpha = 0.5
+                    if annotate_changes:
+                        ymin, ymax = ax.get_ylim()
+                        ax.annotate(stim_table.loc[idx]['image_name'], xy=(start_time, ymax*1.6), xycoords='data',
+                                    fontsize=6,  va='top', clip_on=False, annotation_clip=False)
                 else:  # if its a non-change make it gray with low alpha
                     image_color = 'gray'
                     alpha = 0.25
@@ -1874,7 +2562,7 @@ def plot_behavior_and_physio_timeseries_stacked(dataset, start_time, duration_se
                           labelbottom=False, labeltop=False, labelright=False, labelleft=True)
 
     # label bottom row of plot
-    ax[i].set_xlabel('time in session (seconds)')
+    ax[i].set_xlabel('Time in session (seconds)')
     ax[i].tick_params(which='both', bottom=True, top=False, right=False, left=True,
                       labelbottom=True, labeltop=False, labelright=False, labelleft=True)
     # add title to top row
@@ -1896,6 +2584,7 @@ def plot_matched_roi_and_trace(ophys_container_id, cell_specimen_id, limit_to_la
                                use_events=False, filter_events=False, save_figure=True):
     """
     Generates plots characterizing single cell activity in response to stimulus, omissions, and changes.
+    First row is the ROI mask in the 3 sessions, second row is the average change response for each session in gray
     Compares across all sessions in a container for each cell, including the ROI mask across days.
     Useful to validate cell matching as well as examine changes in activity profiles over days.
     """
@@ -1910,12 +2599,12 @@ def plot_matched_roi_and_trace(ophys_container_id, cell_specimen_id, limit_to_la
 
     if use_events:
         if filter_events:
-            suffix = 'filtered_events'
+            data_type = 'filtered_events'
         else:
-            suffix = 'events'
+            data_type = 'events'
         ylabel = 'response'
     else:
-        suffix = 'dff'
+        data_type = 'dff'
         ylabel = 'dF/F'
 
     n = len(expts)
@@ -1941,12 +2630,16 @@ def plot_matched_roi_and_trace(ophys_container_id, cell_specimen_id, limit_to_la
                                           spacex=50, spacey=50, show_mask=True, ax=ax[i])
                 ax[i].set_title(container_expts.loc[ophys_experiment_id].experience_level)
 
-                analysis = ResponseAnalysis(dataset, use_events=use_events, filter_events=filter_events,
-                                            use_extended_stimulus_presentations=False)
-                sdf = analysis.get_response_df(df_name='stimulus_response_df')
+                # analysis = ResponseAnalysis(dataset, use_events=use_events, filter_events=filter_events,
+                #                             use_extended_stimulus_presentations=False)
+                # sdf = analysis.get_response_df(df_name='stimulus_response_df')
+                window = [-1, 0.75]
+                sdf = loading.get_stimulus_response_df(dataset, time_window=window, interpolate=True,
+                                                       output_sampling_rate=30,
+                                                       data_type=data_type, event_type='changes',
+                                                       load_from_file=True)
                 cell_data = sdf[(sdf.cell_specimen_id == cell_specimen_id) & (sdf.is_change == True)]
 
-                window = rp.get_default_stimulus_response_params()["window_around_timepoint_seconds"]
                 ax[i + n] = utils.plot_mean_trace(cell_data.trace.values, cell_data.trace_timestamps.values[0],
                                                   ylabel=ylabel, legend_label=None, color='gray', interval_sec=0.5,
                                                   xlim_seconds=window, plot_sem=True, ax=ax[i + n])
@@ -1973,14 +2666,16 @@ def plot_matched_roi_and_trace(ophys_container_id, cell_specimen_id, limit_to_la
             print(e)
     if save_figure:
         save_dir = r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/platform_paper_plots/cell_matching'
-        utils.save_figure(fig, figsize, save_dir, folder, str(cell_specimen_id) + '_' + metadata_string + '_' + suffix)
+        metadata_string = utils.get_metadata_string(dataset.metadata)
+        utils.save_figure(fig, figsize, save_dir, folder, str(cell_specimen_id) + '_' + metadata_string + '_' + data_type)
         plt.close()
 
 
 def plot_matched_roi_and_traces_example(cell_metadata, include_omissions=True,
                                         use_events=False, filter_events=False, save_dir=None, folder=None):
     """
-    Plots the ROI masks and cell traces for a cell matched across sessions
+    Plots the ROI masks and cell traces for a cell matched across sessions in a single row
+    First 3 panels are ROIs, then change response across sessions, then omission response across sessions if include_omission=True
     Cell_metadata is a subset of the ophys_cells_table limited to the cell_specimen_id of interest
     Masks and traces will be plotted for all ophys_experiment_ids in the cell_metadata table
     To limit to a single session of each type, set last_familiar_second_novel to True
