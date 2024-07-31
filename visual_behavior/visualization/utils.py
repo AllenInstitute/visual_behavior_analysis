@@ -542,6 +542,68 @@ def make_color_transparent(rgb_color, background_rgb=[255, 255, 255], alpha=0.5)
             for (c1, c2) in zip(rgb_color, background_rgb)]
 
 
+def addSpan(ax, amin, amax, color='k', alpha=0.3, axtype='x'):
+    """
+    adds a vertical span to an axis
+    """
+    if axtype == 'x':
+            ax.axvspan(amin, amax, facecolor=color, edgecolor='none', alpha=alpha, linewidth=0)
+    if axtype == 'y':
+        ax.axhspan(amin, amax, facecolor=color, edgecolor='none', alpha=alpha, linewidth=0)
+
+
+def add_stim_color_span(dataset, ax, xlim=None, color=None, label_changes=True, label_omissions=True, annotate_changes=False):
+    """
+    adds a vertical span for all stimulus presentations contained within xlim
+    xlim is a time in seconds during a behavior session
+    if label_changes is True, changes will be blue and all other flashes will be gray
+    if label_changes is False, each flash will be colored according to image identity
+    if label_omissions is True, a dotted line will be shown at the time of omission
+    if a color is provided, all stimulus presentations will be that color
+    """
+    # set default alpha. If label_changes=True, alphas will be reset below.
+    alpha = 0.3
+    # get stim table
+    stim_table = dataset.stimulus_presentations.copy()
+    import visual_behavior.data_access.loading as loading
+    stim_table = loading.limit_stimulus_presentations_to_change_detection(stim_table)
+    # remove omissions because they dont get labeled
+    #     stim_table = stim_table[stim_table.omitted == False].copy()
+    # get all images & assign colors (image colors wont be used if a color is provided or if label_changes is True)
+    images = np.sort(stim_table[stim_table.omitted == False].image_name.unique())
+    image_colors = sns.color_palette("hls", len(images))
+    # limit to time window if provided
+    if xlim is not None:
+        stim_table = stim_table[(stim_table.start_time >= xlim[0]) & (stim_table.end_time <= xlim[1])]
+    # loop through stimulus presentations and add a span with appropriate color
+    for idx in stim_table.index:
+        start_time = stim_table.loc[idx]['start_time']
+        end_time = stim_table.loc[idx]['end_time']
+        image_name = stim_table.loc[idx]['image_name']
+        image_index = stim_table.loc[idx]['image_index']
+        if image_name == 'omitted':
+            if label_omissions:
+                ax.axvline(x=start_time, ymin=0, ymax=1, linestyle='--', color=sns.color_palette()[9])
+        else:
+            if label_changes:
+                if stim_table.loc[idx]['is_change']:  # if its a change, make it blue with higher alpha
+                    image_color = sns.color_palette()[0]
+                    alpha = 0.5
+                    if annotate_changes:
+                        ymin, ymax = ax.get_ylim()
+                        ax.annotate(stim_table.loc[idx]['image_name'], xy=(start_time, ymax*1.6), xycoords='data',
+                                    fontsize=6,  va='top', clip_on=False, annotation_clip=False)
+                else:  # if its a non-change make it gray with low alpha
+                    image_color = 'gray'
+                    alpha = 0.25
+            else:
+                if color is None:
+                    image_color = image_colors[image_index]
+                else:
+                    image_color = color
+            addSpan(ax, start_time, end_time, color=image_color, alpha=alpha)
+    return ax
+
 def plot_flashes_on_trace(ax, timestamps, change=None, omitted=False, alpha=0.075, facecolor='gray', linewidth=1.5):
     """
     plot stimulus flash durations on the given axis according to the provided timestamps
@@ -664,8 +726,8 @@ def get_metadata_string(metadata):
 
 
 def get_container_metadata_string(metadata):
-    m = metadata
-    metadata_string = str(m['mouse_id']) + '_' + str(m['experiment_container_id']) + '_' + m['cre_line'].split('-')[0] + '_' + m['targeted_structure'] + '_' + str(m['imaging_depth'])
+    m = metadata.copy()
+    metadata_string = str(m['ophys_container_id']) + '_' + str(m['ophys_experiment_id']) + '_' + m['cre_line'].split('-')[0] + '_' + m['targeted_structure'] + '_' + str(m['imaging_depth'])
     return metadata_string
 
 

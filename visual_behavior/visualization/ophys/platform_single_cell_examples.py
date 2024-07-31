@@ -552,8 +552,9 @@ def plot_single_cell_example_timeseries_stacked(dataset, start_time, duration_se
     return ax
 
 def plot_single_cell_example_timeseries_and_behavior(dataset, start_time, duration_seconds=20, cell_specimen_ids=None,
-                                                use_filtered_events=False, sort_within_expt=True, label_csids=True,
-                                                dff_metrics=None, short_title=False, save_dir=None, ax=None, suffix=''):
+                                                use_filtered_events=False, sort_within_expt=True, label_csids=True, fontsize=8,
+                                                dff_metrics=None, short_title=False, skip_behavior=False,
+                                                save_dir=None, ax=None, suffix=''):
     """
     Plots licking behavior, rewards, running speed, pupil area, and dff traces for a defined window of time.
     Each timeseries gets its own row.
@@ -561,7 +562,8 @@ def plot_single_cell_example_timeseries_and_behavior(dataset, start_time, durati
     if use_filtered_events is True, will plot filtered events trace, if False, will plot dFF
     """
 
-    xlim_seconds = [start_time - (duration_seconds / 3.), start_time + duration_seconds * 2]
+    # xlim_seconds = [start_time - (duration_seconds / 3.), start_time + duration_seconds * 2]
+    xlim_seconds = [start_time, start_time + duration_seconds]
 
     # get cell traces and events
     ophys_timestamps = dataset.ophys_timestamps.copy()
@@ -623,7 +625,11 @@ def plot_single_cell_example_timeseries_and_behavior(dataset, start_time, durati
     # make the plot
     if ax is None:
         figsize = (8, 6)
-        fig, ax = plt.subplots(len(cell_specimen_ids)+3, 1, figsize=figsize, sharex=True, )
+        if skip_behavior:
+            n_rows = len(cell_specimen_ids)+3
+        else:
+            n_rows = len(cell_specimen_ids)+3
+        fig, ax = plt.subplots(n_rows, 1, figsize=figsize, sharex=True, )
         ax = ax.ravel()
 
     colors = sns.color_palette()
@@ -645,7 +651,7 @@ def plot_single_cell_example_timeseries_and_behavior(dataset, start_time, durati
         for timepoint in np.where(events_trace != 0)[0]:
             # ax[i].axvline(x=timestamps[timepoint], ymin=0, ymax=events_trace[timepoint], color=colors[6])
             ax[i].annotate('', xy=(timestamps[timepoint], 0), xycoords='data',
-                           xytext=(timestamps[timepoint], events_trace[timepoint]), fontsize=8,
+                           xytext=(timestamps[timepoint], events_trace[timepoint]), fontsize=fontsize,
                            arrowprops=dict(arrowstyle='-', color='magenta', lw=1, shrinkA=0, shrinkB=0))
             # ax[i].set_yticks((0, 2))
         ax[i].set_xlim(xlim_seconds)
@@ -653,7 +659,7 @@ def plot_single_cell_example_timeseries_and_behavior(dataset, start_time, durati
         # label cell id on right side so it can be cropped out later
         xmin, xmax = ax[i].get_xlim()
         if label_csids:
-            ax[i].text(s='csid:' + str(cell_specimen_id), x=xmax + 0.2, y=0, fontsize=8)
+            ax[i].text(s='csid:' + str(cell_specimen_id), x=xmax + 0.2, y=0, fontsize=fontsize)
 
         # get ylims of data in this window
         ymin, ymax = ax[i].get_ylim()
@@ -664,10 +670,11 @@ def plot_single_cell_example_timeseries_and_behavior(dataset, start_time, durati
         # get it again to determine where the scale bar will go
         ymin, ymax = ax[i].get_ylim()
         ax[i].set_yticks([0, np.round(ymax * .3, 2)])
-        ax[i].set_yticklabels(['', np.round(ymax * .3, 2)], va='top', ha='right', fontsize=5)
+        ax[i].set_yticklabels(['', np.round(ymax * .3, 2)], va='top', ha='right', fontsize=fontsize-1)
         # ax[i].axvline(x=xlim_seconds[0] - 0.1, ymin=0, ymax=0.3, color='k', linewidth=1, clip_on=False)
         # add scale bar
-        ax[i].annotate('', xy=(xmin-0.5, 0), xycoords='data', xytext=(xmin-0.5, np.round(ymax * 0.3, 2)), fontsize=8,
+        scalex = (duration_seconds*0.01)
+        ax[i].annotate('', xy=(xmin-scalex, 0), xycoords='data', xytext=(xmin-scalex, np.round(ymax * 0.3, 2)), fontsize=fontsize-2,
                        arrowprops=dict(arrowstyle='-', color='k', lw=1, shrinkA=0, shrinkB=0), annotation_clip=False)
 
         sns.despine(ax=ax[i], top=True, right=True, left=True, bottom=True)
@@ -675,10 +682,10 @@ def plot_single_cell_example_timeseries_and_behavior(dataset, start_time, durati
         ax[i].set_xticklabels([])
         ax[i].set_xlabel('')
         ax[i].tick_params(which='both', bottom=False, top=False, right=False, left=False,
-                          labelbottom=False, labeltop=False, labelright=False, labelleft=True, labelsize=7, pad=-1)
+                          labelbottom=False, labeltop=False, labelright=False, labelleft=True)
 
         # plot cell ID on left with index
-        ax[i].set_ylabel('cell ' + str(i + 1), rotation=0, fontsize=8, ha='center', y=0.4)
+        ax[i].set_ylabel('cell ' + str(i + 1), rotation=0, fontsize=fontsize, ha='center', y=0.4)
 
         # add stimuli, despine and such
         if i == 0:
@@ -688,38 +695,44 @@ def plot_single_cell_example_timeseries_and_behavior(dataset, start_time, durati
         ax[i] = ppf.add_stim_color_span(dataset, ax[i], xlim=xlim_seconds, annotate_changes=annotate_changes,
                                         label_changes=True, label_omissions=True)
 
-    # plot behavior timeseries
-    colors = sns.color_palette()
+    if not skip_behavior:
+        # plot behavior timeseries
+        colors = sns.color_palette()
 
-    ax[i+2].plot(running_timestamps, running_speed, label='running_speed', color='gray')
-    ax[i+2].set_ylabel('running\nspeed\n(cm/s)', rotation=0, horizontalalignment='right', verticalalignment='center', fontsize=8)
-    ax[i+2].set_ylim(ymin=-8)
+        ax[i+2].plot(running_timestamps, running_speed, label='running_speed', color='gray')
+        ax[i+2].set_ylabel('running\nspeed\n(cm/s)', rotation=0, horizontalalignment='right', verticalalignment='center', fontsize=fontsize)
+        ax[i+2].set_ylim(ymin=-8)
+        # ax[i+2].tick_params(which='both', bottom=False, top=False, right=False, left=False,
+        #                   labelbottom=False, labeltop=False, labelright=False, labelleft=True, size=fontsize)
 
-    ax[i+3].plot(pupil_timestamps, pupil_diameter, label='pupil_diameter', color='gray')
-    ax[i+3].set_ylabel('pupil\ndiameter\n(pixels)', rotation=0, horizontalalignment='right', verticalalignment='center', fontsize=8)
+        ax[i+3].plot(pupil_timestamps, pupil_diameter, label='pupil_diameter', color='gray')
+        ax[i+3].set_ylabel('pupil\ndiameter\n(pixels)', rotation=0, horizontalalignment='right', verticalalignment='center', fontsize=fontsize)
+        # ax[i+3].tick_params(which='both', bottom=False, top=False, right=False, left=False,
+        #                   labelbottom=False, labeltop=False, labelright=False, labelleft=True, size=fontsize)
 
-    ax[i+1].plot(lick_timestamps, licks, '|', label='licks', color='gray', markersize=10)
-    ax[i+1].plot(reward_timestamps, rewards, 'o', label='rewards', color='cyan', markersize=5)
-    ax[i+1].set_ylabel('licks &\nrewards', rotation=0, horizontalalignment='right', verticalalignment='center', fontsize=8)
-    ax[i+1].set_yticklabels([])
-    ax[i+1].set_ylim(-1,3)
+        ax[i+1].plot(lick_timestamps, licks, '|', label='licks', color='gray', markersize=10)
+        ax[i+1].plot(reward_timestamps, rewards, 'o', label='rewards', color='cyan', markersize=5)
+        ax[i+1].set_ylabel('licks &\nrewards', rotation=0, horizontalalignment='right', verticalalignment='center', fontsize=fontsize)
+        ax[i+1].set_yticklabels([])
+        ax[i+1].set_ylim(-1,3)
 
-    # add stimuli, despine and such
-    for x in range(i+1, i+4):
-        ax[x] = ppf.add_stim_color_span(dataset, ax[x], xlim=xlim_seconds, label_changes=True, label_omissions=True)
-        sns.despine(ax=ax[x], top=True, right=True, left=True, bottom=True)
-        ax[x].set_xticklabels([])
-        ax[x].set_xlabel('')
-        ax[x].tick_params(which='both', bottom=False, top=False, right=False, left=False,
-                          labelbottom=False, labeltop=False, labelright=False, labelleft=True, labelsize=7, pad=-1)
+        # add stimuli, despine and such
+        for x in range(i+1, i+4):
+            ax[x] = ppf.add_stim_color_span(dataset, ax[x], xlim=xlim_seconds, label_changes=True, label_omissions=True)
+            sns.despine(ax=ax[x], top=True, right=True, left=True, bottom=True)
+            ax[x].set_xticklabels([])
+            ax[x].set_xlabel('')
+            ax[x].tick_params(which='both', bottom=False, top=False, right=False, left=False,
+                              labelbottom=False, labeltop=False, labelright=False, labelleft=True, labelsize=fontsize)
+        i = i+3
 
     # Label bottom row with times
-    ax[i+3].set_xticks(np.arange(int(xlim_seconds[0]), int(xlim_seconds[1]), 10))
-    ax[i+3].set_xticklabels(np.arange(int(xlim_seconds[0]), int(xlim_seconds[1]), 10), fontsize=10)
+    ax[i].set_xticks(np.arange(int(xlim_seconds[0]), int(xlim_seconds[1]), 5))
+    ax[i].set_xticklabels(np.arange(int(xlim_seconds[0]), int(xlim_seconds[1]), 5), fontsize=fontsize)
     # label bottom row of plot
-    ax[i+3].set_xlabel('Time in session (seconds)', fontsize=12 )
-    ax[i+3].tick_params(which='both', bottom=False, top=False, right=False, left=False,
-                      labelbottom=True, labeltop=False, labelright=False, labelleft=True, labelsize=7, pad=-1)
+    ax[i].set_xlabel('Time in session (seconds)', fontsize=fontsize+2)
+    ax[i].tick_params(which='both', bottom=False, top=False, right=False, left=False,
+                      labelbottom=True, labeltop=False, labelright=False, labelleft=True, labelsize=fontsize)
 
     # add title to top row
     # ophys_container_id = dataset.metadata['ophys_container_id']
@@ -854,7 +867,7 @@ def plot_roi_mask_outlines(dataset, cell_specimen_ids=None, ax=None):
         for i, cell_specimen_id in enumerate(cell_specimen_ids):
             mask_data = cell_specimen_table.loc[cell_specimen_id]
             ax.contour(mask_data.roi_mask, levels=0, colors=['red'], linewidths=[0.5])
-            ax.text(s=str(i), x=mask_data.x, y=mask_data.y,
+            ax.text(s=str(i+1), x=mask_data.x, y=mask_data.y,
                     ha='right', va='bottom', fontsize=8, color='magenta')
     ax.axis('off')
     return ax
@@ -885,7 +898,7 @@ def plot_max_and_roi_outlines_for_container(ophys_container_id, platform_experim
             suffix = '_matched'
         experience_level = platform_experiments.loc[ophys_experiment_id].experience_level
         ax[i] = plot_roi_mask_outlines(dataset, cells_to_plot, ax=ax[i])
-        ax[i].set_title(experience_level, color=experience_level_colors[i])
+        ax[i].set_title(experience_level, color=experience_level_colors[i], fontsize=14)
     if save_dir:
         metadata = utils.get_metadata_string(dataset.metadata)
         fig.suptitle(str(ophys_container_id) + '_' + metadata, x=0.5, y=1.1)
@@ -900,7 +913,7 @@ def plot_max_and_roi_outlines_for_container(ophys_container_id, platform_experim
 
 def plot_matched_traces_across_sessions(ophys_container_id, dataset_dict,
                                         matched_cells_table, platform_experiments,
-                                        change_mdf, omission_mdf, cell_type,
+                                        change_mdf, omission_mdf, cell_type, skip_behavior=False, fontsize=12,
                                         start_times=np.arange(1500, 1600, 40), duration_seconds=20,
                                         matched_cells=None, save_dir=None, suffix=''):
     '''
@@ -936,22 +949,22 @@ def plot_matched_traces_across_sessions(ophys_container_id, dataset_dict,
         fig = plt.figure(figsize=figsize, facecolor='white')
 
         # plot max projections
-        ax = utils.placeAxesOnGrid(fig, dim=(1, 3), xspan=(0, 0.4), yspan=(0, 0.2), wspace=0.4)
+        ax = utils.placeAxesOnGrid(fig, dim=(1, 3), xspan=(0, 0.3), yspan=(0, 0.2), wspace=0.2)
         ax = plot_matched_max_projections_for_container(ophys_container_id, platform_experiments,
                                                             dataset_dict, ax=ax)
 
         # plot max projections with ROI masks
-        ax = utils.placeAxesOnGrid(fig, dim=(1, 3), xspan=(0, 0.4), yspan=(0.25, 0.45), wspace=0.4)
+        ax = utils.placeAxesOnGrid(fig, dim=(1, 3), xspan=(0, 0.3), yspan=(0.25, 0.45), wspace=0.2)
         ax = plot_max_and_roi_outlines_for_container(ophys_container_id, platform_experiments, dataset_dict,
                                                          cell_specimen_ids=matched_cells, ax=ax)
         # plot change responses for matched cells
-        ax = utils.placeAxesOnGrid(fig, dim=(len(matched_cells) + 2, 4), xspan=(0.55, 0.7), yspan=(0, 0.45),
+        ax = utils.placeAxesOnGrid(fig, dim=(len(matched_cells) + 2, 4), xspan=(0.38, 0.53), yspan=(0, 0.45),
                                    sharey=True)
         ax = plot_reliable_example_cells_container(change_mdf, matched_cells, cell_type,
                                                        event_type='changes', label_csids=False, linewidth=1, ax=ax)
 
         # plot max projections with ROI masks
-        ax = utils.placeAxesOnGrid(fig, dim=(len(matched_cells) + 2, 4), xspan=(0.75, 0.9), yspan=(0, 0.45),
+        ax = utils.placeAxesOnGrid(fig, dim=(len(matched_cells) + 2, 4), xspan=(0.55, 0.7), yspan=(0, 0.45),
                                    sharey=True)
         ax = plot_reliable_example_cells_container(omission_mdf, matched_cells, cell_type,
                                                        event_type='omissions', label_csids=False, linewidth=1, ax=ax)
@@ -961,9 +974,13 @@ def plot_matched_traces_across_sessions(ophys_container_id, dataset_dict,
             dataset = dataset_dict[ophys_container_id][ophys_experiment_id]
 
             # plot timeseries
-            x = i * 0.3
-            ax = utils.placeAxesOnGrid(fig, dim=(len(matched_cells) + 3, 1),
-                                       xspan=(x, x + 0.25), yspan=(0.5, 1), sharex=True, wspace=0.5)
+            x = i * 0.22
+            if skip_behavior:
+                ax = utils.placeAxesOnGrid(fig, dim=(len(matched_cells), 1),
+                                       xspan=(x, x + 0.18), yspan=(0.5, 0.8), sharex=True, wspace=0.5)
+            else:
+                ax = utils.placeAxesOnGrid(fig, dim=(len(matched_cells) + 3, 1),
+                                           xspan=(x, x + 0.18), yspan=(0.5, 1), sharex=True, wspace=0.5)
             if i == 2:
                 label_csids = True
             else:
@@ -973,7 +990,8 @@ def plot_matched_traces_across_sessions(ophys_container_id, dataset_dict,
                                                                       cell_specimen_ids=matched_cells, save_dir=False,
                                                                       sort_within_expt=False, dff_metrics=dff_metrics,
                                                                       label_csids=label_csids, short_title=True,
-                                                                      ax=ax, suffix='')
+                                                                      fontsize=fontsize,
+                                                                      skip_behavior=skip_behavior, ax=ax, suffix='')
 
         if save_dir:
             print('saving')

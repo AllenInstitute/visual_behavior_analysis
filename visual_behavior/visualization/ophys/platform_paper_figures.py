@@ -2264,7 +2264,7 @@ def add_stim_color_span(dataset, ax, xlim=None, color=None, label_changes=True, 
                     alpha = 0.5
                     if annotate_changes:
                         ymin, ymax = ax.get_ylim()
-                        ax.annotate(stim_table.loc[idx]['image_name'], xy=(start_time, ymax*1.6), xycoords='data',
+                        ax.annotate(stim_table.loc[idx]['image_name'], xy=(start_time, ymax*1.4), xycoords='data',
                                     fontsize=6,  va='top', clip_on=False, annotation_clip=False)
                 else:  # if its a non-change make it gray with low alpha
                     image_color = 'gray'
