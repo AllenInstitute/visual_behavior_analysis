@@ -2124,6 +2124,11 @@ def get_coding_metrics_for_condition(index_dropouts, index_value, index_name):
     stats: dataframe, containing one row for each cell_specimen_id or cluster_id, with metrics as columns
                         metrics can be computed within or across experience levels,
     """
+    if 'all-images' in index_dropouts.columns:
+        image_col = 'all-images'
+    else:
+        image_col = 'images'
+
     stats = pd.DataFrame(index=[index_value])
     stats.index.name = index_name
     # get dropout scores per cell
@@ -2142,9 +2147,9 @@ def get_coding_metrics_for_condition(index_dropouts, index_value, index_name):
     values = index_dropouts[dominant_feature].values[order[::-1]]
     experience_selectivity = (values[0] - (np.mean(values[1:]))) / (values[0] + (np.mean(values[1:])))
     stats.loc[index_value, 'max_coding_score'] = index_dropouts.loc[dominant_experience_level][dominant_feature]
-    stats.loc[index_value, 'max_image_coding_score'] = index_dropouts.loc[dominant_experience_level]['all-images']
+    stats.loc[index_value, 'max_image_coding_score'] = index_dropouts.loc[dominant_experience_level][image_col]
     for experience_level in index_dropouts.index.values:
-        stats.loc[index_value, 'image_coding_' + experience_level] = index_dropouts.loc[experience_level]['all-images']
+        stats.loc[index_value, 'image_coding_' + experience_level] = index_dropouts.loc[experience_level][image_col]
     stats.loc[index_value, 'feature_selectivity'] = feature_selectivity
     stats.loc[index_value, 'experience_selectivity'] = experience_selectivity
     # get experience modulation indices
@@ -4030,7 +4035,7 @@ def add_significance(sample1, sample2, test='2ttest'):
     return t, p
 
 
-def get_cluster_info(cre_line, cluster_df):
+def get_cluster_info(cre_line, cluster_meta):
     """
     Calculate unique mouse IDs in each cluster and unique cluster IDs in each mouse.
 

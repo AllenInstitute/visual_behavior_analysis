@@ -652,7 +652,7 @@ def plot_single_cell_example_timeseries_and_behavior(dataset, start_time, durati
             # ax[i].axvline(x=timestamps[timepoint], ymin=0, ymax=events_trace[timepoint], color=colors[6])
             ax[i].annotate('', xy=(timestamps[timepoint], 0), xycoords='data',
                            xytext=(timestamps[timepoint], events_trace[timepoint]), fontsize=fontsize,
-                           arrowprops=dict(arrowstyle='-', color='magenta', lw=1, shrinkA=0, shrinkB=0))
+                           arrowprops=dict(arrowstyle='-', color=sns.color_palette()[0], lw=1, shrinkA=0, shrinkB=0))
             # ax[i].set_yticks((0, 2))
         ax[i].set_xlim(xlim_seconds)
 

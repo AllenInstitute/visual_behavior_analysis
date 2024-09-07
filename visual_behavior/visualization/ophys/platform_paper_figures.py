@@ -2118,7 +2118,7 @@ def plot_cell_response_heatmap(data, timestamps, xlabel='time after change (s)',
 
 
 def plot_response_heatmaps_for_conditions(multi_session_df, timestamps, data_type, event_type,
-                                          row_condition, col_condition, cols_to_sort_by=None, suptitle=None,
+                                          row_condition, col_condition, cols_to_sort_by=None, cell_order=None, suptitle=None,
                                           microscope=None, vmax=0.05, xlim_seconds=None, xlabel='time (s)',
                                           match_cells=False, cbar=True, cbar_label='Avg. calcium events',
                                           save_dir=None, folder=None, suffix='', ax=None):
@@ -2134,6 +2134,7 @@ def plot_response_heatmaps_for_conditions(multi_session_df, timestamps, data_typ
         figsize = (2.5 * len(col_conditions), 3 * len(row_conditions))
         fig, ax = plt.subplots(len(row_conditions), len(col_conditions), figsize=figsize, sharex=True)
         ax = ax.ravel()
+        fig.subplots_adjust(hspace=0.4, wspace=0.4)
 
     i = 0
     for r, row in enumerate(row_conditions):
@@ -2150,16 +2151,22 @@ def plot_response_heatmaps_for_conditions(multi_session_df, timestamps, data_typ
                 vmax = 0.02
 
             tmp = row_sdf[(row_sdf[col_condition] == col)]
-            tmp = tmp.reset_index()
             if cols_to_sort_by:
                 tmp = tmp.sort_values(by=cols_to_sort_by, ascending=True)
             else:
                 if match_cells:
-                    if c == 0:
-                        tmp = tmp.sort_values(by='mean_response', ascending=True)
-                        order = tmp.index.values
+
+                    cell_order = row_sdf[(row_sdf.experience_level=='Novel') &
+                                         (row_sdf.cell_specimen_id.isin(tmp.cell_specimen_id.unique()))].sort_values(by=['cell_type', 'mean_response']).cell_specimen_id.values
+                    if cell_order is not None:
+                        tmp = tmp.set_index('cell_specimen_id')
+                        tmp = tmp.loc[cell_order]
                     else:
-                        tmp = tmp.loc[order]
+                        if c == 0:
+                            tmp = tmp.sort_values(by=['cell_type', 'mean_response'], ascending=True)
+                            order = tmp.index.values
+                        else:
+                            tmp = tmp.loc[order]
                 else:
                     tmp = tmp.sort_values(by='mean_response', ascending=True)
             data = pd.DataFrame(np.vstack(tmp.mean_trace.values), columns=timestamps)
@@ -2167,7 +2174,7 @@ def plot_response_heatmaps_for_conditions(multi_session_df, timestamps, data_typ
 
             ax[i] = plot_cell_response_heatmap(data, timestamps, vmax=vmax, xlabel=xlabel, cbar=cbar,
                                                microscope=microscope, cbar_label=cbar_label, ax=ax[i])
-            ax[i].set_title(row + '\n' + str(col))
+            ax[i].set_title(str(row) + '\n' + str(col))
             if col_condition == 'experience_level':
                 colors = utils.get_experience_level_colors()
                 if r == 0:
@@ -2200,12 +2207,10 @@ def plot_response_heatmaps_for_conditions(multi_session_df, timestamps, data_typ
             i += 1
 
     for c, i in enumerate(np.arange(0, (len(col_conditions) * len(row_conditions)), len(col_conditions))):
-        ax[i].set_ylabel(row_conditions[c]+'\ncells')
+        ax[i].set_ylabel(str(row_conditions[c])+'\ncells')
 
-    if suptitle:
-        plt.suptitle(suptitle, x=0.52, y=1.0, fontsize=18)
-    # fig.tight_layout()
-    fig.subplots_adjust(hspace=0.4, wspace=0.4)
+    # if suptitle:
+    #     plt.suptitle(suptitle, x=0.52, y=1.0, fontsize=18)
 
     if save_dir:
         fig_title = event_type + '_response_heatmap_' + data_type + '_' + col_condition + '_' + row_condition + suffix
