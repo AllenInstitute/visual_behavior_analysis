@@ -324,9 +324,240 @@ def plot_glm_methods_with_example_cells(ophys_experiment_id, cell_specimen_id_1,
         utils.save_figure(fig, figsize, save_dir, folder, metadata_string + '_' + str(int(start_time)) + '_' + str(cell_specimen_id_1) + '_' + str(cell_specimen_id_2))
 
 
+
+def plot_glm_features_for_window(dataset, xlim_seconds, save_dir=None, ax=None, suffix=''):
+    """
+    For a given period of time in an ophys or behavior session,
+    plot the stimulus times in the background, along with the period over which each kernel is active (images, hits, misses, omissions),
+    and the licks, running speed, and pupil area
+
+    """
+
+    start_time = xlim_seconds[0]
+    duration_seconds = xlim_seconds[1] - xlim_seconds[0]
+
+    # get behavior events & timeseries to plot
+    lick_timestamps = dataset.licks.timestamps.values
+    licks = np.zeros(len(lick_timestamps))
+    licks[:] = 1
+
+    reward_timestamps = dataset.rewards.timestamps.values
+    rewards = np.zeros(len(reward_timestamps))
+    rewards[:] = 1
+
+    # get run speed trace and timestamps
+    running_speed = dataset.running_speed.speed.values
+    running_timestamps = dataset.running_speed.timestamps.values
+    # limit running trace to window so yaxes scale properly
+    start_ind = np.where(running_timestamps < xlim_seconds[0])[0][-1]
+    stop_ind = np.where(running_timestamps > xlim_seconds[1])[0][0]
+    running_speed = running_speed[start_ind:stop_ind]
+    running_timestamps = running_timestamps[start_ind:stop_ind]
+
+    # get pupil width trace and timestamps
+    eye_tracking = dataset.eye_tracking.copy()
+    pupil_diameter = eye_tracking.pupil_width.values
+    pupil_diameter[eye_tracking.likely_blink == True] = np.nan
+    pupil_timestamps = eye_tracking.timestamps.values
+    # smooth pupil diameter
+    from scipy.signal import medfilt
+    pupil_diameter = medfilt(pupil_diameter, kernel_size=5)
+    # limit pupil trace to window so yaxes scale properly
+    start_ind = np.where(pupil_timestamps < xlim_seconds[0])[0][-1]
+    stop_ind = np.where(pupil_timestamps > xlim_seconds[1])[0][0]
+    pupil_diameter = pupil_diameter[start_ind:stop_ind]
+    pupil_timestamps = pupil_timestamps[start_ind:stop_ind]
+
+    n_rows = 14
+    height_ratios = np.hstack((np.repeat(1, 12), 2, 2))
+    if ax is None:
+        figsize = (6, 10)
+        fig, ax = plt.subplots(n_rows, 1, figsize=figsize, sharex=True, gridspec_kw={'height_ratios':height_ratios})
+        ax = ax.ravel()
+
+    i = 0
+    for i in range(9):
+        try:
+            ax[i] = plot_kernel_activations(dataset, start_time, duration_seconds, index_image_in_window=False,
+                                                kernel='image '+str(i+1), ax=ax[i])
+        except:
+            pass
+
+    ax[i] = plot_kernel_activations(dataset, start_time, duration_seconds, kernel='omissions', ax=ax[i])
+    i+=1
+
+    ax[i] = plot_kernel_activations(dataset, start_time, duration_seconds, kernel='misses', ax=ax[i])
+    i+=1
+
+    ax[i] = plot_kernel_activations(dataset, start_time, duration_seconds, kernel='hits', ax=ax[i])
+    ax[i].plot(reward_timestamps, rewards, '^', label='rewards', color='b', markersize=8)
+    i+=1
+
+    # ax[i] = gep.plot_kernel_activations(dataset, start_time, duration_seconds, kernel='licks', ax=ax[i])
+    ax[i].plot(lick_timestamps, licks, '|', label='licks', color='k', markersize=20)
+    ax[i].set_ylabel('licks', rotation=0, horizontalalignment='right',  verticalalignment='center')
+    i+=1
+
+    for x in range(0, i):
+        ax[x].set_ylim(0, 2)
+
+    # now plot running and pupil as continuous variables
+    ax[i].plot(running_timestamps, running_speed, label='running_speed', color='k')
+    ax[i].set_ylabel('running', rotation=0, horizontalalignment='right', verticalalignment='center')
+    # ax[i].yaxis.set_label_position("right")
+    ax[i].set_ylim(ymin=-8)
+    i+=1
+
+    ax[i].plot(pupil_timestamps, pupil_diameter, label='pupil_diameter', color='k')
+    ax[i].set_ylabel('pupil', rotation=0, horizontalalignment='right',  verticalalignment='center')
+    ax[i].set_xticks(np.arange(xlim_seconds[0], xlim_seconds[1], 4))
+    i+=1
+
+    # remove ticks everywhere but bottom row + set xlim for all axes
+    i = n_rows - 1
+    ax[i].set_xlabel('Time in session (seconds)')
+    for i in range(n_rows):
+        ax[i].set_xlim(xlim_seconds)
+        ax[i].tick_params(which='both', bottom=False, top=False, right=False, left=False,
+                            labelbottom=False, labeltop=False, labelright=False, labelleft=True)
+        ax[i].spines[['right', 'top', 'bottom', 'left']].set_visible(False)
+        ax[i].set_yticklabels([])
+        # flip all ylabels to the right side
+        # ax[i].yaxis.set_label_position("left")
+        ax[i] = ppf.add_stim_color_span(dataset, ax[i], xlim=xlim_seconds, annotate_changes=False, max_alpha=0.4)
+    # bottom row has ticks for timestamps
+    ax[n_rows - 1].tick_params(which='both', bottom=True, top=False, right=False, left=False,
+                                labelbottom=True, labeltop=False, labelright=False, labelleft=True)
+
+    # add title to top row
+    metadata_string = utils.get_metadata_string(dataset.metadata) + suffix
+    # ax[0].set_title(metadata_string + '\nFeatures')
+    plt.suptitle(metadata_string, x=0.48, y=0.95, fontsize=12)
+    ax[0].set_title('Features')
+    plt.subplots_adjust(hspace=0, wspace=0.9)
+
+    if save_dir:
+        folder = 'glm_features_panel'
+        utils.save_figure(fig, figsize, save_dir, folder, metadata_string + '_' + str(int(start_time)))
+    return ax
+
+
+def plot_stacked_kernels_for_cell(cell_specimen_id, dataset, weights_df, kernels, save_dir=None, ax=None):
+    """
+    plots the kernel weights for each kernel type for a given cell, in a row
+    weights_df and kernels can be obtained using `load_GLM_outputs` or by loading files directly from the cache
+    """
+
+    # get weights for example cell
+    ophys_experiment_id = dataset.ophys_experiment_id
+    identifier = str(ophys_experiment_id) + '_' + str(cell_specimen_id)
+    cell_weights = weights_df[weights_df.identifier == identifier]
+
+    # GLM output is all resampled to 30Hz
+    frame_rate = 31
+
+    # which features to plot
+    features = ['image0', 'image1', 'image2', 'image3', 'image4', 'image5', 'image6', 'image7', 'omissions', 'misses',
+                'hits', 'licks', 'running', 'pupil']
+
+    color = sns.color_palette()[0]
+    color = 'k'
+
+    n_rows = 14
+    # height_ratios = np.hstack((np.repeat(1, 12), 2, 2))
+    if ax is None:
+        figsize = (3, 10)
+        fig, ax = plt.subplots(n_rows, 1, figsize=figsize, sharex=True,
+                               sharey=False)  # gridspec_kw={'height_ratios':height_ratios})
+        ax = ax.ravel()
+
+    # first plot each image
+    # image_weights = []
+    for i, feature in enumerate(features[:8]):
+        kernel_weights = cell_weights[feature + '_weights'].values[0]
+        t_array = get_t_array_for_kernel(kernels, feature, frame_rate)
+        ax[i] = utils.plot_flashes_on_trace(ax[i], t_array, change=False, omitted=False, alpha=0.2)
+        ax[i].plot(t_array, kernel_weights, color=color)
+        ax[i].set_ylabel(feature[:-1] + ' ' + str(int(feature[-1]) + 1), fontsize=14, rotation=0, ha='right',
+                         va='center')
+        ax[i].set_xlabel('')
+        ax[i].set_yticklabels('')
+        ax[i].set_xticklabels('')
+
+    for i, feature in enumerate(features[8:]):
+        i += 8
+        kernel_weights = cell_weights[feature + '_weights'].values[0]
+        if feature == 'omissions':
+            n_frames_to_clip = int(kernels['omissions']['length'] * frame_rate) + 1
+            kernel_weights = kernel_weights[:n_frames_to_clip]
+
+        t_array = get_t_array_for_kernel(kernels, feature, frame_rate)
+        if feature == 'omissions':
+            ax[i] = utils.plot_flashes_on_trace(ax[i], t_array, change=False, omitted=True, alpha=0.2)
+        elif feature == 'hits':
+            ax[i] = utils.plot_flashes_on_trace(ax[i], t_array, change=True, omitted=False, alpha=0.2)
+        elif feature == 'misses':
+            ax[i] = utils.plot_flashes_on_trace(ax[i], t_array, change=True, omitted=False, alpha=0.2)
+        # plot kernel
+        ax[i].plot(t_array, kernel_weights, color=color)
+
+        ax[i].set_ylabel(feature, fontsize=14, rotation=0, ha='right', va='center')
+        # ax[i].set_title(feature, fontsize=fontsize)
+        ax[i].set_xlabel('')
+        ax[i].set_yticklabels('')
+        ax[i].set_xticklabels('')
+
+    for i in range(n_rows):
+        sns.despine(ax=ax[i], top=True, right=True, left=True, bottom=True)
+        ax[i].tick_params(which='both', bottom=False, top=False, right=False, left=False,
+                          labelbottom=False, labeltop=False, labelright=False, labelleft=False)
+        ax[i].axvline(x=0, ymin=0, ymax=1, color='gray', linestyle='--')
+
+        # ymin, ymax = ax[i].get_ylim()
+        # print(ymin, ymax)
+        # print(ymin*1.2, ymax*1.2)
+        # ax[i].set_ylim((ymin * 1.2, ymax * 1.5))
+
+        # # Annotate axes
+        # xmin, xmax = ax[i].get_xlim()
+        # ymin, ymax = ax[i].get_ylim()
+        # # limit y axis to 1/3 of max & label it
+        # ytop = np.round(ymax * .3, 3)
+        # ax[i].set_yticks([0, ytop])
+        # ax[i].set_yticklabels(['', ytop], va='top', fontsize=10)
+        # # # add scale bar for y axis, from 0 to 1/3 of max
+        # # plot a line for 1/3 of the axis, corresponding to the yticklabel for y axis, which is set at 1/3 of the max y value
+        # ax[i].axvline(x=-1.1, ymin=0, ymax=0.3, color='k', linewidth=1, clip_on=False)
+        # ax[i].annotate(str(ytop), xy=(-1.2, ytop),
+        #                xycoords='data', xytext=(-1.2, ytop), ha='right',
+        #                fontsize=10, clip_on=False, annotation_clip=False)
+
+    # Label last axis
+    sns.despine(ax=ax[i], top=True, right=True, left=True, bottom=True)
+    ax[i].tick_params(which='both', bottom=True, top=False, right=False, left=False,
+                      labelbottom=True, labeltop=False, labelright=False, labelleft=False)
+    ax[i].set_xticks(np.arange(-1, 4, 1))
+    ax[i].set_xticklabels(np.arange(-1, 4, 1), fontsize=12)
+    ax[i].set_xlabel('Time (sec)')
+
+    ax[0].set_title('Kernels')
+    plt.subplots_adjust(hspace=0, wspace=0.9)
+
+    # ax[i-1].legend(fontsize='x-small')
+    # ax[0].set_ylabel('Calcium events', fontsize=fontsize)
+
+    if save_dir:
+        metadata_string = utils.get_metadata_string(dataset.metadata)
+        title_string = metadata_string + '_' + str(cell_specimen_id)
+        plt.suptitle(metadata_string, x=0.48, y=0.95, fontsize=12)
+        utils.save_figure(fig, figsize, save_dir, 'example_kernels_stacked', title_string + '_kernels')
+
+    return ax
+
+
 def plot_model_fits_example_cell(cell_specimen_id, dataset, cell_results_df, dropouts, results,
                                  kernel=None, include_events=True, include_dff=False,
-                                 times=None, n_flashes=16, linewidth=None,
+                                 times=None, n_flashes=16, linewidth=2, twinx=False,
                                  fontsize=8, as_panel=False, save_dir=None, ax=None):
     '''
     For one cell, plot the cell trace, model fits, and model fits with a specific kernel (such as all-images or omissions) removed
@@ -361,7 +592,7 @@ def plot_model_fits_example_cell(cell_specimen_id, dataset, cell_results_df, dro
 
     # do the plot
     if ax is None:
-        figsize = (8, 2.5)
+        figsize = (8, 2)
         fig, ax = plt.subplots(figsize=figsize)
 
     # time to use for extracting the trace in the relvant time window
@@ -369,7 +600,7 @@ def plot_model_fits_example_cell(cell_specimen_id, dataset, cell_results_df, dro
     cell_index = np.where(cell_results_df.cell_specimen_id.unique() == cell_specimen_id)[0][0]
 
     ax = utils.add_stim_color_span(dataset, ax, xlim=xlim_seconds, annotate_changes=False,
-                                    label_changes=True, label_omissions=True)
+                                    label_changes=True, label_omissions=True, max_alpha=0.4)
     # # add stimulus, change, and omission times to plot
     # stim = stimulus_presentations.query('start_time > @times[0] & start_time < @times[1]')
     # stim = stim[(stim.omitted == False) & (stim.is_change == False)]
@@ -394,9 +625,9 @@ def plot_model_fits_example_cell(cell_specimen_id, dataset, cell_results_df, dro
     if include_events:
         suffix = '_events'
         ax.plot(fit['fit_trace_timestamps'][time_vec],
-                fit['events'][time_vec], label='events',
+                fit['events'][time_vec], label='calcium events',
                 linewidth=linewidth,
-                color=sns.color_palette()[0])
+                color=sns.color_palette()[4])
 
     if include_dff:
         # Plot df/f
@@ -422,10 +653,15 @@ def plot_model_fits_example_cell(cell_specimen_id, dataset, cell_results_df, dro
     # ax.plot(fit['fit_trace_timestamps'][time_vec],
     #         dropouts['Full']['full_model_train_prediction'][time_vec, cell_index],
     #         linewidth=linewidth, color=sns.color_palette()[6], alpha=0)
-    ax2 = ax.twinx()
-    ax2.plot(fit['fit_trace_timestamps'][time_vec],
-             dropouts['Full']['full_model_train_prediction'][time_vec, cell_index],
-             label='full model', linewidth=linewidth, color=sns.color_palette()[6])
+    if twinx:
+        ax2 = ax.twinx()
+        ax2.plot(fit['fit_trace_timestamps'][time_vec],
+                 dropouts['Full']['full_model_train_prediction'][time_vec, cell_index],
+                 label='model prediction', linewidth=linewidth, color=sns.color_palette()[9])
+    else:
+        ax.plot(fit['fit_trace_timestamps'][time_vec],
+                 dropouts['Full']['full_model_train_prediction'][time_vec, cell_index],
+                 label='model prediction', linewidth=linewidth, color=sns.color_palette()[9])
 
     if kernel is not None:
         cs = np.round(results.loc[cell_specimen_id]
@@ -434,12 +670,16 @@ def plot_model_fits_example_cell(cell_specimen_id, dataset, cell_results_df, dro
         ax.plot(fit['fit_trace_timestamps'][time_vec],
                 dropouts[kernel]['full_model_train_prediction'][time_vec, cell_index], '-',
                 # label='without ' + kernel + ' kernels\n' +
-                label = str(np.round(dropout, 1)) + '% reduction in VE\n' + kernel + ' coding score: ' + str(cs),
+                # label='without ' + kernel + ', coding score: ' + str(cs) + '\n' + str(
+                #     np.round(dropout, 1)) + '% reduction in VE',
+                label = 'without '+ kernel + '\n' +  str(np.round(dropout, 1)) + '% reduction in VE',
                 linewidth=linewidth, color=sns.color_palette()[2])
         ax.spines['right'].set_visible(False)
 
+    ax.legend(bbox_to_anchor=(1,1))
+
     ax.set_xlim(xlim_seconds)
-    ax2.set_xlim(xlim_seconds)
+
     # Clean up plot
     if as_panel:
         # ax.legend(bbox_to_anchor=(1, 1), fontsize=fontsize)
@@ -454,40 +694,49 @@ def plot_model_fits_example_cell(cell_specimen_id, dataset, cell_results_df, dro
         xmin, xmax = ax2.get_xlim()
         # create scale bar
         ytop = np.round(ymax * .3, 2)
-        ax2.set_yticks([0, ytop])
-        ax2.set_yticklabels(['', ytop], va='top', ha='left', fontsize=fontsize-2)
-        # ax[i].axvline(x=xlim_seconds[0] - 0.1, ymin=0, ymax=0.3, color='k', linewidth=1, clip_on=False)
-        # add scale bar
-        ax2.annotate('', xy=(xmax + 0.25, 0), xycoords='data', xytext=(xmax + 0.25, ytop),
-                       fontsize=fontsize, arrowprops=dict(arrowstyle='-', color='k', lw=1, shrinkA=0, shrinkB=0), annotation_clip=False)
 
         ax.spines[['top', 'bottom', 'left', 'right']].set_visible(False)
-        ax2.spines[['top', 'bottom', 'left', 'right']].set_visible(False)
+
         ax.tick_params(which='both', bottom=False, top=False, right=False, left=False,
                        labelbottom=False, labeltop=False, labelright=False, labelleft=True)
-        ax2.tick_params(which='both', bottom=False, top=False, right=False, left=False,
-                        labelbottom=False, labeltop=False, labelright=True, labelleft=False)
+
+        if twinx:
+            ax2.set_xlim(xlim_seconds)
+            ax2.set_yticks([0, ytop])
+            ax2.set_yticklabels(['', ytop], va='top', ha='left', fontsize=fontsize-2)
+            # ax[i].axvline(x=xlim_seconds[0] - 0.1, ymin=0, ymax=0.3, color='k', linewidth=1, clip_on=False)
+            # add scale bar
+            ax2.annotate('', xy=(xmax + 0.25, 0), xycoords='data', xytext=(xmax + 0.25, ytop),
+                           fontsize=fontsize, arrowprops=dict(arrowstyle='-', color='k', lw=1, shrinkA=0, shrinkB=0), annotation_clip=False)
+
+
+            ax2.spines[['top', 'bottom', 'left', 'right']].set_visible(False)
+            ax2.tick_params(which='both', bottom=False, top=False, right=False, left=False,
+                            labelbottom=False, labeltop=False, labelright=True, labelleft=False)
     else:
         # ax.legend(bbox_to_anchor=(1,1), fontsize=fontsize)
         # ax2.legend(loc='upper left', fontsize=fontsize)
         ax.set_ylabel('Calcium events', fontsize=style['fs1'])
-        ax.set_xlabel('Time in session (s)', fontsize=style['fs1'])
-        ax.spines['top'].set_visible(False)
+        ax.set_xlabel('Time in session (sec)', fontsize=style['fs1'])
         ax.tick_params(axis='x', labelsize=style['fs2'])
         ax.tick_params(axis='y', labelsize=style['fs2'])
         ax.set_title('csid: ' + str(cell_specimen_id))
-        ax.spines[['bottom', 'left', 'right']].set_visible(False)
+        ax.spines[['bottom', 'left', 'right', 'top']].set_visible(False)
+        ax.spines[['top', 'bottom', 'left', 'right']].set_visible(False)
         # ax2.spines[['top', 'bottom', 'left']].set_visible(False)
         ax.tick_params(which='both', bottom=True, top=False, right=False, left=True,
                        labelbottom=True, labeltop=False, labelright=False, labelleft=True)
+
+        if twinx:
+            ax2.tick_params(which='both', bottom=True, top=False, right=True, left=False,
+                           labelbottom=True, labeltop=False, labelright=True, labelleft=False)
     # ax.set_ylim(-0.035,.9)
     ax.set_xlim(times)
-
     ax.set_xticks(np.arange(times[0], times[1], 4))
 
-
     if save_dir:
-        fig.legend(bbox_to_anchor=(1.1, 1), fontsize=fontsize)
+        if twinx:
+            fig.legend(bbox_to_anchor=(1.1, 1), fontsize=fontsize)
         if kernel is not None:
             suffix = suffix + '_' + kernel + '_dropout'
         else:
@@ -806,7 +1055,7 @@ def load_GLM_outputs(glm_version, experiments_table, cells_table, glm_output_dir
 
 ####### plot GLM kernel timing along with behavior timeseries & stimulus times #######
 
-def plot_kernel_activations(dataset, start_time, duration_seconds, kernel='omissions', ax=None):
+def plot_kernel_activations(dataset, start_time, duration_seconds, kernel='omissions', index_image_in_window=True, ax=None):
     '''
     For a given period of time in an ophys or behavior session,
     then plot the window over which a given GLM kernel is active, relative to the event of interest
@@ -816,6 +1065,8 @@ def plot_kernel_activations(dataset, start_time, duration_seconds, kernel='omiss
     :param start_time: start time for plot (in seconds within session)
     :param duration_seconds: duration in seconds for the x axis to span
     :param kernel: name of kernel to plot time window for, can be ['imagex', 'omissions', 'hits', 'misses', 'licks']
+    :param index_image_in_window: Boolean, if True, will number images according to how many are in the window
+                                    if False, will number images according to how many there are total
     :param ax:
     :return:
     '''
@@ -832,20 +1083,25 @@ def plot_kernel_activations(dataset, start_time, duration_seconds, kernel='omiss
     images = np.sort(stim_table[stim_table.omitted == False].image_name.unique())
     image_colors = sns.color_palette("hls", len(images))
     # limit to time window
-    stim_table = stim_table[(stim_table.start_time >= xlim_seconds[0]) & (stim_table.end_time <= xlim_seconds[1])]
-    images = stim_table[stim_table.image_name != 'omitted'].image_name.unique()
+    if index_image_in_window: # if we want to show all 8 images we need to get the list of images before limiting stim table to this window
+        stim_table = stim_table[(stim_table.start_time >= xlim_seconds[0]) & (stim_table.end_time <= xlim_seconds[1])]
+        images = stim_table[stim_table.image_name != 'omitted'].image_name.unique()
+    else:
+        images = np.sort(stim_table.image_name.unique())
+        stim_table = stim_table[(stim_table.start_time >= xlim_seconds[0]) & (stim_table.end_time <= xlim_seconds[1])]
 
     # get timestamps & frames for this window
     # get first and last indices
     first_idx = stim_table[stim_table.start_time >= xlim_seconds[0]].index.values[0]
     first_frame = int(stim_table.loc[first_idx].start_frame)
-    last_idx = stim_table[stim_table.start_time <= xlim_seconds[1]].index.values[-1]
+    last_idx = stim_table[stim_table.end_time <= xlim_seconds[1]].index.values[-1]
     last_frame = int(stim_table.loc[last_idx].end_frame)
 
     # use running timestamps to construct array for plotting kernels in this time window
     running_timestamps = dataset.running_speed.timestamps.values
     kernel_trace_timestamps = running_timestamps[first_frame:last_frame]
     kernel_trace = np.zeros(len(kernel_trace_timestamps))
+    kernel_trace[:] = np.nan
 
     # loop through stimulus presentations and add a span with appropriate color
     image_presentation_number = 0
@@ -855,18 +1111,31 @@ def plot_kernel_activations(dataset, start_time, duration_seconds, kernel='omiss
         # image_index = stim_table.loc[idx]['image_index']
         if ('image' in kernel):
             image_kernel_index = int(kernel[-1]) - 1
-            if image_name == images[image_kernel_index]:
+            this_image_index = np.where(images == image_name)[0][0]
+            if index_image_in_window:
+                if this_image_index == image_kernel_index:
+                    plot = True
+                else:
+                    plot = False
+            else:
+                if image_name == images[image_kernel_index]:
+                    plot = True
+                else:
+                    plot = False
+            if plot:
                 # frame where image starts
                 frame_in_kernel_trace = stim_table.loc[idx]['start_frame'] - first_frame
                 # length of this kernel
                 len_image_kernel = 0.75
                 # set values during this kernel window to 1 and plot
-                kernel_trace[frame_in_kernel_trace:frame_in_kernel_trace + (int(len_image_kernel * 60))] = 1
-                # plot first image as black, rest as gray
-                if image_presentation_number == 0:
-                    ax.plot(kernel_trace_timestamps, kernel_trace, color='k', zorder=10000)
-                else:
-                    ax.plot(kernel_trace_timestamps, kernel_trace, color='gray', linewidth=0.5)
+                kernel_trace[frame_in_kernel_trace + 2 :frame_in_kernel_trace + (int(len_image_kernel * 60)-2)] = 1
+                if index_image_in_window: # plot first image as black, rest as gray
+                    if image_presentation_number == 0:
+                        ax.plot(kernel_trace_timestamps, kernel_trace, color='k', zorder=10000)
+                    else:
+                        ax.plot(kernel_trace_timestamps, kernel_trace, color='gray', linewidth=0.5)
+                else: # plot them all as black lines
+                    ax.plot(kernel_trace_timestamps, kernel_trace, color='k')
                 image_presentation_number += 1
         if (image_name == 'omitted') and (kernel == 'omissions'):
             # frame where omission starts
@@ -904,7 +1173,7 @@ def plot_kernel_activations(dataset, start_time, duration_seconds, kernel='omiss
                 ax.plot(kernel_trace_timestamps, kernel_trace, color='gray', linewidth=0.5)
 
     # label y axis with kernel name
-    ax.set_ylabel(kernel, rotation=0, horizontalalignment='left', verticalalignment='center')
+    ax.set_ylabel(kernel, rotation=0, horizontalalignment='right', verticalalignment='center')
 
     return ax
 
@@ -1828,16 +2097,18 @@ def plot_coding_score_components_for_cell(cell_specimen_id, ophys_experiment_id,
         figsize = (3, 2)
         fig, ax = plt.subplots(figsize=figsize)
     # get dropouts just for one cell
-    ax = sns.barplot(data=np.abs(cell_dropouts[main_coding_score_features]), orient='v',
+    ax = sns.barplot(data=np.abs(cell_dropouts[main_coding_score_features]), orient='h',
                      palette=feature_colors, ax=ax)  # color=sns.color_palette('Blues_r')[0], ax=ax)
-    ax.set_ylabel('Coding score', fontsize=fontsize)
-    ax.set_title('var_exp_full = ' + str(np.round(cell_dropouts.variance_explained_full.values[0], 3)), fontsize=fontsize)
-    ax.set_xticklabels(feature_labels, rotation=45, horizontalalignment='right', fontsize=fontsize+1)
+    ax.set_xlabel('Coding score', fontsize=fontsize)
+    ax.set_title('VE full model = ' + str(np.round(cell_dropouts.variance_explained_full.values[0], 3)), fontsize=fontsize)
+    ax.set_yticklabels(feature_labels, rotation=0, horizontalalignment='right', fontsize=fontsize)
+    ax.xaxis.set_tick_params(labelsize=fontsize)
 
     for x, feature in enumerate(main_coding_score_features):
         cs = np.abs(cell_dropouts[feature].values[0])
         if cs>0:
-            ax.text(s = str(np.round(cs,2)), x=x, y=cs, rotation=0, fontsize=fontsize-1, color='k', va='bottom',  ha='center')
+            ax.text(s = str(np.round(cs,2)), y=x, x=cs, rotation=0, fontsize=fontsize-4,
+                    color='k', va='center',  ha='left')
     if as_panel:
         ax.set_title('')
         # Annotate axes
@@ -1847,8 +2118,8 @@ def plot_coding_score_components_for_cell(cell_specimen_id, ophys_experiment_id,
         # ytop = np.round(ymax * .3, 2)
         # ytop = 1
         # ax.set_yticks([0, ytop])
-        ax.set_ylim(0, 1)
-        ax.set_yticklabels('')
+        ax.set_xlim(0, 1)
+        ax.set_xticklabels('')
         # ax.set_yticklabels([0, ytop], va='top', fontsize=fontsize)
         #
         # ax.annotate('', xy=(xmin-0.1, 0), xycoords='data', xytext=(xmin-0.1, ytop),
@@ -1865,7 +2136,7 @@ def plot_coding_score_components_for_cell(cell_specimen_id, ophys_experiment_id,
         # cre_line = utils.get_abbreviated_cell_type(cell_dropouts.cre_line.values[0])
         cre_line = cell_dropouts['cre_line'].values[0].split('-')[0]
         title_string = str(ophys_experiment_id) + '_' + str(cell_specimen_id) + '_' + cre_line
-        fig.suptitle(title_string, x=0.5, y=1., fontsize=16)
+        fig.suptitle(title_string, x=0.5, y=1.3, fontsize=16)
         utils.save_figure(fig, figsize, save_dir, 'example_model_fits', title_string + '_coding_scores')
 
     return ax

@@ -83,13 +83,13 @@ def convert_boolean_cols_to_bool(stimulus_presentations):
             if type(stimulus_presentations[column].dtype).__name__ == 'BooleanDtype':
                 row_ids = stimulus_presentations[stimulus_presentations[column].isnull()].index
                 stimulus_presentations.loc[row_ids, column] = False
-                stimulus_presentations[column] = stimulus_presentations[column].astype('bool')
+                stimulus_presentations.loc[row_ids, column] = stimulus_presentations[column].astype('bool', inplace=True)
         except:
             if stimulus_presentations[column].dtype == 'boolean':
                 # remove NaNs and make bool
                 row_ids = stimulus_presentations[stimulus_presentations[column].isnull()].index
                 stimulus_presentations.loc[row_ids, column] = False
-                stimulus_presentations[column] = stimulus_presentations[column].astype('bool')
+                stimulus_presentations.loc[row_ids, column] = stimulus_presentations[column].astype('bool')
     return stimulus_presentations
 
 

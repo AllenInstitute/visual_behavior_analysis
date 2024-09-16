@@ -552,7 +552,8 @@ def addSpan(ax, amin, amax, color='k', alpha=0.3, axtype='x'):
         ax.axhspan(amin, amax, facecolor=color, edgecolor='none', alpha=alpha, linewidth=0)
 
 
-def add_stim_color_span(dataset, ax, xlim=None, color=None, label_changes=True, label_omissions=True, annotate_changes=False):
+def add_stim_color_span(dataset, ax, xlim=None, color=None, label_changes=True, label_omissions=True,
+                        annotate_changes=False, max_alpha=0.5):
     """
     adds a vertical span for all stimulus presentations contained within xlim
     xlim is a time in seconds during a behavior session
@@ -588,14 +589,14 @@ def add_stim_color_span(dataset, ax, xlim=None, color=None, label_changes=True, 
             if label_changes:
                 if stim_table.loc[idx]['is_change']:  # if its a change, make it blue with higher alpha
                     image_color = sns.color_palette()[0]
-                    alpha = 0.5
+                    alpha = max_alpha
                     if annotate_changes:
                         ymin, ymax = ax.get_ylim()
                         ax.annotate(stim_table.loc[idx]['image_name'], xy=(start_time, ymax*1.6), xycoords='data',
                                     fontsize=6,  va='top', clip_on=False, annotation_clip=False)
                 else:  # if its a non-change make it gray with low alpha
                     image_color = 'gray'
-                    alpha = 0.25
+                    alpha = max_alpha/2.
             else:
                 if color is None:
                     image_color = image_colors[image_index]
@@ -652,7 +653,7 @@ def plot_mean_trace(traces, timestamps, ylabel='dF/F', legend_label=None, color=
         sem = (np.std(traces)) / np.sqrt(float(len(traces)))
         ax.plot(timestamps, trace, label=legend_label, linewidth=linewidth, color=color)
         if plot_sem:
-            ax.fill_between(timestamps, trace + sem, trace - sem, alpha=0.5, color=color)
+            ax.fill_between(timestamps, trace + sem, trace - sem, alpha=0.4, color=color)
         ax.set_xticks(np.arange(int(timestamps[0]), int(timestamps[-1]) + 1, interval_sec))
         ax.set_xlim(xlim_seconds)
         ax.set_xlabel('Time (sec)')
@@ -791,6 +792,31 @@ def get_start_end_time_for_period_with_omissions_and_change(stimulus_presentatio
     start_time = start_times[10]
     end_time = start_time+(0.75*n_flashes)
     return [start_time, end_time]
+
+
+def get_start_end_time_for_period_with_event(stimulus_presentations, event_type='is_change',
+                                             n_before=4, n_after=8, event_ind_to_choose=10):
+    '''
+
+    Parameters
+    ----------
+    stimulus_presentations: SDK stimulus presentations table
+    event_type: binary column in stimulus_presentations that can be used to filter to find relevant timepoints
+    n_before: number of flashes before the event to take window for start time
+    n_after: number of flashes after the event to take window for dnd time
+    event_ind_to_choose: index of event to use (i.e. the 10th change or 15th omission)
+    Returns
+    -------
+
+    '''
+
+    st = stimulus_presentations.copy()
+    index = st[st[event_type] == True].index.values[event_ind_to_choose]
+    start_time = st.loc[index - n_before].start_time
+    start_time = np.round(start_time, 1)
+    end_time = start_time + (0.75 * (n_after+n_before))
+    return [start_time, end_time]
+
 
 def get_experiments_matched_across_project_codes(df):
     '''
