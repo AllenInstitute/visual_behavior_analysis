@@ -12,6 +12,8 @@ from scipy.spatial.distance import cdist, pdist
 import re
 
 from sklearn.cluster import KMeans
+from statsmodels.stats.multicomp import pairwise_tukeyhsd
+from statsmodels.stats.multicomp import MultiComparison
 
 import visual_behavior.visualization.utils as utils
 import visual_behavior.data_access.loading as loading
@@ -330,7 +332,8 @@ def get_elbow_plots(X, n_clusters=range(2, 20), ax=None):
     return ax
 
 
-def plot_silhouette_scores(silhouette_scores, silhouette_std, metric, n_clusters=None, save_dir=None, folder=None, ax=None):
+def plot_silhouette_scores(silhouette_scores, silhouette_std, n_clusters=None,
+                           save_dir=None, folder=None, ax=None, suffix=''):
 
 
     n_clusters_range = np.arange(1, len(silhouette_scores) + 1)
@@ -349,18 +352,18 @@ def plot_silhouette_scores(silhouette_scores, silhouette_std, metric, n_clusters
         ax.vlines(x=n_clusters, ymin=ylims[0], ymax=ylims[1], linestyle='--', color='gray')
 
     if save_dir:
-        utils.save_figure(fig, figsize, save_dir, folder, 'silhouette_scores_' + metric)
+        utils.save_figure(fig, figsize, save_dir, folder, 'silhouette_scores' + suffix)
 
     return ax
 
 
-def plot_silhouette_scores_n_clusters(silhouette_scores, cell_metadata, n_clusters_cre=None, save_dir=None, folder=None):
+def plot_silhouette_scores_n_clusters(silhouette_scores, cell_metadata, n_clusters_cre=None,
+                                      save_dir=None, folder=None, suffix=''):
     """
     n_clusters_cre is a dictionary with cre lines as keys and the selected number of clusters for that cre line as values
     silhouette scores are plotted with dashed line at the x value for n_clusters_cre
     """
-    suffix = ''  # suffix to attach to file name - blank if n_clusters_cre is None, otherwise will add label below
-    figsize = (15, 5)
+    figsize = (15, 3)
     fig, ax = plt.subplots(1, 3, figsize=figsize)
     for i, cre_line in enumerate(get_cre_lines(cell_metadata)):
         silhouette_scores_cre = silhouette_scores[cre_line]
@@ -371,7 +374,9 @@ def plot_silhouette_scores_n_clusters(silhouette_scores, cell_metadata, n_cluste
             n_clusters = n_clusters_cre[cre_line]
             ax[i].axvline(x=n_clusters, ymin=0, ymax=1, linestyle='--', color='gray')
             suffix = '_n_clusters'
-    plt.grid()
+        if i > 0:
+            ax[i].set_ylabel('')
+    plt.subplots_adjust(wspace=0.25)
     if save_dir:
         utils.save_figure(fig, figsize, save_dir, folder, 'silhouette_scores' + suffix)
 
@@ -469,7 +474,6 @@ def plot_coclustering_matrix_sorted_by_cluster_size(coclustering_matrices, clust
         ax.set_title('all cell types clustered')
     else:
         ax.set_title(processing.get_cre_line_map(cre_line))
-    ax.set_title('')
     ax.set_yticks((0, sorted_coclustering_matrix.shape[0]))
     ax.set_yticklabels((0, sorted_coclustering_matrix.shape[0]), fontsize=20)
     ax.set_ylabel('cells', fontsize=20)
@@ -535,8 +539,9 @@ def plot_umap_for_clusters(cluster_meta, feature_matrix, umap_df=None, label_col
     if cre_lines is None:
         cre_lines = get_cre_lines(cluster_meta)
     
-    figsize = (3*len(cre_lines), 3)
-    fig, axes = plt.subplots(1, len(cre_lines), figsize=figsize)
+    figsize = (4*len(cre_lines), 3)
+    fig, axes = plt.subplots(1, len(cre_lines), figsize=figsize, sharex=True, sharey=True)
+    plt.subplots_adjust(wspace=0.7)
     for i, cre_line in enumerate(cre_lines):
         # get feature matrix for this cre line
         feature_matrix_cre = processing.get_feature_matrix_for_cre_line(feature_matrix, cluster_meta, cre_line)
@@ -560,12 +565,15 @@ def plot_umap_for_clusters(cluster_meta, feature_matrix, umap_df=None, label_col
         if cre_line is 'all':
             ax=axes
         else:
-            ax=ax[i]
+            ax=axes[i]
         ax = sns.scatterplot(data=umap_df, x='x', y='y', hue='labels', s=6, ax=ax, palette=palette)
         ax.set_xlabel('UMAP 0')
         ax.set_ylabel('UMAP 1')
         ax.legend(fontsize='xx-small', title=label_col, title_fontsize='xx-small', bbox_to_anchor=(1, 1))
         ax.set_title(get_cell_type_for_cre_line(cre_line, cluster_meta))
+
+
+    plt.subplots_adjust(wspace=0.3)
     if save_dir:
         utils.save_figure(fig, figsize, save_dir, folder, 'UMAP_' + label_col)
 
@@ -740,7 +748,7 @@ def plot_within_cluster_correlations(cluster_meta, sort_order=None, spearman=Fal
     return ax
 
 
-def plot_within_cluster_correlations_all_cre(cluster_meta, n_clusters_cre,  sort_order=None, spearman=False, suffix='_cluster_id_sort', save_dir=None, folder=None):
+def plot_within_cluster_correlations_all_cre(cluster_meta, n_clusters_cre, sort_order=None, spearman=False, suffix='_cluster_id_sort', save_dir=None, folder=None):
     """
     plot distribution of within cluster correlations for all cre lines, sorted by sort_order
 
@@ -754,14 +762,16 @@ def plot_within_cluster_correlations_all_cre(cluster_meta, n_clusters_cre,  sort
     cre_lines = get_cre_lines(cluster_meta)
     n_clusters = [n_clusters_cre[cre] for cre in cre_lines]
 
-    figsize = (12, 3)
+    figsize = (12, 2.5)
     fig, ax = plt.subplots(1, 3, figsize=figsize, gridspec_kw={'width_ratios': n_clusters})
     for i, cre_line in enumerate(cre_lines):
         cluster_meta_cre = cluster_meta[cluster_meta.cre_line==cre_line]
-        ax[i] = plot_within_cluster_correlations_for_cre_line(cluster_meta_cre, cre_line, sort_order, spearman=spearman, ax=ax[i])
+        ax[i] = plot_within_cluster_correlations(cluster_meta_cre, sort_order=sort_order, spearman=spearman, ax=ax[i])
         ax[i].set_title(get_cell_type_for_cre_line(cre_line, cluster_meta))
+        if i > 0:
+            ax[i].set_ylabel('')
 
-    fig.tight_layout()
+    plt.subplots_adjust(wspace=0.3)
     if save_dir:
         utils.save_figure(fig, figsize, save_dir, folder, 'within_cluster_correlations_' + suffix)
 
@@ -1751,7 +1761,7 @@ def plot_mean_shuffled_feature_matrix(shuffled_feature_matrices, cluster_meta, s
 
 def plot_mean_cluster_heatmaps_remapped(feature_matrix, cluster_meta, cre_line=None, session_colors=True, 
                                         experience_index=None, abbreviate_features=False, abbreviate_experience=False,
-                                        sort_by='cluster_id', save_dir=None, folder=None):
+                                        sort_by='cluster_id', plot_as_rows=False, save_dir=None, folder=None, ax=None):
     """
     Plot mean cluster heatmaps with remapped coding scores.
 
@@ -1787,10 +1797,19 @@ def plot_mean_cluster_heatmaps_remapped(feature_matrix, cluster_meta, cre_line=N
         feature_matrix_remapped = feature_matrix.copy()
         vmax = 1
         remapped_cmap = utils.get_experience_level_cmap()[experience_index]
-    
-    figsize = (2.5*len(clusters), 1.7)
-    fig, ax = plt.subplots(1, len(clusters), figsize=figsize, sharex=True, sharey=True)
-    ax = ax.ravel()
+
+    if ax is None:
+        annotate = True
+        if plot_as_rows:
+            figsize = (3, 2 * len(clusters))
+            fig, ax = plt.subplots(len(clusters), 1, figsize=figsize, sharex=True, sharey=True)
+            ax = ax.ravel()
+        else:
+            figsize = (2.5*len(clusters), 1.7)
+            fig, ax = plt.subplots(1, len(clusters), figsize=figsize, sharex=True, sharey=True)
+            ax = ax.ravel()
+    else: 
+        annotate = False
 
     # loop through clusters in sorted order
     for i, cluster_id in enumerate(clusters):
@@ -1814,28 +1833,48 @@ def plot_mean_cluster_heatmaps_remapped(feature_matrix, cluster_meta, cre_line=N
         fraction_cluster = len(this_cluster_csids) / float(len(cluster_meta))
         fraction = np.round(fraction_cluster * 100, 1)
         # set title and labels
-        ax[i].set_title('cluster ' + str(cluster_id) + '\n' + str(fraction) + '%, n=' + str(len(this_cluster_csids)))
-        ax[i].set_xlabel('')
+        if annotate:
+            ax[i].set_title(
+                'cluster ' + str(cluster_id) + '\n' + str(fraction) + '%, n=' + str(len(this_cluster_csids)), fontsize=14)
+            ax[i].set_xlabel('')
+        else:
+            ax[i].set_ylabel('cluster ' + str(cluster_id), fontsize=14)
+            ax[i].set_title(str(fraction) + '%, n=' + str(len(this_cluster_csids)), fontsize=12)
+            ax[i].set_xlabel('')
 
+        ax[i].set_yticks(np.arange(0.5, len(mean_dropout_df.index.values)+0.5))
         if abbreviate_features:
         # set yticks to abbreviated feature labels
             feature_abbreviations = get_abbreviated_features(mean_dropout_df.index.values)
-            ax[i].set_yticklabels(feature_abbreviations, rotation=0)
+            ax[i].set_yticklabels(feature_abbreviations, rotation=0, fontsize=12)
         else:
-            ax[i].set_yticklabels(mean_dropout_df.index.values, rotation=0, fontsize=14)
+            ax[i].set_yticklabels(mean_dropout_df.index.values, rotation=0, fontsize=12)
+
+        ax[i].set_xticks(np.arange(0.5, len(mean_dropout_df.columns.values)+0.5))
         if abbreviate_experience:
             # set xticks to abbreviated experience level labels
-            exp_level_abbreviations = get_abbreviated_experience_levels(mean_dropout_df.columns.values)
-            ax[i].set_xticklabels(exp_level_abbreviations, rotation=90)
+            xticklabels = get_abbreviated_experience_levels(mean_dropout_df.columns.values)
+            ax[i].set_xticklabels(xticklabels, rotation=0, fontsize=12)
         else:
-            ax[i].set_xticklabels(mean_dropout_df.columns.values, rotation=90, fontsize=14)
+            xticklabels = mean_dropout_df.columns.values
+            ax[i].set_xticklabels(xticklabels, rotation=0, fontsize=12)
+        if annotate is False:
+            ax[i].set_xticklabels('')
+    ax[i].set_xticklabels(xticklabels)
+    if annotate:
+        if plot_as_rows:
+            fig.suptitle(cell_type, x=0.65, y=1.0)
+            plt.subplots_adjust(hspace=0.6, wspace=0.25)
+            plt.tight_layout()
+        else:
+            fig.suptitle(cell_type, x=0.46, y=0.95)
+            plt.subplots_adjust(hspace=0.6, wspace=0.25)
+            plt.tight_layout()
 
-    fig.suptitle(cell_type, x=0.46, y=1.5)
-    plt.subplots_adjust(hspace=0.6, wspace=0.25)
-    plt.tight_layout()
     if save_dir:
         utils.save_figure(fig, figsize, save_dir, folder, 'mean_cluster_heatmaps_remapped_'+cell_type)
 
+    return ax
 
 
 def plot_coding_score_heatmap_remapped(cluster_meta, feature_matrix, sort_by='cluster_id',
@@ -2210,6 +2249,12 @@ def plot_coding_score_heatmaps_horiz(cluster_meta, feature_matrix, sort_by='clus
 
     ax.set_ylim(ax.get_ylim()[::-1])  # flip y axes so image clusters are on top
 
+    ax2 = ax.twinx()
+    ax2.set_yticks((0, coding_scores_remapped.shape[0]))
+    ax2.set_yticklabels((coding_scores_remapped.shape[0], 0), rotation=0, fontsize=14)
+    ax2.set_ylabel('Cells')
+    # ax2.set_xticklabels('')
+
     # if title:
     #     ax.set_title(title)
 
@@ -2271,6 +2316,14 @@ def plot_percent_cells_per_cluster_per_cre(cluster_meta, col_to_group='cre_line'
         ax[i].set_xlabel('')
         ax[i].set_title(utils.convert_cre_line_to_cell_type(cre_line)[:3]) #.split(' ')[0])
 
+        # plot percent in each cluster as text
+        for cluster_id in order:
+            try: # Not all cre lines have all clusters
+                percent = np.round(cre_data[cre_data.cluster_id == cluster_id].percent_cells.values[0], 1)
+                ax[i].text(x=percent + 1, y=cluster_id - 1, s=str(percent), fontsize=10, color='gray', ha='left', va='center')
+            except:
+                pass
+
     ax[1].set_xlabel('Percent of cells in each cluster')
     ax[0].set_ylabel('Cluster ID')
     sns.despine(fig=fig, top=True, right=True, left=False, bottom=False, offset=None, trim=False)
@@ -2279,6 +2332,104 @@ def plot_percent_cells_per_cluster_per_cre(cluster_meta, col_to_group='cre_line'
 
     if save_dir:
         utils.save_figure(fig, figsize, save_dir, folder, 'percent_cells_per_cluster_per_cre')
+
+def plot_percent_cells_per_cluster_per_cre_and_all(cluster_meta, col_to_group='cre_line', save_dir=None, folder=None):
+    '''
+    plots the percent of cells in each cre line belonging to each cluster as a barplot
+    with one axis / row per cre line
+    clusters on y axis, %
+    '''
+
+    # percent cells per cre
+    n_cells_per_cluster = processing.get_fraction_cells_per_cluster_per_group(cluster_meta, col_to_group)
+    n_cells_per_cluster['percent_cells'] = n_cells_per_cluster.fraction_per_cluster * 100
+
+    # all cells
+    tmp = cluster_meta.copy()
+    tmp['cre_line'] = 'all'
+    n_cells_per_cluster_all = processing.get_fraction_cells_per_cluster_per_group(tmp, col_to_group)
+    n_cells_per_cluster_all['percent_cells'] = n_cells_per_cluster_all.fraction_per_cluster * 100
+
+
+    if 'dominant_feature_cluster' in cluster_meta:
+        hue='dominant_feature_cluster'
+        hue_order = ['null']+processing.get_features_for_clustering()
+        feature_colors, feature_labels_dict = get_feature_colors_and_labels()
+        feature_colors = [(0.5, 0.5, 0.5)] + feature_colors
+
+        tmp = cluster_meta.groupby(['cluster_id', 'dominant_feature_cluster']).count()[['cell_specimen_id']].reset_index()
+        n_cells_per_cluster_all = n_cells_per_cluster_all.merge(tmp, on=['cluster_id'])
+        n_cells_per_cluster_all.loc[
+            n_cells_per_cluster_all[n_cells_per_cluster_all.cluster_id == 1].index, 'dominant_feature_cluster'] = 'null'
+
+        tmp = cluster_meta.groupby(['cre_line', 'cluster_id', 'dominant_feature_cluster']).count()[['cell_specimen_id']].reset_index()
+        n_cells_per_cluster = n_cells_per_cluster.merge(tmp, on=['cre_line', 'cluster_id'])
+        n_cells_per_cluster.loc[
+            n_cells_per_cluster[n_cells_per_cluster.cluster_id == 1].index, 'dominant_feature_cluster'] = 'null'
+
+
+    figsize = (6, 5)
+    fig, ax = plt.subplots(1, 4, figsize=figsize, sharey=True, sharex=True)
+
+    # all cells
+    i = 0
+    all_data = n_cells_per_cluster_all[n_cells_per_cluster_all.cre_line == 'all']
+    order = np.sort(cluster_meta.cluster_id.unique())
+    if hue:
+        all_data_clusters = np.sort(all_data.cluster_id.unique())
+        features = [all_data[all_data.cluster_id == cluster_id].dominant_feature_cluster.values[0] if cluster_id in all_data_clusters else 'null' for cluster_id in order]
+        colors = [feature_colors[hue_order.index(feature)] for feature in features]
+        ax[i] = sns.barplot(data=all_data, y='cluster_id', x='percent_cells', order=order, orient='h',
+                            palette=colors, width=0.5, ax=ax[i])
+    else:
+        ax[i] = sns.barplot(data=all_data, y='cluster_id', x='percent_cells', order=order, orient='h',
+                            color='gray', width=0.5, ax=ax[i])
+    ax[i].set_ylabel('')
+    ax[i].set_xlabel('')
+    ax[i].set_title('All cells')  # .split(' ')[0])
+    # plot percent in each cluster as text
+    for cluster_id in order:
+        try:
+            percent = np.round(all_data[all_data.cluster_id == cluster_id].percent_cells.values[0], 1)
+            ax[i].text(x=percent + 1, y=cluster_id - 1, s=str(percent), fontsize=10, color='gray', ha='left',
+                           va='center')
+        except:
+            pass
+
+    # each cre line
+    for i, cre_line in enumerate(utils.get_cre_lines()):
+        cre_data = n_cells_per_cluster[n_cells_per_cluster.cre_line == cre_line]
+        order = np.sort(cluster_meta.cluster_id.unique())
+        cre_clusters = np.sort(cre_data.cluster_id.unique())
+        if hue:
+            features = [cre_data[cre_data.cluster_id == cluster_id].dominant_feature_cluster.values[0] if cluster_id in cre_clusters else 'null' for cluster_id in order]
+            colors = [feature_colors[hue_order.index(feature)] for feature in features]
+
+            ax[i+1] = sns.barplot(data=cre_data, y='cluster_id', x='percent_cells', order=order, orient='h',
+                                palette=colors, width=0.5, ax=ax[i+1])
+        else:
+            ax[i + 1] = sns.barplot(data=cre_data, y='cluster_id', x='percent_cells', order=order, orient='h',
+                                    color='gray', width=0.5, ax=ax[i + 1])
+        ax[i+1].set_ylabel('')
+        ax[i+1].set_xlabel('')
+        ax[i+1].set_title(utils.convert_cre_line_to_cell_type(cre_line)[:3]) #.split(' ')[0])
+
+        # plot percent in each cluster as text
+        for cluster_id in order:
+            try: # not all cell types have all clusters
+                percent = np.round(cre_data[cre_data.cluster_id == cluster_id].percent_cells.values[0], 1)
+                ax[i+1].text(x=percent + 1, y=cluster_id - 1, s=str(percent), fontsize=10, color='gray', ha='left', va='center')
+            except:
+                pass
+
+    ax[0].set_xlabel('Percent of cells in each cluster', ha='left')
+    ax[0].set_ylabel('Cluster ID')
+    sns.despine(fig=fig, top=True, right=True, left=False, bottom=False, offset=None, trim=False)
+
+    plt.subplots_adjust(hspace=0.5, wspace=0.3)
+
+    if save_dir:
+        utils.save_figure(fig, figsize, save_dir, folder, 'percent_cells_per_cluster_per_cre_and_all')
 
 
 def plot_percent_cells_per_cluster_per_cre_as_rows(cluster_meta, cre_line='Slc17a7-IRES2-Cre', save_dir=None,
@@ -2481,7 +2632,7 @@ def plot_population_averages_for_clusters(multi_session_df, event_type, axes_col
         i += 1
 
 
-    ax[0].set_ylabel(ylabel)
+    # ax[0].set_ylabel(ylabel)
     if sharex:
         x = int(n_axes_conditions/2)-1
         ax[x].set_xlabel(xlabel)
@@ -2498,7 +2649,7 @@ def plot_population_averages_for_clusters(multi_session_df, event_type, axes_col
     return ax
 
 
-def plot_population_average_response_for_clusters_as_rows(multi_session_df, event_type, ax=None):
+def plot_population_average_response_for_clusters_as_rows(multi_session_df, event_type, cluster_order=None, ax=None):
     '''
     Plot population averages on a specified axis, with annotations for image presentation time
     and scale bars for response magnitude on y and time on x
@@ -2520,13 +2671,14 @@ def plot_population_average_response_for_clusters_as_rows(multi_session_df, even
         xtra_space = 0.05
 
     tmp = multi_session_df.copy()
-    tmp = tmp[(tmp.mean_baseline < np.percentile(tmp.mean_baseline.values, 99.9)) & (
-                tmp.mean_response < np.percentile(tmp.mean_response.values, 99.8))]
     timestamps = tmp.trace_timestamps.values[0]
     axes_column = 'cluster_id'
     hue_column = 'experience_level'
 
-    cluster_ids = np.sort(multi_session_df.cluster_id.unique())
+    if cluster_order:
+        cluster_ids = cluster_order
+    else:
+        cluster_ids = np.sort(multi_session_df.cluster_id.unique())
 
     if ax is None:
         fig, ax = plt.subplots(len(cluster_ids), 1, figsize=(10, 2))
@@ -2777,7 +2929,101 @@ def plot_population_averages_for_clusters_grid(multi_session_df, event_type, axe
     return ax
 
 
-def plot_cell_response_heatmaps_for_clusters(image_mdf, data_type='events', event_type='images',
+def plot_response_heatmap_for_concatenated_traces(multi_session_df, event_type='images', cell_order=None,
+                                                  zscore_traces=False,
+                                                  cmap='bone', cbar=False, vmin=0, vmax=0.01, ax=None):
+    '''
+    for each cell in multi_session_df, take the 'mean_trace' column for each experience level and concatenate them
+    Then plot a heatmap with each cell's multi session trace as a row
+    Will label x axes at 0 and 0.5 second intervals
+    '''
+
+    df = multi_session_df.copy()
+    experience_levels = utils.get_experience_levels()
+
+    if event_type == 'images':
+        xlim_seconds = [-0.3, 0.8]
+    elif event_type == 'changes':
+        xlim_seconds = [-1, 0.8]
+    elif event_type == 'omissions':
+        xlim_seconds = [-1, 1.5]
+
+    if cell_order is not None:
+        csids = cell_order
+    else:
+        csids = df.cell_specimen_id.unique()
+
+    # get one cell's data to construct axes info
+    tmp_cell_data = df[df.cell_specimen_id == csids[0]]
+
+    # figure out how to chop timestamps
+    timestamps = tmp_cell_data.sort_values(by='experience_level').trace_timestamps.values[0]
+    timestamps = np.asarray([np.round(time, 4) for time in timestamps])
+    start_ind = np.where(timestamps == xlim_seconds[0])[0][0]
+    end_ind = np.where(timestamps == xlim_seconds[1])[0][0]
+    chopped_timestamps = timestamps[start_ind:end_ind]
+    zero_ind = np.where(chopped_timestamps == 0)[0][0]
+
+    # get xticks for every 0.5 s
+    t = 0
+    xticks = []
+    for t in np.arange(0, xlim_seconds[1], 0.5):
+        xticks.append(np.where(chopped_timestamps == t)[0][0])
+    xticks = np.asarray(xticks)
+    xticks_all_traces = np.hstack((xticks, xticks + len(chopped_timestamps), xticks + len(chopped_timestamps) * 2))
+
+    # get xticklabels
+    xticklabels_one_trace = chopped_timestamps[xticks]
+    concat_xticklabels = np.hstack((xticklabels_one_trace, xticklabels_one_trace, xticklabels_one_trace))
+
+    # get length of chopped traces for constructing array
+    tmp_cell_data['mean_trace'] = [mean_trace[start_ind:end_ind] for mean_trace in tmp_cell_data.mean_trace.values]
+    len_one_trace = len(tmp_cell_data.sort_values(by='experience_level').mean_trace.values[0])
+    len_concat_traces = len_one_trace * 3
+
+    # make response matrix for cells x concat traces
+    response_matrix = np.empty((len(csids), len_concat_traces))
+
+    incomplete_cells = 0
+    for i, csid in enumerate(csids):
+        cell_data = df[df.cell_specimen_id == csid]
+        cell_data = cell_data.sort_values(by='experience_level')
+        if len(cell_data) == 3:  # must have all 3 exp levels
+            cell_data['mean_trace'] = [mean_trace[start_ind:end_ind] for mean_trace in cell_data.mean_trace.values]
+            traces = np.hstack(cell_data.mean_trace.values)
+            response_matrix[i, :] = traces
+        else:
+            incomplete_cells += 1
+    # print(incomplete_cells, 'cells without all 3 experience levels')
+
+    if zscore_traces:
+        from scipy.stats import zscore
+        response_matrix = zscore(response_matrix, axis=1)
+        cmap = 'RdGy_r'
+        if vmin is None:
+            vmin = np.percentile(response_matrix, 5)
+        if vmax is None:
+            vmax = np.percentile(response_matrix, 95)
+
+    if ax is None:
+        fig, ax = plt.subplots()
+    if zscore_traces:
+        ax = sns.heatmap(response_matrix, cmap=cmap, vmin=vmin, vmax=vmax, cbar=cbar, center=0, ax=ax)
+    else:
+        ax = sns.heatmap(response_matrix, cmap=cmap, vmin=vmin, vmax=vmax, cbar=cbar, ax=ax)
+    ax.set_yticks((0, len(csids)))
+    ax.set_yticklabels((0, len(csids)), rotation=0)
+    ax.set_ylabel('Cells')
+    ax.set_xticks(xticks_all_traces)
+    ax.set_xticklabels(concat_xticklabels)
+    for i in range(len(experience_levels)):
+        ax.vlines(x=len_one_trace * i, ymin=0, ymax=len(csids), linestyle='-', color='w')
+        ax.vlines(x=zero_ind + (len_one_trace * i), ymin=0, ymax=len(csids), linestyle='--', color='w')
+
+    return ax
+
+
+def plot_cell_response_heatmaps_for_clusters(multi_session_df, data_type='events', event_type='images',
                                              xlim_seconds=[-0.3, 0.8], vmax=0.001, ax=None):
     '''
     Plot heatmaps for all cells in each cluster (as rows) for each experience level (as columns)
@@ -2786,9 +3032,12 @@ def plot_cell_response_heatmaps_for_clusters(image_mdf, data_type='events', even
 
     import visual_behavior.visualization.ophys.platform_paper_figures as ppf
 
-    tmp = image_mdf.copy()
-    tmp = tmp[(tmp.mean_baseline < np.percentile(tmp.mean_baseline.values, 99.9)) & (
-                tmp.mean_response < np.percentile(tmp.mean_response.values, 99.8))]
+    tmp = multi_session_df.copy()
+
+    threshold_percentile = 99.9
+    tmp, outliers = processing.remove_outliers(tmp, threshold_percentile)
+    print(len(outliers), 'total removed')
+
     # xlim_seconds = [-0.3, 0.8]
     timestamps = tmp.trace_timestamps.values[0]
     timestamps = np.asarray([np.round(time, 4) for time in timestamps])
@@ -2805,6 +3054,7 @@ def plot_cell_response_heatmaps_for_clusters(image_mdf, data_type='events', even
         fig, ax = plt.subplots(len(cluster_ids), 3, figsize=(4, 12), sharex=True, sharey=False)
         ax = ax.ravel()
         plt.subplots_adjust(hspace=0, wspace=0)
+
 
     ax = ppf.plot_response_heatmaps_for_conditions(tmp, timestamps, data_type, event_type,
                                                    row_condition, col_condition, cols_to_sort_by=None, suptitle=None,
@@ -3820,7 +4070,7 @@ def plot_eigengap_values(eigenvalues_cre, cre_lines, n_clusters_cre=None, save_d
         ax[1].axvline(x=n_clusters, ymin=0, ymax=1, linestyle='--', color='gray')
 
         if len(cre_lines) > 1:
-            plt.suptitle(title, x=0.5, y=1)
+            plt.suptitle(title, x=0.5, y=1, fontsize=16)
 
         plt.subplots_adjust(wspace=0.4)
         if save_dir:
@@ -4191,7 +4441,7 @@ def plot_experience_modulation(coding_score_metrics, metric='experience_modulati
 
     Parameters:
     - coding_score_metrics (DataFrame): DataFrame containing the coding score metrics.
-    - metric (str): The metric to use for plotting. Default is 'experience_modulation'.
+    - metric (str): The metric to use for plotting, Default is 'experience_modulation'.
     - save_dir (str): Directory to save the plot. If None, the plot is not saved.
     - folder (str): Folder name within save_dir to save the plot. Ignored if save_dir is None.
 
@@ -4230,7 +4480,7 @@ def plot_cluster_depth_distribution_by_cre_lines(cluster_meta, location, metric,
 
     Parameters:
     - n_cells_table (DataFrame): DataFrame containing the cell data.
-    - metric (str): The metric to use for plotting.
+    - metric (str): The metric to use for plotting
     - xorder (array-like): Order of the x-axis.
     - hue (str): Hue for the plot.
     - hue_order (array-like): Order of the hue.
@@ -5863,6 +6113,328 @@ def plot_metric_distribution_across_clusters_experience_levels(metrics_df, metri
         utils.save_figure(fig, figsize, save_dir, 'metric_distributions_for_clusters', filename)
 
 
+def get_pref_experience_level_colors_for_clusters(response_metrics):
+
+    exp_colors_dict = dict(zip(utils.get_experience_levels(), utils.get_experience_level_colors()))
+    cluster_ids = np.sort(response_metrics.cluster_id.unique())
+    pref_exp_for_clusters = [response_metrics[response_metrics.cluster_id==cluster_id].dominant_experience_level_cluster.values[0] for cluster_id in cluster_ids]
+    pref_exp_colors = [exp_colors_dict[exp] for exp in pref_exp_for_clusters]
+    return pref_exp_colors
+
+
+def plot_difference_of_means_and_universal_CI(tukey_results, all_groups=None, group_colors=None, group_to_compare=None,
+                                              title=None, xlabel=None, ylabel=None, color='k', ax=None):
+    """Plot a universal confidence interval of each group mean
+
+    Visualize significant differences by plotting universal confidence
+    interval per group instead of all pairwise confidence intervals.
+    Universal CI is computed using the Studentized range distribution statistic
+    Q's critical value to compute the intervals for each group.
+    The Q valueis determined based on the confidence level (alpha),
+    the degrees of freedom (number of samples), and the number of groups.
+
+    A confidence interval is a range of values,
+    bounded above and below the statistic's mean,
+    that likely would contain an unknown population parameter.
+    CI = mean +/- confidence level * (standard deviation / square root of sample size)
+
+    Parameters
+    ----------
+    tukey_results: Output of statsmodels.stats.multicomp.MultiComparison across groups
+        Groups included in results does not have to match the list of all groups, but must be a subset of it
+        This is helpful for cases when all groups should be included in plot but not all groups exist on all plots
+    all_groups : list, optional
+        List of all groups to plot. If results do not exist for a particular group,
+        will assign NaN values to this group and still include it on the y axis, but with no values
+    group_colors : list, optional
+        List of colors corresponding to the groups in all_groups to plot data with
+    group_to_compare : str, optional
+        if provided, plot_intervals will color code all groups that are
+        significantly different from the comparison_name red, and will
+        color code insignificant groups gray. Otherwise, all intervals will
+        just be plotted in black.
+    ax : matplotlib axis, optional
+        An axis handle on which to attach the plot.
+    figsize : tuple, optional
+        tuple for the size of the figure generated
+    xlabel : str, optional
+        Name to be displayed on x axis
+    ylabel : str, optional
+        Name to be displayed on y axis
+
+    Returns
+    -------
+    Figure
+        handle to figure object containing interval plots
+
+    """
+
+    from statsmodels.compat.python import lzip, lrange
+
+    if ax is None:
+        figsize = (2, 5)
+        fig, ax = plt.subplots(figsize=figsize)
+    markersize = 5
+
+    # Get universal confidence intervals
+    tukey_results._simultaneous_ci()
+    # Get group means
+    means = tukey_results._multicomp.groupstats.groupmean
+    groups = tukey_results.groupsunique
+    universal_cis = tukey_results.halfwidths
+    print(len(means))
+
+    # create dictionary of group names and means to keep track of things for plotting
+    tukey_means_dict = {}
+    tukey_ci_dict = {}
+    if all_groups is not None:
+        for idx, group in enumerate(all_groups):
+            if group in groups:
+                group_idx = np.where(tukey_results.groupsunique == group)[0][0]
+                tukey_means_dict[group] = means[group_idx]
+                tukey_ci_dict[group] = universal_cis[group_idx]
+            else:
+                tukey_means_dict[group] = np.nan
+                tukey_ci_dict[group] = np.nan
+    else:
+        tukey_means_dict = dict(zip(groups, means))
+        tukey_ci_dict = dict(zip(groups, universal_cis))
+        all_groups = groups
+
+    # Set values of groups and means based on sorting above
+    groups = np.asarray(list(tukey_means_dict.keys()))
+    means = np.asarray(list(tukey_means_dict.values()))
+    universal_cis = np.asarray(list(tukey_ci_dict.values()))
+
+    sigidx = []
+    nsigidx = []
+    # Get min and max values to set lims of plot
+    minrange = [means[i] - universal_cis[i] for i in range(len(means))]
+    maxrange = [means[i] + universal_cis[i] for i in range(len(means))]
+
+    # If not higlighting a specific group
+    if group_to_compare is None:
+        ax.errorbar(means, lrange(len(means)), xerr=universal_cis, markersize=markersize,
+                    marker='o', linestyle='None', color=color, ecolor=color)
+    # Otherwise color the highlighted group in a specific way
+    else:
+        # Get group for comparison name
+        midx = np.where(groups == group_to_compare)[0][0]
+        # if group_colors is not None:
+        #     color = group_colors[midx]
+        #     print(color)
+
+        colors = []  # aggregate colors for sig and non-sig measm
+        # Go through means and figure out which are significant or not compared to the group to compare with
+        for i in range(len(means)):
+            if groups[i] == group_to_compare:
+                colors.append('blue')
+                continue
+            # Do the confidence intervals for this group overlap with the group we are comparing with or not?
+            if (min(maxrange[i], maxrange[midx]) - max(minrange[i], minrange[midx]) < 0):
+                sigidx.append(i)
+                colors.append('red')
+            else:
+                nsigidx.append(i)
+                colors.append('gray')
+
+        # if colors are provided, use those instead
+        if group_colors is not None:
+            colors = group_colors
+
+        # Plot the group that we are comparing with, giving it its own marker style
+        ax.errorbar(means[midx], midx, xerr=universal_cis[midx],
+                    marker='>', linestyle='None', color=colors[midx], ecolor=colors[midx], markersize=10)
+        # Plot dotted line around the range for this group
+        ax.plot([minrange[midx]] * 2, [-1, len(all_groups)], linestyle='--', color='0.7')
+        ax.plot([maxrange[midx]] * 2, [-1, len(all_groups)], linestyle='--', color='0.7')
+
+        # Plot those that are significantly different
+        if len(sigidx) > 0:
+            these_colors = [colors[idx] for idx in sigidx]
+            for sigid in sigidx:
+                ax.errorbar(means[sigid], sigid,
+                            xerr=universal_cis[sigid], marker='o', markersize=markersize,
+                            linestyle='None', color=colors[sigid], ecolor=colors[sigid])
+            # connector, caplines, (vertical_lines,) = c.errorbar.lines
+            # vertical_lines.set_color(these_colors)
+        # Plot those that are not significantly different with lower alpha
+        if len(nsigidx) > 0:
+            these_colors = [colors[idx] for idx in nsigidx]
+            for nsigid in nsigidx:
+                ax.errorbar(means[nsigid], nsigid,
+                            xerr=universal_cis[nsigid], marker='o', markersize=markersize,
+                            linestyle='None', color=colors[nsigid], ecolor=colors[nsigid], alpha=0.5)
+
+    # Set title
+    if title is None:
+        title = 'Multiple Comparisons Between All Pairs (Tukey)'
+    ax.set_title(title)
+    # Axis formatting
+    r = np.nanmax(maxrange) - np.nanmin(minrange)
+    # Set lims to min and max of CI ranges
+    ax.set_ylim([-0.5, len(groups) - 0.5])
+    # ax.set_xlim([np.nanmin(minrange) - r / 10., np.nanmax(maxrange) + r / 10.])
+    # Set labels for groups
+    ax.set_yticks(np.arange(0, len(groups)))
+    ax.set_yticklabels(groups)
+    ax.set_xlabel(xlabel if xlabel is not None else '')
+    ax.set_ylabel(ylabel if ylabel is not None else '')
+    # Flip y axis so cluster 1 is on top
+    ax.invert_yaxis()
+
+    # sns.despine(offset=10, trim=True);
+
+    return ax
+
+
+def plot_tukey_diff_in_means_for_metric(response_metrics, metric, title='', xlabel=None,
+                                        group_to_compare=None, pref_exp_level=False, split_by_cre=False, save_dir=None):
+    '''
+    Runs Tukey HSD multiple comparisons test across clusters
+    Averages metric value across experience level before computing stats, unless
+    pref_exp_level is True, in which case it will select the preferred experience level per cluster before running stats,
+    and color points based on their preferred experience level.
+    Otherwise plots significant differences in red, and cluster for group_to_compare in blue, NS diffs in gray
+
+    Generates plots for each cre line and across cre lines
+
+    response_metrics: table of coding score metrics for all cells & experience levels
+    metric: metric to plot and compute stats for, must be column in response_metrics
+    title: title for plot
+    group_to_compare: cluster_id to show multicomp stats against, will draw dashed lines around confidence intervals for this cluster
+                        If None, will not draw CI bounds
+    '''
+
+    if xlabel is None:
+        xlabel = metric
+
+    if pref_exp_level == True:
+        pref_exp_response_metrics = response_metrics[
+            (response_metrics.experience_level == response_metrics.dominant_experience_level_cluster)]
+        response_metrics_clean = pref_exp_response_metrics.dropna(subset=[metric])
+        colors = get_pref_experience_level_colors_for_clusters(response_metrics)
+
+    else:
+        response_metrics_clean = response_metrics.dropna(subset=[metric])
+        colors = None
+
+    # get list of all clusters so that all are plotted on each cre specific plot
+    all_groups = np.sort(response_metrics.cluster_id.unique())
+
+    if split_by_cre:
+        fig, ax = plt.subplots(1, 3, figsize=(8, 5), sharey=True, sharex=True)
+        for i, cre_line in enumerate(cre_lines):
+            response_metrics_cre = response_metrics_clean[response_metrics_clean.cre_line == cre_line]
+            multi_comp = MultiComparison(response_metrics_cre[metric], response_metrics_cre['cluster_id'])
+            tukey_results = multi_comp.tukeyhsd()
+
+            ax[i] = plot_difference_of_means_and_universal_CI(tukey_results, all_groups=all_groups,
+                                                              group_to_compare=group_to_compare,
+                                                              group_colors=colors, color='k',
+                                                              title=utils.convert_cre_line_to_cell_type(cre_line)[:3],
+                                                              xlabel=xlabel, ylabel='Cluster ID', ax=ax[i])
+            if i > 0:
+                ax[i].set_ylabel('')
+            if i != 1:
+                ax[i].set_xlabel('')
+        plt.suptitle(title, x=0.52, y=1, fontsize=18)
+        plt.subplots_adjust(hspace=0.4, wspace=0.2)
+
+    else:
+        multi_comp = MultiComparison(response_metrics_clean[metric], response_metrics_clean['cluster_id'])
+        tukey_results = multi_comp.tukeyhsd()
+        fig, ax = plt.subplots(figsize=(2, 5))
+        plot_difference_of_means_and_universal_CI(tukey_results, group_to_compare=group_to_compare, all_groups=None,
+                                                  group_colors=colors, color='k', title=title,
+                                                  xlabel=xlabel, ylabel='Cluster ID', ax=ax)
+
+    if save_dir:
+        utils.save_figure(fig, figsize, save_dir, 'response_metrics',
+                          metric + 'dif_of_means_pref_exp_' + str(pref_exp_level) + '_split_by_cre_' + str(
+                              split_by_cre))
+
+    return ax
+
+
+def plot_mean_distributions_for_metric(response_metrics, metric, title='', xlabel=None,
+                                       pref_exp_level=False, all_exp_levels=False, split_by_cre=True, save_dir=None):
+    '''
+    Plot pointplot for distriution of metric across clusters. One plot with split axes for each cre line, one across cre lines.
+    if pref_exp_level is True, will select the preferred experience level per cluster before running stats,
+    and color points based on their preferred experience level.
+    if all_exp_levels is True, will plot each experience level in a different color
+    If both pref_exp_level and all_exp_levels are True, pref_exp_level wins
+
+    response_metrics: table of coding score metrics for all cells & experience levels
+    metric: metric to plot and compute stats for, must be column in response_metrics
+    '''
+
+    # get list of all clusters so that all are plotted on each cre specific plot
+    all_groups = np.sort(response_metrics.cluster_id.unique())
+
+    if pref_exp_level == True:
+        pref_exp_response_metrics = response_metrics[
+            (response_metrics.experience_level == response_metrics.dominant_experience_level_cluster)]
+        response_metrics_clean = pref_exp_response_metrics.dropna(subset=[metric])
+        colors = get_pref_experience_level_colors_for_clusters(response_metrics)
+
+    else:
+        response_metrics_clean = response_metrics.dropna(subset=[metric])
+        colors = np.repeat('gray', len(all_groups))
+
+    if xlabel is None:
+        xlabel = metric
+
+    if split_by_cre:
+        fig, ax = plt.subplots(1, 3, figsize=(8, 5), sharey=True, sharex=True)
+        for i, cre_line in enumerate(cre_lines):
+            response_metrics_cre = response_metrics_clean[response_metrics_clean.cre_line == cre_line]
+
+            if all_exp_levels:
+                hue_order = utils.get_experience_levels()
+                colors = utils.get_experience_level_colors()
+                ax[i] = sns.pointplot(data=response_metrics_cre, x=metric, y='cluster_id',
+                                      hue='experience_level', hue_order=hue_order, palette=colors,
+                                      orient='h', order=all_groups, dodge=0.3, join=False, ax=ax[i])
+                ax[i].get_legend().remove()
+            else:
+                ax[i] = sns.pointplot(data=response_metrics_cre, x=metric, y='cluster_id', palette=colors,
+                                      orient='h', order=all_groups, dodge=0.3, join=False, ax=ax[i])
+            if i == 1:
+                ax[i].set_xlabel(xlabel)
+            else:
+                ax[i].set_xlabel('')
+            if i > 0:
+                ax[i].set_ylabel('')
+            else:
+                ax[i].set_ylabel('Cluster ID')
+            ax[i].set_title(utils.convert_cre_line_to_cell_type(cre_line)[:3])
+        plt.suptitle(title, x=0.52, y=1, fontsize=18)
+        plt.subplots_adjust(hspace=0.4, wspace=0.2)
+
+    else:
+        fig, ax = plt.subplots(figsize=(2, 5))
+        if all_exp_levels:
+            hue_order = utils.get_experience_levels()
+            colors = utils.get_experience_level_colors()
+            ax = sns.pointplot(data=response_metrics_clean, x=metric, y='cluster_id',
+                               hue='experience_level', hue_order=hue_order, palette=colors,
+                               orient='h', order=all_groups, dodge=0.3, join=False, ax=ax)
+            ax.get_legend().remove()
+        else:
+            ax = sns.pointplot(data=response_metrics_clean, x=metric, y='cluster_id', palette=colors,
+                               orient='h', order=all_groups, dodge=0.3, join=False, ax=ax)
+        ax.set_xlabel(xlabel)
+        ax.set_ylabel('Cluster ID')
+        ax.set_title(title)
+
+    if save_dir:
+        utils.save_figure(fig, figsize, save_dir, 'response_metrics',
+                          metric + '_pref_exp_' + str(pref_exp_level) + '_all_exp_' + str(
+                              all_exp_levels) + '_split_by_cre_' + str(split_by_cre))
+
+    return ax
 
 ### image selectivity & within session changes for clusters ###
 
@@ -6161,7 +6733,7 @@ def plot_kde_rugplot(ax, data, color, y_shift, linestyle='-'):
     Plot kernel density estimate and rug plot.
 
     Args:
-    - ax (matplotlib.axes.Axes): Axes object for plotting.
+    - ax (matplotlib.axes.Axes): Axes object for plotting
     - data (np.ndarray): Data to plot.
     - color (str): Color for the plot.
     - y_shift (float): Shift value for the plot.
@@ -6180,7 +6752,7 @@ def plot_response_boxplot(ax, data, colors, patch_artist=True, widths=0.5):
     Plot boxplot for response data.
 
     Args:
-    - ax (matplotlib.axes.Axes): Axes object for plotting.
+    - ax (matplotlib.axes.Axes): Axes object for plotting
     - data (list): List of data arrays.
     - colors (list): List of colors for the plot.
     - patch_artist (bool): Whether to use patch artist for boxplot.
@@ -6214,7 +6786,7 @@ def plot_cluster_rugplots(cluster_meta, rm_unstacked, ax, cre_line, cluster_ids,
     Args:
     - cluster_meta (pd.DataFrame): DataFrame containing cluster id data.
     - rm_unstacked (pd.DataFrame): DataFrame containing unstacked response metric data.
-    - ax (matplotlib.axes.Axes): Axes object for plotting.
+    - ax (matplotlib.axes.Axes): Axes object for plotting
     - cre_line (str): CRE line.
     - cluster_ids (list): List of cluster IDs.
     - exp_levels (list): List of experience levels.
@@ -6361,8 +6933,8 @@ def plot_response_metrics_boxplot(response_metrics, metric=None, ylabel=None, pl
 
 
 def plot_response_metrics_boxplot_by_cre(response_metrics, metric=None, cre_lines=None, ylabel=None,
-                                         experience_levels=None, experience_level_colors=None,
-                                         save_dir=None, folder=None):
+                                         experience_levels=None, experience_level_colors=None, horiz=False, axhline=True,
+                                         pointplot=False, save_dir=None, folder=None, suffix='', ax=None):
     """
     Plot running modulation for different cell types and experience levels.
     
@@ -6387,14 +6959,26 @@ def plot_response_metrics_boxplot_by_cre(response_metrics, metric=None, cre_line
     n_clusters = len(response_metrics.cluster_id.unique())
 
     order = np.arange(0, n_clusters+1, 1)
-    figsize = (10, 9)
-    fig, ax = plt.subplots(len(cre_lines), 1, figsize=figsize, sharey=True, sharex=False)
+    if ax is None:
+        if horiz:
+            figsize = (20, 2)
+            fig, ax = plt.subplots(1, len(cre_lines), figsize=figsize, sharey=True, sharex=False)
+        else:
+            figsize = (10, 9)
+            fig, ax = plt.subplots(len(cre_lines), 1, figsize=figsize, sharey=True, sharex=False)
     
     for i, cre_line in enumerate(cre_lines):
         data = response_metrics[response_metrics.cre_line==cre_line]
-        ax[i] = sns.boxplot(data=data, x='cluster_id', y=metric, order=order, showfliers=False,
-                            hue='experience_level', hue_order=experience_levels, palette=experience_level_colors, 
-                            width=0.5, boxprops=dict(alpha=.7), ax=ax[i])
+        if pointplot:
+            ax[i] = sns.pointplot(data=data, x='cluster_id', y=metric, order=order,
+                                hue='experience_level', hue_order=experience_levels, palette=experience_level_colors,
+                                join=False, dodge=0.3, ax=ax[i])
+            ax[i].axhline(y=0, xmin=0, xmax=1, linestyle='--', color='gray')
+        else:
+            ax[i] = sns.boxplot(data=data, x='cluster_id', y=metric, order=order, showfliers=False,
+                               hue='experience_level', hue_order=experience_levels, palette=experience_level_colors,
+                               width=0.5, boxprops=dict(alpha=.7), ax=ax[i])
+
         ax[i].set_title(utils.convert_cre_line_to_cell_type(cre_line))
         ax[i].get_legend().remove()
         ax[i].set_xlabel('')
@@ -6402,16 +6986,25 @@ def plot_response_metrics_boxplot_by_cre(response_metrics, metric=None, cre_line
         ax[i].set_xticks(order+1)
         ax[i].set_xlim((0.5, n_clusters+0.5))
         ax[i].spines[['right', 'top']].set_visible(False)
+        if axhline:
+            ax[i].axhline(y=0, xmin=0, xmax=1, color='gray', linestyle='--', linewidth=1)
 
 
     ax[i].set_xlabel('cluster ID')
-    ax[1].set_ylabel(ylabel)
+    if horiz:
+        ax[0].set_ylabel(ylabel)
+        for i in range(3):
+            ax[i].set_xlabel('Cluster ID')
+    else:
+        ax[1].set_ylabel(ylabel)
     ax[1].legend(loc='upper right', fontsize='xx-small', title_fontsize='xx-small')
     # plt.suptitle(metric.replace("_", " "), x=0.51, y=0.95)
-    plt.subplots_adjust(hspace=0.5)
+    plt.subplots_adjust(hspace=0.5, wspace=0.05)
 
     if save_dir:
-        utils.save_figure(fig, figsize, save_dir, folder, metric)
+        utils.save_figure(fig, figsize, save_dir, folder, metric+suffix)
+
+    return ax
 
 
 def plot_metric_feature_coding_relationship(metric_data, x, y, xlabel=None, ylabel=None, title=None, color_by_cre=True, xlims=(-0.1, 1.1), ylims=(-0.1, 1.1), ax=None, save_dir=None):

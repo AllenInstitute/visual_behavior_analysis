@@ -125,7 +125,7 @@ def get_cre_lines(cell_metadata):
     get list of cre lines in cell_metadata and sort in reverse order so that Vip is first
     cell_metadata is a table similar to ophys_cells_table from SDK but can have additional columns based on clustering results
     """
-    cre_lines = np.sort(cell_metadata.cre_line.unique())[::-1]
+    cre_lines = np.sort(cell_metadata.cre_line.unique())
     return cre_lines
 
 
@@ -199,6 +199,63 @@ def get_cre_line_cell_specimen_ids(df_no_cre, df_cre):
         ids = df[df.cre_line == cre_line]['cell_specimen_id'].unique()
         cre_line_ids[cre_line] = ids
     return cre_line_ids
+
+
+def remove_outliers(multi_session_df, threshold_percentile=99.9):
+    '''
+    Filters a dataframe of cell responses to remove cells with mean response values greater than
+    a given percentile threshold.
+    Also removes specific cells known to have abnormally high dF/F values that may not get caught by the percentile threshold for whatever reason
+
+    Parameters
+    ----------
+    multi_session_df: datafame containing cell responses for all experience levels
+                        must contain columns 'mean_response' and 'mean_baseline'
+    threshold_percentile: percentile to theshold mean response to identify outliers
+
+    Returns
+    -------
+
+    '''
+    outlier_cells = multi_session_df[(multi_session_df.mean_response>np.percentile(multi_session_df.mean_response.values, threshold_percentile)) &
+                                     (multi_session_df.mean_baseline>np.percentile(multi_session_df.mean_baseline.values, threshold_percentile))].cell_specimen_id.unique()
+    # These cells have abnormally high dF/F values and throw off the meam
+    bad_cells = [1120091750,  1120094237, 1086580238, 1086551540, 1086553602,  # Sst
+                1086514682, 1086515397, 1086673279, # Vip
+                1086529704, ] # Slc17a7
+    outlier_cells = np.hstack((outlier_cells, bad_cells))
+    # outlier_cells = image_mdf[image_mdf.mean_response>0.1].cell_specimen_id.unique()
+    multi_session_df_clean = multi_session_df[multi_session_df.cell_specimen_id.isin(outlier_cells)==False].copy()
+    return multi_session_df_clean, outlier_cells
+
+
+def compare_cell_count_after_removing_outliers(multi_session_df, threshold_percentile=99.9):
+    '''
+    A function that will remove outliers using the function remove_outliers,
+    then compare the number of cells per cre line & cluster to the original table of cell responses
+    to see how many cells were dropped
+
+    Parameters
+    ----------
+    multi_session_df
+    threshold_percentile
+
+    Returns
+    -------
+
+    '''
+    tmp = multi_session_df.drop_duplicates(subset='cell_specimen_id')
+    original = tmp.groupby(['cre_line', 'cluster_id']).count()[['cell_specimen_id']]
+
+    mdf_clean, outlier_cells = remove_outliers(multi_session_df, threshold_percentile)
+
+    tmp = mdf_clean.drop_duplicates(subset='cell_specimen_id')
+    clean = tmp.groupby(['cre_line', 'cluster_id']).count()[['cell_specimen_id']]
+
+    dffs = original.merge(clean, on=['cre_line', 'cluster_id'])
+    dffs['diff'] = dffs.cell_specimen_id_x - dffs.cell_specimen_id_y
+
+    print(dffs)
 
 
 def clean_cells_table(cells_table=None, columns=None, add_binned_depth=True):
@@ -669,7 +726,7 @@ def compute_inertia(a, X, metric='euclidean'):
     return np.mean(W)
 
 
-def compute_gap(clustering, data, k_max=5, n_boots=20, reference_shuffle='all', metric='euclidean', separate_cre_lines=False):
+def compute_gap(clustering, data, k_max=5, n_boots=20, reference_shuffle='all', metric='euclidean', separate_cre_lines_for_shuffle=False):
     '''
     Computes gap statistic between clustered data (ondata inertia) and null hypothesis (reference intertia).
 
@@ -680,8 +737,9 @@ def compute_gap(clustering, data, k_max=5, n_boots=20, reference_shuffle='all', 
     :param reference: (str) what type of shuffle to use, shuffle_dropout_scores,
             None is use random normal distribution
     :param metric: (str) type of distance to use, default = 'euclidean'
-    :param separate_cre_lines: (bool) whether or not to shuffle within cre lines. 
+    :param separate_cre_lines_for_shuffle: (bool) whether or not to shuffle within cre lines.
                                 Set to True if feature matrix consists of multiple cre lines.
+                                If feature_matrix consists of a single cre line, no need to separate anything before shuffling
     :return:
     gap: array of gap values that are the difference between two inertias
     reference_inertia: array of log of reference inertia
@@ -708,7 +766,7 @@ def compute_gap(clustering, data, k_max=5, n_boots=20, reference_shuffle='all', 
             if reference_shuffle is None:
                 reference = np.random.rand(*data.shape) * -1
             else:
-                reference_df = shuffle_dropout_score(data, shuffle_type=reference_shuffle, separate_cre_lines=separate_cre_lines)
+                reference_df = shuffle_dropout_score(data, shuffle_type=reference_shuffle, separate_cre_lines_for_shuffle=separate_cre_lines_for_shuffle)
                 reference = reference_df.values
 
             clustering.n_clusters = k
@@ -2049,6 +2107,10 @@ def get_coding_metrics_unmatched(index_dropouts, index_value, index_name):
     stats: dataframe, containing one row for each cell_specimen_id , with metrics as columns
                         metrics are computed within each experience level
     """
+    if 'all-images' in index_dropouts.columns:
+        image_col = 'all-images'
+    else:
+        image_col = 'images'
     stats = pd.DataFrame(index=[index_value])
     stats.index.name = index_name
     # get dropout scores per cell
@@ -2067,9 +2129,9 @@ def get_coding_metrics_unmatched(index_dropouts, index_value, index_name):
     values = index_dropouts[dominant_feature].values[order[::-1]]
     experience_selectivity = (values[0] - (np.mean(values[1:]))) / (values[0] + (np.mean(values[1:])))
     stats.loc[index_value, 'max_coding_score'] = index_dropouts.loc[dominant_experience_level][dominant_feature]
-    stats.loc[index_value, 'max_image_coding_score'] = index_dropouts.loc[dominant_experience_level]['images']
+    stats.loc[index_value, 'max_image_coding_score'] = index_dropouts.loc[dominant_experience_level][image_col]
     for experience_level in index_dropouts.index.values:
-        stats.loc[index_value, 'image_coding_' + experience_level] = index_dropouts.loc[experience_level]['images']
+        stats.loc[index_value, 'image_coding_' + experience_level] = index_dropouts.loc[experience_level][image_col]
     stats.loc[index_value, 'feature_selectivity'] = feature_selectivity
     stats.loc[index_value, 'experience_selectivity'] = experience_selectivity
     # get experience modulation indices
@@ -2096,7 +2158,10 @@ def get_coding_score_metrics_unmatched_cells(results_pivoted):
     computes metrics on dropout scores for each cell, including experience level and feature selectivity
     does not require cells to be matched, does not add cluster info
     """
-    features = get_feature_labels_for_clustering()
+    if 'all-images' in results_pivoted.columns:
+        features = get_features_for_clustering()
+    else:
+        features = get_feature_labels_for_clustering()
     cell_metrics = pd.DataFrame()
     for i, cell_specimen_id in enumerate(results_pivoted.cell_specimen_id.values):
         cell_dropouts = results_pivoted[results_pivoted.cell_specimen_id == cell_specimen_id].groupby('experience_level').mean()[features]
@@ -2206,6 +2271,19 @@ def get_coding_score_metrics(cluster_meta, results_pivoted):
     return cell_metrics
 
 
+def get_coding_score_metrics_for_clusters(cluster_meta, results_pivoted):
+    """
+    Computes metrics on dropout scores for each matched cell, including experience level and feature selectivity
+    """
+    results_pivoted = results_pivoted.merge(cluster_meta[['cluster_id']], on='cell_specimen_id')
+    cluster_metrics = pd.DataFrame()
+    for i, cluster_id in enumerate(results_pivoted.cluster_id.unique()):
+        cluster_dropouts = results_pivoted[results_pivoted.cluster_id == cluster_id].groupby('experience_level').mean()[get_features_for_clustering()]
+        stats = get_coding_metrics_for_condition(index_dropouts=cluster_dropouts, index_value=cluster_id, index_name='cluster_id')
+        cluster_metrics = pd.concat([cluster_metrics, stats], sort=False)
+    # cluster_metrics = cluster_metrics.merge(cluster_meta, on='cluster_id')
+    return cluster_metrics
+
 def generate_coding_score_metrics_table(cluster_meta, results_pivoted, save_dir=None):
     '''
     generate table of coding score metrics across experience levels per matched cell
@@ -2302,7 +2380,7 @@ def get_coding_score_metrics_per_experience_level(cluster_meta, results_pivoted)
         # create boolean column for rows where the experience level is the one that has the max coding score
         indices = cell_scores[(cell_scores.experience_level == dominant_experience_level)].index.values
         cell_scores['pref_experience_level'] = False
-        cell_scores.at[indices, 'pref_experience_level'] = True
+        cell_scores.loc[indices, 'pref_experience_level'] = True
         # move cell specimen id and exp level to front of df
         cell_scores.insert(0, 'cell_specimen_id', cell_scores.pop('cell_specimen_id'))
         cell_scores.insert(1, 'experience_level', cell_scores.pop('experience_level'))
@@ -2694,9 +2772,15 @@ def generate_coding_score_metrics_per_experience_level_table(cluster_meta, resul
         # merge coding score metrics per experience level with select coding score metrics per cell
 
         # add columns with the dominant feature and exp level determined based on the cluster each cell belongs to
-        # get cluster based dominant feature & exp from coding score metrics table
-        coding_score_metrics['dominant_feature_cluster'] = coding_score_metrics.dominant_feature
-        coding_score_metrics['dominant_experience_level_cluster'] = coding_score_metrics.dominant_experience_level
+        # get cluster based dominant feature & exp from cluster coding score metrics table
+        cluster_metrics = get_coding_score_metrics_for_clusters(cluster_meta, results_pivoted)
+        cluster_metrics = cluster_metrics.rename(columns={'dominant_experience_level': 'dominant_experience_level_cluster',
+                                                 'dominant_feature': 'dominant_feature_cluster'})
+        # merge into coding score metrics
+        coding_score_metrics = coding_score_metrics.merge(cluster_metrics.reset_index()[
+                                    ['cluster_id', 'dominant_experience_level_cluster', 'dominant_feature_cluster']])
+        # coding_score_metrics['dominant_feature_cluster'] = coding_score_metrics.dominant_feature
+        # coding_score_metrics['dominant_experience_level_cluster'] = coding_score_metrics.dominant_experience_level
 
         # make sure important columns are ints before merging
         coding_scores_per_exp_level['ophys_experiment_id'] = coding_scores_per_exp_level[
@@ -2784,7 +2868,7 @@ def restructure_results_to_get_coding_by_experience_for_matched_cells(glm_versio
     results_pivoted = limit_results_pivoted_to_features_for_clustering(results_pivoted, features)
 
     # flip sign so coding scores are positive
-    results_pivoted = flip_sign_of_dropouts(results_pivoted, processing.get_features_for_clustering(), use_signed_weights=False)
+    results_pivoted = flip_sign_of_dropouts(results_pivoted, get_features_for_clustering(), use_signed_weights=False)
 
     results_pivoted = results_pivoted.rename(columns={'all-images': 'images', 'behavioral': 'behavior'})
     # now drop ophys_experiment_id
@@ -2792,7 +2876,7 @@ def restructure_results_to_get_coding_by_experience_for_matched_cells(glm_versio
 
     results_pivoted['experience_level'] = [utils.convert_experience_level(experience_level) for experience_level in results_pivoted.experience_level.values]
 
-    feature_matrix = get_feature_matrix_for_clustering(results_pivoted, glm_version, save_dir=save_dir)
+    feature_matrix = get_feature_matrix_for_clustering(results_pivoted, glm_version, save_dir=None)
 
     return feature_matrix
 
@@ -2889,7 +2973,7 @@ def select_cre_cids(cids, cre_line):
     return cre_line_ids
 
 
-def shuffle_dropout_score(df_dropout, shuffle_type='all', separate_cre_lines=False):
+def shuffle_dropout_score(df_dropout, shuffle_type='all', separate_cre_lines_for_shuffle=False):
     '''
     Shuffles dataframe with dropout scores from GLM.
     shuffle_type: str, default='all', other options= 'experience', 'regressors', 'experience_within_cell',
@@ -2898,7 +2982,7 @@ def shuffle_dropout_score(df_dropout, shuffle_type='all', separate_cre_lines=Fal
     Returns:
         df_shuffled (pd. Dataframe) of shuffled dropout scores
     '''
-    if separate_cre_lines:
+    if separate_cre_lines_for_shuffle:
         print('shuffle_dropout_score function: Feature matrix consists of multiple cre lines, going to shuffle dropout scores within cre lines, and combined them afterwards.')
         # adding this if statement to amke sure that even if dropouts cores are clustered with all cre lines, the shuffle only happens within cre lines
         # there is better ways of doing it, but for now, this is the easiest way to do it ira 2021-07-20
@@ -3977,17 +4061,81 @@ def run_hierarchical_clustering_and_save_cluster_meta(coclustering_df, n_cluster
     # add metadata to cluster labels
     cell_metadata = get_cell_metadata_for_feature_matrix(feature_matrix, cells_table_matched)
 
+    print(len(cluster_labels), 'cluster_labels')
     cluster_meta = cluster_labels[['cell_specimen_id', 'cluster_id', 'labels']].merge(cell_metadata, on='cell_specimen_id')
     cluster_meta = cluster_meta.set_index('cell_specimen_id')
+    print(len(cluster_meta), 'cluster_meta')
 
     # annotate & clean cluster metadata
     cluster_meta = clean_cluster_meta(cluster_meta)  # drop cluster IDs with fewer than 5 cells in them
+    print(len(cluster_meta), 'cluster_meta after cleaning ')
 
     # save cluster meta file
     if cluster_meta_filename is not None:
         cluster_meta.to_hdf(cluster_meta_filename, key='df')
         print('Created and saved cluster_meta file.')
     return cluster_meta
+
+
+def run_hierarchical_clustering_each_cre_and_save_cluster_meta(coclustering_dict, n_clusters_cre,
+                                                               feature_matrix, cells_table_matched,
+                                                               cluster_meta_filename=None):
+    '''
+    INPUT:
+    coclustering_dict: (dict) dictionary of coclustering results, one entry per cre line
+    n_clusters_cre: (dict) number of clusters per cre line
+    feature_matrix: (pd.DataFrame) of dropout scores
+    cells_table_matched: (pd.DataFrame) of cell metadata
+    cluster_meta_filename: (str) filename to save the cluster meta file
+    '''
+    from sklearn.cluster import AgglomerativeClustering
+
+    cluster_meta = pd.DataFrame() # df to aggregate cluster meta for each cre line
+    for cre_line in utils.get_cre_lines():
+        n_clusters = n_clusters_cre[cre_line]
+        coclustering_df = coclustering_dict[cre_line]
+        X = coclustering_df.values
+        cluster = AgglomerativeClustering(n_clusters=n_clusters, affinity='euclidean', linkage='average')
+        labels = cluster.fit_predict(X)
+        cell_specimen_ids = coclustering_df.index.values
+
+        # make dictionary with labels for each cell specimen ID in this cre line
+        labels_dict = {'labels': labels, 'cell_specimen_id': cell_specimen_ids}
+
+        # turn it into a dataframe
+        labels_df = pd.DataFrame(data=labels_dict, columns=['labels', 'cell_specimen_id'])
+
+        # get new cluster_ids based on size of clusters and add to labels_df
+        cluster_size_order = labels_df['labels'].value_counts().index.values
+
+        # translate between original labels and new IDs based on cluster size
+        labels_df['cluster_id'] = [np.where(cluster_size_order == label)[0][0] for label in labels_df.labels.values]
+
+        # concatenate with df for all cre lines
+        cluster_labels = labels_df.copy()
+        cluster_labels['cluster_id'] = cluster_labels['cluster_id'].copy() + 1
+
+        # add metadata to cluster labels
+        cell_metadata = get_cell_metadata_for_feature_matrix(feature_matrix, cells_table_matched)
+
+        print(len(cluster_labels), 'cluster_labels')
+        cluster_meta_cre = cluster_labels[['cell_specimen_id', 'cluster_id', 'labels']].merge(cell_metadata, on='cell_specimen_id')
+        cluster_meta_cre = cluster_meta_cre.set_index('cell_specimen_id')
+        print(len(cluster_meta_cre), 'cluster_meta')
+
+        # annotate & clean cluster metadata
+        cluster_meta_cre = clean_cluster_meta(cluster_meta_cre)  # drop cluster IDs with fewer than 5 cells in them
+        print(len(cluster_meta_cre), 'cluster_meta after cleaning ')
+
+        # concat cluster meta for all cells
+        cluster_meta = pd.concat((cluster_meta, cluster_meta_cre))
+
+    # save cluster meta file
+    if cluster_meta_filename is not None:
+        cluster_meta.to_hdf(cluster_meta_filename, key='df')
+        print('Created and saved cluster_meta file.')
+    return cluster_meta
+
 
 # Functions for response metric plots across clusters
 

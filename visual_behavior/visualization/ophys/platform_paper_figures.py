@@ -2231,7 +2231,8 @@ def addSpan(ax, amin, amax, color='k', alpha=0.3, axtype='x'):
         ax.axhspan(amin, amax, facecolor=color, edgecolor='none', alpha=alpha, linewidth=0)
 
 
-def add_stim_color_span(dataset, ax, xlim=None, color=None, label_changes=True, label_omissions=True, annotate_changes=False):
+def add_stim_color_span(dataset, ax, xlim=None, color=None, label_changes=True,
+                        label_omissions=True, annotate_changes=False, max_alpha=0.5):
     """
     adds a vertical span for all stimulus presentations contained within xlim
     xlim is a time in seconds during a behavior session
@@ -2266,14 +2267,14 @@ def add_stim_color_span(dataset, ax, xlim=None, color=None, label_changes=True, 
             if label_changes:
                 if stim_table.loc[idx]['is_change']:  # if its a change, make it blue with higher alpha
                     image_color = sns.color_palette()[0]
-                    alpha = 0.5
+                    alpha = max_alpha
                     if annotate_changes:
                         ymin, ymax = ax.get_ylim()
                         ax.annotate(stim_table.loc[idx]['image_name'], xy=(start_time, ymax*1.4), xycoords='data',
                                     fontsize=6,  va='top', clip_on=False, annotation_clip=False)
                 else:  # if its a non-change make it gray with low alpha
                     image_color = 'gray'
-                    alpha = 0.25
+                    alpha = max_alpha/2.
             else:
                 if color is None:
                     image_color = image_colors[image_index]
