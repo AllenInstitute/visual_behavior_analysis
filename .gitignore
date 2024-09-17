@@ -71,3 +71,5 @@ figures/
 .vscode/
 
 \.DS_Store
+
+visual_behavior/clustering/multiscope_fn/....
