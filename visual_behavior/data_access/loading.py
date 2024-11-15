@@ -354,6 +354,70 @@ def get_platform_paper_experiment_table(add_extra_columns=True, limit_to_closest
     return experiment_table
 
 
+def get_active_passive_sessions_for_platform_dataset():
+    '''
+    Function to identify active and passive sessions closest to the first novel day, for the containers in the platform epxeriments table
+
+    Gets list of all experiments in dataset, plus list of all platform containers
+    limits to platform container, then seperately finds the active and passive sessions just before or after the first novel day
+    then merges the list of active and passive sessions
+    List will not contain the first novel session
+    '''
+
+    import visual_behavior.visualization.utils as utils
+
+    all_experiments = get_platform_paper_experiment_table(limit_to_closest_active=False,
+                                                                  add_extra_columns=True,
+                                                                  include_4x2_data=False,
+                                                                  remove_Ai94=True,
+                                                                  remove_flagged=True)
+    print(len(all_experiments), 'total experiments')
+
+    platform_experiments = get_platform_paper_experiment_table(limit_to_closest_active=True,
+                                                                       add_extra_columns=True,
+                                                                       include_4x2_data=False,
+                                                                       remove_Ai94=True,
+                                                                       remove_flagged=True)
+    platform_containers = platform_experiments.ophys_container_id.unique()
+    print(len(platform_experiments), 'platform experiments')
+    print(len(platform_containers), 'platform containers')
+
+    all_platform_experiments = all_experiments[all_experiments.ophys_container_id.isin(platform_containers)]
+    all_platform_experiments['experience_level'] = [utils.convert_experience_level(experience_level) for
+                                                    experience_level in
+                                                    all_platform_experiments.experience_level.values]
+    print(len(all_platform_experiments), 'experiments in platform dataset')
+    print(len(all_platform_experiments.ophys_container_id.unique()), 'containers in platform dataset')
+    print(len(all_platform_experiments.experience_level.unique()), 'experience levels in platform dataset')
+
+    # Get the passive sessions closest to the first novel session
+    passive_platform_experiments = all_platform_experiments[
+        (all_platform_experiments.passive == True) | (all_platform_experiments.experience_level == 'Novel')]
+    passive_platform_experiments = utilities.add_n_relative_to_first_novel_column(passive_platform_experiments)
+    # limit to passive sessions 1 or 2 days before or after the novel session - this will also remove the novel session
+    passive_platform_experiments = passive_platform_experiments[
+        passive_platform_experiments.n_relative_to_first_novel.isin([-1, 1, -2, 2])]
+    print(len(passive_platform_experiments), 'passive expts closest to first novel day')
+
+    # get the active sessions closest to the first novel session
+    active_platform_experiments = all_platform_experiments[
+        (all_platform_experiments.passive == False) | (all_platform_experiments.experience_level == 'Novel')]
+    active_platform_experiments = utilities.add_n_relative_to_first_novel_column(active_platform_experiments)
+    # limit to active sessions just before or after the novel session - this will also remove the novel session
+    active_platform_experiments = active_platform_experiments[
+        active_platform_experiments.n_relative_to_first_novel.isin([-1, 1])]
+    print(len(active_platform_experiments), 'active expts closest to first novel day')
+
+    # merge the list of active and passive experiments
+    active_passive_experiment_ids = np.hstack(
+        [passive_platform_experiments.index.values, active_platform_experiments.index.values])
+    active_passive_experiment_table = all_platform_experiments.loc[active_passive_experiment_ids]
+    print(len(active_passive_experiment_table), 'merged passive and active expts')
+    print(len(active_passive_experiment_table.ophys_container_id.unique()), 'containers in active passive set')
+
+    return active_passive_experiment_table
+
+
 def get_platform_paper_behavior_session_table(include_4x2_data=False, add_extra_columns=True):
     """
     loads the behavior sessions table that was downloaded from AWS and saved to the the platform paper cache dir.
@@ -3517,13 +3581,14 @@ def get_dataset_dict_for_containers(ophys_container_ids, platform_experiments, d
     if dataset_dict is None, a new dictionary will be created
     if dataset_dict is provided, experiments will be added to it and returned
     '''
-    if dataset_dict is None:
+    if dataset_dict == None:
         dataset_dict = {}
     for ophys_container_id in ophys_container_ids:
         ophys_experiment_ids = platform_experiments[
             platform_experiments.ophys_container_id == ophys_container_id].sort_values(by='experience_level').index.values
         expts_dict = {}
         for i, ophys_experiment_id in enumerate(ophys_experiment_ids):
+            print(ophys_experiment_id)
             dataset = get_ophys_dataset(ophys_experiment_id)
             expts_dict[ophys_experiment_id] = dataset
         dataset_dict[ophys_container_id] = expts_dict
@@ -3573,6 +3638,18 @@ def get_multi_session_df_for_conditions(data_type, event_type, conditions, inclu
                                                                 remove_flagged=True)
         multi_session_df = multi_session_df[multi_session_df.ophys_experiment_id.isin(experiments_table.index.values)]
         print('there are', len(multi_session_df.ophys_experiment_id.unique()), 'experiments in the multi_session_df after limiting to platform experiments')
+    if inclusion_criteria == 'platform_active_passive':
+        # Get active and passive sessions just before or after the first novel session
+        # only for containers in the platform datset
+        active_passive_experiment_table = get_active_passive_sessions_for_platform_dataset()
+        active_passive_experiment = active_passive_experiment_table.index.values
+
+        multi_session_df = multi_session_df[multi_session_df.ophys_experiment_id.isin(active_passive_experiment)]
+
+        print('there are', len(multi_session_df.ophys_experiment_id.unique()), 'experiments',
+              'in the multi_session_df after limiting to active-passive experiments from platform paper containers')
+        # copy this so metdata can be merged in later
+        experiments_table = active_passive_experiment_table.copy()
     elif 'strategy_paper' in inclusion_criteria:
         experiments_table = get_platform_paper_experiment_table(limit_to_closest_active=False,
                                                                 add_extra_columns=True,
