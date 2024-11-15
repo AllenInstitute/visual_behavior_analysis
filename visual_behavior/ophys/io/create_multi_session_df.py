@@ -1,13 +1,13 @@
 import os
 import pandas as pd
 
-# from allensdk.brain_observatory.behavior.behavior_project_cache import VisualBehaviorOphysProjectCache
+from allensdk.brain_observatory.behavior.behavior_project_cache import VisualBehaviorOphysProjectCache
 import visual_behavior.ophys.response_analysis.utilities as ut
 from visual_behavior.data_access import loading
 
 
 def get_multi_session_df(project_code, session_number, conditions, data_type, event_type,
-                         time_window=[-3, 3.1], interpolate=True, output_sampling_rate=30,
+                         time_window=[-2, 2.1], interpolate=True, output_sampling_rate=30,
                          response_window_duration=0.5, epoch_duration_mins=5,
                          use_extended_stimulus_presentations=False, overwrite=True):
     """
@@ -71,19 +71,19 @@ def get_multi_session_df(project_code, session_number, conditions, data_type, ev
         get_pref_stim = False
     print('get_pref_stim', get_pref_stim)
 
-    # cache_dir = loading.get_platform_analysis_cache_dir()
-    # cache = VisualBehaviorOphysProjectCache.from_s3_cache(cache_dir=cache_dir)
-    # print(cache_dir)
-    # experiments_table = cache.get_ophys_experiment_table()
+    cache_dir = loading.get_platform_analysis_cache_dir()
+    cache = VisualBehaviorOphysProjectCache.from_s3_cache(cache_dir=cache_dir)
+    print(cache_dir)
+    experiments_table = cache.get_ophys_experiment_table()
     # dont include Ai94 experiments because they makes things too slow
-    # experiments_table = experiments_table[(experiments_table.reporter_line != 'Ai94(TITL-GCaMP6s)')]
+    experiments_table = experiments_table[(experiments_table.reporter_line != 'Ai94(TITL-GCaMP6s)')]
+    # experiments_table = experiments_table[experiments_table.project_code == 'VisualBehavior']
 
     # limit to platform paper experiments
-    experiments_table = loading.get_platform_paper_experiment_table(add_extra_columns=True,
-                                                                    limit_to_closest_active=True,
-                                                                    include_4x2_data=False)
-
-    print(len(experiments_table), 'platform expts')
+    # experiments_table = loading.get_platform_paper_experiment_table(add_extra_columns=True,
+    #                                                                 limit_to_closest_active=True,
+    #                                                                 include_4x2_data=False)
+    # print(len(experiments_table), 'platform expts')
 
     print(experiments_table.session_number.unique(), 'session numbers')
     # session_number = int(session_number)
@@ -104,6 +104,7 @@ def get_multi_session_df(project_code, session_number, conditions, data_type, ev
     else:  # otherwise, include it
         filename = loading.get_file_name_for_multi_session_df(data_type, event_type, project_code, session_type,
                                                               conditions, epoch_duration_mins=epoch_duration_mins)
+        
     mega_mdf_write_dir = loading.get_multi_session_df_dir(interpolate=interpolate, output_sampling_rate=output_sampling_rate,
                                                           event_type=event_type)
     filepath = os.path.join(mega_mdf_write_dir, filename)
@@ -131,11 +132,12 @@ def get_multi_session_df(project_code, session_number, conditions, data_type, ev
                 # get stimulus_response_df
                 df = loading.get_stimulus_response_df(dataset, data_type=data_type, event_type=event_type, time_window=time_window,
                                                       interpolate=interpolate, output_sampling_rate=output_sampling_rate,
-                                                      load_from_file=True, epoch_duration_mins=epoch_duration_mins)
+                                                      epoch_duration_mins=epoch_duration_mins, load_from_file=True)
+                print('stim response df loaded')
                 # use response_window duration from stim response df if it exists
                 if response_window_duration in df.keys():
                     response_window_duration = df.response_window_duration.values[0]
-                df['ophys_experiment_id'] = experiment_id
+                df['ophys_experiment_id'] = str(experiment_id)
                 # if using omissions, only include omissions where time from last change is more than 3 seconds
                 # if event_type == 'omissions':
                 #     df = df[df.time_from_last_change > 3]
@@ -156,35 +158,40 @@ def get_multi_session_df(project_code, session_number, conditions, data_type, ev
                                                  df.mean_pupil_area.values]
                 if 'pre_change' in conditions:
                     df = df[df.pre_change.isnull() == False]
+                print(len(df), 'length of stimulus_response_df after filtering')
                 # get params for mean df creation from stimulus_response_df
-                output_sampling_rate = df.output_sampling_rate.unique()[0]
-
+                output_sampling_rate = df.output_sampling_rate.values[0]
+                print('generating mean response df')
                 mdf = ut.get_mean_df(df, conditions=conditions, frame_rate=output_sampling_rate,
                                      window_around_timepoint_seconds=time_window,
                                      response_window_duration_seconds=response_window_duration,
                                      get_pref_stim=get_pref_stim, exclude_omitted_from_pref_stim=True)
+                print(len(mdf), 'length of multi session df')
                 if 'correlation_values' in mdf.keys():
                     mdf = mdf.drop(columns=['correlation_values'])
-                mdf['ophys_experiment_id'] = experiment_id
+                mdf['ophys_experiment_id'] = int(experiment_id)
                 print('mean df created for', experiment_id)
+                print(len(mega_mdf),'length of mega mdf')
                 mega_mdf = pd.concat([mega_mdf, mdf])
+                print(len(mega_mdf), 'length of mega mdf after merge')
             except Exception as e:  # flake8: noqa: E722
                 print(e)
                 print('problem for', experiment_id)
+        else:
+            print('multi_session_df not created')
 
-        if 'level_0' in mega_mdf.keys():
-            mega_mdf = mega_mdf.drop(columns='level_0')
-        if 'index' in mega_mdf.keys():
-            mega_mdf = mega_mdf.drop(columns='index')
+    if 'level_0' in mega_mdf.keys():
+        mega_mdf = mega_mdf.drop(columns='level_0')
+    if 'index' in mega_mdf.keys():
+        mega_mdf = mega_mdf.drop(columns='index')
 
-        # if file of the same name exists, delete & overwrite to prevent files from getting huge
-        if os.path.exists(filepath):
-            os.remove(filepath)
-        print('saving multi session mean df as ', filename)
-        mega_mdf.to_hdf(filepath, key='df')
-        print('saved to', mega_mdf_write_dir)
+    # if file of the same name exists, delete & overwrite to prevent files from getting huge
+    if os.path.exists(filepath):
+        os.remove(filepath)
+    print('saving multi session mean df as ', filename)
+    mega_mdf.to_hdf(filepath, key='df')
+    print('saved to', mega_mdf_write_dir)
 
-        return mega_mdf
+    return mega_mdf
 
-    else:
-        print('multi_session_df not created')
+

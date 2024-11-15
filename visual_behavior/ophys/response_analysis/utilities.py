@@ -1,4 +1,5 @@
 import os
+import warnings
 import numpy as np
 import pandas as pd
 import seaborn as sns
@@ -340,7 +341,10 @@ def compute_reliability_vectorized(traces):
     lower_tri_inds = np.where(np.tril(np.ones([m, m]), k=-1))
     # Take the lower triangle values from the corrmat and averge them
     correlation_values = list(corrmat[lower_tri_inds[0], lower_tri_inds[1]])
-    reliability = np.nanmean(correlation_values)
+    # I expect to see RuntimeWarnings in this block
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", category=RuntimeWarning)
+        reliability = np.nanmean(correlation_values)
     return reliability, correlation_values
 
 
@@ -352,12 +356,15 @@ def compute_reliability(group, window=[-3, 3], response_window_duration=0.5, fra
     response_window = [onset, onset + (int(response_window_duration * frame_rate))]
     traces = group['trace'].values
     traces = np.vstack(traces)
-    if traces.shape[0] > 5:
-        traces = traces[:, response_window[0]:response_window[1]]  # limit to response window
-        reliability, correlation_values = compute_reliability_vectorized(traces)
-    else:
-        reliability = np.nan
-        correlation_values = []
+    # I expect to see RuntimeWarnings in this block
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", category=RuntimeWarning)
+        if traces.shape[0] > 5:
+            traces = traces[:, response_window[0]:response_window[1]]  # limit to response window
+            reliability, correlation_values = compute_reliability_vectorized(traces)
+        else:
+            reliability = np.nan
+            correlation_values = []
     return pd.Series({'reliability': reliability, 'correlation_values': correlation_values})
 
 
@@ -415,7 +422,7 @@ def get_mean_df(response_df, conditions=['cell', 'change_image_name'], frame_rat
         reliability = rdf.groupby(conditions).apply(compute_reliability, window, response_window_duration, frame_rate)
         reliability = reliability.reset_index()
         mdf['reliability'] = reliability.reliability
-        mdf['correlation_values'] = reliability.correlation_values
+        # mdf['correlation_values'] = reliability.correlation_values
         # print('done computing reliability')
     except Exception as e:
         print('failed to compute reliability')
@@ -568,8 +575,11 @@ def annotate_mean_df_with_fano_factor(mean_df):
     for idx in mean_df.index:
         mean_responses = mean_df.iloc[idx].mean_responses
         sd = np.nanstd(mean_responses)
-        mean_response = np.nanmean(mean_responses)
-        fano_factor = np.abs((sd * 2) / mean_response)  # take abs value to account for negative mean_response
+        # I expect to see RuntimeWarnings in this block
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=RuntimeWarning)
+            mean_response = np.nanmean(mean_responses)
+            fano_factor = np.abs((sd * 2) / mean_response)  # take abs value to account for negative mean_response
         ff_list.append(fano_factor)
     mean_df['fano_factor'] = ff_list
     return mean_df
@@ -776,8 +786,8 @@ def add_early_late_block_ratio_for_fdf(fdf, repeat=1, pref_stim=True):
 
     data['early_late_block_ratio'] = np.nan
     for cell in data.cell.unique():
-        first_blocks = data[(data.cell == cell) & (data.block_set.isin([0, 1]))].mean_response.mean()
-        last_blocks = data[(data.cell == cell) & (data.block_set.isin([2, 3]))].mean_response.mean()
+        first_blocks = data[(data.cell == cell) & (data.block_set.isin([0, 1]))].mean_response.mean(numeric_only=True)
+        last_blocks = data[(data.cell == cell) & (data.block_set.isin([2, 3]))].mean_response.mean(numeric_only=True)
         index = (last_blocks - first_blocks) / (last_blocks + first_blocks)
         ratio = first_blocks / last_blocks
         indices = data[data.cell == cell].index
@@ -826,7 +836,7 @@ def get_running_speed_ophys_time(running_speed, timestamps_ophys):
     for i, ophys_time in enumerate(timestamps_ophys):
         run_df = running_speed[running_speed.ophys_time == ophys_time]
         if len(run_df) > 0:
-            run_speed = run_df.running_speed.mean()
+            run_speed = run_df.running_speed.mean(numeric_only=True)
         else:
             run_speed = np.nan
         running_speed_ophys_time[i] = run_speed

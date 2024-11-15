@@ -1,4 +1,5 @@
 import os
+import warnings
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
@@ -28,7 +29,7 @@ def get_pref_image_for_cell_specimen_ids(stimulus_response_df):
     returns a dataframe with index cell_specimen_id and column pref_image indicating
     which image_name evoked the largest response for each cell
     """
-    pref_images = stimulus_response_df.groupby(['cell_specimen_id', 'image_name']).mean().reset_index().groupby(
+    pref_images = stimulus_response_df.groupby(['cell_specimen_id', 'image_name']).mean(numeric_only=True).reset_index().groupby(
         'cell_specimen_id').apply(get_pref_image_for_group)
     return pref_images
 
@@ -49,7 +50,7 @@ def add_pref_image(stimulus_response_df, pref_images):
         pref_image_name = pref_images.loc[cell_specimen_id].pref_image
         indices = stimulus_response_df[(stimulus_response_df.cell_specimen_id == cell_specimen_id) & (
             stimulus_response_df.image_name == pref_image_name)].index
-        stimulus_response_df.at[indices, 'pref_image'] = True
+        stimulus_response_df.loc[indices, 'pref_image'] = True
     return stimulus_response_df
 
 
@@ -71,7 +72,7 @@ def get_non_pref_image_for_cell_specimen_ids(stimulus_response_df):
     returns a dataframe with index cell_specimen_id and column non_pref_image indicating
     which image_name evoked the smallest response for each cell
     """
-    non_pref_images = stimulus_response_df.groupby(['cell_specimen_id', 'image_name']).mean().reset_index().groupby(
+    non_pref_images = stimulus_response_df.groupby(['cell_specimen_id', 'image_name']).mean(numeric_only=True).reset_index().groupby(
         'cell_specimen_id').apply(get_non_pref_image_for_group)
     return non_pref_images
 
@@ -92,7 +93,7 @@ def add_non_pref_image(stimulus_response_df, non_pref_images):
         non_pref_image_name = non_pref_images.loc[cell_specimen_id].non_pref_image
         indices = stimulus_response_df[(stimulus_response_df.cell_specimen_id == cell_specimen_id) & (
             stimulus_response_df.image_name == non_pref_image_name)].index
-        stimulus_response_df.at[indices, 'non_pref_image'] = True
+        stimulus_response_df.loc[indices, 'non_pref_image'] = True
     return stimulus_response_df
 
 
@@ -117,10 +118,10 @@ def get_image_selectivity_index_pref_non_pref(stimulus_response_df):
     returns a dataframe with index cell_specimen_id and column 'image_selectivity_index'
     """
     pref_image_df = stimulus_response_df[stimulus_response_df.pref_image]
-    mean_response_pref_image = pref_image_df.groupby(['cell_specimen_id']).mean()[['mean_response']]
+    mean_response_pref_image = pref_image_df.groupby(['cell_specimen_id']).mean(numeric_only=True)[['mean_response']]
 
     non_pref_image_df = stimulus_response_df[stimulus_response_df.non_pref_image]
-    mean_response_non_pref_image = non_pref_image_df.groupby(['cell_specimen_id']).mean()[['mean_response']]
+    mean_response_non_pref_image = non_pref_image_df.groupby(['cell_specimen_id']).mean(numeric_only=True)[['mean_response']]
 
     image_selectivity_index = (mean_response_pref_image - mean_response_non_pref_image) / (
         mean_response_pref_image + mean_response_non_pref_image)
@@ -135,10 +136,10 @@ def get_image_selectivity_index_one_vs_all(stimulus_response_df):
     returns a dataframe with index cell_specimen_id and column 'image_selectivity_index_one_vs_all'
     """
     pref_image_df = stimulus_response_df[stimulus_response_df.pref_image]
-    mean_response_pref_image = pref_image_df.groupby(['cell_specimen_id']).mean()[['mean_response']]
+    mean_response_pref_image = pref_image_df.groupby(['cell_specimen_id']).mean(numeric_only=True)[['mean_response']]
 
     non_pref_images_df = stimulus_response_df[(stimulus_response_df.pref_image == False)]
-    mean_response_non_pref_images = non_pref_images_df.groupby(['cell_specimen_id']).mean()[['mean_response']]
+    mean_response_non_pref_images = non_pref_images_df.groupby(['cell_specimen_id']).mean(numeric_only=True)[['mean_response']]
 
     image_selectivity_index = (mean_response_pref_image - mean_response_non_pref_images) / (
         mean_response_pref_image + mean_response_non_pref_images)
@@ -163,8 +164,10 @@ def compute_lifetime_sparseness(image_responses):
     # ls = (1 - (((np.sum(image_responses) / N) ** 2) / (np.sum(image_responses ** 2 / N)))) / (1 - (1 / N))
     # emulated from https://github.com/AllenInstitute/visual_coding_2p_analysis/blob/master/visual_coding_2p_analysis/natural_scenes_events.py
     # formulated similar to Froudarakis et al., 2014
-    ls = ((1 - (1 / N) * ((np.power(image_responses.sum(axis=0), 2)) / (np.power(image_responses, 2).sum(axis=0)))) / (
-        1 - (1 / N)))
+    # I expect to see RuntimeWarnings in this block
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", category=RuntimeWarning)
+        ls = ((1 - (1 / N) * ((np.power(image_responses.sum(axis=0), 2)) / (np.power(image_responses, 2).sum(axis=0)))) / (1 - (1 / N)))
     return ls
 
 
@@ -185,7 +188,7 @@ def get_lifetime_sparseness_for_cell_specimen_ids(stimulus_response_df):
     computes lifetime sparseness across images for each cell_specimen_id in the stimulus_response_df
     returns a dataframe with index cell_specimen_id and column lifetime_sparseness for each cell
     """
-    lifetime_sparseness_df = stimulus_response_df.groupby(['cell_specimen_id', 'image_name']).mean().reset_index().groupby('cell_specimen_id').apply(get_lifetime_sparseness_for_group)
+    lifetime_sparseness_df = stimulus_response_df.groupby(['cell_specimen_id', 'image_name']).mean(numeric_only=True).reset_index().groupby('cell_specimen_id').apply(get_lifetime_sparseness_for_group)
     return lifetime_sparseness_df
 
 
@@ -194,7 +197,7 @@ def get_mean_response_cell_specimen_ids(stimulus_response_df):
     takes stimulus_response_df (with any filtering criteria applied, such as limited to pref image),
     and computes the average response across all stimulus_presentations for each cell_specimen_id
     """
-    mean_responses = stimulus_response_df.groupby(['cell_specimen_id']).mean()[['mean_response']]
+    mean_responses = stimulus_response_df.groupby(['cell_specimen_id']).mean(numeric_only=True)[['mean_response']]
     return mean_responses
 
 
@@ -216,8 +219,11 @@ def get_fano_factor(group):
     """
     mean_responses = group.mean_response.values
     sd = np.nanstd(mean_responses)
-    mean_response = np.nanmean(mean_responses)
-    fano_factor = np.abs((sd ** 2) / mean_response)
+    # I expect to see RuntimeWarnings in this block
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", category=RuntimeWarning)
+        mean_response = np.nanmean(mean_responses)
+        fano_factor = np.abs((sd ** 2) / mean_response)
     return pd.Series({'fano_factor': fano_factor})
 
 
@@ -238,7 +244,10 @@ def compute_reliability_vectorized(traces):
     lower_tri_inds = np.where(np.tril(np.ones([m, m]), k=-1))
     # Take the lower triangle values from the corrmat and averge them
     correlation_values = list(corrmat[lower_tri_inds[0], lower_tri_inds[1]])
-    reliability = np.nanmean(correlation_values)
+    # I expect to see RuntimeWarnings in this block
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", category=RuntimeWarning)
+        reliability = np.nanmean(correlation_values)
     return reliability, correlation_values
 
 
@@ -266,7 +275,6 @@ def get_reliability_for_cell_specimen_ids(stimulus_response_df, frame_rate, time
     """
 
     reliability = stimulus_response_df.groupby(['cell_specimen_id']).apply(compute_reliability, frame_rate, time_window, response_window_duration)
-    # reliability = reliability.drop(columns=['correlation_values'])
     return reliability
 
 
@@ -287,7 +295,10 @@ def get_running_modulation_index_for_group(group):
     """
     running = group[group.running].mean_response.values
     not_running = group[group.running == False].mean_response.values
-    running_modulation_index = (running - not_running) / (running + not_running)
+    # I expect to see RuntimeWarnings in this block
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", category=RuntimeWarning)
+        running_modulation_index = (running - not_running) / (running + not_running)
     return pd.Series({'running_modulation_index': running_modulation_index})
 
 
@@ -298,7 +309,7 @@ def get_running_modulation_index_for_cell_specimen_ids(stimulus_response_df):
     called 'running' that is True if mean_running_speed is >2 cm/s otherwise False
     """
     stimulus_response_df = add_running_to_df(stimulus_response_df)
-    running_modulation_index = stimulus_response_df.groupby(['cell_specimen_id', 'running']).mean()[['mean_response']].reset_index().groupby('cell_specimen_id').apply(get_running_modulation_index_for_group)
+    running_modulation_index = stimulus_response_df.groupby(['cell_specimen_id', 'running']).mean(numeric_only=True)[['mean_response']].reset_index().groupby('cell_specimen_id').apply(get_running_modulation_index_for_group)
     running_modulation_index['running_modulation_index'] = [np.nan if len(index) == 0 else index[0] for index in running_modulation_index.running_modulation_index.values]
     return running_modulation_index
 
@@ -308,7 +319,10 @@ def get_hit_miss_modulation_index_for_group(group):
     """
     hit = group[group.hit].mean_response.values
     miss = group[group.hit == False].mean_response.values
-    hit_miss_index = (hit - miss) / (hit + miss)
+    # I expect to see RuntimeWarnings in this block
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", category=RuntimeWarning)
+        hit_miss_index = (hit - miss) / (hit + miss)
     return pd.Series({'hit_miss_index': hit_miss_index})
 
 
@@ -319,7 +333,7 @@ def get_hit_miss_modulation_index(stimulus_response_df):
     returns a dataframe with column 'hit_miss_index' with computed value for each cell_specimen_id in stimulus_response_df
     """
     stimulus_response_df['hit'] = [True if (stimulus_response_df.iloc[row].is_change and stimulus_response_df.iloc[row].licked) else False for row in range(len(stimulus_response_df))]
-    hit_miss_index = stimulus_response_df.groupby(['cell_specimen_id', 'hit']).mean()[['mean_response']].reset_index().groupby('cell_specimen_id').apply(get_hit_miss_modulation_index_for_group)
+    hit_miss_index = stimulus_response_df.groupby(['cell_specimen_id', 'hit']).mean(numeric_only=True)[['mean_response']].reset_index().groupby('cell_specimen_id').apply(get_hit_miss_modulation_index_for_group)
     hit_miss_index['hit_miss_index'] = [np.nan if len(index) == 0 else index[0] for index in hit_miss_index.hit_miss_index.values]
     return hit_miss_index
 
@@ -330,12 +344,12 @@ def get_change_modulation_index(stimulus_response_df):
     if stimulus_response_df has been limited to pref_stim, metric will be for pref stim only
     """
     sdf = stimulus_response_df.copy()
-    change = sdf.groupby(['cell_specimen_id', 'is_change']).mean()[['mean_response']].rename(
+    change = sdf.groupby(['cell_specimen_id', 'is_change']).mean(numeric_only=True)[['mean_response']].rename(
         columns={'mean_response': 'change_response'})
     change = change.reset_index()
     change = change[change.is_change]
 
-    pre_change = sdf.groupby(['cell_specimen_id', 'pre_change']).mean()[['mean_response']].rename(
+    pre_change = sdf.groupby(['cell_specimen_id', 'pre_change']).mean(numeric_only=True)[['mean_response']].rename(
         columns={'mean_response': 'pre_change_response'})
     pre_change = pre_change.reset_index()
     pre_change = pre_change[pre_change.pre_change]
@@ -352,16 +366,22 @@ def get_omission_modulation_index(stimulus_response_df, pre_omitted):
     compute the diff over the sum of the omission to pre-omission image response for each cell in stimulus_response_df
     """
     sdf = stimulus_response_df.copy()
-    omitted = sdf.groupby(['cell_specimen_id', 'omitted']).mean()[['mean_response']].rename(
+    omitted = sdf.groupby(['cell_specimen_id', 'omitted']).mean(numeric_only=True)[['mean_response']].rename(
         columns={'mean_response': 'omission_response'})
     omitted = omitted.reset_index()
     omitted = omitted[omitted.omitted]
 
-    pre_omitted = pre_omitted.groupby(['cell_specimen_id', 'pre_omitted']).mean()[['mean_response']].rename(
+    pre_omitted = pre_omitted.groupby(['cell_specimen_id', 'pre_omitted']).mean(numeric_only=True)[['mean_response']].rename(
         columns={'mean_response': 'pre_omission_response'})
     pre_omitted = pre_omitted.reset_index()
     pre_omitted = pre_omitted[pre_omitted.pre_omitted]
 
+    post_omitted = sdf.groupby(['cell_specimen_id', 'post_omitted']).mean(numeric_only=True)[['mean_response']].rename(
+        columns={'mean_response': 'post_omission_response'})
+    post_omitted = post_omitted.reset_index()
+    post_omitted = post_omitted[post_omitted.post_omitted]
+
+    omitted = omitted.merge(post_omitted, on='cell_specimen_id')
     omitted = omitted.merge(pre_omitted, on='cell_specimen_id')
     omitted['omission_modulation_index'] = (omitted.omission_response - omitted.pre_omission_response) / (
         omitted.omission_response + omitted.pre_omission_response)
@@ -388,8 +408,11 @@ def get_population_coupling_for_cell_specimen_ids(traces):
     for cell_specimen_id in cell_specimen_ids:
         cell_trace = traces.loc[cell_specimen_id][trace_column]
         population_trace = traces.loc[cell_specimen_ids[cell_specimen_ids != cell_specimen_id]][trace_column].mean()
-        r, p_value = pearsonr(cell_trace, population_trace)
-
+        try:
+            r, p_value = pearsonr(cell_trace, population_trace)
+        except:
+            r = np.nan
+            p_value = np.nan
         pc_list.append([cell_specimen_id, r, p_value])
     columns = ['cell_specimen_id', 'population_coupling_r_value', 'population_coupling_p_value']
     population_coupling = pd.DataFrame(pc_list, columns=columns)
@@ -470,10 +493,9 @@ def generate_trace_metrics_table(ophys_experiment_id, data_type='events', save=F
     ophys_frame_rate = dataset.metadata['ophys_frame_rate']
     trace_metrics = get_trace_metrics(traces, data_type, ophys_frame_rate)
 
-    # # get population coupling across all cells full dff traces
-    # population_coupling = get_population_coupling_for_cell_specimen_ids(traces)
-    #
-    # trace_metrics = trace_metrics.merge(population_coupling, on='cell_specimen_id')
+    # get population coupling across all cells full dff traces
+    population_coupling = get_population_coupling_for_cell_specimen_ids(traces)
+    trace_metrics = trace_metrics.merge(population_coupling, on='cell_specimen_id')
 
     trace_metrics['ophys_experiment_id'] = ophys_experiment_id
 
@@ -679,7 +701,7 @@ def get_cell_metrics_dir(interpolate=False, output_sampling_rate=None):
     :param output_sampling_rate: sampling rate used to create interpolated traces; if interpolate is False, output_sampling_rate is None
     :return:
     """
-    base_dir = r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/platform_paper_cache/cell_metrics'
+    base_dir = os.path.join(loading.get_platform_analysis_cache_dir(), 'cell_metrics')
     if interpolate:
         save_dir = os.path.join(base_dir, 'interpolated_' + str(output_sampling_rate) + 'Hz')
     else:
@@ -708,7 +730,7 @@ def get_metrics_df_filepath(ophys_experiment_id, condition, stimuli, session_sub
 
 
 def generate_and_save_all_metrics_tables_for_experiment(ophys_experiment_id, data_type='events', interpolate=True, output_sampling_rate=30,
-                                                        time_window=[-3, 3.1], response_window_duration=0.5, overwrite=True):
+                                                        time_window=[-2, 2.1], response_window_duration=0.5, overwrite=True):
     """
     For a single ophys_experiment_id, creates trace and cell (stimulus locked) metrics
     for all possible combinations of scenarios one might want to analyze for a given data_type.
@@ -730,8 +752,8 @@ def generate_and_save_all_metrics_tables_for_experiment(ophys_experiment_id, dat
     :return: saves files to save_dir defined in get_metrics_df_filepath()
     """
 
-    i = 0
-    problem_expts = pd.DataFrame()
+    # i = 0
+    # problem_expts = pd.DataFrame()
 
     # trace metrics ###
     condition = 'traces'
@@ -762,13 +784,7 @@ def generate_and_save_all_metrics_tables_for_experiment(ophys_experiment_id, dat
     except Exception as e:
         print('metrics not generated for trace_metrics for experiment', ophys_experiment_id)
         print(e)
-        problem_expts.loc[i, 'ophys_experiment_id'] = ophys_experiment_id
-        problem_expts.loc[i, 'condition'] = condition
-        problem_expts.loc[i, 'stimuli'] = stimuli
-        problem_expts.loc[i, 'session_subset'] = session_subset
-        problem_expts.loc[i, 'data_type'] = data_type
-        problem_expts.loc[i, 'exception'] = e
-        i += 1
+
 
     # event locked response metrics ###
 
@@ -782,17 +798,20 @@ def generate_and_save_all_metrics_tables_for_experiment(ophys_experiment_id, dat
     stimulus_response_df = loading.get_stimulus_response_df(dataset, data_type=data_type, event_type='all', time_window=time_window,
                                                             interpolate=interpolate, output_sampling_rate=output_sampling_rate,
                                                             load_from_file=True)
+    stimulus_response_df = loading.convert_boolean_cols_to_bool(stimulus_response_df)
 
     # conditions to loop through
-    conditions = ['changes', 'omissions', 'images']
+    conditions = ['omissions', 'images', 'changes']
     stimuli = ['all_images', 'pref_image']
-    session_subsets = ['full_session', 'engaged', 'disengaged']
+    session_subsets = ['full_session']
 
     # loop through all conditions, generate metrics and save
     metrics_df = pd.DataFrame()
     for condition in conditions:
         for stimulus in stimuli:
             for session_subset in session_subsets:
+                if condition == 'omissions':
+                    stimulus = 'all_images'
                 # need try except because code will not always run, such as in the case of passive sessions (no trials that are 'engaged')
                 try:
                     filepath = get_metrics_df_filepath(ophys_experiment_id, condition=condition,
@@ -803,6 +822,7 @@ def generate_and_save_all_metrics_tables_for_experiment(ophys_experiment_id, dat
                         if os.path.exists(filepath):  # and file exists, delete it
                             os.remove(filepath)
                             print('h5 file exists for', ophys_experiment_id, ' - overwriting')
+
                         # regenerate metrics and save
                         metrics_df = generate_cell_metrics_table(dataset,
                                                                  stimulus_response_df,
@@ -816,11 +836,12 @@ def generate_and_save_all_metrics_tables_for_experiment(ophys_experiment_id, dat
                                                                  interpolate=interpolate,
                                                                  )
                         metrics_df.to_hdf(filepath, key='df')
-                        print('metrics generated for', data_type, condition, stimulus, session_subset, 'interpolate:', interpolate)
+                        print('metrics generated for', ophys_experiment_id, data_type, condition, stimulus, session_subset, 'interpolate:', interpolate)
                     else:  # if you dont want to overwrite
                         if os.path.exists(filepath):  # and the file already exists
                             pass  # do nothing
                         else:  # otherwise
+
                             # generate metrics and save
                             metrics_df = generate_cell_metrics_table(dataset,
                                                                      stimulus_response_df,
@@ -834,24 +855,24 @@ def generate_and_save_all_metrics_tables_for_experiment(ophys_experiment_id, dat
                                                                      interpolate=interpolate,
                                                                      )
                             metrics_df.to_hdf(filepath, key='df')
-                            print('metrics generated for', data_type, condition, stimulus, session_subset, 'interpolate:', interpolate)
-
+                            print('metrics generated for', ophys_experiment_id, data_type, condition, stimulus, session_subset, 'interpolate:', interpolate)
+                            print('metrics saved to', filepath)
                 except Exception as e:
                     print('metrics not generated for experiment_id', ophys_experiment_id,
                           'data_type', data_type, 'interpolate', interpolate,
                           'condition', condition, 'stimulus', stimulus,
                           'session_subset', session_subset)
                     print(e)
-                    problem_expts.loc[i, 'ophys_experiment_id'] = ophys_experiment_id
-                    problem_expts.loc[i, 'condition'] = condition
-                    problem_expts.loc[i, 'stimuli'] = stimulus
-                    problem_expts.loc[i, 'session_subset'] = session_subset
-                    problem_expts.loc[i, 'data_type'] = data_type
-                    problem_expts.loc[i, 'interpolate'] = interpolate
-                    problem_expts.loc[i, 'exception'] = e
-                    i += 1
+                    # problem_expts.loc[i, 'ophys_experiment_id'] = ophys_experiment_id
+                    # problem_expts.loc[i, 'condition'] = condition
+                    # problem_expts.loc[i, 'stimuli'] = stimulus
+                    # problem_expts.loc[i, 'session_subset'] = session_subset
+                    # problem_expts.loc[i, 'data_type'] = data_type
+                    # problem_expts.loc[i, 'interpolate'] = interpolate
+                    # problem_expts.loc[i, 'exception'] = e
+                    # i += 1
 
-    save_metrics_generation_exceptions_log_file(problem_expts)
+    # save_metrics_generation_exceptions_log_file(problem_expts)
 
 
 def save_metrics_generation_exceptions_log_file(problem_expts):
@@ -930,24 +951,80 @@ def load_metrics_table_for_experiments(ophys_experiment_ids, condition, stimuli,
             print('problem loading all experiments metrics table')
     else:
         for ophys_experiment_id in tqdm(ophys_experiment_ids):
-            try:
-                tmp = load_metrics_table_for_experiment(ophys_experiment_id, condition, stimuli, session_subset,
-                                                        data_type=data_type, interpolate=interpolate,
-                                                        output_sampling_rate=output_sampling_rate)
+            # try:
+                # tmp = load_metrics_table_for_experiment(ophys_experiment_id, condition, stimuli, session_subset,
+                #                                         data_type=data_type, interpolate=interpolate,
+                #                                         output_sampling_rate=output_sampling_rate)
+            filepath = get_metrics_df_filepath(ophys_experiment_id, condition, stimuli, session_subset,
+                                               data_type=data_type, interpolate=interpolate,
+                                               output_sampling_rate=output_sampling_rate)
+            print('attempting to load', filepath)
+            if os.path.exists(filepath):
+                tmp = pd.read_hdf(filepath, key='df')
                 metrics_table = pd.concat([metrics_table, tmp])
-            except Exception as e:
-                print('problem for experiment', ophys_experiment_id)
-                problem_expts.loc[i, 'ophys_experiment_id'] = ophys_experiment_id
-                problem_expts.loc[i, 'condition'] = condition
-                problem_expts.loc[i, 'stimuli'] = stimuli
-                problem_expts.loc[i, 'session_subset'] = session_subset
-                problem_expts.loc[i, 'data_type'] = data_type
-                problem_expts.loc[i, 'interpolate'] = interpolate
-                problem_expts.loc[i, 'output_sampling_rate'] = output_sampling_rate
-                problem_expts.loc[i, 'exception'] = e
-                i += 1
+            else:
+                # generate the table
+                if condition == 'traces':
+                    print('generating trace metrics for', ophys_experiment_id, data_type)
+                    metrics_df = generate_trace_metrics_table(ophys_experiment_id, data_type)
+                else:
+                    print('cant load saved table, generating metrics table for', ophys_experiment_id, data_type)
+                    # load dataset
+                    dataset = loading.get_ophys_dataset(ophys_experiment_id, get_extended_stimulus_presentations=False)
+                    # load stimulus_response_df from saved file or generate it if file doesnt exist
+                    # event_type must be all so that we can filter as needed
+                    time_window = [-2, 2.1]
+                    stimulus_response_df = loading.get_stimulus_response_df(dataset, data_type=data_type, event_type='all',
+                                                                            time_window=time_window,
+                                                                            interpolate=interpolate,
+                                                                            output_sampling_rate=output_sampling_rate,
+                                                                            load_from_file=True)
+                    # need try except because code will not always run, such as in the case of passive sessions (no trials that are 'engaged')
+                    # try:
+                    print('stim response df loaded, generating cell metrics')
+                    filepath = get_metrics_df_filepath(ophys_experiment_id, condition=condition,
+                                                       stimuli=stimuli, session_subset=session_subset,
+                                                       data_type=data_type, interpolate=interpolate,
+                                                       output_sampling_rate=output_sampling_rate)
+                    # regenerate metrics and save
+                    if condition == 'omissions':
+                        response_window_duration = 0.75
+                    else:
+                        response_window_duration = 0.5
+                    metrics_df = generate_cell_metrics_table(dataset,
+                                                             stimulus_response_df,
+                                                             data_type=data_type,
+                                                             condition=condition,
+                                                             session_subset=session_subset,
+                                                             stimuli=stimuli,
+                                                             time_window=time_window,
+                                                             output_sampling_rate=output_sampling_rate,
+                                                             response_window_duration=response_window_duration,
+                                                             interpolate=interpolate,
+                                                             )
+                metrics_df['ophys_experiment_id'] = ophys_experiment_id
+                if os.path.exists(filepath): # remove it first in case there is a busted file there
+                    os.remove(filepath)
+                metrics_df.to_hdf(filepath, key='df')
+                print('metrics generated for', data_type, condition, stimuli, session_subset,
+                      'interpolate:', interpolate)
+                metrics_table = pd.concat([metrics_table, metrics_df])
 
-    save_metrics_loading_exceptions_log_file(problem_expts)
+                # except Exception as e:
+                #     print('problem for experiment', ophys_experiment_id)
+                #     print('could not generate metrics table for', data_type, condition, stimuli, session_subset,
+                #           'interpolate:', interpolate)
+                #     problem_expts.loc[i, 'ophys_experiment_id'] = ophys_experiment_id
+                #     problem_expts.loc[i, 'condition'] = condition
+                #     problem_expts.loc[i, 'stimuli'] = stimuli
+                #     problem_expts.loc[i, 'session_subset'] = session_subset
+                #     problem_expts.loc[i, 'data_type'] = data_type
+                #     problem_expts.loc[i, 'interpolate'] = interpolate
+                #     problem_expts.loc[i, 'output_sampling_rate'] = output_sampling_rate
+                #     problem_expts.loc[i, 'exception'] = e
+                #     i += 1
+
+    # save_metrics_loading_exceptions_log_file(problem_expts)
 
     return metrics_table
 
@@ -1062,7 +1139,7 @@ def get_cell_metrics_for_conditions(data_type, condition, stimuli, session_subse
     """
     Loads cell metrics for all experiments in the platform paper experiments table, merges with metadata, and limits based on provided inclusion_criteria
     :param data_type: 'dff', 'events', 'filtered_events'
-    :param condition: 'changes', 'omissions', 'images' or 'traces
+    :param condition: 'changes', 'omissions', 'images' or 'traces'
     :param stimuli: 'all_images', 'pref_image', or 'full_session' (for data_type='traces')
     :param session_subset: 'engaged', 'disengaged', 'full_session'
     :param inclusion_criteria: a string including any combination of the following:
@@ -1150,13 +1227,13 @@ def get_descriptive_stats_for_conditions(metrics_table, condition, conditions=['
                    'lifetime_sparseness', 'mean_response',
                    'fraction_significant_p_value_gray_screen', 'fano_factor',
                    'reliability', 'running_modulation_index', 'hit_miss_index',
-                   'change_response', 'pre_change', 'pre_change_response',
+                   'change_response',  'pre_change_response',
                    'change_modulation_index']
     elif condition == 'omissions':
         metrics = ['cell_specimen_id', 'mouse_id', 'ophys_session_id', 'ophys_container_id', 'ophys_experiment_id',
                    'mean_response', 'fraction_significant_p_value_gray_screen', 'fano_factor',
                    'reliability', 'running_modulation_index', 'omitted',
-                   'omission_response', 'pre_omitted', 'pre_omission_response',
+                   'omission_response', 'pre_omission_response',
                    'omission_modulation_index', ]
 
     metrics_stats = metrics_table[metrics + conditions].groupby(conditions).describe()
@@ -1185,40 +1262,116 @@ def compute_experience_modulation_index(metrics_table, metric, cells_table):
 
     # get subset of data of interest
     metric_data = metrics_table[['cell_specimen_id', 'ophys_experiment_id', metric]]
+    print(len(metric_data.ophys_experiment_id.unique()), 'experiments in metric_data before merging with cells_table')
+    print(len(metric_data.cell_specimen_id.unique()), 'cells in metric_data before merging with cells_table')
 
     # merge in metadata for sessions to compare
     metric_data = metric_data.merge(cells_table.reset_index()[['cell_specimen_id', 'ophys_experiment_id', 'experience_level']],
                                     on=['cell_specimen_id', 'ophys_experiment_id'])
+    # metric_data = metric_data.drop_duplicates(subset='cell_specimen_id')
     print(len(metric_data.ophys_experiment_id.unique()), 'experiments in metric_data after merging with cells_table')
+    print(len(metric_data.cell_specimen_id.unique()), 'cells in metric_data after merging with cells_table')
 
     # groupby cell and session number then average across multiple sessions of the same type for each cell
-    metric_data = metric_data.groupby(['cell_specimen_id', 'experience_level']).mean()[[metric]]
+    metric_data = metric_data.groupby(['cell_specimen_id', 'experience_level']).mean(numeric_only=True)[[metric]]
     # unstack to get metric for each session number
     metric_data = metric_data.unstack()
     # get rid of multi index column name
     metric_data.columns = metric_data.columns.droplevel(0)
 
     # compute modulation indices
+    # Familiar vs novel, familiar vs novel +
     exp_level_1 = 'Familiar'
 
-    exp_level_2 = 'Novel 1'
+    exp_level_2 = 'Novel'
     metric_data[exp_level_2 + ' vs. ' + exp_level_1] = (metric_data[exp_level_2] - metric_data[exp_level_1]) / (
         metric_data[exp_level_2] + metric_data[exp_level_1])
-    exp_level_2 = 'Novel >1'
+    exp_level_2 = 'Novel +'
     metric_data[exp_level_2 + ' vs. ' + exp_level_1] = (metric_data[exp_level_2] - metric_data[exp_level_1]) / (
         metric_data[exp_level_2] + metric_data[exp_level_1])
 
-    exp_level_2 = 'Novel 1'
+    exp_level_2 = 'Novel'
     metric_data[exp_level_2 + ' % of ' + exp_level_1] = (metric_data[exp_level_2]) / (metric_data[exp_level_1])
-    exp_level_2 = 'Novel >1'
+    exp_level_2 = 'Novel +'
+    metric_data[exp_level_2 + ' % of ' + exp_level_1] = (metric_data[exp_level_2]) / (metric_data[exp_level_1])
+
+    # Novel vs Novel +
+    exp_level_1 = 'Novel +'
+
+    exp_level_2 = 'Novel'
+    metric_data[exp_level_2 + ' vs. ' + exp_level_1] = (metric_data[exp_level_2] - metric_data[exp_level_1]) / (
+        metric_data[exp_level_2] + metric_data[exp_level_1])
+
+    exp_level_2 = 'Novel'
     metric_data[exp_level_2 + ' % of ' + exp_level_1] = (metric_data[exp_level_2]) / (metric_data[exp_level_1])
 
     # add cell type
-    metric_data = metric_data.merge(cells_table[['cell_specimen_id', 'cell_type']], on='cell_specimen_id')
+    metric_data = metric_data.merge(cells_table[['cell_specimen_id', 'ophys_experiment_id', 'cell_type', 'layer',
+                                                 'binned_depth', 'targeted_structure', 'project_code']], on='cell_specimen_id')
 
     return metric_data
 
 
+def compute_experience_modulation_index_new(metrics_table, metric, cells_table):
+    """
+    computes the difference over the sum of metric value between Novel 1 and Familiar, and Novel >1 and Familiar
+
+    metrics_table: table of cell metrics, each row is one cell_specimen_id in one ophys_experiment,
+                    metrics_table is the output of get_cell_metrics_for_conditions()
+    metric: column in metrics table to compute index with
+    cells_table: cells metadata table
+    """
+
+    # get subset of data of interest
+    metric_data = metrics_table[['cell_specimen_id', 'ophys_experiment_id', metric]]
+    print(len(metric_data.ophys_experiment_id.unique()), 'experiments in metric_data before merging with cells_table')
+    print(len(metric_data.cell_specimen_id.unique()), 'cells in metric_data before merging with cells_table')
+
+    # merge in metadata for sessions to compare
+    metric_data = metric_data.merge(cells_table.reset_index()[['cell_specimen_id', 'ophys_experiment_id', 'experience_level']],
+                                    on=['cell_specimen_id', 'ophys_experiment_id'])
+    # metric_data = metric_data.drop_duplicates(subset='cell_specimen_id')
+    print(len(metric_data.ophys_experiment_id.unique()), 'experiments in metric_data after merging with cells_table')
+    print(len(metric_data.cell_specimen_id.unique()), 'cells in metric_data after merging with cells_table')
+
+    # groupby cell and session number then average across multiple sessions of the same type for each cell
+    metric_data = metric_data.groupby(['cell_specimen_id', 'experience_level']).mean(numeric_only=True)[[metric]]
+    # unstack to get metric for each session number
+    metric_data = metric_data.unstack()
+    # get rid of multi index column name
+    metric_data.columns = metric_data.columns.droplevel(0)
+
+    # compute modulation indices
+    # Familiar vs novel, familiar vs novel +
+    exp_level_1 = 'Familiar'
+
+    exp_level_2 = 'Novel'
+    metric_data['N F'] = (metric_data[exp_level_2] - metric_data[exp_level_1]) / (
+        metric_data[exp_level_2] + metric_data[exp_level_1])
+    exp_level_2 = 'Novel +'
+    metric_data['N+ F'] = (metric_data[exp_level_2] - metric_data[exp_level_1]) / (
+        metric_data[exp_level_2] + metric_data[exp_level_1])
+
+    exp_level_2 = 'Novel'
+    metric_data[exp_level_2 + ' % of ' + exp_level_1] = (metric_data[exp_level_2]) / (metric_data[exp_level_1])
+    exp_level_2 = 'Novel +'
+    metric_data[exp_level_2 + ' % of ' + exp_level_1] = (metric_data[exp_level_2]) / (metric_data[exp_level_1])
+
+    # Novel vs Novel +
+    exp_level_1 = 'Novel +'
+
+    exp_level_2 = 'Novel'
+    metric_data['N N+'] = (metric_data[exp_level_2] - metric_data[exp_level_1]) / (
+        metric_data[exp_level_2] + metric_data[exp_level_1])
+
+    exp_level_2 = 'Novel'
+    metric_data[exp_level_2 + ' % of ' + exp_level_1] = (metric_data[exp_level_2]) / (metric_data[exp_level_1])
+
+    # add cell type
+    metric_data = metric_data.merge(cells_table[['cell_specimen_id', 'ophys_experiment_id', 'cell_type', 'layer',
+                                                 'binned_depth', 'targeted_structure', 'project_code']], on='cell_specimen_id')
+
+    return metric_data
 if __name__ == '__main__':
 
     # set params

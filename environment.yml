@@ -60,7 +60,7 @@ dependencies:
 - qt=4.8.7=4
 - readline=6.2=2
 - scikit-learn=0.18.1=np111py27_0
-- scipy=0.18.1=np111py27_0
+- scipy<=1.4.1
 - seaborn=0.7.1=py27_0
 - setuptools=33.1.0=py27_0
 - simplegeneric=0.8.1=py27_1

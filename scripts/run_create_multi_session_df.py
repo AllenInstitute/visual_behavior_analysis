@@ -1,4 +1,5 @@
 import os
+import numpy as np
 from simple_slurm import Slurm
 
 import visual_behavior.data_access.loading as loading
@@ -8,13 +9,13 @@ from allensdk.brain_observatory.behavior.behavior_project_cache import VisualBeh
 python_file = r"/home/marinag/visual_behavior_analysis/scripts/create_multi_session_df.py"
 
 # conda environment to use
-conda_environment = 'visual_behavior_sdk'
+conda_environment = 'visual_behavior_sdk_new'
 
 # build the python path
-# this assumes that the environments are saved in the user's home directory in a folder called 'anaconda2'
+# this assumes that the environments are saved in the user's home directory in a folder called 'anaconda3'
 python_path = os.path.join(
     os.path.expanduser("~"),
-    'anaconda2',
+    'anaconda3',
     'envs',
     conda_environment,
     'bin',
@@ -29,10 +30,13 @@ cache = bpc.from_s3_cache(cache_dir=cache_dir)
 print(cache_dir)
 
 experiments_table = cache.get_ophys_experiment_table()
-# experiments_table = experiments_table[(experiments_table.session_number==4)&(experiments_table.project_code=='VisualBehaviorMultiscope')]
+experiments_table = experiments_table[(experiments_table.reporter_line != 'Ai94(TITL-GCaMP6s)')]
+# experiments_table = experiments_table[experiments_table.project_code=='VisualBehavior']
+project_codes = np.sort(experiments_table.project_code.unique())
+print(project_codes)
 
 # call the `sbatch` command to run the jobs.
-for project_code in experiments_table.project_code.unique():
+for project_code in project_codes:
     print(project_code)
     for session_number in experiments_table.session_number.unique():
 

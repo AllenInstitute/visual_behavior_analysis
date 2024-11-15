@@ -1302,13 +1302,13 @@ def add_first_last_day_of_stage_to_behavior_sessions(behavior_sessions):
     behavior_sessions['first_day_of_stage'] = False
     stage_start = behavior_sessions.sort_values(by=['mouse_id', 'date_of_acquisition'])
     stage_start = stage_start.drop_duplicates(subset=['mouse_id', 'training_stage'])
-    behavior_sessions.at[stage_start.index.values, 'first_day_of_stage'] = True
+    behavior_sessions.loc[stage_start.index.values, 'first_day_of_stage'] = True
 
     # add last day of stage based on acquisition date
     behavior_sessions['last_day_of_stage'] = False
     stage_end = behavior_sessions.sort_values(by=['mouse_id', 'date_of_acquisition'], ascending=False)
     stage_end = stage_end.drop_duplicates(subset=['mouse_id', 'training_stage'])
-    behavior_sessions.at[stage_end.index.values, 'last_day_of_stage'] = True
+    behavior_sessions.loc[stage_end.index.values, 'last_day_of_stage'] = True
 
     return behavior_sessions
 
@@ -1327,13 +1327,13 @@ def add_first_last_day_of_stimulus_to_behavior_sessions(behavior_sessions):
     behavior_sessions['first_day_of_stimulus'] = False
     stage_start = behavior_sessions.sort_values(by=['mouse_id', 'date_of_acquisition'])
     stage_start = stage_start.drop_duplicates(subset=['mouse_id', 'stimulus'])
-    behavior_sessions.at[stage_start.index.values, 'first_day_of_stimulus'] = True
+    behavior_sessions.loc[stage_start.index.values, 'first_day_of_stimulus'] = True
 
     # add last day of stage based on acquisition date
     behavior_sessions['first_day_of_stimulus'] = False
     stage_end = behavior_sessions.sort_values(by=['mouse_id', 'date_of_acquisition'], ascending=False)
     stage_end = stage_end.drop_duplicates(subset=['mouse_id', 'stimulus'])
-    behavior_sessions.at[stage_end.index.values, 'last_day_of_stimulus'] = True
+    behavior_sessions.loc[stage_end.index.values, 'last_day_of_stimulus'] = True
 
     return behavior_sessions
 
@@ -1363,7 +1363,7 @@ def add_stimulus_to_table(df):
             stimulus = session_type_split[2] + '_' + session_type_split[3]
         else:
             stimulus = 'unknown'
-        df.at[row, 'stimulus'] = stimulus
+        df.loc[row, 'stimulus'] = stimulus
     return df
 
 
@@ -1378,7 +1378,7 @@ def add_has_ophys_column_to_behavior_sessions(behavior_sessions):
     """
     behavior_sessions['has_ophys'] = True
     indices = behavior_sessions[behavior_sessions.ophys_experiment_id.isnull()].index.values
-    behavior_sessions.at[indices, 'has_ophys'] = False
+    behavior_sessions.loc[indices, 'has_ophys'] = False
     return behavior_sessions
 
 
@@ -1408,6 +1408,91 @@ def add_stimulus_phase_to_behavior_sessions(behavior_sessions):
     return behavior_sessions
 
 
+def add_behavior_stage_to_behavior_sessions(behavior_sessions):
+    """
+    creates a column 'behavior_stage' based on session type and other metadata, values of which are:
+       ['gratings_static_training', 'gratings_flashed_training',
+       'familiar_images_training', 'familiar_images_ophys',
+       'familiar_images_ophys_passive', 'novel_images_ophys',
+       'novel_images_ophys_passive']
+    """
+    # get rid of sessions with no experience level
+    if len(behavior_sessions[behavior_sessions.experience_level.isnull()]) > 0:
+        bsid = behavior_sessions[behavior_sessions.experience_level == 'None'].index.values[0]
+        behavior_sessions = behavior_sessions.drop(index=bsid)
+    # create new behavior stage label
+    behavior_sessions['phase'] = ['training' if 'TRAINING' in session_type else 'ophys' for session_type in
+                                  behavior_sessions.session_type.values]
+    behavior_sessions['stimulus_type'] = ['gratings' if 'gratings' in session_type else 'images' for session_type in
+                                          behavior_sessions.session_type.values]
+    behavior_sessions['exp_level'] = [exp_level.split(' ')[0].lower()+'_' if 'Training' not in exp_level else 'familiar_' for exp_level in
+                                      behavior_sessions.experience_level.values]
+    behavior_sessions['exp_level'] = [behavior_sessions.iloc[row].exp_level + 'images' if 'gratings' not in behavior_sessions.iloc[row].session_type
+                                      else 'gratings' for row in range(len(behavior_sessions))]
+    # add static vs. flashed
+    for i, behavior_session in enumerate(behavior_sessions.index.values):
+        row = behavior_sessions.iloc[i]
+        if ('gratings' in row.session_type) and ('flashed' in row.session_type):
+            behavior_sessions.loc[behavior_session, 'exp_level'] = row.exp_level + '_flashed'
+        if ('gratings' in row.session_type) and ('flashed' not in row.session_type):
+            behavior_sessions.loc[behavior_session, 'exp_level'] = row.exp_level + '_static'
+    behavior_sessions['engagement'] = ['_passive' if 'passive' in session_type else '' for session_type in
+                                       behavior_sessions.session_type.values]
+
+    behavior_sessions['behavior_stage'] = None
+    for i, behavior_session in enumerate(behavior_sessions.index.values):
+        row = behavior_sessions.loc[behavior_session]
+        behavior_sessions.loc[behavior_session, 'behavior_stage'] = row.exp_level + '_' + row.phase + row.engagement
+
+    return behavior_sessions
+
+
+def add_ophys_stage_to_behavior_sessions(platform_experiments, behavior_sessions):
+    """
+    adds a column 'ophys_stage' that contains the image set for each session, whether or not it was a passive session,
+    and whether or not the session has ophys data that is included in platform paper ophys analysis.
+    habituation sessions are excluded
+    ex: 'images_A', 'images_A_passive', 'images_A_in_dataset'
+    """
+    # get behavior_session_ids that have ophys data in the paper
+    print(len(platform_experiments))
+    platform_behavior_sessions = platform_experiments.behavior_session_id.unique()
+
+    # make column indicating whether session is represented in the set of ophys experiments that are in the platform paper
+    behavior_sessions.loc[:, 'in_dataset'] = False
+    behavior_sessions.loc[platform_behavior_sessions, 'in_dataset'] = True
+
+    # make column with stimulus name appended with 'in_dataset' for the sessions with ophys data in the paper
+    behavior_sessions['ophys_stage'] = 'None'
+    for behavior_session_id in behavior_sessions.index.values:
+        row_data = behavior_sessions.loc[behavior_session_id]
+        if ('OPHYS' in row_data.session_type) and ('habituation' not in row_data.session_type):
+            if row_data.prior_exposures_to_image_set==0:
+                suffix = '_first_novel'
+            else:
+                suffix = ''
+            if row_data.passive:
+                suffix = suffix+'_passive'
+            else:
+                suffix = suffix+''
+            ophys_stage = row_data.stimulus_experience_level+suffix
+            if behavior_session_id in platform_behavior_sessions:
+                ophys_stage = ophys_stage+'_in_dataset'
+            behavior_sessions.loc[behavior_session_id, 'ophys_stage'] = ophys_stage
+    return behavior_sessions
+
+
+def add_stimulus_experience_level_to_behavior_sessions(behavior_sessions):
+    """
+    adds a column to behavior_sessions that a simplified version of the stimulus + experience level,
+    ex: 'gratings_flashed', 'gratings_static', 'familiar_images', 'novel_images',
+    'behavior_stage' column is needed for this and will be added if it does not exist
+    """
+    if 'behavior_stage' not in behavior_sessions.keys():
+        behavior_sessions = add_behavior_stage_to_behavior_sessions(behavior_sessions)
+    behavior_sessions['stimulus_experience_level'] = [stage.split('_')[0]+'_'+stage.split('_')[1] for stage in behavior_sessions.behavior_stage.values]
+    return behavior_sessions
+
 def add_experience_level_to_behavior_sessions(behavior_sessions):
     """
     adds a column to behavior_sessions table that contains a string indicating whether a session had
@@ -1421,7 +1506,7 @@ def add_experience_level_to_behavior_sessions(behavior_sessions):
     behavior_sessions['experience_level'] = 'None'
 
     # ophys sessions 1,2,3 = Familiar
-    indices = behavior_sessions[behavior_sessions.session_number.isin([1, 2, 3])].index.values
+    indices = behavior_sessions[behavior_sessions.session_number.isin([0, 1, 2, 3])].index.values
     behavior_sessions.loc[indices, 'experience_level'] = 'Familiar'
 
     # ophys session 4 with no prior exposures to image set = Novel
@@ -1675,8 +1760,10 @@ def dateformat(exp_date):
     """
     reformat date of acquisition for accurate sorting by date
     """
-    from datetime import datetime
-    date = int(datetime.strptime(exp_date, '%Y-%m-%d  %H:%M:%S.%f').strftime('%Y%m%d'))
+    # from datetime import datetime
+    # date = int(datetime.strptime(exp_date, '%Y-%m-%d  %H:%M:%S.%f').strftime('%Y%m%d'))
+    from dateutil import parser
+    date = parser.parse(str(exp_date)).strftime('%Y%m%d')
     return date
 
 
@@ -1710,6 +1797,9 @@ def get_n_relative_to_first_novel(group):
     group = group.sort_values(by='date')  # must sort for relative ordering to be accurate
     if 'Novel 1' in group.experience_level.values:
         novel_ind = np.where(group.experience_level == 'Novel 1')[0][0]
+        n_relative_to_first_novel = np.arange(-novel_ind, len(group) - novel_ind, 1)
+    elif 'Novel' in group.experience_level.values:
+        novel_ind = np.where(group.experience_level == 'Novel')[0][0]
         n_relative_to_first_novel = np.arange(-novel_ind, len(group) - novel_ind, 1)
     else:
         n_relative_to_first_novel = np.empty(len(group))
@@ -1791,7 +1881,10 @@ def add_second_novel_column(df):
     input df must have 'experience_level' and 'n_relative_to_first_novel'
     """
     df['second_novel'] = False
-    indices = df[(df.n_relative_to_first_novel == 1) & (df.experience_level == 'Novel >1')].index.values
+    if 'Novel >1' in df.experience_level.unique():
+        indices = df[(df.n_relative_to_first_novel == 1) & (df.experience_level == 'Novel >1')].index.values
+    elif 'Novel +' in df.experience_level.unique():
+        indices = df[(df.n_relative_to_first_novel == 1) & (df.experience_level == 'Novel +')].index.values
     df.loc[indices, 'second_novel'] = True
     return df
 
@@ -1837,7 +1930,10 @@ def limit_to_last_familiar_second_novel_active(df):
     Drops rows that are not the last familiar active session or the second novel active session
     """
     # drop novel sessions that arent the second active one
-    indices = df[(df.experience_level == 'Novel >1') & (df.second_novel_active == False)].index.values
+    if 'Novel >1' in df.experience_level.unique():
+        indices = df[(df.experience_level == 'Novel >1') & (df.second_novel_active == False)].index.values
+    elif 'Novel +' in df.experience_level.unique():
+        indices = df[(df.experience_level == 'Novel +') & (df.second_novel_active == False)].index.values
     df = df.drop(labels=indices, axis=0)
 
     # drop Familiar sessions that arent the last active one
@@ -1852,7 +1948,11 @@ def limit_to_last_familiar_second_novel(df):
     Drops rows that are not the last familiar session or the second novel session, regardless of active or passive
     """
     # drop novel sessions that arent the second active one
-    indices = df[(df.experience_level == 'Novel >1') & (df.second_novel == False)].index.values
+    if 'Novel >1' in df.experience_level.unique():
+        indices = df[(df.experience_level == 'Novel >1') & (df.second_novel == False)].index.values
+    elif 'Novel +' in df.experience_level.unique():
+        indices = df[(df.experience_level == 'Novel +') & (df.second_novel == False)].index.values
+
     df = df.drop(labels=indices, axis=0)
 
     # drop Familiar sessions that arent the last active one
@@ -1868,7 +1968,10 @@ def limit_to_second_novel_exposure(df):
     input df must have columns 'experience_level' and 'prior_exposures_to_image_set'
     """
     # drop novel >1 sessions that arent the second exposure (prior exposures = 1)
-    indices = df[(df.experience_level == 'Novel >1') & (df.prior_exposures_to_image_set != 1)].index.values
+    if 'Novel >1' in df.experience_level.unique():
+        indices = df[(df.experience_level == 'Novel >1') & (df.prior_exposures_to_image_set != 1)].index.values
+    elif 'Novel +' in df.experience_level.unique():
+        indices = df[(df.experience_level == 'Novel +') & (df.prior_exposures_to_image_set != 1)].index.values
     df = df.drop(labels=indices, axis=0)
     return df
 
@@ -1922,7 +2025,7 @@ def value_counts(df, conditions=['cell_type', 'experience_level', 'mouse_id']):
     return counts
 
 
-def count_mice_expts_containers_cells(df, conditions_to_group=['cell_type', 'experience_level']):
+def count_mice_expts_containers_cells(df, conditions_to_group=['cell_type', 'experience_level'], include_matched_cells=True):
     """
     count the number of mice, sessions, experiments, containers, and cells in input dataframe
     input dataframe is typically ophys_cells_table merged with ophys_experiment_table
@@ -1936,16 +2039,23 @@ def count_mice_expts_containers_cells(df, conditions_to_group=['cell_type', 'exp
     containers = value_counts(df, conditions=conditions_to_group + ['ophys_container_id'])
     cells = value_counts(df, conditions=conditions_to_group + ['cell_specimen_id'])
 
-    matched_cells = limit_to_last_familiar_second_novel_active(df)
-    matched_cells = limit_to_cell_specimen_ids_matched_in_all_experience_levels(matched_cells)
-    matched_cells = value_counts(matched_cells, conditions=conditions_to_group + ['cell_specimen_id'])
-    matched_cells = matched_cells.rename(columns={'n_cell_specimen_id': 'n_matched_cells'})
+    if include_matched_cells:
+        try:
+            matched_cells = limit_to_last_familiar_second_novel_active(df)
+            matched_cells = limit_to_cell_specimen_ids_matched_in_all_experience_levels(matched_cells)
+            matched_cells = value_counts(matched_cells, conditions=conditions_to_group + ['cell_specimen_id'])
+            matched_cells = matched_cells.rename(columns={'n_cell_specimen_id': 'n_matched_cells'})
+        except Exception as e:
+            print(e)
+            include_matched_cells = False
+            print('could not compute matched cells because input dataframe was not limited to platform paper experiments')
 
     counts = mice.merge(sessions, on=conditions_to_group)
     counts = counts.merge(experiments, on=conditions_to_group)
     counts = counts.merge(containers, on=conditions_to_group)
     counts = counts.merge(cells, on=conditions_to_group)
-    counts = counts.merge(matched_cells, on=conditions_to_group)
+    if include_matched_cells:
+        counts = counts.merge(matched_cells, on=conditions_to_group)
     return counts
 
 
@@ -1971,8 +2081,23 @@ def annotate_epoch_df(epoch_df):
     # add experience epoch column
     def merge_experience_epoch(row):
         epoch_num = str(int(row.epoch + 1))  # index at 1 not 0
-        if len(epoch_num) == 1:
-            epoch_num = '0' + str(epoch_num)
+        # if len(epoch_num) == 1:
+        #     epoch_num = '0' + str(epoch_num)
+        return row.experience_level + ' epoch ' + epoch_num
+
+    epoch_df['experience_epoch'] = epoch_df[['experience_level', 'epoch']].apply(axis=1, func=merge_experience_epoch)
+
+    return epoch_df
+def annotate_epoch_df(epoch_df):
+    """
+    adds 'experience_epoch' column which is a conjunction of experience level and epoch #
+    """
+
+    # add experience epoch column
+    def merge_experience_epoch(row):
+        epoch_num = str(int(row.epoch + 1))  # index at 1 not 0
+        # if len(epoch_num) == 1:
+        #     epoch_num = '0' + str(epoch_num)
         return row.experience_level + ' epoch ' + epoch_num
 
     epoch_df['experience_epoch'] = epoch_df[['experience_level', 'epoch']].apply(axis=1, func=merge_experience_epoch)

@@ -222,7 +222,7 @@ class ResponseAnalysis(object):
                 # merge in the extended stimulus presentations df on the change_time/start_time columns
                 stimulus_presentations = self.dataset.extended_stimulus_presentations.copy()
                 stimulus_presentations['trials_id'] = None
-                stimulus_presentations.at[stimulus_presentations[stimulus_presentations.is_change].index, 'trials_id'] = trials[trials.stimulus_change].index.values
+                stimulus_presentations.loc[stimulus_presentations[stimulus_presentations.is_change].index, 'trials_id'] = trials[trials.stimulus_change].index.values
                 columns_to_keep = [
                     'trials_id',
                     'epoch',

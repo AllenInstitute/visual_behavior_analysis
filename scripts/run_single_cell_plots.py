@@ -7,17 +7,16 @@ from visual_behavior.data_access import utilities as utilities
 from simple_slurm import Slurm
 
 parser = argparse.ArgumentParser(description='run cell plots generation functions on the cluster')
-parser.add_argument('--env', type=str, default='visual_behavior_sdk', metavar='name of conda environment to use')
+parser.add_argument('--env', type=str, default='visual_behavior_sdk_new', metavar='name of conda environment to use')
 parser.add_argument('--scriptname', type=str, default='create_single_cell_plots.py', metavar='name of script to run (must be in same folder)')
-
-
 
 container_ids = loading.get_ophys_container_ids(platform_paper_only=True, add_extra_columns=True)
 
 if __name__ == "__main__":
     args = parser.parse_args()
-    python_executable = "{}/anaconda2/envs/{}/bin/python".format(os.path.expanduser('~'), args.env)
-    python_file = os.path.join(os.getcwd(), args.scriptname)
+    python_executable = "{}/anaconda3/envs/{}/bin/python".format(os.path.expanduser('~'), args.env)
+    python_file = r"/home/marinag/visual_behavior_analysis/scripts/create_single_cell_plots.py"
+    # python_file = os.path.join(os.getcwd(), args.scriptname)
 
     # define the job record output folder
     stdout_location = r"/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/cluster_jobs/paper_figures"
