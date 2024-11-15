@@ -1985,6 +1985,7 @@ def get_cluster_proportion_stats_for_locations(cluster_meta, location='layer'):
                                                       how='left')
     n_cells_table['fraction_cells_location'] = n_cells_table['n_cells_location'] / n_cells_table[
         'n_cells_location_total']
+    n_cells_table['percent_cells_location'] = n_cells_table['fraction_cells_location'] * 100
 
     # get number of cells per cluster per cre line
     n_cells_per_cluster = cluster_meta.reset_index().groupby(['cre_line', 'cluster_id']).count()[['cell_specimen_id']]
@@ -2228,8 +2229,8 @@ def get_coding_metrics_for_condition(index_dropouts, index_value, index_name):
     # if we wanted consider either novel session, could use novel_dropout = np.amax([row['Novel 1'], row['Novel >1']])
     exp_mod_direction = (row['Novel'] - row['Familiar']) / (row['Novel'] + row['Familiar'])
     # persistence of exp mod is whether coding stays similar after repetition of novel session
-#     exp_mod_persistence = (row['Novel >1']-row['Novel 1'])/(row['Novel >1']+row['Novel 1'])
-    exp_mod_persistence = row['Novel +'] / row['Novel']  # make it an index
+    exp_mod_persistence = (row['Novel +']-row['Novel'])/(row['Novel +']+row['Novel'])
+    # exp_mod_persistence = row['Novel +'] / row['Novel']  # make it an index
     stats.loc[index_value, 'exp_mod_direction'] = exp_mod_direction
     stats.loc[index_value, 'exp_mod_persistence'] = exp_mod_persistence
     # within session joint coding index
@@ -2275,13 +2276,17 @@ def get_coding_score_metrics_for_clusters(cluster_meta, results_pivoted):
     """
     Computes metrics on dropout scores for each matched cell, including experience level and feature selectivity
     """
-    results_pivoted = results_pivoted.merge(cluster_meta[['cluster_id']], on='cell_specimen_id')
+    if 'cluster_id' not in results_pivoted.columns:
+        results_pivoted = results_pivoted.merge(cluster_meta[['cluster_id']], on='cell_specimen_id')
     cluster_metrics = pd.DataFrame()
     for i, cluster_id in enumerate(results_pivoted.cluster_id.unique()):
         cluster_dropouts = results_pivoted[results_pivoted.cluster_id == cluster_id].groupby('experience_level').mean()[get_features_for_clustering()]
         stats = get_coding_metrics_for_condition(index_dropouts=cluster_dropouts, index_value=cluster_id, index_name='cluster_id')
         cluster_metrics = pd.concat([cluster_metrics, stats], sort=False)
     # cluster_metrics = cluster_metrics.merge(cluster_meta, on='cluster_id')
+    # reclassify cluster 6 as task coding
+    cluster_metrics.loc[6, 'dominant_feature'] = 'task'
+
     return cluster_metrics
 
 def generate_coding_score_metrics_table(cluster_meta, results_pivoted, save_dir=None):
@@ -2846,6 +2851,10 @@ def generate_merged_table_of_coding_score_and_model_free_metrics(cluster_meta, r
         if save_dir is not None:
             metrics.to_csv(merged_metrics_table_filepath)
             print('merged metrics table saved')
+
+    # reclassify cluster 6 as task coding
+    indices = metrics[metrics.cluster_id == 6].index.values
+    metrics.loc[indices, 'dominant_feature_cluster'] = 'task'
 
     return metrics
 
