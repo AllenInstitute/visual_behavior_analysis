@@ -87,10 +87,34 @@ def plot_population_averages_for_conditions(multi_session_df, data_type, event_t
                                             title=None, suptitle=None, xlabel='Time (s)', ylabel='Response',
                                             horizontal=True, xlim_seconds=None, interval_sec=1, legend=True,
                                             save_dir=None, folder=None, suffix='', ax=None):
+    '''
+    Function to plot a population average response across multiple conditions from a dataframe containing event aligned timeseries,
+    where axes_column defines the axes conditions and hue_column defines the colors of traces within each axes condition.
+    axes_column and hue_column must be columns of the multi_session_df.
+    multi_session_df must contain a column for 'mean_trace' and rows should be individual cells' average responses to a specific condition.
+    also works for behavior timeseries, in which case rows are averages across an experiment or subset of an experiment rather than individual cells.
+
+    event_type is one of ['changes', 'omissions', 'images']
+    this determines how stimuli will be plotted overlaid with the trace - changes in blue, omissions with dotted line, repeated images in gray
+
+    data_type is one of ['dff', 'events', 'filtered_events', 'running_speed', 'pupil_width', 'lick_rate']
+
+    interval_sec determines the interval of the xtick labels (ex: ticks every 1 second or 0.5 seconds)
+    xlim_seconds is the range of x-axis, which must be the same or shorter than the range of the data in the 'mean_response' column of the multi_session_df.
+    timestamps can be provided, or inferred from the 'trace_timestamps' column of the multi_session_df.
+
+    event aligned timeseries can be computed using brain_observatory_utilities function 'get_stimulus_response_df' here:
+    https://github.com/AllenInstitute/brain_observatory_utilities/blob/main/brain_observatory_utilities/datasets/optical_physiology/data_formatting.py#L441
+    Followed by a groupby and mean on the conditions of interest.
+
+    '''
+
     if palette is None:
         palette = utils.get_experience_level_colors()
 
     sdf = multi_session_df.copy()
+
+    # get timestamps
     if 'trace_timestamps' in sdf.keys():
         timestamps = sdf.trace_timestamps.values[0]
     elif timestamps is not None:
@@ -98,6 +122,7 @@ def plot_population_averages_for_conditions(multi_session_df, data_type, event_t
     else:
         print('provide timestamps or provide a multi_session_df with a trace_timestamps column')
 
+    # set formatting options
     if xlim_seconds is None:
         xlim_seconds = [timestamps[0], timestamps[-1]]
     if event_type == 'omissions':
@@ -110,14 +135,10 @@ def plot_population_averages_for_conditions(multi_session_df, data_type, event_t
         omitted = False
         change = False
 
-    if hue_column == 'experience_level':
-        hue_conditions = np.sort(sdf[hue_column].unique())
-    else:
-        hue_conditions = np.sort(sdf[hue_column].unique())
-    if axes_column == 'experience_level':
-        axes_conditions = np.sort(sdf[axes_column].unique())
-    else:
-        axes_conditions = np.sort(sdf[axes_column].unique())
+    # get conditions to plot
+    hue_conditions = np.sort(sdf[hue_column].unique())
+    axes_conditions = np.sort(sdf[axes_column].unique())
+
     # if there is only one axis condition, set n conditions for plotting to 2 so it can still iterate
     if len(axes_conditions) == 1:
         n_axes_conditions = 2
@@ -126,18 +147,18 @@ def plot_population_averages_for_conditions(multi_session_df, data_type, event_t
         n_axes_conditions = len(axes_conditions)
 
     # set plot size depending on what type of data it is
-    if data_type in ['running_speed', 'pupil_width', 'lick_rate']:
-        if horizontal:
-            figsize = (6 * n_axes_conditions, 3) # for behavior timeseries
-        else:
-            figsize = (2.5, 3 * n_axes_conditions) # for image response
-    else:
+    if data_type in ['dff', 'events', 'filtered_events']:
         if horizontal:
             figsize = (4 * n_axes_conditions, 2.5)
         else:
             figsize = (3, 3 * n_axes_conditions)  # for changes and omissions
+    elif data_type in ['running_speed', 'pupil_width', 'lick_rate']:
+        if horizontal:
+            figsize = (6 * n_axes_conditions, 3)  # for behavior timeseries
+        else:
+            figsize = (2.5, 3 * n_axes_conditions)  # for image response
 
-
+    # create axes
     if ax is None:
         format_fig = True
         if horizontal:
@@ -147,28 +168,26 @@ def plot_population_averages_for_conditions(multi_session_df, data_type, event_t
             fig, ax = plt.subplots(n_axes_conditions, 1, figsize=figsize, sharex=sharey)
     else:
         format_fig = False
+
+    # loop over conditions and plot
     for i, axis in enumerate(axes_conditions):
         for c, hue in enumerate(hue_conditions):
             # try:
             cdf = sdf[(sdf[axes_column] == axis) & (sdf[hue_column] == hue)]
             traces = cdf.mean_trace.values
-
+            # plot average of all traces for this condition
             ax[i] = utils.plot_mean_trace(np.asarray(traces), timestamps, ylabel=ylabel,
                                           legend_label=hue, color=palette[c], interval_sec=interval_sec,
                                           xlim_seconds=xlim_seconds, ax=ax[i])
+            # plot stimulus timing overlaid on trace
             ax[i] = utils.plot_flashes_on_trace(ax[i], timestamps, change=change, omitted=omitted)
-            if omitted:
-                omission_color = sns.color_palette()[9]
-                ax[i].axvline(x=0, ymin=0, ymax=1, linestyle='--', color=omission_color)
-            if title == 'metadata':
-                metadata_string = utils.get_container_metadata_string(utils.get_metadata_for_row_of_multi_session_df(cdf))
-                ax[i].set_title(metadata_string)
+
+            # color title by experience level if axes are experience levels
+            if axes_column == 'experience_level':
+                title_colors = utils.get_experience_level_colors()
+                ax[i].set_title(axis, color=title_colors[i], fontsize=20)
             else:
-                if axes_column == 'experience_level':
-                    title_colors = utils.get_experience_level_colors()
-                    ax[i].set_title(axis, color=title_colors[i], fontsize=20)
-                else:
-                    ax[i].set_title(axis)
+                ax[i].set_title(axis)
             if title:
                 ax[i].set_title(title)
             ax[i].set_xlim(xlim_seconds)
@@ -176,7 +195,7 @@ def plot_population_averages_for_conditions(multi_session_df, data_type, event_t
             ax[i].set_ylabel('')
             ax[i].set_xlabel('')
             ax[i].tick_params(axis='both', which='major', labelsize=14)
-
+    # formatting
     if format_fig:
         if horizontal:
             ax[0].set_ylabel(ylabel)
@@ -189,7 +208,6 @@ def plot_population_averages_for_conditions(multi_session_df, data_type, event_t
             ax[i].set_xlabel(xlabel)
     if legend:
         ax[i].legend(loc='upper center', fontsize='x-small', bbox_to_anchor=(1.5,1))
-
     if project_code:
         if suptitle is None:
             suptitle = 'population average - ' + data_type + ' response - ' + project_code[14:]

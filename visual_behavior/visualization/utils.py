@@ -608,6 +608,7 @@ def add_stim_color_span(dataset, ax, xlim=None, color=None, label_changes=True, 
 def plot_flashes_on_trace(ax, timestamps, change=None, omitted=False, alpha=0.075, facecolor='gray', linewidth=1.5):
     """
     plot stimulus flash durations on the given axis according to the provided timestamps
+    will show repeated images in gray, image changes in blue, and image omissions with a dotted line
     """
     stim_duration = 0.2502
     blank_duration = 0.5004
@@ -646,6 +647,10 @@ def plot_flashes_on_trace(ax, timestamps, change=None, omitted=False, alpha=0.07
 
 def plot_mean_trace(traces, timestamps, ylabel='dF/F', legend_label=None, color='k',
                     interval_sec=1, xlim_seconds=[-2, 2], linewidth=2, plot_sem=True, ax=None):
+    '''
+    compute average and SEM of traces array and plot it on the specified axis
+    produces x-axis timestamps based on the xlim_seconds range provided, incremented by the value of interval_sec
+    '''
     if ax is None:
         fig, ax = plt.subplots()
     if len(traces) > 0:
@@ -710,6 +715,152 @@ def plot_stimulus_response_df_trace(stimulus_response_df, time_window=[-1, 1], c
 
     if title:
         ax.set_title(title)
+
+    return ax
+
+
+def plot_population_averages_for_conditions(multi_session_df, data_type, event_type, axes_column, hue_column,
+                                            project_code=None, timestamps=None, palette=None, sharey=False,
+                                            title=None, suptitle=None, xlabel='Time (s)', ylabel='Response',
+                                            horizontal=True, xlim_seconds=None, interval_sec=1, legend=True,
+                                            save_dir=None, folder=None, suffix='', ax=None):
+    '''
+    Function to plot a population average response across multiple conditions from a dataframe containing event aligned timeseries,
+    where axes_column defines the axes conditions and hue_column defines the colors of traces within each axes condition.
+    axes_column and hue_column must be columns of the multi_session_df.
+    multi_session_df must contain a column for 'mean_trace' and rows should be individual cells' average responses to a specific condition.
+    also works for behavior timeseries, in which case rows are averages across an experiment or subset of an experiment rather than individual cells.
+
+    event_type is one of ['changes', 'omissions', 'images']
+    this determines how stimuli will be plotted overlaid with the trace - changes in blue, omissions with dotted line, repeated images in gray
+
+    data_type is one of ['dff', 'events', 'filtered_events', 'running_speed', 'pupil_width', 'lick_rate']
+
+    interval_sec determines the interval of the xtick labels (ex: ticks every 1 second or 0.5 seconds)
+    xlim_seconds is the range of x-axis, which must be the same or shorter than the range of the data in the 'mean_response' column of the multi_session_df.
+    timestamps can be provided, or inferred from the 'trace_timestamps' column of the multi_session_df.
+
+    event aligned timeseries can be computed using brain_observatory_utilities function 'get_stimulus_response_df' here:
+    https://github.com/AllenInstitute/brain_observatory_utilities/blob/main/brain_observatory_utilities/datasets/optical_physiology/data_formatting.py#L441
+    Followed by a groupby and mean on the conditions of interest.
+
+    '''
+
+    if palette is None:
+        palette = get_experience_level_colors()
+
+    sdf = multi_session_df.copy()
+
+    # get timestamps
+    if 'trace_timestamps' in sdf.keys():
+        timestamps = sdf.trace_timestamps.values[0]
+    elif timestamps is not None:
+        timestamps = timestamps
+    else:
+        print('provide timestamps or provide a multi_session_df with a trace_timestamps column')
+
+    # set formatting options
+    if xlim_seconds is None:
+        xlim_seconds = [timestamps[0], timestamps[-1]]
+    if event_type == 'omissions':
+        omitted = True
+        change = False
+    elif event_type == 'changes':
+        omitted = False
+        change = True
+    else:
+        omitted = False
+        change = False
+
+    # get conditions to plot
+    hue_conditions = np.sort(sdf[hue_column].unique())
+    axes_conditions = np.sort(sdf[axes_column].unique())
+
+    # if there is only one axis condition, set n conditions for plotting to 2 so it can still iterate
+    if len(axes_conditions) == 1:
+        n_axes_conditions = 2
+        ax_to_xlabel = 1
+    else:
+        n_axes_conditions = len(axes_conditions)
+
+    # set plot size depending on what type of data it is
+    if data_type in ['dff', 'events', 'filtered_events']:
+        if horizontal:
+            figsize = (4 * n_axes_conditions, 2.5)
+        else:
+            figsize = (3, 3 * n_axes_conditions)  # for changes and omissions
+    elif data_type in ['running_speed', 'pupil_width', 'lick_rate']:
+        if horizontal:
+            figsize = (6 * n_axes_conditions, 3)  # for behavior timeseries
+        else:
+            figsize = (2.5, 3 * n_axes_conditions)  # for image response
+
+    # create axes
+    if ax is None:
+        format_fig = True
+        if horizontal:
+            suffix = suffix+'_horiz'
+            fig, ax = plt.subplots(1, n_axes_conditions, figsize=figsize, sharey=sharey)
+        else:
+            fig, ax = plt.subplots(n_axes_conditions, 1, figsize=figsize, sharex=sharey)
+    else:
+        format_fig = False
+
+    # loop over conditions and plot
+    for i, axis in enumerate(axes_conditions):
+        for c, hue in enumerate(hue_conditions):
+            # try:
+            cdf = sdf[(sdf[axes_column] == axis) & (sdf[hue_column] == hue)]
+            traces = cdf.mean_trace.values
+            # plot average of all traces for this condition
+            ax[i] = plot_mean_trace(np.asarray(traces), timestamps, ylabel=ylabel,
+                                          legend_label=hue, color=palette[c], interval_sec=interval_sec,
+                                          xlim_seconds=xlim_seconds, ax=ax[i])
+            # plot stimulus timing overlaid on trace
+            ax[i] = plot_flashes_on_trace(ax[i], timestamps, change=change, omitted=omitted)
+
+            # color title by experience level if axes are experience levels
+            if axes_column == 'experience_level':
+                title_colors = get_experience_level_colors()
+                ax[i].set_title(axis, color=title_colors[i], fontsize=20)
+            else:
+                ax[i].set_title(axis)
+            if title:
+                ax[i].set_title(title)
+            ax[i].set_xlim(xlim_seconds)
+            ax[i].set_xlabel(xlabel, fontsize=16)
+            ax[i].set_ylabel('')
+            ax[i].set_xlabel('')
+            ax[i].tick_params(axis='both', which='major', labelsize=14)
+    # formatting
+    if format_fig:
+        if horizontal:
+            ax[0].set_ylabel(ylabel)
+            if n_axes_conditions == 3:
+                ax[1].set_xlabel(xlabel)
+            else:
+                ax[0].set_xlabel(xlabel)
+        else:
+            ax[1].set_ylabel(ylabel)
+            ax[i].set_xlabel(xlabel)
+    if legend:
+        ax[i].legend(loc='upper center', fontsize='x-small', bbox_to_anchor=(1.5,1))
+    if project_code:
+        if suptitle is None:
+            suptitle = 'population average - ' + data_type + ' response - ' + project_code[14:]
+    if suptitle:
+        if horizontal:
+            y = 1.1
+        else:
+            y = 0.97
+        plt.suptitle(suptitle, x=0.51, y=y, fontsize=18)
+
+    plt.rcParams["savefig.bbox"] = "tight"
+    if save_dir:
+        plt.rcParams["savefig.bbox"] = "tight"
+        fig.subplots_adjust(hspace=0.4, wspace=0.3)
+        fig_title = 'population_average_' + axes_column + '_' + hue_column + suffix
+        save_figure(fig, figsize, save_dir, folder, fig_title)
 
     return ax
 
@@ -795,8 +946,14 @@ def get_start_end_time_for_period_with_omissions_and_change(stimulus_presentatio
 
 
 def get_start_end_time_for_period_with_event(stimulus_presentations, event_type='is_change',
-                                             n_before=4, n_after=8, event_ind_to_choose=10):
+                                             n_before=4, n_after=8, event_ind_to_choose=10,
+                                             two_in_window=False):
     '''
+
+    Get start and end times around a given event based on the requested number of image flashes before and after the event
+    if 'two_in_window' is True, function will check whether there are two events within the window,
+    if there are, the start and end times will be returned, if there are not two events in the window,
+    the returned start and end times will be None
 
     Parameters
     ----------
@@ -812,10 +969,23 @@ def get_start_end_time_for_period_with_event(stimulus_presentations, event_type=
 
     st = stimulus_presentations.copy()
     index = st[st[event_type] == True].index.values[event_ind_to_choose]
+    event_time = st.loc[index].start_time
     start_time = st.loc[index - n_before].start_time
     start_time = np.round(start_time, 1)
-    end_time = start_time + (0.75 * (n_after+n_before))
-    return [start_time, end_time]
+    end_time = start_time + (0.75 * (n_after))
+    if two_in_window:
+        # find time of next change
+        ind = st[st['is_change'] == True].index.values[event_ind_to_choose + 1]
+        next_start = st.loc[ind].start_time
+        # check if next event is in the window defined by n_after flashes
+        if (next_start+(0.75*4) - event_time) < (end_time - event_time):
+            print('found two changes, event_index:', event_ind_to_choose)
+            window = [start_time, end_time]
+        else:
+            window = None
+    else:
+        window = [start_time, end_time]
+    return window
 
 
 def get_experiments_matched_across_project_codes(df):
