@@ -24,7 +24,270 @@ sns.set_palette('deep')
 plt.rcParams['xtick.bottom'] = True
 plt.rcParams['ytick.left'] = True
 
+# plot data for a given session
+
+def plot_max_intensity_projection(dataset, ax=None):
+    if ax is None:
+        fig, ax = plt.subplots()
+    max_projection = dataset.max_projection.data
+    ax.imshow(max_projection, cmap='gray', vmax=np.percentile(max_projection, 99))
+    ax.axis('off')
+    return ax
+
+
+# ophys_container_ids = list(dataset_dict.keys())
+
+# ophys_container_id = ophys_container_ids[0]
+
+def plot_all_planes_all_sessions_for_mouse(dataset_dict, mouse_expts, session_id_for_area_depths=None,
+                                           save_dir=None, folder=None, ax=None):
+    '''
+    For a given mouse, plot all FOVs across all sessions in a grid. If an FOV for a particular container is missing, leave a blank axis
+    '''
+    # ophys_container_ids = list(dataset_dict.keys())
+    mouse_expts = mouse_expts.sort_values(by=['date_of_acquisition', 'targeted_structure', 'imaging_depth'])
+    mouse_id = mouse_expts.mouse_id.values[0]
+    ophys_container_ids = mouse_expts.ophys_container_id.unique()
+    ophys_session_ids = mouse_expts.ophys_session_id.unique()
+
+    if ax is None:
+        figsize = (8, 10)
+        fig, ax = plt.subplots(len(ophys_container_ids), len(ophys_session_ids), figsize=figsize)
+        ax = ax.ravel()
+
+    i = 0
+    for c, ophys_container_id in enumerate(ophys_container_ids):
+        container_data = mouse_expts[(mouse_expts.ophys_container_id == ophys_container_id)]
+        area = container_data.targeted_structure.values[0]
+        depth = int(container_data.imaging_depth.values[0])
+
+        for s, ophys_session_id in enumerate(ophys_session_ids):
+            # for s, session_type in enumerate(session_types):
+            # ophys_experiment_id = container_data[(container_data.session_type==session_type)].index.values[0]
+            try:
+                ophys_experiment_id = \
+                container_data[(container_data.ophys_session_id == ophys_session_id)].index.values[0]
+                session_type = \
+                container_data[(container_data.ophys_session_id == ophys_session_id)].session_type.values[0]
+
+                dataset = dataset_dict[ophys_container_id][ophys_experiment_id]
+                ax[i] = plot_max_intensity_projection(dataset, ax=ax[i])
+            except:
+                print('could not plot for experiment', ophys_experiment_id, session_type, area, depth)
+            if s == 0:
+                if session_id_for_area_depths:
+                    tmp = mouse_expts[(mouse_expts.ophys_session_id == session_id_for_area_depths) &
+                                      (mouse_expts.ophys_container_id == ophys_container_id)]
+                    area = tmp.targeted_structure.values[0]
+                    depth = int(tmp.imaging_depth.values[0])
+                ax[i].text(s=area + ' ' + str(depth), x=-20, y=dataset.max_projection.data.shape[0] / 2,
+                           ha='right', va='center', rotation=90, fontsize=8)
+            if c == 0:
+                ax[i].set_title(str(ophys_session_id) + '\n' + session_type, fontsize=6)
+            i += 1
+
+    plt.subplots_adjust(hspace=0.2, wspace=0.2)
+
+    if save_dir:
+        cre = dataset.metadata['cre_line'][:3]
+        utils.save_figure(fig, figsize, save_dir, folder, str(mouse_id) + '_' + cre + '_max_projection_images')
+
+
+def aggregate_traces_for_session(dataset_dict, session_metadata, trace_type='dff'):
+    '''
+    Loop through the fields of view in session_metadata, get traces for each, and combine into a single array
+
+    dataset_dict is a dictionary containing the SDK dataset object for each field of view
+        first key is ophys_container_id, second key is ophys_experiment_id
+    session_metadata is a subset of an ophys_experiment_table, limited to the experiments from the session of interest
+    trace_type is one of ['dff', 'events', 'filtered_events'] to plot
+
+    returns array of traces and the session_metadata for each FOV with the N cells and other useful info added
+    '''
+    ophys_container_ids = list(dataset_dict.keys())
+
+    # get data for one experiment to start the traces array
+    ophys_container_id = ophys_container_ids[0]
+    ophys_experiment_id = session_metadata[session_metadata.ophys_container_id == ophys_container_id].index.values[0]
+    ophys_session_id = session_metadata.ophys_session_id.values[0]
+    dataset = dataset_dict[ophys_container_id][ophys_experiment_id]
+    # loop through all FOVs for this session and aggregate the traces
+    # area_depth_info = []
+    for c, ophys_container_id in enumerate(ophys_container_ids):
+        ophys_experiment_id = session_metadata[session_metadata.ophys_container_id == ophys_container_id].index.values[
+            0]
+        dataset = dataset_dict[ophys_container_id][ophys_experiment_id]
+        # get traces
+        if trace_type == 'dff':
+            traces = dataset.dff_traces['dff'].values
+        elif trace_type == 'events':
+            traces = dataset.events['events'].values
+        elif trace_type == 'filtered_events':
+            traces = dataset.events['filtered_events'].values
+        # aggregate
+        if c == 0:
+            all_traces = np.vstack(traces)
+        else:
+            traces = np.vstack(traces)
+            all_traces = np.vstack((all_traces, traces))
+        # add useful info to FOV metadata
+        session_metadata.loc[ophys_experiment_id, 'n_cells'] = int(traces.shape[0])
+        session_metadata.loc[ophys_experiment_id, 'ophys_frame_rate'] = dataset.metadata['ophys_frame_rate']
+        session_metadata.loc[ophys_experiment_id, 'trace_type'] = trace_type
+        session_metadata.loc[ophys_experiment_id, 'container_order'] = c
+    session_metadata = session_metadata.sort_values(by=['targeted_structure', 'imaging_depth'])
+
+    return all_traces, session_metadata
+
+
+def plot_all_traces_heatmap(all_traces, session_metadata, timestamps=None, cmap='gray_r', save_dir=None, ax=None):
+    '''
+    Plot heatmap for all traces across multiple fields of view in a session
+
+    all_traces is an array of all traces in the session stacked
+    session_metadata is a dataframe containing experiment metadata
+    in addition to the n_cells in each plane, and the order in which the FOV traces are stacked
+    these can be generated using the function aggregate_traces_for_session
+
+    '''
+    if timestamps is not None:
+        ophys_frame_rate = np.mean(1 / np.diff(timestamps))
+    else:
+        ophys_frame_rate = session_metadata.ophys_frame_rate.values[0]  # should be the same for all expts in a session
+
+    if ax is None:
+        figsize = (15, 5)
+        fig, ax = plt.subplots(figsize=figsize)
+    ax = sns.heatmap(all_traces, cmap=cmap, vmin=0, vmax=np.percentile(all_traces, 95),
+                     cbar_kws={'label': 'dF/F', 'pad': 0.1}, ax=ax)
+    ax.set_ylim(0, all_traces.shape[0])
+    ax.set_xlim(0, all_traces.shape[1])
+    xticks = np.arange(0, all_traces.shape[1], ophys_frame_rate * 60 * 5)  # 11Hz * 60s * 5 mins
+    ax.set_xticks(xticks)
+    len_mins = (all_traces.shape[1] / ophys_frame_rate) / 60
+    xticklabels = [int(t) for t in np.arange(0, len_mins, 5)]
+    ax.set_xticklabels(xticklabels)  # tick every 5 mins
+    ax.set_xlabel('Time in session (minutes)')
+
+    # put ticks on right side also and keep box around plot
+    ax.tick_params(which='both', bottom=True, top=False, right=True, left=True,
+                   labelbottom=True, labeltop=False, labelright=False, labelleft=False)
+    sns.despine(ax=ax, top=False, right=False, left=False, bottom=False, offset=False, trim=False)
+
+    # label area depths
+    # loop through FOVs
+    cell_count = 0
+    yticks = []
+    yticks.append(0)
+    for container_order in np.sort(session_metadata.container_order.unique()):
+        this_expt_info = session_metadata[session_metadata.container_order == container_order]
+        n_cells = this_expt_info.n_cells.values[0]
+        # get midpoint of this section for label
+        y = cell_count + (n_cells / 2)
+        s = this_expt_info.targeted_structure.values[0] + ' ' + str(this_expt_info.imaging_depth.values[0])
+        # print(s, n_cells)
+        # add label for area depth on left side of plot
+        x = -800
+        ax.text(s=s, x=x, y=y, rotation=0, ha='right', va='center', fontsize=16)
+        # get cell count for ticks
+        cell_count = cell_count + n_cells
+        yticks.append(cell_count)
+
+    # set yticks in increments of FOV
+    ax2 = ax.twinx()
+    ax.set_yticks(np.asarray(yticks))
+    ax2.set_yticks(np.asarray(yticks))
+    ax2.set_ylabel('Cells')
+    # flip so zero / VISp on top
+    ax.invert_yaxis()
+    ax2.invert_yaxis()
+
+    if save_dir:
+        ophys_session_id = session_metadata.ophys_session_id.values[0]
+        mouse_id = session_metadata.mouse_id.values[0]
+        cre = session_metadata.cre_line.values[0][:3]
+        trace_type = session_metadata.trace_type.values[0]
+        session_type = session_metadata.session_type.values[0]
+        filename = str(mouse_id) + '_' + str(
+            ophys_session_id) + '_' + session_type + '_' + cre + '_' + trace_type + '_' + cmap
+        fig.suptitle(filename, x=0.4, y=1.1, fontsize=16)
+        utils.save_figure(fig, figsize, save_dir, 'traces_heatmaps', filename)
+
+    return ax
+
+
+
 # basic characterization #########################
+
+def plot_cell_count_by_depth(cells_table, suptitle=None, save_dir=None, folder=None, ax=None):
+    colors = [sns.color_palette()[9], sns.color_palette()[0]]
+    if ax is None:
+        figsize = (12, 3)
+        fig, ax = plt.subplots(1, 3, figsize=figsize, sharey=True)
+    for i, cell_type in enumerate(utils.get_cell_types()):
+        ax[i] = sns.histplot(data=cells_table[cells_table.cell_type == cell_type], bins=10,
+                             hue='targeted_structure', y='imaging_depth', hue_order=['VISp', 'VISl'],
+                             palette=colors, multiple='stack', stat='count', ax=ax[i])
+        title = cell_type + '\n' + str(len(cells_table[cells_table.cell_type == cell_type])) + ' cells, ' + str(
+            len(cells_table[cells_table.cell_type == cell_type].mouse_id.unique())) + ' mice'
+        ax[i].set_title(title)
+        ax[i].invert_yaxis()
+        ax[i].get_legend().remove()
+        ax[i].set_ylim(400, 50)
+        ax[i].set_xlabel('Cell count')
+        ax[i].set_ylabel('')
+    ax[0].legend(['VISp', 'VISl'][::-1], fontsize='xx-small')
+    ax[0].set_ylabel('Imaging depth (um)')
+    plt.subplots_adjust(wspace=0.3)
+    plt.suptitle(suptitle, x=0.5, y=1.2)
+
+    if save_dir:
+        utils.save_figure(fig, figsize, save_dir, folder, 'cell_count_by_depth_areas_' + suptitle)
+    return ax
+
+
+def plot_n_cells_per_plane_by_depth(cells_table, suptitle=None, save_dir=None, folder=None, ax=None):
+
+    n_cells = cells_table.groupby(['cell_type', 'binned_depth', 'ophys_experiment_id']).count().rename(columns={'cell_specimen_id':'n_cells'}).reset_index()
+
+    if ax is None:
+        figsize = (12, 3)
+        fig, ax = plt.subplots(1, 3, figsize=figsize, sharey=True)
+    for i, cell_type in enumerate(utils.get_cell_types()):
+        ax[i] = sns.stripplot(data=n_cells[n_cells.cell_type==cell_type], y='binned_depth', x='n_cells', orient='h', ax=ax[i])
+        ax[i].set_title(cell_type)
+        ax[i].set_xlabel('# Cells per plane')
+        ax[i].set_ylabel('')
+    ax[0].set_ylabel('Binned depth (um)')
+    plt.subplots_adjust(wspace=0.4)
+    plt.suptitle(suptitle, x=0.5, y=1.2)
+
+    if save_dir:
+        utils.save_figure(fig, figsize, save_dir, folder, 'cell_count_by_depth_areas_'+suptitle)
+    return ax
+
+
+def plot_n_planes_per_depth(experiments_table, suptitle=None, save_dir=None, folder=None, ax=None):
+
+    n_expts = experiments_table.groupby(['cell_type', 'binned_depth']).count().rename(columns={'ophys_session_id':'n_expts'}).reset_index()
+
+    if ax is None:
+        figsize = (12, 3)
+        fig, ax = plt.subplots(1, 3, figsize=figsize, sharey=True)
+
+    for i, cell_type in enumerate(utils.get_cell_types()):
+        ax[i] = sns.barplot(data=n_expts[n_expts.cell_type==cell_type], y='binned_depth', x='n_expts',
+                            orient='h', color='gray', width=0.5, ax=ax[i])
+        ax[i].set_title(cell_type)
+        ax[i].set_xlabel('# Imaging planes')
+        ax[i].set_ylabel('')
+    ax[0].set_ylabel('Binned depth (um)')
+    plt.subplots_adjust(wspace=0.4)
+    plt.suptitle(suptitle, x=0.5, y=1.2)
+
+    if save_dir:
+        utils.save_figure(fig, figsize, save_dir, folder, 'cell_count_by_depth_areas_'+suptitle)
+    return ax
 
 
 def plot_n_segmented_cells(multi_session_df, df_name, horizontal=True, save_dir=None, folder='cell_matching', suffix='', ax=None):
@@ -2302,6 +2565,75 @@ def add_stim_color_span(dataset, ax, xlim=None, color=None, label_changes=True,
     return ax
 
 
+def plot_time_in_minutes(timestamps, ax, interval_duration=5):
+    '''
+    Takes timestamps, in seconds, convert to minutes, and set xticklabels to show time in the provided interval duration in minutes
+    '''
+    ax.set_xlim(timestamps[0], timestamps[-1])
+    ax.set_xticks(np.arange(0, timestamps[-1], 60 * interval_duration))
+    ax.set_xticklabels([int(t) for t in np.arange(0, timestamps[-1] / 60, interval_duration)])  # tick every x mins
+    ax.set_xlabel('Time in session (minutes)')
+
+    return ax
+
+def add_stimulus_blocks(stim_table, xlim=None, annotate_blocks=True, ax=None):
+    '''
+    Function to plot shaded bar across x axis representing each stimulus block within the period of xlim
+    Expecting blocks to be either change detection, gray screen, or natural movie one
+    if xlim is None, will plot entire session
+    if ax is provided, will plot on that axis, otherwise generates a figure to plot
+    '''
+
+    if ax is None:
+        fig, ax = plt.subplots(figsize=(15, 1))
+
+    if xlim is None:
+        xlim = [stim_table.start_time.values[0], stim_table.end_time.values[-1]]
+
+    block_change_inds = np.where(stim_table.stimulus_block.diff())
+    stimulus_blocks = stim_table.loc[block_change_inds]
+
+    block_change_inds = np.where(stim_table.stimulus_block.diff())
+    stimulus_blocks = stim_table.loc[block_change_inds]
+    last_block = stimulus_blocks.stimulus_block.max()
+
+    # loop through stimulus blocks and add a span with appropriate color
+    for idx in stimulus_blocks.index:
+        stimulus_block = stimulus_blocks.loc[idx]['stimulus_block']
+        block_name = stimulus_blocks.loc[idx]['stimulus_block_name']
+        start_time = stimulus_blocks.loc[idx]['start_time']
+        if stimulus_block != last_block:
+            end_time = stimulus_blocks[stimulus_blocks.stimulus_block == stimulus_block + 1]['start_time'].values[0]
+        else:  # if its the last block, use the very last timestamp as the end
+            end_time = stim_table.end_time.values[-1]  # stimulus_blocks.loc[idx]['end_time']
+
+        if 'gray_screen' in block_name:
+            color = 'gray'
+            name = 'gray\nscreen'
+        elif 'change_detection' in block_name:
+            color = sns.color_palette()[0]
+            name = 'change detection task performance'
+        elif 'movie' in block_name:
+            color = sns.color_palette()[9]
+            name = 'movie\nclips'
+
+        if annotate_blocks:
+            ax.text(s=name, x=start_time + (end_time - start_time) / 2, y=0.5, va='center', ha='center')
+
+        addSpan(ax, start_time, end_time, color=color, alpha=0.5)
+
+    ax.set_yticklabels([])
+    ax.set_xlim(xlim)
+    ax = plot_time_in_minutes(xlim, ax)
+
+    sns.despine(ax=ax, top=True, right=True, left=True, )
+    ax.tick_params(which='both', bottom=True, top=False, right=False, left=False)
+
+    return ax
+
+
+
+
 def plot_behavior_timeseries(dataset, start_time, duration_seconds=20, xlim_seconds=None, save_dir=None, ax=None):
     """
     Plots licking behavior, rewards, running speed, and pupil area for a defined window of time
@@ -2350,7 +2682,7 @@ def plot_behavior_timeseries(dataset, start_time, duration_seconds=20, xlim_seco
     labels = [label.get_label() for label in axes_to_label]
     ax.legend(axes_to_label, labels, bbox_to_anchor=(1, 1), fontsize='small')
 
-    ax = add_stim_color_span(dataset, ax, xlim=xlim_seconds)
+    ax = add_stim_color_span(dataset, ax, xlim=xlim_seconds, label_changes=True, label_omissions=True)
 
     ax.set_xlim(xlim_seconds)
     ax.set_xlabel('time in session (seconds)')
@@ -2368,7 +2700,8 @@ def plot_behavior_timeseries(dataset, start_time, duration_seconds=20, xlim_seco
     return ax
 
 
-def plot_behavior_timeseries_stacked(dataset, start_time, duration_seconds=20,
+def plot_behavior_timeseries_stacked(dataset, start_time, fontsize=14,
+                                     duration_seconds=20, xlim_seconds=None,
                                      label_changes=True, label_omissions=True,
                                      save_dir=None, ax=None):
     """
@@ -2383,7 +2716,8 @@ def plot_behavior_timeseries_stacked(dataset, start_time, duration_seconds=20,
     else:
         suffix = '_colors'
 
-    xlim_seconds = [start_time - (duration_seconds / 4.), start_time + duration_seconds * 2]
+    if xlim_seconds == None:
+        xlim_seconds = [start_time - (duration_seconds / 4.), start_time + duration_seconds * 2]
 
     lick_timestamps = dataset.licks.timestamps.values
     licks = np.ones(len(lick_timestamps))
@@ -2423,46 +2757,51 @@ def plot_behavior_timeseries_stacked(dataset, start_time, duration_seconds=20,
 
     colors = sns.color_palette()
 
-    ax[0].plot(lick_timestamps, licks, '|', label='licks', color=colors[3], markersize=10)
+    ax[0].plot(lick_timestamps, licks, '|', label='licks', color='gray', markersize=6) #colors[3], markersize=10)
     ax[0].set_yticklabels([])
-    ax[0].set_ylabel('licks', rotation=0, horizontalalignment='right', verticalalignment='center')
+    ax[0].set_ylabel('licks', rotation=0, horizontalalignment='right', verticalalignment='center', fontsize=fontsize)
     ax[0].tick_params(which='both', bottom=False, top=False, right=False, left=False,
                       labelbottom=False, labeltop=False, labelright=False, labelleft=False)
 
-    ax[1].plot(reward_timestamps, rewards, 'o', label='rewards', color=colors[8], markersize=10)
+    ax[1].plot(reward_timestamps, rewards, 'o', label='rewards', color='gray', markersize=6) #color=colors[8], markersize=10)
     ax[1].set_yticklabels([])
-    ax[1].set_ylabel('rewards', rotation=0, horizontalalignment='right', verticalalignment='center')
+    ax[1].set_ylabel('rewards', rotation=0, horizontalalignment='right', verticalalignment='center', fontsize=fontsize)
     ax[1].tick_params(which='both', bottom=False, top=False, right=False, left=False,
                       labelbottom=False, labeltop=False, labelright=False, labelleft=False)
 
-    ax[2].plot(running_timestamps, running_speed, label='running_speed', color=colors[2])
-    ax[2].set_ylabel('running\nspeed\n(cm/s)', rotation=0, horizontalalignment='right', verticalalignment='center')
+    ax[2].plot(running_timestamps, running_speed, label='running_speed', color='gray')  #color=colors[2])
+    ax[2].set_ylabel('running\nspeed', rotation=0, horizontalalignment='right', verticalalignment='center', fontsize=fontsize)
     ax[2].set_ylim(ymin=-8)
 
-    ax[3].plot(pupil_timestamps, pupil_diameter, label='pupil_diameter', color=colors[4])
-    ax[3].set_ylabel('pupil\ndiameter\n(pixels)', rotation=0, horizontalalignment='right', verticalalignment='center')
+    ax[3].plot(pupil_timestamps, pupil_diameter, label='pupil_diameter', color='gray') # color=colors[4])
+    ax[3].set_ylabel('pupil\ndiameter', rotation=0, horizontalalignment='right', verticalalignment='center', fontsize=fontsize)
+
 
     for i in range(4):
         ax[i] = add_stim_color_span(dataset, ax[i], xlim=xlim_seconds, label_changes=label_changes, label_omissions=label_omissions)
         ax[i].set_xlim(xlim_seconds)
         ax[i].tick_params(which='both', bottom=False, top=False, right=False, left=True,
-                          labelbottom=False, labeltop=False, labelright=False, labelleft=True)
+                          labelbottom=False, labeltop=False, labelright=False, labelleft=True,)
+                          #labelsize=fontsize)
         sns.despine(ax=ax[i], bottom=True)
     sns.despine(ax=ax[i], bottom=False)
 
     # label bottom row of plot
-    ax[i].set_xlabel('time in session (seconds)')
+    ax[i].set_xlabel('Time in session (seconds)')
     ax[i].tick_params(which='both', bottom=True, top=False, right=False, left=True,
                       labelbottom=True, labeltop=False, labelright=False, labelleft=True)
-    # add title to top row
-    metadata_string = utils.get_metadata_string(dataset.metadata)
-    ax[0].set_title(metadata_string)
 
-    plt.subplots_adjust(hspace=0)
+
+    ax[i] = plot_time_in_minutes(xlim_seconds, ax[i])
+
     if save_dir:
+        # add title to top row
+        metadata_string = utils.get_metadata_string(dataset.metadata)
+        ax[0].set_title(metadata_string)
+
+        plt.subplots_adjust(hspace=0)
         folder = 'behavior_timeseries_stacked'
-        utils.save_figure(fig, figsize, save_dir, folder, metadata_string + '_' + str(int(start_time)) + '_' + suffix,
-                          formats=['.png', '.pdf'])
+        utils.save_figure(fig, figsize, save_dir, folder, metadata_string + '_' + str(int(start_time)) + '_' + suffix)
     return ax
 
 

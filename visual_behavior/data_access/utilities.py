@@ -1976,6 +1976,40 @@ def limit_to_second_novel_exposure(df):
     return df
 
 
+def add_extra_columns_to_experiment_table(experiment_table):
+    '''
+    Add a variety of extra metadata columns to the experiment table (or any table with the same columns as experiment table)
+    including binned depth, cell type, n_relative to novel day, etc
+    Parameters
+    ----------
+    experiment_table
+
+    Returns
+    -------
+
+    '''
+    # add cell type and binned depth columms for plot labels
+    experiment_table = add_cell_type_column(experiment_table)
+    experiment_table = add_average_depth_across_container(experiment_table)
+    experiment_table = add_binned_depth_column(experiment_table)
+    experiment_table = add_area_depth_column(experiment_table)
+    experiment_table = add_layer_column(experiment_table)
+    experiment_table = add_area_layer_column(experiment_table)
+    # add other columns indicating whether a session was the last familiar before the first novel session,
+    # or the second passing novel session after the first truly novel one
+    experiment_table = add_date_string(experiment_table)  # add simplified date string for sorting
+    experiment_table = add_first_novel_column(experiment_table)
+    experiment_table = add_n_relative_to_first_novel_column(experiment_table)
+    experiment_table = add_last_familiar_column(experiment_table)
+    experiment_table = add_last_familiar_active_column(experiment_table)
+    experiment_table = add_second_novel_column(experiment_table)
+    experiment_table = add_second_novel_active_column(experiment_table)
+    # # add column that has a combination of experience level and exposure to omissions for familiar sessions,
+    # # or exposure to image set for novel sessions
+    experiment_table = add_experience_exposure_column(experiment_table)
+    return experiment_table
+
+
 def get_containers_with_all_experience_levels(experiments_table):
     """
     identifies containers with all 3 experience levels in ['Familiar', 'Novel 1', 'Novel >1']

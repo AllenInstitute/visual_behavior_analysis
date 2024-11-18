@@ -324,25 +324,8 @@ def get_platform_paper_experiment_table(add_extra_columns=True, limit_to_closest
     #                                             experiment_table.experience_level.values]
 
     if add_extra_columns:
-        # add cell type and binned depth columms for plot labels
-        experiment_table = utilities.add_cell_type_column(experiment_table)
-        experiment_table = utilities.add_average_depth_across_container(experiment_table)
-        experiment_table = utilities.add_binned_depth_column(experiment_table)
-        experiment_table = utilities.add_area_depth_column(experiment_table)
-        experiment_table = utilities.add_layer_column(experiment_table)
-        experiment_table = utilities.add_area_layer_column(experiment_table)
-        # add other columns indicating whether a session was the last familiar before the first novel session,
-        # or the second passing novel session after the first truly novel one
-        experiment_table = utilities.add_date_string(experiment_table)  # add simplified date string for sorting
-        experiment_table = utilities.add_first_novel_column(experiment_table)
-        experiment_table = utilities.add_n_relative_to_first_novel_column(experiment_table)
-        experiment_table = utilities.add_last_familiar_column(experiment_table)
-        experiment_table = utilities.add_last_familiar_active_column(experiment_table)
-        experiment_table = utilities.add_second_novel_column(experiment_table)
-        experiment_table = utilities.add_second_novel_active_column(experiment_table)
-        # # add column that has a combination of experience level and exposure to omissions for familiar sessions,
-        # # or exposure to image set for novel sessions
-        experiment_table = utilities.add_experience_exposure_column(experiment_table)
+        experiment_table = utilities.add_extra_columns_to_experiment_table(experiment_table)
+
 
     if limit_to_closest_active:
         experiment_table = utilities.limit_to_last_familiar_second_novel_active(experiment_table)
