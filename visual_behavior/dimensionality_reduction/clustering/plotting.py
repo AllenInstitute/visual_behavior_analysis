@@ -116,6 +116,24 @@ def standardize_axes_fontsize(ax):
     return ax
 
 
+
+def get_feature_colors_and_labels():
+    c = sns.color_palette()
+    feature_colors = [c[2], c[9], c[8], c[1] ]
+
+    feature_labels_dict = {'all-images': 'images',
+                         'omissions': 'omissions',
+                         'task': 'task',
+                          'behavioral': 'behavior',}
+    return feature_colors, feature_labels_dict
+
+
+def get_feature_colors_with_gray():
+    feature_colors, feature_labels_dict = get_feature_colors_and_labels()
+    feature_colors = [(0.5, 0.5, 0.5)] + feature_colors
+    return feature_colors
+
+
 ### basic cluster output plots ###
 
 def plot_feature_matrix_for_cre_lines(feature_matrix, cell_metadata, use_abbreviated_labels=False, save_dir=None, folder=None):
@@ -1641,7 +1659,8 @@ def plot_cre_line_means_remapped(feature_matrix, cluster_meta, session_colors=Tr
                                 save_dir=save_dir, folder=folder, ax=None)
 
 
-def plot_cluster_means_heatmap(cluster_means, cmap, vmax, colorbar=False, ax=None, session_colors=True):
+def plot_cluster_means_heatmap(cluster_means, cmap, vmax, clusters_as_rows=True,
+                               colorbar=False, ax=None, session_colors=True):
     """
     plots a heatmap of cluster mean value with a given colormap and vmax
     cluster_means: dataframe with clusters as columns and feature-experience combinations as rows
@@ -1651,38 +1670,61 @@ def plot_cluster_means_heatmap(cluster_means, cmap, vmax, colorbar=False, ax=Non
         fig, ax = plt.subplots(figsize=figsize)
     ax = sns.heatmap(cluster_means, cmap=cmap, vmin=0, vmax=vmax, square=True, cbar=colorbar, ax=ax)
     sns.despine(ax=ax, top=False, right=False, left=False, bottom=False, offset=None, trim=False)
-    ax.set_ylabel('')
-    ax.set_xlabel('Cluster ID')
-    ax.set_title('Cluster averages')
-    # dotted gray lines in between feature categories
-    for y in [3, 6, 9]:
-        ax.axhline(y=y, xmin=0, xmax=cluster_means.shape[0], color='gray', linestyle='--', linewidth=1)
 
-    # # dotted gray lines every 3rd cluster
-    # for x in [3, 6, 9]:
-    #     ax.axvline(x=x, ymin=0, ymax=cluster_means.shape[0], color='gray', linestyle='--', linewidth=1)
+    if clusters_as_rows:
+        ax.set_xlabel('')
+        ax.set_ylabel('Cluster ID')
+        # ax.set_title('Cluster averages')
+        # dotted gray lines in between feature categories
+        for x in [3, 6, 9]:
+            ax.axvline(x=x, ymin=0, ymax=cluster_means.shape[0], color='gray', linestyle='--', linewidth=1)
 
-    # label feature categories on right
-    fontsize = 12
-    rotation = -90
-    features = processing.get_feature_labels_for_clustering()
-    x_loc = cluster_means.shape[1]+.25
-    for i,feature in enumerate(features):
-        if feature == 'all-images':
-            features[i] = 'images'
-    ax.text(s=features[0], x=x_loc, y=1.5, rotation=rotation, color='black', fontsize=fontsize, va='center', ha='left')
-    ax.text(s=features[1], x=x_loc, y=4.4, rotation=rotation, color='black', fontsize=fontsize, va='center', ha='left')
-    ax.text(s=features[2], x=x_loc, y=7.5, rotation=rotation, color='black', fontsize=fontsize, va='center', ha='left')
-    ax.text(s=features[3], x=x_loc, y=10.5, rotation=rotation, color='black', fontsize=fontsize, va='center', ha='left')
+        # label feature categories on right
+        fontsize = 12
+        rotation = 0
+        features = processing.get_feature_labels_for_clustering()
+        y_loc = -0.3
+        for i, feature in enumerate(features):
+            if feature == 'all-images':
+                features[i] = 'images'
+        ax.text(s=features[0], y=y_loc, x=1.5, rotation=rotation, color='black', fontsize=fontsize, va='center', ha='center')
+        ax.text(s=features[1], y=y_loc, x=4.4, rotation=rotation, color='black', fontsize=fontsize, va='center', ha='center')
+        ax.text(s=features[2], y=y_loc, x=7.5, rotation=rotation, color='black', fontsize=fontsize, va='center', ha='center')
+        ax.text(s=features[3], y=y_loc, x=10.5, rotation=rotation, color='black', fontsize=fontsize, va='center', ha='center')
 
-    # colorize y axis labels
-    if session_colors:
-        color_yaxis_labels_by_experience(ax)
+        # colorize y axis labels
+        if session_colors:
+            color_xaxis_labels_by_experience(ax)
+    else:
+        ax.set_ylabel('')
+        ax.set_xlabel('Cluster ID')
+        ax.set_title('Cluster averages')
+        # dotted gray lines in between feature categories
+        for y in [3, 6, 9]:
+            ax.axhline(y=y, xmin=0, xmax=cluster_means.shape[0], color='gray', linestyle='--', linewidth=1)
+
+        # label feature categories on right
+        fontsize = 12
+        rotation = -90
+        features = processing.get_feature_labels_for_clustering()
+        x_loc = cluster_means.shape[1]+.25
+        for i,feature in enumerate(features):
+            if feature == 'all-images':
+                features[i] = 'images'
+        ax.text(s=features[0], x=x_loc, y=1.5, rotation=rotation, color='black', fontsize=fontsize, va='center', ha='left')
+        ax.text(s=features[1], x=x_loc, y=4.4, rotation=rotation, color='black', fontsize=fontsize, va='center', ha='left')
+        ax.text(s=features[2], x=x_loc, y=7.5, rotation=rotation, color='black', fontsize=fontsize, va='center', ha='left')
+        ax.text(s=features[3], x=x_loc, y=10.5, rotation=rotation, color='black', fontsize=fontsize, va='center', ha='left')
+
+        # colorize y axis labels
+        if session_colors:
+            color_yaxis_labels_by_experience(ax)
 
     return ax
 
 
-def plot_cluster_means_remapped(feature_matrix, cluster_meta, session_colors=True, experience_index=None, save_dir=None, folder=None, ax=None):
+def plot_cluster_means_remapped(feature_matrix, cluster_meta, clusters_as_rows=True,
+                                session_colors=True, experience_index=None, save_dir=None, folder=None, ax=None):
     """
     Get the average coding score values for each cluster, remap the colormap to use session colors,
     Translate the dataframe so that clusters are columns and rows are feature-experience combos,
@@ -1709,8 +1751,17 @@ def plot_cluster_means_remapped(feature_matrix, cluster_meta, session_colors=Tru
     if ax is None:
         figsize = (8,5)
         fig, ax = plt.subplots(figsize=figsize)
-    ax = plot_cluster_means_heatmap(cluster_means_remapped, coding_score_cmap, vmax, colorbar=False, ax=ax, session_colors=session_colors)
-    ax.set_yticklabels(new_labels, rotation=0)
+    if clusters_as_rows:
+        ax = plot_cluster_means_heatmap(cluster_means_remapped.T, coding_score_cmap, vmax,
+                                        clusters_as_rows=True, colorbar=False, ax=ax,
+                                        session_colors=session_colors)
+        ax.set_xticklabels(new_labels, rotation=0)
+        ax.set_yticklabels(np.sort(cluster_meta.cluster_id.unique()), rotation=0)
+        plt.suptitle('Cluster means', x=0.51, y=.98, fontsize=18)
+    else:
+        ax = plot_cluster_means_heatmap(cluster_means_remapped, coding_score_cmap, vmax,
+                                        clusters_as_rows=False, colorbar=False, ax=ax, session_colors=session_colors)
+        ax.set_yticklabels(new_labels, rotation=0)
     # save
     if save_dir:
         utils.save_figure(fig, figsize, save_dir, folder, 'cluster_means_remapped')
@@ -2084,7 +2135,7 @@ def plot_coding_score_heatmap_matched(cluster_meta, feature_matrix, sort_by='clu
     cell_type_colors_dict = dict(zip(utils.get_cell_types(), utils.get_cell_type_colors()))
 
     if ax is None:
-        figsize = (5, 12)
+        figsize = (5, 10)
         fig, ax = plt.subplots(len(cluster_order), 1, figsize=figsize, sharex=True)
         plt.subplots_adjust(wspace=0, hspace=0)
 
@@ -2137,16 +2188,18 @@ def plot_coding_score_heatmap_matched(cluster_meta, feature_matrix, sort_by='clu
         if feature == 'all-images':
             features[f] = 'images'
 
-    fontsize = 12
+    feature_colors, feature_labels_dict = get_feature_colors_and_labels()
+
+    fontsize = 14
     ymin, ymax = ax[0].get_ylim()
-    ymax = ymax + (ymax * 0.12)
-    ax[0].text(s=features[0], y=ymax, x=1.5, rotation=rotation, color='black', fontsize=fontsize, va='center',
+    ymax = ymax + (ymax * 0.14)
+    ax[0].text(s=features[0], y=ymax, x=1.5, rotation=rotation, color=feature_colors[0], fontsize=fontsize, va='center',
                ha='center')
-    ax[0].text(s=features[1], y=ymax, x=4.5, rotation=rotation, color='black', fontsize=fontsize, va='center',
+    ax[0].text(s=features[1], y=ymax, x=4.5, rotation=rotation, color=feature_colors[1], fontsize=fontsize, va='center',
                ha='center')
-    ax[0].text(s=features[2], y=ymax, x=7.5, rotation=rotation, color='black', fontsize=fontsize, va='center',
+    ax[0].text(s=features[2], y=ymax, x=7.5, rotation=rotation, color=feature_colors[2], fontsize=fontsize, va='center',
                ha='center')
-    ax[0].text(s=features[3], y=ymax, x=10.5, rotation=rotation, color='black', fontsize=fontsize, va='center',
+    ax[0].text(s=features[3], y=ymax, x=10.5, rotation=rotation, color=feature_colors[3], fontsize=fontsize, va='center',
                ha='center')
 
     if save_dir:
@@ -2322,7 +2375,7 @@ def plot_percent_cells_per_cluster_per_cre(cluster_meta, col_to_group='cre_line'
     fig, ax = plt.subplots(1, 3, figsize=figsize, sharey=True, sharex=True)
     for i, cre_line in enumerate(utils.get_cre_lines()):
         cre_data = n_cells_per_cluster[n_cells_per_cluster.cre_line == cre_line]
-        if cluster_order:
+        if cluster_order is not None:
             order = cluster_order.copy()
         else:
             order = np.sort(cluster_meta.cluster_id.unique())
@@ -2384,7 +2437,7 @@ def plot_percent_cells_per_cluster_per_cre_dominant_feature(cluster_meta, col_to
     # each cre line
     for i, cre_line in enumerate(utils.get_cre_lines()):
         cre_data = n_cells_per_cluster[n_cells_per_cluster.cre_line == cre_line]
-        if cluster_order:
+        if cluster_order is not None:
             order = cluster_order.copy()
         else:
             order = np.sort(cluster_meta.cluster_id.unique())
@@ -2592,7 +2645,7 @@ def plot_fraction_cells_per_cluster_per_cre(cluster_meta, col_to_group='cre_line
     fig, ax = plt.subplots(3, 1, figsize=figsize, sharey=True, sharex=True)
     for i, cre_line in enumerate(utils.get_cre_lines()):
         cre_data = n_cells_per_cluster[n_cells_per_cluster.cre_line == cre_line]
-        if cluster_order:
+        if cluster_order is not None:
             order = cluster_order.copy()
         else:
             order = np.sort(cluster_meta.cluster_id.unique())
@@ -2676,7 +2729,7 @@ def plot_population_averages_for_clusters(multi_session_df, event_type, axes_col
         scale = 1
 
     # plot in order of overall cluster size
-    if cluster_order:
+    if cluster_order is not None:
         cluster_ids = cluster_order
     else:
         cluster_order = sdf['cluster_id'].value_counts().index.values
@@ -2766,7 +2819,7 @@ def plot_population_average_response_for_clusters_as_rows(multi_session_df, even
     axes_column = 'cluster_id'
     hue_column = 'experience_level'
 
-    if cluster_order:
+    if cluster_order is not None:
         cluster_ids = cluster_order.copy()
     else:
         cluster_ids = np.sort(multi_session_df.cluster_id.unique())
@@ -3054,7 +3107,7 @@ def plot_population_average_response_for_clusters_as_rows_split(multi_session_df
     # axes_conditions = np.sort(tmp[axes_column].unique())
     hue_conditions = np.sort(tmp[hue_column].unique())
 
-    if cluster_order:
+    if cluster_order is not None:
         cluster_ids = cluster_order
     else:
         cluster_ids = np.sort(multi_session_df.cluster_id.unique())
@@ -3533,7 +3586,7 @@ def plot_cell_stats_per_cluster_for_areas_depths(cluster_meta, cell_count_stats,
         # sort area / depth combos
         data = data[locations]
         # sort clusters
-        if cluster_order:
+        if cluster_order is not None:
             data = data.loc[cluster_order[cre_line]]
         ax[i] = sns.heatmap(data.T, vmin=vmin, vmax=vmax, cmap=cmap, ax=ax[i],
                             cbar_kws={'shrink': 0.8, 'label': cbar_label})
@@ -4700,7 +4753,7 @@ def plot_cluster_depth_distribution_by_cre_lines(cluster_meta, location, metric,
     n_cells_table = processing.get_cluster_proportion_stats_for_locations(cluster_meta, location=location)
     n_cells_table = n_cells_table.reset_index()
 
-    if cluster_order:
+    if cluster_order is not None:
         xorder = cluster_order
     else:
         xorder = np.sort(n_cells_table.cluster_id.unique())
@@ -4757,12 +4810,12 @@ def plot_cluster_depth_distribution_by_cre_lines(cluster_meta, location, metric,
     if horiz:
         ax[1].set_ylabel(ylabel)
         ax[i].set_xlabel('Cluster ID')
-        ax[0].legend(loc='upper right', fontsize=fontsize, title_fontsize=fontsize)
+        ax[0].legend(bbox_to_anchor=(1.1, 0.8), fontsize=fontsize, title_fontsize=fontsize)
         suffix = '_horiz'
     else:
         ax[1].set_xlabel(ylabel)
         ax[0].set_ylabel('Cluster ID')
-        ax[0].legend(loc='lower right', fontsize=fontsize, title_fontsize=fontsize)
+        ax[i].legend(bbox_to_anchor=(1.1, 0.8), fontsize=fontsize, title_fontsize=fontsize)
         suffix = '_vert'
     sns.despine(fig=fig, top=True, right=True, left=False, bottom=False, offset=None, trim=False)
 
@@ -4813,7 +4866,7 @@ def plot_cluster_depth_distribution_by_cre_line_separately(cluster_meta, locatio
     for i, cre_line in enumerate(utils.get_cre_lines()):
 
         cre_data = n_cells_table[n_cells_table.cre_line == cre_line]
-        if cluster_order:
+        if cluster_order is not None:
             order = cluster_order
         else:
             # sort by cluster size
@@ -6059,6 +6112,13 @@ def get_feature_colors_and_labels():
                          'task': 'task',
                           'behavioral': 'behavior',}
     return feature_colors, feature_labels_dict
+
+
+def get_feature_colors_with_gray():
+    feature_colors, feature_labels_dict = get_feature_colors_and_labels()
+    feature_colors = [(0.5, 0.5, 0.5)] + feature_colors
+    return feature_colors
+
 
 
 def plot_barplot_of_metric_value_for_pref_feature(metrics, x, xlabel,

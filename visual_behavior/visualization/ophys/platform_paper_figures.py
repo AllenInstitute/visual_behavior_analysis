@@ -935,8 +935,8 @@ def plot_percent_responsive_cells(multi_session_df, responsiveness_threshold=0.1
                               hue_order=experience_levels, palette=palette, dodge=0, join=False, markers='.',
                               errorbar=('ci', 95), ax=ax[i])
 
-
         ax[i].set_xticklabels(utils.get_abbreviated_experience_levels(), rotation=0)
+        [t.set_color(x) for (x, t) in zip(palette, ax[i].xaxis.get_ticklabels())]
         # ax[i].set_xticklabels(experience_levels, rotation=90)
         ax[i].set_ylabel('')
         ax[i].get_legend().remove()
@@ -1486,7 +1486,7 @@ def plot_metric_distribution_by_experience_no_cell_type(metrics_table, metric, e
     if ax is None:
         if horiz:
             suffix = suffix + '_horiz'
-            figsize = (3, 2)
+            figsize = (3, 1.8)
             fig, ax = plt.subplots(1, 1, figsize=figsize)
         else:
             figsize = (2, 3)
@@ -2551,8 +2551,11 @@ def add_stim_color_span(dataset, ax, xlim=None, color=None, label_changes=True,
                     alpha = max_alpha
                     if annotate_changes:
                         ymin, ymax = ax.get_ylim()
-                        ax.annotate(stim_table.loc[idx]['image_name'], xy=(start_time, ymax*1.4), xycoords='data',
-                                    fontsize=6,  va='top', clip_on=False, annotation_clip=False)
+                        ax.annotate(stim_table.loc[idx]['image_name'], xy=(start_time, ymax*1.2), xycoords='data',
+                                    fontsize=8,  va='top', clip_on=False, annotation_clip=False)
+                        # also show the one before
+                        ax.annotate(stim_table.loc[idx-1]['image_name'], xy=(start_time-1.5, ymax * 1.2), xycoords='data',
+                                    fontsize=8, va='top', clip_on=False, annotation_clip=False)
                 else:  # if its a non-change make it gray with low alpha
                     image_color = 'gray'
                     alpha = max_alpha/2.
@@ -2682,7 +2685,8 @@ def plot_behavior_timeseries(dataset, start_time, duration_seconds=20, xlim_seco
     labels = [label.get_label() for label in axes_to_label]
     ax.legend(axes_to_label, labels, bbox_to_anchor=(1, 1), fontsize='small')
 
-    ax = add_stim_color_span(dataset, ax, xlim=xlim_seconds, label_changes=True, label_omissions=True)
+    ax = add_stim_color_span(dataset, ax, xlim=xlim_seconds, annotate_changes=True,
+                             label_changes=True, label_omissions=True)
 
     ax.set_xlim(xlim_seconds)
     ax.set_xlabel('time in session (seconds)')
@@ -2695,14 +2699,14 @@ def plot_behavior_timeseries(dataset, start_time, duration_seconds=20, xlim_seco
     #                 labelbottom=True, labeltop=False, labelright=True, labelleft=True)
     if save_dir:
         folder = 'behavior_timeseries'
-        utils.save_figure(fig, figsize, save_dir, folder, metadata_string + '_' + str(int(start_time)),
-                          formats=['.png'])
+        utils.save_figure(fig, figsize, save_dir, folder, metadata_string + '_' + str(int(start_time)))
     return ax
 
 
-def plot_behavior_timeseries_stacked(dataset, start_time, fontsize=14,
+def plot_behavior_timeseries_stacked(dataset, start_time, fontsize=12,
                                      duration_seconds=20, xlim_seconds=None,
                                      label_changes=True, label_omissions=True,
+                                     show_images=True, annotate_yaxis=True,
                                      save_dir=None, ax=None):
     """
     Plots licking behavior, rewards, running speed, and pupil area for a defined window of time.
@@ -2717,15 +2721,20 @@ def plot_behavior_timeseries_stacked(dataset, start_time, fontsize=14,
         suffix = '_colors'
 
     if xlim_seconds == None:
-        xlim_seconds = [start_time - (duration_seconds / 4.), start_time + duration_seconds * 2]
+        # xlim_seconds = [start_time - (duration_seconds / 4.), start_time + duration_seconds * 2]
+        xlim_seconds = [start_time, start_time+duration_seconds]
 
     lick_timestamps = dataset.licks.timestamps.values
+    lick_timestamps = lick_timestamps[lick_timestamps > xlim_seconds[0]]
+    lick_timestamps = lick_timestamps[lick_timestamps < xlim_seconds[1]]
     licks = np.ones(len(lick_timestamps))
-    licks[:] = -2
+    # licks[:] = -2
 
     reward_timestamps = dataset.rewards.timestamps.values
-    rewards = np.zeros(len(reward_timestamps))
-    rewards[:] = -4
+    reward_timestamps = reward_timestamps[reward_timestamps > xlim_seconds[0]]
+    reward_timestamps = reward_timestamps[reward_timestamps < xlim_seconds[1]]
+    rewards = np.ones(len(reward_timestamps))
+    # rewards[:] = -4
 
     # get run speed trace and timestamps
     running_speed = dataset.running_speed.speed.values
@@ -2751,53 +2760,71 @@ def plot_behavior_timeseries_stacked(dataset, start_time, fontsize=14,
     pupil_timestamps = pupil_timestamps[start_ind:stop_ind]
 
     if ax is None:
-        figsize = (15, 5)
-        fig, ax = plt.subplots(4, 1, figsize=figsize, sharex=True, gridspec_kw={'height_ratios': [1, 1, 3, 3]})
+        figsize = (5, 2)
+        fig, ax = plt.subplots(4, 1, figsize=figsize, sharex=True, gridspec_kw={'height_ratios': [1, 1, 4, 4]})
         ax = ax.ravel()
 
     colors = sns.color_palette()
 
-    ax[0].plot(lick_timestamps, licks, '|', label='licks', color='gray', markersize=6) #colors[3], markersize=10)
+    ax[0].plot(lick_timestamps, licks, '|', label='licks', color='gray', markersize=5) #colors[3], markersize=10)
     ax[0].set_yticklabels([])
     ax[0].set_ylabel('licks', rotation=0, horizontalalignment='right', verticalalignment='center', fontsize=fontsize)
-    ax[0].tick_params(which='both', bottom=False, top=False, right=False, left=False,
-                      labelbottom=False, labeltop=False, labelright=False, labelleft=False)
 
-    ax[1].plot(reward_timestamps, rewards, 'o', label='rewards', color='gray', markersize=6) #color=colors[8], markersize=10)
+    ax[1].plot(reward_timestamps, rewards, '^', label='rewards', color='b', markersize=5) #color=colors[8], markersize=10)
     ax[1].set_yticklabels([])
     ax[1].set_ylabel('rewards', rotation=0, horizontalalignment='right', verticalalignment='center', fontsize=fontsize)
-    ax[1].tick_params(which='both', bottom=False, top=False, right=False, left=False,
-                      labelbottom=False, labeltop=False, labelright=False, labelleft=False)
 
     ax[2].plot(running_timestamps, running_speed, label='running_speed', color='gray')  #color=colors[2])
-    ax[2].set_ylabel('running\nspeed', rotation=0, horizontalalignment='right', verticalalignment='center', fontsize=fontsize)
+    ax[2].set_ylabel('running\nspeed\n(cm/s)', rotation=0, horizontalalignment='right', verticalalignment='center', fontsize=fontsize)
     ax[2].set_ylim(ymin=-8)
 
     ax[3].plot(pupil_timestamps, pupil_diameter, label='pupil_diameter', color='gray') # color=colors[4])
-    ax[3].set_ylabel('pupil\ndiameter', rotation=0, horizontalalignment='right', verticalalignment='center', fontsize=fontsize)
+    ax[3].set_ylabel('pupil\ndiameter\n(pixels)', rotation=0, horizontalalignment='right', verticalalignment='center', fontsize=fontsize)
 
 
     for i in range(4):
-        ax[i] = add_stim_color_span(dataset, ax[i], xlim=xlim_seconds, label_changes=label_changes, label_omissions=label_omissions)
+        if (i == 0) & (show_images == True):
+            ax[i] = add_stim_color_span(dataset, ax[i], xlim=xlim_seconds, annotate_changes=True,
+                                        label_changes=label_changes, label_omissions=label_omissions)
+        else:
+            ax[i] = add_stim_color_span(dataset, ax[i], xlim=xlim_seconds, annotate_changes=False,
+                                        label_changes=label_changes, label_omissions=label_omissions)
         ax[i].set_xlim(xlim_seconds)
-        ax[i].tick_params(which='both', bottom=False, top=False, right=False, left=True,
-                          labelbottom=False, labeltop=False, labelright=False, labelleft=True,)
-                          #labelsize=fontsize)
-        sns.despine(ax=ax[i], bottom=True)
-    sns.despine(ax=ax[i], bottom=False)
+        if i in [0, 1]: # for licks and rewards
+            ax[i].tick_params(which='both', bottom=False, top=False, right=False, left=False,
+                              labelbottom=False, labeltop=False, labelright=False, labelleft=True, )
+        else: # for running and pupil
+            if annotate_yaxis: # plot lines for data range instead of ticks
+                ymin, ymax = ax[i].get_ylim()
+                if i == 2:
+                    ymin = 0
+                    ymax = int(ymax / 2)
+                else:
+                    diff = (ymax-ymin)*0.25
+                    ymin = int(ymin+diff)
+                    ymax = int(ymax-diff)
+                ax[i].set_yticks([ymin, ymax])
+                ax[i].set_yticklabels([ymin, ymax], va='center', ha='right', fontsize=fontsize - 2)
+                ax[i].annotate('', xy=(xlim_seconds[0] - 0.3, ymin), xycoords='data', xytext=(xlim_seconds[0] - 0.3, ymax),
+                               fontsize=fontsize, arrowprops=dict(arrowstyle='-', color='k', lw=1, shrinkA=0, shrinkB=0),
+                               annotation_clip=False)
+                ax[i].tick_params(which='both', bottom=False, top=False, right=False, left=False,
+                                  labelbottom=False, labeltop=False, labelright=False, labelleft=True, )
+        ax[i].spines[['right', 'top', 'bottom', 'left']].set_visible(False)
+        # sns.despine(ax=ax[i], bottom=True)
+    # sns.despine(ax=ax[i], bottom=False)
+    ax[i].tick_params(which='both', bottom=True, top=False, right=False, left=False,
+                      labelbottom=True, labeltop=False, labelright=False, labelleft=True, labelsize=fontsize-2)
 
     # label bottom row of plot
-    ax[i].set_xlabel('Time in session (seconds)')
-    ax[i].tick_params(which='both', bottom=True, top=False, right=False, left=True,
-                      labelbottom=True, labeltop=False, labelright=False, labelleft=True)
+    ax[i].set_xlabel('Time in session (seconds)', fontsize=fontsize)
 
-
-    ax[i] = plot_time_in_minutes(xlim_seconds, ax[i])
+    # ax[i] = plot_time_in_minutes(xlim_seconds, ax[i])
 
     if save_dir:
         # add title to top row
         metadata_string = utils.get_metadata_string(dataset.metadata)
-        ax[0].set_title(metadata_string)
+        plt.suptitle(metadata_string, x=0.5, y=1.1, fontsize=fontsize)
 
         plt.subplots_adjust(hspace=0)
         folder = 'behavior_timeseries_stacked'
@@ -3756,7 +3783,7 @@ def plot_stimulus_exposure_prior_to_imaging(behavior_sessions, column_to_group='
         stats.to_csv(os.path.join(save_dir, folder, 'stimulus_exposure_prior_to_imaging_stats_'+column_to_group+'.csv'))
 
 def plot_training_history_for_mice(behavior_sessions, color_column='session_type', color_map=sns.color_palette(),
-                                   save_dir=None, folder=None, suffix='', ax=None):
+                                   group_by_cre_line=True, save_dir=None, folder=None, suffix='', ax=None):
     """
     plots the session sequence for all mice in behavior_sessions table, sorted by total # of sessions per mouse
 
@@ -3768,18 +3795,17 @@ def plot_training_history_for_mice(behavior_sessions, color_column='session_type
     color_column = 'stimulus_phase' : color_map = utils.get_stimulus_phase_color_map(as_rgb=True)
 
     """
-    # group by mice and count n_session per mouse to get the max n_sessions and list of mouse_ids to plot
-    n_sessions = \
-        behavior_sessions.groupby(['cre_line', 'mouse_id']).count().rename(columns={'equipment_name': 'n_sessions'})[['n_sessions']]
-    n_sessions = n_sessions.reset_index()
-    n_sessions = n_sessions.sort_values(by=['cre_line', 'n_sessions'])
+
+    if group_by_cre_line:
+        # group by mice and count n_session per mouse to get the max n_sessions and list of mouse_ids to plot
+        n_sessions = behavior_sessions.groupby(['cre_line', 'mouse_id']).count().rename(columns={'equipment_name': 'n_sessions'})[['n_sessions']]
+        n_sessions = n_sessions.reset_index()
+        n_sessions = n_sessions.sort_values(by=['cre_line', 'n_sessions'])
+    else:
+        n_sessions =  behavior_sessions.groupby(['mouse_id']).count().rename(columns={'equipment_name': 'n_sessions'})[['n_sessions']]
+        n_sessions = n_sessions.reset_index().sort_values(by=['n_sessions'])
     max_n_sessions = np.amax(n_sessions.n_sessions.values)
     mouse_ids = n_sessions.mouse_id.values
-
-    # get ytick labels based on number of mice per cre line
-    yticklabels = [0]
-    for i, cre_line in enumerate(n_sessions.cre_line.unique()):
-        yticklabels.append(yticklabels[i] + len(n_sessions[n_sessions.cre_line == cre_line]))
 
     n_mouse_ids = len(mouse_ids)
 
@@ -3801,34 +3827,29 @@ def plot_training_history_for_mice(behavior_sessions, color_column='session_type
         figsize = (10, n_mouse_ids * 0.1)
         fig, ax = plt.subplots(figsize=figsize)
     ax.imshow(img.astype(int), aspect='auto')
-    ax.set_ylim(0, len(mouse_ids))
+    ax.set_ylim(0, n_mouse_ids)
     ax.invert_yaxis()
-    ax.set_yticks(yticklabels)
-    ax.set_yticklabels(yticklabels, fontdict={'verticalalignment': 'top'})
+
     ax.set_xlabel('Session number')
     ax.set_ylabel('Mouse number')
     ax.set_title('Training history')
+    plot_behavior_performance_for_one_mouse
 
-    # label with cell type
-    for i, cre_line in enumerate(n_sessions.cre_line.unique()):
-        cell_type = utils.convert_cre_line_to_cell_type(cre_line)
-        ax.text(-2, (yticklabels[i] + yticklabels[i + 1]) / 2., cell_type.split(' ')[0], fontsize=16, ha='center',
-                va='center', rotation='vertical')
-
-        #     ax.axis('off')
-
-        #     for mouse, mouse_id in enumerate(mouse_ids):
-        #         # plot cre line
-        #         cre_line = behavior_sessions[behavior_sessions.mouse_id == mouse_id].cre_line.values[0]
-        #         if cre_line == 'Gad2-IRES-Cre': # square
-        #             ax.text(-1, mouse, '\u25a1', fontsize=16, ha='center', va='center',)
-        #         elif cre_line == 'Rbp4-Cre_KL100': # triangle
-        #             ax.text(-1, mouse, '\u25b2', fontsize=16, ha='center', va='center', color='black')
-        #         else: # circle
-        #             ax.text(-1, mouse, '\u25cf', fontsize=16, ha='center', va='center', color='black')
-        #         # plot mouse_id
-        #         sessions_for_mouse = n_sessions[n_sessions.mouse_id==mouse_id].n_sessions.values[0]
-        #         ax.text(sessions_for_mouse, mouse, str(mouse_id), fontsize=17, ha='left', va='center',)
+    if group_by_cre_line:
+        # set ytick labels based on number of mice per cre line
+        yticklabels = [0]
+        for i, cre_line in enumerate(n_sessions.cre_line.unique()):
+            yticklabels.append(yticklabels[i] + len(n_sessions[n_sessions.cre_line == cre_line]))
+        ax.set_yticks(yticklabels)
+        ax.set_yticklabels(yticklabels, fontdict={'verticalalignment': 'top'})
+        # label with cell type
+        for i, cre_line in enumerate(n_sessions.cre_line.unique()):
+            cell_type = utils.convert_cre_line_to_cell_type(cre_line)
+            ax.text(-2, (yticklabels[i] + yticklabels[i + 1]) / 2., cell_type.split(' ')[0], fontsize=16, ha='center',
+                    va='center', rotation='vertical')
+        suffix = suffix+'_group_by_cre'
+    else:
+        ax.set_yticks((0, n_mouse_ids))
 
     if save_dir:
         utils.save_figure(fig, figsize, save_dir, folder, 'training_history' + suffix)
@@ -4012,7 +4033,7 @@ def plot_behavior_performance_for_one_mouse(behavior_stats, mouse_id, metric, me
     ax.set_ylabel(ylabel)
     if save_dir:
         utils.save_figure(fig, figsize, os.path.join(save_dir, folder), 'behavior_performance_over_time_'+method,
-                        metric+'_mouse_id_'+str(mouse_id))
+                        metric+'_mouse_id_'+str(mouse_id)+'_'+hue)
     return ax
 
 def plot_response_rate_trial_types(data, save_dir=None, suffix='', ax=None):
@@ -4039,6 +4060,56 @@ def plot_response_rate_trial_types(data, save_dir=None, suffix='', ax=None):
 
     if save_dir:
         utils.save_figure(fig, figsize, save_dir, 'response_rate', 'response_rate_trial_types' + suffix)
+    return ax
+
+
+
+def plot_lick_raster_for_trials(trials, title='', save_dir=None, filename=None, suffix='', ax=None):
+    # trials = dataset.trials
+    # image_set = dataset.metadata.session_type.values[0][-1]
+    # mouse_id = str(dataset.metadata.donor_id.values[0])
+    if ax is None:
+        figsize = (4, 5)
+        fig, ax = plt.subplots(figsize=figsize)
+    for trial in range(len(trials)):
+        trial_data = trials.iloc[trial]
+        trial_start = trial_data.start_time - trial_data.change_time
+        # plot trial
+        if trial_data.go == True:
+            color = sns.color_palette()[0]
+        else:
+            color = 'white'
+        # ax.axhspan(trial, trial + 1, -200, 200, color='white', alpha=0.075*1.5)
+        # plot lines in between trials
+        ax.vlines(trial_start, trial, trial + 1, color='gray', linewidth=0.5, alpha=0.5)
+        # plot line at trial start
+        # ax.vlines(0, trial, trial + 1, color='gray', linewidth=1, linestyle='--')
+        # plot licks
+        lick_times = [(t - trial_data.change_time) for t in trial_data.lick_times]
+        if len(lick_times) > 0:
+            ax.vlines(lick_times, trial, trial + 1, color='k', linewidth=1)
+            # rewarded lick is a different color
+            ax.vlines(lick_times[0], trial, trial + 1, color='b', linewidth=1)
+        # plot rewards
+        # if np.isnan(trial_data.reward_time) == False:
+        #     reward_time = trial_data.reward_time - trial_data.change_time
+        #     ax.plot(reward_time, trial + 0.5, '^', color='blue', label='reward', markersize=3)
+    # plot reward window
+    color = sns.color_palette()[0]
+    ax.axvspan(0.15, 0.75, facecolor=color, alpha=.4, edgecolor='none')
+    ax.grid(False)
+    ax.set_ylim(0, len(trials))
+    ax.set_xlim([-1, 5])
+    ax.set_ylabel('Trial number')
+    ax.set_xlabel('Time from change (sec)')
+    ax.set_xticks(np.arange(0, 5, 2))
+    # ax.set_title('M'+mouse_id+' image set '+image_set, fontsize=14)
+    ax.set_title(title, fontsize=16)
+    ax.invert_yaxis()
+    # plt.gca().invert_yaxis()
+    plt.subplots_adjust(left=0.3)
+    if save_dir:
+        utils.save_figure(fig, figsize, save_dir, 'lick_rasters', filename+suffix)
     return ax
 
 def plot_response_probability_heatmaps_for_cohorts(behavior_sessions, save_dir=None):

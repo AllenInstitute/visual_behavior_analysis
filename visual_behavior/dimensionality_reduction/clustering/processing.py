@@ -2791,7 +2791,10 @@ def generate_coding_score_metrics_per_experience_level_table(cluster_meta, resul
         coding_scores_per_exp_level['ophys_experiment_id'] = coding_scores_per_exp_level[
             ['ophys_experiment_id']].astype('int32')
         # merge coding scores tables
-        merged_metrics = coding_scores_per_exp_level.merge(coding_score_metrics.reset_index()[['cell_specimen_id', 'ophys_experiment_id',
+        coding_score_metrics = coding_score_metrics.reset_index()
+        print(coding_score_metrics.keys())
+        print(coding_scores_per_exp_level.keys())
+        merged_metrics = coding_scores_per_exp_level.merge(coding_score_metrics[['cell_specimen_id', 'ophys_experiment_id',
                                                                                                'dominant_feature_cluster',
                                                                                                'dominant_experience_level_cluster']], on=['cell_specimen_id', 'ophys_experiment_id'], how='left')
         print(merged_metrics.experience_level.unique())
@@ -2842,9 +2845,12 @@ def generate_merged_table_of_coding_score_and_model_free_metrics(cluster_meta, r
     else:
 
         model_free_metrics = generate_merged_table_of_model_free_metrics(data_type, session_subset, inclusion_criteria, save_dir)
+        # print(model_free_metrics.columns)
+        model_free_metrics = model_free_metrics.set_index('cell_specimen_id')
 
         coding_score_per_experience_metrics = generate_coding_score_metrics_per_experience_level_table(cluster_meta, results_pivoted, save_dir)
-
+        # print(coding_score_per_experience_metrics.columns)
+        
         metrics = coding_score_per_experience_metrics.merge(model_free_metrics, on=['cell_specimen_id', 'experience_level', 'ophys_experiment_id'], how='left')
 
         print(len(metrics.cell_specimen_id.unique()), 'cells in merged coding score and model free metrics table')

@@ -40,18 +40,22 @@ def plot_reliable_example_cells(multi_session_mean_df, cells_to_plot, cell_type,
         change = True
         omitted = False
         window = [-1, 0.75]
+        window = [-0.25, 0.75]
+        col_size = 0.75
         label = 'Image change'
         label_color = sns.color_palette()[0]
     elif event_type == 'omissions':
         change = False
         omitted = True
         window = [-1, 1.5]
+        col_size = 1.25
         label = 'Image omission'
         label_color = sns.color_palette()[9]
     else:
         change = False
         omitted = False
         window = [-0.5, 0.75]
+        col_size = 0.75
 
     interval_sec = 1
 
@@ -63,7 +67,7 @@ def plot_reliable_example_cells(multi_session_mean_df, cells_to_plot, cell_type,
     last_container_id = sdf[(sdf.cell_specimen_id == cells_to_plot[0])].ophys_container_id.values[0]
 
     n_cols = 4
-    figsize = (n_cols, (len(cells_to_plot) + 2) / 1.5)
+    figsize = (n_cols*col_size, (len(cells_to_plot) + 2) / 1.5)
     fig, ax = plt.subplots(len(cells_to_plot) + 2, n_cols, figsize=figsize, sharey='row')
     ax = ax.ravel()
 
@@ -88,21 +92,27 @@ def plot_reliable_example_cells(multi_session_mean_df, cells_to_plot, cell_type,
 
         if e == 0:
             # plot a line for 1/3 of the axis, corresponding to the yticklabel for y axis, which is set at 1/3 of the max y value
-            ax[i].axvline(x=window[0] - 0.1, ymin=0, ymax=0.3, color='k', linewidth=1, clip_on=False)
+            # ax[i].axvline(x=window[0] - 0.1, ymin=0, ymax=0.3, color='k', linewidth=1, clip_on=False)
+            if event_type == 'omissions':
+                dist = 0.18
+            else:
+                dist = 0.1
+            ax[i].axvline(x=window[0] - dist, ymin=0, ymax=0.3, color='k', linewidth=1, clip_on=False)
 
         sns.despine(ax=ax[i], top=True, right=True, left=True, bottom=True)
         ax[i].tick_params(bottom=False, left=False, right=False, top=False, labelsize=7, pad=-1)
 
     # annotate first axis
     i = 0
-    ax[i].set_ylabel('pop. avg.', rotation=0, fontsize=10, ha='right', y=0.4)
+    ax[i].set_ylabel('grand avg.', rotation=0, fontsize=10, ha='right', y=0.4)
 
     # annotate time axis and change/omission for excitatory only
     if cell_type == 'Excitatory':
         # plot time axis bar
-        ax[i].set_xticks([-0.75, -0.25])
+        # ax[i].set_xticks([-0.75, -0.25])
+        ax[i].set_xticks([0, 0.5])
         ax[i].set_xticklabels(['', '0.5 s'], va='top')
-        ax[i].annotate('', xy=(-0.75, -0.08), xycoords=ax[i].get_xaxis_transform(), xytext=(-0.25, -0.08), fontsize=8,
+        ax[i].annotate('', xy=(0, -0.08), xycoords=ax[i].get_xaxis_transform(), xytext=(0.5, -0.08), fontsize=8,
                        arrowprops=dict(arrowstyle='-', color='k', lw=1, shrinkA=0, shrinkB=0), clip_on=False)
         # label image change or image omission
         ax[i].annotate(label, xy=(-0.17, 1.4), xycoords=ax[i].get_xaxis_transform(), ha="right", va="top",
@@ -135,8 +145,12 @@ def plot_reliable_example_cells(multi_session_mean_df, cells_to_plot, cell_type,
             ymin, ymax = ax[i].get_ylim()
             ax[i].set_yticks([0, np.round(ymax * .3, 2)])
             ax[i].set_yticklabels(['', np.round(ymax * .3, 2)], va='top')
-            if e == 0:
-                ax[i].axvline(x=window[0] - 0.1, ymin=0, ymax=0.3, color='k', linewidth=1, clip_on=False)
+            if e == 0: # plot response magnitude bar
+                if event_type == 'omissions':
+                    dist = 0.18
+                else:
+                    dist = 0.1
+                ax[i].axvline(x=window[0] - dist, ymin=0, ymax=0.3, color='k', linewidth=1, clip_on=False)
                 ax[i].set_ylabel('cell ' + str(c + 1), rotation=0, fontsize=10, ha='right', y=0.4)
             sns.despine(ax=ax[i], top=True, right=True, left=True, bottom=True)
             ax[i].tick_params(bottom=False, left=False, right=False, top=False, labelsize=7, pad=-1, )
@@ -581,7 +595,7 @@ def plot_single_cell_example_timeseries_and_behavior(dataset, start_time, durati
             matched_dff_traces = dff_traces.loc[cell_specimen_ids]
             # get the top 20 highest SNR cells
             cell_specimen_ids = ppf.sort_trace_csids_by_max_in_window(matched_dff_traces, ophys_timestamps, xlim_seconds)
-            print('sorting matched cell IDs by SNR')
+            # print('sorting matched cell IDs by SNR')
             # if cell specimen ids are provided but there are more than 20 of them
         else:
             print('using provided cell_specimen_ids in the order they were provided')
@@ -626,7 +640,7 @@ def plot_single_cell_example_timeseries_and_behavior(dataset, start_time, durati
     if ax is None:
         figsize = (8, 6)
         if skip_behavior:
-            n_rows = len(cell_specimen_ids)+3
+            n_rows = len(cell_specimen_ids)
         else:
             n_rows = len(cell_specimen_ids)+3
         fig, ax = plt.subplots(n_rows, 1, figsize=figsize, sharex=True, )
@@ -652,21 +666,22 @@ def plot_single_cell_example_timeseries_and_behavior(dataset, start_time, durati
             # ax[i].axvline(x=timestamps[timepoint], ymin=0, ymax=events_trace[timepoint], color=colors[6])
             ax[i].annotate('', xy=(timestamps[timepoint], 0), xycoords='data',
                            xytext=(timestamps[timepoint], events_trace[timepoint]), fontsize=fontsize,
-                           arrowprops=dict(arrowstyle='-', color=sns.color_palette()[0], lw=1, shrinkA=0, shrinkB=0))
+                           arrowprops=dict(arrowstyle='-', color='k', #sns.color_palette()[0],
+                                           lw=1, shrinkA=0, shrinkB=0))
             # ax[i].set_yticks((0, 2))
         ax[i].set_xlim(xlim_seconds)
 
         # label cell id on right side so it can be cropped out later
         xmin, xmax = ax[i].get_xlim()
         if label_csids:
-            ax[i].text(s='csid:' + str(cell_specimen_id), x=xmax + 0.2, y=0, fontsize=fontsize)
+            ax[i].text(s='csid:' + str(cell_specimen_id), x=xmax + 0.2, y=0, fontsize=6)
 
         # get ylims of data in this window
         ymin, ymax = ax[i].get_ylim()
         if dff_metrics is not None: # if metrics are provided, set the ymax value to the relevant trace metric
             metric = '99_pct'
             metric_value = dff_metrics.loc[cell_specimen_id, metric]
-            ax[i].set_ylim(ymin, metric_value)
+            ax[i].set_ylim(ymin, metric_value*1.5)
         # get it again to determine where the scale bar will go
         ymin, ymax = ax[i].get_ylim()
         ax[i].set_yticks([0, np.round(ymax * .3, 2)])
@@ -727,8 +742,8 @@ def plot_single_cell_example_timeseries_and_behavior(dataset, start_time, durati
         i = i+3
 
     # Label bottom row with times
-    ax[i].set_xticks(np.arange(int(xlim_seconds[0]), int(xlim_seconds[1]), 5))
-    ax[i].set_xticklabels(np.arange(int(xlim_seconds[0]), int(xlim_seconds[1]), 5), fontsize=fontsize)
+    ax[i].set_xticks(np.arange(int(xlim_seconds[0]), int(xlim_seconds[1])+1, 5))
+    ax[i].set_xticklabels(np.arange(int(xlim_seconds[0]), int(xlim_seconds[1])+1, 5), fontsize=fontsize)
     # label bottom row of plot
     ax[i].set_xlabel('Time in session (seconds)', fontsize=fontsize+2)
     ax[i].tick_params(which='both', bottom=False, top=False, right=False, left=False,
@@ -836,8 +851,10 @@ def plot_matched_max_projections_for_container(ophys_container_id, platform_expe
         ax[i].imshow(dataset.max_projection, cmap='gray', vmin=0, vmax=np.percentile(dataset.max_projection, 99))
         ax[i].axis('off')
         session_type = platform_experiments.loc[ophys_experiment_id].session_type
-        ax[i].set_title(str(ophys_experiment_id)+'\n'+session_type,
-                        color=experience_level_colors[i], fontsize=12)
+        ax[i].set_title(str(ophys_experiment_id), color=experience_level_colors[i], fontsize=12)
+        # ax[i].set_title(str(ophys_experiment_id)+'\n'+session_type+'\n'+experience_level,
+        #                 color=experience_level_colors[i], fontsize=12)
+        ax[i].set_aspect('equal')
 
     if save_dir:
         metadata = utils.get_metadata_string(dataset.metadata)
@@ -856,25 +873,34 @@ def plot_max_intensity_projection(dataset, ax=None):
     ax.axis('off')
     return ax
 
-def plot_roi_mask_outlines(dataset, cell_specimen_ids=None, ax=None):
+def plot_roi_mask_outlines(dataset, cell_specimen_ids=None, include_max_projection=True,
+                           roi_color='red', label_rois=True, label_color='yellow', ax=None):
     if ax is None:
         fig, ax = plt.subplots()
-    ax = plot_max_intensity_projection(dataset, ax=ax)
+    if include_max_projection:
+        ax = plot_max_intensity_projection(dataset, ax=ax)
     cell_specimen_table = dataset.cell_specimen_table.copy()
     if cell_specimen_ids is None:
         cell_specimen_ids = cell_specimen_table.index.values
     if len(cell_specimen_table) > 0:
         for i, cell_specimen_id in enumerate(cell_specimen_ids):
             mask_data = cell_specimen_table.loc[cell_specimen_id]
-            ax.contour(mask_data.roi_mask, levels=0, colors=['red'], linewidths=[0.5])
-            ax.text(s=str(i+1), x=mask_data.x, y=mask_data.y,
-                    ha='right', va='bottom', fontsize=8, color='magenta')
-    ax.axis('off')
+            ax.contour(mask_data.roi_mask, levels=0, colors=roi_color, linewidths=[0.5])
+            if label_rois:
+                ax.text(s=str(i+1), x=mask_data.x, y=mask_data.y,
+                        ha='right', va='bottom', fontsize=12, color=label_color)
+    sns.despine(ax=ax, top=False, right=False, left=False, bottom=False, offset=None, trim=False)
+    ax.tick_params(which='both', bottom=False, top=False, right=False, left=False)
+    ax.set_xticklabels([])
+    ax.set_yticklabels([])
+    ax.set_aspect('equal')
+
+    #ax.axis('off')
     return ax
 
 
 def plot_max_and_roi_outlines_for_container(ophys_container_id, platform_experiments, dataset_dict,
-                                               cell_specimen_ids=None, save_dir=None, ax=None):
+                                               cell_specimen_ids=None, label_rois=True, save_dir=None, ax=None):
     '''
     Loop through platform ophys experiments belonging to this container
     and plot the max projection image for each experiment with experience level in title
@@ -897,7 +923,8 @@ def plot_max_and_roi_outlines_for_container(ophys_container_id, platform_experim
             cells_to_plot = cell_specimen_ids
             suffix = '_matched'
         experience_level = platform_experiments.loc[ophys_experiment_id].experience_level
-        ax[i] = plot_roi_mask_outlines(dataset, cells_to_plot, ax=ax[i])
+        ax[i] = plot_roi_mask_outlines(dataset, cell_specimen_ids=cells_to_plot, label_rois=label_rois,
+                                       include_max_projection=False, roi_color='red', ax=ax[i])
         ax[i].set_title(experience_level, color=experience_level_colors[i], fontsize=14)
     if save_dir:
         metadata = utils.get_metadata_string(dataset.metadata)
@@ -908,7 +935,122 @@ def plot_max_and_roi_outlines_for_container(ophys_container_id, platform_experim
     return ax
 
 
+
+def plot_matched_roi_outlines_for_container(ophys_container_id, platform_experiments, matched_cells_table,
+                                            dataset_dict, cells_to_label=None, save_dir=None, ax=None):
+    '''
+    Loop through platform ophys experiments belonging to this container
+    and plot the ROI masks for each experiment with experience level in title,
+    with matched ROIs in red and unmatched in yellow
+    Only label the cell IDs for cells_to_label
+    platform_experiments is the ophys_experiment_table limited to the experiments for the platform paper (one F, one N and one N+ per FOV)
+    matched_cells_table is the ophys_cells_table limited to the ROIs matched across sessions (for the sessions in platform_experiments)
+    dataset_dict is a dictionary with keys ophys_container_id, ophys_experiment_id
+    containing the dataset object for each experiment within a container
+    cell_specimen_ids is a list of cells within the container to plot roi masks for
+    '''
+    matched_cells = matched_cells_table[matched_cells_table.ophys_container_id==ophys_container_id].cell_specimen_id.unique()
+    experience_level_colors = utils.get_experience_level_colors()
+    ophys_experiment_ids = platform_experiments[platform_experiments.ophys_container_id==ophys_container_id].sort_values(by='experience_level').index.values
+    if ax is None:
+        figsize = (15, 3)
+        fig, ax = plt.subplots(1, 3, figsize=figsize)
+    for i,ophys_experiment_id in enumerate(ophys_experiment_ids):
+        dataset = dataset_dict[ophys_container_id][ophys_experiment_id]
+        cell_specimen_table = dataset.cell_specimen_table.copy()
+        all_cells = cell_specimen_table.index.values
+        unmatched_cells = all_cells[all_cells!=matched_cells][0]
+        experience_level = platform_experiments.loc[ophys_experiment_id].experience_level
+        ax[i] = plot_roi_mask_outlines(dataset, matched_cells, include_max_projection=False, roi_color='k', label_rois=False, label_color='w', ax=ax[i])
+        ax[i] = plot_roi_mask_outlines(dataset, unmatched_cells, include_max_projection=False, roi_color='gray', label_rois=False, label_color='w', ax=ax[i])
+        if cells_to_label is not None:
+            ax[i] = plot_roi_mask_outlines(dataset, cells_to_label, include_max_projection=False, roi_color='red', label_rois=True, label_color='k', ax=ax[i])
+        ax[i].set_title(experience_level, color=experience_level_colors[i], fontsize=14)
+    if save_dir:
+        metadata = utils.get_metadata_string(dataset.metadata)
+        fig.suptitle(str(ophys_container_id) + '_' + metadata, x=0.5, y=1.1)
+        filename = str(ophys_container_id) +'_'+ metadata + '_outlines'
+        folder = 'matched_roi_mask_outlines'
+        utils.save_figure(fig, figsize, save_dir, folder, filename)
+    return ax
+
 ####### multi panel plot for matched FOVs ########
+
+
+def plot_matched_rois_and_traces_for_container(ophys_container_id, dataset_dict,
+                                        matched_cells_table, platform_experiments, fontsize=12,
+                                        start_times=np.arange(1500, 1600, 40), duration_seconds=20,
+                                        matched_cells=None, save_dir=None, suffix=''):
+    '''
+    dataset_dict: dictionary containing ophys_container_ids as top level keys,
+        with ophys_experiment_ids as second level keys, and dataset obejcts for those experiments as values
+    ophys_container_id: key within dataset_dict to use for plots
+    matched_cells_table: ophys_cells_table instance filtered to limit to matched cells across sessions
+    platform_experiments: ophys_epxeriment_table instance limited to experiments in VB platform paper
+    start_times: array of time values, in seconds, to use for start of each timeseries plot axis
+    duration_seconds: duration of timeseries to plot
+    matched_reliable_cells: list of cell_specimen_ids from the provided ophys_container_id,
+        sorted in order of reliability. reliability can be computed based on change or omission multi session df
+    change_mdf: multi session mean response df for changes
+    omission_mf: multi session mean response df for omissions
+    cell_type: ['Excitatory', 'Vip', 'Sst']
+    '''
+
+    matched_cells_snr, dff_metrics = get_high_snr_matched_cells_for_container(ophys_container_id, dataset_dict,
+                                                                            matched_cells_table,
+                                                                            platform_experiments,
+                                                                            xlim_seconds=[500, 2500])
+    if matched_cells is None:  # if matched cell ids  not provided, get high SNR cells
+        matched_cells = matched_cells_snr
+        suffix = '_high_snr_cells'
+
+    if len(matched_cells) > 20:
+        matched_cells = matched_cells[:20]
+
+    for s, start_time in enumerate(start_times):
+        print(np.where(start_times == start_time)[0][0], 'out of', len(start_times))
+
+        figsize = [20, 6]
+        fig = plt.figure(figsize=figsize, facecolor='white')
+
+        # plot max projections
+        ax = utils.placeAxesOnGrid(fig, dim=(1, 3), xspan=(0, 0.3), yspan=(0, 0.4), wspace=0.2)
+        ax = plot_matched_max_projections_for_container(ophys_container_id, platform_experiments,
+                                                            dataset_dict, ax=ax)
+
+        # plot max projections with ROI masks
+        ax = utils.placeAxesOnGrid(fig, dim=(1, 3), xspan=(0.4, 0.7), yspan=(0, 0.4), wspace=0.2)
+        ax = plot_matched_roi_outlines_for_container(ophys_container_id, platform_experiments, matched_cells_table,
+                                                dataset_dict, cells_to_label=matched_cells, save_dir=None, ax=ax)
+
+
+        expt_ids = list(dataset_dict[ophys_container_id].keys())
+        for i, ophys_experiment_id in enumerate(expt_ids):
+            dataset = dataset_dict[ophys_container_id][ophys_experiment_id]
+
+            # plot timeseries
+            x = i * 0.25
+            ax = utils.placeAxesOnGrid(fig, dim=(len(matched_cells), 1),
+                                           xspan=(x, x + 0.22), yspan=(0.5, 1), sharex=True, wspace=0.5)
+            if i == 2:
+                label_csids = True
+            else:
+                label_csids = False
+            ax = plot_single_cell_example_timeseries_and_behavior(dataset, start_time=start_time,
+                                                                      duration_seconds=duration_seconds,
+                                                                      cell_specimen_ids=matched_cells, save_dir=False,
+                                                                      sort_within_expt=False, dff_metrics=dff_metrics,
+                                                                      label_csids=label_csids, short_title=True,
+                                                                      fontsize=fontsize,
+                                                                      skip_behavior=True, ax=ax, suffix='')
+
+        if save_dir:
+            print('saving')
+            folder = 'example_rois_and_traces_for_container'
+            m = dataset.metadata.copy()
+            metadata_string = utils.get_container_metadata_string(m) + '_' + str(int(start_time)) + '_' + str(duration_seconds)
+            plt.suptitle(metadata_string, x=0.4, y=0.98, fontsize=16)
+            utils.save_figure(fig, figsize, save_dir, folder, metadata_string + suffix)
 
 
 def plot_matched_traces_across_sessions(ophys_container_id, dataset_dict,
@@ -974,7 +1116,7 @@ def plot_matched_traces_across_sessions(ophys_container_id, dataset_dict,
             dataset = dataset_dict[ophys_container_id][ophys_experiment_id]
 
             # plot timeseries
-            x = i * 0.22
+            x = i * 0.24
             if skip_behavior:
                 ax = utils.placeAxesOnGrid(fig, dim=(len(matched_cells), 1),
                                        xspan=(x, x + 0.18), yspan=(0.5, 0.8), sharex=True, wspace=0.5)

@@ -483,7 +483,7 @@ def get_behavior_stage_color_map(as_rgb=False):
     (ex: ['gratings_static_training', 'gratings_flashed_training', 'familiar_images_training', )
 
     """
-    session_number_colors = get_colors_for_session_numbers()
+    session_number_colors = get_experience_level_colors()
     white = np.array([1, 1, 1]).astype(np.uint8)
 
     training_scale = 0.7
@@ -496,8 +496,10 @@ def get_behavior_stage_color_map(as_rgb=False):
         'familiar_images_ophys': session_number_colors[0],
         'familiar_images_ophys_passive': (
         session_number_colors[0] + (white - session_number_colors[0]) * passive_scale),
-        'novel_images_ophys': session_number_colors[3],
-        'novel_images_ophys_passive': (session_number_colors[3] + (white - session_number_colors[3]) * passive_scale),
+        'novel_images_ophys': session_number_colors[1],
+        'novel_images_ophys_passive': (session_number_colors[2] + (white - session_number_colors[2]) * passive_scale),
+        'novel +_images_ophys': session_number_colors[2],
+        'novel +_images_ophys_passive': (session_number_colors[2] + (white - session_number_colors[2]) * passive_scale),
     }
 
     if as_rgb:
@@ -592,7 +594,7 @@ def add_stim_color_span(dataset, ax, xlim=None, color=None, label_changes=True, 
                     alpha = max_alpha
                     if annotate_changes:
                         ymin, ymax = ax.get_ylim()
-                        ax.annotate(stim_table.loc[idx]['image_name'], xy=(start_time, ymax*1.6), xycoords='data',
+                        ax.annotate(stim_table.loc[idx]['image_name'], xy=(start_time, ymax*2), xycoords='data',
                                     fontsize=6,  va='top', clip_on=False, annotation_clip=False)
                 else:  # if its a non-change make it gray with low alpha
                     image_color = 'gray'
@@ -944,6 +946,19 @@ def get_start_end_time_for_period_with_omissions_and_change(stimulus_presentatio
     end_time = start_time+(0.75*n_flashes)
     return [start_time, end_time]
 
+def get_start_times_for_period_with_hit_and_omission(stimulus_presentations, trials, n_flashes=16):
+    st = stimulus_presentations.copy()
+    hit_times = trials[trials.hit].change_time.values
+    indices = st[st.start_time.isin(hit_times)].index.values # indices of hit times
+    # get all start times for periods with hit and check if there is also an omission within n_flashes-4
+    start_times = []
+    for idx in indices: # loop through omission times
+        subset = st.loc[idx:idx+n_flashes-2] #from 4 flashes before omission to 2 flashes before end of window
+        if subset.omitted.any():
+            start_time = st.loc[idx - 4].start_time # start time is -4 flashes before the change
+            start_times.append(start_time)
+    print(len(start_times))
+    return start_times
 
 def get_start_end_time_for_period_with_event(stimulus_presentations, event_type='is_change',
                                              n_before=4, n_after=8, event_ind_to_choose=10,
