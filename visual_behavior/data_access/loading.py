@@ -111,7 +111,7 @@ def get_flagged_ophys_experiment_ids():
 
     # ophys_session_id = 919888953, SDK#2216, OPHYS_3 listed but novel image set susepcted to have been shown based on activity profile
     # ophys_experiment_ids for 919888953
-    # [920288855, 920288849, 920288853, 920288851, 920288845, 920288843]
+    oeids = oeids + [920288855, 920288849, 920288853, 920288851, 920288845, 920288843]
 
     # ophys_session_id = 931326814, # SDK#2215 and 2202 report mouse was shown image set B for session 2 when it should have been A
     # this will also affect the novelty of the first novel session for this mouse (453988), but that has not been added here yet
@@ -302,8 +302,8 @@ def get_platform_paper_experiment_table(add_extra_columns=True, limit_to_closest
         print('removing', len(flagged_oeids), 'problematic experiments')
         experiment_table = experiment_table.drop(flagged_oeids, axis=0)
 
-    # bad_session_ids = [931326814, 919888953]
-    # experiment_table = experiment_table[experiment_table.ophys_session_id.isin(bad_session_ids) == False]
+    bad_session_ids = [919888953] #931326814,
+    experiment_table = experiment_table[experiment_table.ophys_session_id.isin(bad_session_ids) == False]
 
     # remove 4x2
     if not include_4x2_data:
@@ -332,7 +332,7 @@ def get_platform_paper_experiment_table(add_extra_columns=True, limit_to_closest
         experiment_table = utilities.limit_to_containers_with_all_experience_levels(experiment_table)
 
     # remove familiar session that was actually novel
-    experiment_table = experiment_table[experiment_table.ophys_session_id!=919888953]
+    # experiment_table = experiment_table[experiment_table.ophys_session_id!=919888953]
 
     return experiment_table
 
@@ -3621,7 +3621,7 @@ def get_multi_session_df_for_conditions(data_type, event_type, conditions, inclu
                                                                 remove_flagged=True)
         multi_session_df = multi_session_df[multi_session_df.ophys_experiment_id.isin(experiments_table.index.values)]
         print('there are', len(multi_session_df.ophys_experiment_id.unique()), 'experiments in the multi_session_df after limiting to platform experiments')
-    if inclusion_criteria == 'platform_active_passive':
+    elif inclusion_criteria == 'platform_active_passive':
         # Get active and passive sessions just before or after the first novel session
         # only for containers in the platform datset
         active_passive_experiment_table = get_active_passive_sessions_for_platform_dataset()
