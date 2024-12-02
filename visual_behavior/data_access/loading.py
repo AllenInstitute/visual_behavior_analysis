@@ -1328,6 +1328,14 @@ def get_extended_stimulus_presentations_for_session(session):
     return extended_stimulus_presentations
 
 
+def get_behavior_model_summary_table():
+    data_dir = get_behavior_model_outputs_dir()
+    data = pd.read_csv(os.path.join(data_dir, '_summary_table.csv'))
+    data2 = pd.read_csv(os.path.join(data_dir, '_meso_summary_table.csv'))
+    data = data.append(data2)
+    return data
+
+
 def get_model_output_file(behavior_session_id):
     model_output_dir = get_behavior_model_outputs_dir()
     model_output_file = [file for file in os.listdir(model_output_dir) if
