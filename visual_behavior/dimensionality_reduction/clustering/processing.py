@@ -2862,7 +2862,7 @@ def generate_merged_table_of_coding_score_and_model_free_metrics(cluster_meta, r
             metrics.to_csv(merged_metrics_table_filepath)
             print('merged metrics table saved')
 
-    # reclassify cluster 6 as task coding
+    # reclassify cluster 10 as task coding
     indices = metrics[metrics.cluster_id == 10].index.values
     metrics.loc[indices, 'dominant_feature_cluster'] = 'task'
 

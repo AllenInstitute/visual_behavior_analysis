@@ -78,6 +78,9 @@ def placeAxesOnGrid(fig, dim=[1, 1], xspan=[0, 1], yspan=[0, 1], wspace=None, hs
             if row > 0 and sharey == 'col':
                 share_y_with = inner_ax[0][col]
 
+            if col > 0 and sharey == 'row':
+                share_y_with = inner_ax[row][0]
+
             inner_ax[row][col] = plt.Subplot(fig, inner_grid[idx], sharex=share_x_with, sharey=share_y_with)
             fig.add_subplot(inner_ax[row, col])
             idx += 1
