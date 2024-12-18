@@ -368,34 +368,37 @@ def plot_glm_features_for_window(dataset, xlim_seconds, save_dir=None, ax=None, 
     pupil_diameter = pupil_diameter[start_ind:stop_ind]
     pupil_timestamps = pupil_timestamps[start_ind:stop_ind]
 
+    import visual_behavior.dimensionality_reduction.clustering.plotting as plotting
+    feature_colors, feature_labels_dict = plotting.get_feature_colors_and_labels()
+
     n_rows = 14
     height_ratios = np.hstack((np.repeat(1, 12), 2, 2))
     if ax is None:
         figsize = (6, 6)
-        fig, ax = plt.subplots(n_rows, 1, figsize=figsize, sharex=True, gridspec_kw={'height_ratios':height_ratios})
+        fig, ax = plt.subplots(n_rows, 1, figsize=figsize, sharex=True) #, gridspec_kw={'height_ratios':height_ratios})
         ax = ax.ravel()
 
     i = 0
     for i in range(9):
         try:
             ax[i] = plot_kernel_activations(dataset, start_time, duration_seconds, index_image_in_window=False,
-                                                kernel='image '+str(i+1), ax=ax[i])
+                                                kernel='image '+str(i+1), label_color=feature_colors[0], ax=ax[i])
         except:
             pass
 
-    ax[i] = plot_kernel_activations(dataset, start_time, duration_seconds, kernel='omissions', ax=ax[i])
+    ax[i] = plot_kernel_activations(dataset, start_time, duration_seconds, kernel='omissions', label_color=feature_colors[1],ax=ax[i])
     i+=1
 
-    ax[i] = plot_kernel_activations(dataset, start_time, duration_seconds, kernel='misses', ax=ax[i])
+    ax[i] = plot_kernel_activations(dataset, start_time, duration_seconds, kernel='misses', label_color=feature_colors[2], ax=ax[i])
     i+=1
 
-    ax[i] = plot_kernel_activations(dataset, start_time, duration_seconds, kernel='hits', ax=ax[i])
+    ax[i] = plot_kernel_activations(dataset, start_time, duration_seconds, kernel='hits', label_color=feature_colors[2], ax=ax[i])
     ax[i].plot(reward_timestamps, rewards, '^', label='rewards', color='b', markersize=8)
     i+=1
 
     # ax[i] = gep.plot_kernel_activations(dataset, start_time, duration_seconds, kernel='licks', ax=ax[i])
     ax[i].plot(lick_timestamps, licks, '|', label='licks', color='k', markersize=20)
-    ax[i].set_ylabel('licks', rotation=0, horizontalalignment='right',  verticalalignment='center')
+    ax[i].set_ylabel('licks', rotation=0, horizontalalignment='right',  verticalalignment='center', color=feature_colors[3])
     i+=1
 
     for x in range(0, i):
@@ -403,14 +406,16 @@ def plot_glm_features_for_window(dataset, xlim_seconds, save_dir=None, ax=None, 
 
     # now plot running and pupil as continuous variables
     ax[i].plot(running_timestamps, running_speed, label='running_speed', color='k')
-    ax[i].set_ylabel('running', rotation=0, horizontalalignment='right', verticalalignment='center')
+    ax[i].set_ylabel('running', rotation=0, horizontalalignment='right', verticalalignment='center', color=feature_colors[3])
     # ax[i].yaxis.set_label_position("right")
     ax[i].set_ylim(ymin=-8)
     i+=1
 
     ax[i].plot(pupil_timestamps, pupil_diameter, label='pupil_diameter', color='k')
-    ax[i].set_ylabel('pupil', rotation=0, horizontalalignment='right',  verticalalignment='center')
+    ax[i].set_ylabel('pupil', rotation=0, horizontalalignment='right',  verticalalignment='center', color=feature_colors[3])
     ax[i].set_xticks(np.arange(xlim_seconds[0], xlim_seconds[1], 4))
+    ylims = ax[i].get_ylim()
+    ax[i].set_ylim([ylims[0]-1, ylims[1]])
     i+=1
 
     # remove ticks everywhere but bottom row + set xlim for all axes
@@ -548,21 +553,20 @@ def plot_stacked_kernels_for_cell(cell_specimen_id, dataset, weights_df, kernels
 
     if save_dir:
         metadata_string = utils.get_metadata_string(dataset.metadata)
-        # title_string = metadata_string + '_' + str(cell_specimen_id)
         m = dataset.metadata.copy()
         title_string = str(m['ophys_experiment_id']) + '_' + str(
-            cell_specimen_id) + '_' + m['cre_line'].split('-')[0] + '_kernels'
-        plt.suptitle(metadata_string, x=0.48, y=0.99, fontsize=12)
-        utils.save_figure(fig, figsize, save_dir, 'example_kernels_stacked', title_string)
-        utils.save_figure(fig, figsize, save_dir, 'example_cell_kernels_and_fits_separate_plots', title_string)
-
+            cell_specimen_id) + '_' + m['cre_line'].split('-')[0]
+        plt.suptitle(title_string, x=0.48, y=0.99, fontsize=12)
+        filename = str(cell_specimen_id) + '_' + metadata_string + '_kernels'
+        utils.save_figure(fig, figsize, save_dir, 'example_kernels_stacked', filename)
+        utils.save_figure(fig, figsize, save_dir, 'example_cell_kernels_coding_scores_and_fits', filename)
     return ax
 
 
 def plot_model_fits_example_cell(cell_specimen_id, dataset, cell_results_df, dropouts, results,
                                  kernel=None, include_events=True, include_dff=False,
                                  times=None, n_flashes=16, linewidth=2, twinx=False,
-                                 fontsize=8, as_panel=False, save_dir=None, ax=None):
+                                 fontsize=8, as_panel=False, save_dir=None, suffix='', ax=None):
     '''
     For one cell, plot the cell trace, model fits, and model fits with a specific kernel (such as all-images or omissions) removed
     Inputs are attributes of the GLM class in visual_behavior_glm repo, either derived by instantiating the GLM class,
@@ -627,8 +631,6 @@ def plot_model_fits_example_cell(cell_specimen_id, dataset, cell_results_df, dro
     if linewidth is None:
         linewidth = 2
 
-    suffix = ''
-    
     # Plot Filtered event trace
     if include_events:
         suffix = '_events'
@@ -749,11 +751,14 @@ def plot_model_fits_example_cell(cell_specimen_id, dataset, cell_results_df, dro
             suffix = suffix + '_' + kernel + '_dropout'
         else:
             suffix = suffix
-        m = dataset.metadata.copy()
-        filename = str(m['ophys_experiment_id']) + '_' + str(
-            cell_specimen_id) + '_' + m['cre_line'].split('-')[0] +'_'+ str(int(times[0])) + '_model_fit' + suffix
+        metadata_string = utils.get_metadata_string(dataset.metadata)
+        # m = dataset.metadata.copy()
+        # filename = str(m['ophys_experiment_id']) + '_' + str(
+        #     cell_specimen_id) + '_' + m['cre_line'].split('-')[0] +'_'+ str(int(times[0])) + '_model_fit' + suffix
+        filename = str(cell_specimen_id) + '_' +metadata_string + '_model_fit' + suffix
+
         utils.save_figure(fig, figsize, save_dir, 'example_model_fits', filename)
-        utils.save_figure(fig, figsize, save_dir, 'example_cell_kernels_and_fits_separate_plots', filename)
+        utils.save_figure(fig, figsize, save_dir, 'example_cell_kernels_coding_scores_and_fits', filename)
 
     return ax
 
@@ -1089,7 +1094,8 @@ def load_GLM_outputs(glm_version, experiments_table, cells_table, glm_output_dir
 
 ####### plot GLM kernel timing along with behavior timeseries & stimulus times #######
 
-def plot_kernel_activations(dataset, start_time, duration_seconds, kernel='omissions', index_image_in_window=True, ax=None):
+def plot_kernel_activations(dataset, start_time, duration_seconds, kernel='omissions',
+                            index_image_in_window=True, label_color=None, ax=None):
     '''
     For a given period of time in an ophys or behavior session,
     then plot the window over which a given GLM kernel is active, relative to the event of interest
@@ -1207,7 +1213,11 @@ def plot_kernel_activations(dataset, start_time, duration_seconds, kernel='omiss
                 ax.plot(kernel_trace_timestamps, kernel_trace, color='gray', linewidth=0.5)
 
     # label y axis with kernel name
-    ax.set_ylabel(kernel, rotation=0, horizontalalignment='right', verticalalignment='center')
+    if label_color is not None:
+        color = label_color
+    else:
+        color = 'k'
+    ax.set_ylabel(kernel, rotation=0, horizontalalignment='right', verticalalignment='center', color=color)
 
     return ax
 
@@ -2111,7 +2121,7 @@ def plot_coding_scores_for_cell(cell_specimen_id, ophys_experiment_id, results_p
     return ax
 
 
-def plot_coding_score_components_for_cell(cell_specimen_id, ophys_experiment_id, results_pivoted,
+def plot_coding_score_components_for_cell(cell_specimen_id, ophys_experiment_id, results_pivoted, dataset,
                                           fontsize=12, as_panel=False, save_dir=None, ax=None):
     '''
     Creates barplot of coding scores for a single cell in a single experiment and saves it
@@ -2171,8 +2181,10 @@ def plot_coding_score_components_for_cell(cell_specimen_id, ophys_experiment_id,
         cre_line = cell_dropouts['cre_line'].values[0].split('-')[0]
         title_string = str(ophys_experiment_id) + '_' + str(cell_specimen_id) + '_' + cre_line
         fig.suptitle(title_string, x=0.5, y=1.3, fontsize=16)
-        utils.save_figure(fig, figsize, save_dir, 'example_model_fits', title_string + '_coding_scores')
-        utils.save_figure(fig, figsize, save_dir, 'example_cell_kernels_and_fits_separate_plots',  title_string + '_coding_scores')
+        metadata_string = utils.get_metadata_string(dataset.metadata)
+        filename = str(cell_specimen_id) + '_' + metadata_string + '_coding_scores'
+        utils.save_figure(fig, figsize, save_dir, 'example_model_fits', filename)
+        utils.save_figure(fig, figsize, save_dir, 'example_cell_kernels_coding_scores_and_fits',  filename)
 
     return ax
 

@@ -623,8 +623,8 @@ def plot_umap_for_clusters_separately(cluster_meta, feature_matrix, umap_df=None
         umap_df['x'] = u[:, 0]
         umap_df['y'] = u[:, 1]
 
-    figsize = (18, 6)
-    fig, ax = plt.subplots(2, 6, figsize=figsize, sharex=True, sharey=True)
+    figsize = (9, 12)
+    fig, ax = plt.subplots(4, 3, figsize=figsize, sharex=True, sharey=True)
     ax = ax.ravel()
     for i, cluster_id in enumerate(cluster_ids):
         # get number of unique values in label_col to color by
@@ -1814,9 +1814,10 @@ def plot_mean_shuffled_feature_matrix(shuffled_feature_matrices, cluster_meta, s
     return ax
 
 
-def plot_mean_cluster_heatmaps_remapped(feature_matrix, cluster_meta, cre_line=None, session_colors=True, 
-                                        experience_index=None, abbreviate_features=False, abbreviate_experience=False,
-                                        sort_by='cluster_id', plot_as_rows=False, save_dir=None, folder=None, ax=None):
+def plot_mean_cluster_heatmaps_remapped(feature_matrix, cluster_meta, cre_line=None, session_colors=True,
+                                        experience_index=None, abbreviate_features=False, abbreviate_experience=True,
+                                        sort_by='cluster_id', plot_as_rows=False, fontsize=14,
+                                        save_dir=None, folder=None, ax=None):
     """
     Plot mean cluster heatmaps with remapped coding scores.
 
@@ -1878,7 +1879,7 @@ def plot_mean_cluster_heatmaps_remapped(feature_matrix, cluster_meta, cre_line=N
         mean_dropout_df = mean_dropout_df.loc[features]  # order regressors in a specific order
 
         ax[i] = sns.heatmap(mean_dropout_df, cmap=remapped_cmap, vmin=0, vmax=vmax, ax=ax[i], cbar=False, cbar_kws={'label': 'coding score'})
-
+        sns.despine(ax=ax[i], top=False, right=False, left=False, bottom=False)
         # ax[i] = plot_dropout_heatmap(cluster_meta.loc[this_cluster_csids], feature_matrix_remapped.loc[this_cluster_csids],
         #                 cluster_id, cre_line=None, cbar=False,
         #                  abbreviate_features=False, abbreviate_experience=True,
@@ -1890,41 +1891,44 @@ def plot_mean_cluster_heatmaps_remapped(feature_matrix, cluster_meta, cre_line=N
         # set title and labels
         if annotate:
             ax[i].set_title(
-                'cluster ' + str(cluster_id) + '\n' + str(fraction) + '%, n=' + str(len(this_cluster_csids)), fontsize=14)
+                'cluster ' + str(cluster_id) + '\n' + str(fraction) + '% n=' + str(len(this_cluster_csids)), fontsize=fontsize)
             ax[i].set_xlabel('')
         else:
-            ax[i].set_ylabel('cluster ' + str(cluster_id), fontsize=14)
-            ax[i].set_title(str(fraction) + '%, n=' + str(len(this_cluster_csids)), fontsize=12)
+            ax[i].set_ylabel('cluster ' + str(cluster_id)+'\n'+str(fraction) + '%', fontsize=fontsize)
+            # ax[i].set_title(str(fraction) + '%, n=' + str(len(this_cluster_csids)), fontsize=fontsize)
             ax[i].set_xlabel('')
 
         ax[i].set_yticks(np.arange(0.5, len(mean_dropout_df.index.values)+0.5))
         if abbreviate_features:
         # set yticks to abbreviated feature labels
             feature_abbreviations = get_abbreviated_features(mean_dropout_df.index.values)
-            ax[i].set_yticklabels(feature_abbreviations, rotation=0, fontsize=12)
+            ax[i].set_yticklabels(feature_abbreviations, rotation=0, fontsize=fontsize)
         else:
-            ax[i].set_yticklabels(mean_dropout_df.index.values, rotation=0, fontsize=12)
+            ax[i].set_yticklabels(mean_dropout_df.index.values, rotation=0, fontsize=fontsize)
 
         ax[i].set_xticks(np.arange(0.5, len(mean_dropout_df.columns.values)+0.5))
         if abbreviate_experience:
             # set xticks to abbreviated experience level labels
             xticklabels = get_abbreviated_experience_levels(mean_dropout_df.columns.values)
-            ax[i].set_xticklabels(xticklabels, rotation=0, fontsize=12)
+            ax[i].set_xticklabels(xticklabels, rotation=0, fontsize=fontsize)
         else:
             xticklabels = mean_dropout_df.columns.values
-            ax[i].set_xticklabels(xticklabels, rotation=0, fontsize=12)
+            ax[i].set_xticklabels(xticklabels, rotation=0, fontsize=fontsize)
         if annotate is False:
             ax[i].set_xticklabels('')
     ax[i].set_xticklabels(xticklabels)
+
     if annotate:
         if plot_as_rows:
             fig.suptitle(cell_type, x=0.65, y=1.0)
-            plt.subplots_adjust(hspace=0.6, wspace=0.25)
-            plt.tight_layout()
+            plt.subplots_adjust(hspace=0.4, wspace=0.25)
+            # plt.tight_layout()
         else:
-            fig.suptitle(cell_type, x=0.46, y=0.95)
-            plt.subplots_adjust(hspace=0.6, wspace=0.25)
-            plt.tight_layout()
+            fig.suptitle(cell_type, x=0.46, y=1.4)
+            plt.subplots_adjust(hspace=0.4, wspace=0.25)
+            # plt.tight_layout()
+
+
 
     if save_dir:
         utils.save_figure(fig, figsize, save_dir, folder, 'mean_cluster_heatmaps_remapped_'+cell_type)
@@ -2190,9 +2194,9 @@ def plot_coding_score_heatmap_matched(cluster_meta, feature_matrix, sort_by='clu
 
     feature_colors, feature_labels_dict = get_feature_colors_and_labels()
 
-    fontsize = 14
+    fontsize = 16
     ymin, ymax = ax[0].get_ylim()
-    ymax = ymax + (ymax * 0.14)
+    ymax = ymax + (ymax * 0.22)
     ax[0].text(s=features[0], y=ymax, x=1.5, rotation=rotation, color=feature_colors[0], fontsize=fontsize, va='center',
                ha='center')
     ax[0].text(s=features[1], y=ymax, x=4.5, rotation=rotation, color=feature_colors[1], fontsize=fontsize, va='center',
@@ -2429,9 +2433,9 @@ def plot_percent_cells_per_cluster_per_cre_dominant_feature(cluster_meta, col_to
             n_cells_per_cluster[n_cells_per_cluster.cluster_id == 1].index, 'dominant_feature_cluster'] = 'null'
 
     if match_height:
-        figsize = (5, 12)
+        figsize = (5, 10)
     else:
-        figsize = (5, 5)
+        figsize = (6, 5)
     fig, ax = plt.subplots(1, 3, figsize=figsize, sharey=True, sharex=True)
 
     # each cre line
@@ -2572,7 +2576,7 @@ def plot_percent_cells_per_cluster_per_cre_and_all(cluster_meta, col_to_group='c
 
 
 def plot_percent_cells_per_cluster_per_cre_as_rows(cluster_meta, cre_line='Slc17a7-IRES2-Cre', save_dir=None,
-                                                   folder=None, ax=None):
+                                                   sort_by='cluster_id', folder=None, ax=None):
     '''
     Plots the percent of cells in each cre line belonging to each cluster as a barplot
     with one axis / row per cre line
@@ -2580,9 +2584,14 @@ def plot_percent_cells_per_cluster_per_cre_as_rows(cluster_meta, cre_line='Slc17
     n_cells_per_cluster = processing.get_fraction_cells_per_cluster_per_group(cluster_meta, 'cre_line')
     n_cells_per_cluster['percent_cells'] = n_cells_per_cluster.fraction_per_cluster * 100
 
-    cluster_ids = np.sort(cluster_meta.cluster_id.unique())
-
-    cre_data = n_cells_per_cluster[n_cells_per_cluster.cre_line == cre_line]
+    if sort_by == 'cluster_size':
+        cluster_ids = cluster_meta['cluster_id'].value_counts().index.values
+    else:
+        cluster_ids = np.sort(cluster_meta.cluster_id.unique())
+    if cre_line != 'all':
+        cre_data = n_cells_per_cluster[n_cells_per_cluster.cre_line == cre_line]
+    else:
+        cre_data = n_cells_per_cluster
     if ax is None:
         figsize = (2, 10)
         fig, ax = plt.subplots(len(cluster_ids), 1, figsize=figsize, sharex=False)
@@ -2607,7 +2616,7 @@ def plot_percent_cells_per_cluster_per_cre_as_rows(cluster_meta, cre_line='Slc17
         ax[i].set_xlim(xlims)
         xmin, xmax = ax[i].get_xlim()
 
-        sns.despine(ax=ax[i], top=True, right=True, left=True, bottom=True, offset=None, trim=False)
+        sns.despine(ax=ax[i], top=True, right=True, left=False, bottom=False, offset=None, trim=False)
         ax[i].tick_params(which='both', bottom=False, top=False, right=False, left=False,
                           labelbottom=False, labeltop=False, labelright=False, labelleft=False)
 
@@ -2624,7 +2633,14 @@ def plot_percent_cells_per_cluster_per_cre_as_rows(cluster_meta, cre_line='Slc17
     ax[i].set_xticks((0, 10))
     ax[i].set_xticklabels((0, 10), fontsize=12)
 
-    ax[0].set_title(utils.convert_cre_line_to_cell_type(cre_line).split(' ')[0], fontsize=14)
+    if cre_line == 'all':
+        ax[0].set_title('% cells per cluster', fontsize=10)
+        ax[i].set_xlabel('% of cells', fontsize=10)
+    else:
+        ax[0].set_title(utils.convert_cre_line_to_cell_type(cre_line).split(' ')[0], fontsize=14)
+
+    ax[0].set_title('% of cells', fontsize=10)
+    ax[i].set_xlabel('% of cells', fontsize=10)
 
     plt.subplots_adjust(wspace=0, hspace=0)
 
@@ -2784,6 +2800,7 @@ def plot_population_averages_for_clusters(multi_session_df, event_type, axes_col
         plt.legend(legend_txt,bbox_to_anchor=(1, 1))
     if suptitle is not None:
         plt.suptitle(suptitle, x=0.52, y=1.3, fontsize=18)
+    ax[0].set_ylabel(ylabel)
 
     if save_dir:
         fig.subplots_adjust(wspace=wspace, hspace=0.75)
@@ -2866,7 +2883,7 @@ def plot_population_average_response_for_clusters_as_rows(multi_session_df, even
     # Put arrow and label for image onset
     # ax[0].annotate(event_type[:-1]+' onset', xy=(np.abs(xlim_seconds[0])+xtra_space, 1.35), xycoords=ax[0].get_xaxis_transform(), ha="right", va="top",
     #                         color=label_color, fontsize=10, clip_on=False)
-    ax[0].annotate(event_type[:-1] + ' onset', xy=(0.1, 1.35), xycoords=ax[0].get_xaxis_transform(), ha="left",
+    ax[0].annotate(event_type[:-1], xy=(0.1, 1.35), xycoords=ax[0].get_xaxis_transform(), ha="left",
                    va="top",
                    color=label_color, fontsize=10, clip_on=False)
     ax[0].annotate('', xy=(0.01, 1.35), xycoords=ax[0].get_xaxis_transform(), xytext=(0.01, 0.95), fontsize=8,
@@ -3073,8 +3090,185 @@ def plot_population_averages_for_clusters_grid(multi_session_df, event_type, axe
     return ax
 
 
+def plot_population_average_response_for_clusters_as_rows_all_response_types(image_mdf, change_mdf, omission_mdf,
+                                                                             suptitle=None, cluster_order=None, ax=None):
+    '''
+    Plot population averages for each cluster, with separate columns for images, changes, and omissions
+    will use same ymax for all columns of each row
+    add annotations for image presentation times on top row
+    and scale bars for response magnitude on y and time on x
+
+    multi_session_dfs must have 'cluster_id' as a column
+
+    '''
+
+    tmp = image_mdf.copy()
+    timestamps = tmp.trace_timestamps.values[0]
+    experience_level_colors = utils.get_experience_level_colors()
+    ylabel = 'Calcium events'
+    axes_column = 'cluster_id'
+    hue_column = 'experience_level'
+    axes_conditions = np.sort(tmp[axes_column].unique())
+    hue_conditions = np.sort(tmp[hue_column].unique())
+    print(len(axes_conditions), len(hue_conditions))
+
+    image_xlim = [-0.5, 0.75]
+    change_xlim = [-1, 0.75]
+    omission_xlim = [-1, 1.5]
+
+    if cluster_order:
+        cluster_ids = cluster_order
+    else:
+        cluster_ids = np.sort(image_mdf.cluster_id.unique())
+
+    if ax == None:
+        fig, ax = plt.subplots(len(cluster_ids), 3, figsize=(4, 10),
+                               sharey='row', sharex=False, gridspec_kw={'width_ratios':[1, 1.25, 1.25]})
+        ax = ax.ravel()
+
+    for x, cluster_id in enumerate(cluster_ids):
+        i = (x * 3)
+        # for a, axis in enumerate(axes_conditions):
+        for c, hue in enumerate(hue_conditions):
+            cdf = image_mdf[(image_mdf['cluster_id'] == cluster_id) & (image_mdf[hue_column] == hue)]
+            traces = cdf.mean_trace.values
+            timestamps = cdf.trace_timestamps.values[0]
+            # xlim_seconds = [-0.5, 0.75]
+            ax[i] = utils.plot_mean_trace(np.asarray(traces), timestamps, ylabel=ylabel, linewidth=1,
+                                          legend_label=hue, color=experience_level_colors[c], interval_sec=0.5,
+                                          xlim_seconds=image_xlim, ax=ax[i])
+            ax[i].set_xlim(image_xlim)
+
+        ax[i] = utils.plot_flashes_on_trace(ax[i], timestamps, change=False, omitted=False, alpha=0.25)
+
+        if x == 0:
+            ax[i].annotate('image', xy=(0.1, 1.35), xycoords=ax[i].get_xaxis_transform(), ha='left',
+                           va='top', color='gray', fontsize=10, clip_on=False)
+            ax[i].annotate('', xy=(0.01, 1.35), xycoords=ax[i].get_xaxis_transform(), xytext=(0.01, 0.95), fontsize=8,
+                           arrowprops=dict(arrowstyle="<-", color='gray', lw=1), clip_on=False)
+        ax[i].set_xlim(image_xlim)
+
+        i = (x * 3) + 1
+        # for a, axis in enumerate(axes_conditions):
+        for c, hue in enumerate(hue_conditions):
+            cdf = change_mdf[(change_mdf['cluster_id'] == cluster_id) & (change_mdf[hue_column] == hue)]
+            traces = cdf.mean_trace.values
+            timestamps = cdf.trace_timestamps.values[0]
+            # xlim_seconds=[-1, 0.75]
+            ax[i] = utils.plot_mean_trace(np.asarray(traces), timestamps, ylabel=ylabel, linewidth=1,
+                                          legend_label=hue, color=experience_level_colors[c], interval_sec=0.5,
+                                          xlim_seconds=change_xlim, ax=ax[i])
+            # ax[i].set_xlim(change_xlim)
+        ax[i] = utils.plot_flashes_on_trace(ax[i], timestamps, change=True, omitted=False, alpha=0.25)
+        if x == 0:
+            ax[i].annotate('change', xy=(0.1, 1.35), xycoords=ax[i].get_xaxis_transform(), ha='left',
+                           va='top', color=sns.color_palette()[0], fontsize=10, clip_on=False)
+            ax[i].annotate('', xy=(0.01, 1.35), xycoords=ax[i].get_xaxis_transform(), xytext=(0.01, 0.95), fontsize=8,
+                           arrowprops=dict(arrowstyle="<-", color=sns.color_palette()[0], lw=1), clip_on=False)
+        # ax[i].set_xlim(change_xlim)
+
+        i = (x * 3) + 2
+        # for a, axis in enumerate(axes_conditions):
+        for c, hue in enumerate(hue_conditions):
+            cdf = omission_mdf[(omission_mdf['cluster_id'] == cluster_id) & (omission_mdf[hue_column] == hue)]
+            traces = cdf.mean_trace.values
+            timestamps = cdf.trace_timestamps.values[0]
+            # xlim_seconds=[-1, 1.5]
+            ax[i] = utils.plot_mean_trace(np.asarray(traces), timestamps, ylabel=ylabel, linewidth=1,
+                                          legend_label=hue, color=experience_level_colors[c], interval_sec=0.5,
+                                          xlim_seconds=omission_xlim, ax=ax[i])
+            # ax[i].set_xlim(omission_xlim)
+        ax[i] = utils.plot_flashes_on_trace(ax[i], timestamps, change=False, omitted=True, alpha=0.25)
+        if x == 0:
+            ax[i].annotate('omission', xy=(0.12, 1.35), xycoords=ax[i].get_xaxis_transform(), ha='left',
+                           va='top', color=sns.color_palette()[9], fontsize=10, clip_on=False)
+            ax[i].annotate('', xy=(0.01, 1.35), xycoords=ax[i].get_xaxis_transform(), xytext=(0.01, 0.95), fontsize=8,
+                           arrowprops=dict(arrowstyle="<-", color=sns.color_palette()[9], lw=1), clip_on=False)
+        # ax[i].set_xlim(omission_xlim)
+
+    n_panels = len(cluster_ids) * 3
+    for i in range(n_panels):
+        ymin, ymax = ax[i].get_ylim()
+        if ymax < 0.015:
+            ymax = 0.015
+        ax[i].set_ylim(ymin, ymax)
+        ax[i].set_xticks((0, 0.5))
+        ax[i].set_yticks((0, 0.01))
+        ax[i].set_title('')
+        ax[i].set_xlabel('')
+        ax[i].set_ylabel('')
+        ax[i].set_yticklabels([])
+        sns.despine(ax=ax[i], top=True, right=True, left=True, bottom=True)
+        ax[i].tick_params(which='both', bottom=False, top=False, right=False, left=False,
+                          labelbottom=False, labeltop=False, labelright=False, labelleft=False)
+
+        # for the first column of each row
+        if i in np.arange(0, n_panels)[::3]:
+            # label y-axis with max value
+            ax[i].axvline(x=image_xlim[0] - 0.1, ymin=ymin, ymax=0.4, color='k', linewidth=1.3, clip_on=False)
+            ax[i].annotate(str(np.round(ymax * 0.4, 3)), xy=(image_xlim[0] - 0.15, np.round(ymax / 3, 3)),
+                           xycoords='data', xytext=(image_xlim[0] - 0.15, np.round(ymax / 3, 3)), ha='right',
+                           va='center',
+                           fontsize=8, clip_on=False, annotation_clip=False, rotation=90)
+
+    # label Clusters IDs on y axis
+    for x, cluster_id in enumerate(cluster_ids):
+        i = (x * 3)
+        ymin, ymax = ax[i].get_ylim()
+        ax[i].annotate('Cluster '+str(cluster_id), xy=(image_xlim[0] - 0.5, np.round(ymax / 2, 3)),
+                       xycoords='data', xytext=(image_xlim[0] - 0.5, np.round(ymax / 2, 3)), ha='right',
+                       va='center', fontsize=10, clip_on=False, annotation_clip=False, rotation=90)
+
+        # ax[i].set_ylabel('Cluster ' + str(cluster_id), fontsize=10, ha='center', va='bottom')
+
+    # Label x-axis with time
+    # images
+    i = n_panels - 3
+    xlim_seconds = image_xlim
+    xmax = 0.5 / (np.abs(xlim_seconds[0]) + xlim_seconds[1])  # 0.5 / of total time
+    y_time = (ymax - ymin) * 0.15
+    y_label = -(ymax - ymin) * 0.25
+    ax[i].axhline(y=-y_time, xmin=0, xmax=xmax, color='k', linewidth=1.3, clip_on=False)
+    ax[i].annotate('0.5 s', xy=(xlim_seconds[0], y_label),
+                   xycoords='data', xytext=(xlim_seconds[0] + 0.5, y_label), ha='center', va='top',
+                   fontsize=8, clip_on=False, annotation_clip=False)
+
+    # changes
+    i = n_panels - 2
+    xlim_seconds = change_xlim
+    xmax = 0.5 / (np.abs(xlim_seconds[0]) + xlim_seconds[1])  # 0.5 / of total time
+    y_time = (ymax - ymin) * 0.15
+    y_label = -(ymax - ymin) * 0.25
+    ax[i].axhline(y=-y_time, xmin=0, xmax=xmax, color='k', linewidth=1.3, clip_on=False)
+    ax[i].annotate('0.5 s', xy=(xlim_seconds[0], y_label),
+                   xycoords='data', xytext=(xlim_seconds[0] + 0.5, y_label), ha='center', va='top',
+                   fontsize=8, clip_on=False, annotation_clip=False)
+
+    # omissions
+    # images
+    i = n_panels - 1
+    xlim_seconds = omission_xlim
+    xmax = 0.5 / (np.abs(xlim_seconds[0]) + xlim_seconds[1])  # 0.5 / of total time
+    y_time = (ymax - ymin) * 0.15
+    y_label = -(ymax - ymin) * 0.25
+    ax[i].axhline(y=-y_time, xmin=0, xmax=xmax, color='k', linewidth=1.3, clip_on=False)
+    ax[i].annotate('0.5 s', xy=(xlim_seconds[0], y_label),
+                   xycoords='data', xytext=(xlim_seconds[0] + 0.5, y_label), ha='center', va='top',
+                   fontsize=8, clip_on=False, annotation_clip=False)
+
+    # changes
+
+    plt.subplots_adjust(wspace=0.4)
+    if suptitle is not None:
+        plt.suptitle(suptitle, x=0.5, y=0.93, fontsize=14)
+
+
+
+    return ax
+
+
 def plot_population_average_response_for_clusters_as_rows_split(multi_session_df, event_type, cluster_order=None,
-                                                                ax=None):
+                                                                with_pre_change=True, ax=None, save_dir=None):
     '''
     Plot population averages on a specified axis, with each experience level as its own column
     add annotations for image presentation time
@@ -3084,7 +3278,12 @@ def plot_population_average_response_for_clusters_as_rows_split(multi_session_df
 
     '''
     if event_type == 'changes':
-        xlim_seconds = [-1, 0.75]
+        if with_pre_change:
+            xlim_seconds = [-1, 0.75]
+            col_size = 1.25
+        else:
+            xlim_seconds = [-0.5, 0.75]
+            col_size = 1
         label_color = sns.color_palette()[0]
         omitted = False
         change = True
@@ -3093,11 +3292,15 @@ def plot_population_average_response_for_clusters_as_rows_split(multi_session_df
         label_color = sns.color_palette()[9]
         omitted = True
         change = False
+        col_size = 1.5
     else:
         xlim_seconds = [-0.5, 0.75]
         label_color = 'gray'
         omitted = False
         change = False
+        col_size = 1
+
+    # row_width = xlim_seconds[1]+np.abs(xlim_seconds[0])
 
     tmp = multi_session_df.copy()
     timestamps = tmp.trace_timestamps.values[0]
@@ -3113,7 +3316,8 @@ def plot_population_average_response_for_clusters_as_rows_split(multi_session_df
         cluster_ids = np.sort(multi_session_df.cluster_id.unique())
 
     if ax == None:
-        fig, ax = plt.subplots(len(cluster_ids), 3, figsize=(3, 10), sharey='row', sharex=True)
+        figsize = (3*col_size, 10)
+        fig, ax = plt.subplots(len(cluster_ids), 3, figsize=figsize, sharey='row', sharex=True)
         ax = ax.ravel()
 
     i = 0
@@ -3124,7 +3328,7 @@ def plot_population_average_response_for_clusters_as_rows_split(multi_session_df
             ax[i] = utils.plot_mean_trace(np.asarray(traces), timestamps, ylabel='Calcium events',
                                           legend_label=hue, color=experience_level_colors[c], interval_sec=0.5,
                                           xlim_seconds=xlim_seconds, ax=ax[i])
-            ax[i] = utils.plot_flashes_on_trace(ax[i], timestamps, change=change, omitted=omitted, alpha=0.25)
+            ax[i] = utils.plot_flashes_on_trace(ax[i], timestamps, change=change, omitted=omitted, alpha=0.15)
 
             i += 1
 
@@ -3172,8 +3376,99 @@ def plot_population_average_response_for_clusters_as_rows_split(multi_session_df
         ax[i].annotate('', xy=(0.01, 1.35), xycoords=ax[0].get_xaxis_transform(), xytext=(0.01, 0.95), fontsize=8,
                        arrowprops=dict(arrowstyle="<-", color=label_color, lw=1), clip_on=False)
 
-    plt.subplots_adjust(wspace=0.4)
+    # label Clusters IDs on y axis
+    for x, cluster_id in enumerate(cluster_ids):
+        i = (x * 3)
+        ymin, ymax = ax[i].get_ylim()
+        ax[i].annotate('Cluster ' + str(cluster_id), xy=(xlim_seconds[0] - 0.6, np.round(ymax / 2, 3)),
+                       xycoords='data', xytext=(xlim_seconds[0] - 0.6, np.round(ymax / 2, 3)), ha='right',
+                       va='center', fontsize=8, clip_on=False, annotation_clip=False, rotation=90)
+
+
+    # plt.subplots_adjust(wspace=0.4)
+    if save_dir:
+        fig_title = 'population_average_as_cols_' + event_type
+        utils.save_figure(fig, figsize, save_dir, 'cluster_properties', fig_title)
     return ax
+
+
+cre_line = 'Slc17a7-IRES2-Cre'
+
+
+def plot_cluster_properties_combined(cluster_meta, feature_matrix, cre_line,
+                                     image_mdf, change_mdf, omission_mdf, save_dir=None):
+    '''
+    Plots cluster heatmap, % cells per cluster, cluster average heatmaps, and population averages for clusters
+    '''
+
+
+
+    threshold_percentile = 99.8
+    image_mdf_clean, image_outliers = processing.remove_outliers(image_mdf, threshold_percentile)
+    change_mdf_clean, change_outliers = processing.remove_outliers(change_mdf, threshold_percentile)
+    omission_mdf_clean, omission_outliers = processing.remove_outliers(omission_mdf, threshold_percentile)
+
+    # Limit to cre line
+    if cre_line != 'all':
+        cluster_order = cluster_meta[cluster_meta.cre_line == cre_line]['cluster_id'].value_counts().index.values
+        cre_csids = cluster_meta[cluster_meta.cre_line == cre_line].index.values
+        cluster_meta = cluster_meta.loc[cre_csids]
+        feature_matrix = feature_matrix.loc[cre_csids]
+        image_mdf_clean = image_mdf_clean[image_mdf_clean.cell_specimen_id.isin(cre_csids)]
+        change_mdf_clean = change_mdf_clean[change_mdf_clean.cell_specimen_id.isin(cre_csids)]
+        omission_mdf_clean = omission_mdf_clean[omission_mdf_clean.cell_specimen_id.isin(cre_csids)]
+        cell_type = utils.convert_cre_line_to_cell_type(cre_line)
+    else:
+        cluster_order = cluster_meta['cluster_id'].value_counts().index.values
+        cluster_meta['cre_line'] = 'all'
+        cell_type = 'all'
+
+    cluster_ids = cluster_meta.cluster_id.unique()
+    n_clusters = len(cluster_ids)
+
+    figsize = [15, n_clusters]
+    fig = plt.figure(figsize=figsize, facecolor='white')
+
+    # coding scores per cluster
+    ax = utils.placeAxesOnGrid(fig, dim=(n_clusters, 1), xspan=(0, 0.3), yspan=(0, 1), sharex=True, wspace=0, hspace=0)
+    ax = plot_coding_score_heatmap_matched(cluster_meta, feature_matrix, cluster_order=cluster_order,
+                                                    session_colors=True, experience_index=None, title='', ax=ax)
+
+    # plot average coding scores
+    ax = utils.placeAxesOnGrid(fig, dim=(n_clusters, 1), xspan=(0.39, 0.45), yspan=(0, 1), sharex=True, sharey=True,
+                               wspace=0, hspace=0.2)
+    ax = plot_mean_cluster_heatmaps_remapped(feature_matrix, cluster_meta, fontsize=9, sort_by='cluster_size',
+                                                      abbreviate_features=True, plot_as_rows=True, ax=ax)
+
+    # percent cells for each cluster
+    ax = utils.placeAxesOnGrid(fig, dim=(n_clusters, 1), xspan=(0.48, 0.58), yspan=(0, 1), sharex=False, wspace=0,
+                               hspace=0)
+    ax = plot_percent_cells_per_cluster_per_cre_as_rows(cluster_meta, cre_line=cre_line,
+                                                                 sort_by='cluster_size', ax=ax)
+
+    # average repeated image response across all cells in each cluster
+    ax = utils.placeAxesOnGrid(fig, dim=(n_clusters, 1), xspan=(0.62, 0.69), yspan=(0, 1), sharex=True, sharey=True,
+                               wspace=0, hspace=0)
+    ax = plot_population_average_response_for_clusters_as_rows(image_mdf_clean, 'images',
+                                                                        cluster_order=cluster_order, ax=ax)
+
+    # average repeated image response across all cells in each cluster
+    ax = utils.placeAxesOnGrid(fig, dim=(n_clusters, 1), xspan=(0.74, 0.82), yspan=(0, 1), sharex=True, sharey=True,
+                               wspace=0, hspace=0)
+    ax = plot_population_average_response_for_clusters_as_rows(change_mdf_clean, 'changes',
+                                                                        cluster_order=cluster_order, ax=ax)
+
+    # average repeated image response across all cells in each cluster
+    ax = utils.placeAxesOnGrid(fig, dim=(n_clusters, 1), xspan=(0.87, 0.99), yspan=(0, 1), sharex=True, sharey=True,
+                               wspace=0, hspace=0)
+    ax = plot_population_average_response_for_clusters_as_rows(omission_mdf_clean, 'omissions',
+                                                                        cluster_order=cluster_order, ax=ax)
+
+    plt.suptitle('Cluster properties for ' + cell_type + ' matched cells sorted by cluster size',
+                 x=0.5, y=0.97, fontsize=14)
+
+    if save_dir:
+        utils.save_figure(fig, figsize, save_dir, 'clustering_results', 'cluster_properties_combined_' + cre_line[:3])
 
 
 def plot_response_heatmap_for_concatenated_traces(multi_session_df, event_type='images', cell_order=None,
@@ -4830,7 +5125,7 @@ def plot_cluster_depth_distribution_by_cre_lines(cluster_meta, location, metric,
 
 def plot_cluster_depth_distribution_by_cre_line_separately(cluster_meta, location, cluster_order=None,
                                                             metric='fraction_cells_location', ylabel='Fraction cells',
-                                                            save_dir=None, folder=''):
+                                                            legend_title='', save_dir=None, folder=''):
     """
     Barplot of fraction or number of cells in each cluster within each cre line,
     with separate figures for each cre line
@@ -4890,7 +5185,7 @@ def plot_cluster_depth_distribution_by_cre_line_separately(cluster_meta, locatio
                             horizontalalignment='center', verticalalignment='center')
 
         ax.set_title(utils.convert_cre_line_to_cell_type(cre_line))
-        ax.legend(loc='upper right', fontsize=fontsize, title_fontsize=fontsize)
+        ax.legend(loc='upper right', fontsize=fontsize, title_fontsize=fontsize, title=legend_title)
         sns.despine(fig=fig, top=True, right=True, left=False, bottom=False, offset=None, trim=False)
 
         if save_dir:
@@ -6597,6 +6892,8 @@ def plot_tukey_diff_in_means_for_metric(response_metrics, metric, title='', xlab
     group_to_compare: cluster_id to show multicomp stats against, will draw dashed lines around confidence intervals for this cluster
                         If None, will not draw CI bounds
     '''
+
+    cre_lines = utiles.get_cre_lines()
 
     if xlabel is None:
         xlabel = metric

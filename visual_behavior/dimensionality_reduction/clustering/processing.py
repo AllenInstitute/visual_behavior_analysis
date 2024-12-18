@@ -204,7 +204,7 @@ def get_cre_line_cell_specimen_ids(df_no_cre, df_cre):
 def remove_outliers(multi_session_df, threshold_percentile=99.9):
     '''
     Filters a dataframe of cell responses to remove cells with mean response values greater than
-    a given percentile threshold.
+    a given percentile threshold, per cre line
     Also removes specific cells known to have abnormally high dF/F values that may not get caught by the percentile threshold for whatever reason
 
     Parameters
@@ -217,14 +217,17 @@ def remove_outliers(multi_session_df, threshold_percentile=99.9):
     -------
 
     '''
-    outlier_cells = multi_session_df[(multi_session_df.mean_response>np.percentile(multi_session_df.mean_response.values, threshold_percentile)) &
-                                     (multi_session_df.mean_baseline>np.percentile(multi_session_df.mean_baseline.values, threshold_percentile))].cell_specimen_id.unique()
+    outlier_cells = []
+    for cre_line in multi_session_df.cre_line.unique():
+        cre_df = multi_session_df[(multi_session_df.cre_line==cre_line)]
+        outlier_cells_tmp = cre_df[(cre_df.mean_response>np.percentile(cre_df.mean_response.values, threshold_percentile)) &
+                                         (cre_df.mean_baseline>np.percentile(cre_df.mean_baseline.values, threshold_percentile)) ].cell_specimen_id.unique()
+        outlier_cells = np.hstack((outlier_cells, outlier_cells_tmp))
     # These cells have abnormally high dF/F values and throw off the meam
     bad_cells = [1120091750,  1120094237, 1086580238, 1086551540, 1086553602,  # Sst
                 1086514682, 1086515397, 1086673279, # Vip
                 1086529704, ] # Slc17a7
     outlier_cells = np.hstack((outlier_cells, bad_cells))
-    # outlier_cells = image_mdf[image_mdf.mean_response>0.1].cell_specimen_id.unique()
     multi_session_df_clean = multi_session_df[multi_session_df.cell_specimen_id.isin(outlier_cells)==False].copy()
     return multi_session_df_clean, outlier_cells
 
@@ -2284,8 +2287,8 @@ def get_coding_score_metrics_for_clusters(cluster_meta, results_pivoted):
         stats = get_coding_metrics_for_condition(index_dropouts=cluster_dropouts, index_value=cluster_id, index_name='cluster_id')
         cluster_metrics = pd.concat([cluster_metrics, stats], sort=False)
     # cluster_metrics = cluster_metrics.merge(cluster_meta, on='cluster_id')
-    # reclassify cluster 6 as task coding
-    cluster_metrics.loc[6, 'dominant_feature'] = 'task'
+    # reclassify cluster 10 as task coding
+    cluster_metrics.loc[10, 'dominant_feature'] = 'task'
 
     return cluster_metrics
 
@@ -2782,6 +2785,7 @@ def generate_coding_score_metrics_per_experience_level_table(cluster_meta, resul
         cluster_metrics = cluster_metrics.rename(columns={'dominant_experience_level': 'dominant_experience_level_cluster',
                                                  'dominant_feature': 'dominant_feature_cluster'})
         # merge into coding score metrics
+        coding_score_metrics = coding_score_metrics.reset_index()
         coding_score_metrics = coding_score_metrics.merge(cluster_metrics.reset_index()[
                                     ['cluster_id', 'dominant_experience_level_cluster', 'dominant_feature_cluster']])
         # coding_score_metrics['dominant_feature_cluster'] = coding_score_metrics.dominant_feature
@@ -2859,7 +2863,7 @@ def generate_merged_table_of_coding_score_and_model_free_metrics(cluster_meta, r
             print('merged metrics table saved')
 
     # reclassify cluster 6 as task coding
-    indices = metrics[metrics.cluster_id == 6].index.values
+    indices = metrics[metrics.cluster_id == 10].index.values
     metrics.loc[indices, 'dominant_feature_cluster'] = 'task'
 
     return metrics

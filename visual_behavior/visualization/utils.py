@@ -22,7 +22,7 @@ def get_single_cell_plots_dir():
     return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/single_cell_plots'
 
 
-def save_figure(fig, figsize, save_dir, folder, fig_title, formats=['.png']):
+def save_figure(fig, figsize, save_dir, folder, fig_title, formats=['.png', '.pdf']):
     fig_dir = os.path.join(save_dir, folder)
     if not os.path.exists(fig_dir):
         os.mkdir(fig_dir)
@@ -1001,6 +1001,36 @@ def get_start_end_time_for_period_with_event(stimulus_presentations, event_type=
     else:
         window = [start_time, end_time]
     return window
+
+
+def get_consecutive_trials_with_omission_in_middle(dataset, flashes_between_changes=16):
+    ''' Loops through trials and finds those where a hit and a miss are within a given distance of each other
+    and there is an omission between them
+    '''
+
+    st = dataset.stimulus_presentations.copy()
+    trials = dataset.trials.copy()
+
+    # get all trials where the next one is less than the designated number of flashes between changes
+    time_between_changes = flashes_between_changes*0.75
+    diffs = np.where(trials.change_time.diff()<time_between_changes)[0] -1
+
+    trials_to_keep = []
+    start_times = []
+    for diff in diffs: # for all trials that have another change within the selected window
+        # if the current change is a hit and the next change is a miss (or vice versa)
+        if (trials.loc[diff].hit and trials.loc[diff+1].miss) | (trials.loc[diff].miss and trials.loc[diff+1].hit) :
+            # get the start and end times of the two trials
+            start_time = trials.loc[diff].change_time
+            end_time = trials.loc[diff+1].change_time
+            window_stim = st[(st.start_time>start_time) & (st.end_time<end_time)]
+            # check whether there is an omission in that window
+            if len(window_stim[window_stim.omitted]) > 0:
+                # if so, keep it
+                trials_to_keep.append(diff)
+                start_times.append(start_time-(3*0.75)) # start time to keep is 2 flashes before the first change
+    # return trials_to_keep
+    return start_times
 
 
 def get_experiments_matched_across_project_codes(df):
