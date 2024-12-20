@@ -44,18 +44,36 @@ def plot_reliable_example_cells(multi_session_mean_df, cells_to_plot, cell_type,
         col_size = 0.75
         label = 'Image change'
         label_color = sns.color_palette()[0]
+        if cell_type == 'Excitatory':
+            scale = 1.2
+        elif cell_type == 'Sst Inhibitory':
+            scale = 1.05
+        elif cell_type == 'Vip Inhibitory':
+            scale = 1.6
     elif event_type == 'omissions':
         change = False
         omitted = True
         window = [-1, 1.5]
-        col_size = 1.1
+        col_size = 1.2
         label = 'Image omission'
         label_color = sns.color_palette()[9]
+        if cell_type == 'Excitatory':
+            scale = 1.25
+        elif cell_type == 'Sst Inhibitory':
+            scale = 1
+        elif cell_type == 'Vip Inhibitory':
+            scale = 1.025
     else:
         change = False
         omitted = False
         window = [-0.5, 0.75]
         col_size = 0.75
+        if cell_type == 'Excitatory':
+            scale = 1.2
+        elif cell_type == 'Sst Inhibitory':
+            scale = 1.05
+        elif cell_type == 'Vip Inhibitory':
+            scale = 1.6
 
     interval_sec = 1
 
@@ -92,8 +110,11 @@ def plot_reliable_example_cells(multi_session_mean_df, cells_to_plot, cell_type,
         ax[i].set_xticklabels([])
         ax[i].set_xlabel('')
         ymin, ymax = ax[i].get_ylim()
+        ax[i].set_ylim(ymax=ymax*scale)
         ax[i].set_yticks([0, np.round(ymax * .3, 3)])
         ax[i].set_yticklabels(['', np.round(ymax * .3, 3)], va='top')
+        ax[i].set_title(experience_level, color=color, fontsize=12)
+
 
         # ax[i].set_title(experience_level, color=color, fontsize=12)
 
@@ -105,28 +126,38 @@ def plot_reliable_example_cells(multi_session_mean_df, cells_to_plot, cell_type,
             else:
                 dist = 0.1
             ax[i].axvline(x=window[0] - dist, ymin=0, ymax=0.3, color='k', linewidth=1, clip_on=False)
-
         sns.despine(ax=ax[i], top=True, right=True, left=True, bottom=True)
         ax[i].tick_params(bottom=False, left=False, right=False, top=False, labelsize=7, pad=-1)
 
     # annotate first axis
     i = 0
     n_cells = len(sdf[(sdf.cell_type == cell_type)].cell_specimen_id.unique())
-    ax[i].set_ylabel('n='+str(n_cells)+' cells', rotation=0, fontsize=10, ha='right', y=0.4)
+    ax[i].set_ylabel('n='+str(n_cells)+' cells', rotation=0, fontsize=8, ha='center', va='top', y=0.8)
     # ax[i].set_ylabel('grand avg.', rotation=0, fontsize=10, ha='right', y=0.4)
 
     # annotate time axis and change/omission for excitatory only
     if cell_type == 'Excitatory':
         # plot time axis bar
         # ax[i].set_xticks([-0.75, -0.25])
-        ax[i].set_xticks([0, 0.5])
-        ax[i].set_xticklabels(['', '0.5 s'], va='top')
-        ax[i].annotate('', xy=(0, -0.08), xycoords=ax[i].get_xaxis_transform(), xytext=(0.5, -0.08), fontsize=8,
-                       arrowprops=dict(arrowstyle='-', color='k', lw=1, shrinkA=0, shrinkB=0), clip_on=False)
-        # label image change or image omission
-        ax[i].annotate(label, xy=(-0.17, 1.4), xycoords=ax[i].get_xaxis_transform(), ha="right", va="top",
-                        color=label_color, fontsize=10, clip_on=False)
-        ax[i].annotate('', xy=(0.01, 1.35), xycoords=ax[i].get_xaxis_transform(), xytext=(0.01, 0.95), fontsize=8,
+        # ax[i].set_xticks([0, 0.5])
+        # ax[i].set_xticklabels(['', '0.5 s'], va='top')
+        # ax[i].annotate('', xy=(0, -0.08), xycoords=ax[i].get_xaxis_transform(), xytext=(0.5, -0.08), fontsize=8,
+        #                arrowprops=dict(arrowstyle='-', color='k', lw=1, shrinkA=0, shrinkB=0), clip_on=False)
+
+        xmax = 0.5 / (np.abs(window[0]) + window[1])  # 0.5 / of total time
+        y_time = (ymax - ymin) * 0.1
+        y_label = -(ymax - ymin) * 0.2
+        ax[i].axhline(y=-y_time, xmin=0, xmax=xmax, color='k', linewidth=1, clip_on=False)
+        ax[i].annotate('0.5 s', xy=(window[0] - 0.1, y_label),
+                       xycoords='data', xytext=(window[0] - 0.1 + 0.5, y_label), ha='center', va='top',
+                       fontsize=8, clip_on=False, annotation_clip=False)
+
+
+        i = 1
+        # label image change or image omission on second axis
+        ax[i].annotate(label, xy=(0.12, -0.1), xycoords=ax[i].get_xaxis_transform(), ha="left", va="top",
+                        color=label_color, fontsize=8, clip_on=False)
+        ax[i].annotate('', xy=(0.01, -0.25), xycoords=ax[i].get_xaxis_transform(), xytext=(0.01, 0), fontsize=8,
                             arrowprops=dict(arrowstyle="<-", color=label_color, lw=1), clip_on=False)
 
     for i in np.arange(3, 8):
@@ -134,7 +165,6 @@ def plot_reliable_example_cells(multi_session_mean_df, cells_to_plot, cell_type,
         ax[i].tick_params(bottom=False, left=False, right=False, top=False)
         ax[i].axis('off')
 
-    # plot example cells
     for c, cell_specimen_id in enumerate(cells_to_plot):
         ophys_container_id = sdf[(sdf.cell_specimen_id == cell_specimen_id)].ophys_container_id.values[0]
         for e, experience_level in enumerate(experience_levels):
@@ -154,17 +184,20 @@ def plot_reliable_example_cells(multi_session_mean_df, cells_to_plot, cell_type,
             ymin, ymax = ax[i].get_ylim()
             ax[i].set_yticks([0, np.round(ymax * .3, 2)])
             ax[i].set_yticklabels(['', np.round(ymax * .3, 2)], va='top')
-            if c == 0: # plot exp level title
-                ax[i].set_title(experience_level, color=color, fontsize=12)
+
+            # if c == 0: # plot exp level title
+            #     ax[i].set_title(experience_level, color=color, fontsize=12)
+
             if e == 0: # plot response magnitude bar
                 if event_type == 'omissions':
                     dist = 0.18
                 else:
                     dist = 0.1
                 ax[i].axvline(x=window[0] - dist, ymin=0, ymax=0.3, color='k', linewidth=1, clip_on=False)
-                ax[i].set_ylabel('cell ' + str(c + 1), rotation=0, fontsize=10, ha='right', y=0.4)
+                ax[i].set_ylabel('cell ' + str(c + 1), rotation=0, fontsize=8, ha='right', y=0.4)
             sns.despine(ax=ax[i], top=True, right=True, left=True, bottom=True)
             ax[i].tick_params(bottom=False, left=False, right=False, top=False, labelsize=7, pad=-1, )
+
         # ax[(i*n_cols)+3].set_title('csid:'+str(cell_specimen_id)+'\nocid:'+str(ophys_container_id), fontsize=6)
         # 4th column with cell metadata
         i = ((c + 2) * n_cols) + 3
@@ -178,8 +211,27 @@ def plot_reliable_example_cells(multi_session_mean_df, cells_to_plot, cell_type,
         ax[i].tick_params(bottom=False, left=False, right=False, top=False)
         ax[i].set_xticklabels([])
         last_container_id = ophys_container_id
-    ax[1].set_title(cell_type, fontsize=14)
-    # plt.suptitle(cell_type, x=0.4, y=0.98, fontsize=14)
+
+    # scale y lim and add time bar
+    for c, cell_specimen_id in enumerate(cells_to_plot):
+        for e, experience_level in enumerate(experience_levels):
+            i = ((c + 2) * n_cols) + e
+            ymin, ymax = ax[i].get_ylim()
+            ax[i].set_ylim(ymax=ymax * 1.1)
+            if (e == 0) & (c == len(cells_to_plot)-1): # if its the first axis, plot the time window
+                # plot 0.5 s time bar
+                xmax = 0.5 / (np.abs(window[0]) + window[1])  # 0.5 / of total time
+                y_time = (ymax - ymin) * 0.15
+                y_label = -(ymax - ymin) * 0.25
+                ax[i].axhline(y=-y_time, xmin=0, xmax=xmax, color='k', linewidth=1, clip_on=False)
+                ax[i].annotate('0.5 s', xy=(window[0] - 0.15, y_label),
+                               xycoords='data', xytext=(window[0] - 0.15 + 0.5, y_label), ha='center', va='top',
+                               fontsize=8, clip_on=False, annotation_clip=False)
+
+
+    # ax[1].set_title(cell_type, fontsize=14)
+    plt.suptitle(cell_type, x=0.4, y=1, fontsize=14)
+    plt.subplots_adjust(hspace=0)
 
     if save_dir:
         utils.save_figure(fig, figsize, save_dir, folder, cell_type.split(' ')[0] + '_' + event_type + suffix)
@@ -971,10 +1023,11 @@ def plot_matched_roi_outlines_for_container(ophys_container_id, platform_experim
         dataset = dataset_dict[ophys_container_id][ophys_experiment_id]
         cell_specimen_table = dataset.cell_specimen_table.copy()
         all_cells = cell_specimen_table.index.values
-        unmatched_cells = all_cells[all_cells!=matched_cells][0]
+        unmatched_cells = [cell for cell in all_cells if cell not in matched_cells]
         experience_level = platform_experiments.loc[ophys_experiment_id].experience_level
-        ax[i] = plot_roi_mask_outlines(dataset, matched_cells, include_max_projection=False, roi_color='k', label_rois=False, label_color='w', ax=ax[i])
+        print(ophys_experiment_id, experience_level, len(matched_cells), 'matched cells, ', len(cell_specimen_table), 'total cells')
         ax[i] = plot_roi_mask_outlines(dataset, unmatched_cells, include_max_projection=False, roi_color='gray', label_rois=False, label_color='w', ax=ax[i])
+        ax[i] = plot_roi_mask_outlines(dataset, matched_cells, include_max_projection=False, roi_color='black', label_rois=False, label_color='w', ax=ax[i])
         if cells_to_label is not None:
             ax[i] = plot_roi_mask_outlines(dataset, cells_to_label, include_max_projection=False, roi_color='red', label_rois=True, label_color='k', ax=ax[i])
         ax[i].set_title(experience_level, color=experience_level_colors[i], fontsize=14)
@@ -1473,6 +1526,7 @@ def plot_coding_scores_for_cell(cell_dropouts, ax=None):
     from visual_behavior.dimensionality_reduction.clustering import plotting
 
     features = processing.get_features_for_clustering()
+    feature_labels = processing.get_feature_labels_for_clustering()
     feature_colors, feature_labels_dict = plotting.get_feature_colors_and_labels()
 
     # unstack coding scores for plot
@@ -1482,14 +1536,16 @@ def plot_coding_scores_for_cell(cell_dropouts, ax=None):
     coding_scores = coding_scores.rename(columns={'level_0':'feature'})
     coding_scores['coding_score'] = np.abs(coding_scores.coding_score) # make sure they are positive
 
+    experience_levels = utils.get_experience_levels()
     experience_level_colors = utils.get_experience_level_colors()
 
     if ax is None:
         fig, ax = plt.subplots(figsize=(6, 3))
-    ax = sns.barplot(data=coding_scores, x='feature', y='coding_score', hue='experience_level',
-                     palette=experience_level_colors, alpha=0.7, width=0.7, ax=ax)
+    ax = sns.barplot(data=coding_scores, x='feature', y='coding_score', order=features,
+                     hue='experience_level', hue_order=experience_levels, palette=experience_level_colors,
+                     alpha=0.7, width=0.7, ax=ax)
     ax.set_xlabel('')
-    ax.set_xticklabels(list(feature_labels_dict.values()))
+    ax.set_xticklabels(feature_labels)
     [t.set_color(x) for (x,t) in zip(feature_colors, ax.xaxis.get_ticklabels())]
     ax.set_ylabel('Coding score')
     ax.set_ylim(0,1)

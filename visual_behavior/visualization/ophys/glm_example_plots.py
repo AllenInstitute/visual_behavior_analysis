@@ -16,6 +16,9 @@ import visual_behavior.visualization.ophys.platform_paper_figures as ppf
 
 import mindscope_utilities.general_utilities as ms_utils
 
+import visual_behavior.dimensionality_reduction.clustering.plotting as plotting
+import visual_behavior.dimensionality_reduction.clustering.processing as processing
+
 from visual_behavior_glm.glm import GLM
 import visual_behavior_glm.GLM_params as glm_params
 import visual_behavior_glm.GLM_schematic_plots as gsp
@@ -368,7 +371,6 @@ def plot_glm_features_for_window(dataset, xlim_seconds, save_dir=None, ax=None, 
     pupil_diameter = pupil_diameter[start_ind:stop_ind]
     pupil_timestamps = pupil_timestamps[start_ind:stop_ind]
 
-    import visual_behavior.dimensionality_reduction.clustering.plotting as plotting
     feature_colors, feature_labels_dict = plotting.get_feature_colors_and_labels()
 
     n_rows = 14
@@ -748,7 +750,7 @@ def plot_model_fits_example_cell(cell_specimen_id, dataset, cell_results_df, dro
         if twinx:
             fig.legend(bbox_to_anchor=(1.1, 1), fontsize=fontsize)
         if kernel is not None:
-            suffix = suffix + '_' + kernel + '_dropout'
+            suffix = suffix + '_' + kernel
         else:
             suffix = suffix
         metadata_string = utils.get_metadata_string(dataset.metadata)
@@ -2126,29 +2128,28 @@ def plot_coding_score_components_for_cell(cell_specimen_id, ophys_experiment_id,
     '''
     Creates barplot of coding scores for a single cell in a single experiment and saves it
     '''
-    import visual_behavior.dimensionality_reduction.clustering.plotting as plotting
 
     identifier = str(ophys_experiment_id) + '_' + str(cell_specimen_id)
     # get dropouts just for one cell
     cell_dropouts = results_pivoted[results_pivoted.identifier == identifier]
 
     # which features to plot
-    main_coding_score_features = ['all-images', 'omissions', 'task', 'behavioral']
-    feature_labels = ['images', 'omissions', 'task', 'behavior']
+    features = processing.get_features_for_clustering()
+    feature_labels = processing.get_feature_labels_for_clustering()
     feature_colors, feature_labels_dict = plotting.get_feature_colors_and_labels()
 
     if ax is None:
         figsize = (3, 2)
         fig, ax = plt.subplots(figsize=figsize)
     # get dropouts just for one cell
-    ax = sns.barplot(data=np.abs(cell_dropouts[main_coding_score_features]), orient='h',
-                     palette=feature_colors, ax=ax)  # color=sns.color_palette('Blues_r')[0], ax=ax)
+    ax = sns.barplot(data=np.abs(cell_dropouts[features]), orient='h',
+                     order=features, palette=feature_colors, ax=ax)  # color=sns.color_palette('Blues_r')[0], ax=ax)
     ax.set_xlabel('Coding score', fontsize=fontsize)
     ax.set_title('VE full model = ' + str(np.round(cell_dropouts.variance_explained_full.values[0], 3)), fontsize=fontsize)
     ax.set_yticklabels(feature_labels, rotation=0, horizontalalignment='right', fontsize=fontsize)
     ax.xaxis.set_tick_params(labelsize=fontsize)
 
-    for x, feature in enumerate(main_coding_score_features):
+    for x, feature in enumerate(features):
         cs = np.abs(cell_dropouts[feature].values[0])
         if cs>0:
             ax.text(s = str(np.round(cs,2)), y=x, x=cs, rotation=0, fontsize=fontsize-4,

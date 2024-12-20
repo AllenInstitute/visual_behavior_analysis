@@ -3422,7 +3422,7 @@ def plot_population_average_response_for_clusters_as_rows_all_response_types(ima
 
 
 def plot_population_average_response_for_clusters_as_rows_split(multi_session_df, event_type, cluster_order=None,
-                                                                with_pre_change=True, ax=None, save_dir=None):
+                                                                with_pre_change=True, ax=None, save_dir=None, suffix=''):
     '''
     Plot population averages on a specified axis, with each experience level as its own column
     add annotations for image presentation time
@@ -3435,6 +3435,7 @@ def plot_population_average_response_for_clusters_as_rows_split(multi_session_df
         if with_pre_change:
             xlim_seconds = [-1, 0.75]
             col_size = 1
+            suffix = suffix + '_pre_change'
         else:
             xlim_seconds = [-0.5, 0.75]
             col_size = 0.8
@@ -3446,7 +3447,7 @@ def plot_population_average_response_for_clusters_as_rows_split(multi_session_df
         label_color = sns.color_palette()[9]
         omitted = True
         change = False
-        col_size = 1.2
+        col_size = 1.1
     else:
         xlim_seconds = [-0.5, 0.75]
         label_color = 'gray'
@@ -3484,6 +3485,12 @@ def plot_population_average_response_for_clusters_as_rows_split(multi_session_df
                                           xlim_seconds=xlim_seconds, ax=ax[i])
             ax[i] = utils.plot_flashes_on_trace(ax[i], timestamps, change=change, omitted=omitted, alpha=0.15)
 
+            if a == 0: # label top row with experience level
+                print(hue)
+                ax[i].set_title(hue, fontsize=12, color=experience_level_colors[c])
+            else:
+                ax[i].set_title('')
+
             i += 1
 
     n_panels = len(cluster_ids) * 3
@@ -3491,10 +3498,10 @@ def plot_population_average_response_for_clusters_as_rows_split(multi_session_df
         ymin, ymax = ax[i].get_ylim()
         if ymax < 0.01:
             ymax = 0.01
+        ymax = ymax * 1.2
         ax[i].set_ylim(ymin, ymax)
         ax[i].set_xticks((0, 0.5))
         ax[i].set_yticks((0, 0.01))
-        ax[i].set_title('')
         ax[i].set_xlabel('')
         ax[i].set_ylabel('')
         ax[i].set_yticklabels([])
@@ -3505,43 +3512,45 @@ def plot_population_average_response_for_clusters_as_rows_split(multi_session_df
         # for the first column of each row
         if i in np.arange(0, n_panels)[::3]:
             # label y-axis with max value
-            ax[i].axvline(x=xlim_seconds[0] - 0.1, ymin=ymin, ymax=0.4, color='k', linewidth=1.3, clip_on=False)
-            ax[i].annotate(str(np.round(ymax * 0.4, 3)), xy=(xlim_seconds[0] - 0.15, np.round(ymax / 3, 3)),
-                           xycoords='data', xytext=(xlim_seconds[0] - 0.15, np.round(ymax / 3, 3)), ha='right', va='center',
+            ax[i].axvline(x=xlim_seconds[0] - 0.2, ymin=ymin, ymax=0.4, color='k', linewidth=1.3, clip_on=False)
+            ax[i].annotate(str(np.round(ymax * 0.4, 3)), xy=(xlim_seconds[0] - 0.25, np.round(ymax / 3, 3)),
+                           xycoords='data', xytext=(xlim_seconds[0] - 0.25, np.round(ymax / 3, 3)), ha='right', va='center',
                            fontsize=8, clip_on=False, annotation_clip=False, rotation=90)
 
     # Label x-axis with time
-    for i in range(n_panels - 3, n_panels):
-        xmax = 0.5 / (np.abs(xlim_seconds[0]) + xlim_seconds[1])  # 0.5 / of total time
-        y_time = (ymax - ymin) * 0.15
-        y_label = -(ymax - ymin) * 0.25
-        ax[i].axhline(y=-y_time, xmin=0, xmax=xmax, color='k', linewidth=1.3, clip_on=False)
-        ax[i].annotate('0.5 s', xy=(xlim_seconds[0], y_label),
-                       xycoords='data', xytext=(xlim_seconds[0] + 0.5, y_label), ha='center', va='top',
-                       fontsize=8, clip_on=False, annotation_clip=False)
+    # for i in range(n_panels - 3, n_panels):
+    i = n_panels-3
+    xmax = 0.5 / (np.abs(xlim_seconds[0]) + xlim_seconds[1])  # 0.5 / of total time
+    y_time = (ymax - ymin) * 0.15
+    y_label = -(ymax - ymin) * 0.25
+    ax[i].axhline(y=-y_time, xmin=0, xmax=xmax, color='k', linewidth=1.3, clip_on=False)
+    ax[i].annotate('0.5 s', xy=(xlim_seconds[0]-0.1, y_label),
+                   xycoords='data', xytext=(xlim_seconds[0]-0.1 + 0.5, y_label), ha='center', va='top',
+                   fontsize=8, clip_on=False, annotation_clip=False)
 
-    # Put arrow and label for image onset
-    for i in range(0, 3):
-        # ax[0].annotate(event_type[:-1]+' onset', xy=(np.abs(xlim_seconds[0])+xtra_space, 1.35), xycoords=ax[0].get_xaxis_transform(), ha="right", va="top",
-        #                         color=label_color, fontsize=10, clip_on=False)
-        ax[i].annotate(event_type[:-1] + ' onset', xy=(0.1, 1.35), xycoords=ax[0].get_xaxis_transform(), ha="left",
-                       va="top",
-                       color=label_color, fontsize=10, clip_on=False)
-        ax[i].annotate('', xy=(0.01, 1.35), xycoords=ax[0].get_xaxis_transform(), xytext=(0.01, 0.95), fontsize=8,
-                       arrowprops=dict(arrowstyle="<-", color=label_color, lw=1), clip_on=False)
+    # Put arrow and label for image change or omission on bottom row
+    i = n_panels - 2
+    if event_type != 'images':
+        label = 'image '+event_type[:-1]
+    else:
+        label = 'image onset'
+    ax[i].annotate(label, xy=(0.2, -0.2), xycoords=ax[i].get_xaxis_transform(), ha="left",
+                   va="top", color=label_color, fontsize=10, clip_on=False)
+    ax[i].annotate('', xy=(0.01, -0.4), xycoords=ax[i].get_xaxis_transform(), xytext=(0.01, 0), fontsize=8,
+                   arrowprops=dict(arrowstyle="<-", color=label_color, lw=1), clip_on=False)
 
     # label Clusters IDs on y axis
     for x, cluster_id in enumerate(cluster_ids):
         i = (x * 3)
         ymin, ymax = ax[i].get_ylim()
-        ax[i].annotate('Cluster ' + str(cluster_id), xy=(xlim_seconds[0] - 0.6, np.round(ymax / 2, 3)),
-                       xycoords='data', xytext=(xlim_seconds[0] - 0.6, np.round(ymax / 2, 3)), ha='right',
-                       va='center', fontsize=8, clip_on=False, annotation_clip=False, rotation=90)
+        ax[i].annotate(str(cluster_id), xy=(xlim_seconds[0] - 0.9, np.round(ymax / 2, 3)),
+                       xycoords='data', xytext=(xlim_seconds[0] - 0.9, np.round(ymax / 2, 3)), ha='right',
+                       va='center', fontsize=14, clip_on=False, annotation_clip=False, rotation=0)
 
 
-    # plt.subplots_adjust(wspace=0.4)
+    plt.subplots_adjust(hspace=0)
     if save_dir:
-        fig_title = 'population_average_as_cols_' + event_type
+        fig_title = 'population_average_as_cols_' + event_type + suffix
         utils.save_figure(fig, figsize, save_dir, 'cluster_properties', fig_title)
     return ax
 

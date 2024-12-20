@@ -22,7 +22,7 @@ def get_single_cell_plots_dir():
     return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/single_cell_plots'
 
 
-def save_figure(fig, figsize, save_dir, folder, fig_title, formats=['.png', '.pdf']):
+def save_figure(fig, figsize, save_dir, folder, fig_title, formats=['.png']):
     fig_dir = os.path.join(save_dir, folder)
     if not os.path.exists(fig_dir):
         os.mkdir(fig_dir)
@@ -651,7 +651,7 @@ def plot_flashes_on_trace(ax, timestamps, change=None, omitted=False, alpha=0.07
 
 
 def plot_mean_trace(traces, timestamps, ylabel='dF/F', legend_label=None, color='k',
-                    interval_sec=1, xlim_seconds=[-2, 2], linewidth=2, plot_sem=True, ax=None):
+                    interval_sec=1, xlim_seconds=[-2, 2], linewidth=1, plot_sem=True, ax=None):
     '''
     compute average and SEM of traces array and plot it on the specified axis
     produces x-axis timestamps based on the xlim_seconds range provided, incremented by the value of interval_sec
