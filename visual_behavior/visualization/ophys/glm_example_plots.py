@@ -567,7 +567,7 @@ def plot_stacked_kernels_for_cell(cell_specimen_id, dataset, weights_df, kernels
 
 def plot_model_fits_example_cell(cell_specimen_id, dataset, cell_results_df, dropouts, results,
                                  kernel=None, include_events=True, include_dff=False,
-                                 times=None, n_flashes=16, linewidth=2, twinx=False,
+                                 times=None, n_flashes=16, linewidth=1, twinx=False,
                                  fontsize=8, as_panel=False, save_dir=None, suffix='', ax=None):
     '''
     For one cell, plot the cell trace, model fits, and model fits with a specific kernel (such as all-images or omissions) removed
@@ -768,7 +768,8 @@ def plot_model_fits_example_cell(cell_specimen_id, dataset, cell_results_df, dro
 def plot_single_cell_example_model_fits_and_behavior(dataset, start_time, duration_seconds, cell_specimen_ids,
                                                      cell_results_df, dropouts, expt_results, fontsize=8,
                                                      kernel='all-images', label_csids=True, linewidth=None,
-                                                     short_title=False, include_events=False, save_dir=None, ax=None, suffix=''):
+                                                     short_title=False, include_events=True,
+                                                     save_dir=None, folder=None, ax=None, suffix=''):
     """
     Plots licking behavior, rewards, running speed, pupil area, and dff traces for a defined window of time.
     Each timeseries gets its own row.
@@ -813,7 +814,7 @@ def plot_single_cell_example_model_fits_and_behavior(dataset, start_time, durati
 
     # make the plot
     if ax is None:
-        figsize = (8, 6)
+        figsize = (6, 8)
         fig, ax = plt.subplots(len(cell_specimen_ids)+3, 1, figsize=figsize, sharex=True, )
         ax = ax.ravel()
 
@@ -821,8 +822,8 @@ def plot_single_cell_example_model_fits_and_behavior(dataset, start_time, durati
     for i, cell_specimen_id in enumerate(cell_specimen_ids):
 
         ax[i] = plot_model_fits_example_cell(cell_specimen_id, dataset, cell_results_df, dropouts, expt_results,
-                                            kernel=kernel, times=xlim_seconds, linewidth=1.5, fontsize=fontsize,
-                                            include_events=include_events, include_dff=True, as_panel=True, ax=ax[i])
+                                            kernel=kernel, times=xlim_seconds, linewidth=1, fontsize=fontsize,
+                                            include_events=include_events, include_dff=False, as_panel=True, ax=ax[i])
 
         ax[i].set_xlim(xlim_seconds)
         # ax[0].legend(bbox_to_anchor=(1, 1), fontsize=fontsize-2)
@@ -834,7 +835,7 @@ def plot_single_cell_example_model_fits_and_behavior(dataset, start_time, durati
         # label cell id on right side so it can be cropped out later
         xmin, xmax = ax[i].get_xlim()
         if label_csids:
-            ax[i].text(s='csid:' + str(cell_specimen_id), x=xmax + 0.2, y=0, fontsize=fontsize-2)
+            ax[i].text(s='csid:' + str(cell_specimen_id), x=xmax + 0.2, y=0, fontsize=12)
 
         # get ylims of data in this window
         ymin, ymax = ax[i].get_ylim()
@@ -893,9 +894,11 @@ def plot_single_cell_example_model_fits_and_behavior(dataset, start_time, durati
     # ophys_container_id = dataset.metadata['ophys_container_id']
     # metadata_string = str(ophys_container_id)+'_'+utils.get_metadata_string(dataset.metadata) +'_'+ str(int(start_time)) +'_'+ str(duration_seconds)
     m = dataset.metadata.copy()
-    metadata_string = str(m['ophys_container_id']) + '_' + str(m['mouse_id']) + '_' + m['cre_line'].split('-')[
-        0] + '_' + str(m['targeted_structure']) + '_' + str(m['imaging_depth']) + '_' + m['session_type']  +'_'+ str(int(start_time)) +'_'+ str(duration_seconds)
-
+    # metadata_string = str(m['ophys_container_id']) + '_' + str(m['mouse_id']) + '_' + m['cre_line'].split('-')[
+    #     0] + '_' + str(m['targeted_structure']) + '_' + str(m['imaging_depth']) + '_' + m['session_type']  +'_'+ str(int(start_time)) +'_'+ str(duration_seconds)
+    # metadata_string
+    metadata_string = utils.get_metadata_string(m) + suffix
+    filename = str(int(start_time)) + '_' + metadata_string
     if short_title:
         metadata_short = str(m['ophys_container_id']) + '_' + m['session_type']  +'_'+ str(int(start_time)) +'_'+ str(duration_seconds)
         # ax[0].set_title(metadata_short, fontsize=6, va='top', )
@@ -905,8 +908,11 @@ def plot_single_cell_example_model_fits_and_behavior(dataset, start_time, durati
     plt.subplots_adjust(hspace=0)
     if save_dir:
         print('saving')
-        folder = 'example_cell_model_fits_and_behavior_stacked'
-        utils.save_figure(fig, figsize, save_dir, folder, metadata_string + suffix)
+        if folder is None:
+            folder = 'example_cell_model_fits_and_behavior_stacked'
+        else:
+            folder = os.path.join('example_cell_model_fits_and_behavior_stacked', folder)
+        utils.save_figure(fig, figsize, save_dir, folder, filename)
     return ax
 
 

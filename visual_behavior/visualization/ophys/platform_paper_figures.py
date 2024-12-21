@@ -2615,7 +2615,7 @@ def add_stimulus_blocks(stim_table, xlim=None, annotate_blocks=True, ax=None):
             name = 'gray\nscreen'
         elif 'change_detection' in block_name:
             color = sns.color_palette()[0]
-            name = 'change detection task performance'
+            name = 'change detection task'
         elif 'movie' in block_name:
             color = sns.color_palette()[9]
             name = 'movie\nclips'
@@ -2783,12 +2783,14 @@ def plot_behavior_timeseries_stacked(dataset, start_time, fontsize=12,
 
 
     for i in range(4):
-        if (i == 0) & (show_images == True):
-            ax[i] = add_stim_color_span(dataset, ax[i], xlim=xlim_seconds, annotate_changes=True,
-                                        label_changes=label_changes, label_omissions=label_omissions)
-        else:
-            ax[i] = add_stim_color_span(dataset, ax[i], xlim=xlim_seconds, annotate_changes=False,
-                                        label_changes=label_changes, label_omissions=label_omissions)
+        # if (i == 0) & (show_images == True):
+        #     ax[i] = add_stim_color_span(dataset, ax[i], xlim=xlim_seconds, annotate_changes=True,
+        #                                 label_changes=label_changes, label_omissions=label_omissions)
+        # elif label_changes==True | label_omissions==True:
+        #     ax[i] = add_stim_color_span(dataset, ax[i], xlim=xlim_seconds, annotate_changes=False,
+        #                                 label_changes=label_changes, label_omissions=label_omissions)
+        # else:
+        #     pass
         ax[i].set_xlim(xlim_seconds)
         if i in [0, 1]: # for licks and rewards
             ax[i].tick_params(which='both', bottom=False, top=False, right=False, left=False,
@@ -2810,7 +2812,7 @@ def plot_behavior_timeseries_stacked(dataset, start_time, fontsize=12,
                                annotation_clip=False)
                 ax[i].tick_params(which='both', bottom=False, top=False, right=False, left=False,
                                   labelbottom=False, labeltop=False, labelright=False, labelleft=True, )
-        ax[i].spines[['right', 'top', 'bottom', 'left']].set_visible(False)
+        ax[i].spines[['right', 'top']].set_visible(False)
         # sns.despine(ax=ax[i], bottom=True)
     # sns.despine(ax=ax[i], bottom=False)
     ax[i].tick_params(which='both', bottom=True, top=False, right=False, left=False,
