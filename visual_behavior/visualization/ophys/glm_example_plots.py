@@ -31,6 +31,63 @@ sns.set_context('notebook', font_scale=1.5, rc={'lines.markeredgewidth': 2})
 sns.set_palette('deep')
 
 
+def get_glm_example_cells_and_times():
+
+    # dict of expt IDs and cells for each
+    example_cells_dict = {974994093: [1086537043, 1086526518, 1086520057],
+                        974994095: [1086514461, 1086515592],
+                        974433388: [1086526678, 1086519261],
+                        974433395: [1086535501, 1086535669],
+                        974433397: [1086529269, 1086535465, 1086516056],
+                        974994095: [1086519261],
+                        974994101: [1086518655],
+                        974994105: [1086524231],
+                        905955204: [1086528784, 1086549714, 1086549924, 1086535478, 1086563886],
+                        905955213: [1086525961, 1086532875, 1086532886],
+                        905955219: [1086509036],
+                        906910612: [1086545900, 1086570627, 1086565536, 1086596382, 1086568462],
+                        906910627: [1086525115, 1086525369, 1086525010],
+                        1076808560: [1120091606, 1120091140, 1120091558, 1120091884, 1120091915],
+                        1076808556: [1120094297, 1120094089, 1120094237],
+                        1076808560: [1120092097, 1120091440, 1120091606, 1120091844, 1120091937, 1120091558],
+                        1076808556: [1120094089, 1120094237],
+                        1076808568: [1120096184],
+                        1076808556: [1120094089, 1120094237, 1120094842],
+                        1076808560: [1120092097, 1120091915, 1120091606, 1120091558, 1120091844],
+                        1076808562: [1120094103, 1120093912],
+                        1076808556: [1120094297,  1120094089,  1120094237,  1120094842],
+                        1076808560: [1120091915,  1120091440,  1120091606,  1120091884,  1120091558],
+                        }
+
+    # dict of expt IDs and start_times for each
+    example_times_dict = {974994093: [1878],
+                        974994095: [1878],
+                        974433388: [1738],
+                        974433395: [1738],
+                        974433397: [1738],
+                        974994095: [1506],
+                        974994101: [1506],
+                        974994105: [1506],
+                        905955204: [1881],
+                        905955213: [1881],
+                        905955219: [1881],
+                        906910612: [2084],
+                        906910627: [2084],
+                        1076808560: [1067],
+                        1076808556: [1067],
+                        1076808560: [1971],
+                        1076808556: [1971],
+                        1076808568: [1971],
+                        1076808556: [1946],
+                        1076808560: [1946],
+                        1076808562: [1946],
+                        1076808556: [1859],
+                        1076808560: [1859],
+    }
+
+    return example_cells_dict, example_times_dict
+
+
 def load_glm_model_fit_results(ophys_experiment_id):
     '''
     Load cell_results_df, results, and dropouts from pre-saved files derived from GLM object
@@ -328,7 +385,7 @@ def plot_glm_methods_with_example_cells(ophys_experiment_id, cell_specimen_id_1,
 
 
 
-def plot_glm_features_for_window(dataset, xlim_seconds, save_dir=None, ax=None, suffix=''):
+def plot_glm_features_for_window(dataset, xlim_seconds, save_dir=None, folder=None, ax=None, suffix=''):
     """
     For a given period of time in an ophys or behavior session,
     plot the stimulus times in the background, along with the period over which each kernel is active (images, hits, misses, omissions),
@@ -444,12 +501,13 @@ def plot_glm_features_for_window(dataset, xlim_seconds, save_dir=None, ax=None, 
     plt.subplots_adjust(hspace=0, wspace=0.9)
 
     if save_dir:
-        folder = 'glm_features_panel'
-        utils.save_figure(fig, figsize, save_dir, folder, metadata_string + '_' + str(int(start_time)))
+        if folder is None:
+            folder = 'glm_features_panel'
+        utils.save_figure(fig, figsize, save_dir, folder, str(int(start_time)) + '_' + metadata_string)
     return ax
 
 
-def plot_stacked_kernels_for_cell(cell_specimen_id, dataset, weights_df, kernels, save_dir=None, ax=None):
+def plot_stacked_kernels_for_cell(cell_specimen_id, dataset, weights_df, kernels, save_dir=None, folder=None, ax=None):
     """
     plots the kernel weights for each kernel type for a given cell, in a row
     weights_df and kernels can be obtained using `load_GLM_outputs` or by loading files directly from the cache
@@ -560,15 +618,18 @@ def plot_stacked_kernels_for_cell(cell_specimen_id, dataset, weights_df, kernels
             cell_specimen_id) + '_' + m['cre_line'].split('-')[0]
         plt.suptitle(title_string, x=0.48, y=0.99, fontsize=12)
         filename = str(cell_specimen_id) + '_' + metadata_string + '_kernels'
-        utils.save_figure(fig, figsize, save_dir, 'example_kernels_stacked', filename)
-        utils.save_figure(fig, figsize, save_dir, 'example_cell_kernels_coding_scores_and_fits', filename)
+        if folder is None:
+            utils.save_figure(fig, figsize, save_dir, 'example_kernels_stacked', filename)
+            utils.save_figure(fig, figsize, save_dir, 'example_cell_kernels_coding_scores_and_fits', filename)
+        else:
+            utils.save_figure(fig, figsize, save_dir, folder, filename)
     return ax
 
 
 def plot_model_fits_example_cell(cell_specimen_id, dataset, cell_results_df, dropouts, results,
                                  kernel=None, include_events=True, include_dff=False,
                                  times=None, n_flashes=16, linewidth=1, twinx=False,
-                                 fontsize=8, as_panel=False, save_dir=None, suffix='', ax=None):
+                                 fontsize=8, as_panel=False, save_dir=None, folder=None, suffix='', ax=None):
     '''
     For one cell, plot the cell trace, model fits, and model fits with a specific kernel (such as all-images or omissions) removed
     Inputs are attributes of the GLM class in visual_behavior_glm repo, either derived by instantiating the GLM class,
@@ -757,10 +818,12 @@ def plot_model_fits_example_cell(cell_specimen_id, dataset, cell_results_df, dro
         # m = dataset.metadata.copy()
         # filename = str(m['ophys_experiment_id']) + '_' + str(
         #     cell_specimen_id) + '_' + m['cre_line'].split('-')[0] +'_'+ str(int(times[0])) + '_model_fit' + suffix
-        filename = str(cell_specimen_id) + '_' +metadata_string + '_model_fit' + suffix
-
-        utils.save_figure(fig, figsize, save_dir, 'example_model_fits', filename)
-        utils.save_figure(fig, figsize, save_dir, 'example_cell_kernels_coding_scores_and_fits', filename)
+        filename = str(int(times[0])) + '_' + str(cell_specimen_id) + '_' + metadata_string + '_model_fit' + suffix
+        if folder is None:
+            utils.save_figure(fig, figsize, save_dir, 'example_model_fits', filename)
+            utils.save_figure(fig, figsize, save_dir, 'example_cell_kernels_coding_scores_and_fits', filename)
+        else:
+            utils.save_figure(fig, figsize, save_dir, folder, filename)
 
     return ax
 
@@ -2130,7 +2193,7 @@ def plot_coding_scores_for_cell(cell_specimen_id, ophys_experiment_id, results_p
 
 
 def plot_coding_score_components_for_cell(cell_specimen_id, ophys_experiment_id, results_pivoted, dataset,
-                                          fontsize=12, as_panel=False, save_dir=None, ax=None):
+                                          fontsize=12, as_panel=False, save_dir=None, folder=None, ax=None):
     '''
     Creates barplot of coding scores for a single cell in a single experiment and saves it
     '''
@@ -2190,8 +2253,11 @@ def plot_coding_score_components_for_cell(cell_specimen_id, ophys_experiment_id,
         fig.suptitle(title_string, x=0.5, y=1.3, fontsize=16)
         metadata_string = utils.get_metadata_string(dataset.metadata)
         filename = str(cell_specimen_id) + '_' + metadata_string + '_coding_scores'
-        utils.save_figure(fig, figsize, save_dir, 'example_model_fits', filename)
-        utils.save_figure(fig, figsize, save_dir, 'example_cell_kernels_coding_scores_and_fits',  filename)
+        if folder is None:
+            utils.save_figure(fig, figsize, save_dir, 'example_model_fits', filename)
+            utils.save_figure(fig, figsize, save_dir, 'example_cell_kernels_coding_scores_and_fits',  filename)
+        else:
+            utils.save_figure(fig, figsize, save_dir, folder, filename)
 
     return ax
 
