@@ -1460,6 +1460,9 @@ def add_ophys_stage_to_behavior_sessions(platform_experiments, behavior_sessions
     print(len(platform_experiments))
     platform_behavior_sessions = platform_experiments.behavior_session_id.unique()
 
+    # make sure behavior stage is in there
+    behavior_sessions = add_stimulus_experience_level_to_behavior_sessions(behavior_sessions)
+
     # make column indicating whether session is represented in the set of ophys experiments that are in the platform paper
     behavior_sessions.loc[:, 'in_dataset'] = False
     behavior_sessions.loc[platform_behavior_sessions, 'in_dataset'] = True

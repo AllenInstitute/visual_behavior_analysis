@@ -514,7 +514,8 @@ def get_behavior_stage_color_map(as_rgb=False):
 
 
 def get_ophys_stage_color_map(as_rgb=False):
-    session_number_colors = get_colors_for_session_numbers()
+    # session_number_colors = get_colors_for_session_numbers()
+    experience_level_colors = get_experience_level_colors()
     gh_colors = get_colors_for_session_numbers_GH()
     white = np.array([1, 1, 1]).astype(np.uint8)
 
@@ -522,16 +523,14 @@ def get_ophys_stage_color_map(as_rgb=False):
     active_not_in_dataset_scale = 0.4
 
     ophys_stage_color_map = {
-        'familiar_images_in_dataset': session_number_colors[0],
+        'familiar_images_in_dataset': experience_level_colors[0],
         'familiar_images': (
-                    session_number_colors[0] + (white - session_number_colors[0]) * active_not_in_dataset_scale),
-        'familiar_images_passive': (session_number_colors[0] + (white - session_number_colors[0]) * passive_scale),
-
-        'novel_images_first_novel_in_dataset': session_number_colors[3],
-
-        'novel_images_in_dataset': session_number_colors[3],
-        'novel_images': (session_number_colors[3] + (white - session_number_colors[3]) * active_not_in_dataset_scale),
-        'novel_images_passive': (session_number_colors[3] + (white - session_number_colors[3]) * passive_scale),
+                    experience_level_colors[0] + (white - experience_level_colors[0]) * active_not_in_dataset_scale),
+        'familiar_images_passive': (experience_level_colors[0] + (white - experience_level_colors[0]) * passive_scale),
+        'novel_images_first_novel_in_dataset': experience_level_colors[1],
+        'novel +_images_in_dataset': experience_level_colors[2],
+        'novel +_images': (experience_level_colors[2] + (white - experience_level_colors[2]) * active_not_in_dataset_scale),
+        'novel +_images_passive': (experience_level_colors[2] + (white - experience_level_colors[2]) * passive_scale),
     }
 
     if as_rgb:
