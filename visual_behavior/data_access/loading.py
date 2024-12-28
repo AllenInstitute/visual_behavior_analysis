@@ -111,7 +111,15 @@ def get_flagged_ophys_experiment_ids():
 
     # ophys_session_id = 919888953, SDK#2216, OPHYS_3 listed but novel image set susepcted to have been shown based on activity profile
     # ophys_experiment_ids for 919888953
-    oeids = oeids + [920288855, 920288849, 920288853, 920288851, 920288845, 920288843]
+    # oeids = oeids + [920288855, 920288849, 920288853, 920288851, 920288845, 920288843]
+    # worst offenders - expts
+    # oeids = oeids + [920288845, 920288849]
+    # outlier cells csids = [1086573689, 1086573585, 1086577313, 1086577516, 1086560073, 1086560671, 1086562892, 1086563531,  1086568099, ]
+    # # in cluster meta and clearly bad
+    # csids = [1086573585, 1086577313, 1086560073, 1086560671, 1086562892, ]
+    # worst offenders - cells
+    # csids = [1086560073, 1086562892, 1086577313, 1086560671]
+
 
     # ophys_session_id = 931326814, # SDK#2215 and 2202 report mouse was shown image set B for session 2 when it should have been A
     # this will also affect the novelty of the first novel session for this mouse (453988), but that has not been added here yet
@@ -276,7 +284,8 @@ def get_released_ophys_experiment_table(exclude_ai94=True):
     return experiment_table
 
 
-def get_platform_paper_experiment_table(add_extra_columns=True, limit_to_closest_active=False, include_4x2_data=False, remove_flagged=True, remove_Ai94=True):
+def get_platform_paper_experiment_table(add_extra_columns=True, limit_to_closest_active=False,
+                                        include_4x2_data=False, remove_flagged=True, remove_Ai94=True):
     """
     loads the experiment table that was downloaded from AWS and saved to the the platform paper cache dir.
     Then filter out VisualBehaviorMultiscope4areasx2d and Ai94 data.
@@ -302,8 +311,8 @@ def get_platform_paper_experiment_table(add_extra_columns=True, limit_to_closest
         print('removing', len(flagged_oeids), 'problematic experiments')
         experiment_table = experiment_table.drop(flagged_oeids, axis=0)
 
-    bad_session_ids = [919888953] #931326814,
-    experiment_table = experiment_table[experiment_table.ophys_session_id.isin(bad_session_ids) == False]
+    # bad_session_ids = [919888953] #931326814,
+    # experiment_table = experiment_table[experiment_table.ophys_session_id.isin(bad_session_ids) == False]
 
     # remove 4x2
     if not include_4x2_data:
@@ -319,13 +328,12 @@ def get_platform_paper_experiment_table(add_extra_columns=True, limit_to_closest
     experiment_table = utilities.add_passive_flag_to_ophys_experiment_table(experiment_table)
 
     # # convert experience level
-    # import visual_behavior.visualization.utils as utils
-    # experiment_table['experience_level'] = [utils.convert_experience_level(experience_level) for experience_level in
-    #                                             experiment_table.experience_level.values]
+    import visual_behavior.visualization.utils as utils
+    experiment_table['experience_level'] = [utils.convert_experience_level(experience_level) for experience_level in
+                                                experiment_table.experience_level.values]
 
     if add_extra_columns:
         experiment_table = utilities.add_extra_columns_to_experiment_table(experiment_table)
-
 
     if limit_to_closest_active:
         experiment_table = utilities.limit_to_last_familiar_second_novel_active(experiment_table)
@@ -492,8 +500,8 @@ def get_filtered_ophys_experiment_table(include_failed_data=False, release_data_
         cache = bpc.from_lims(data_release_date=['2021-03-25', '2021-08-12'])
         experiments = cache.get_ophys_experiment_table()
 
-    bad_session_ids = [931326814, 919888953]  # 931326814 is an OPHYS_2_passive that was actually novel, 919888953 is an OPHYS_3 that appears to have been novel
-    experiments = experiments[experiments.ophys_session_id.isin(bad_session_ids) == False]
+    # bad_session_ids = [931326814, 919888953]  # 931326814 is an OPHYS_2_passive that was actually novel, 919888953 is an OPHYS_3 that appears to have been novel
+    # experiments = experiments[experiments.ophys_session_id.isin(bad_session_ids) == False]
 
     if not release_data_only:
         if from_cached_file:
@@ -3021,7 +3029,7 @@ def load_multi_session_df(data_type, event_type, conditions, inclusion_criteria,
     cache = bpc.from_s3_cache(cache_dir=cache_dir)
     experiments_table = cache.get_ophys_experiment_table()
     # remove familiar session that was actually novel
-    experiments_table = experiments_table[experiments_table.ophys_session_id!=919888953]
+    # experiments_table = experiments_table[experiments_table.ophys_session_id!=919888953]
     if exclude_passive_sessions:
         session_types = experiments_table.session_type.unique()
         filtered_session_types = [s for s in session_types if 'passive' not in s]
@@ -3492,6 +3500,10 @@ def get_cell_table(platform_paper_only=True, add_extra_columns=True, limit_to_cl
     if limit_to_matched_cells:
         cell_table = utilities.limit_to_cell_specimen_ids_matched_in_all_experience_levels(cell_table)
 
+    # drop aberrant outlier cells
+    csids = [1086560073, 1086562892, 1086577313, 1086560671]
+    cell_table = cell_table[cell_table.cell_specimen_id.isin(csids) == False]
+
     return cell_table
 
 
@@ -3669,7 +3681,11 @@ def get_multi_session_df_for_conditions(data_type, event_type, conditions, inclu
 
     # remove familiar session that was actually novel (this should not be in the most recently released data v1.0.1)
     # ophys_session_id = 919888953, SDK#2216, OPHYS_3 listed but novel image set susepcted to have been shown based on activity profile
-    multi_session_df = multi_session_df[multi_session_df.ophys_session_id!=919888953]
+    # multi_session_df = multi_session_df[multi_session_df.ophys_session_id!=919888953]
+
+    ### Remove abberant outlier cells
+    csids = [1086560073, 1086562892, 1086577313, 1086560671]
+    multi_session_df = multi_session_df[multi_session_df.cell_specimen_id.isin(csids) == False]
 
     print('there are', len(multi_session_df.ophys_experiment_id.unique()),
           'experiments after filtering for inclusion criteria - ', inclusion_criteria)
