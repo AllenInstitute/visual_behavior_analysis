@@ -37,17 +37,17 @@ def get_glm_example_cells_and_times():
     example_cells_dict = {974994093: [1086537043, 1086526518, 1086520057],
                         974994095: [1086514461, 1086515592],
                         974433388: [1086526678, 1086519261],
-                        974433395: [1086535501, 1086535669],
-                        974433397: [1086529269, 1086535465, 1086516056],
+                        974433395: [1086535501, 1086515669],
+                        974433397: [1086529269, 1086525465, 1086516056],
                         974994095: [1086519261],
                         974994101: [1086518655],
                         974994105: [1086524231],
                         905955204: [1086528784, 1086549714, 1086549924, 1086535478, 1086563886],
-                        905955213: [1086525961, 1086532875, 1086532886],
+                        905955213: [1086525861, 1086532875, 1086532286],
                         905955219: [1086509036],
                         906910612: [1086545900, 1086570627, 1086565536, 1086596382, 1086568462],
                         906910627: [1086525115, 1086525369, 1086525010],
-                        1076808560: [1120091606, 1120091140, 1120091558, 1120091884, 1120091915],
+                        1076808560: [1120091606, 1120091140, 1120091558, 1120091844, 1120091915],
                         1076808556: [1120094297, 1120094089, 1120094237],
                         1076808560: [1120092097, 1120091440, 1120091606, 1120091844, 1120091937, 1120091558],
                         1076808556: [1120094089, 1120094237],
@@ -56,7 +56,7 @@ def get_glm_example_cells_and_times():
                         1076808560: [1120092097, 1120091915, 1120091606, 1120091558, 1120091844],
                         1076808562: [1120094103, 1120093912],
                         1076808556: [1120094297,  1120094089,  1120094237,  1120094842],
-                        1076808560: [1120091915,  1120091440,  1120091606,  1120091884,  1120091558],
+                        1076808560: [1120091915,  1120091440,  1120091606,  1120091844,  1120091558],
                         }
 
     # dict of expt IDs and start_times for each
@@ -507,7 +507,8 @@ def plot_glm_features_for_window(dataset, xlim_seconds, save_dir=None, folder=No
     return ax
 
 
-def plot_stacked_kernels_for_cell(cell_specimen_id, dataset, weights_df, kernels, save_dir=None, folder=None, ax=None):
+def plot_stacked_kernels_for_cell(cell_specimen_id, dataset, weights_df, kernels,
+                                  scale_y=True, save_dir=None, folder=None, suffix='', ax=None):
     """
     plots the kernel weights for each kernel type for a given cell, in a row
     weights_df and kernels can be obtained using `load_GLM_outputs` or by loading files directly from the cache
@@ -527,6 +528,9 @@ def plot_stacked_kernels_for_cell(cell_specimen_id, dataset, weights_df, kernels
 
     color = sns.color_palette()[0]
     color = 'k'
+
+    if scale_y:
+        suffix = '_scale_y'
 
     n_rows = 14
     # height_ratios = np.hstack((np.repeat(1, 12), 2, 2))
@@ -548,6 +552,20 @@ def plot_stacked_kernels_for_cell(cell_specimen_id, dataset, weights_df, kernels
         ax[i].set_xlabel('')
         ax[i].set_yticklabels('')
         ax[i].set_xticklabels('')
+
+        if scale_y:
+            ymin, ymax = ax[i].get_ylim()
+            # print(feature, ymin, ymax)
+            if ymax > 0:
+                ax[i].set_ylim(ymax=ymax * 1.3)
+            else:
+                ax[i].set_ylim(ymax=ymax * 0.3)
+            if ymin > 0:
+                ax[i].set_ylim(ymin=ymin * 0.3)
+            else:
+                ax[i].set_ylim(ymin=ymin * 1.3)
+            # ymin, ymax = ax[i].get_ylim()
+            # print(feature, ymin, ymax)
 
     for i, feature in enumerate(features[8:]):
         i += 8
@@ -571,6 +589,20 @@ def plot_stacked_kernels_for_cell(cell_specimen_id, dataset, weights_df, kernels
         ax[i].set_xlabel('')
         ax[i].set_yticklabels('')
         ax[i].set_xticklabels('')
+
+        if scale_y:
+            ymin, ymax = ax[i].get_ylim()
+            # print(feature, ymin, ymax)
+            if ymax > 0:
+                ax[i].set_ylim(ymax=ymax * 1.3)
+            else:
+                ax[i].set_ylim(ymax=ymax * 0.3)
+            if ymin > 0:
+                ax[i].set_ylim(ymin=ymin * 0.3)
+            else:
+                ax[i].set_ylim(ymin=ymin * 1.3)
+            # ymin, ymax = ax[i].get_ylim()
+            # print(feature, ymin, ymax)
 
     for i in range(n_rows):
         sns.despine(ax=ax[i], top=True, right=True, left=True, bottom=True)
@@ -617,7 +649,7 @@ def plot_stacked_kernels_for_cell(cell_specimen_id, dataset, weights_df, kernels
         title_string = str(m['ophys_experiment_id']) + '_' + str(
             cell_specimen_id) + '_' + m['cre_line'].split('-')[0]
         plt.suptitle(title_string, x=0.48, y=0.99, fontsize=12)
-        filename = str(cell_specimen_id) + '_' + metadata_string + '_kernels'
+        filename = str(cell_specimen_id) + '_' + metadata_string + '_kernels' + suffix
         if folder is None:
             utils.save_figure(fig, figsize, save_dir, 'example_kernels_stacked', filename)
             utils.save_figure(fig, figsize, save_dir, 'example_cell_kernels_coding_scores_and_fits', filename)
@@ -738,7 +770,7 @@ def plot_model_fits_example_cell(cell_specimen_id, dataset, cell_results_df, dro
 
     if kernel is not None:
         cs = np.round(results.loc[cell_specimen_id]
-                      [kernel + '__dropout'] * -1, 3)
+                      [kernel + '__adj_dropout'] * -1, 3)
         dropout = cs * 100
         ax.plot(fit['fit_trace_timestamps'][time_vec],
                 dropouts[kernel]['full_model_train_prediction'][time_vec, cell_index], '-',
@@ -2193,7 +2225,7 @@ def plot_coding_scores_for_cell(cell_specimen_id, ophys_experiment_id, results_p
 
 
 def plot_coding_score_components_for_cell(cell_specimen_id, ophys_experiment_id, results_pivoted, dataset,
-                                          fontsize=12, as_panel=False, save_dir=None, folder=None, ax=None):
+                                          fontsize=12, as_panel=False, horiz=False, save_dir=None, folder=None, ax=None):
     '''
     Creates barplot of coding scores for a single cell in a single experiment and saves it
     '''
@@ -2206,23 +2238,37 @@ def plot_coding_score_components_for_cell(cell_specimen_id, ophys_experiment_id,
     features = processing.get_features_for_clustering()
     feature_labels = processing.get_feature_labels_for_clustering()
     feature_colors, feature_labels_dict = plotting.get_feature_colors_and_labels()
+    c_vals, feature_labels_dict = plotting.get_feature_colors_and_labels()
 
     if ax is None:
-        figsize = (3, 2)
+        figsize = (2, 2)
         fig, ax = plt.subplots(figsize=figsize)
     # get dropouts just for one cell
-    ax = sns.barplot(data=np.abs(cell_dropouts[features]), orient='h',
+    if horiz:
+        ax = sns.barplot(data=np.abs(cell_dropouts[features]), orient='h',
                      order=features, palette=feature_colors, ax=ax)  # color=sns.color_palette('Blues_r')[0], ax=ax)
-    ax.set_xlabel('Coding score', fontsize=fontsize)
+        ax.set_yticklabels(feature_labels, rotation=0, horizontalalignment='right', fontsize=fontsize)
+        [t.set_color(i) for (i, t) in zip([c_vals[0], c_vals[1], c_vals[2], c_vals[3]], ax.yaxis.get_ticklabels())]
+        ax.xaxis.set_tick_params(labelsize=fontsize)
+        ax.set_xlabel('Coding score', fontsize=fontsize)
+    else:
+        ax = sns.barplot(data=np.abs(cell_dropouts[features]),
+                         order=features, palette=feature_colors, ax=ax)  # color=sns.color_palette('Blues_r')[0], ax=ax)
+        ax.set_xticklabels(feature_labels, rotation=45, horizontalalignment='right', fontsize=fontsize)
+        [t.set_color(i) for (i, t) in zip([c_vals[0], c_vals[1], c_vals[2], c_vals[3]], ax.xaxis.get_ticklabels())]
+        ax.yaxis.set_tick_params(labelsize=fontsize)
+        ax.set_ylabel('Coding score', fontsize=fontsize)
     ax.set_title('VE full model = ' + str(np.round(cell_dropouts.variance_explained_full.values[0], 3)), fontsize=fontsize)
-    ax.set_yticklabels(feature_labels, rotation=0, horizontalalignment='right', fontsize=fontsize)
-    ax.xaxis.set_tick_params(labelsize=fontsize)
 
     for x, feature in enumerate(features):
         cs = np.abs(cell_dropouts[feature].values[0])
         if cs>0:
-            ax.text(s = str(np.round(cs,2)), y=x, x=cs, rotation=0, fontsize=fontsize-4,
+            if horiz:
+                ax.text(s = str(np.round(cs,2)), y=x, x=cs, rotation=0, fontsize=fontsize-4,
                     color='k', va='center',  ha='left')
+            else:
+                ax.text(s=str(np.round(cs, 2)), x=x, y=cs, rotation=0, fontsize=fontsize - 4,
+                        color='k', va='bottom', ha='center')
     if as_panel:
         ax.set_title('')
         # Annotate axes
