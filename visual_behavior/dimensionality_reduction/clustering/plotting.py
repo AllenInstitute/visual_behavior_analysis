@@ -4783,7 +4783,7 @@ def plot_cluster_info(cre_lines, cluster_meta, save_dir=None, folder=''):
     - base_dir (str): Base directory to save figures.
     """
     for cre_line in cre_lines:
-        unique_mouse_per_cluster, unique_cluster_per_mouse, unique_equipment_per_cluster, unique_clusters_per_equipment = processing.get_cluster_info(cre_line, cluster_meta)
+        unique_mouse_per_cluster, unique_cluster_per_mouse, unique_project_per_cluster, unique_clusters_per_project = processing.get_cluster_info(cre_line, cluster_meta)
 
         figsize = (24, 3)
         fig, ax = plt.subplots(1, 4, figsize=figsize)
@@ -4803,15 +4803,15 @@ def plot_cluster_info(cre_lines, cluster_meta, save_dir=None, folder=''):
             fontsize = 12
         ax[1].set_xticklabels(unique_cluster_per_mouse.index.values, fontsize=fontsize)
 
-        unique_equipment_per_cluster.plot(kind='bar', color='grey', ax=ax[2])
-        ax[2].set_ylabel('Number of unique \nrigs')
+        unique_project_per_cluster.plot(kind='bar', color='grey', ax=ax[2])
+        ax[2].set_ylabel('Number of unique \nproject codes')
         ax[2].set_yticks(np.round(ax[2].get_yticks(), 1))
         ax[2].set_xlabel('Cluster ID')
 
-        unique_clusters_per_equipment.plot(kind='bar', color='grey', ax=ax[3])
+        unique_clusters_per_project.plot(kind='bar', color='grey', ax=ax[3])
         ax[3].set_ylabel('Number of unique \ncluster IDs')
         ax[3].set_yticks(np.round(ax[3].get_yticks(), 1))
-        ax[3].set_xlabel('Equipment name')
+        ax[3].set_xlabel('Project code')
 
         plt.subplots_adjust(hspace=0.4, wspace=0.3)
         plt.suptitle(processing.get_cre_line_map(cre_line), x=0.5, y=1.05, fontsize=22)

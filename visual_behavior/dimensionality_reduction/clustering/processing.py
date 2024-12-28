@@ -2689,7 +2689,7 @@ def generate_merged_table_of_model_free_metrics(data_type='filtered_events', ses
                                                            'mean_response_all_images', 'lifetime_sparseness_images',
                                                            'reliability_all_images', 'fraction_significant_p_value_gray_screen_all_images',
                                                            'fano_factor_all_images', 'running_modulation_all_images']],
-                                                      on=['cell_specimen_id', 'experience_level', 'ophys_experiment_id'])
+                                                      on=['cell_specimen_id', 'experience_level', 'ophys_experiment_id'], how='outer')
 
         # merge in omission metrics for each exp level
         tmp = omission_response_metrics.rename(columns={'mean_response': 'mean_response_omissions',
@@ -2703,7 +2703,7 @@ def generate_merged_table_of_model_free_metrics(data_type='filtered_events', ses
                                                            'reliability_omissions', 'fraction_significant_p_value_gray_screen_omissions',
                                                            'fano_factor_omissions', 'running_modulation_omissions',
                                                            'omission_modulation_index']],
-                                                      on=['cell_specimen_id', 'experience_level', 'ophys_experiment_id'])
+                                                      on=['cell_specimen_id', 'experience_level', 'ophys_experiment_id'], how='outer')
 
         # merge in change metrics for each exp level
         tmp = change_response_metrics.rename(columns={'mean_response': 'mean_response_changes',
@@ -2719,7 +2719,7 @@ def generate_merged_table_of_model_free_metrics(data_type='filtered_events', ses
                                                            'reliability_changes', 'fraction_significant_p_value_gray_screen_changes',
                                                            'fano_factor_changes', 'running_modulation_changes',
                                                            'change_modulation_index', 'hit_miss_index']],
-                                                      on=['cell_specimen_id', 'experience_level', 'ophys_experiment_id'])
+                                                      on=['cell_specimen_id', 'experience_level', 'ophys_experiment_id'], how='outer')
 
         # merge in change metrics for each exp level
         tmp = pref_image_change_response_metrics.rename(columns={'mean_response': 'mean_response_changes_pref_image', 'pre_change_response': 'mean_response_pre_change_pref_image',
@@ -2732,7 +2732,7 @@ def generate_merged_table_of_model_free_metrics(data_type='filtered_events', ses
         model_free_metrics = model_free_metrics.merge(tmp[['cell_specimen_id', 'experience_level', 'ophys_experiment_id', 'mean_response_changes_pref_image', 'mean_response_pre_change_pref_image',
                                                            'lifetime_sparseness_changes_pref_image', 'reliability_changes_pref_image', 'fraction_significant_p_value_gray_screen_changes_pref_image', 'fano_factor_changes_pref_image',
                                                            'running_modulation_changes_pref_image', 'change_modulation_index_pref_image', 'hit_miss_index_pref_image', ]],
-                                                      on=['cell_specimen_id', 'experience_level', 'ophys_experiment_id'])
+                                                      on=['cell_specimen_id', 'experience_level', 'ophys_experiment_id'], how='outer')
 
 
         # convert experience level
@@ -4217,9 +4217,9 @@ def get_cluster_info(cre_line, cluster_meta):
     tmp = cluster_meta[cluster_meta.cre_line == cre_line]
     unique_mouse_per_cluster = tmp.groupby('cluster_id')['mouse_id'].nunique()
     unique_cluster_per_mouse = tmp.groupby('mouse_id')['cluster_id'].nunique()
-    unique_equipment_per_cluster = tmp.groupby('cluster_id')['equipment_name'].nunique()
-    unique_clusters_per_equipment = tmp.groupby('equipment_name')['cluster_id'].nunique()
-    return unique_mouse_per_cluster, unique_cluster_per_mouse, unique_equipment_per_cluster, unique_clusters_per_equipment
+    unique_project_per_cluster = tmp.groupby('cluster_id')['project_code'].nunique()
+    unique_clusters_per_project = tmp.groupby('project_code')['cluster_id'].nunique()
+    return unique_mouse_per_cluster, unique_cluster_per_mouse, unique_project_per_cluster, unique_clusters_per_project
 
 
 def get_cell_specimen_ids_matched_in_x_sessions(cells_table, x_sessions=3):
