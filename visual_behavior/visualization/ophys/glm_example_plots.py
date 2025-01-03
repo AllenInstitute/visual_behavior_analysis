@@ -2581,8 +2581,9 @@ def plot_weights_and_coding_score_heatmaps_for_experience_levels(kernel, weights
             else:
                 ax[r][0].set_xticks(np.arange(timestamps[0], timestamps[-1], interval_sec))
                 # ax[r][0].xaxis.get_label().set_fontsize(14)
-                ax[r][0].set_xlabel(xlabel)
                 ax[r][0].tick_params(axis='x', labelsize=14)
+                # only label middle axis on bottom row
+                ax[r][1].set_xlabel(xlabel)
 
             # coding scores
             row_weights = col_weights[col_weights[row_condition] == row]
