@@ -22,7 +22,7 @@ def get_single_cell_plots_dir():
     return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/single_cell_plots'
 
 
-def save_figure(fig, figsize, save_dir, folder, fig_title, formats=['.png']):
+def save_figure(fig, figsize, save_dir, folder, fig_title, formats=['.png', '.pdf']):
     fig_dir = os.path.join(save_dir, folder)
     if not os.path.exists(fig_dir):
         os.mkdir(fig_dir)
@@ -77,6 +77,9 @@ def placeAxesOnGrid(fig, dim=[1, 1], xspan=[0, 1], yspan=[0, 1], wspace=None, hs
 
             if row > 0 and sharey == 'col':
                 share_y_with = inner_ax[0][col]
+
+            if col > 0 and sharey == 'row':
+                share_y_with = inner_ax[row][0]
 
             inner_ax[row][col] = plt.Subplot(fig, inner_grid[idx], sharex=share_x_with, sharey=share_y_with)
             fig.add_subplot(inner_ax[row, col])
@@ -483,7 +486,7 @@ def get_behavior_stage_color_map(as_rgb=False):
     (ex: ['gratings_static_training', 'gratings_flashed_training', 'familiar_images_training', )
 
     """
-    session_number_colors = get_colors_for_session_numbers()
+    session_number_colors = get_experience_level_colors()
     white = np.array([1, 1, 1]).astype(np.uint8)
 
     training_scale = 0.7
@@ -496,8 +499,10 @@ def get_behavior_stage_color_map(as_rgb=False):
         'familiar_images_ophys': session_number_colors[0],
         'familiar_images_ophys_passive': (
         session_number_colors[0] + (white - session_number_colors[0]) * passive_scale),
-        'novel_images_ophys': session_number_colors[3],
-        'novel_images_ophys_passive': (session_number_colors[3] + (white - session_number_colors[3]) * passive_scale),
+        'novel_images_ophys': session_number_colors[1],
+        'novel_images_ophys_passive': (session_number_colors[2] + (white - session_number_colors[2]) * passive_scale),
+        'novel +_images_ophys': session_number_colors[2],
+        'novel +_images_ophys_passive': (session_number_colors[2] + (white - session_number_colors[2]) * passive_scale),
     }
 
     if as_rgb:
@@ -509,7 +514,8 @@ def get_behavior_stage_color_map(as_rgb=False):
 
 
 def get_ophys_stage_color_map(as_rgb=False):
-    session_number_colors = get_colors_for_session_numbers()
+    # session_number_colors = get_colors_for_session_numbers()
+    experience_level_colors = get_experience_level_colors()
     gh_colors = get_colors_for_session_numbers_GH()
     white = np.array([1, 1, 1]).astype(np.uint8)
 
@@ -517,16 +523,14 @@ def get_ophys_stage_color_map(as_rgb=False):
     active_not_in_dataset_scale = 0.4
 
     ophys_stage_color_map = {
-        'familiar_images_in_dataset': session_number_colors[0],
+        'familiar_images_in_dataset': experience_level_colors[0],
         'familiar_images': (
-                    session_number_colors[0] + (white - session_number_colors[0]) * active_not_in_dataset_scale),
-        'familiar_images_passive': (session_number_colors[0] + (white - session_number_colors[0]) * passive_scale),
-
-        'novel_images_first_novel_in_dataset': session_number_colors[3],
-
-        'novel_images_in_dataset': session_number_colors[3],
-        'novel_images': (session_number_colors[3] + (white - session_number_colors[3]) * active_not_in_dataset_scale),
-        'novel_images_passive': (session_number_colors[3] + (white - session_number_colors[3]) * passive_scale),
+                    experience_level_colors[0] + (white - experience_level_colors[0]) * active_not_in_dataset_scale),
+        'familiar_images_passive': (experience_level_colors[0] + (white - experience_level_colors[0]) * passive_scale),
+        'novel_images_first_novel_in_dataset': experience_level_colors[1],
+        'novel +_images_in_dataset': experience_level_colors[2],
+        'novel +_images': (experience_level_colors[2] + (white - experience_level_colors[2]) * active_not_in_dataset_scale),
+        'novel +_images_passive': (experience_level_colors[2] + (white - experience_level_colors[2]) * passive_scale),
     }
 
     if as_rgb:
@@ -592,7 +596,7 @@ def add_stim_color_span(dataset, ax, xlim=None, color=None, label_changes=True, 
                     alpha = max_alpha
                     if annotate_changes:
                         ymin, ymax = ax.get_ylim()
-                        ax.annotate(stim_table.loc[idx]['image_name'], xy=(start_time, ymax*1.6), xycoords='data',
+                        ax.annotate(stim_table.loc[idx]['image_name'], xy=(start_time, ymax*2), xycoords='data',
                                     fontsize=6,  va='top', clip_on=False, annotation_clip=False)
                 else:  # if its a non-change make it gray with low alpha
                     image_color = 'gray'
@@ -646,7 +650,7 @@ def plot_flashes_on_trace(ax, timestamps, change=None, omitted=False, alpha=0.07
 
 
 def plot_mean_trace(traces, timestamps, ylabel='dF/F', legend_label=None, color='k',
-                    interval_sec=1, xlim_seconds=[-2, 2], linewidth=2, plot_sem=True, ax=None):
+                    interval_sec=1, xlim_seconds=[-2, 2], linewidth=1, plot_sem=True, ax=None):
     '''
     compute average and SEM of traces array and plot it on the specified axis
     produces x-axis timestamps based on the xlim_seconds range provided, incremented by the value of interval_sec
@@ -944,6 +948,19 @@ def get_start_end_time_for_period_with_omissions_and_change(stimulus_presentatio
     end_time = start_time+(0.75*n_flashes)
     return [start_time, end_time]
 
+def get_start_times_for_period_with_hit_and_omission(stimulus_presentations, trials, n_flashes=16):
+    st = stimulus_presentations.copy()
+    hit_times = trials[trials.hit].change_time.values
+    indices = st[st.start_time.isin(hit_times)].index.values # indices of hit times
+    # get all start times for periods with hit and check if there is also an omission within n_flashes-4
+    start_times = []
+    for idx in indices: # loop through omission times
+        subset = st.loc[idx:idx+n_flashes-2] #from 4 flashes before omission to 2 flashes before end of window
+        if subset.omitted.any():
+            start_time = st.loc[idx - 4].start_time # start time is -4 flashes before the change
+            start_times.append(start_time)
+    print(len(start_times))
+    return start_times
 
 def get_start_end_time_for_period_with_event(stimulus_presentations, event_type='is_change',
                                              n_before=4, n_after=8, event_ind_to_choose=10,
@@ -986,6 +1003,36 @@ def get_start_end_time_for_period_with_event(stimulus_presentations, event_type=
     else:
         window = [start_time, end_time]
     return window
+
+
+def get_consecutive_trials_with_omission_in_middle(dataset, flashes_between_changes=16):
+    ''' Loops through trials and finds those where a hit and a miss are within a given distance of each other
+    and there is an omission between them
+    '''
+
+    st = dataset.stimulus_presentations.copy()
+    trials = dataset.trials.copy()
+
+    # get all trials where the next one is less than the designated number of flashes between changes
+    time_between_changes = flashes_between_changes*0.75
+    diffs = np.where(trials.change_time.diff()<time_between_changes)[0] -1
+
+    trials_to_keep = []
+    start_times = []
+    for diff in diffs: # for all trials that have another change within the selected window
+        # if the current change is a hit and the next change is a miss (or vice versa)
+        if (trials.loc[diff].hit and trials.loc[diff+1].miss) | (trials.loc[diff].miss and trials.loc[diff+1].hit) :
+            # get the start and end times of the two trials
+            start_time = trials.loc[diff].change_time
+            end_time = trials.loc[diff+1].change_time
+            window_stim = st[(st.start_time>start_time) & (st.end_time<end_time)]
+            # check whether there is an omission in that window
+            if len(window_stim[window_stim.omitted]) > 0:
+                # if so, keep it
+                trials_to_keep.append(diff)
+                start_times.append(start_time-(3*0.75)) # start time to keep is 2 flashes before the first change
+    # return trials_to_keep
+    return start_times
 
 
 def get_experiments_matched_across_project_codes(df):

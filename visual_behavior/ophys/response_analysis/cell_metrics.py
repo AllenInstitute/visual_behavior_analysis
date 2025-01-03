@@ -1324,15 +1324,15 @@ def compute_experience_modulation_index_new(metrics_table, metric, cells_table):
 
     # get subset of data of interest
     metric_data = metrics_table[['cell_specimen_id', 'ophys_experiment_id', metric]]
-    print(len(metric_data.ophys_experiment_id.unique()), 'experiments in metric_data before merging with cells_table')
-    print(len(metric_data.cell_specimen_id.unique()), 'cells in metric_data before merging with cells_table')
+    # print(len(metric_data.ophys_experiment_id.unique()), 'experiments in metric_data before merging with cells_table')
+    # print(len(metric_data.cell_specimen_id.unique()), 'cells in metric_data before merging with cells_table')
 
     # merge in metadata for sessions to compare
     metric_data = metric_data.merge(cells_table.reset_index()[['cell_specimen_id', 'ophys_experiment_id', 'experience_level']],
                                     on=['cell_specimen_id', 'ophys_experiment_id'])
     # metric_data = metric_data.drop_duplicates(subset='cell_specimen_id')
-    print(len(metric_data.ophys_experiment_id.unique()), 'experiments in metric_data after merging with cells_table')
-    print(len(metric_data.cell_specimen_id.unique()), 'cells in metric_data after merging with cells_table')
+    # print(len(metric_data.ophys_experiment_id.unique()), 'experiments in metric_data after merging with cells_table')
+    # print(len(metric_data.cell_specimen_id.unique()), 'cells in metric_data after merging with cells_table')
 
     # groupby cell and session number then average across multiple sessions of the same type for each cell
     metric_data = metric_data.groupby(['cell_specimen_id', 'experience_level']).mean(numeric_only=True)[[metric]]
@@ -1344,13 +1344,10 @@ def compute_experience_modulation_index_new(metrics_table, metric, cells_table):
     # compute modulation indices
     # Familiar vs novel, familiar vs novel +
     exp_level_1 = 'Familiar'
-
     exp_level_2 = 'Novel'
-    metric_data['N F'] = (metric_data[exp_level_2] - metric_data[exp_level_1]) / (
-        metric_data[exp_level_2] + metric_data[exp_level_1])
+    metric_data['F N'] = (metric_data[exp_level_2] - metric_data[exp_level_1]) / (metric_data[exp_level_2] + metric_data[exp_level_1])
     exp_level_2 = 'Novel +'
-    metric_data['N+ F'] = (metric_data[exp_level_2] - metric_data[exp_level_1]) / (
-        metric_data[exp_level_2] + metric_data[exp_level_1])
+    metric_data['F N+'] = (metric_data[exp_level_2] - metric_data[exp_level_1]) / (metric_data[exp_level_2] + metric_data[exp_level_1])
 
     exp_level_2 = 'Novel'
     metric_data[exp_level_2 + ' % of ' + exp_level_1] = (metric_data[exp_level_2]) / (metric_data[exp_level_1])
@@ -1359,11 +1356,8 @@ def compute_experience_modulation_index_new(metrics_table, metric, cells_table):
 
     # Novel vs Novel +
     exp_level_1 = 'Novel +'
-
     exp_level_2 = 'Novel'
-    metric_data['N N+'] = (metric_data[exp_level_2] - metric_data[exp_level_1]) / (
-        metric_data[exp_level_2] + metric_data[exp_level_1])
-
+    metric_data['N+ N'] = (metric_data[exp_level_2] - metric_data[exp_level_1]) / (metric_data[exp_level_2] + metric_data[exp_level_1])
     exp_level_2 = 'Novel'
     metric_data[exp_level_2 + ' % of ' + exp_level_1] = (metric_data[exp_level_2]) / (metric_data[exp_level_1])
 

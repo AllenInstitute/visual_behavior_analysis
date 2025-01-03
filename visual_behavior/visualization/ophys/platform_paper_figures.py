@@ -24,7 +24,309 @@ sns.set_palette('deep')
 plt.rcParams['xtick.bottom'] = True
 plt.rcParams['ytick.left'] = True
 
+# plot data for a given session
+
+def plot_max_intensity_projection(dataset, ax=None):
+    if ax is None:
+        fig, ax = plt.subplots()
+    max_projection = dataset.max_projection.data
+    ax.imshow(max_projection, cmap='gray', vmax=np.percentile(max_projection, 99))
+    ax.axis('off')
+    return ax
+
+
+# ophys_container_ids = list(dataset_dict.keys())
+
+# ophys_container_id = ophys_container_ids[0]
+
+def plot_all_planes_all_sessions_for_mouse(dataset_dict, mouse_expts, session_id_for_area_depths=None,
+                                           save_dir=None, folder=None, ax=None):
+    '''
+    For a given mouse, plot all FOVs across all sessions in a grid. If an FOV for a particular container is missing, leave a blank axis
+    '''
+    # ophys_container_ids = list(dataset_dict.keys())
+    mouse_expts = mouse_expts.sort_values(by=['date_of_acquisition', 'targeted_structure', 'imaging_depth'])
+    mouse_id = mouse_expts.mouse_id.values[0]
+    ophys_container_ids = mouse_expts.ophys_container_id.unique()
+    ophys_session_ids = mouse_expts.ophys_session_id.unique()
+
+    if ax is None:
+        figsize = (8, 10)
+        fig, ax = plt.subplots(len(ophys_container_ids), len(ophys_session_ids), figsize=figsize)
+        ax = ax.ravel()
+
+    i = 0
+    for c, ophys_container_id in enumerate(ophys_container_ids):
+        container_data = mouse_expts[(mouse_expts.ophys_container_id == ophys_container_id)]
+        area = container_data.targeted_structure.values[0]
+        depth = int(container_data.imaging_depth.values[0])
+
+        for s, ophys_session_id in enumerate(ophys_session_ids):
+            # for s, session_type in enumerate(session_types):
+            # ophys_experiment_id = container_data[(container_data.session_type==session_type)].index.values[0]
+            try:
+                ophys_experiment_id = \
+                container_data[(container_data.ophys_session_id == ophys_session_id)].index.values[0]
+                session_type = \
+                container_data[(container_data.ophys_session_id == ophys_session_id)].session_type.values[0]
+
+                dataset = dataset_dict[ophys_container_id][ophys_experiment_id]
+                ax[i] = plot_max_intensity_projection(dataset, ax=ax[i])
+            except:
+                print('could not plot for experiment', ophys_experiment_id, session_type, area, depth)
+            if s == 0:
+                if session_id_for_area_depths:
+                    tmp = mouse_expts[(mouse_expts.ophys_session_id == session_id_for_area_depths) &
+                                      (mouse_expts.ophys_container_id == ophys_container_id)]
+                    area = tmp.targeted_structure.values[0]
+                    depth = int(tmp.imaging_depth.values[0])
+                ax[i].text(s=area + ' ' + str(depth), x=-20, y=dataset.max_projection.data.shape[0] / 2,
+                           ha='right', va='center', rotation=90, fontsize=8)
+            if c == 0:
+                ax[i].set_title(str(ophys_session_id) + '\n' + session_type, fontsize=6)
+            i += 1
+
+    plt.subplots_adjust(hspace=0.2, wspace=0.2)
+
+    if save_dir:
+        cre = dataset.metadata['cre_line'][:3]
+        utils.save_figure(fig, figsize, save_dir, folder, str(mouse_id) + '_' + cre + '_max_projection_images')
+
+
+def aggregate_traces_for_session(dataset_dict, session_metadata, trace_type='dff'):
+    '''
+    Loop through the fields of view in session_metadata, get traces for each, and combine into a single array
+
+    dataset_dict is a dictionary containing the SDK dataset object for each field of view
+        first key is ophys_container_id, second key is ophys_experiment_id
+    session_metadata is a subset of an ophys_experiment_table, limited to the experiments from the session of interest
+    trace_type is one of ['dff', 'events', 'filtered_events'] to plot
+
+    returns array of traces and the session_metadata for each FOV with the N cells and other useful info added
+    '''
+    ophys_container_ids = list(dataset_dict.keys())
+
+    # get data for one experiment to start the traces array
+    ophys_container_id = ophys_container_ids[0]
+    ophys_experiment_id = session_metadata[session_metadata.ophys_container_id == ophys_container_id].index.values[0]
+    ophys_session_id = session_metadata.ophys_session_id.values[0]
+    dataset = dataset_dict[ophys_container_id][ophys_experiment_id]
+    # loop through all FOVs for this session and aggregate the traces
+    # area_depth_info = []
+    for c, ophys_container_id in enumerate(ophys_container_ids):
+        ophys_experiment_id = session_metadata[session_metadata.ophys_container_id == ophys_container_id].index.values[
+            0]
+        dataset = dataset_dict[ophys_container_id][ophys_experiment_id]
+        # get traces
+        if trace_type == 'dff':
+            traces = dataset.dff_traces['dff'].values
+        elif trace_type == 'events':
+            traces = dataset.events['events'].values
+        elif trace_type == 'filtered_events':
+            traces = dataset.events['filtered_events'].values
+        # aggregate
+        if c == 0:
+            all_traces = np.vstack(traces)
+        else:
+            traces = np.vstack(traces)
+            all_traces = np.vstack((all_traces, traces))
+        # add useful info to FOV metadata
+        session_metadata.loc[ophys_experiment_id, 'n_cells'] = int(traces.shape[0])
+        session_metadata.loc[ophys_experiment_id, 'ophys_frame_rate'] = dataset.metadata['ophys_frame_rate']
+        session_metadata.loc[ophys_experiment_id, 'trace_type'] = trace_type
+        session_metadata.loc[ophys_experiment_id, 'container_order'] = c
+    session_metadata = session_metadata.sort_values(by=['targeted_structure', 'imaging_depth'])
+
+    return all_traces, session_metadata
+
+
+def plot_all_traces_heatmap(all_traces, session_metadata, timestamps=None, cmap='gray_r', save_dir=None, ax=None):
+    '''
+    Plot heatmap for all traces across multiple fields of view in a session
+
+    all_traces is an array of all traces in the session stacked
+    session_metadata is a dataframe containing experiment metadata
+    in addition to the n_cells in each plane, and the order in which the FOV traces are stacked
+    these can be generated using the function aggregate_traces_for_session
+
+    '''
+    if timestamps is not None:
+        ophys_frame_rate = np.mean(1 / np.diff(timestamps))
+    else:
+        ophys_frame_rate = session_metadata.ophys_frame_rate.values[0]  # should be the same for all expts in a session
+
+    if ax is None:
+        figsize = (15, 5)
+        fig, ax = plt.subplots(figsize=figsize)
+    ax = sns.heatmap(all_traces, cmap=cmap, vmin=0, vmax=np.percentile(all_traces, 95),
+                     cbar_kws={'label': 'dF/F', 'pad': 0.1}, ax=ax)
+    ax.set_ylim(0, all_traces.shape[0])
+    ax.set_xlim(0, all_traces.shape[1])
+    xticks = np.arange(0, all_traces.shape[1], ophys_frame_rate * 60 * 5)  # 11Hz * 60s * 5 mins
+    ax.set_xticks(xticks)
+    len_mins = (all_traces.shape[1] / ophys_frame_rate) / 60
+    xticklabels = [int(t) for t in np.arange(0, len_mins, 5)]
+    ax.set_xticklabels(xticklabels)  # tick every 5 mins
+    ax.set_xlabel('Time in session (minutes)')
+
+    # put ticks on right side also and keep box around plot
+    ax.tick_params(which='both', bottom=True, top=False, right=True, left=True,
+                   labelbottom=True, labeltop=False, labelright=False, labelleft=False)
+    sns.despine(ax=ax, top=False, right=False, left=False, bottom=False, offset=False, trim=False)
+
+    # label area depths
+    # loop through FOVs
+    cell_count = 0
+    yticks = []
+    yticks.append(0)
+    for container_order in np.sort(session_metadata.container_order.unique()):
+        this_expt_info = session_metadata[session_metadata.container_order == container_order]
+        n_cells = this_expt_info.n_cells.values[0]
+        # get midpoint of this section for label
+        y = cell_count + (n_cells / 2)
+        s = this_expt_info.targeted_structure.values[0] + ' ' + str(this_expt_info.imaging_depth.values[0])
+        # print(s, n_cells)
+        # add label for area depth on left side of plot
+        x = -800
+        ax.text(s=s, x=x, y=y, rotation=0, ha='right', va='center', fontsize=16)
+        # get cell count for ticks
+        cell_count = cell_count + n_cells
+        yticks.append(cell_count)
+
+    # set yticks in increments of FOV
+    ax2 = ax.twinx()
+    ax.set_yticks(np.asarray(yticks))
+    ax2.set_yticks(np.asarray(yticks))
+    ax2.set_ylabel('Cells')
+    # flip so zero / VISp on top
+    ax.invert_yaxis()
+    ax2.invert_yaxis()
+
+    if save_dir:
+        ophys_session_id = session_metadata.ophys_session_id.values[0]
+        mouse_id = session_metadata.mouse_id.values[0]
+        cre = session_metadata.cre_line.values[0][:3]
+        trace_type = session_metadata.trace_type.values[0]
+        session_type = session_metadata.session_type.values[0]
+        filename = str(mouse_id) + '_' + str(
+            ophys_session_id) + '_' + session_type + '_' + cre + '_' + trace_type + '_' + cmap
+        fig.suptitle(filename, x=0.4, y=1.1, fontsize=16)
+        utils.save_figure(fig, figsize, save_dir, 'traces_heatmaps', filename)
+
+    return ax
+
+
+
 # basic characterization #########################
+
+def plot_cell_count_by_depth(cells_table, project_code=None, suptitle=None, horiz=True,
+                             save_dir=None, folder=None, suffix='', ax=None):
+    if project_code == 'VisualBehaviorMultiscope4areasx2d':
+        areas = ['VISp', 'VISl', 'VISal', 'VISam']
+        colors = sns.color_palette('Paired')[:4]
+        hue = True
+        bins = 10
+    elif project_code == 'VisualBehaviorMultiscope':
+        areas = ['VISp', 'VISl']
+        colors = sns.color_palette('Paired')[:2]
+        hue = True
+        bins = 10
+    else:
+        hue = False
+        areas = ['VISp']
+        colors = sns.color_palette('Paired')[:1]
+        bins = 2
+
+    # bins = len(cells_table.groupby(['binned_depth']).count()) * 2
+    bins = 10
+    binwidth = 50
+    if ax is None:
+        if horiz:
+            figsize = (10, 3)
+            fig, ax = plt.subplots(1, 3, figsize=figsize, sharey=True)
+        else:
+            figsize = (3, 10)
+            fig, ax = plt.subplots(3, 1, figsize=figsize, sharey=True)
+    for i, cell_type in enumerate(utils.get_cell_types()):
+        if hue:
+            ax[i] = sns.histplot(data=cells_table[cells_table.cell_type == cell_type], #bins=20,
+                                 binwidth=binwidth, discrete=False, binrange=[0, 400],
+                                 hue='targeted_structure', y='imaging_depth', hue_order=areas,
+                                 palette=colors, multiple='stack', stat='count', ax=ax[i])
+            ax[i].get_legend().remove()
+        else:
+            ax[i] = sns.histplot(data=cells_table[cells_table.cell_type == cell_type],
+                                 binwidth=binwidth, discrete=False, binrange=[0, 400],
+                                  y='imaging_depth', color=colors[0], stat='count', ax=ax[i])
+        title = cell_type + '\n n = ' + str(len(cells_table[cells_table.cell_type == cell_type])) + ' cells, ' + str(
+            len(cells_table[cells_table.cell_type == cell_type].mouse_id.unique())) + ' mice'
+        ax[i].set_title(title)
+        ax[i].invert_yaxis()
+        ax[i].set_ylim(400, 0)
+        if horiz:
+            ax[i].set_xlabel('Cell count')
+        else:
+            ax[i].set_xlabel('')
+        ax[i].set_ylabel('')
+    ax[i].set_xlabel('Cell count')
+    if hue:
+        ax[0].legend(areas[::-1], fontsize='xx-small', bbox_to_anchor=(1,1))
+    ax[0].set_ylabel('Imaging depth (um)')
+    if horiz:
+        plt.subplots_adjust(wspace=0.2)
+        plt.suptitle(suptitle, x=0.5, y=1.2)
+    else:
+        plt.subplots_adjust(wspace=0.2, hspace=0.5)
+        plt.suptitle(suptitle, x=0.5, y=0.96, fontsize=18)
+
+    if save_dir:
+        utils.save_figure(fig, figsize, save_dir, folder, 'cell_count_by_depth_areas' + suffix)
+    return ax
+
+
+def plot_n_cells_per_plane_by_depth(cells_table, suptitle=None, save_dir=None, folder=None, ax=None):
+
+    n_cells = cells_table.groupby(['cell_type', 'binned_depth', 'ophys_experiment_id']).count().rename(columns={'cell_specimen_id':'n_cells'}).reset_index()
+
+    if ax is None:
+        figsize = (12, 3)
+        fig, ax = plt.subplots(1, 3, figsize=figsize, sharey=True)
+    for i, cell_type in enumerate(utils.get_cell_types()):
+        ax[i] = sns.stripplot(data=n_cells[n_cells.cell_type==cell_type],
+                              y='binned_depth', x='n_cells', orient='h', ax=ax[i])
+        ax[i].set_title(cell_type)
+        ax[i].set_xlabel('# Cells per plane')
+        ax[i].set_ylabel('')
+    ax[0].set_ylabel('Binned depth (um)')
+    plt.subplots_adjust(wspace=0.4)
+    plt.suptitle(suptitle, x=0.5, y=1.2)
+
+    if save_dir:
+        utils.save_figure(fig, figsize, save_dir, folder, 'cell_count_by_depth_areas_'+suptitle)
+    return ax
+
+
+def plot_n_planes_per_depth(experiments_table, suptitle=None, save_dir=None, folder=None, ax=None):
+
+    n_expts = experiments_table.groupby(['cell_type', 'binned_depth']).count().rename(columns={'ophys_session_id':'n_expts'}).reset_index()
+
+    if ax is None:
+        figsize = (12, 3)
+        fig, ax = plt.subplots(1, 3, figsize=figsize, sharey=True)
+
+    for i, cell_type in enumerate(utils.get_cell_types()):
+        ax[i] = sns.barplot(data=n_expts[n_expts.cell_type==cell_type], y='binned_depth', x='n_expts',
+                            orient='h', color='gray', width=0.5, ax=ax[i])
+        ax[i].set_title(cell_type)
+        ax[i].set_xlabel('# Imaging planes')
+        ax[i].set_ylabel('')
+    ax[0].set_ylabel('Binned depth (um)')
+    plt.subplots_adjust(wspace=0.4)
+    plt.suptitle(suptitle, x=0.5, y=1.2)
+
+    if save_dir:
+        utils.save_figure(fig, figsize, save_dir, folder, 'cell_count_by_depth_areas_'+suptitle)
+    return ax
 
 
 def plot_n_segmented_cells(multi_session_df, df_name, horizontal=True, save_dir=None, folder='cell_matching', suffix='', ax=None):
@@ -61,11 +363,11 @@ def plot_n_segmented_cells(multi_session_df, df_name, horizontal=True, save_dir=
         data = fraction_responsive[fraction_responsive.cell_type == cell_type]
         for ophys_container_id in data.ophys_container_id.unique():
             ax[i] = sns.pointplot(data=data[data.ophys_container_id == ophys_container_id], x='experience_level', y='total_cells',
-                                  color='gray', join=True, markers='.', scale=0.25, errwidth=0.25, ax=ax[i])
+                                  color='gray', linewidth=0.5, markers='.', markersize=0.25, err_kws={'linewidth': 0.5}, ax=ax[i])
         plt.setp(ax[i].collections, alpha=.3)  # for the markers
         plt.setp(ax[i].lines, alpha=.3)
         ax[i] = sns.pointplot(data=data, x='experience_level', y='total_cells', hue='experience_level',
-                              hue_order=experience_levels, palette=palette, dodge=0, join=False, ax=ax[i])
+                              hue_order=experience_levels, palette=palette, dodge=0, linewidth='none', ax=ax[i])
         ax[i].set_xticklabels(experience_levels, rotation=45)
     #     ax[i].legend(fontsize='xx-small', title='')
         ax[i].get_legend().remove()
@@ -85,7 +387,7 @@ def plot_n_segmented_cells(multi_session_df, df_name, horizontal=True, save_dir=
 def plot_population_averages_for_conditions(multi_session_df, data_type, event_type, axes_column, hue_column,
                                             project_code=None, timestamps=None, palette=None, sharey=False,
                                             title=None, suptitle=None, xlabel='Time (s)', ylabel='Response',
-                                            horizontal=True, xlim_seconds=None, interval_sec=1, legend=True,
+                                            horizontal=True, xlim_seconds=None, interval_sec=1, legend=False,
                                             save_dir=None, folder=None, suffix='', ax=None):
     '''
     Function to plot a population average response across multiple conditions from a dataframe containing event aligned timeseries,
@@ -149,7 +451,7 @@ def plot_population_averages_for_conditions(multi_session_df, data_type, event_t
     # set plot size depending on what type of data it is
     if data_type in ['dff', 'events', 'filtered_events']:
         if horizontal:
-            figsize = (4 * n_axes_conditions, 2.5)
+            figsize = (5 * n_axes_conditions, 2.5)
         else:
             figsize = (3, 3 * n_axes_conditions)  # for changes and omissions
     elif data_type in ['running_speed', 'pupil_width', 'lick_rate']:
@@ -199,15 +501,15 @@ def plot_population_averages_for_conditions(multi_session_df, data_type, event_t
     if format_fig:
         if horizontal:
             ax[0].set_ylabel(ylabel)
-            if n_axes_conditions == 3: 
+            if n_axes_conditions == 3:
                 ax[1].set_xlabel(xlabel)
-            else: 
+            else:
                 ax[0].set_xlabel(xlabel)
         else:
             ax[1].set_ylabel(ylabel)
             ax[i].set_xlabel(xlabel)
     if legend:
-        ax[i].legend(loc='upper center', fontsize='x-small', bbox_to_anchor=(1.5,1))
+        ax[i].legend(['active', 'passive'], loc='upper center', fontsize='x-small', bbox_to_anchor=(1.3,1))
     if project_code:
         if suptitle is None:
             suptitle = 'population average - ' + data_type + ' response - ' + project_code[14:]
@@ -215,13 +517,14 @@ def plot_population_averages_for_conditions(multi_session_df, data_type, event_t
         if horizontal:
             y = 1.1
         else:
-            y = 0.97
+            y = 0.95
         plt.suptitle(suptitle, x=0.51, y=y, fontsize=18)
-
+    
     plt.rcParams["savefig.bbox"] = "tight"
     if save_dir:
-        plt.rcParams["savefig.bbox"] = "tight"
         fig.subplots_adjust(hspace=0.4, wspace=0.3)
+        plt.rcParams["savefig.bbox"] = "tight"
+
         fig_title = 'population_average_' + axes_column + '_' + hue_column + suffix
         utils.save_figure(fig, figsize, save_dir, folder, fig_title)
 
@@ -270,13 +573,13 @@ def plot_population_averages_for_cell_types_across_experience(multi_session_df, 
             ax[i].set_ylabel('')
 
     if format_fig:
-        for i in [0, 3, 6]:
+        for i in [3]:
             ax[i].set_ylabel(ylabel)
         for i in np.arange(3, 9):
             ax[i].set_title('')
         for i in np.arange(0, 6):
             ax[i].set_xlabel('')
-        for i in np.arange(6, 9):
+        for i in [7]:
             ax[i].set_xlabel(xlabel)
         fig.tight_layout()
     else:
@@ -291,9 +594,10 @@ def plot_population_averages_for_cell_types_across_experience(multi_session_df, 
 
     ax[3].set_ylabel(ylabel)
     ax[7].set_xlabel(xlabel)
-    plt.subplots_adjust(hspace=0.4, wspace=0.3)
+
 
     if save_dir:
+        plt.subplots_adjust(hspace=0.4, wspace=0.3)
         fig_title = 'population_average_cell_types_exp_levels' + suffix
         utils.save_figure(fig, figsize, save_dir, folder, fig_title, formats=['.png'])
 
@@ -595,11 +899,11 @@ def plot_fraction_responsive_cells(multi_session_df, responsiveness_threshold=0.
         data = fraction_responsive[fraction_responsive.cell_type == cell_type]
         for ophys_container_id in data.ophys_container_id.unique():
             ax[i] = sns.pointplot(data=data[data.ophys_container_id == ophys_container_id], x='experience_level', y='fraction_responsive',
-                                  color='gray', join=True, markers='.', scale=0.25, errwidth=0.25, ax=ax[i])
+                                  color='gray', linewidth=0.5, markers='.', markersize=0.25, err_kws={'linewidth': 0.5}, ax=ax[i])
         plt.setp(ax[i].collections, alpha=.3)  # for the markers
         plt.setp(ax[i].lines, alpha=.3)
         ax[i] = sns.pointplot(data=data, x='experience_level', y='fraction_responsive', hue='experience_level',
-                              hue_order=experience_levels, palette=palette, dodge=0, join=False, ax=ax[i])
+                              hue_order=experience_levels, palette=palette, dodge=0, linewidth='none', ax=ax[i])
         ax[i].set_xticklabels(experience_levels, rotation=90)
         ax[i].set_ylabel('')
         ax[i].get_legend().remove()
@@ -661,22 +965,22 @@ def plot_percent_responsive_cells(multi_session_df, responsiveness_threshold=0.1
     tukey = pd.DataFrame()
     for i, cell_type in enumerate(cell_types):
         data = fraction_responsive[fraction_responsive.cell_type == cell_type]
-        # data[metric] = data['fraction_responsive']*100
+        # data[metric] = data['fraction_responsive']*100.
         print(cell_type, 'includes', len(data.ophys_container_id.unique()), 'containers')
         for ophys_container_id in data.ophys_container_id.unique():
             ax[i] = sns.pointplot(data=data[data.ophys_container_id == ophys_container_id], x='experience_level', y=metric,
-                                  color='gray', join=True, markers='.', scale=0.25, errwidth=0.25, ax=ax[i])
+                                  color='gray', linewidth=0.5, markers='.', markersize=0.25, err_kws={'linewidth': 0.5}, ax=ax[i])
         plt.setp(ax[i].collections, alpha=.3)  # for the markers
         plt.setp(ax[i].lines, alpha=.3)
         ax[i] = sns.pointplot(data=data, x='experience_level', y=metric, hue='experience_level',
-                              hue_order=experience_levels, palette=palette, dodge=0, join=False, markers='.',
-                              errorbar=('ci', 95), ax=ax[i])
-
+                              hue_order=experience_levels, palette=palette, dodge=0, markers='.',
+                              err_kws={'linewidth': 2}, markersize=5, errorbar=('ci', 95), ax=ax[i])
 
         ax[i].set_xticklabels(utils.get_abbreviated_experience_levels(), rotation=0)
+        [t.set_color(x) for (x, t) in zip(palette, ax[i].xaxis.get_ticklabels())]
         # ax[i].set_xticklabels(experience_levels, rotation=90)
         ax[i].set_ylabel('')
-        ax[i].get_legend().remove()
+        # ax[i].get_legend().remove()
         ax[i].set_title(cell_type)
         ax[i].set_xlabel('')
         if ylim is None:
@@ -756,12 +1060,12 @@ def plot_average_metric_value_for_experience_levels_across_containers(df, metric
         for ophys_container_id in data.ophys_container_id.unique():
             ax[i] = sns.pointplot(data=data[data.ophys_container_id == ophys_container_id], x='experience_level',
                                   y=metric,
-                                  color='gray', join=True, markers='.', scale=0.25, errwidth=0.25, ax=ax[i])
+                                  color='gray', linewidth=0.5, markers='.', markersize=0.25, err_kws={'linewidth': 0.5}, ax=ax[i])
         plt.setp(ax[i].collections, alpha=.3)  # for the markers
         plt.setp(ax[i].lines, alpha=.3)
         # plot the population average in color
         ax[i] = sns.pointplot(data=data, x='experience_level', y=metric, hue='experience_level',
-                              hue_order=experience_levels, palette=palette, dodge=0, join=False, ax=ax[i])
+                              hue_order=experience_levels, palette=palette, dodge=0, linewidth='none', ax=ax[i])
         ax[i].set_xticklabels(experience_levels, rotation=45)
         #     ax[i].legend(fontsize='xx-small', title='')
         ax[i].get_legend().remove()
@@ -849,7 +1153,7 @@ def add_stats_to_plot_for_hues(data, metric, ax, ymax=None, xorder=None, x='expe
 
     # formatting
     scale = 0.05
-    fontsize = 16
+    fontsize = 15
 
     ytop = ax.get_ylim()[1]
     y = ytop
@@ -866,18 +1170,18 @@ def add_stats_to_plot_for_hues(data, metric, ax, ymax=None, xorder=None, x='expe
                 if len(hues)>2: # if more than 2 values, use the multiple corrections result
                     if row.reject:
                         ax.text(loc, yh, '*', fontsize=fontsize, horizontalalignment='center',
-                                verticalalignment='bottom', color='r')
+                                verticalalignment='bottom', color='k')
                 elif len(hues)==2: # if there are only two values, use the p-value from anova
                     if row.one_way_anova_p_val<0.05:
                         ax.text(loc, yh, '*', fontsize=fontsize, horizontalalignment='center',
-                                verticalalignment='bottom', color='r')
-    ax.set_ylim(ymax = ytop * (1 + (scale * 5))) # 3 works better for behavior plots
+                                verticalalignment='bottom', color='k')
+    ax.set_ylim(ymax=ytop * (1 + (scale * 5))) # 3 works better for behavior plots
 
     return ax, tukey
 
 
 def add_stats_to_plot(data, metric, ax, ymax=None, column_to_compare='experience_level',
-                      show_ns=False, hue_only=False):
+                      show_ns=False, hue_only=False, behavior=False):
     """
     add stars to axis indicating across experience level statistics
     x-axis of plots must be experience_levels or cell_types
@@ -901,23 +1205,30 @@ def add_stats_to_plot(data, metric, ax, ymax=None, column_to_compare='experience
     else: # x pos is 0, 1, 2
         dist = 1
 
-    scale = 0.03#0.05 # 0.1
-    fontsize = 9
+    scale = 0.05#0.05 # 0.1
+    if behavior:
+        scale = 0.01
+    fontsize = 15
 
     if ymax is None:
         ytop = ax.get_ylim()[1]
     else:
         ytop = ymax
     if ytop > 1:
-        second_bar_scale = 6
+        second_bar_scale = 12 #yaxis uses 6
     else:
-        second_bar_scale = 4
+        second_bar_scale = 10 #yaxis uses 4
     y1 = ytop * (1 + scale)
     y1h = ytop * (1 + scale * 2)
     y2 = ytop * (1 + (scale * second_bar_scale))
     y2h = ytop * (1 + (scale * (second_bar_scale+1)))
 
+
     top = [ytop]
+    scale_factor = 3
+    if behavior:
+        scale_factor = 5
+    two_away = False
     for tindex, row in tukey.iterrows():
         if (anova.pvalue < 0.05) and (row.reject): # if something is significant, add some significance bars
             label = '*'
@@ -941,30 +1252,45 @@ def add_stats_to_plot(data, metric, ax, ymax=None, column_to_compare='experience
             yh = y1h
         if len(data[column_to_compare].unique())>2: # if more than 2 values, use the multiple corrections result
             if row.reject:
-                ax.plot([row.x1, row.x1, row.x2, row.x2], [y, yh, yh, y], linestyle='-', color=color, alpha=alpha)
+                # print(row.x1, row.x2, np.abs(row.x2 - row.x1) > dist)
+                # original
+                # ax.plot([row.x1, row.x1, row.x2, row.x2], [y, yh, yh, y], linestyle='-', color=color, alpha=alpha)
+                # from add_stats_yaxis
+                ax.plot([row.x1 + 0.1, row.x1 + 0.1, row.x2 - 0.1, row.x2 - 0.1], [y, y, y, y], linestyle='-',
+                        color=color, alpha=alpha, clip_on=False)
+                # original
                 ax.text(np.mean([row.x1, row.x2]), yh, label, fontsize=fontsize, horizontalalignment='center',
                         verticalalignment='bottom')
                 top.append(yh)
+                if np.abs(row.x2 - row.x1) > dist: # if there are x vals more than one apart, make the y scale bigger to fit the sig bars
+                    scale_factor = 6
+                    # print(scale_factor)
             else:
                 if show_ns:
-                    ax.plot([row.x1, row.x1, row.x2, row.x2], [y, yh, yh, y], linestyle='-', color=color, alpha=alpha)
-                    ax.text(np.mean([row.x1, row.x2]), yh*(1+scale), 'ns', fontsize=fontsize, horizontalalignment='center',
+                    ax.plot([row.x1 + 0.1, row.x1 + 0.1, row.x2 - 0.1, row.x2 - 0.1], [y, y, y, y], linestyle='-',
+                            color=color, alpha=alpha, clip_on=False)
+                    # ax.plot([row.x1, row.x1, row.x2, row.x2], [y, yh, yh, y], linestyle='-', color=color, alpha=alpha)
+                    ax.text(np.mean([row.x1, row.x2]), yh*(1+scale), 'ns', fontsize=fontsize-8, horizontalalignment='center',
                             verticalalignment='bottom')
                     top.append(yh)
         elif len(data[column_to_compare].unique())==2: #  if there are only two values, use the p-value from anova
             if row.one_way_anova_p_val<0.05:
-                ax.plot([row.x1, row.x1, row.x2, row.x2], [y, yh, yh, y], linestyle='-', color=color, alpha=alpha)
+                # ax.plot([row.x1, row.x1, row.x2, row.x2], [y, yh, yh, y], linestyle='-', color=color, alpha=alpha)
+                ax.plot([row.x1 + 0.1, row.x1 + 0.1, row.x2 - 0.1, row.x2 - 0.1], [y, y, y, y], linestyle='-',
+                        color=color, alpha=alpha, clip_on=False)
                 ax.text(np.mean([row.x1, row.x2]), yh, label, fontsize=fontsize, horizontalalignment='center',
                         verticalalignment='bottom')
                 top.append(yh)
             else:
                 if show_ns:
-                    ax.plot([row.x1, row.x1, row.x2, row.x2], [y, yh, yh, y], linestyle='-', color=color, alpha=alpha)
-                    ax.text(np.mean([row.x1, row.x2]), yh*(1+scale), 'ns', fontsize=fontsize, horizontalalignment='center',
+                    ax.plot([row.x1 + 0.1, row.x1 + 0.1, row.x2 - 0.1, row.x2 - 0.1], [y, y, y, y], linestyle='-',
+                            color=color, alpha=alpha, clip_on=False)
+                    # ax.plot([row.x1, row.x1, row.x2, row.x2], [y, yh, yh, y], linestyle='-', color=color, alpha=alpha)
+                    ax.text(np.mean([row.x1, row.x2]), yh*(1+scale), 'ns', fontsize=fontsize-8, horizontalalignment='center',
                             verticalalignment='bottom')
                     top.append(yh)
     # ax.set_ylim(ymax=ytop * (1 + (scale * 7))) # 3 works better for non-behavior plots
-    ax.set_ylim(ymax = np.amax(top) * (1 + scale*10))  # 3 works better for behavior plots, 2 for regular
+    ax.set_ylim(ymax=np.amax(top) * (1 + scale*scale_factor))  # scale factor determined by number of sig points # 3 works better for behavior plots, 2 for regular
 
     return ax, tukey
 
@@ -1223,7 +1549,7 @@ def plot_metric_distribution_by_experience_no_cell_type(metrics_table, metric, e
     if ax is None:
         if horiz:
             suffix = suffix + '_horiz'
-            figsize = (3, 2)
+            figsize = (3, 2.25)
             fig, ax = plt.subplots(1, 1, figsize=figsize)
         else:
             figsize = (2, 3)
@@ -1233,8 +1559,8 @@ def plot_metric_distribution_by_experience_no_cell_type(metrics_table, metric, e
     tukey = pd.DataFrame()
     if hue:
         if pointplot:
-            ax = sns.pointplot(data=data, y=y, x=x, order=order, dodge=0.3, join=False,
-                               hue=hue, hue_order=hue_order, palette='gray', ax=ax)
+            ax = sns.pointplot(data=data, y=y, x=x, order=order, dodge=0.3, linewidth='none',
+                               markers='.', markersize=5, err_kws={'linewidth': 2}, hue=hue, hue_order=hue_order, palette='gray', ax=ax)
 
         else:
             ax = sns.boxplot(data=data, y=y, x=x, order=order, cut=0,
@@ -1246,21 +1572,21 @@ def plot_metric_distribution_by_experience_no_cell_type(metrics_table, metric, e
             print('table includes', len(data.ophys_container_id.unique()), 'containers')
             for ophys_container_id in data.ophys_container_id.unique():
                 ax = sns.pointplot(data=data[data.ophys_container_id == ophys_container_id], x=x, y=y,
-                                   color='gray', join=True, markers='.', scale=0.25, errwidth=0.25, ax=ax)
+                                   color='gray', linewidth=0.5, markers='.', markersize=0.25, err_kws={'linewidth': 0.5}, ax=ax)
         if show_mice:
             print('table includes', len(data.mouse_id.unique()), 'mice')
             for mouse_id in data.mouse_id.unique():
                 ax = sns.pointplot(data=data[data.mouse_id == mouse_id], x=x, y=y,
-                                   color='gray', join=True, markers='.', scale=0.5, errwidth=0.25, ax=ax)
+                                   color='gray', linewidth=0.5, markers='.', markersize=1, err_kws={'linewidth': 0.5}, ax=ax)
             plt.setp(ax.collections, alpha=.7)  # for the markers
             plt.setp(ax.lines, alpha=.7)
 
         if pointplot:
             # ax = sns.pointplot(data=data, x='experience_level', y=metric,
             #                    palette=colors, ax=ax)
-            ax = sns.pointplot(data=data, x=x, y=y, hue='experience_level', scale=1.5, order=order,
-                                  hue_order=experience_levels, palette=palette, dodge=0, join=False, markers='.',
-                                  errorbar=('ci', 95), ax=ax)
+            ax = sns.pointplot(data=data, x=x, y=y, hue='experience_level', order=order,
+                                  hue_order=experience_levels, palette=palette, dodge=0, join=False,
+                                  markers='.', markersize=8, err_kws={'linewidth': 2}, errorbar=('ci', 95), ax=ax)
 
         else:
             ax = sns.boxplot(data=data, x=x, y=y, width=0.4, order=order,
@@ -1271,13 +1597,13 @@ def plot_metric_distribution_by_experience_no_cell_type(metrics_table, metric, e
                                x=x, y=y, color='gray', ax=ax)
         if boxplot:
             ax = sns.boxplot(data=data, x=x, y=y, width=0.4, order=order,
-                             color='white', ax=ax)
+                             palette='dark:white', ax=ax)
             # format to have black lines and transparent box face
             plt.setp(ax.artists, edgecolor='k', facecolor=[0, 0, 0, 0])
             plt.setp(ax.lines, color='k')
 
 
-        ax.get_legend().remove()
+        # ax.get_legend().remove()
         ax.set_title(title)
 
         # if ylims and not horiz:
@@ -1286,19 +1612,19 @@ def plot_metric_distribution_by_experience_no_cell_type(metrics_table, metric, e
         #     ax.set_xlim(ylims)
         # ymin, ymax = ax.get_ylim()
 
-        if horiz: 
+        if horiz:
             ax.set_xlim(xmin=ymin)
             ax.set_ylim(-0.5, len(order) - 0.5)
             ax, tukey_table = add_stats_to_plot_yaxis(data, metric, ax, ymax=ymax, hue_only=False)
         else:
             ax.set_ylim(ymin=ymin)
             ax.set_xlim(-0.5, len(order) - 0.5)
+
             # add stats to plot if only looking at experience levels
             ax, tukey_table = add_stats_to_plot(data, metric, ax, ymax=ymax, show_ns=show_ns)
         # aggregate stats
         tukey_table['metric'] = metric
         tukey = pd.concat([tukey, tukey_table])
-        print(tukey)
 
         # add line at y=0
         if add_zero_line:
@@ -1320,6 +1646,7 @@ def plot_metric_distribution_by_experience_no_cell_type(metrics_table, metric, e
             else:
                 ax.set_xticks(ax.get_xticks().tolist())
                 ax.set_xticklabels(experience_levels, rotation=90, )  # ha='right')
+                utils.color_xaxis_labels_by_experience(ax)
             ax.invert_yaxis()
         else:
             ax.set_xlabel('')
@@ -1333,9 +1660,8 @@ def plot_metric_distribution_by_experience_no_cell_type(metrics_table, metric, e
             else:
                 ax.set_xticks(ax.get_xticks().tolist())
                 ax.set_xticklabels(experience_levels, rotation=90,)  # ha='right')
+                utils.color_xaxis_labels_by_experience(ax)
 
-
-    fig.subplots_adjust(hspace=0.4)
     if save_dir:
         folder = 'metric_distributions'
         filename = event_type + '_' + data_type + '_' + metric + '_distribution' + suffix
@@ -1354,9 +1680,9 @@ def plot_metric_distribution_by_experience_no_cell_type(metrics_table, metric, e
 
 
 def plot_metric_distribution_by_experience(metrics_table, metric, event_type, data_type, hue=None,
-                                           plot_type='pointplot', legend=True, show_containers=False,
-                                           add_zero_line=False, show_ns=False, ylabel=None, ylims=None, horiz=False,
-                                           abbreviate_exp=False, suptitle=None, save_dir=None, ax=None, suffix=''):
+                                               plot_type='pointplot', legend=True, show_containers=False,
+                                               add_zero_line=False, show_ns=False, ylabel=None, ylims=None, horiz=True,
+                                               abbreviate_exp=True, suptitle=None, save_dir=None, ax=None, suffix=''):
     """
     plot metric distribution across experience levels for each cell_type in metrics_table, with stats across experience levels
     if hue is provided, plots will be split by hue column and stats will be done on hue column differences instead of across experience levels
@@ -1387,8 +1713,12 @@ def plot_metric_distribution_by_experience(metrics_table, metric, event_type, da
     new_experience_levels = utils.get_new_experience_levels()
 
     if hue:
-        hue_order = np.sort(metrics_table[hue].unique())[::-1]
+        if hue == 'targeted_structure':
+            hue_order = np.sort(metrics_table[hue].unique())[::-1]
+        else:
+            hue_order = np.sort(metrics_table[hue].unique())
         suffix = '_' + hue + '_' + plot_type + suffix
+        hue_colors = sns.color_palette('Greys', len(hue_order))[::-1]
     else:
         suffix = '_experience_level_' + plot_type + suffix
     if ('index' in metric) and (ylims is None):
@@ -1416,10 +1746,10 @@ def plot_metric_distribution_by_experience(metrics_table, metric, event_type, da
     colors = utils.get_experience_level_colors()
     if ax is None:
         if horiz:
-            figsize = (6, 2.5)
-            fig, ax = plt.subplots(1, 3, figsize=figsize, sharex=False, sharey=True)
+            figsize = (8, 2.25)
+            fig, ax = plt.subplots(1, 3, figsize=figsize, sharex=False, sharey=False)
         else:
-            figsize = (2, 9)
+            figsize = (2, 10)
             fig, ax = plt.subplots(3, 1, figsize=figsize, sharex=True, sharey=False)
     # stats dataframe to save
     tukey = pd.DataFrame()
@@ -1430,26 +1760,29 @@ def plot_metric_distribution_by_experience(metrics_table, metric, event_type, da
         if show_containers:
             for ophys_container_id in ct_data.ophys_container_id.unique():
                 ax[i] = sns.pointplot(data=ct_data[ct_data.ophys_container_id == ophys_container_id], x='experience_level',
-                                      y=metric, color='gray', join=True, markers='.', scale=0.25, errwidth=0.25, ax=ax[i])
+                                      y=metric, color='gray',  
+                                      linewidth=0.5, markers='.', markersize=0.25, err_kws={'linewidth': 0.5}, ax=ax[i])
 
         if hue:
+            
             if plot_type == 'pointplot':
-                dodge = 0.1 * (len(ct_data[hue].unique()))
-                ax[i] = sns.pointplot(data=ct_data, y=metric, x='experience_level', order=order, dodge=dodge, join=False,
-                                      hue=hue, hue_order=hue_order, palette='gray', ax=ax[i])
+                dodge = 0.1 * len(ct_data[hue].unique())
+                ax[i] = sns.pointplot(data=ct_data, y=metric, x='experience_level', order=order, dodge=dodge, linestyle='none',
+                                      markers='.', markersize=5, err_kws={'linewidth': 2}, hue=hue, hue_order=hue_order, 
+                                      palette=hue_colors, ax=ax[i])
             elif plot_type == 'boxplot':
                 ax[i] = sns.boxplot(data=ct_data, y=metric, x='experience_level', order=order, fliersize=0,
-                                    width=0.4, hue=hue, hue_order=hue_order, palette='gray', ax=ax[i])
+                                    width=0.4, hue=hue, hue_order=hue_order, palette=hue_colors, ax=ax[i])
             elif plot_type == 'violinplot':
                 if len(ct_data[hue].unique())==2:
                     split = True
                 else:
                     split = False
                 ax[i] = sns.violinplot(data=ct_data, y=metric, x='experience_level', order=order,
-                                       hue=hue, hue_order=hue_order, palette='gray', cut=0, inner=None,
+                                       hue=hue, hue_order=hue_order, palette=hue_colors, cut=0, inner=None,
                                        split=split, fill=False, ax=ax[i])
                 ax2 = ax[i].twinx()
-                ax2 = sns.boxplot(data=ct_data, hue=hue, y=metric, x='experience_level',  order=order, color='white',
+                ax2 = sns.boxplot(data=ct_data, hue=hue, y=metric, x='experience_level',  order=order, palette='dark:white',
                                   hue_order=hue_order, width=0.3, boxprops=dict(alpha=0.8, zorder=2), whis=0, showfliers=False, ax=ax2)
                 ax2.get_legend().remove()
                 ax2.axis('off')
@@ -1466,7 +1799,6 @@ def plot_metric_distribution_by_experience(metrics_table, metric, event_type, da
             if ylims is not None:
                 ax[i].set_ylim(ylims)
 
-            # add stats to plot for hues
             ax[i], tukey_table = add_stats_to_plot_for_hues(ct_data, metric, ax[i],
                                                             xorder=order, x='experience_level', hue=hue)
             # ax[i], tukey_table = add_stats_to_plot(ct_data, metric, ax[i], ymax=ymax)
@@ -1477,19 +1809,20 @@ def plot_metric_distribution_by_experience(metrics_table, metric, event_type, da
             tukey = pd.concat([tukey, tukey_table])
         else:
             if plot_type == 'pointplot':
-                ax[i] = sns.pointplot(data=ct_data, x='experience_level', y=metric, palette=colors, ax=ax[i])
+                ax[i] = sns.pointplot(data=ct_data, x='experience_level', y=metric, palette=colors, hue='experience_level',
+                                      markers='.', markersize=5, err_kws={'linewidth': 2}, ax=ax[i])
             elif plot_type == 'boxplot':
-                ax[i] = sns.boxplot(data=ct_data, x='experience_level', y=metric, width=0.4,
+                ax[i] = sns.boxplot(data=ct_data, x='experience_level', y=metric, width=0.4, hue='experience_level',
                                     palette=colors, fliersize=0, ax=ax[i])
             elif plot_type == 'violinplot':
-                ax[i] = sns.violinplot(data=ct_data, y=metric, x='experience_level', order=order,
+                ax[i] = sns.violinplot(data=ct_data, y=metric, x='experience_level', order=order, hue='experience_level',
                                        palette=colors,  cut=0, ax=ax[i])
                 for violin in ax[i].collections:
                     violin.set_alpha(0.75)
 
             elif plot_type == 'stripplot':
                 ax[i] = sns.boxplot(data=ct_data, x='experience_level', y=metric, width=0.4,
-                                    color='white', ax=ax[i])
+                                    palette='dark:white', ax=ax[i])
                 # format to have black lines and transparent box face
                 plt.setp(ax[i].artists, edgecolor='k', facecolor=[0, 0, 0, 0])
                 plt.setp(ax[i].lines, color='k')
@@ -1498,8 +1831,8 @@ def plot_metric_distribution_by_experience(metrics_table, metric, event_type, da
                     tmp_data = ct_data.reset_index().copy()
                     # get 25% of all data points
                     pct = 0.25
-                    n_samples = int(len(tmp_data) * pct)
-                    print(n_samples, 'is', pct * 100, '% of all', cell_type, 'cells')
+                    n_samples = float(len(tmp_data) * pct)
+                    print(n_samples, 'is', pct * 100., '% of all', cell_type, 'cells')
                     idx = np.random.choice(tmp_data.index.values, n_samples)
                     # limit to this random subset
                     tmp_data = tmp_data.loc[idx]
@@ -1515,6 +1848,7 @@ def plot_metric_distribution_by_experience(metrics_table, metric, event_type, da
                 ax[i].set_ylim(ylims)
             ax[i].set_xlim(-0.5, len(order) - 0.5)
             # add stats to plot if only looking at experience levels
+            # add stats to plot for hues
             ax[i], tukey_table = add_stats_to_plot(ct_data, metric, ax[i], ymax=ymax, show_ns=show_ns)
             # aggregate stats
             tukey_table['metric'] = metric
@@ -1524,20 +1858,22 @@ def plot_metric_distribution_by_experience(metrics_table, metric, event_type, da
             ax[i].set_xlabel('')
             ax[i].set_ylabel('')
 
-
         # add line at y=0
         if add_zero_line:
             ax[i].axhline(y=0, xmin=0, xmax=1, color='gray', linestyle='--')
-        ax[i].set_title(cell_type)
+        # ax[i].set_title(cell_type)
+        ax[i].set_title(cell_type+'\n(n = '+str(len(ct_data.cell_specimen_id.unique()))+' cells)', fontsize=16)
         # ax[i].set_title('')
         ax[i].set_xlabel('')
 
         if abbreviate_exp:
+            ax[i].set_xticks(np.arange(0, len(utils.get_abbreviated_experience_levels())))
             ax[i].set_xticklabels(utils.get_abbreviated_experience_levels(), rotation=0)
             utils.color_xaxis_labels_by_experience(ax[i])
         else:
             ax[i].set_xticks(ax[i].get_xticks().tolist())
             ax[i].set_xticklabels(new_experience_levels, rotation=90,)  # ha='right')
+            utils.color_xaxis_labels_by_experience(ax[i])
 
         if ylabel:
             if horiz:
@@ -1547,16 +1883,19 @@ def plot_metric_distribution_by_experience(metrics_table, metric, event_type, da
         else:
             ax[i].set_ylabel(metric)
 
-        if legend and hue:
-            ax[0].legend(fontsize='xx-small', title='', bbox_to_anchor=(1.6, 1))
+    if legend and hue:
+        ax[i].legend(fontsize='xx-small', title='', bbox_to_anchor=(1.6, 1))
 
     if horiz:
         ax[0].set_ylabel(ylabel)
         ax[0].set_xlabel('')
         ax[2].set_xlabel('')
     if suptitle:
-        plt.suptitle(suptitle, x=0.52, y=0.98, fontsize=16)
-    fig.subplots_adjust(hspace=0.4, wspace=0.3)
+        if horiz:
+            plt.suptitle(suptitle, x=0.52, y=0.98, fontsize=18)
+        else:
+            plt.suptitle(suptitle, x=0.52, y=0.96, fontsize=18)
+    fig.subplots_adjust(hspace=0.4, wspace=0.6)
     if save_dir:
         folder = 'metric_distributions'
         filename = event_type + '_' + data_type + '_' + metric + '_distribution' + suffix
@@ -1632,7 +1971,7 @@ def plot_metric_distribution_all_conditions(metrics_table, metric, event_type, d
                                                    ylabel=ylabel, ylims=ylims, save_dir=save_dir, ax=None)
             # across depths
             plot_metric_distribution_by_experience(data, metric, plot_type=plot_type, add_zero_line=add_zero_line,
-                                                   event_type=event_type, data_type=data_type, hue='layer', legend=True,
+                                                   event_type=event_type, data_type=data_type, hue='binned_depth', legend=True,
                                                    ylabel=ylabel, ylims=ylims, save_dir=save_dir, ax=None)
 
         # per project code, for each area and depth
@@ -1649,21 +1988,50 @@ def plot_metric_distribution_all_conditions(metrics_table, metric, event_type, d
         #                                            hue='layer', ylabel=ylabel, ylims=ylims, save_dir=save_dir, ax=None)
 
 
-def plot_modulation_index_distribution(metrics_table, metric, xlabel=None, xlims=(-1.1, 1.1), horiz=False,
+def plot_modulation_index_distribution(metrics_table, metric, x_axis_col=None, x_axis_label=None,
+                                       label=None, lims=(-1.1, 1.1), horiz=False,
                                        annot=('left', 'right'), abbreviate_exp=True, suptitle=None,
-                                       save_dir=None, suffix=''):
-    colors = utils.get_experience_level_colors()
-    experience_levels = utils.get_experience_levels()
+                                       fill=True, save_dir=None, suffix='', ax=None):
+    '''
+    Plots distribution of metric values split by experience level, showing violinplot plus pointplot
+    if x_axis_col is provided, will plot metric on y axis and x_axis_col value on x-axis, with hues for exp levels
+        stats will be plotted across hue values for each x value
+        x_axis_label will be used for x-axis label, otherwise will be empty
+    if x_axis_col is not provided, will plot metric value on x-axis and experience levels on y axis and hues for exp levels
+        in this case, stats are plotted along y axis
+
+    '''
 
     data = metrics_table.copy()
 
-    ax = None
+    if x_axis_col:
+        if x_axis_col == 'targeted_structure':
+            ax_size = 4
+            order = np.sort(data[x_axis_col].unique())[::-1]
+        else:
+            ax_size = 3
+            order = np.sort(data[x_axis_col].unique())
+        suffix = '_' + x_axis_col + '_' + suffix
+        wspace = 0.1
+    else:
+        suffix = '_experience_level_' + suffix
+        wspace = 0.3
+
+    colors = utils.get_experience_level_colors()
+    experience_levels = utils.get_experience_levels()
+
     if ax is None:
         if horiz:
-            figsize = (6, 2.5)
+            if x_axis_col: 
+                figsize = (ax_size*len(order), 2.5)
+            else:
+                figsize = (9, 2)
             fig, ax = plt.subplots(1, 3, figsize=figsize, sharex=False, sharey=True)
         else:
-            figsize = (2, 6)
+            if x_axis_col: 
+                figsize = (2, ax_size*len(order))
+            else:
+                figsize = (2, 6)
             fig, ax = plt.subplots(3, 1, figsize=figsize, sharex=True, sharey=False)
         ax = ax.ravel()
     # stats dataframe to save
@@ -1671,45 +2039,89 @@ def plot_modulation_index_distribution(metrics_table, metric, xlabel=None, xlims
     cell_types = utils.get_cell_types()
     for i, cell_type in enumerate(cell_types):
         ct_data = data[data.cell_type == cell_type]
-        ax[i] = sns.violinplot(data=ct_data, x=metric, y='experience_level', order=experience_levels, orient='h',
-                               palette=colors, alpha=0.5, cut=0, ax=ax[i])
+        # if not fill:
+        if x_axis_col: 
+            ax[i] = sns.violinplot(data=ct_data, x=x_axis_col, y=metric, 
+                           hue='experience_level', hue_order=experience_levels,
+                           order=order, palette=colors, ax=ax[i], alpha=0.75, fill=fill, linewidth=1, gap=0.1, cut=0,
+                           inner='box', inner_kws=dict(box_width=2, whis_width=1, color="gray", alpha=0.75))
+            ax[i] = sns.pointplot(data=ct_data, x=x_axis_col, y=metric, 
+                                hue='experience_level', hue_order=experience_levels, linestyle='none', dodge=0.55,
+                                order=order, palette=colors, ax=ax[i], zorder=10000,
+                                markers='.', markersize=5, err_kws={'linewidth': 2}, )
+            ax[i].set_title(cell_type)
+            ax[i].set_ylim(lims)
+            # ax[i].legend(fontsize='xx-small')
+            ax[i].get_legend().remove()
+            ax[i].set_xlabel('')
+            ax[i].set_ylabel(label)
+            ax[i], tukey_table = add_stats_to_plot_for_hues(data, metric, ax[i],
+                                                            xorder=order, x=x_axis_col, hue='experience_level')
+            tukey_table['metric'] = metric
+            tukey_table['cell_type'] = cell_type
+            tukey = pd.concat([tukey, tukey_table])
+        else: 
+            ax[i] = sns.violinplot(data=ct_data, x=metric, y='experience_level',
+                                    hue='experience_level', hue_order=experience_levels, order=experience_levels,
+                                    palette=colors, ax=ax[i], alpha=0.75, fill=fill, linewidth=1, gap=0.1, cut=0,
+                                    inner='box', inner_kws=dict(box_width=2, whis_width=1, color="gray", alpha=0.75))
+            ax[i] = sns.pointplot(data=ct_data, x=metric, y='experience_level', order=experience_levels,
+                                    hue='experience_level', hue_order=experience_levels, linestyle='none', #dodge=0.1,
+                                    palette=colors, ax=ax[i], zorder=10000, 
+                                    markers='.', markersize=5, err_kws={'linewidth': 2}, )
+            ax[i].set_xlim(lims)
+            if abbreviate_exp:
+                ax[i].set_yticks(np.arange(0, len(experience_levels)))
+                ax[i].set_yticklabels(utils.get_abbreviated_experience_levels(), rotation=0)
+                utils.color_yaxis_labels_by_experience(ax[i])
+
+            # add stats to plot
+            ax[i], tukey_table = add_stats_to_plot_xaxis(ct_data, metric, ax[i], xmax=lims[1],
+                                                            column_to_compare='experience_level')
+            tukey_table['metric'] = metric
+            tukey_table['cell_type'] = cell_type
+            tukey = pd.concat([tukey, tukey_table])
+
+        ax[i].set_ylabel('')
+        ax[i].set_xlabel('')
+
         # set title
         ax[i].set_title(cell_type)
         # set x and y axis properties
-        ax[i].set_ylabel('')
-        ax[i].set_xlabel('')
-        ax[i].set_xlim(xlims)
-        if abbreviate_exp:
-            ax[i].set_yticklabels(utils.get_abbreviated_experience_levels(), rotation=0)
-        # set alpha on violinplots
+        
+        # # set alpha on violinplots
         plt.setp(ax[i].collections, alpha=0.7)
-        # line at zero value
-        ax[i].axvline(x=0, ymin=0, ymax=1, color='gray', linestyle='--')
+        # # line at zero value
+        # ax[i].axvline(x=0, ymin=0, ymax=1, color='gray', linestyle='--')
 
-        # add stats to plot
-        ax[i], tukey_table = add_stats_to_plot_xaxis(ct_data, metric, ax[i], xmax=xlims[1],
-                                                         column_to_compare='experience_level')
-        tukey_table['metric'] = metric
-        tukey_table['cell_type'] = cell_type
-        tukey = pd.concat([tukey, tukey_table])
 
-    if horiz:
-        ax[0].annotate(annot[0], xy=(-1.2, -0.05), xycoords=ax[0].get_xaxis_transform(), ha="right", va="center",
-                       fontsize=10)
-        ax[2].annotate(annot[1], xy=(1.2, -0.05), xycoords=ax[2].get_xaxis_transform(), ha="left", va="center",
-                       fontsize=10)
-        ax[1].set_xlabel(xlabel)
-    else:
-        ax[2].annotate('pre-change', xy=(-1.2, -0.05), xycoords=ax[2].get_xaxis_transform(), ha="right", va="center",
-                       fontsize=10)
-        ax[2].annotate('change', xy=(1.2, -0.05), xycoords=ax[2].get_xaxis_transform(), ha="left", va="center",
-                       fontsize=10)
-        ax[2].set_xlabel(xlabel)
+    if x_axis_col: 
+        ax[0].annotate(annot[1], xy=(-0.6, 1.06), xycoords=ax[0].get_xaxis_transform(), ha="center", va="center",
+                       fontsize=8)
+        ax[0].annotate(annot[0], xy=(-0.6, -0.06), xycoords=ax[0].get_xaxis_transform(), ha="center", va="center",
+                       fontsize=8)
+        ax[0].set_ylabel(label)
+        if x_axis_label: 
+            ax[1].set_xlabel(x_axis_label)
+    else: 
+        if horiz:
+            ax[0].annotate(annot[0], xy=(lims[0]-0.1, -0.05), xycoords=ax[0].get_xaxis_transform(), ha="right", va="center",
+                        fontsize=10)
+            ax[2].annotate(annot[1], xy=(lims[1]+0.1, -0.05), xycoords=ax[2].get_xaxis_transform(), ha="left", va="center",
+                        fontsize=10)
+            ax[1].set_xlabel(label)
+        else:
+            ax[2].annotate('pre-change', xy=(-1.2, -0.05), xycoords=ax[2].get_xaxis_transform(), ha="right", va="center",
+                        fontsize=10)
+            ax[2].annotate('change', xy=(1.2, -0.05), xycoords=ax[2].get_xaxis_transform(), ha="left", va="center",
+                        fontsize=10)
+            ax[2].set_xlabel(label)
+
 
     if suptitle:
         plt.suptitle(suptitle, x=0.52, y=0.98, fontsize=16)
 
-    fig.subplots_adjust(hspace=0.4, wspace=0.3)
+    fig.subplots_adjust(hspace=0.5, wspace=wspace)
 
     if save_dir:
         if horiz:
@@ -1781,8 +2193,8 @@ def plot_experience_modulation_index(metric_data, event_type, hue=None, plot_typ
             suffix = suffix + '_' + hue
             if plot_type == 'pointplot':
                 ylims = (-0.5, 0.5)
-                dodge = 0.1 * (len(ct_data[hue].unique()))
-                ax[i] = sns.pointplot(data=ct_data, order=xorder, join=False, hue=hue, hue_order=hue_order, dodge=dodge,
+                dodge = 0.1 * float(len(ct_data[hue].unique()))
+                ax[i] = sns.pointplot(data=ct_data, order=xorder, linewidth='none', hue=hue, hue_order=hue_order, dodge=dodge,
                                       x=x, y=metric, palette='gray', ax=ax[i])
             elif plot_type == 'boxplot':
                 ax[i] = sns.boxplot(data=ct_data, order=xorder, hue=hue, hue_order=hue_order, width=0.5, boxprops=dict(alpha=0.8),
@@ -1791,7 +2203,7 @@ def plot_experience_modulation_index(metric_data, event_type, hue=None, plot_typ
                 ax[i] = sns.violinplot(data=ct_data, order=xorder, cut=0, hue=hue, hue_order=hue_order, inner=None,
                                        x=x, y=metric, palette='gray', split=True, fill=False, ax=ax[i])
                 ax2 = ax[i].twinx()
-                ax2 = sns.boxplot(data=ct_data, order=xorder, hue=hue, hue_order=hue_order, x=x, y=metric, color='white',
+                ax2 = sns.boxplot(data=ct_data, order=xorder, hue=hue, hue_order=hue_order, x=x, y=metric, palette='dark:white',
                                     width=0.3, boxprops=dict(alpha=0.8, zorder=2), whis=0, showfliers=False, ax=ax2)
                 ax2.get_legend().remove()
                 ax2.axis('off')
@@ -1812,7 +2224,7 @@ def plot_experience_modulation_index(metric_data, event_type, hue=None, plot_typ
             tukey = pd.concat([tukey, tukey_table])
         else:
             if plot_type == 'pointplot':
-                ax[i] = sns.pointplot(data=ct_data, order=xorder, join=False,
+                ax[i] = sns.pointplot(data=ct_data, order=xorder, linewidth='none',
                                   x=x, y=metric, color='gray', ax=ax[i])
             elif plot_type == 'boxplot':
                 ax[i] = sns.boxplot(data=ct_data, order=xorder, width=0.5,  boxprops=dict(alpha=0.8),
@@ -1865,7 +2277,7 @@ def plot_experience_modulation_index_annotated(metrics_table, event_type, metric
     exp_mod = cm.compute_experience_modulation_index_new(metrics_table, metric, cells_table)
     exp_mod = exp_mod.drop_duplicates(subset='cell_specimen_id')
 
-    value_vars = ['N F', 'N N+', 'N+ F']
+    value_vars = ['F N', 'N+ N', 'F N+']
     data = exp_mod.melt(id_vars=['cell_specimen_id', 'cell_type'], var_name='comparison', value_vars=value_vars)
     titles = ['Novel vs. Familiar', 'Novel vs. Novel +', 'Novel + vs. Familiar']
 
@@ -1882,7 +2294,7 @@ def plot_experience_modulation_index_annotated(metrics_table, event_type, metric
     colors = utils.get_experience_level_colors()
     if ax is None:
         if horiz:
-            figsize = (8, 2.5)
+            figsize = (9, 2)
             fig, ax = plt.subplots(1, 3, figsize=figsize, sharex=False, sharey=True)
         else:
             figsize = (2, 6)
@@ -1891,7 +2303,8 @@ def plot_experience_modulation_index_annotated(metrics_table, event_type, metric
     tukey = pd.DataFrame()
     for i, comparison in enumerate(value_vars):
         ax[i] = sns.violinplot(data=data[data.comparison == comparison], x='value', y='cell_type', order=cell_types,
-                               color='gray', cut=0, ax=ax[i])
+                               color='gray', cut=0, inner='box', ax=ax[i],)
+                                # inner_kws=dict(box_width=5, whis_width=1, color="gray",))
         for violin in ax[i].collections:
             violin.set_alpha(0.5)
         ax[i].set_xlim(xlims)
@@ -1916,10 +2329,10 @@ def plot_experience_modulation_index_annotated(metrics_table, event_type, metric
 
         c = 0
         ax[i].annotate(annot[c], xy=(-1.2, -0.1), xycoords=ax[i].get_xaxis_transform(), ha="right", va="center",
-                       color=get_color(c), fontsize=14)
+                       color=get_color(c))
         c = 1
         ax[i].annotate(annot[c], xy=(1.2, -0.1), xycoords=ax[i].get_xaxis_transform(), ha="left", va="center",
-                       color=get_color(c), fontsize=14)
+                       color=get_color(c))
         # ax[i].set_xticklabels([x.split('.')[0] + '\n' + x.split('.')[1] for x in xorder], rotation=90, ha='center')
 
         # add stats to plot
@@ -1941,7 +2354,7 @@ def plot_experience_modulation_index_annotated(metrics_table, event_type, metric
     if suptitle:
         plt.suptitle(suptitle, x=0.52, y=0.98, fontsize=16)
 
-    fig.subplots_adjust(hspace=0.5, wspace=0.4)
+    fig.subplots_adjust(hspace=0.5, wspace=0.6)
 
     if save_dir:
         if horiz:
@@ -1984,10 +2397,10 @@ def plot_experience_modulation_index_annotated_by_cell_type(metrics_table, event
     exp_mod = exp_mod.drop_duplicates(subset='cell_specimen_id')
 
     if all_comparisons:
-        value_vars = ['N F', 'N N+', 'N+ F'][::-1]
+        value_vars = ['F N', 'N+ N', 'F N+'][::-1]
         titles = ['Novel vs. Familiar', 'Novel vs. Novel +', 'Novel + vs. Familiar']
     else:
-        value_vars = ['N F', 'N N+', ][::-1]
+        value_vars = ['F N', 'N+ N', ][::-1]
         titles = ['Novel vs. Familiar', 'Novel vs. Novel +', ]
     data = exp_mod.melt(id_vars=['cell_specimen_id', 'cell_type'], var_name='comparison', value_vars=value_vars)
 
@@ -1995,11 +2408,16 @@ def plot_experience_modulation_index_annotated_by_cell_type(metrics_table, event
     x = 'comparison'
 
     cell_types = np.sort(data.cell_type.unique())
-
     colors = utils.get_experience_level_colors()
+
+    wspace = 0.5
     if ax is None:
         if horiz:
-            figsize = (7, 2.5)
+            if 'all_comparisons':
+                figsize = (9, 2)
+                wspace = 0.6
+            else:
+                figsize = (9, 2)
             fig, ax = plt.subplots(1, 3, figsize=figsize, sharex=False, sharey=True)
         else:
             figsize = (2, 6)
@@ -2007,8 +2425,9 @@ def plot_experience_modulation_index_annotated_by_cell_type(metrics_table, event
 
     tukey = pd.DataFrame()
     for i, cell_type in enumerate(cell_types):
-        ax[i] = sns.violinplot(data=data[data.cell_type == cell_type], x='value', y='comparison', order=value_vars,
-                               color='gray', cut=0, ax=ax[i])
+        ax[i] = sns.violinplot(data=data[data.cell_type == cell_type],
+                               x='value', y='comparison', order=value_vars,
+                               color='gray', cut=0, ax=ax[i]) #inner_kws={'marker':'.', 'markersize':5}, ax=ax[i])
         for violin in ax[i].collections:
             violin.set_alpha(0.5)
         ax[i].set_xlim(xlims)
@@ -2033,17 +2452,17 @@ def plot_experience_modulation_index_annotated_by_cell_type(metrics_table, event
                 return color
 
             if all_comparisons:
-                xy_0 = (-1.5, x / 3 + 0.15)
-                xy_1 = (1.6, x / 3 + 0.15)
+                xy_0 = (-1.25, x / 3 + 0.15)
+                xy_1 = (1.4, x / 3 + 0.15)
             else:
-                xy_0 = (-1.45, x / 2 + 0.25)
+                xy_0 = (-1.25, x / 2 + 0.25)
                 xy_1 = (1.18, x / 2 + 0.25)
-            c = 1
-            ax[i].annotate(annot[c], xy=xy_0, xycoords=ax[i].get_xaxis_transform(), ha="center", va="center",
-                           color=get_color(c), fontsize=14)
             c = 0
-            ax[i].annotate(annot[c], xy=xy_1, xycoords=ax[i].get_xaxis_transform(), ha="center", va="center",
-                           color=get_color(c), fontsize=14)
+            ax[i].annotate(annot[c], xy=xy_0, xycoords=ax[i].get_xaxis_transform(), ha="right", va="center",
+                           color=get_color(c))
+            c = 1
+            ax[i].annotate(annot[c], xy=xy_1, xycoords=ax[i].get_xaxis_transform(), ha="left", va="center",
+                           color=get_color(c))
             # ax[i].set_xticklabels([x.split('.')[0] + '\n' + x.split('.')[1] for x in xorder], rotation=90, ha='center')
 
         if len(value_vars) > 2:
@@ -2067,14 +2486,14 @@ def plot_experience_modulation_index_annotated_by_cell_type(metrics_table, event
     if suptitle:
         plt.suptitle(suptitle, x=0.52, y=0.98, fontsize=16)
 
-    fig.subplots_adjust(hspace=0.5, wspace=0.45)
+    fig.subplots_adjust(hspace=0.5, wspace=wspace)
 
     if save_dir:
         if horiz:
             suffix = suffix + '_horiz'
         folder = 'metric_distributions'
-        filename = 'experience_modulation_annot_' + event_type + '_' + suffix
-        stats_filename = 'experience_modulation_' + event_type + '_' + suffix
+        filename = 'experience_modulation_annot_by_cell_type_' + event_type + '_' + suffix
+        stats_filename = 'experience_modulation_by_cell_type_' + event_type + '_' + suffix
         utils.save_figure(fig, figsize, save_dir, folder, filename)
         try:
             print('saving_stats')
@@ -2108,7 +2527,7 @@ def plot_cell_response_heatmap(data, timestamps, xlabel='time after change (s)',
                                microscope='Multiscope', cbar=True, cbar_label='Response', ax=None):
     if ax is None:
         fig, ax = plt.subplots()
-    ax = sns.heatmap(data, cmap='binary', linewidths=0, linecolor='white', square=False,
+    ax = sns.heatmap(data, cmap='binary', linewidths=0, square=False,
                      vmin=0, vmax=vmax, robust=True, cbar=cbar,
                      cbar_kws={"drawedges": False, "shrink": 0.7, "label": cbar_label}, ax=ax)
 
@@ -2136,7 +2555,7 @@ def plot_cell_response_heatmap(data, timestamps, xlabel='time after change (s)',
 
 
 def plot_response_heatmaps_for_conditions(multi_session_df, timestamps, data_type, event_type,
-                                          row_condition, col_condition, cols_to_sort_by=None, cell_order=None, suptitle=None,
+                                          row_condition, col_condition, matched_cells_table=None, cols_to_sort_by=None, cell_order=None, suptitle=None,
                                           microscope=None, vmax=0.05, xlim_seconds=None, xlabel='time (s)',
                                           match_cells=False, cbar=True, cbar_label='Avg. calcium events',
                                           save_dir=None, folder=None, suffix='', ax=None):
@@ -2156,7 +2575,7 @@ def plot_response_heatmaps_for_conditions(multi_session_df, timestamps, data_typ
 
     i = 0
     for r, row in enumerate(row_conditions):
-        row_sdf = sdf[(sdf[row_condition] == row)]
+        cre_sdf = sdf[(sdf[row_condition] == row)]
         for c, col in enumerate(col_conditions):
 
             if row == 'Excitatory':
@@ -2168,29 +2587,49 @@ def plot_response_heatmaps_for_conditions(multi_session_df, timestamps, data_typ
             else:
                 vmax = 0.02
 
-            tmp = row_sdf[(row_sdf[col_condition] == col)]
-            if cols_to_sort_by:
-                tmp = tmp.sort_values(by=cols_to_sort_by, ascending=True)
-            else:
-                if match_cells:
+            exp_data = cre_sdf[(cre_sdf[col_condition] == col)]
+            # if cols_to_sort_by is not None:
+            #     exp_data = exp_data.sort_values(by=cols_to_sort_by, ascending=True)
+            # else:
+            if match_cells:
+                matched_cells_this_ct = matched_cells_table[(matched_cells_table[row_condition] == row)].cell_specimen_id.unique()
+                cre_sdf = cre_sdf[cre_sdf.cell_specimen_id.isin(matched_cells_this_ct)]
+                exp_data = exp_data[exp_data.cell_specimen_id.isin(matched_cells_this_ct)]
+                print(row, col, 'match_cells')
+                # cell_order = cre_sdf[(cre_sdf.experience_level=='Novel') &
+                #                      (cre_sdf.cell_specimen_id.isin(exp_data.cell_specimen_id.unique()))].sort_values(by=['cell_type', 'mean_response']).cell_specimen_id.values
+                # get cell order for novel session
+                novel_cell_order = cre_sdf[(cre_sdf.experience_level == 'Novel')]
+                novel_cell_order = novel_cell_order.set_index('cell_specimen_id')
+                novel_cell_order = novel_cell_order.sort_values(by=['mean_response'])
+                novel_cell_order = novel_cell_order.index.values
+                # apply it to current session
+                exp_data = exp_data.set_index('cell_specimen_id')
+                exp_data = exp_data.loc[novel_cell_order]
+                print(row, novel_cell_order[:3], novel_cell_order[-3:])
 
-                    cell_order = row_sdf[(row_sdf.experience_level=='Novel') &
-                                         (row_sdf.cell_specimen_id.isin(tmp.cell_specimen_id.unique()))].sort_values(by=['cell_type', 'mean_response']).cell_specimen_id.values
-                    if cell_order is not None:
-                        tmp = tmp.set_index('cell_specimen_id')
-                        tmp = tmp.loc[cell_order]
-                    else:
-                        if c == 0:
-                            tmp = tmp.sort_values(by=['cell_type', 'mean_response'], ascending=True)
-                            order = tmp.index.values
-                        else:
-                            tmp = tmp.loc[order]
-                else:
-                    tmp = tmp.sort_values(by='mean_response', ascending=True)
-            data = pd.DataFrame(np.vstack(tmp.mean_trace.values), columns=timestamps)
+                # if novel_cell_order is not None:
+                #     exp_data = exp_data.set_index('cell_specimen_id')
+                #     exp_data = exp_data.loc[novel_cell_order]
+                # else:
+                #     if c == 0:
+                #         novel_cell_order = novel_cell_order.sort_values(by=['cell_type', 'mean_response'], ascending=True)
+                #         order = novel_cell_order.index.values
+                #     else:
+                #         novel_cell_order = novel_cell_order.loc[order]
+            else: # otherwise wort by mean response in session
+                print('sort by mean response within session')
+                exp_data = exp_data.sort_values(by='mean_response', ascending=True)
+            # turn responses it into a dataframe where columns are timestamps
+            # data = np.vstack(exp_data.mean_trace.values)
+            data = pd.DataFrame(np.vstack(exp_data.mean_trace.values), columns=timestamps, index=exp_data.index.values)
             n_cells = len(data)
+            # n_cells = data.shape[0]
+            # make sure its sorted properly
+            # if match_cells:
+            #     data = data.loc[novel_cell_order]
 
-            ax[i] = plot_cell_response_heatmap(data, timestamps, vmax=vmax, xlabel=xlabel, cbar=cbar,
+            ax[i] = plot_cell_response_heatmap(data, timestamps=timestamps, vmax=vmax, xlabel=xlabel, cbar=cbar,
                                                microscope=microscope, cbar_label=cbar_label, ax=ax[i])
             ax[i].set_title(str(row) + '\n' + str(col))
             if col_condition == 'experience_level':
@@ -2216,6 +2655,9 @@ def plot_response_heatmaps_for_conditions(multi_session_df, timestamps, data_typ
             xlims = [start_index, end_index]
             ax[i].set_xlim(xlims)
             ax[i].set_ylabel('')
+
+            # zero_index = np.where(timestamps == 0)[0][0]
+            # ax.vlines(x=zero_index, ymin=0, ymax=len(data), color='gray', linestyle='--')
 
             if (r == len(row_conditions) - 1) and (c == 1):
                 ax[i].set_xlabel(xlabel)
@@ -2288,8 +2730,11 @@ def add_stim_color_span(dataset, ax, xlim=None, color=None, label_changes=True,
                     alpha = max_alpha
                     if annotate_changes:
                         ymin, ymax = ax.get_ylim()
-                        ax.annotate(stim_table.loc[idx]['image_name'], xy=(start_time, ymax*1.4), xycoords='data',
-                                    fontsize=6,  va='top', clip_on=False, annotation_clip=False)
+                        ax.annotate(stim_table.loc[idx]['image_name'], xy=(start_time, ymax*1.2), xycoords='data',
+                                    fontsize=8,  va='top', clip_on=False, annotation_clip=False)
+                        # also show the one before
+                        ax.annotate(stim_table.loc[idx-1]['image_name'], xy=(start_time-1.5, ymax * 1.2), xycoords='data',
+                                    fontsize=8, va='top', clip_on=False, annotation_clip=False)
                 else:  # if its a non-change make it gray with low alpha
                     image_color = 'gray'
                     alpha = max_alpha/2.
@@ -2302,12 +2747,81 @@ def add_stim_color_span(dataset, ax, xlim=None, color=None, label_changes=True,
     return ax
 
 
+def plot_time_in_minutes(timestamps, ax, interval_duration=5):
+    '''
+    Takes timestamps, in seconds, convert to minutes, and set xticklabels to show time in the provided interval duration in minutes
+    '''
+    ax.set_xlim(timestamps[0], timestamps[-1])
+    ax.set_xticks(np.arange(0, timestamps[-1], 60 * float(interval_duration)))
+    ax.set_xticklabels([int(t) for t in np.arange(0, timestamps[-1] / 60, interval_duration)])  # tick every x mins
+    ax.set_xlabel('Time in session (minutes)')
+
+    return ax
+
+def add_stimulus_blocks(stim_table, xlim=None, annotate_blocks=True, ax=None):
+    '''
+    Function to plot shaded bar across x axis representing each stimulus block within the period of xlim
+    Expecting blocks to be either change detection, gray screen, or natural movie one
+    if xlim is None, will plot entire session
+    if ax is provided, will plot on that axis, otherwise generates a figure to plot
+    '''
+
+    if ax is None:
+        fig, ax = plt.subplots(figsize=(15, 1))
+
+    if xlim is None:
+        xlim = [stim_table.start_time.values[0], stim_table.end_time.values[-1]]
+
+    block_change_inds = np.where(stim_table.stimulus_block.diff())
+    stimulus_blocks = stim_table.loc[block_change_inds]
+
+    block_change_inds = np.where(stim_table.stimulus_block.diff())
+    stimulus_blocks = stim_table.loc[block_change_inds]
+    last_block = stimulus_blocks.stimulus_block.max()
+
+    # loop through stimulus blocks and add a span with appropriate color
+    for idx in stimulus_blocks.index:
+        stimulus_block = stimulus_blocks.loc[idx]['stimulus_block']
+        block_name = stimulus_blocks.loc[idx]['stimulus_block_name']
+        start_time = stimulus_blocks.loc[idx]['start_time']
+        if stimulus_block != last_block:
+            end_time = stimulus_blocks[stimulus_blocks.stimulus_block == stimulus_block + 1]['start_time'].values[0]
+        else:  # if its the last block, use the very last timestamp as the end
+            end_time = stim_table.end_time.values[-1]  # stimulus_blocks.loc[idx]['end_time']
+
+        if 'gray_screen' in block_name:
+            color = 'gray'
+            name = 'gray\nscreen'
+        elif 'change_detection' in block_name:
+            color = sns.color_palette()[0]
+            name = 'change detection task'
+        elif 'movie' in block_name:
+            color = sns.color_palette()[9]
+            name = 'movie\nclips'
+
+        if annotate_blocks:
+            ax.text(s=name, x=start_time + (end_time - start_time) / 2, y=0.5, va='center', ha='center')
+
+        addSpan(ax, start_time, end_time, color=color, alpha=0.5)
+
+    ax.set_yticklabels([])
+    ax.set_xlim(xlim)
+    ax = plot_time_in_minutes(xlim, ax)
+
+    sns.despine(ax=ax, top=True, bottom=False, right=True, left=True)
+    ax.tick_params(which='both', bottom=True, top=False, right=False, left=False)
+
+    return ax
+
+
+
+
 def plot_behavior_timeseries(dataset, start_time, duration_seconds=20, xlim_seconds=None, save_dir=None, ax=None):
     """
     Plots licking behavior, rewards, running speed, and pupil area for a defined window of time
     """
     if xlim_seconds is None:
-        xlim_seconds = [start_time - (duration_seconds / 4.), start_time + duration_seconds * 2]
+        xlim_seconds = [start_time - (duration_seconds / 4.), start_time + float(duration_seconds) * 2]
     else:
         if start_time != xlim_seconds[0]:
             start_time = xlim_seconds[0]
@@ -2333,8 +2847,8 @@ def plot_behavior_timeseries(dataset, start_time, duration_seconds=20, xlim_seco
         fig, ax = plt.subplots(1, 1, figsize=figsize)
     colors = sns.color_palette()
 
-    ln0 = ax.plot(lick_timestamps, licks, '|', label='licks', color=colors[3], markersize=10)
-    ln1 = ax.plot(reward_timestamps, rewards, 'o', label='rewards', color=colors[9], markersize=10)
+    ln0 = ax.plot(lick_timestamps, licks, '|', label='licks', color=colors[3], markersize=50)
+    ln1 = ax.plot(reward_timestamps, rewards, 'o', label='rewards', color=colors[9], markersize=50)
 
     ln2 = ax.plot(running_timestamps, running_speed, label='running_speed', color=colors[2])
     ax.set_ylabel('running speed\n(cm/s)')
@@ -2350,7 +2864,8 @@ def plot_behavior_timeseries(dataset, start_time, duration_seconds=20, xlim_seco
     labels = [label.get_label() for label in axes_to_label]
     ax.legend(axes_to_label, labels, bbox_to_anchor=(1, 1), fontsize='small')
 
-    ax = add_stim_color_span(dataset, ax, xlim=xlim_seconds)
+    ax = add_stim_color_span(dataset, ax, xlim=xlim_seconds, annotate_changes=True,
+                             label_changes=True, label_omissions=True)
 
     ax.set_xlim(xlim_seconds)
     ax.set_xlabel('time in session (seconds)')
@@ -2363,13 +2878,14 @@ def plot_behavior_timeseries(dataset, start_time, duration_seconds=20, xlim_seco
     #                 labelbottom=True, labeltop=False, labelright=True, labelleft=True)
     if save_dir:
         folder = 'behavior_timeseries'
-        utils.save_figure(fig, figsize, save_dir, folder, metadata_string + '_' + str(int(start_time)),
-                          formats=['.png'])
+        utils.save_figure(fig, figsize, save_dir, folder, metadata_string + '_' + str(int(start_time)))
     return ax
 
 
-def plot_behavior_timeseries_stacked(dataset, start_time, duration_seconds=20,
+def plot_behavior_timeseries_stacked(dataset, start_time, fontsize=12,
+                                     duration_seconds=20, xlim_seconds=None,
                                      label_changes=True, label_omissions=True,
+                                     show_images=True, annotate_yaxis=True,
                                      save_dir=None, ax=None):
     """
     Plots licking behavior, rewards, running speed, and pupil area for a defined window of time.
@@ -2383,15 +2899,21 @@ def plot_behavior_timeseries_stacked(dataset, start_time, duration_seconds=20,
     else:
         suffix = '_colors'
 
-    xlim_seconds = [start_time - (duration_seconds / 4.), start_time + duration_seconds * 2]
+    if xlim_seconds == None:
+        # xlim_seconds = [start_time - (duration_seconds / 4.), start_time + duration_seconds * 2]
+        xlim_seconds = [start_time, start_time+duration_seconds]
 
     lick_timestamps = dataset.licks.timestamps.values
+    lick_timestamps = lick_timestamps[lick_timestamps > xlim_seconds[0]]
+    lick_timestamps = lick_timestamps[lick_timestamps < xlim_seconds[1]]
     licks = np.ones(len(lick_timestamps))
-    licks[:] = -2
+    # licks[:] = -2
 
     reward_timestamps = dataset.rewards.timestamps.values
-    rewards = np.zeros(len(reward_timestamps))
-    rewards[:] = -4
+    reward_timestamps = reward_timestamps[reward_timestamps > xlim_seconds[0]]
+    reward_timestamps = reward_timestamps[reward_timestamps < xlim_seconds[1]]
+    rewards = np.ones(len(reward_timestamps))
+    # rewards[:] = -4
 
     # get run speed trace and timestamps
     running_speed = dataset.running_speed.speed.values
@@ -2417,52 +2939,77 @@ def plot_behavior_timeseries_stacked(dataset, start_time, duration_seconds=20,
     pupil_timestamps = pupil_timestamps[start_ind:stop_ind]
 
     if ax is None:
-        figsize = (15, 5)
-        fig, ax = plt.subplots(4, 1, figsize=figsize, sharex=True, gridspec_kw={'height_ratios': [1, 1, 3, 3]})
+        figsize = (5, 2)
+        fig, ax = plt.subplots(4, 1, figsize=figsize, sharex=True, gridspec_kw={'height_ratios': [1, 1, 4, 4]})
         ax = ax.ravel()
 
     colors = sns.color_palette()
 
-    ax[0].plot(lick_timestamps, licks, '|', label='licks', color=colors[3], markersize=10)
+    ax[0].plot(lick_timestamps, licks, '|', label='licks', color='gray', markersize=5) #colors[3], markersize=50)
     ax[0].set_yticklabels([])
-    ax[0].set_ylabel('licks', rotation=0, horizontalalignment='right', verticalalignment='center')
-    ax[0].tick_params(which='both', bottom=False, top=False, right=False, left=False,
-                      labelbottom=False, labeltop=False, labelright=False, labelleft=False)
+    ax[0].set_ylabel('licks', rotation=0, horizontalalignment='right', verticalalignment='center', fontsize=fontsize)
 
-    ax[1].plot(reward_timestamps, rewards, 'o', label='rewards', color=colors[8], markersize=10)
+    ax[1].plot(reward_timestamps, rewards, '^', label='rewards', color='b', markersize=5) #color=colors[8], markersize=50)
     ax[1].set_yticklabels([])
-    ax[1].set_ylabel('rewards', rotation=0, horizontalalignment='right', verticalalignment='center')
-    ax[1].tick_params(which='both', bottom=False, top=False, right=False, left=False,
-                      labelbottom=False, labeltop=False, labelright=False, labelleft=False)
+    ax[1].set_ylabel('rewards', rotation=0, horizontalalignment='right', verticalalignment='center', fontsize=fontsize)
 
-    ax[2].plot(running_timestamps, running_speed, label='running_speed', color=colors[2])
-    ax[2].set_ylabel('running\nspeed\n(cm/s)', rotation=0, horizontalalignment='right', verticalalignment='center')
+    ax[2].plot(running_timestamps, running_speed, label='running_speed', color='gray')  #color=colors[2])
+    ax[2].set_ylabel('running\nspeed\n(cm/s)', rotation=0, horizontalalignment='right', verticalalignment='center', fontsize=fontsize)
     ax[2].set_ylim(ymin=-8)
 
-    ax[3].plot(pupil_timestamps, pupil_diameter, label='pupil_diameter', color=colors[4])
-    ax[3].set_ylabel('pupil\ndiameter\n(pixels)', rotation=0, horizontalalignment='right', verticalalignment='center')
+    ax[3].plot(pupil_timestamps, pupil_diameter, label='pupil_diameter', color='gray') # color=colors[4])
+    ax[3].set_ylabel('pupil\ndiameter\n(pixels)', rotation=0, horizontalalignment='right', verticalalignment='center', fontsize=fontsize)
+
 
     for i in range(4):
-        ax[i] = add_stim_color_span(dataset, ax[i], xlim=xlim_seconds, label_changes=label_changes, label_omissions=label_omissions)
+        # if (i == 0) & (show_images == True):
+        #     ax[i] = add_stim_color_span(dataset, ax[i], xlim=xlim_seconds, annotate_changes=True,
+        #                                 label_changes=label_changes, label_omissions=label_omissions)
+        # elif label_changes==True | label_omissions==True:
+        #     ax[i] = add_stim_color_span(dataset, ax[i], xlim=xlim_seconds, annotate_changes=False,
+        #                                 label_changes=label_changes, label_omissions=label_omissions)
+        # else:
+        #     pass
         ax[i].set_xlim(xlim_seconds)
-        ax[i].tick_params(which='both', bottom=False, top=False, right=False, left=True,
-                          labelbottom=False, labeltop=False, labelright=False, labelleft=True)
-        sns.despine(ax=ax[i], bottom=True)
-    sns.despine(ax=ax[i], bottom=False)
+        if i in [0, 1]: # for licks and rewards
+            ax[i].tick_params(which='both', bottom=False, top=False, right=False, left=False,
+                              labelbottom=False, labeltop=False, labelright=False, labelleft=True, )
+        else: # for running and pupil
+            if annotate_yaxis: # plot lines for data range instead of ticks
+                ymin, ymax = ax[i].get_ylim()
+                if i == 2:
+                    ymin = 0
+                    ymax = int(ymax / 2)
+                else:
+                    diff = (ymax-ymin)*0.25
+                    ymin = int(ymin+diff)
+                    ymax = int(ymax-diff)
+                ax[i].set_yticks([ymin, ymax])
+                ax[i].set_yticklabels([ymin, ymax], va='center', ha='right', fontsize=fontsize - 2)
+                ax[i].annotate('', xy=(xlim_seconds[0] - 0.3, ymin), xycoords='data', xytext=(xlim_seconds[0] - 0.3, ymax),
+                               fontsize=fontsize, arrowprops=dict(arrowstyle='-', color='k', lw=1, shrinkA=0, shrinkB=0),
+                               annotation_clip=False)
+                ax[i].tick_params(which='both', bottom=False, top=False, right=False, left=False,
+                                  labelbottom=False, labeltop=False, labelright=False, labelleft=True, )
+        ax[i].spines[['right', 'top']].set_visible(False)
+        # sns.despine(ax=ax[i], bottom=True)
+    # sns.despine(ax=ax[i], bottom=False)
+    ax[i].tick_params(which='both', bottom=True, top=False, right=False, left=False,
+                      labelbottom=True, labeltop=False, labelright=False, labelleft=True, labelsize=fontsize-2)
 
     # label bottom row of plot
-    ax[i].set_xlabel('time in session (seconds)')
-    ax[i].tick_params(which='both', bottom=True, top=False, right=False, left=True,
-                      labelbottom=True, labeltop=False, labelright=False, labelleft=True)
-    # add title to top row
-    metadata_string = utils.get_metadata_string(dataset.metadata)
-    ax[0].set_title(metadata_string)
+    ax[i].set_xlabel('Time in session (seconds)', fontsize=fontsize)
 
-    plt.subplots_adjust(hspace=0)
+    # ax[i] = plot_time_in_minutes(xlim_seconds, ax[i])
+
     if save_dir:
+        # add title to top row
+        metadata_string = utils.get_metadata_string(dataset.metadata)
+        plt.suptitle(metadata_string, x=0.5, y=1.1, fontsize=fontsize)
+
+        plt.subplots_adjust(hspace=0)
         folder = 'behavior_timeseries_stacked'
-        utils.save_figure(fig, figsize, save_dir, folder, metadata_string + '_' + str(int(start_time)) + '_' + suffix,
-                          formats=['.png', '.pdf'])
+        utils.save_figure(fig, figsize, save_dir, folder, metadata_string + '_' + str(int(start_time)) + '_' + suffix)
     return ax
 
 
@@ -2497,7 +3044,7 @@ def plot_behavior_and_physio_timeseries_stacked(dataset, start_time, duration_se
     else:
         suffix = '_colors'
 
-    xlim_seconds = [start_time - (duration_seconds / 4.), start_time + duration_seconds * 2]
+    xlim_seconds = [start_time - (duration_seconds / 4.), start_time + float(duration_seconds) * 2]
 
     lick_timestamps = dataset.licks.timestamps.values
     licks = np.ones(len(lick_timestamps))
@@ -2544,11 +3091,11 @@ def plot_behavior_and_physio_timeseries_stacked(dataset, start_time, duration_se
 
     colors = sns.color_palette()
 
-    ax[8].plot(lick_timestamps, licks, '|', label='licks', color='gray', markersize=10)
+    ax[8].plot(lick_timestamps, licks, '|', label='licks', color='gray', markersize=50)
     ax[8].set_yticklabels([])
     ax[8].set_ylabel('licks', rotation=0, horizontalalignment='right', verticalalignment='center')
 
-    ax[9].plot(reward_timestamps, rewards, 'o', label='rewards', color='gray', markersize=10)
+    ax[9].plot(reward_timestamps, rewards, 'o', label='rewards', color='gray', markersize=50)
     ax[9].set_yticklabels([])
     ax[9].set_ylabel('rewards', rotation=0, horizontalalignment='right', verticalalignment='center')
 
@@ -2812,8 +3359,9 @@ def plot_matched_roi_and_traces_example(cell_metadata, include_omissions=True,
 
 ########## behavior plots - figure 1 #############
 
-def plot_behavior_metric_by_experience(stats, metric, title='', ylabel='', ylims=None, best_image=True, show_containers=False,
-                                       stripplot=True, pointplot=True, plot_stats=False, show_ns=False, save_dir=None, folder=None, suffix='', ax=None):
+def plot_behavior_metric_by_experience(stats, metric, title='', ylabel='', ylims=None, best_image=True, show_mice=False,
+                                       stripplot=True, pointplot=True, plot_stats=False, show_ns=False,
+                                       abbreviate_exp=True, save_dir=None, folder=None, suffix='', ax=None):
     """
     plots average metric value across experience levels, using experience level colors for average, gray for individual points.
     plots a stripplot of all datapoints and a pointplot of means by default. if pointplot is False, a boxplot will be shown.
@@ -2875,22 +3423,29 @@ def plot_behavior_metric_by_experience(stats, metric, title='', ylabel='', ylims
     if stripplot:
         ax = sns.stripplot(data=data, x='experience_level', y=metric, order=experience_levels,
                        orient='v', color='gray', dodge=True, jitter=0.1, size=2, ax=ax, zorder=0)
-    if show_containers:
-        for ophys_container_id in data.ophys_container_id.unique():
-            ax = sns.pointplot(data=data[data.ophys_container_id == ophys_container_id], x='experience_level', y=metric,
-                               order=experience_levels, join=True, orient='v', color='gray',
-                               markers='.', scale=0.15, errwidth=0.25, ax=ax)
+    if show_mice:
+        for mouse_id in data.mouse_id.unique():
+            ax = sns.pointplot(data=data[data.mouse_id == mouse_id], x='experience_level', y=metric,
+                               order=experience_levels, linewidth=0.5, orient='v', color='gray',
+                               markers='.', markersize=0.15, err_kws={'linewidth': 0.5}, ax=ax)
         suffix = suffix + '_containers'
 
     if pointplot:
         ax = sns.pointplot(data=data, x='experience_level', y=metric, order=experience_levels,
-                       orient='v', palette=colors, ax=ax)
+                       orient='v', palette=colors, ax=ax,
+                       markers='.', markersize=8, err_kws={'linewidth': 2},)
     else:
         ax = sns.boxplot(data=data, x='experience_level', y=metric, order=experience_levels,
                            orient='v', palette=colors, width=0.6, boxprops=dict(alpha=0.8), ax=ax)
 
     ax.set_xlim(-0.5, len(experience_levels)-0.5)
-    ax.set_xticklabels(experience_levels, rotation=90)
+    if abbreviate_exp:
+        ax.set_xticklabels(utils.get_abbreviated_experience_levels(), rotation=0)
+        utils.color_xaxis_labels_by_experience(ax)
+    else:
+        ax.set_xticks(ax.get_xticks().tolist())
+        ax.set_xticklabels(experience_levels, rotation=90, )  # ha='right')
+        utils.color_xaxis_labels_by_experience(ax)
     ax.set_xlabel('')
     ax.set_ylabel('')
     ax.set_title(title)
@@ -2903,7 +3458,7 @@ def plot_behavior_metric_by_experience(stats, metric, title='', ylabel='', ylims
     if plot_stats:
         # stats dataframe to save
         tukey = pd.DataFrame()
-        ax, tukey_table = add_stats_to_plot(data, metric, ax, ymax=ymax, show_ns=show_ns)
+        ax, tukey_table = add_stats_to_plot(data, metric, ax, ymax=ymax, show_ns=show_ns, behavior=True)
         # aggregate stats
         tukey_table['metric'] = metric
         tukey = pd.concat([tukey, tukey_table])
@@ -2992,13 +3547,13 @@ def plot_behavior_metric_by_experience_horiz(stats, metric, title='', xlabel='',
     if show_containers:
         for ophys_container_id in data.ophys_container_id.unique():
             ax = sns.pointplot(data=data[data.ophys_container_id == ophys_container_id], y='experience_level', x=metric,
-                               order=experience_levels, join=True, orient='h', color='gray',
-                               markers='.', scale=0.15, errwidth=0.25, ax=ax)
+                               order=experience_levels, linewidth=0.5, orient='h', color='gray',
+                               markers='.', markersize=0.15, err_kws={'linewidth': 0.5}, ax=ax)
         suffix = suffix + '_containers'
 
     if pointplot:
         ax = sns.pointplot(data=data, y='experience_level', x=metric, order=experience_levels,
-                       orient='h', palette=colors, ax=ax)
+                        markers='.', markersize=8, err_kws={'linewidth': 2}, orient='h', palette=colors, ax=ax)
     else:
         ax = sns.boxplot(data=data, y='experience_level', x=metric, order=experience_levels,
                            orient='h', palette=colors, width=0.6, boxprops=dict(alpha=0.8), ax=ax)
@@ -3018,7 +3573,7 @@ def plot_behavior_metric_by_experience_horiz(stats, metric, title='', xlabel='',
     if plot_stats:
         # stats dataframe to save
         tukey = pd.DataFrame()
-        ax, tukey_table = add_stats_to_plot(data, metric, ax, ymax=xmax, show_ns=show_ns)
+        ax, tukey_table = add_stats_to_plot(data, metric, ax, ymax=xmax, show_ns=show_ns, behavior=True)
         # aggregate stats
         tukey_table['metric'] = metric
         tukey = pd.concat([tukey, tukey_table])
@@ -3034,6 +3589,108 @@ def plot_behavior_metric_by_experience_horiz(stats, metric, title='', xlabel='',
             tukey.to_csv(os.path.join(save_dir, folder, stats_filename + '_tukey.csv'))
         # save metric values
         cols_to_groupby = ['experience_level']
+        stats = get_descriptive_stats_for_metric(data, metric, cols_to_groupby)
+        stats.to_csv(os.path.join(save_dir, folder, stats_filename + '_values.csv'))
+    except BaseException:
+        print('stats did not save for', metric)
+    return ax
+
+
+
+def plot_behavior_metric_by_cohort(stats, metric, title='', ylabel='', ylims=None, show_containers=False,
+                                       stripplot=True, pointplot=True, plot_stats=False, show_ns=False,
+                                   save_dir=None, folder=None, suffix='', ax=None):
+    """
+    plots average metric value across project codes
+    plots a stripplot of all datapoints and a pointplot of means by default. if pointplot is False, a boxplot will be shown.
+
+    stats should be a table of behavior metric values loaded using vba.utilities.get_behavior_stats_for_sessions()
+    metric is a column of the stats table
+
+    if stats table has a unique row for each image_name in each behavior session, all images will be included in the average,
+    unless best_image = True
+    if stats table does not have unique images, setting best_image to True will cause an error, as there are no images to filter
+
+    if show_containers = True, will plot a linked gray line for each individual container within the dataset
+    if show_ns = True, indicates whether results are non-significant on plot. otherwise only puts asterisk for significant results
+    returns axis handle
+    """
+    # experience_levels = utils.get_new_experience_levels()
+    # new_experience_levels = utils.get_new_experience_levels()
+    # colors = utils.get_experience_level_colors()
+
+    if ylims is None:
+        ymin = 0
+        ymax = None
+    else:
+        ymin = ylims[0]
+        ymax = ylims[1]
+
+    data = stats.copy()
+
+    # colors = utils.get_experience_level_colors()
+    # experience_levels = utils.get_experience_levels()
+    c = sns.color_palette()
+    colors = [c[0], c[8], c[9]]
+    # project_codes = np.sort(data.project_code.unique())
+    project_codes = ['VisualBehavior', 'VisualBehaviorTask1B', 'VisualBehaviorMultiscope']
+    cohorts = ['Cohort 1', 'Cohort 2', 'Cohort 3']
+
+    if ax is None:
+        figsize = (2, 3)
+        fig, ax = plt.subplots(1, 1, figsize=figsize)
+
+    if stripplot:
+        ax = sns.stripplot(data=data, x='project_code', y=metric, order=project_codes,
+                       orient='v', color='gray', dodge=True, jitter=0.1, size=2, ax=ax, zorder=0)
+    if show_containers:
+        for ophys_container_id in data.ophys_container_id.unique():
+            ax = sns.pointplot(data=data[data.ophys_container_id == ophys_container_id], x='project_code', y=metric,
+                               order=project_codes, linewidth=0.5, orient='v', color='gray',
+                               markers='.', markersize=0.15, err_kws={'linewidth': 0.5}, ax=ax)
+        suffix = suffix + '_containers'
+
+    if pointplot:
+        ax = sns.pointplot(data=data, x='project_code', y=metric, order=project_codes,
+                       orient='v', palette=colors, markers='.', ax=ax) # marker_kws={'size':2},
+    else:
+        ax = sns.boxplot(data=data, x='project_code', y=metric, order=project_codes,
+                           orient='v', palette=colors, width=0.6, boxprops=dict(alpha=0.8), ax=ax)
+
+    ax.set_xlim(-0.5, len(project_codes)-0.5)
+    ax.set_xticklabels([cohort[-1] for cohort in cohorts], rotation=0)
+    ax.set_xlabel('Cohort')
+    ax.set_ylabel('')
+    exp_colors = utils.get_experience_level_colors()
+    experience_levels = utils.get_experience_levels()
+    c = np.where(np.asarray(experience_levels)==title)[0][0]
+    ax.set_title(title, color=exp_colors[c])
+    if ylabel is None:
+        ylabel = metric
+    ax.set_ylabel(ylabel)
+    # ax.legend(bbox_to_anchor=(1,1), fontsize='xx-small')
+
+    # add stats to plot if only looking at experience levels
+    if plot_stats:
+        # stats dataframe to save
+        tukey = pd.DataFrame()
+        ax, tukey_table = add_stats_to_plot(data, metric, ax, ymax=ymax, show_ns=show_ns, behavior=True,
+                                                column_to_compare='project_code')
+        # aggregate stats
+        tukey_table['metric'] = metric
+        tukey = pd.concat([tukey, tukey_table])
+
+    ax.set_ylim(ymin=ymin)
+
+    if save_dir:
+        utils.save_figure(fig, figsize, save_dir, folder, metric + suffix)
+    stats_filename = metric + '_stats' + suffix
+    try:
+        if plot_stats:
+            print('saving_stats')
+            tukey.to_csv(os.path.join(save_dir, folder, stats_filename + '_tukey.csv'))
+        # save metric values
+        cols_to_groupby = ['project_code']
         stats = get_descriptive_stats_for_metric(data, metric, cols_to_groupby)
         stats.to_csv(os.path.join(save_dir, folder, stats_filename + '_values.csv'))
     except BaseException:
@@ -3215,7 +3872,7 @@ def plot_prior_exposures_per_cell_type_for_novel_plus(platform_experiments, beha
     #                order=cell_types, palette='gray', width=0.5, ax=ax)
 
     ax = sns.violinplot(data=exposures, x='cell_type', y='prior_exposures_to_image_set', order=cell_types,
-                        orient='v', color='white', ax=ax)
+                        orient='v', palette='dark:white', ax=ax)
     ax = sns.stripplot(data=exposures, x='cell_type', y='prior_exposures_to_image_set', order=cell_types,
                        orient='v', color='gray', dodge=True, size=2, jitter=0.2, ax=ax)
 
@@ -3417,7 +4074,7 @@ def plot_stimulus_exposure_prior_to_imaging(behavior_sessions, column_to_group='
         stats.to_csv(os.path.join(save_dir, folder, 'stimulus_exposure_prior_to_imaging_stats_'+column_to_group+'.csv'))
 
 def plot_training_history_for_mice(behavior_sessions, color_column='session_type', color_map=sns.color_palette(),
-                                   save_dir=None, folder=None, suffix='', ax=None):
+                                   group_by_cre_line=True, save_dir=None, folder=None, suffix='', ax=None):
     """
     plots the session sequence for all mice in behavior_sessions table, sorted by total # of sessions per mouse
 
@@ -3429,18 +4086,17 @@ def plot_training_history_for_mice(behavior_sessions, color_column='session_type
     color_column = 'stimulus_phase' : color_map = utils.get_stimulus_phase_color_map(as_rgb=True)
 
     """
-    # group by mice and count n_session per mouse to get the max n_sessions and list of mouse_ids to plot
-    n_sessions = \
-        behavior_sessions.groupby(['cre_line', 'mouse_id']).count().rename(columns={'equipment_name': 'n_sessions'})[['n_sessions']]
-    n_sessions = n_sessions.reset_index()
-    n_sessions = n_sessions.sort_values(by=['cre_line', 'n_sessions'])
+
+    if group_by_cre_line:
+        # group by mice and count n_session per mouse to get the max n_sessions and list of mouse_ids to plot
+        n_sessions = behavior_sessions.groupby(['cre_line', 'mouse_id']).count().rename(columns={'equipment_name': 'n_sessions'})[['n_sessions']]
+        n_sessions = n_sessions.reset_index()
+        n_sessions = n_sessions.sort_values(by=['cre_line', 'n_sessions'])
+    else:
+        n_sessions =  behavior_sessions.groupby(['mouse_id']).count().rename(columns={'equipment_name': 'n_sessions'})[['n_sessions']]
+        n_sessions = n_sessions.reset_index().sort_values(by=['n_sessions'])
     max_n_sessions = np.amax(n_sessions.n_sessions.values)
     mouse_ids = n_sessions.mouse_id.values
-
-    # get ytick labels based on number of mice per cre line
-    yticklabels = [0]
-    for i, cre_line in enumerate(n_sessions.cre_line.unique()):
-        yticklabels.append(yticklabels[i] + len(n_sessions[n_sessions.cre_line == cre_line]))
 
     n_mouse_ids = len(mouse_ids)
 
@@ -3459,37 +4115,31 @@ def plot_training_history_for_mice(behavior_sessions, color_column='session_type
 
     # create plot with expt colors image
     if ax is None:
-        figsize = (10, n_mouse_ids * 0.1)
+        figsize = (10, float(n_mouse_ids) * 0.1)
         fig, ax = plt.subplots(figsize=figsize)
     ax.imshow(img.astype(int), aspect='auto')
-    ax.set_ylim(0, len(mouse_ids))
+    ax.set_ylim(0, n_mouse_ids)
     ax.invert_yaxis()
-    ax.set_yticks(yticklabels)
-    ax.set_yticklabels(yticklabels, fontdict={'verticalalignment': 'top'})
+
     ax.set_xlabel('Session number')
     ax.set_ylabel('Mouse number')
     ax.set_title('Training history')
 
-    # label with cell type
-    for i, cre_line in enumerate(n_sessions.cre_line.unique()):
-        cell_type = utils.convert_cre_line_to_cell_type(cre_line)
-        ax.text(-2, (yticklabels[i] + yticklabels[i + 1]) / 2., cell_type.split(' ')[0], fontsize=16, ha='center',
-                va='center', rotation='vertical')
-
-        #     ax.axis('off')
-
-        #     for mouse, mouse_id in enumerate(mouse_ids):
-        #         # plot cre line
-        #         cre_line = behavior_sessions[behavior_sessions.mouse_id == mouse_id].cre_line.values[0]
-        #         if cre_line == 'Gad2-IRES-Cre': # square
-        #             ax.text(-1, mouse, '\u25a1', fontsize=16, ha='center', va='center',)
-        #         elif cre_line == 'Rbp4-Cre_KL100': # triangle
-        #             ax.text(-1, mouse, '\u25b2', fontsize=16, ha='center', va='center', color='black')
-        #         else: # circle
-        #             ax.text(-1, mouse, '\u25cf', fontsize=16, ha='center', va='center', color='black')
-        #         # plot mouse_id
-        #         sessions_for_mouse = n_sessions[n_sessions.mouse_id==mouse_id].n_sessions.values[0]
-        #         ax.text(sessions_for_mouse, mouse, str(mouse_id), fontsize=17, ha='left', va='center',)
+    if group_by_cre_line:
+        # set ytick labels based on number of mice per cre line
+        yticklabels = [0]
+        for i, cre_line in enumerate(n_sessions.cre_line.unique()):
+            yticklabels.append(yticklabels[i] + len(n_sessions[n_sessions.cre_line == cre_line]))
+        ax.set_yticks(yticklabels)
+        ax.set_yticklabels(yticklabels, fontdict={'verticalalignment': 'top'})
+        # label with cell type
+        for i, cre_line in enumerate(n_sessions.cre_line.unique()):
+            cell_type = utils.convert_cre_line_to_cell_type(cre_line)
+            ax.text(-2, (yticklabels[i] + yticklabels[i + 1]) / 2., cell_type.split(' ')[0], fontsize=16, ha='center',
+                    va='center', rotation='vertical')
+        suffix = suffix+'_group_by_cre'
+    else:
+        ax.set_yticks((0, n_mouse_ids))
 
     if save_dir:
         utils.save_figure(fig, figsize, save_dir, folder, 'training_history' + suffix)
@@ -3536,7 +4186,7 @@ def plot_ophys_history_for_mice(behavior_sessions, color_column='ophys_stage', c
     # create plot with expt colors image
     if ax is None:
         #         figsize = (6/1.5, n_mouse_ids*0.3/1.5)
-        figsize = (6, len(mouse_ids) * 0.3)
+        figsize = (6, float(len(mouse_ids)) * 0.3)
         fig, ax = plt.subplots(figsize=figsize)
 
     # loop through mice and create session colors image
@@ -3581,10 +4231,10 @@ def plot_ophys_history_for_mice(behavior_sessions, color_column='ophys_stage', c
     ax.imshow(img.astype(int), aspect='auto')
     ax.set_ylim(-0.5, len(mouse_ids) - 0.5)
     ax.invert_yaxis()
-    ax.set_xlabel('Session number')
+    ax.set_xlabel('Ophys session number')
     ax.set_ylabel('Mouse number')
     if title is None:
-        ax.set_title('Ophys session types')
+        ax.set_title('Ophys session sequence')
     else:
         ax.set_title(title)
 
@@ -3673,7 +4323,7 @@ def plot_behavior_performance_for_one_mouse(behavior_stats, mouse_id, metric, me
     ax.set_ylabel(ylabel)
     if save_dir:
         utils.save_figure(fig, figsize, os.path.join(save_dir, folder), 'behavior_performance_over_time_'+method,
-                        metric+'_mouse_id_'+str(mouse_id))
+                        metric+'_mouse_id_'+str(mouse_id)+'_'+hue)
     return ax
 
 def plot_response_rate_trial_types(data, save_dir=None, suffix='', ax=None):
@@ -3700,6 +4350,56 @@ def plot_response_rate_trial_types(data, save_dir=None, suffix='', ax=None):
 
     if save_dir:
         utils.save_figure(fig, figsize, save_dir, 'response_rate', 'response_rate_trial_types' + suffix)
+    return ax
+
+
+
+def plot_lick_raster_for_trials(trials, title='', save_dir=None, filename=None, suffix='', ax=None):
+    # trials = dataset.trials
+    # image_set = dataset.metadata.session_type.values[0][-1]
+    # mouse_id = str(dataset.metadata.donor_id.values[0])
+    if ax is None:
+        figsize = (4, 5)
+        fig, ax = plt.subplots(figsize=figsize)
+    for trial in range(len(trials)):
+        trial_data = trials.iloc[trial]
+        trial_start = trial_data.start_time - trial_data.change_time
+        # plot trial
+        if trial_data.go == True:
+            color = sns.color_palette()[0]
+        else:
+            color = 'white'
+        # ax.axhspan(trial, trial + 1, -200, 200, palette='dark:white', alpha=0.075*1.5)
+        # plot lines in between trials
+        ax.vlines(trial_start, trial, trial + 1, color='gray', linewidth=0.5, alpha=0.5)
+        # plot line at trial start
+        # ax.vlines(0, trial, trial + 1, color='gray', linewidth=1, linestyle='--')
+        # plot licks
+        lick_times = [(t - trial_data.change_time) for t in trial_data.lick_times]
+        if len(lick_times) > 0:
+            ax.vlines(lick_times, trial, trial + 1, color='k', linewidth=1)
+            # rewarded lick is a different color
+            ax.vlines(lick_times[0], trial, trial + 1, color='b', linewidth=1)
+        # plot rewards
+        # if np.isnan(trial_data.reward_time) == False:
+        #     reward_time = trial_data.reward_time - trial_data.change_time
+        #     ax.plot(reward_time, trial + 0.5, '^', color='blue', label='reward', markersize=3)
+    # plot reward window
+    color = sns.color_palette()[0]
+    ax.axvspan(0.15, 0.75, facecolor=color, alpha=.4, edgecolor='none')
+    ax.grid(False)
+    ax.set_ylim(0, len(trials))
+    ax.set_xlim([-1, 5])
+    ax.set_ylabel('Trial number')
+    ax.set_xlabel('Time from change (sec)')
+    ax.set_xticks(np.arange(0, 5, 2))
+    # ax.set_title('M'+mouse_id+' image set '+image_set, fontsize=14)
+    ax.set_title(title, fontsize=16)
+    ax.invert_yaxis()
+    # plt.gca().invert_yaxis()
+    plt.subplots_adjust(left=0.3)
+    if save_dir:
+        utils.save_figure(fig, figsize, save_dir, 'lick_rasters', filename+suffix)
     return ax
 
 def plot_response_probability_heatmaps_for_cohorts(behavior_sessions, save_dir=None):

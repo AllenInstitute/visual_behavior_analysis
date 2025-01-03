@@ -16,6 +16,9 @@ import visual_behavior.visualization.ophys.platform_paper_figures as ppf
 
 import mindscope_utilities.general_utilities as ms_utils
 
+import visual_behavior.dimensionality_reduction.clustering.plotting as plotting
+import visual_behavior.dimensionality_reduction.clustering.processing as processing
+
 from visual_behavior_glm.glm import GLM
 import visual_behavior_glm.GLM_params as glm_params
 import visual_behavior_glm.GLM_schematic_plots as gsp
@@ -26,6 +29,63 @@ import visual_behavior_glm.GLM_visualization_tools as gvt
 sns.set_context('notebook', font_scale=1.5, rc={'lines.markeredgewidth': 2})
 # sns.set_style('white', {'axes.spines.right': False, 'axes.spines.top': False})
 sns.set_palette('deep')
+
+
+def get_glm_example_cells_and_times():
+
+    # dict of expt IDs and cells for each
+    example_cells_dict = {974994093: [1086537043, 1086526518, 1086520057],
+                        974994095: [1086514461, 1086515592],
+                        974433388: [1086526678, 1086519261],
+                        974433395: [1086535501, 1086515669],
+                        974433397: [1086529269, 1086525465, 1086516056],
+                        974994095: [1086519261],
+                        974994101: [1086518655],
+                        974994105: [1086524231],
+                        905955204: [1086528784, 1086549714, 1086549924, 1086535478, 1086563886],
+                        905955213: [1086525861, 1086532875, 1086532286],
+                        905955219: [1086509036],
+                        906910612: [1086545900, 1086570627, 1086565536, 1086596382, 1086568462],
+                        906910627: [1086525115, 1086525369, 1086525010],
+                        1076808560: [1120091606, 1120091140, 1120091558, 1120091844, 1120091915],
+                        1076808556: [1120094297, 1120094089, 1120094237],
+                        1076808560: [1120092097, 1120091440, 1120091606, 1120091844, 1120091937, 1120091558],
+                        1076808556: [1120094089, 1120094237],
+                        1076808568: [1120096184],
+                        1076808556: [1120094089, 1120094237, 1120094842],
+                        1076808560: [1120092097, 1120091915, 1120091606, 1120091558, 1120091844],
+                        1076808562: [1120094103, 1120093912],
+                        1076808556: [1120094297,  1120094089,  1120094237,  1120094842],
+                        1076808560: [1120091915,  1120091440,  1120091606,  1120091844,  1120091558],
+                        }
+
+    # dict of expt IDs and start_times for each
+    example_times_dict = {974994093: [1878],
+                        974994095: [1878],
+                        974433388: [1738],
+                        974433395: [1738],
+                        974433397: [1738],
+                        974994095: [1506],
+                        974994101: [1506],
+                        974994105: [1506],
+                        905955204: [1881],
+                        905955213: [1881],
+                        905955219: [1881],
+                        906910612: [2084],
+                        906910627: [2084],
+                        1076808560: [1067],
+                        1076808556: [1067],
+                        1076808560: [1971],
+                        1076808556: [1971],
+                        1076808568: [1971],
+                        1076808556: [1946],
+                        1076808560: [1946],
+                        1076808562: [1946],
+                        1076808556: [1859],
+                        1076808560: [1859],
+    }
+
+    return example_cells_dict, example_times_dict
 
 
 def load_glm_model_fit_results(ophys_experiment_id):
@@ -325,7 +385,7 @@ def plot_glm_methods_with_example_cells(ophys_experiment_id, cell_specimen_id_1,
 
 
 
-def plot_glm_features_for_window(dataset, xlim_seconds, save_dir=None, ax=None, suffix=''):
+def plot_glm_features_for_window(dataset, xlim_seconds, save_dir=None, folder=None, ax=None, suffix=''):
     """
     For a given period of time in an ophys or behavior session,
     plot the stimulus times in the background, along with the period over which each kernel is active (images, hits, misses, omissions),
@@ -368,34 +428,36 @@ def plot_glm_features_for_window(dataset, xlim_seconds, save_dir=None, ax=None, 
     pupil_diameter = pupil_diameter[start_ind:stop_ind]
     pupil_timestamps = pupil_timestamps[start_ind:stop_ind]
 
+    feature_colors, feature_labels_dict = plotting.get_feature_colors_and_labels()
+
     n_rows = 14
     height_ratios = np.hstack((np.repeat(1, 12), 2, 2))
     if ax is None:
         figsize = (6, 6)
-        fig, ax = plt.subplots(n_rows, 1, figsize=figsize, sharex=True, gridspec_kw={'height_ratios':height_ratios})
+        fig, ax = plt.subplots(n_rows, 1, figsize=figsize, sharex=True) #, gridspec_kw={'height_ratios':height_ratios})
         ax = ax.ravel()
 
     i = 0
     for i in range(9):
         try:
             ax[i] = plot_kernel_activations(dataset, start_time, duration_seconds, index_image_in_window=False,
-                                                kernel='image '+str(i+1), ax=ax[i])
+                                                kernel='image '+str(i+1), label_color=feature_colors[0], ax=ax[i])
         except:
             pass
 
-    ax[i] = plot_kernel_activations(dataset, start_time, duration_seconds, kernel='omissions', ax=ax[i])
+    ax[i] = plot_kernel_activations(dataset, start_time, duration_seconds, kernel='omissions', label_color=feature_colors[1],ax=ax[i])
     i+=1
 
-    ax[i] = plot_kernel_activations(dataset, start_time, duration_seconds, kernel='misses', ax=ax[i])
+    ax[i] = plot_kernel_activations(dataset, start_time, duration_seconds, kernel='misses', label_color=feature_colors[2], ax=ax[i])
     i+=1
 
-    ax[i] = plot_kernel_activations(dataset, start_time, duration_seconds, kernel='hits', ax=ax[i])
+    ax[i] = plot_kernel_activations(dataset, start_time, duration_seconds, kernel='hits', label_color=feature_colors[2], ax=ax[i])
     ax[i].plot(reward_timestamps, rewards, '^', label='rewards', color='b', markersize=8)
     i+=1
 
     # ax[i] = gep.plot_kernel_activations(dataset, start_time, duration_seconds, kernel='licks', ax=ax[i])
     ax[i].plot(lick_timestamps, licks, '|', label='licks', color='k', markersize=20)
-    ax[i].set_ylabel('licks', rotation=0, horizontalalignment='right',  verticalalignment='center')
+    ax[i].set_ylabel('licks', rotation=0, horizontalalignment='right',  verticalalignment='center', color=feature_colors[3])
     i+=1
 
     for x in range(0, i):
@@ -403,14 +465,16 @@ def plot_glm_features_for_window(dataset, xlim_seconds, save_dir=None, ax=None, 
 
     # now plot running and pupil as continuous variables
     ax[i].plot(running_timestamps, running_speed, label='running_speed', color='k')
-    ax[i].set_ylabel('running', rotation=0, horizontalalignment='right', verticalalignment='center')
+    ax[i].set_ylabel('running', rotation=0, horizontalalignment='right', verticalalignment='center', color=feature_colors[3])
     # ax[i].yaxis.set_label_position("right")
     ax[i].set_ylim(ymin=-8)
     i+=1
 
     ax[i].plot(pupil_timestamps, pupil_diameter, label='pupil_diameter', color='k')
-    ax[i].set_ylabel('pupil', rotation=0, horizontalalignment='right',  verticalalignment='center')
+    ax[i].set_ylabel('pupil', rotation=0, horizontalalignment='right',  verticalalignment='center', color=feature_colors[3])
     ax[i].set_xticks(np.arange(xlim_seconds[0], xlim_seconds[1], 4))
+    ylims = ax[i].get_ylim()
+    ax[i].set_ylim([ylims[0]-1, ylims[1]])
     i+=1
 
     # remove ticks everywhere but bottom row + set xlim for all axes
@@ -437,12 +501,14 @@ def plot_glm_features_for_window(dataset, xlim_seconds, save_dir=None, ax=None, 
     plt.subplots_adjust(hspace=0, wspace=0.9)
 
     if save_dir:
-        folder = 'glm_features_panel'
-        utils.save_figure(fig, figsize, save_dir, folder, metadata_string + '_' + str(int(start_time)))
+        if folder is None:
+            folder = 'glm_features_panel'
+        utils.save_figure(fig, figsize, save_dir, folder, str(int(start_time)) + '_' + metadata_string)
     return ax
 
 
-def plot_stacked_kernels_for_cell(cell_specimen_id, dataset, weights_df, kernels, save_dir=None, ax=None):
+def plot_stacked_kernels_for_cell(cell_specimen_id, dataset, weights_df, kernels,
+                                  scale_y=True, save_dir=None, folder=None, suffix='', ax=None):
     """
     plots the kernel weights for each kernel type for a given cell, in a row
     weights_df and kernels can be obtained using `load_GLM_outputs` or by loading files directly from the cache
@@ -462,6 +528,9 @@ def plot_stacked_kernels_for_cell(cell_specimen_id, dataset, weights_df, kernels
 
     color = sns.color_palette()[0]
     color = 'k'
+
+    if scale_y:
+        suffix = '_scale_y'
 
     n_rows = 14
     # height_ratios = np.hstack((np.repeat(1, 12), 2, 2))
@@ -483,6 +552,20 @@ def plot_stacked_kernels_for_cell(cell_specimen_id, dataset, weights_df, kernels
         ax[i].set_xlabel('')
         ax[i].set_yticklabels('')
         ax[i].set_xticklabels('')
+
+        if scale_y:
+            ymin, ymax = ax[i].get_ylim()
+            # print(feature, ymin, ymax)
+            if ymax > 0:
+                ax[i].set_ylim(ymax=ymax * 1.3)
+            else:
+                ax[i].set_ylim(ymax=ymax * 0.3)
+            if ymin > 0:
+                ax[i].set_ylim(ymin=ymin * 0.3)
+            else:
+                ax[i].set_ylim(ymin=ymin * 1.3)
+            # ymin, ymax = ax[i].get_ylim()
+            # print(feature, ymin, ymax)
 
     for i, feature in enumerate(features[8:]):
         i += 8
@@ -506,6 +589,20 @@ def plot_stacked_kernels_for_cell(cell_specimen_id, dataset, weights_df, kernels
         ax[i].set_xlabel('')
         ax[i].set_yticklabels('')
         ax[i].set_xticklabels('')
+
+        if scale_y:
+            ymin, ymax = ax[i].get_ylim()
+            # print(feature, ymin, ymax)
+            if ymax > 0:
+                ax[i].set_ylim(ymax=ymax * 1.3)
+            else:
+                ax[i].set_ylim(ymax=ymax * 0.3)
+            if ymin > 0:
+                ax[i].set_ylim(ymin=ymin * 0.3)
+            else:
+                ax[i].set_ylim(ymin=ymin * 1.3)
+            # ymin, ymax = ax[i].get_ylim()
+            # print(feature, ymin, ymax)
 
     for i in range(n_rows):
         sns.despine(ax=ax[i], top=True, right=True, left=True, bottom=True)
@@ -548,21 +645,23 @@ def plot_stacked_kernels_for_cell(cell_specimen_id, dataset, weights_df, kernels
 
     if save_dir:
         metadata_string = utils.get_metadata_string(dataset.metadata)
-        # title_string = metadata_string + '_' + str(cell_specimen_id)
         m = dataset.metadata.copy()
         title_string = str(m['ophys_experiment_id']) + '_' + str(
-            cell_specimen_id) + '_' + m['cre_line'].split('-')[0] + '_kernels'
-        plt.suptitle(metadata_string, x=0.48, y=0.99, fontsize=12)
-        utils.save_figure(fig, figsize, save_dir, 'example_kernels_stacked', title_string)
-        utils.save_figure(fig, figsize, save_dir, 'example_cell_kernels_and_fits_separate_plots', title_string)
-
+            cell_specimen_id) + '_' + m['cre_line'].split('-')[0]
+        plt.suptitle(title_string, x=0.48, y=0.99, fontsize=12)
+        filename = str(cell_specimen_id) + '_' + metadata_string + '_kernels' + suffix
+        if folder is None:
+            utils.save_figure(fig, figsize, save_dir, 'example_kernels_stacked', filename)
+            utils.save_figure(fig, figsize, save_dir, 'example_cell_kernels_coding_scores_and_fits', filename)
+        else:
+            utils.save_figure(fig, figsize, save_dir, folder, filename)
     return ax
 
 
 def plot_model_fits_example_cell(cell_specimen_id, dataset, cell_results_df, dropouts, results,
                                  kernel=None, include_events=True, include_dff=False,
-                                 times=None, n_flashes=16, linewidth=2, twinx=False,
-                                 fontsize=8, as_panel=False, save_dir=None, ax=None):
+                                 times=None, n_flashes=16, linewidth=1, twinx=False,
+                                 fontsize=8, as_panel=False, save_dir=None, folder=None, suffix='', ax=None):
     '''
     For one cell, plot the cell trace, model fits, and model fits with a specific kernel (such as all-images or omissions) removed
     Inputs are attributes of the GLM class in visual_behavior_glm repo, either derived by instantiating the GLM class,
@@ -627,8 +726,6 @@ def plot_model_fits_example_cell(cell_specimen_id, dataset, cell_results_df, dro
     if linewidth is None:
         linewidth = 2
 
-    suffix = ''
-    
     # Plot Filtered event trace
     if include_events:
         suffix = '_events'
@@ -673,7 +770,7 @@ def plot_model_fits_example_cell(cell_specimen_id, dataset, cell_results_df, dro
 
     if kernel is not None:
         cs = np.round(results.loc[cell_specimen_id]
-                      [kernel + '__dropout'] * -1, 3)
+                      [kernel + '__adj_dropout'] * -1, 3)
         dropout = cs * 100
         ax.plot(fit['fit_trace_timestamps'][time_vec],
                 dropouts[kernel]['full_model_train_prediction'][time_vec, cell_index], '-',
@@ -746,14 +843,19 @@ def plot_model_fits_example_cell(cell_specimen_id, dataset, cell_results_df, dro
         if twinx:
             fig.legend(bbox_to_anchor=(1.1, 1), fontsize=fontsize)
         if kernel is not None:
-            suffix = suffix + '_' + kernel + '_dropout'
+            suffix = suffix + '_' + kernel
         else:
             suffix = suffix
-        m = dataset.metadata.copy()
-        filename = str(m['ophys_experiment_id']) + '_' + str(
-            cell_specimen_id) + '_' + m['cre_line'].split('-')[0] +'_'+ str(int(times[0])) + '_model_fit' + suffix
-        utils.save_figure(fig, figsize, save_dir, 'example_model_fits', filename)
-        utils.save_figure(fig, figsize, save_dir, 'example_cell_kernels_and_fits_separate_plots', filename)
+        metadata_string = utils.get_metadata_string(dataset.metadata)
+        # m = dataset.metadata.copy()
+        # filename = str(m['ophys_experiment_id']) + '_' + str(
+        #     cell_specimen_id) + '_' + m['cre_line'].split('-')[0] +'_'+ str(int(times[0])) + '_model_fit' + suffix
+        filename = str(int(times[0])) + '_' + str(cell_specimen_id) + '_' + metadata_string + '_model_fit' + suffix
+        if folder is None:
+            utils.save_figure(fig, figsize, save_dir, 'example_model_fits', filename)
+            utils.save_figure(fig, figsize, save_dir, 'example_cell_kernels_coding_scores_and_fits', filename)
+        else:
+            utils.save_figure(fig, figsize, save_dir, folder, filename)
 
     return ax
 
@@ -761,7 +863,8 @@ def plot_model_fits_example_cell(cell_specimen_id, dataset, cell_results_df, dro
 def plot_single_cell_example_model_fits_and_behavior(dataset, start_time, duration_seconds, cell_specimen_ids,
                                                      cell_results_df, dropouts, expt_results, fontsize=8,
                                                      kernel='all-images', label_csids=True, linewidth=None,
-                                                     short_title=False, include_events=False, save_dir=None, ax=None, suffix=''):
+                                                     short_title=False, include_events=True,
+                                                     save_dir=None, folder=None, ax=None, suffix=''):
     """
     Plots licking behavior, rewards, running speed, pupil area, and dff traces for a defined window of time.
     Each timeseries gets its own row.
@@ -806,7 +909,7 @@ def plot_single_cell_example_model_fits_and_behavior(dataset, start_time, durati
 
     # make the plot
     if ax is None:
-        figsize = (8, 6)
+        figsize = (6, 8)
         fig, ax = plt.subplots(len(cell_specimen_ids)+3, 1, figsize=figsize, sharex=True, )
         ax = ax.ravel()
 
@@ -814,8 +917,8 @@ def plot_single_cell_example_model_fits_and_behavior(dataset, start_time, durati
     for i, cell_specimen_id in enumerate(cell_specimen_ids):
 
         ax[i] = plot_model_fits_example_cell(cell_specimen_id, dataset, cell_results_df, dropouts, expt_results,
-                                            kernel=kernel, times=xlim_seconds, linewidth=1.5, fontsize=fontsize,
-                                            include_events=include_events, include_dff=True, as_panel=True, ax=ax[i])
+                                            kernel=kernel, times=xlim_seconds, linewidth=1, fontsize=fontsize,
+                                            include_events=include_events, include_dff=False, as_panel=True, ax=ax[i])
 
         ax[i].set_xlim(xlim_seconds)
         # ax[0].legend(bbox_to_anchor=(1, 1), fontsize=fontsize-2)
@@ -827,7 +930,7 @@ def plot_single_cell_example_model_fits_and_behavior(dataset, start_time, durati
         # label cell id on right side so it can be cropped out later
         xmin, xmax = ax[i].get_xlim()
         if label_csids:
-            ax[i].text(s='csid:' + str(cell_specimen_id), x=xmax + 0.2, y=0, fontsize=fontsize-2)
+            ax[i].text(s='csid:' + str(cell_specimen_id), x=xmax + 0.2, y=0, fontsize=12)
 
         # get ylims of data in this window
         ymin, ymax = ax[i].get_ylim()
@@ -886,9 +989,11 @@ def plot_single_cell_example_model_fits_and_behavior(dataset, start_time, durati
     # ophys_container_id = dataset.metadata['ophys_container_id']
     # metadata_string = str(ophys_container_id)+'_'+utils.get_metadata_string(dataset.metadata) +'_'+ str(int(start_time)) +'_'+ str(duration_seconds)
     m = dataset.metadata.copy()
-    metadata_string = str(m['ophys_container_id']) + '_' + str(m['mouse_id']) + '_' + m['cre_line'].split('-')[
-        0] + '_' + str(m['targeted_structure']) + '_' + str(m['imaging_depth']) + '_' + m['session_type']  +'_'+ str(int(start_time)) +'_'+ str(duration_seconds)
-
+    # metadata_string = str(m['ophys_container_id']) + '_' + str(m['mouse_id']) + '_' + m['cre_line'].split('-')[
+    #     0] + '_' + str(m['targeted_structure']) + '_' + str(m['imaging_depth']) + '_' + m['session_type']  +'_'+ str(int(start_time)) +'_'+ str(duration_seconds)
+    # metadata_string
+    metadata_string = utils.get_metadata_string(m) + suffix
+    filename = str(int(start_time)) + '_' + metadata_string
     if short_title:
         metadata_short = str(m['ophys_container_id']) + '_' + m['session_type']  +'_'+ str(int(start_time)) +'_'+ str(duration_seconds)
         # ax[0].set_title(metadata_short, fontsize=6, va='top', )
@@ -898,8 +1003,11 @@ def plot_single_cell_example_model_fits_and_behavior(dataset, start_time, durati
     plt.subplots_adjust(hspace=0)
     if save_dir:
         print('saving')
-        folder = 'example_cell_model_fits_and_behavior_stacked'
-        utils.save_figure(fig, figsize, save_dir, folder, metadata_string + suffix)
+        if folder is None:
+            folder = 'example_cell_model_fits_and_behavior_stacked'
+        else:
+            folder = os.path.join('example_cell_model_fits_and_behavior_stacked', folder)
+        utils.save_figure(fig, figsize, save_dir, folder, filename)
     return ax
 
 
@@ -1089,7 +1197,8 @@ def load_GLM_outputs(glm_version, experiments_table, cells_table, glm_output_dir
 
 ####### plot GLM kernel timing along with behavior timeseries & stimulus times #######
 
-def plot_kernel_activations(dataset, start_time, duration_seconds, kernel='omissions', index_image_in_window=True, ax=None):
+def plot_kernel_activations(dataset, start_time, duration_seconds, kernel='omissions',
+                            index_image_in_window=True, label_color=None, ax=None):
     '''
     For a given period of time in an ophys or behavior session,
     then plot the window over which a given GLM kernel is active, relative to the event of interest
@@ -1207,7 +1316,11 @@ def plot_kernel_activations(dataset, start_time, duration_seconds, kernel='omiss
                 ax.plot(kernel_trace_timestamps, kernel_trace, color='gray', linewidth=0.5)
 
     # label y axis with kernel name
-    ax.set_ylabel(kernel, rotation=0, horizontalalignment='right', verticalalignment='center')
+    if label_color is not None:
+        color = label_color
+    else:
+        color = 'k'
+    ax.set_ylabel(kernel, rotation=0, horizontalalignment='right', verticalalignment='center', color=color)
 
     return ax
 
@@ -2111,38 +2224,51 @@ def plot_coding_scores_for_cell(cell_specimen_id, ophys_experiment_id, results_p
     return ax
 
 
-def plot_coding_score_components_for_cell(cell_specimen_id, ophys_experiment_id, results_pivoted,
-                                          fontsize=12, as_panel=False, save_dir=None, ax=None):
+def plot_coding_score_components_for_cell(cell_specimen_id, ophys_experiment_id, results_pivoted, dataset,
+                                          fontsize=12, as_panel=False, horiz=False, save_dir=None, folder=None, ax=None):
     '''
     Creates barplot of coding scores for a single cell in a single experiment and saves it
     '''
-    import visual_behavior.dimensionality_reduction.clustering.plotting as plotting
 
     identifier = str(ophys_experiment_id) + '_' + str(cell_specimen_id)
     # get dropouts just for one cell
     cell_dropouts = results_pivoted[results_pivoted.identifier == identifier]
 
     # which features to plot
-    main_coding_score_features = ['all-images', 'omissions', 'task', 'behavioral']
-    feature_labels = ['images', 'omissions', 'task', 'behavior']
+    features = processing.get_features_for_clustering()
+    feature_labels = processing.get_feature_labels_for_clustering()
     feature_colors, feature_labels_dict = plotting.get_feature_colors_and_labels()
+    c_vals, feature_labels_dict = plotting.get_feature_colors_and_labels()
 
     if ax is None:
-        figsize = (3, 2)
+        figsize = (2, 2)
         fig, ax = plt.subplots(figsize=figsize)
     # get dropouts just for one cell
-    ax = sns.barplot(data=np.abs(cell_dropouts[main_coding_score_features]), orient='h',
-                     palette=feature_colors, ax=ax)  # color=sns.color_palette('Blues_r')[0], ax=ax)
-    ax.set_xlabel('Coding score', fontsize=fontsize)
+    if horiz:
+        ax = sns.barplot(data=np.abs(cell_dropouts[features]), orient='h',
+                     order=features, palette=feature_colors, ax=ax)  # color=sns.color_palette('Blues_r')[0], ax=ax)
+        ax.set_yticklabels(feature_labels, rotation=0, horizontalalignment='right', fontsize=fontsize)
+        [t.set_color(i) for (i, t) in zip([c_vals[0], c_vals[1], c_vals[2], c_vals[3]], ax.yaxis.get_ticklabels())]
+        ax.xaxis.set_tick_params(labelsize=fontsize)
+        ax.set_xlabel('Coding score', fontsize=fontsize)
+    else:
+        ax = sns.barplot(data=np.abs(cell_dropouts[features]),
+                         order=features, palette=feature_colors, ax=ax)  # color=sns.color_palette('Blues_r')[0], ax=ax)
+        ax.set_xticklabels(feature_labels, rotation=45, horizontalalignment='right', fontsize=fontsize)
+        [t.set_color(i) for (i, t) in zip([c_vals[0], c_vals[1], c_vals[2], c_vals[3]], ax.xaxis.get_ticklabels())]
+        ax.yaxis.set_tick_params(labelsize=fontsize)
+        ax.set_ylabel('Coding score', fontsize=fontsize)
     ax.set_title('VE full model = ' + str(np.round(cell_dropouts.variance_explained_full.values[0], 3)), fontsize=fontsize)
-    ax.set_yticklabels(feature_labels, rotation=0, horizontalalignment='right', fontsize=fontsize)
-    ax.xaxis.set_tick_params(labelsize=fontsize)
 
-    for x, feature in enumerate(main_coding_score_features):
+    for x, feature in enumerate(features):
         cs = np.abs(cell_dropouts[feature].values[0])
         if cs>0:
-            ax.text(s = str(np.round(cs,2)), y=x, x=cs, rotation=0, fontsize=fontsize-4,
+            if horiz:
+                ax.text(s = str(np.round(cs,2)), y=x, x=cs, rotation=0, fontsize=fontsize-4,
                     color='k', va='center',  ha='left')
+            else:
+                ax.text(s=str(np.round(cs, 2)), x=x, y=cs, rotation=0, fontsize=fontsize - 4,
+                        color='k', va='bottom', ha='center')
     if as_panel:
         ax.set_title('')
         # Annotate axes
@@ -2171,8 +2297,13 @@ def plot_coding_score_components_for_cell(cell_specimen_id, ophys_experiment_id,
         cre_line = cell_dropouts['cre_line'].values[0].split('-')[0]
         title_string = str(ophys_experiment_id) + '_' + str(cell_specimen_id) + '_' + cre_line
         fig.suptitle(title_string, x=0.5, y=1.3, fontsize=16)
-        utils.save_figure(fig, figsize, save_dir, 'example_model_fits', title_string + '_coding_scores')
-        utils.save_figure(fig, figsize, save_dir, 'example_cell_kernels_and_fits_separate_plots',  title_string + '_coding_scores')
+        metadata_string = utils.get_metadata_string(dataset.metadata)
+        filename = str(cell_specimen_id) + '_' + metadata_string + '_coding_scores'
+        if folder is None:
+            utils.save_figure(fig, figsize, save_dir, 'example_model_fits', filename)
+            utils.save_figure(fig, figsize, save_dir, 'example_cell_kernels_coding_scores_and_fits',  filename)
+        else:
+            utils.save_figure(fig, figsize, save_dir, folder, filename)
 
     return ax
 
@@ -2450,8 +2581,9 @@ def plot_weights_and_coding_score_heatmaps_for_experience_levels(kernel, weights
             else:
                 ax[r][0].set_xticks(np.arange(timestamps[0], timestamps[-1], interval_sec))
                 # ax[r][0].xaxis.get_label().set_fontsize(14)
-                ax[r][0].set_xlabel(xlabel)
                 ax[r][0].tick_params(axis='x', labelsize=14)
+                # only label middle axis on bottom row
+                ax[r][1].set_xlabel(xlabel)
 
             # coding scores
             row_weights = col_weights[col_weights[row_condition] == row]

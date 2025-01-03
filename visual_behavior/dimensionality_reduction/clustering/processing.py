@@ -204,7 +204,7 @@ def get_cre_line_cell_specimen_ids(df_no_cre, df_cre):
 def remove_outliers(multi_session_df, threshold_percentile=99.9):
     '''
     Filters a dataframe of cell responses to remove cells with mean response values greater than
-    a given percentile threshold.
+    a given percentile threshold, per cre line
     Also removes specific cells known to have abnormally high dF/F values that may not get caught by the percentile threshold for whatever reason
 
     Parameters
@@ -217,14 +217,17 @@ def remove_outliers(multi_session_df, threshold_percentile=99.9):
     -------
 
     '''
-    outlier_cells = multi_session_df[(multi_session_df.mean_response>np.percentile(multi_session_df.mean_response.values, threshold_percentile)) &
-                                     (multi_session_df.mean_baseline>np.percentile(multi_session_df.mean_baseline.values, threshold_percentile))].cell_specimen_id.unique()
+    outlier_cells = []
+    for cre_line in multi_session_df.cre_line.unique():
+        cre_df = multi_session_df[(multi_session_df.cre_line==cre_line)]
+        outlier_cells_tmp = cre_df[(cre_df.mean_response>np.percentile(cre_df.mean_response.values, threshold_percentile)) &
+                                         (cre_df.mean_baseline>np.percentile(cre_df.mean_baseline.values, threshold_percentile)) ].cell_specimen_id.unique()
+        outlier_cells = np.hstack((outlier_cells, outlier_cells_tmp))
     # These cells have abnormally high dF/F values and throw off the meam
     bad_cells = [1120091750,  1120094237, 1086580238, 1086551540, 1086553602,  # Sst
                 1086514682, 1086515397, 1086673279, # Vip
                 1086529704, ] # Slc17a7
     outlier_cells = np.hstack((outlier_cells, bad_cells))
-    # outlier_cells = image_mdf[image_mdf.mean_response>0.1].cell_specimen_id.unique()
     multi_session_df_clean = multi_session_df[multi_session_df.cell_specimen_id.isin(outlier_cells)==False].copy()
     return multi_session_df_clean, outlier_cells
 
@@ -2284,8 +2287,8 @@ def get_coding_score_metrics_for_clusters(cluster_meta, results_pivoted):
         stats = get_coding_metrics_for_condition(index_dropouts=cluster_dropouts, index_value=cluster_id, index_name='cluster_id')
         cluster_metrics = pd.concat([cluster_metrics, stats], sort=False)
     # cluster_metrics = cluster_metrics.merge(cluster_meta, on='cluster_id')
-    # reclassify cluster 6 as task coding
-    cluster_metrics.loc[6, 'dominant_feature'] = 'task'
+    # reclassify cluster 10 as task coding
+    cluster_metrics.loc[10, 'dominant_feature'] = 'task'
 
     return cluster_metrics
 
@@ -2686,7 +2689,7 @@ def generate_merged_table_of_model_free_metrics(data_type='filtered_events', ses
                                                            'mean_response_all_images', 'lifetime_sparseness_images',
                                                            'reliability_all_images', 'fraction_significant_p_value_gray_screen_all_images',
                                                            'fano_factor_all_images', 'running_modulation_all_images']],
-                                                      on=['cell_specimen_id', 'experience_level', 'ophys_experiment_id'])
+                                                      on=['cell_specimen_id', 'experience_level', 'ophys_experiment_id'], how='outer')
 
         # merge in omission metrics for each exp level
         tmp = omission_response_metrics.rename(columns={'mean_response': 'mean_response_omissions',
@@ -2700,7 +2703,7 @@ def generate_merged_table_of_model_free_metrics(data_type='filtered_events', ses
                                                            'reliability_omissions', 'fraction_significant_p_value_gray_screen_omissions',
                                                            'fano_factor_omissions', 'running_modulation_omissions',
                                                            'omission_modulation_index']],
-                                                      on=['cell_specimen_id', 'experience_level', 'ophys_experiment_id'])
+                                                      on=['cell_specimen_id', 'experience_level', 'ophys_experiment_id'], how='outer')
 
         # merge in change metrics for each exp level
         tmp = change_response_metrics.rename(columns={'mean_response': 'mean_response_changes',
@@ -2716,7 +2719,7 @@ def generate_merged_table_of_model_free_metrics(data_type='filtered_events', ses
                                                            'reliability_changes', 'fraction_significant_p_value_gray_screen_changes',
                                                            'fano_factor_changes', 'running_modulation_changes',
                                                            'change_modulation_index', 'hit_miss_index']],
-                                                      on=['cell_specimen_id', 'experience_level', 'ophys_experiment_id'])
+                                                      on=['cell_specimen_id', 'experience_level', 'ophys_experiment_id'], how='outer')
 
         # merge in change metrics for each exp level
         tmp = pref_image_change_response_metrics.rename(columns={'mean_response': 'mean_response_changes_pref_image', 'pre_change_response': 'mean_response_pre_change_pref_image',
@@ -2729,7 +2732,7 @@ def generate_merged_table_of_model_free_metrics(data_type='filtered_events', ses
         model_free_metrics = model_free_metrics.merge(tmp[['cell_specimen_id', 'experience_level', 'ophys_experiment_id', 'mean_response_changes_pref_image', 'mean_response_pre_change_pref_image',
                                                            'lifetime_sparseness_changes_pref_image', 'reliability_changes_pref_image', 'fraction_significant_p_value_gray_screen_changes_pref_image', 'fano_factor_changes_pref_image',
                                                            'running_modulation_changes_pref_image', 'change_modulation_index_pref_image', 'hit_miss_index_pref_image', ]],
-                                                      on=['cell_specimen_id', 'experience_level', 'ophys_experiment_id'])
+                                                      on=['cell_specimen_id', 'experience_level', 'ophys_experiment_id'], how='outer')
 
 
         # convert experience level
@@ -2782,6 +2785,7 @@ def generate_coding_score_metrics_per_experience_level_table(cluster_meta, resul
         cluster_metrics = cluster_metrics.rename(columns={'dominant_experience_level': 'dominant_experience_level_cluster',
                                                  'dominant_feature': 'dominant_feature_cluster'})
         # merge into coding score metrics
+        coding_score_metrics = coding_score_metrics.reset_index()
         coding_score_metrics = coding_score_metrics.merge(cluster_metrics.reset_index()[
                                     ['cluster_id', 'dominant_experience_level_cluster', 'dominant_feature_cluster']])
         # coding_score_metrics['dominant_feature_cluster'] = coding_score_metrics.dominant_feature
@@ -2791,7 +2795,10 @@ def generate_coding_score_metrics_per_experience_level_table(cluster_meta, resul
         coding_scores_per_exp_level['ophys_experiment_id'] = coding_scores_per_exp_level[
             ['ophys_experiment_id']].astype('int32')
         # merge coding scores tables
-        merged_metrics = coding_scores_per_exp_level.merge(coding_score_metrics.reset_index()[['cell_specimen_id', 'ophys_experiment_id',
+        coding_score_metrics = coding_score_metrics.reset_index()
+        print(coding_score_metrics.keys())
+        print(coding_scores_per_exp_level.keys())
+        merged_metrics = coding_scores_per_exp_level.merge(coding_score_metrics[['cell_specimen_id', 'ophys_experiment_id',
                                                                                                'dominant_feature_cluster',
                                                                                                'dominant_experience_level_cluster']], on=['cell_specimen_id', 'ophys_experiment_id'], how='left')
         print(merged_metrics.experience_level.unique())
@@ -2842,9 +2849,12 @@ def generate_merged_table_of_coding_score_and_model_free_metrics(cluster_meta, r
     else:
 
         model_free_metrics = generate_merged_table_of_model_free_metrics(data_type, session_subset, inclusion_criteria, save_dir)
+        # print(model_free_metrics.columns)
+        model_free_metrics = model_free_metrics.set_index('cell_specimen_id')
 
         coding_score_per_experience_metrics = generate_coding_score_metrics_per_experience_level_table(cluster_meta, results_pivoted, save_dir)
-
+        # print(coding_score_per_experience_metrics.columns)
+        
         metrics = coding_score_per_experience_metrics.merge(model_free_metrics, on=['cell_specimen_id', 'experience_level', 'ophys_experiment_id'], how='left')
 
         print(len(metrics.cell_specimen_id.unique()), 'cells in merged coding score and model free metrics table')
@@ -2852,8 +2862,8 @@ def generate_merged_table_of_coding_score_and_model_free_metrics(cluster_meta, r
             metrics.to_csv(merged_metrics_table_filepath)
             print('merged metrics table saved')
 
-    # reclassify cluster 6 as task coding
-    indices = metrics[metrics.cluster_id == 6].index.values
+    # reclassify cluster 10 as task coding
+    indices = metrics[metrics.cluster_id == 10].index.values
     metrics.loc[indices, 'dominant_feature_cluster'] = 'task'
 
     return metrics
@@ -3265,45 +3275,67 @@ def get_CI_for_clusters(cluster_meta, columns_to_groupby=['targeted_structure', 
 
 #### shuffle control functions ###
 
-def get_cluster_mapping(matrix, threshold=0.1, ):
+def get_cluster_mapping(SSE_matrix_dict, threshold=0.1, ):
     '''
     find clusters with most similar SSE, create a dictionaty of cluster maps.
 
     Input:
-    matrix: (np.array) SSE matrix (n clusters by n clusters), can be any other matrix (correlation, etc)
+    SSE_matrix_dict: (dict) dictionary of SSE matrix values for each bootstrap iteration
+                    keys are n_boot, values are dataframes of SSE values for original vs shuffled clusters
+    # matrix: (np.array) SSE matrix (n clusters by n clusters), can be any other matrix (correlation, etc)
     threshold: (int) a value, abov which the matrix will not find an optimally similar cluster
 
     Returns:
-    cluster_mapping_comparisons: (dict) {original cluster id: matched cluster id}
+    cluster_mapping_dict: (dict of dicts) dict with keys for n_boot, values are:
+                                {original cluster id: matched cluster id} for each n_boot
 
     '''
-    comparisons = matrix.keys()
+    # shuffled_cluster_indices = SSE_matrix.columns # columns are SSE values for shuffled cluster matrix
+    # the lowest row value will be the matched original cluster ID
 
-    # comparison dictionary
-    cluster_mapping_comparisons = {}
-    for i, comparison in enumerate(comparisons):
-        tmp_matrix = matrix[comparison]
+    # get the original cluster id with the lowest SSE value for each shuffled cluster
+    # cluster_mapping_comparisons = {}
+    # for i, shuffled_cluster_index in enumerate(shuffled_cluster_indices):
+    #     # get SSE values for this cluster; indices of SSE_values are the original cluster ID
+    #     SSE_values = SSE_matrix[shuffled_cluster_index] # column is shuffled cluster SSE
+    #
+    #     # cluster
+    #     cluster_mapping = {}
+    #     # tmp_matrix is n_clusters x n_clusters with SSE values saying how well matched clusters are to shuffled clusters
+    #     # index is original cluster id, column is matched cluster id
+    #     # loop through original clusters, which are the rows of the SSE_matrix
+    #     for original_cluster_index in SSE_matrix.index.values:
+    #
+    #         # if the row value is less than threshold, that is the matching cluster ID
+    #         if min(SSE_values[original_cluster_index]) < threshold:
+    #             # the matched cluster is the one with the lowest SSE value
+    #             SSE_values[original_cluster_index]
+    #             matched_cluster_index = SSE_values[original_cluster_index].index(min(SSE_values[original_cluster_index])) + 1
+    #             # add one because this is an index and cluster IDs start at 1
+    #             cluster_mapping[original_cluster_index + 1] = matched_cluster_index
+    #         # else there is no matched cluster with sse < threshold, set matched cluster ID to -1
+    #         else:
+    #             cluster_mapping[original_cluster_index + 1] = -1
+    #      cluster_mapping_comparisons[original_cluster_index] = cluster_mapping
 
-        # cluster
-        cluster_mapping = {}
-        # tmp_matrix is n_clusters x n_clusters with SSE values saying how well matched clusters are to shuffled clusters
-        # index is original cluster id, column is matched cluster id
-        for original_cluster_index in range(0, len(tmp_matrix)):
-
-            # if min less than threshold
-            if min(tmp_matrix[original_cluster_index]) < threshold:
-                # the matched cluster is the one with the lowest SSE value
-                matched_cluster_index = tmp_matrix[original_cluster_index].index(min(tmp_matrix[original_cluster_index])) + 1
-                # add one because this is an index and cluster IDs start at 1
-                cluster_mapping[original_cluster_index + 1] = matched_cluster_index
-
-            # else there is no cluster, set matched cluster ID to -1
+    cluster_mapping_dict = {}
+    for n_boot in range(len(SSE_matrix_dict)):
+        SSE_matrix = SSE_matrix_dict[n_boot]
+        matched_cluster_ids = {}
+        for original_cluster_id in SSE_matrix.index.values:
+            # if the min SSE value for this cluster is less than the threshold
+            if SSE_matrix.loc[original_cluster_id].min() < threshold:
+                # get the column index with lowest SSE
+                min_col_index = SSE_matrix.loc[original_cluster_id].argmin()
+                # index into col values to get matched cluster ID
+                matched_cluster_id = SSE_matrix.columns[min_col_index]
+            # otherwise set it to -1; there is no match
             else:
-                cluster_mapping[original_cluster_index + 1] = -1
+                matched_cluster_id = -1
+            matched_cluster_ids[original_cluster_id] = matched_cluster_id
+        cluster_mapping_dict[n_boot] = matched_cluster_ids
 
-        cluster_mapping_comparisons[comparison] = cluster_mapping
-
-    return cluster_mapping_comparisons
+    return cluster_mapping_dict
 
 
 def get_mapped_SSE_values(matrix, threshold=1, ):
@@ -3337,14 +3369,15 @@ def get_mapped_SSE_values(matrix, threshold=1, ):
     return cluster_mapping_SSE
 
 
-def get_mean_dropout_scores_per_cluster(dropout_df, cluster_meta=None, labels=None, stacked=True, sort=False, max_n_clusters=None):
+def get_mean_dropout_scores_per_cluster(dropout_df, cluster_meta=None, labels=None, stacked=True,
+                                        sort_by_cluster_size=False, max_n_clusters=None):
     '''
     INPUT:
     dropout_df: (pd.DataFrame) of GLM dropout scores (cell_specimen_ids by regressors x experience)
     cluster_meta: (pd.DataFrame), either provide this df, must contain columns 'cluster_id', 'cell_specimen_id'
     labels: (list, np.array) or provide this array, list or array of int indicating cells' cluster ids,
                             if provided, len(labels)==len(dropout_df)
-    sort: boolean, if True, sorts clusters by size, if False, clusters are not sorted
+    sort_by_cluster_size: boolean, if True, sorts clusters by size, if False, clusters are sorted by cluster ID
 
     Provide either cluster_meta or labels. Cluster df must be df with 'cluster_id' and 'cell_specimen_id' columns,
     labels can be np array or list of cluster ids
@@ -3355,12 +3388,17 @@ def get_mean_dropout_scores_per_cluster(dropout_df, cluster_meta=None, labels=No
 
     Clusters are sorted by size.
     '''
-    if sort and isinstance(cluster_meta, pd.core.frame.DataFrame):
+    if 'all-images' in dropout_df.columns:
+        features = get_features_for_clustering()
+    else:
+        features = get_feature_labels_for_clustering()
+    if sort_by_cluster_size:
         cluster_ids = cluster_meta['cluster_id'].value_counts().index.values  # sort cluster ids by size
-    elif sort is False and isinstance(cluster_meta, pd.core.frame.DataFrame):
-        cluster_ids = cluster_meta['cluster_id'].unique()  # sorts numerically not by cluster size
+    else:
+        cluster_ids = np.sort(cluster_meta['cluster_id'].unique())  # sorts numerically not by cluster size
 
-    if sort is False and max_n_clusters is not None:
+    # for shuffled clusters, where a max_n_clusters is set
+    if (sort_by_cluster_size is False) and (max_n_clusters) is not None:
         cluster_ids = np.arange(1, max_n_clusters + 1)
 
     elif labels is not None:
@@ -3371,15 +3409,17 @@ def get_mean_dropout_scores_per_cluster(dropout_df, cluster_meta=None, labels=No
     mean_cluster = {}
     for i, cluster_id in enumerate(cluster_ids):
         this_cluster_ids = cluster_meta[cluster_meta['cluster_id'] == cluster_id]['cell_specimen_id'].unique()
-        if stacked is True:
-            mean_dropout_df = dropout_df.loc[this_cluster_ids].mean()[get_features_for_clustering()]
+        if stacked is True: # returns an array of coding scores for features x exp levels
+            mean_dropout_df = dropout_df.loc[this_cluster_ids].mean()[features]
+            columns = dropout_df.columns
             mean_cluster[cluster_id] = mean_dropout_df.values
-        elif stacked is False:
-            mean_dropout_df = dropout_df.loc[this_cluster_ids].mean()[get_features_for_clustering()]
-            mean_cluster[cluster_id] = mean_dropout_df.unstack()
+        elif stacked is False: # returns a df matrix of features (rows) x exp levels (cols)
+            mean_dropout_df = dropout_df.loc[this_cluster_ids].mean()[features]
+            mean_cluster[cluster_id] = mean_dropout_df.unstack().loc[features]
 
     if stacked is True:
-        return (pd.DataFrame(mean_cluster))
+        df = pd.DataFrame(mean_cluster, index=columns, columns=cluster_ids)
+        return (df)
     elif stacked is False:
         return (mean_cluster)
 
@@ -3392,15 +3432,19 @@ def compute_SSE(mean_dropout_df_original, mean_dropout_df_compare):
     SSE_matrix, rows are original clusters, columns are compared clusters
     '''
     SSE_matrix = []
-    for cluster_original in mean_dropout_df_original.keys():  # cluster ids are columns
+    original_cluster_ids = mean_dropout_df_original.columns# cluster ids are columns
+    for cluster_original in original_cluster_ids:
         x = mean_dropout_df_original[cluster_original].values
         row = []
-        for cluster_compare in mean_dropout_df_compare.keys():
+        shuffled_cluster_ids = mean_dropout_df_compare.columns
+        for cluster_compare in shuffled_cluster_ids:
             y = mean_dropout_df_compare[cluster_compare].values
             sse = np.sum((np.abs(x) - np.abs(y)) ** 2)
             row.append(sse)
         SSE_matrix.append(row)
-
+    SSE_matrix = pd.DataFrame(data=SSE_matrix, index=original_cluster_ids, columns=shuffled_cluster_ids)
+    SSE_matrix.index.name = 'original_cluster_ids'
+    SSE_matrix.columns.name = 'shuffled_cluster_ids'
     return SSE_matrix
 
 
@@ -3647,7 +3691,7 @@ def get_matched_cluster_labels(SSE_mapping):
     return matched_clusters  # dictionary of original cluster IDs and their matched IDs across all shuffle iterations
 
 
-def get_cluster_size_variance(SSE_mapping, cluster_meta_shuffled, normalize=False, use_nan=False, adjust_to_expected_N=False):
+def get_cluster_size_variance(SSE_mapping, cluster_meta_shuffled, normalize=True, use_nan=False, adjust_to_expected_N=False):
     original_cluster_ids = SSE_mapping[0].keys()
     matched_ids = get_matched_cluster_labels(SSE_mapping)  # gets list of all matched IDs across shuffle iterations for
     # each original cluster, in the order of shuffle iterations
@@ -3772,8 +3816,7 @@ def get_matched_clusters_means_dict(SSE_mapping, mean_dropout_scores_unstacked, 
         for n_boot in n_boots:
             matched_cluster_id = SSE_mapping[n_boot][cluster_id]
             if matched_cluster_id != -1:
-                all_matched_cluster_meta = all_matched_cluster_meta.append(
-                    mean_dropout_scores_unstacked[n_boot][matched_cluster_id])
+                all_matched_cluster_meta = pd.concat([all_matched_cluster_meta, mean_dropout_scores_unstacked[n_boot][matched_cluster_id]])
 
         all_matched_cluster_meta = all_matched_cluster_meta.reset_index().rename(columns={'index': 'regressor'})
 
@@ -3812,12 +3855,18 @@ def get_shuffled_cluster_means(shuffled_clusters_dict, n_clusters):
     """
     
     shuffled_cluster_means = None
+
+    if 'all-images' in shuffled_clusters_dict[1].index.values:
+        features = get_features_for_clustering()
+    else:
+        features = get_feature_labels_for_clustering()
     
     for cluster_id in np.arange(1, n_clusters + 1):
         if cluster_id == 1:
-            shuffled_cluster_means = pd.DataFrame(shuffled_clusters_dict[cluster_id].stack().loc[get_features_for_clustering()]).T
+            shuffled_cluster_means = pd.DataFrame(shuffled_clusters_dict[cluster_id].stack().loc[features]).T
         else:
-            shuffled_cluster_means = shuffled_cluster_means.append(pd.DataFrame(shuffled_clusters_dict[cluster_id].stack().loc[get_features_for_clustering()]).T)
+            shuffled_cluster_means = pd.concat([shuffled_cluster_means, 
+                                                pd.DataFrame(shuffled_clusters_dict[cluster_id].stack().loc[features]).T])
     
     shuffled_cluster_means.index = np.arange(1, n_clusters + 1)
     
@@ -3831,51 +3880,96 @@ def make_dict(matrix):
     return new_dict
 
 
-def sort_SSE_values(SSE_matrix, SSE_mapping):
+def sort_SSE_values(SSE_matrix_dict, SSE_mapping):
     """
-    Sort SSE values using original cluster sort.
+    Aggregate SSE values for matched shuffled clusters across clustering iterations
 
     Args:
-    - SSE_matrix: Dictionary containing SSE matrices for each bootstrap
+    - SSE_matrix_dict: Dictionary containing SSE matrices for each bootstrap
+                each matrix is original clusters as rows, matched shuffled clusters as columms, values are SSE
     - SSE_mapping: Dictionary containing cluster mappings for each bootstrap
+                each dict entry is another dict with original clusters : matched shuffled cluster IDs for that n_boot
 
     Returns:
-    - SSE_matrix_sorted: DataFrame containing sorted SSE values
+    - SSE_matrix_sorted: DataFrame containing SSE values for each matched shuffled cluster - one value for the correspondence of each matched cluster to all original clusters
+                    rows are original cluster IDs, columns are the matched shuffled cluster IDs (i.e. converted from original shuffle cluster ID to the match to original cluster ID one based on SSE)
+
+        # returns a dataframe containing the SSE values for matched clusters for all n_boots,
+        # with columns representing the matched shuffled cluster, and the row representing the original cluster
+        # the row values are the SSE values for matching of each matched cluster to all original clusters
+        # (i.e. if cluster 5 was matched to cluster 1, what are the SSE values for cluster 5 across all the original clusters?)
+
+        SSE_matrix_sorted also includes a column for n_boot, in case you want to confirm matching across iterations
+        we drop it for most analysis
     """
     
-    n_boots = list(SSE_matrix.keys())
-    cluster_ids = list(SSE_mapping[0].keys())
-    
-    # create a data frame to collect sorted SSE from all n_boots
-    SSE_matrix_sorted = pd.DataFrame(columns=['cluster_id', *cluster_ids])
-    
-    # run over all nboots and sort SSE using original cluster sort
-    for n in n_boots:
-        # Get matched map and SSE matrix for this n boot
-        SSE_df = pd.DataFrame(make_dict(SSE_matrix[n]))
-        SSE_map = SSE_mapping[n]
-        
-        # make a copy which will be used to store sorted SSE values
-        SSE_df_sorted = SSE_df.copy()
-        
-        # first sort SSE values
-        for i, cluster_id in enumerate(cluster_ids):
-            matched_cluster_id = SSE_map[cluster_id] # matched shuffled cluster id
-            # copy matched SSE value to a new location in df
-            if matched_cluster_id != -1:
-                SSE_df_sorted.loc[i][:] = SSE_df.loc[matched_cluster_id - 1][:].values
-            else:
-                SSE_df_sorted.loc[i][:] = np.nan  # cluster was not matched, mean coding scores are nan
-        
-        # reset index and rename cluster id column
-        SSE_df_sorted = SSE_df_sorted.reset_index(drop=True)
-        SSE_df_sorted['cluster_id'] = np.arange(1, len(cluster_ids) + 1)
-        
-        # append to larger df with all n_boots
-        SSE_matrix_sorted = SSE_matrix_sorted.append(SSE_df_sorted, ignore_index=True)
-    
-    return SSE_matrix_sorted
+    # n_boots = list(SSE_matrix_dict.keys())
+    # # original cluster IDs are the rows of the dataframe contained in each entry of SSE_matrix_dict
+    # # also contained in the SSE mapping dict
+    # cluster_ids = list(SSE_mapping[0].keys())
+    #
+    # # create a data frame to collect sorted SSE from all n_boots
+    # SSE_matrix_sorted = pd.DataFrame(columns=['cluster_id', *cluster_ids])
+    #
+    # # run over all nboots and sort SSE using original cluster sort
+    # for n in n_boots:
+    #     # Get matched map and SSE matrix for this n boot
+    #     # SSE_df = pd.DataFrame(make_dict(SSE_matrix_dict[n]))
+    #     SSE_df = SSE_matrix_dict[n]
+    #     SSE_map = SSE_mapping[n]
+    #
+    #     # make a copy which will be used to store sorted SSE values
+    #     SSE_df_sorted = SSE_df.copy()
+    #
+    #     # first sort SSE values
+    #     for i, cluster_id in enumerate(cluster_ids):
+    #         matched_cluster_id = SSE_map[cluster_id] # matched shuffled cluster id
+    #         # copy matched SSE value to a new location in df
+    #         if matched_cluster_id != -1:
+    #             # SSE values for original cluster are the
+    #             SSE_df_sorted.loc[i][:] = SSE_df.loc[matched_cluster_id][:].values
+    #         else:
+    #             SSE_df_sorted.loc[i][:] = np.nan  # cluster was not matched, mean coding scores are nan
+    #
+    #     # reset index and rename cluster id column
+    #     SSE_df_sorted = SSE_df_sorted.reset_index(drop=True)
+    #     SSE_df_sorted['cluster_id'] = np.arange(1, len(original_cluster_ids) + 1)
+    #
+    #     # append to larger df with all n_boots
+    #     SSE_matrix_sorted = pd.concat([SSE_matrix_sorted, SSE_df_sorted], ignore_index=True)
 
+    # returns a dataframe containing the SSE values for matched clusters for all n_boots,
+    # with columns representing the matched shuffled cluster, and the row representing the original cluster
+    # the row values are the SSE values for matching of each matched cluster to all original clusters
+    # (i.e. if cluster 5 was matched to cluster 1, what are the SSE values for cluster 5 across all the original clusters?)
+
+    original_cluster_ids = SSE_mapping[0].keys()
+
+    n_boots = SSE_mapping.keys()
+    SSE_matrix_sorted = pd.DataFrame()
+    for n in n_boots:
+        new_SSE_matrix = pd.DataFrame(index=original_cluster_ids, columns=original_cluster_ids)
+        new_SSE_matrix.index.name = 'cluster_id'
+        original_cluster_ids = list(SSE_mapping[n].keys())
+        for i, original_cluster_id in enumerate(original_cluster_ids):
+            # get matched cluster for this cluster and n_boot
+            matched_cluster_id = SSE_mapping[n][original_cluster_id]
+            # if there was a match, get the SSE values for mapping of matched cluster to original clusters
+            if matched_cluster_id != -1:
+                matched_sse_values = SSE_matrix_dict[n][
+                    matched_cluster_id].values  # these are organized by original cluster ID
+                # matched cluster ID is the index, original clusters are the columns
+                new_SSE_matrix.loc[original_cluster_id] = matched_sse_values
+            else:  # otherwise set the row values for this cluster to zero
+                nan_array = np.zeros(len(original_cluster_ids))
+                nan_array[:] = np.nan
+                new_SSE_matrix.loc[original_cluster_id] = nan_array
+
+        new_SSE_matrix = new_SSE_matrix.reset_index()
+        new_SSE_matrix['n_boot'] = n
+        SSE_matrix_sorted = pd.concat([SSE_matrix_sorted, new_SSE_matrix])
+
+    return SSE_matrix_sorted
 
 
 def get_corr_for_matched_clusters_dict(SSE_mapping, mean_shuffled_dropout_scores,
@@ -3911,7 +4005,7 @@ def get_corr_for_matched_clusters_dict(SSE_mapping, mean_shuffled_dropout_scores
         for n_boot in n_boots:
             matched_cluster_id = SSE_mapping[n_boot][cluster_id]
             if matched_cluster_id != -1:
-                X.append(mean_shuffled_dropout_scores[n_boot][matched_cluster_id].values)
+                pd.concat([X, mean_shuffled_dropout_scores[n_boot][matched_cluster_id].values])
 
         # corr is a np.array of corr rs for all matched clusters (with original or one another)
         corr = np.array([])
@@ -4207,9 +4301,9 @@ def get_cluster_info(cre_line, cluster_meta):
     tmp = cluster_meta[cluster_meta.cre_line == cre_line]
     unique_mouse_per_cluster = tmp.groupby('cluster_id')['mouse_id'].nunique()
     unique_cluster_per_mouse = tmp.groupby('mouse_id')['cluster_id'].nunique()
-    unique_equipment_per_cluster = tmp.groupby('cluster_id')['equipment_name'].nunique()
-    unique_clusters_per_equipment = tmp.groupby('equipment_name')['cluster_id'].nunique()
-    return unique_mouse_per_cluster, unique_cluster_per_mouse, unique_equipment_per_cluster, unique_clusters_per_equipment
+    unique_project_per_cluster = tmp.groupby('cluster_id')['project_code'].nunique()
+    unique_clusters_per_project = tmp.groupby('project_code')['cluster_id'].nunique()
+    return unique_mouse_per_cluster, unique_cluster_per_mouse, unique_project_per_cluster, unique_clusters_per_project
 
 
 def get_cell_specimen_ids_matched_in_x_sessions(cells_table, x_sessions=3):
