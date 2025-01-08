@@ -1,0 +1,19 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Fri Sep 13 15:38:36 2019
+
+@author: farzaneh
+"""
+
+regex = re.compile(name) # + '.h5')
+l = os.listdir(dir_now)
+h5_files = [string for string in l if re.match(regex, string)] # string=l[0]
+
+name = 'OPHYS\w+B'  # name = 'OPHYS\_[0-9]\w+A'
+regex = re.compile(name) # + '.h5')
+ophys_sessB = [string for string in stages if re.findall(regex, string)]
+
+
+all_1 = [m.start() for m in re.finditer('1', aa)]
+
