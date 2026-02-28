@@ -785,10 +785,9 @@ def get_stimulus_response_df(dataset, time_window=[-2, 2.1], interpolate=True, o
                                 columns include stimulus and behavior metadata
      """
 
-    # import brain_observatory_utilities.datasets.optical_physiology.data_formatting as ophys_formatting
-    # import brain_observatory_utilities.datasets.behavior.data_formatting as behavior_formatting
-
-    import mindscope_utilities.visual_behavior_ophys.data_formatting as data_formatting
+    import brain_observatory_utilities.datasets.optical_physiology.data_formatting as ophys_formatting
+    import brain_observatory_utilities.datasets.behavior.data_formatting as behavior_formatting
+    # import mindscope_utilities.visual_behavior_ophys.data_formatting as data_formatting
 
 
     # load stimulus response df from file if it exists otherwise generate it
@@ -814,7 +813,7 @@ def get_stimulus_response_df(dataset, time_window=[-2, 2.1], interpolate=True, o
                 print('stimulus_response_df does not exist or could not be loaded for', filepath)
                 print(e)
                 print('generating response df')
-                sdf = data_formatting.get_stimulus_response_df(dataset, data_type=data_type, event_type=event_type,
+                sdf = ophys_formatting.get_stimulus_response_df(dataset, data_type=data_type, event_type=event_type,
                                                         time_window=time_window, interpolate=interpolate,
                                                         output_sampling_rate=output_sampling_rate,
                                                         response_window_duration=response_window_duration)
@@ -827,7 +826,7 @@ def get_stimulus_response_df(dataset, time_window=[-2, 2.1], interpolate=True, o
                     print('could not save', filepath)
         else:  # if file does not exist, generate response df
             print('generating response df')
-            sdf = data_formatting.get_stimulus_response_df(dataset, data_type=data_type, event_type=event_type,
+            sdf = ophys_formatting.get_stimulus_response_df(dataset, data_type=data_type, event_type=event_type,
                                                     time_window=time_window, interpolate=interpolate,
                                                     output_sampling_rate=output_sampling_rate,
                                                     response_window_duration=response_window_duration)
@@ -839,7 +838,7 @@ def get_stimulus_response_df(dataset, time_window=[-2, 2.1], interpolate=True, o
                 print('could not save', filepath)
     else:  # if load_from_file is False, generate response df
         print('generating response df')
-        sdf = data_formatting.get_stimulus_response_df(dataset, data_type=data_type, event_type=event_type,
+        sdf = behavior_formatting.get_stimulus_response_df(dataset, data_type=data_type, event_type=event_type,
                                                 time_window=time_window, interpolate=interpolate,
                                                 output_sampling_rate=output_sampling_rate,
                                                 response_window_duration=response_window_duration)
@@ -848,7 +847,7 @@ def get_stimulus_response_df(dataset, time_window=[-2, 2.1], interpolate=True, o
     if 'extended_stimulus_presentations' in dir(dataset):
         stimulus_presentations = dataset.extended_stimulus_presentations.copy()
     else:
-        stimulus_presentations = data_formatting.get_annotated_stimulus_presentations(dataset, epoch_duration_mins=epoch_duration_mins)
+        stimulus_presentations = behavior_formatting.get_annotated_stimulus_presentations(dataset, epoch_duration_mins=epoch_duration_mins)
     # limit to change detection block & change Boolean cols to bool
     stimulus_presentations = limit_stimulus_presentations_to_change_detection(stimulus_presentations)
     sdf = sdf.merge(stimulus_presentations, on='stimulus_presentations_id')
@@ -3028,6 +3027,7 @@ def load_multi_session_df(data_type, event_type, conditions, inclusion_criteria,
     cache_dir = get_platform_analysis_cache_dir()
     cache = bpc.from_s3_cache(cache_dir=cache_dir)
     experiments_table = cache.get_ophys_experiment_table()
+    print(len(experiments_table))
     # remove familiar session that was actually novel
     # experiments_table = experiments_table[experiments_table.ophys_session_id!=919888953]
     if exclude_passive_sessions:
@@ -3061,6 +3061,7 @@ def load_multi_session_df(data_type, event_type, conditions, inclusion_criteria,
                 try:
                     filename = get_file_name_for_multi_session_df(data_type, event_type, project_code, session_type,
                                                                   conditions, epoch_duration_mins)
+                    print(filename)
                     df = pd.read_hdf(os.path.join(multi_session_df_dir, filename), key='df')
                     multi_session_df = pd.concat([multi_session_df, df])
                 except BaseException:
@@ -3683,12 +3684,13 @@ def get_multi_session_df_for_conditions(data_type, event_type, conditions, inclu
     # ophys_session_id = 919888953, SDK#2216, OPHYS_3 listed but novel image set susepcted to have been shown based on activity profile
     # multi_session_df = multi_session_df[multi_session_df.ophys_session_id!=919888953]
 
-    ### Remove abberant outlier cells
-    csids = [1086560073, 1086562892, 1086577313, 1086560671]
-    multi_session_df = multi_session_df[multi_session_df.cell_specimen_id.isin(csids) == False]
+    if data_type not in ['running_speed', 'pupil_width', 'lick_rate']:
+        ### Remove abberant outlier cells
+        csids = [1086560073, 1086562892, 1086577313, 1086560671]
+        multi_session_df = multi_session_df[multi_session_df.cell_specimen_id.isin(csids) == False]
 
     print('there are', len(multi_session_df.ophys_experiment_id.unique()),
-          'experiments after filtering for inclusion criteria - ', inclusion_criteria)
+      'experiments after filtering for inclusion criteria - ', inclusion_criteria)
 
     return multi_session_df
 

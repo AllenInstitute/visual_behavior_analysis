@@ -728,8 +728,7 @@ def compute_inertia(a, X, metric='euclidean'):
     W = [np.mean(pairwise_distances(X[a == c, :], metric=metric)) for c in np.unique(a)]
     return np.mean(W)
 
-
-def compute_gap(clustering, data, k_max=5, n_boots=20, reference_shuffle='all', metric='euclidean', separate_cre_lines_for_shuffle=False):
+def compute_gap(clustering, data, k_max=5, n_boots=20, reference_shuffle='all', metric='euclidean', separate_cre_lines_for_shuffle=True):
     '''
     Computes gap statistic between clustered data (ondata inertia) and null hypothesis (reference intertia).
 
@@ -1005,7 +1004,6 @@ def get_labels_for_coclust_matrix(X, model=SpectralClustering, nboot=np.arange(1
 
 def get_coClust_matrix(X, model=SpectralClustering, nboot=np.arange(150), n_clusters=8):
     '''
-
     :param X: (ndarray) data, n observations by n features
     :param model: (clustering object) default =  SpectralClustering; clustering method to use. Model must be initialized.
     :param nboot: (list or an array) default = 100, number of clustering repeats
@@ -2625,6 +2623,13 @@ def generate_merged_table_of_model_free_metrics(data_type='filtered_events', ses
     if file already exists in save_dir, load it, if not, generate and save it
 
     input variables are as described in visual_behavior.ophys.response_analysis.cell_metrics.get_cell_metrics_for_conditions()
+    :param data_type: 'dff', 'events', 'filtered_events'
+    :param condition: 'changes', 'omissions', 'images' or 'traces'
+    :param stimuli: 'all_images', 'pref_image', or 'full_session' (for data_type='traces')
+    :param session_subset: 'engaged', 'disengaged', 'full_session'
+    :param inclusion_criteria: a string including any combination of the following:
+                    ['full_dataset', 'active_only', 'closest_familiar_and_novel', 'containers_with_all_levels']
+                    criteria will be applied to output dataframe
     '''
     import visual_behavior.ophys.response_analysis.cell_metrics as cm
 

@@ -1427,6 +1427,7 @@ def add_behavior_stage_to_behavior_sessions(behavior_sessions):
                                           behavior_sessions.session_type.values]
     # behavior_sessions['exp_level'] = [exp_level.split(' ')[0].lower()+'_' if 'Training' not in exp_level else 'familiar_' for exp_level in
     #                                   behavior_sessions.experience_level.values]
+    print(behavior_sessions.experience_level.unique())
     behavior_sessions['exp_level'] = [exp_level.lower() + '_' if 'Training' not in exp_level else 'familiar_' for exp_level in
         behavior_sessions.experience_level.values]
     behavior_sessions['exp_level'] = [behavior_sessions.iloc[row].exp_level + 'images' if 'gratings' not in behavior_sessions.iloc[row].session_type

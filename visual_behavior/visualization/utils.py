@@ -22,7 +22,7 @@ def get_single_cell_plots_dir():
     return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/single_cell_plots'
 
 
-def save_figure(fig, figsize, save_dir, folder, fig_title, formats=['.png', '.pdf']):
+def save_figure(fig, figsize, save_dir, folder, fig_title, formats=['.png']):
     fig_dir = os.path.join(save_dir, folder)
     if not os.path.exists(fig_dir):
         os.mkdir(fig_dir)
@@ -197,7 +197,7 @@ def get_experience_level_colors():
 
     # colors = [reds[0], blues[0], purples[0]]
     colors = [blues[0], reds[0],  purples[0]] # changing red to be Novel and blue to be Familiar
-
+    # hex_colors = [#aa1016, #0b559f, #572c92]
     return colors
 
 
@@ -527,10 +527,16 @@ def get_ophys_stage_color_map(as_rgb=False):
         'familiar_images': (
                     experience_level_colors[0] + (white - experience_level_colors[0]) * active_not_in_dataset_scale),
         'familiar_images_passive': (experience_level_colors[0] + (white - experience_level_colors[0]) * passive_scale),
+        'familiar_images_passive_in_dataset': (experience_level_colors[0] + (white - experience_level_colors[0]) * passive_scale),
         'novel_images_first_novel_in_dataset': experience_level_colors[1],
+        'novel_images_first_novel': experience_level_colors[1],
+        'novel_images_first_novel_passive': (
+                    experience_level_colors[1] + (white - experience_level_colors[1]) * passive_scale),
+
         'novel +_images_in_dataset': experience_level_colors[2],
         'novel +_images': (experience_level_colors[2] + (white - experience_level_colors[2]) * active_not_in_dataset_scale),
         'novel +_images_passive': (experience_level_colors[2] + (white - experience_level_colors[2]) * passive_scale),
+        'novel +_images_passive_in_dataset': (experience_level_colors[2] + (white - experience_level_colors[2]) * passive_scale),
     }
 
     if as_rgb:

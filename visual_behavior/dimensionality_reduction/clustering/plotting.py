@@ -2009,7 +2009,7 @@ def plot_coding_score_heatmap_remapped(cluster_meta, feature_matrix, sort_by='cl
     new_labels = get_clean_labels_for_coding_scores_df(coding_scores_remapped, columns=False)
     coding_scores_remapped.index = new_labels
 
-    if ax is None:
+    if ax == None:
         figsize = (12,5)
         figsize = (8, 5)
         fig, ax = plt.subplots(figsize=figsize)
@@ -5095,6 +5095,30 @@ def plot_proportion_cells_area_depth_pie_chart(cluster_meta, save_dir=None, fold
     fig.tight_layout()
     if save_dir:
         utils.save_figure(fig, figsize, save_dir, folder, 'proportion_cells_pie_chart')
+
+def plot_proportion_cells_per_depth_pie_chart(cluster_meta, save_dir=None, folder=None):
+    colors = sns.color_palette('Greys', 10)
+
+    figsize = (15, 15)
+    fig, ax = plt.subplots(3, 4, figsize=figsize)
+    ax = ax.ravel()
+    i = 0
+    for cre_line in get_cre_lines(cluster_meta):
+        for binned_depth in np.sort(cluster_meta.binned_depth.unique()):
+            cells = cluster_meta[(cluster_meta.binned_depth == binned_depth) & (cluster_meta.cre_line == cre_line)]
+
+            total = len(cells.index.unique())
+
+            cluster_cells = cells.groupby('cluster_id').count()[['labels']].rename(columns={'labels': 'n_cells'})
+            cluster_cells['fraction'] = cluster_cells.n_cells / total
+            cluster_cells = cluster_cells.reset_index()
+
+            ax[i].pie(cluster_cells.fraction, labels=cluster_cells.cluster_id, autopct='%.f%%', colors=colors)
+            ax[i].set_title(cre_line + '\n' + str(binned_depth)+'um')
+            i += 1
+    fig.tight_layout()
+    if save_dir:
+        utils.save_figure(fig, figsize, save_dir, folder, 'proportion_cells_pie_chart_depths')
 
 
 def plot_cluster_proportion_pie_legends(save_dir=None, folder=None):
