@@ -9,7 +9,8 @@ export CONDA_PS1_BACKUP=${CONDA_PS1_BACKUP:-}
 
 source activate ${bamboo_build_working_directory}/.conda/conda_test_env
 cd ${bamboo_build_working_directory}
-python setup.py bdist_wheel --dist-dir build
+pip install build --quiet
+python -m build --wheel --outdir build
 source deactivate
 
 
