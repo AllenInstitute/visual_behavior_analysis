@@ -21,7 +21,7 @@ if __name__ == '__main__':
 
     # load cache and dataset
     cache_dir = loading.get_platform_analysis_cache_dir()
-    cache = VisualBehaviorOphysProjectCache.from_s3_cache(cache_dir)
+    cache = VisualBehaviorOphysProjectCache.from_local_cache(cache_dir)
     dataset = cache.get_behavior_ophys_experiment(ophys_experiment_id)
     # create and save stimulus response df for all data types
     event_type = 'omissions'

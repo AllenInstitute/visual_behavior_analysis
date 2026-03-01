@@ -29,7 +29,7 @@ def deploy_get_behavior_summary_for_all_sessions():
     from allensdk.brain_observatory.behavior.behavior_project_cache import VisualBehaviorOphysProjectCache as bpc
 
     cache_dir = loading.get_platform_analysis_cache_dir()
-    cache = bpc.from_s3_cache(cache_dir=cache_dir)
+    cache = bpc.from_local_cache(cache_dir=cache_dir, use_static_cache=True)
     behavior_sessions = cache.get_behavior_session_table()
     behavior_session_ids = behavior_sessions.index.values
 

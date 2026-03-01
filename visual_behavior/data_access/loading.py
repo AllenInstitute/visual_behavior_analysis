@@ -19,40 +19,101 @@ import configparser as configp  # for parsing scientifica ini files
 config = configp.ConfigParser()
 
 
-try:
-    lims_dbname = os.environ["LIMS_DBNAME"]
-    lims_user = os.environ["LIMS_USER"]
-    lims_host = os.environ["LIMS_HOST"]
-    lims_password = os.environ["LIMS_PASSWORD"]
-    lims_port = os.environ["LIMS_PORT"]
 
-    mtrain_dbname = os.environ["MTRAIN_DBNAME"]
-    mtrain_user = os.environ["MTRAIN_USER"]
-    mtrain_host = os.environ["MTRAIN_HOST"]
-    mtrain_password = os.environ["MTRAIN_PASSWORD"]
-    mtrain_port = os.environ["MTRAIN_PORT"]
+#  RELEVANT DIRECTORIES
 
-    lims_engine = PostgresQueryMixin(
-        dbname=lims_dbname,
-        user=lims_user,
-        host=lims_host,
-        password=lims_password,
-        port=lims_port
-    )
 
-    mtrain_engine = PostgresQueryMixin(
-        dbname=mtrain_dbname,
-        user=mtrain_user,
-        host=mtrain_host,
-        password=mtrain_password,
-        port=mtrain_port
-    )
+def get_platform_analysis_cache_dir():
+    """
+    This is the root directory to use for all saved analysis files
+    """
+    # return r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\platform_paper_cache_new'
+    return r'/data'
 
-except Exception as e:
-    warn_string = 'failed to set up LIMS/mtrain credentials\n{}\n\ninternal AIBS users should set up environment variables appropriately\nfunctions requiring database access will fail'.format(
-        e)
-    warnings.warn(warn_string)
 
+def get_sdk_cache_dir():
+    """
+    Directory containing the SDK S3 cache (manifest, NWB files, project metadata).
+    On Code Ocean, this is a separate data asset from the analysis files.
+    """
+    # return os.path.join(get_platform_analysis_cache_dir(), 'visual-behavior-ophys')
+    return r'/data'
+
+def get_analysis_files_dir():
+    return os.path.join(get_platform_analysis_cache_dir(), 'visual_behavior_analysis_files')
+
+def get_metadata_tables_dir():
+    return os.path.join(get_platform_analysis_cache_dir(), 'visual_behavior_metadata_tables')
+
+def get_performance_metrics_dir():
+    return os.path.join(get_platform_analysis_cache_dir(), 'visual_behavior_performance_metrics')
+
+def get_multi_session_mean_response_df():
+    return os.path.join(get_platform_analysis_cache_dir(), 'visual_behavior_multi_session_mean_responses')
+
+def get_cell_metrics_dir():
+    return os.path.join(get_platform_analysis_cache_dir(), 'visual_behavior_metadata_tables')
+
+def get_glm_results_dir():
+    return os.path.join(get_platform_analysis_cache_dir(), 'visual_behavior_glm_results')
+
+def get_clustering_results_dir():
+    return os.path.join(get_platform_analysis_cache_dir(), 'visual_behavior_clustering_results')
+
+def get_stimulus_behavior_response_dir():
+    return os.path.join(get_platform_analysis_cache_dir(), 'visual_behavior_stimulus_behavior_response')
+
+def get_stimulus_population_response_dir():
+    return os.path.join(get_platform_analysis_cache_dir(), 'visual_behavior_stimulus_population_response')
+
+
+
+def get_stimulus_response_df_dir(interpolate=True, output_sampling_rate=30, event_type='all'):
+    base_dir = get_platform_analysis_cache_dir()
+    if interpolate:
+        save_dir = os.path.join(base_dir, 'stimulus_response_dfs', 'interpolate_' + str(int(output_sampling_rate)) + 'Hz')
+    else:
+        save_dir = os.path.join(base_dir, 'stimulus_response_dfs', 'original_frame_rate')
+    if not os.path.exists(save_dir):
+        os.mkdir(save_dir)
+    return save_dir
+
+
+def get_multi_session_df_dir(interpolate=True, output_sampling_rate=30, event_type='all'):
+    base_dir = get_platform_analysis_cache_dir()
+    save_dir = os.path.join(base_dir, 'visual_behavior_multi_session_mean_responses')
+    return save_dir
+
+
+def get_manifest_path():
+    """
+    Get path to default manifest file for analysis
+    Default location of manifest is the production cache directory at /visual_behavior/2020_cache/production_cache'
+    This includes all VB production data and is not the same thing as the platform paper cache
+    """
+    manifest_path = os.path.join(get_production_cache_dir(), "manifest.json")
+    return manifest_path
+
+
+def get_visual_behavior_cache(from_s3=True, release_data_only=True, cache_dir=None):
+    """
+    Gets the visual behavior dataset cache object from s3 or lims
+    :param from_s3: If True, loads manifest from s3 and saves to provided cache_dir (or default cache_dir if None provided)
+    :param release_data_only: limits to data released on March 25th and August 12th when loading from lims
+    :param cache_dir: directory where to save manifest & data files if using s3
+    :return: SDK cache object
+    """
+    if from_s3:
+        if cache_dir is None:
+            cache_dir = get_sdk_cache_dir()
+            print(cache_dir)
+        cache = bpc.from_local_cache(cache_dir=cache_dir, use_static_cache=True)
+    else:
+        if release_data_only:
+            cache = bpc.from_lims(data_release_date=['2021-03-25', '2021-08-12'])
+        else:
+            cache = bpc.from_lims()
+    return cache
 
 
 def limit_stimulus_presentations_to_change_detection(stimulus_presentations):
@@ -135,132 +196,6 @@ def get_flagged_ophys_experiment_ids():
 
     return oeids
 
-#  RELEVANT DIRECTORIES
-
-
-def get_platform_analysis_cache_dir():
-    """
-    This is the cache directory to use for all platform paper analysis
-    This cache contains NWB files downloaded directly from AWS
-    """
-    # return '/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/platform_paper_cache_new'
-    return r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\platform_paper_cache_new'
-
-  
-def get_production_cache_dir():
-    """Get directory containing a manifest file that includes all VB production data, including failed experiments"""
-    cache_dir = '//allen/programs/mindscope/workgroups/learning/ophys/learning_project_cache'
-    # cache_dir = r'\\allen\programs\mindscope\workgroups\learning\ophys\learning_project_cache'
-    return cache_dir
-
-
-def get_qc_plots_dir():
-    return '//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots'
-
-
-def get_super_container_plots_dir():
-    return '//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/super_container_plots'
-
-
-def get_container_plots_dir():
-    return '//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/container_plots'
-
-
-def get_session_plots_dir():
-    return '//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/session_plots'
-
-
-def get_experiment_plots_dir():
-    return '//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/experiment_plots'
-
-
-def get_single_cell_plots_dir():
-    return '//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/single_cell_plots'
-
-
-def get_analysis_cache_dir():
-    return '//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/visual_behavior_production_analysis'
-
-
-def get_events_dir():
-    return '//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/event_detection'
-
-
-def get_behavior_model_outputs_dir():
-    return '//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/behavior_model_output'
-
-
-def get_decoding_analysis_dir():
-    return '//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/decoding'
-
-
-def get_ophys_glm_dir():
-    return '//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/ophys_glm'
-
-
-def get_stimulus_response_df_dir(interpolate=True, output_sampling_rate=30, event_type='all'):
-    base_dir = get_platform_analysis_cache_dir()
-    if interpolate:
-        save_dir = os.path.join(base_dir, 'stimulus_response_dfs', 'interpolate_' + str(int(output_sampling_rate)) + 'Hz')
-    else:
-        save_dir = os.path.join(base_dir, 'stimulus_response_dfs', 'original_frame_rate')
-    if not os.path.exists(save_dir):
-        os.mkdir(save_dir)
-    return save_dir
-
-
-def get_multi_session_df_dir(interpolate=True, output_sampling_rate=30, event_type='all'):
-    base_dir = get_platform_analysis_cache_dir()
-    if interpolate:
-        save_dir = os.path.join(base_dir, 'multi_session_mean_response_dfs', 'interpolate_' + str(output_sampling_rate) + 'Hz')
-    else:
-        save_dir = os.path.join(base_dir, 'multi_session_mean_response_dfs', 'original_frame_rate')
-    if not os.path.exists(save_dir):
-        os.mkdir(save_dir)
-    return save_dir
-
-
-# def get_multi_session_df_dir(interpolate=True, output_sampling_rate=30, event_type='all'):
-#     base_dir = get_platform_analysis_cache_dir()
-#     if interpolate:
-#         save_dir = os.path.join(base_dir, 'multi_session_mean_response_dfs', event_type, 'interpolate_' + str(output_sampling_rate) + 'Hz')
-#     else:
-#         save_dir = os.path.join(base_dir, 'multi_session_mean_response_dfs', event_type, 'original_frame_rate')
-#     if not os.path.exists(save_dir):
-#         os.mkdir(save_dir)
-#     return save_dir
-
-
-def get_manifest_path():
-    """
-    Get path to default manifest file for analysis
-    Default location of manifest is the production cache directory at /visual_behavior/2020_cache/production_cache'
-    This includes all VB production data and is not the same thing as the platform paper cache
-    """
-    manifest_path = os.path.join(get_production_cache_dir(), "manifest.json")
-    return manifest_path
-
-
-def get_visual_behavior_cache(from_s3=True, release_data_only=True, cache_dir=None):
-    """
-    Gets the visual behavior dataset cache object from s3 or lims
-    :param from_s3: If True, loads manifest from s3 and saves to provided cache_dir (or default cache_dir if None provided)
-    :param release_data_only: limits to data released on March 25th and August 12th when loading from lims
-    :param cache_dir: directory where to save manifest & data files if using s3
-    :return: SDK cache object
-    """
-    if from_s3:
-        if cache_dir is None:
-            cache_dir = get_platform_analysis_cache_dir()
-            print(cache_dir)
-        cache = bpc.from_s3_cache(cache_dir=cache_dir)
-    else:
-        if release_data_only:
-            cache = bpc.from_lims(data_release_date=['2021-03-25', '2021-08-12'])
-        else:
-            cache = bpc.from_lims()
-    return cache
-
 
 def get_released_ophys_experiment_table(exclude_ai94=True):
     '''
@@ -301,8 +236,8 @@ def get_platform_paper_experiment_table(add_extra_columns=True, limit_to_closest
 
 
     """
-    cache_dir = get_platform_analysis_cache_dir()
-    cache = bpc.from_s3_cache(cache_dir=cache_dir)
+    cache_dir = get_sdk_cache_dir()
+    cache = bpc.from_local_cache(cache_dir=cache_dir, use_static_cache=True)
     experiment_table = cache.get_ophys_experiment_table()
 
     # REMOVE PROBLEMATIC SESSIONS
@@ -419,7 +354,7 @@ def get_platform_paper_behavior_session_table(include_4x2_data=False, add_extra_
     add_extra_columns(bool), whether or not to add a bunch of useful columns to sort behavior sessions by
                                 such as whether a session has ophys, the abbreviated stimulus name, cell type, etc.
     """
-    cache_dir = get_platform_analysis_cache_dir()
+    cache_dir = get_sdk_cache_dir()
     cache = bpc.from_s3_cache(cache_dir=cache_dir)
     behavior_sessions = cache.get_behavior_session_table()
 
@@ -1036,7 +971,7 @@ def get_ophys_dataset(ophys_experiment_id, include_invalid_rois=False, load_from
     if load_from_lims:
         dataset = BehaviorOphysExperiment.from_lims(int(ophys_experiment_id))
     elif load_from_nwb:
-        cache_dir = get_platform_analysis_cache_dir()
+        cache_dir = get_sdk_cache_dir()
         cache = bpc.from_s3_cache(cache_dir=cache_dir)
         dataset = cache.get_behavior_ophys_experiment(ophys_experiment_id)
     else:
@@ -1164,7 +1099,7 @@ def get_behavior_dataset(behavior_session_id, from_lims=False, from_nwb=True,
     if from_lims:
         dataset = BehaviorSession.from_lims(behavior_session_id)
     elif from_nwb:
-        cache_dir = get_platform_analysis_cache_dir()
+        cache_dir = get_sdk_cache_dir()
         cache = bpc.from_s3_cache(cache_dir=cache_dir)
         dataset = cache.get_behavior_session(behavior_session_id, skip_eye_tracking=True)
     else:
@@ -1207,7 +1142,7 @@ def get_ophys_container_ids(platform_paper_only=False, add_extra_columns=True):
     if platform_paper_only:
         experiments = get_platform_paper_experiment_table(add_extra_columns=add_extra_columns, limit_to_closest_active=True)
     else:
-        cache_dir = get_platform_analysis_cache_dir()
+        cache_dir = get_sdk_cache_dir()
         cache = bpc.from_s3_cache(cache_dir)
         experiments = cache.get_ophys_experiment_table()
     container_ids = np.sort(experiments.ophys_container_id.unique())
@@ -3024,7 +2959,7 @@ def load_multi_session_df(data_type, event_type, conditions, inclusion_criteria,
     :param epoch_duration_mins: epoch duration used when creating stim response df 'epoch' column
     :return:
     """
-    cache_dir = get_platform_analysis_cache_dir()
+    cache_dir = get_sdk_cache_dir()
     cache = bpc.from_s3_cache(cache_dir=cache_dir)
     experiments_table = cache.get_ophys_experiment_table()
     print(len(experiments_table))
@@ -3039,12 +2974,19 @@ def load_multi_session_df(data_type, event_type, conditions, inclusion_criteria,
     multi_session_df_dir = get_multi_session_df_dir(interpolate=interpolate, output_sampling_rate=output_sampling_rate, event_type=event_type)
     print('loading files from', multi_session_df_dir)
 
+    # Also check for pre-saved files in the multi_session_mean_responses directory (flat structure from data assets)
+    multi_session_mean_response_dir = get_multi_session_mean_response_df()
+
     saved_multi_session_df_filename = get_file_name_for_saved_multi_session_df(data_type, event_type,
                                                                                        conditions,
                                                                                        inclusion_criteria,
                                                                                        epoch_duration_mins)
     print(saved_multi_session_df_filename)
     saved_multi_session_df_filepath = os.path.join(multi_session_df_dir, saved_multi_session_df_filename)
+    # Check the flat multi_session_mean_responses directory as well (Code Ocean data asset layout)
+    saved_multi_session_df_filepath_alt = os.path.join(multi_session_mean_response_dir, saved_multi_session_df_filename)
+    if not os.path.exists(saved_multi_session_df_filepath) and os.path.exists(saved_multi_session_df_filepath_alt):
+        saved_multi_session_df_filepath = saved_multi_session_df_filepath_alt
     # if mutli session df for these conditions has already been generated and saved, load it
     if os.path.exists(saved_multi_session_df_filepath):
         print('loading multi_session_df from saved file at',saved_multi_session_df_filepath)
@@ -3468,7 +3410,7 @@ def get_cell_table(platform_paper_only=True, add_extra_columns=True, limit_to_cl
     if 'limit_to_matched_cells' is True, will only return cells that are matched in all 3 experience levels
     :return:
     """
-    cache_dir = get_platform_analysis_cache_dir()
+    cache_dir = get_sdk_cache_dir()
     cache = bpc.from_s3_cache(cache_dir=cache_dir)
     # load cell table
     cell_table = cache.get_ophys_cells_table()
@@ -3535,7 +3477,7 @@ def get_data_dict(ophys_experiment_ids, data_types=None):
         data_types = ['filtered_events', 'running_speed', 'pupil_width', 'lick_rate']
     # get cache
     from allensdk.brain_observatory.behavior.behavior_project_cache import VisualBehaviorOphysProjectCache
-    cache_dir = get_platform_analysis_cache_dir()
+    cache_dir = get_sdk_cache_dir()
     cache = VisualBehaviorOphysProjectCache.from_s3_cache(cache_dir)
     # define params
     time_window = [-3, 3.1]
