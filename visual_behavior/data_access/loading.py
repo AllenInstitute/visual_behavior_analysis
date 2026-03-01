@@ -84,7 +84,7 @@ def convert_boolean_cols_to_bool(stimulus_presentations):
                 row_ids = stimulus_presentations[stimulus_presentations[column].isnull()].index
                 stimulus_presentations.loc[row_ids, column] = False
                 stimulus_presentations.loc[row_ids, column] = stimulus_presentations[column].astype('bool', inplace=True)
-        except:
+        except Exception:
             if stimulus_presentations[column].dtype == 'boolean':
                 # remove NaNs and make bool
                 row_ids = stimulus_presentations[stimulus_presentations[column].isnull()].index

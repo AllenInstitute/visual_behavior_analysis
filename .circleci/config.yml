@@ -9,10 +9,10 @@ jobs:
             flake8 visual_behavior
           name: lint it up
 
-  test-36-pinned-allensdk: &linux-template
+  test-39-pinned-allensdk: &linux-template
     parameters:
       pyversion:
-        default: "3.6.12"
+        default: "3.9"
         type: string
     executor: python/default
     steps:
@@ -31,7 +31,8 @@ jobs:
           command: |
             export PATH="$HOME/miniconda/bin:$PATH"
             source activate test-environment
-            pip install .[DEV]
+            pip install --upgrade pip setuptools
+            pip install ".[DEV]"
           name: install dependencies
       - run:
           command: |
@@ -40,18 +41,11 @@ jobs:
             python -m pytest -m "not onprem"
           name: run tests
 
-  test-37-pinned-allensdk:
+  test-310-pinned-allensdk:
     <<: *linux-template
     parameters:
       pyversion:
-        default: "3.7.7"
-        type: string
-  
-  test-38-pinned-allensdk:
-    <<: *linux-template
-    parameters:
-      pyversion:
-        default: "3.8.10"
+        default: "3.10"
         type: string
 
 orbs:
@@ -61,6 +55,5 @@ workflows:
   basic:
     jobs:
       - lint
-      - test-36-pinned-allensdk
-      - test-37-pinned-allensdk
-      - test-38-pinned-allensdk
+      - test-39-pinned-allensdk
+      - test-310-pinned-allensdk

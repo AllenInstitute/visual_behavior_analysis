@@ -13,7 +13,7 @@ authors = [
 urls = {homepage = "https://github.com/AllenInstitute/visual_behavior_analysis"}
 dependencies = [
     "allensdk==2.16.2",
-    "scikit-learn==1.3.2",
+    "scikit-learn==1.5.0",
     "python-dateutil>=2.6.1",
     "scipy==1.10.1",
     "numpy==1.22.0",
@@ -37,6 +37,9 @@ DEV = [
     "pytest-html",
     "coverage",
     "markupsafe==2.0.1",
+]
+GLM = [
+    "visual-behavior-glm @ git+https://github.com/AllenInstitute/visual_behavior_glm.git",
 ]
 
 [tool.setuptools.packages.find]

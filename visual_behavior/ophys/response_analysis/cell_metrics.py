@@ -410,7 +410,7 @@ def get_population_coupling_for_cell_specimen_ids(traces):
         population_trace = traces.loc[cell_specimen_ids[cell_specimen_ids != cell_specimen_id]][trace_column].mean()
         try:
             r, p_value = pearsonr(cell_trace, population_trace)
-        except:
+        except Exception:
             r = np.nan
             p_value = np.nan
         pc_list.append([cell_specimen_id, r, p_value])
