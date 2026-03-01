@@ -38,6 +38,9 @@ DEV = [
     "coverage",
     "markupsafe==2.0.1",
 ]
+GLM = [
+    "visual-behavior-glm @ git+https://github.com/AllenInstitute/visual_behavior_glm.git",
+]
 
 [tool.setuptools.packages.find]
 where = ["."]
