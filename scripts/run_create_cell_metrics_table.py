@@ -18,7 +18,7 @@ stdout_location = r"/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/
 
 from allensdk.brain_observatory.behavior.behavior_project_cache import VisualBehaviorOphysProjectCache as bpc
 cache_dir = loading.get_platform_analysis_cache_dir()
-cache = bpc.from_s3_cache(cache_dir=cache_dir)
+cache = bpc.from_local_cache(cache_dir=cache_dir, use_static_cache=True)
 experiments_table = cache.get_ophys_experiment_table()
 experiments_table = experiments_table[(experiments_table.reporter_line != 'Ai94(TITL-GCaMP6s)')]
 ophys_experiment_ids = experiments_table.index.values

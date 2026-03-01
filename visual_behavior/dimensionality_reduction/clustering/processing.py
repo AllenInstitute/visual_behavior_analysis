@@ -32,8 +32,8 @@ from statsmodels.stats.proportion import proportion_confint
 from statsmodels.stats.proportion import multinomial_proportions_confint
 from visual_behavior.dimensionality_reduction.clustering import plotting as plotting
 
-cache_dir = loading.get_platform_analysis_cache_dir()
-cache = VisualBehaviorOphysProjectCache.from_s3_cache(cache_dir=cache_dir)
+cache_dir = loading.get_sdk_cache_dir()
+cache = VisualBehaviorOphysProjectCache.from_local_cache(cache_dir=cache_dir, use_static_cache=True)
 
 
 import seaborn as sns
@@ -4384,7 +4384,7 @@ def get_cells_matched_in_3_familiar_active_sessions():
     limits to cells matched in the first 3 familiar active sessions
     and modifies "experience_level" column to include the familiar active session number (ex: Familiar 1, Familiar 2, etc)
     """
-    cache_dir = loading.get_platform_analysis_cache_dir()
+    cache_dir = loading.get_sdk_cache_dir()
     cache = VisualBehaviorOphysProjectCache.from_s3_cache(cache_dir=cache_dir)
     experiment_table = cache.get_ophys_experiment_table()
     # remove 4x2 and GC6s

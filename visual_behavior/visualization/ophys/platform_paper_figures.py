@@ -2731,7 +2731,7 @@ def plot_cell_response_heatmap(data, timestamps, xlabel='time after change (s)',
 def plot_response_heatmaps_for_conditions(multi_session_df, timestamps, data_type, event_type,
                                           row_condition, col_condition, matched_cells_table=None, plot_epochs=False,
                                           cols_to_sort_by=None, cell_order=None, suptitle=None,
-                                          microscope=None,  xlim_seconds=None, xlabel='time (s)',
+                                          microscope=None, vmax=None, xlim_seconds=None, xlabel='time (s)',
                                           match_cells=False, cbar=True, cbar_label='Avg. calcium events',
                                           save_dir=None, folder=None, suffix='', ax=None):
     sdf = multi_session_df.copy()
@@ -2753,14 +2753,15 @@ def plot_response_heatmaps_for_conditions(multi_session_df, timestamps, data_typ
         cre_sdf = sdf[(sdf[row_condition] == row)]
         for c, col in enumerate(col_conditions):
 
-            if row == 'Excitatory':
-                vmax = 0.005
-            elif row == 'Vip Inhibitory':
-                vmax = 0.01
-            elif row == 'Sst Inhibitory':
-                vmax = 0.015
-            else:
-                vmax = 0.02
+            if vmax == None: 
+                if row == 'Excitatory':
+                    vmax = 0.005
+                elif row == 'Vip Inhibitory':
+                    vmax = 0.01
+                elif row == 'Sst Inhibitory':
+                    vmax = 0.015
+                else:
+                    vmax = 0.02
 
             if plot_epochs:
                 vmax = vmax*3
@@ -2770,11 +2771,15 @@ def plot_response_heatmaps_for_conditions(multi_session_df, timestamps, data_typ
             #     exp_data = exp_data.sort_values(by=cols_to_sort_by, ascending=True)
             # else:
             if match_cells:
-                matched_cells_this_ct = matched_cells_table[(matched_cells_table[row_condition] == row)].cell_specimen_id.unique()
+                if matched_cells_table != None: 
+                    matched_cells_this_ct = matched_cells_table[(matched_cells_table[row_condition] == row)].cell_specimen_id.unique()
+                    # print(len(matched_cells_this_ct))
+                else: 
+                    matched_cells_this_ct = cre_sdf[(cre_sdf[row_condition] == row)].cell_specimen_id.unique()
                 cre_sdf = cre_sdf[cre_sdf.cell_specimen_id.isin(matched_cells_this_ct)]
                 # print(row, col, 'match_cells')
-                # cell_order = cre_sdf[(cre_sdf.experience_level=='Novel') &
-                #                      (cre_sdf.cell_specimen_id.isin(exp_data.cell_specimen_id.unique()))].sort_values(by=['cell_type', 'mean_response']).cell_specimen_id.values
+                    # cell_order = cre_sdf[(cre_sdf.experience_level=='Novel') &
+                    #                   (cre_sdf.cell_specimen_id.isin(exp_data.cell_specimen_id.unique()))].sort_values(by=['cell_type', 'mean_response']).cell_specimen_id.values
                 # get cell order for novel session
                 if plot_epochs:
                     exp_data = exp_data.reset_index()
@@ -2794,6 +2799,7 @@ def plot_response_heatmaps_for_conditions(multi_session_df, timestamps, data_typ
                     novel_cell_order = novel_cell_order.index.values
 
                 # apply it to current session
+                # print('sort by novel session order')
                 exp_data = exp_data.set_index('cell_specimen_id')
                 exp_data = exp_data.loc[novel_cell_order]
                 # print(row, novel_cell_order[:3], novel_cell_order[-3:])
@@ -2807,7 +2813,7 @@ def plot_response_heatmaps_for_conditions(multi_session_df, timestamps, data_typ
                 #         order = novel_cell_order.index.values
                 #     else:
                 #         novel_cell_order = novel_cell_order.loc[order]
-            else: # otherwise wort by mean response in session
+            else: # otherwise sort by mean response in session
                 # print('sort by mean response within session')
                 exp_data = exp_data.sort_values(by='mean_response', ascending=True)
             # turn responses it into a dataframe where columns are timestamps
@@ -2823,8 +2829,8 @@ def plot_response_heatmaps_for_conditions(multi_session_df, timestamps, data_typ
             n_cells = len(data)
             # n_cells = data.shape[0]
             # make sure its sorted properly
-            # if match_cells:
-            #     data = data.loc[novel_cell_order]
+            if match_cells:
+                data = data.loc[novel_cell_order]
 
             ax[i] = plot_cell_response_heatmap(data, timestamps=timestamps, vmax=vmax, xlabel=xlabel, cbar=cbar,
                                                microscope=microscope, cbar_label=cbar_label, ax=ax[i])
@@ -4736,8 +4742,8 @@ if __name__ == '__main__':
     from allensdk.brain_observatory.behavior.behavior_project_cache import VisualBehaviorOphysProjectCache
 
     # load cache
-    cache_dir = loading.get_platform_analysis_cache_dir()
-    cache = VisualBehaviorOphysProjectCache.from_s3_cache(cache_dir)
+    cache_dir = loading.get_sdk_cache_dir()
+    cache = VisualBehaviorOphysProjectCache.from_local_cache(cache_dir=cache_dir, use_static_cache=True)
     experiments_table = loading.get_platform_paper_experiment_table()
 
     # load multi_session_df

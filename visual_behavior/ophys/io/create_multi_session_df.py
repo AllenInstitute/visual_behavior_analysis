@@ -71,8 +71,8 @@ def get_multi_session_df(project_code, session_number, conditions, data_type, ev
         get_pref_stim = False
     print('get_pref_stim', get_pref_stim)
 
-    cache_dir = loading.get_platform_analysis_cache_dir()
-    cache = VisualBehaviorOphysProjectCache.from_s3_cache(cache_dir=cache_dir)
+    cache_dir = loading.get_sdk_cache_dir()
+    cache = VisualBehaviorOphysProjectCache.from_local_cache(cache_dir=cache_dir, use_static_cache=True)
     print(cache_dir)
     experiments_table = cache.get_ophys_experiment_table()
     # dont include Ai94 experiments because they makes things too slow

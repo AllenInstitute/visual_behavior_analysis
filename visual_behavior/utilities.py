@@ -18,7 +18,9 @@ from visual_behavior.data_access import loading
 import visual_behavior.visualization.behavior as behavior
 from visual_behavior.ophys.sync.sync_dataset import Dataset
 
-import mindscope_utilities.visual_behavior_ophys.data_formatting as data_formatting
+# import mindscope_utilities.visual_behavior_ophys.data_formatting as data_formatting
+import brain_observatory_utilities.datasets.optical_physiology.data_formatting as ophys_formatting
+import brain_observatory_utilities.datasets.behavior.data_formatting as behavior_formatting
 
 
 def flatten_list(in_list):
@@ -1157,7 +1159,7 @@ def get_behavior_stats(behavior_session_id, method='stimulus_based', engaged_onl
         elif method == 'stimulus_based':
 
             # stimulus_presentations = annotate_stimuli(session, inplace=False)
-            stimulus_presentations = data_formatting.annotate_stimuli(session, inplace=False)
+            stimulus_presentations = behavior_formatting.annotate_stimuli(session, inplace=False)
             print(len(stimulus_presentations), 'total stimulus presentations')
 
             if engaged_only == True: # 2/3 rewards / min threshold
@@ -1336,7 +1338,7 @@ def cache_response_probability(behavior_session_id, engaged_only=True):
     # get stimulus presentations and annotate
     dataset = loading.get_behavior_dataset(behavior_session_id)
     # stimulus_presentations = annotate_stimuli(dataset)
-    stimulus_presentations = data_formatting.annotate_stimuli(dataset, inplace=False)
+    stimulus_presentations = behavior_formatting.annotate_stimuli(dataset, inplace=False)
 
     if engaged_only:
         stimulus_presentations = stimulus_presentations[stimulus_presentations.engagement_state == 'engaged']

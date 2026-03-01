@@ -13,7 +13,10 @@ import visual_behavior.data_access.loading as loading
 import visual_behavior.visualization.ophys.summary_figures as sf
 import visual_behavior.visualization.ophys.platform_paper_figures as ppf
 
-import mindscope_utilities.general_utilities as ms_utils
+# import mindscope_utilities.general_utilities as ms_utils
+import brain_observatory_utilities.datasets.optical_physiology.data_formatting as ophys_formatting
+import brain_observatory_utilities.datasets.behavior.data_formatting as behavior_formatting
+
 
 import visual_behavior_glm.GLM_params as glm_params
 
@@ -1257,7 +1260,7 @@ def get_time_window_for_kernel(kernels, feature):
 
 def get_t_array_for_kernel(kernels, feature, frame_rate):
     time_window = get_time_window_for_kernel(kernels, feature)
-    t_array = ms_utils.get_time_array(t_start=time_window[0], t_end=time_window[1], sampling_rate=frame_rate,
+    t_array = ophys_formatting.get_time_array(t_start=time_window[0], t_end=time_window[1], sampling_rate=frame_rate,
                                       include_endpoint=False)
     if 'image' in feature:
         t_array = t_array[:-1]  # not sure why we have to do this

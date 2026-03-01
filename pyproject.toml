@@ -20,7 +20,7 @@ dependencies = [
     "zipfile36",
     "pymongo",
     "pyyaml",
-    "opencv-python",
+    "opencv-python-headless",
     "dash",
     "plotly",
     "hdmf",
