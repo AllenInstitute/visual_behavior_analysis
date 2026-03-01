@@ -7,3 +7,4 @@ User Guide
    installation
    quickstart
    data_structures
+   internal_paths

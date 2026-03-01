@@ -17,6 +17,29 @@ def discrim(
         metric=None,
         metric_kws=None
 ):
+    """Compute a discrimination metric between ground-truth change and detected response.
+
+    Parameters
+    ----------
+    session_trials : pd.DataFrame
+        Trial-level DataFrame (e.g. from ``VisualBehaviorOphysDataset.trials``).
+    change : str
+        Column name indicating whether a change occurred (boolean or 0/1).
+    detect : str
+        Column name indicating whether the animal responded (boolean or 0/1).
+    trial_types : tuple of str, optional
+        Trial types to include.  Defaults to ``('go', 'catch')``.
+    metric : callable, optional
+        Discrimination function with signature ``metric(y_true, y_pred)``.
+        Defaults to :func:`visual_behavior.metrics.d_prime`.
+    metric_kws : dict, optional
+        Extra keyword arguments forwarded to *metric*.
+
+    Returns
+    -------
+    float
+        Scalar discrimination value (e.g. d').
+    """
     if metric is None:
         metric = d_prime
 
@@ -32,6 +55,22 @@ def discrim(
 
 
 def response_bias(session_trials, detect, trial_types=('go', 'catch')):
+    """Compute the overall response rate across specified trial types.
+
+    Parameters
+    ----------
+    session_trials : pd.DataFrame
+        Trial-level DataFrame.
+    detect : str
+        Column name indicating whether the animal responded (boolean or 0/1).
+    trial_types : tuple of str, optional
+        Trial types to include.  Defaults to ``('go', 'catch')``.
+
+    Returns
+    -------
+    float
+        Mean response rate (0–1) across the selected trials.
+    """
     mask = masks.trial_types(session_trials, trial_types)
 
     return session_trials[mask][detect].mean()
@@ -88,16 +127,55 @@ def flashwise_lick_probability(session_trials, flash_blank_duration=0.75):
 
 
 def num_trials(session_trials):
+    """Return the total number of trials in the session.
+
+    Parameters
+    ----------
+    session_trials : pd.DataFrame
+        Trial-level DataFrame.
+
+    Returns
+    -------
+    int
+        Total row count.
+    """
     return len(session_trials)
 
 
 def num_usable_trials(session_trials):
+    """Count contingent (go/catch) trials within the high-reward-rate epoch.
+
+    Filters to trials that pass the reward-rate mask (indicating the mouse is
+    engaged), then counts only go and catch trial types.
+
+    Parameters
+    ----------
+    session_trials : pd.DataFrame
+        Trial-level DataFrame.
+
+    Returns
+    -------
+    int
+        Number of usable go/catch trials.
+    """
     usable_trials = session_trials[masks.reward_rate(session_trials)]
 
     return num_contingent_trials(usable_trials)
 
 
 def num_contingent_trials(session_trials):
+    """Count go and catch (contingent) trials.
+
+    Parameters
+    ----------
+    session_trials : pd.DataFrame
+        Trial-level DataFrame.
+
+    Returns
+    -------
+    int
+        Number of trials whose ``trial_type`` is ``'go'`` or ``'catch'``.
+    """
     return session_trials['trial_type'].isin(['go', 'catch']).sum()
 
 
@@ -127,21 +205,78 @@ def reward_lick_count(session_trials):
 
 
 def reward_lick_latency(session_trials):
+    """Return the mean latency from reward delivery to first lick.
+
+    Parameters
+    ----------
+    session_trials : pd.DataFrame
+        Trial-level DataFrame containing a ``reward_lick_latency`` column.
+
+    Returns
+    -------
+    float
+        Mean reward lick latency in seconds.
+    """
     quantile = session_trials['reward_lick_latency'].mean()
     return quantile
 
 
 def total_water(session_trials, trial_types=()):
+    """Return the total volume of water delivered across specified trial types.
+
+    Parameters
+    ----------
+    session_trials : pd.DataFrame
+        Trial-level DataFrame.
+    trial_types : tuple of str, optional
+        Restrict to these trial types.  An empty tuple includes all trials.
+
+    Returns
+    -------
+    float
+        Sum of ``reward_volume`` (µL) across selected trials.
+    """
     mask = masks.trial_types(session_trials, trial_types)
 
     return session_trials[mask]['reward_volume'].sum()
 
 
 def earned_water(session_trials):
+    """Return total water earned on go trials (excludes auto-rewards).
+
+    Parameters
+    ----------
+    session_trials : pd.DataFrame
+        Trial-level DataFrame.
+
+    Returns
+    -------
+    float
+        Sum of ``reward_volume`` (µL) on go trials only.
+    """
     return total_water(session_trials, ('go', ))
 
 
 def peak_dprime(session_trials, first_valid_trial=50, sliding_window=100, apply_trial_number_limit=False):
+    """Return the peak d' over the session using a rolling window.
+
+    Parameters
+    ----------
+    session_trials : pd.DataFrame
+        Trial-level DataFrame (aborted trials are excluded internally).
+    first_valid_trial : int, optional
+        Trial index before which d' values are ignored.  Defaults to 50.
+    sliding_window : int, optional
+        Number of trials in the rolling window.  Defaults to 100.
+    apply_trial_number_limit : bool, optional
+        Passed through to :func:`get_response_rates`.  Defaults to ``False``.
+
+    Returns
+    -------
+    float
+        Peak d' value after *first_valid_trial*, or ``np.nan`` if all values
+        are NaN or the session is too short.
+    """
     mask = (session_trials['trial_type'] != 'aborted')
     _, _, dp = get_response_rates(
         session_trials[mask],
@@ -157,6 +292,18 @@ def peak_dprime(session_trials, first_valid_trial=50, sliding_window=100, apply_
 
 
 def peak_hit_rate(session_trials):
+    """Return the peak hit rate over a 100-trial rolling window (after trial 50).
+
+    Parameters
+    ----------
+    session_trials : pd.DataFrame
+        Trial-level DataFrame.
+
+    Returns
+    -------
+    float
+        Peak hit rate (0–1), or ``np.nan`` if the session is too short.
+    """
     mask = (session_trials['trial_type'] != 'aborted')
     hr, _, _ = get_response_rates(session_trials[mask], sliding_window=100)
     if all(np.isnan(hr)):
@@ -168,6 +315,18 @@ def peak_hit_rate(session_trials):
 
 
 def peak_false_alarm_rate(session_trials):
+    """Return the peak false-alarm rate over a 100-trial rolling window (after trial 50).
+
+    Parameters
+    ----------
+    session_trials : pd.DataFrame
+        Trial-level DataFrame.
+
+    Returns
+    -------
+    float
+        Peak false-alarm rate (0–1), or ``np.nan`` if the session is too short.
+    """
     mask = (session_trials['trial_type'] != 'aborted')
     _, far, _ = get_response_rates(session_trials[mask], sliding_window=100)
     if all(np.isnan(far)):
@@ -179,6 +338,22 @@ def peak_false_alarm_rate(session_trials):
 
 
 def fraction_time_by_trial_type(session_trials, trial_type='aborted'):
+    """Return the fraction of total session time spent in a given trial type.
+
+    Parameters
+    ----------
+    session_trials : pd.DataFrame
+        Trial-level DataFrame.
+    trial_type : str, optional
+        Full trial type label (e.g. ``'aborted'``, ``'hit'``).  Defaults to
+        ``'aborted'``.
+
+    Returns
+    -------
+    float
+        Fraction (0–1) of total ``trial_length`` attributable to *trial_type*,
+        or 0.0 if the trial type is absent.
+    """
     session_trials['full_trial_type'] = session_trials.apply(assign_trial_description, axis=1)
     trial_fractions = session_trials.groupby('full_trial_type')['trial_length'].sum() / session_trials['trial_length'].sum()
     try:
@@ -188,6 +363,20 @@ def fraction_time_by_trial_type(session_trials, trial_type='aborted'):
 
 
 def trial_count_by_trial_type(session_trials, trial_type='hit'):
+    """Return the number of trials of a given full trial type.
+
+    Parameters
+    ----------
+    session_trials : pd.DataFrame
+        Trial-level DataFrame.
+    trial_type : str, optional
+        Full trial type label.  Defaults to ``'hit'``.
+
+    Returns
+    -------
+    int or float
+        Trial count, or 0.0 if the trial type is absent.
+    """
     session_trials['full_trial_type'] = session_trials.apply(assign_trial_description, axis=1)
     trial_count = session_trials.groupby('full_trial_type')['trial_length'].count()
     try:
@@ -218,6 +407,18 @@ def session_id(session_trials):
 
 
 def isnull(a):
+    """Check whether *a* contains any null values, handling both scalars and arrays.
+
+    Parameters
+    ----------
+    a : scalar or array-like
+        Value to test.
+
+    Returns
+    -------
+    bool
+        ``True`` if *a* is null or contains any null element.
+    """
     try:
         return pd.isnull(a).any()
     except AttributeError:
@@ -240,30 +441,114 @@ def blank_duration(session_trials):
 
 
 def training_stage(session_trials):
+    """Return the training stage string for the session.
+
+    Parameters
+    ----------
+    session_trials : pd.DataFrame
+        Trial-level DataFrame with a ``stage`` column.
+
+    Returns
+    -------
+    str
+        Training stage label from the first trial row.
+    """
     return session_trials['stage'].iloc[0]
 
 
 def session_duration(session_trials):
+    """Return the total session duration in seconds.
+
+    Parameters
+    ----------
+    session_trials : pd.DataFrame
+        Trial-level DataFrame.
+
+    Returns
+    -------
+    float
+        Sum of ``trial_length`` across all trials.
+    """
     return session_trials['trial_length'].sum()
 
 
 def day_of_week(session_trials):
+    """Return the day-of-week integer for the session.
+
+    Parameters
+    ----------
+    session_trials : pd.DataFrame
+        Trial-level DataFrame with a ``dayofweek`` column.
+
+    Returns
+    -------
+    int
+        Day of week (0 = Monday … 6 = Sunday).
+    """
     return session_trials['dayofweek'].iloc[0]
 
 
 def change_time_distribution(session_trials):
+    """Return the change-time distribution type for the session.
+
+    Parameters
+    ----------
+    session_trials : pd.DataFrame
+        Trial-level DataFrame with a ``stimulus_distribution`` column.
+
+    Returns
+    -------
+    str
+        Distribution label (e.g. ``'exponential'`` or ``'geometric'``).
+    """
     return session_trials['stimulus_distribution'].iloc[0]
 
 
 def trial_duration(session_trials):
+    """Return the nominal trial duration for the session.
+
+    Parameters
+    ----------
+    session_trials : pd.DataFrame
+        Trial-level DataFrame with a ``trial_duration`` column.
+
+    Returns
+    -------
+    float
+        Trial duration in seconds.
+    """
     return session_trials['trial_duration'].iloc[0]
 
 
 def user_id(session_trials):
+    """Return the user/experimenter ID for the session.
+
+    Parameters
+    ----------
+    session_trials : pd.DataFrame
+        Trial-level DataFrame with a ``user_id`` column.
+
+    Returns
+    -------
+    str
+        User identifier from the first trial row.
+    """
     return session_trials.iloc[0].user_id
 
 
 def rig_id(session_trials):
+    """Return the rig identifier for the session.
+
+    Parameters
+    ----------
+    session_trials : pd.DataFrame
+        Trial-level DataFrame.  May or may not contain a ``rig_id`` column.
+
+    Returns
+    -------
+    str
+        Rig ID, or ``'unknown'`` if the column is absent.
+    """
     try:
         rig_id = session_trials['rig_id'].iloc[0]
     except KeyError:
@@ -272,14 +557,54 @@ def rig_id(session_trials):
 
 
 def filename(session_trials):
+    """Return the source data filename for the session.
+
+    Parameters
+    ----------
+    session_trials : pd.DataFrame
+        Trial-level DataFrame with a ``filename`` column.
+
+    Returns
+    -------
+    str
+        Path to the original data file.
+    """
     return session_trials.iloc[0].filename
 
 
 def stimulus(session_trials):
+    """Return the stimulus class used in the session.
+
+    Parameters
+    ----------
+    session_trials : pd.DataFrame
+        Trial-level DataFrame with a ``stimulus`` column.
+
+    Returns
+    -------
+    str
+        Stimulus label (e.g. ``'natural_images'``).
+    """
     return session_trials['stimulus'].iloc[0]
 
 
 def reward_rate(session_trials, epoch_length):
+    """Compute the reward rate (rewards per second) over a given epoch.
+
+    Only counts rewarded go trials; auto-rewarded trials are excluded.
+
+    Parameters
+    ----------
+    session_trials : pd.DataFrame
+        Trial-level DataFrame.
+    epoch_length : float
+        Duration of the epoch in seconds used as the denominator.
+
+    Returns
+    -------
+    float
+        Rewards per second.
+    """
 
     mask = (
         masks.trial_types(session_trials, ('go',))

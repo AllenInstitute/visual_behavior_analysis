@@ -57,3 +57,9 @@ Most ophys functionality requires either:
 - Or the public `AllenSDK cache <https://allensdk.readthedocs.io/en/latest/visual_behavior_ophys.html>`_, which can be set up without internal access
 
 See :doc:`quickstart` for examples of both access patterns.
+
+.. note::
+
+   Many functions contain hardcoded Allen Institute filesystem paths that are
+   unreachable from outside the Allen network.  See :doc:`internal_paths` for
+   a full list and guidance on providing your own paths.

@@ -135,6 +135,20 @@ def slice_inds_and_offsets(ophys_times, event_times, window_around_timepoint_sec
 
 
 def get_nan_trace_cell_specimen_ids(dff_traces):
+    """Return cell specimen IDs whose dF/F traces contain any NaN values.
+
+    Parameters
+    ----------
+    dff_traces : pd.DataFrame
+        DataFrame with index ``cell_specimen_id`` and a ``dff`` column
+        containing 1-D trace arrays.
+
+    Returns
+    -------
+    pd.Index
+        Cell specimen IDs (subset of *dff_traces* index) whose trace has at
+        least one NaN value.
+    """
     nan_indices = np.unique(np.where(np.isnan(np.vstack(dff_traces.dff.values)))[0])
     nan_cell_ids = dff_traces.index[nan_indices]
     return nan_cell_ids
@@ -328,6 +342,41 @@ def get_p_value_from_shuffled_flashes(mean_responses,
 
 def get_response_xr(session, traces, timestamps, event_times, event_ids, trace_ids, response_analysis_params,
                     frame_rate=None):
+    """Build an xarray Dataset of event-locked traces and response statistics.
+
+    Extracts peri-event trace snippets for every (event × trace) pair,
+    computes the mean response and mean baseline, and calculates three
+    p-values via shuffle tests against spontaneous activity, shuffled
+    omission responses, and shuffled flash responses.
+
+    Parameters
+    ----------
+    session : dataset object
+        Must expose ``stimulus_presentations`` (used for p-value shuffles).
+    traces : np.ndarray
+        Shape ``(n_traces, n_timepoints)``.
+    timestamps : np.ndarray
+        1-D array of sample timestamps (seconds).
+    event_times : np.ndarray
+        Timestamps of events around which to extract windows.
+    event_ids : array-like
+        Identifier for each event (becomes the ``trial_id`` coordinate).
+    trace_ids : array-like
+        Identifier for each trace (becomes the ``trace_id`` coordinate).
+    response_analysis_params : dict
+        Must contain keys ``window_around_timepoint_seconds``,
+        ``response_window_duration_seconds``, and
+        ``baseline_window_duration_seconds``.
+    frame_rate : float, optional
+        Imaging/stimulus frame rate.  Inferred from *timestamps* if ``None``.
+
+    Returns
+    -------
+    xr.Dataset
+        Variables: ``eventlocked_traces``, ``mean_response``,
+        ``mean_baseline``, ``p_value_omission``, ``p_value_stimulus``,
+        ``p_value_gray_screen``.
+    """
     event_indices, start_ind_offset, end_ind_offset, trace_timebase = slice_inds_and_offsets(
         ophys_times=timestamps,
         event_times=event_times,
@@ -397,9 +446,26 @@ def get_response_xr(session, traces, timestamps, event_times, event_ids, trace_i
 
 
 def response_df(response_xr):
-    '''
-    Smash things into df format if you want.
-    '''
+    """Convert a response xarray Dataset to a flat pandas DataFrame (wide format).
+
+    Stacks the ``(trial_id × trace_id)`` multi-index into rows, attaching
+    the full trace array and scalar summaries as columns.
+
+    Parameters
+    ----------
+    response_xr : xr.Dataset
+        Output of :func:`get_response_xr`, containing ``eventlocked_traces``,
+        ``mean_response``, ``mean_baseline``, ``p_value_gray_screen``,
+        ``p_value_omission``, and ``p_value_stimulus``.
+
+    Returns
+    -------
+    pd.DataFrame
+        One row per (event × trace) pair with columns ``trial_id``,
+        ``trace_id``, ``trace``, ``trace_timestamps``, ``mean_response``,
+        ``baseline_response``, ``p_value_gray_screen``, ``p_value_omission``,
+        and ``p_value_stimulus``.
+    """
     traces = response_xr['eventlocked_traces']
     mean_response = response_xr['mean_response']
     mean_baseline = response_xr['mean_baseline']
@@ -433,6 +499,25 @@ def response_df(response_xr):
 
 
 def filter_events_array(trace_arr, scale=2, t_scale=20):
+    """Convolve each cell's event trace with a half-normal smoothing kernel.
+
+    Used to create ``filtered_events`` from sparse L0 event arrays, making them
+    more suitable for continuous trace analyses.
+
+    Parameters
+    ----------
+    trace_arr : np.ndarray
+        Array of shape ``(n_cells, n_timepoints)`` containing event values.
+    scale : float, optional
+        Scale (σ) of the half-normal kernel.  Defaults to 2.
+    t_scale : int, optional
+        Length of the convolution kernel in samples.  Defaults to 20.
+
+    Returns
+    -------
+    np.ndarray
+        Smoothed array with the same shape as *trace_arr*.
+    """
     from scipy import stats
     filt = stats.halfnorm(loc=0, scale=scale).pdf(np.arange(t_scale))
     filt = filt / np.sum(filt)  # normalize filter
@@ -445,6 +530,31 @@ def filter_events_array(trace_arr, scale=2, t_scale=20):
 
 
 def get_trials_response_xr(dataset, use_events=False, filter_events=False, frame_rate=None, time_window=None):
+    """Build a trial-aligned response xarray Dataset.
+
+    Aligns traces to each trial's ``change_time`` using the default
+    ``[-5, 5]`` s window (overridable via *time_window*).
+
+    Parameters
+    ----------
+    dataset : dataset object
+        Must expose ``dff_traces`` (or ``events``), ``ophys_timestamps``,
+        and ``trials``.
+    use_events : bool, optional
+        Use L0 events instead of dF/F traces.  Defaults to ``False``.
+    filter_events : bool, optional
+        Apply half-normal smoothing to events before extraction.
+        Only used when *use_events* is ``True``.  Defaults to ``False``.
+    frame_rate : float, optional
+        Imaging frame rate.  Inferred from timestamps if ``None``.
+    time_window : list of float or None, optional
+        ``[start, end]`` window in seconds.  Defaults to ``[-5, 5]``.
+
+    Returns
+    -------
+    xr.Dataset
+        See :func:`get_response_xr` for variable descriptions.
+    """
     if use_events:
         if filter_events:
             traces = np.stack(dataset.events['filtered_events'].values)
@@ -471,6 +581,32 @@ def get_trials_response_xr(dataset, use_events=False, filter_events=False, frame
 
 
 def get_trials_response_df(dataset, use_events=False, filter_events=False, frame_rate=None, df_format='wide', time_window=None):
+    """Return trial-aligned neural responses as a DataFrame.
+
+    Wrapper around :func:`get_trials_response_xr` that flattens to a
+    DataFrame.  Adds a ``response_window`` column and renames index columns
+    to ``trials_id`` / ``cell_specimen_id``.
+
+    Parameters
+    ----------
+    dataset : dataset object
+    use_events : bool, optional
+        Defaults to ``False``.
+    filter_events : bool, optional
+        Defaults to ``False``.
+    frame_rate : float, optional
+    df_format : {'wide', 'tidy'}, optional
+        ``'wide'`` returns one row per (trial × cell) with trace arrays;
+        ``'tidy'`` returns one row per (trial × cell × timepoint).
+        Defaults to ``'wide'``.
+    time_window : list of float or None, optional
+        Override the default ``[-5, 5]`` s window.
+
+    Returns
+    -------
+    pd.DataFrame
+        Trial-aligned response DataFrame.
+    """
     response_xr = get_trials_response_xr(dataset, use_events, filter_events, frame_rate, time_window)
 
     if df_format == 'wide':
@@ -487,6 +623,27 @@ def get_trials_response_df(dataset, use_events=False, filter_events=False, frame
 
 
 def get_stimulus_response_xr(dataset, use_events=False, filter_events=True, frame_rate=None, time_window=None):
+    """Build a stimulus-presentation-aligned response xarray Dataset.
+
+    Aligns traces to each stimulus presentation's ``start_time`` using the
+    default ``[-0.5, 0.75]`` s window.
+
+    Parameters
+    ----------
+    dataset : dataset object
+    use_events : bool, optional
+        Defaults to ``False``.
+    filter_events : bool, optional
+        Defaults to ``True`` (smoothing applied when using events).
+    frame_rate : float, optional
+    time_window : list of float or None, optional
+        Override default ``[-0.5, 0.75]`` s window.
+
+    Returns
+    -------
+    xr.Dataset
+        See :func:`get_response_xr` for variable descriptions.
+    """
     if use_events:
         if filter_events:
             traces = np.stack(dataset.events['filtered_events'].values)
@@ -512,6 +669,26 @@ def get_stimulus_response_xr(dataset, use_events=False, filter_events=True, fram
 
 
 def get_stimulus_response_df(dataset, use_events=False, filter_events=False, frame_rate=None, df_format='wide', time_window=None):
+    """Return stimulus-aligned neural responses as a DataFrame.
+
+    Parameters
+    ----------
+    dataset : dataset object
+    use_events : bool, optional
+        Defaults to ``False``.
+    filter_events : bool, optional
+        Defaults to ``False``.
+    frame_rate : float, optional
+    df_format : {'wide', 'tidy'}, optional
+        Defaults to ``'wide'``.
+    time_window : list of float or None, optional
+
+    Returns
+    -------
+    pd.DataFrame
+        Stimulus-aligned response DataFrame with columns renamed to
+        ``stimulus_presentations_id`` / ``cell_specimen_id``.
+    """
     response_xr = get_stimulus_response_xr(dataset, use_events, filter_events, frame_rate, time_window=time_window)
 
     if df_format == 'wide':
@@ -528,6 +705,27 @@ def get_stimulus_response_df(dataset, use_events=False, filter_events=False, fra
 
 
 def get_omission_response_xr(dataset, use_events=False, filter_events=False, frame_rate=None, time_window=None):
+    """Build an omission-aligned response xarray Dataset.
+
+    Filters stimulus presentations to ``image_name == 'omitted'`` and
+    aligns traces to each omission onset using the default ``[-5, 5]`` s window.
+
+    Parameters
+    ----------
+    dataset : dataset object
+    use_events : bool, optional
+        Defaults to ``False``.
+    filter_events : bool, optional
+        Defaults to ``False``.
+    frame_rate : float, optional
+    time_window : list of float or None, optional
+        Override default ``[-5, 5]`` s window.
+
+    Returns
+    -------
+    xr.Dataset
+        See :func:`get_response_xr` for variable descriptions.
+    """
     if use_events:
         if filter_events:
             traces = np.stack(dataset.events['filtered_events'].values)
@@ -555,6 +753,25 @@ def get_omission_response_xr(dataset, use_events=False, filter_events=False, fra
 
 
 def get_omission_response_df(dataset, use_events=False, filter_events=False, frame_rate=None, df_format='wide', time_window=None):
+    """Return omission-aligned neural responses as a DataFrame.
+
+    Parameters
+    ----------
+    dataset : dataset object
+    use_events : bool, optional
+        Defaults to ``False``.
+    filter_events : bool, optional
+        Defaults to ``False``.
+    frame_rate : float, optional
+    df_format : {'wide', 'tidy'}, optional
+        Defaults to ``'wide'``.
+    time_window : list of float or None, optional
+
+    Returns
+    -------
+    pd.DataFrame
+        Omission-aligned response DataFrame.
+    """
     response_xr = get_omission_response_xr(dataset, use_events, filter_events, frame_rate, time_window)
 
     if df_format == 'wide':
@@ -572,6 +789,23 @@ def get_omission_response_df(dataset, use_events=False, filter_events=False, fra
 
 
 def get_trials_run_speed_df(dataset, frame_rate=None, df_format='wide', time_window=None):
+    """Return trial-aligned running speed traces as a DataFrame.
+
+    Parameters
+    ----------
+    dataset : dataset object
+    frame_rate : float, optional
+        Stimulus frame rate.  Inferred from timestamps if ``None``.
+    df_format : {'wide', 'tidy'}, optional
+        Defaults to ``'wide'``.
+    time_window : list of float or None, optional
+        Override default ``[-5, 5]`` s window.
+
+    Returns
+    -------
+    pd.DataFrame
+        Trial-aligned running speed DataFrame indexed by ``trials_id``.
+    """
     traces = np.vstack((dataset.running_speed.speed.values, dataset.running_speed.speed.values))
     trace_ids = np.asarray([0, 1])
     timestamps = dataset.stimulus_timestamps
@@ -596,6 +830,24 @@ def get_trials_run_speed_df(dataset, frame_rate=None, df_format='wide', time_win
 
 
 def get_stimulus_run_speed_df(dataset, frame_rate=None, df_format='wide', time_window=None):
+    """Return stimulus-aligned running speed traces as a DataFrame.
+
+    Also computes ``p_value_baseline`` for each trace via a Wilcoxon signed-rank
+    test against the pre-stimulus baseline window.
+
+    Parameters
+    ----------
+    dataset : dataset object
+    frame_rate : float, optional
+    df_format : {'wide', 'tidy'}, optional
+        Defaults to ``'wide'``.
+    time_window : list of float or None, optional
+
+    Returns
+    -------
+    pd.DataFrame
+        Stimulus-aligned running speed DataFrame.
+    """
     traces = np.vstack((dataset.running_speed.speed.values, dataset.running_speed.speed.values))
     trace_ids = [0, 1]
     timestamps = dataset.stimulus_timestamps
@@ -628,6 +880,21 @@ def get_stimulus_run_speed_df(dataset, frame_rate=None, df_format='wide', time_w
 
 
 def get_omission_run_speed_df(dataset, frame_rate=None, df_format='wide', time_window=None):
+    """Return omission-aligned running speed traces as a DataFrame.
+
+    Parameters
+    ----------
+    dataset : dataset object
+    frame_rate : float, optional
+    df_format : {'wide', 'tidy'}, optional
+        Defaults to ``'wide'``.
+    time_window : list of float or None, optional
+
+    Returns
+    -------
+    pd.DataFrame
+        Omission-aligned running speed DataFrame.
+    """
     traces = np.vstack((dataset.running_speed.speed.values, dataset.running_speed.speed.values))
     trace_ids = [0, 1]
     timestamps = dataset.stimulus_timestamps
@@ -655,6 +922,25 @@ def get_omission_run_speed_df(dataset, frame_rate=None, df_format='wide', time_w
 
 
 def get_trials_pupil_area_df(dataset, frame_rate=None, df_format='wide', time_window=None):
+    """Return trial-aligned pupil area traces as a DataFrame.
+
+    Uses ``dataset.eye_tracking.pupil_area`` and aligns to ``change_time``
+    using the trial response window.  Rows with NaN traces are dropped.
+
+    Parameters
+    ----------
+    dataset : dataset object
+        Must expose ``eye_tracking`` with ``pupil_area`` and ``timestamps``.
+    frame_rate : float, optional
+    df_format : {'wide', 'tidy'}, optional
+        Defaults to ``'wide'``.
+    time_window : list of float or None, optional
+
+    Returns
+    -------
+    pd.DataFrame
+        Trial-aligned pupil area DataFrame with ``p_value_baseline`` column.
+    """
     pupil_area = dataset.eye_tracking.pupil_area.values
     traces = np.vstack((pupil_area, pupil_area))
     trace_ids = [0, 1]
@@ -692,6 +978,22 @@ def get_trials_pupil_area_df(dataset, frame_rate=None, df_format='wide', time_wi
 
 
 def get_stimulus_pupil_area_df(dataset, frame_rate=None, df_format='wide', time_window=None):
+    """Return stimulus-aligned pupil area traces as a DataFrame.
+
+    Parameters
+    ----------
+    dataset : dataset object
+    frame_rate : float, optional
+    df_format : {'wide', 'tidy'}, optional
+        Defaults to ``'wide'``.
+    time_window : list of float or None, optional
+
+    Returns
+    -------
+    pd.DataFrame
+        Stimulus-aligned pupil area DataFrame with ``p_value_baseline`` column.
+        Rows with NaN traces are dropped.
+    """
     pupil_area = dataset.eye_tracking.pupil_area.values
     traces = np.vstack((pupil_area, pupil_area))
     trace_ids = [0, 1]
@@ -728,6 +1030,22 @@ def get_stimulus_pupil_area_df(dataset, frame_rate=None, df_format='wide', time_
 
 
 def get_omission_pupil_area_df(dataset, frame_rate=30, df_format='wide', time_window=None):
+    """Return omission-aligned pupil area traces as a DataFrame.
+
+    Parameters
+    ----------
+    dataset : dataset object
+    frame_rate : float, optional
+        Defaults to 30 Hz.
+    df_format : {'wide', 'tidy'}, optional
+        Defaults to ``'wide'``.
+    time_window : list of float or None, optional
+
+    Returns
+    -------
+    pd.DataFrame
+        Omission-aligned pupil area DataFrame.  Rows with NaN traces are dropped.
+    """
     pupil_area = dataset.eye_tracking.pupil_area.values
     traces = np.vstack((pupil_area, pupil_area))
     trace_ids = [0, 1]
@@ -760,6 +1078,19 @@ def get_omission_pupil_area_df(dataset, frame_rate=30, df_format='wide', time_wi
 
 
 def get_lick_binary(dataset):
+    """Create a binary lick array aligned to stimulus timestamps.
+
+    Parameters
+    ----------
+    dataset : dataset object
+        Must expose ``licks.timestamps`` and ``stimulus_timestamps``.
+
+    Returns
+    -------
+    np.ndarray
+        1-D binary array of length ``n_stimulus_frames`` where 1 indicates a
+        lick occurred at that timestamp and 0 indicates no lick.
+    """
     licks = dataset.licks.timestamps.values.copy()
     times = dataset.stimulus_timestamps.copy()
     lick_binary = np.asarray([1 if time in licks else 0 for time in times])
@@ -767,6 +1098,21 @@ def get_lick_binary(dataset):
 
 
 def get_trials_licks_df(dataset, frame_rate=None, df_format='wide', time_window=None):
+    """Return trial-aligned lick binary traces as a DataFrame.
+
+    Parameters
+    ----------
+    dataset : dataset object
+    frame_rate : float, optional
+    df_format : {'wide', 'tidy'}, optional
+        Defaults to ``'wide'``.
+    time_window : list of float or None, optional
+
+    Returns
+    -------
+    pd.DataFrame
+        Trial-aligned lick trace DataFrame indexed by ``trials_id``.
+    """
     licks = get_lick_binary(dataset)
     traces = np.vstack((licks, licks))
     trace_ids = [0, 1]
@@ -792,6 +1138,21 @@ def get_trials_licks_df(dataset, frame_rate=None, df_format='wide', time_window=
 
 
 def get_omission_licks_df(dataset, frame_rate=None, df_format='wide', time_window=None):
+    """Return omission-aligned lick binary traces as a DataFrame.
+
+    Parameters
+    ----------
+    dataset : dataset object
+    frame_rate : float, optional
+    df_format : {'wide', 'tidy'}, optional
+        Defaults to ``'wide'``.
+    time_window : list of float or None, optional
+
+    Returns
+    -------
+    pd.DataFrame
+        Omission-aligned lick trace DataFrame.
+    """
     licks = get_lick_binary(dataset)
     traces = np.vstack((licks, licks))
     trace_ids = [0, 1]
@@ -820,6 +1181,26 @@ def get_omission_licks_df(dataset, frame_rate=None, df_format='wide', time_windo
 
 
 def get_lick_triggered_response_xr(dataset, use_events=False, filter_events=False, frame_rate=None, time_window=None):
+    """Build a lick-triggered average response xarray Dataset.
+
+    Aligns traces to the first lick of each bout (to avoid contamination from
+    lick-bout sequels) using the default ``[-5, 5]`` s window.
+
+    Parameters
+    ----------
+    dataset : dataset object
+    use_events : bool, optional
+        Defaults to ``False``.
+    filter_events : bool, optional
+        Defaults to ``False``.
+    frame_rate : float, optional
+    time_window : list of float or None, optional
+
+    Returns
+    -------
+    xr.Dataset
+        See :func:`get_response_xr` for variable descriptions.
+    """
     import visual_behavior.data_access.processing as processing
     if use_events:
         if filter_events:
@@ -848,6 +1229,25 @@ def get_lick_triggered_response_xr(dataset, use_events=False, filter_events=Fals
 
 
 def get_lick_triggered_response_df(dataset, use_events=False, filter_events=False, frame_rate=None, df_format='wide'):
+    """Return lick-triggered average neural responses as a DataFrame.
+
+    Parameters
+    ----------
+    dataset : dataset object
+    use_events : bool, optional
+        Defaults to ``False``.
+    filter_events : bool, optional
+        Defaults to ``False``.
+    frame_rate : float, optional
+    df_format : {'wide', 'tidy'}, optional
+        Defaults to ``'wide'``.
+
+    Returns
+    -------
+    pd.DataFrame
+        Lick-triggered response DataFrame with columns renamed to
+        ``lick_id`` / ``cell_specimen_id``.
+    """
     response_xr = get_lick_triggered_response_xr(dataset, use_events, filter_events, frame_rate)
 
     if df_format == 'wide':
