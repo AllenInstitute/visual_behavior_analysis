@@ -1,0 +1,6 @@
+The goal of this task is to refactor the jupyter notebooks in visual_behavior_analysis/notebooks/platform_paper_tmp based on the organization of figures and results in the paper PDF, to produce a set of scripts and new notebooks that can produce all the figures of the paper in a reasonable, organized way. I believe the steps are as follows: 
+1) convert jupyter notebooks into scripts so they are easier to parse
+2) interpret the scripts and their contents, relating the plotting functions in the scripts to the figures in the paper PDF (main and supplemental figures)
+3) create new scripts, one for each main figure (there are 5 main figures), e.g. "figure_1.py", and one for the set of supplemental figures associated with each main figure (there are >20 supplemental figures, but there should only be 5 scripts for supplemental figures - one for each main figure), e.g. "figure_1_supplemental.py", and put the relevant plotting functions from the notebooks into the scripts. 
+4) include all relevant imports and data loading functions needed for the plotting functions associated with each figure, and organize the plotting functions roughly in order of the figure panels in the paper
+5) create new notebooks corresponding to the scripts so that users can see how figures were generate in a more straightforward manner
