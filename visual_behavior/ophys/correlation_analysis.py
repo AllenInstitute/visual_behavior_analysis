@@ -1,9 +1,94 @@
 import os
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 from scipy.cluster.hierarchy import linkage, fcluster, dendrogram
 from scipy.spatial.distance import squareform
 from sklearn.decomposition import PCA
+
+
+def get_ophys_experiment_ids_for_ophys_session_id(ophys_session_id, experiments_table):
+    """Return all ophys_experiment_ids belonging to *ophys_session_id*.
+
+    Parameters
+    ----------
+    ophys_session_id : int
+    experiments_table : pd.DataFrame
+        As returned by ``loading.get_filtered_ophys_experiment_table()``.
+        The index must be ``ophys_experiment_id`` and there must be an
+        ``ophys_session_id`` column.
+
+    Returns
+    -------
+    list of int
+    """
+    mask = experiments_table['ophys_session_id'] == ophys_session_id
+    return list(experiments_table.index[mask])
+
+
+def merge_dff_traces_for_session(dataset_dict):
+    """Merge dff_traces from multiple experiments into a single DataFrame.
+
+    Each experiment (imaging plane) in *dataset_dict* may have a slightly
+    different number of recorded timepoints.  Traces are truncated to the
+    minimum length across all experiments before concatenation so that the
+    resulting array is rectangular.
+
+    Parameters
+    ----------
+    dataset_dict : dict
+        Mapping ``{ophys_experiment_id: dataset}`` as returned by
+        ``loading.get_dataset_dict()``.
+
+    Returns
+    -------
+    merged_dff_traces : pd.DataFrame
+        Concatenated dff_traces DataFrame with ``cell_specimen_id`` as index
+        and a ``'dff'`` column.  Each entry in the ``'dff'`` column is a
+        1-D numpy array of length ``min_timepoints``.
+    session_metadata : dict
+        Metadata assembled from the individual datasets, suitable for passing
+        to ``run_correlation_clustering_analysis``.  Keys:
+        ``'ophys_session_id'``, ``'cre_line'``, ``'n_experiments'``,
+        ``'ophys_experiment_ids'``, ``'min_timepoints'``.
+    """
+    ophys_experiment_ids = list(dataset_dict.keys())
+
+    # Collect per-experiment dff arrays and find the minimum timepoint count
+    dff_frames = {}
+    for eid, dataset in dataset_dict.items():
+        dff_frames[eid] = dataset.dff_traces
+
+    min_timepoints = min(
+        dff_frames[eid]['dff'].iloc[0].shape[0] for eid in ophys_experiment_ids
+    )
+    print(f'Truncating all traces to {min_timepoints} timepoints '
+          f'(shortest plane across {len(ophys_experiment_ids)} experiments)')
+
+    # Truncate and collect rows
+    all_rows = []
+    for eid in ophys_experiment_ids:
+        df = dff_frames[eid].copy()
+        df['dff'] = df['dff'].apply(lambda arr: arr[:min_timepoints])
+        all_rows.append(df)
+
+    merged_dff_traces = pd.concat(all_rows)
+
+    # Build a combined metadata dict from the first dataset
+    first_dataset = next(iter(dataset_dict.values()))
+    first_meta = first_dataset.metadata
+    session_metadata = {
+        'ophys_session_id': first_meta.get('ophys_session_id', ''),
+        'cre_line': first_meta.get('cre_line', ''),
+        'n_experiments': len(ophys_experiment_ids),
+        'ophys_experiment_ids': ophys_experiment_ids,
+        'min_timepoints': min_timepoints,
+    }
+
+    n_cells = len(merged_dff_traces)
+    print(f'Merged dff_traces: {n_cells} cells across '
+          f'{len(ophys_experiment_ids)} experiments')
+    return merged_dff_traces, session_metadata
 
 
 def run_correlation_clustering_analysis(
@@ -47,9 +132,15 @@ def run_correlation_clustering_analysis(
         - 'linkage_matrix'             : ndarray, Ward linkage matrix Z
         - 'pc1_variance_explained'     : float, fraction (not percent)
     """
-    ophys_experiment_id = metadata.get('ophys_experiment_id', '')
     cre_line = metadata.get('cre_line', '')
-    title_suffix = f'\nophys_experiment_id: {ophys_experiment_id}, cre_line: {cre_line}'
+    # Support both session-level and experiment-level metadata
+    if 'ophys_session_id' in metadata and metadata['ophys_session_id']:
+        id_label = f"ophys_session_id: {metadata['ophys_session_id']}"
+        save_prefix = str(metadata['ophys_session_id'])
+    else:
+        id_label = f"ophys_experiment_id: {metadata.get('ophys_experiment_id', '')}"
+        save_prefix = str(metadata.get('ophys_experiment_id', 'unknown'))
+    title_suffix = f'\n{id_label}, cre_line: {cre_line}'
 
     # ------------------------------------------------------------------
     # 1. Build dff array and compute raw correlation matrix
@@ -64,7 +155,7 @@ def run_correlation_clustering_analysis(
 
     if save_dir is not None:
         os.makedirs(save_dir, exist_ok=True)
-        path = os.path.join(save_dir, f'{ophys_experiment_id}_correlation_matrix.npy')
+        path = os.path.join(save_dir, f'{save_prefix}_correlation_matrix.npy')
         np.save(path, correlation_matrix)
         print(f'Saved: {path}')
 
@@ -87,7 +178,7 @@ def run_correlation_clustering_analysis(
     )
 
     if save_dir is not None:
-        path = os.path.join(save_dir, f'{ophys_experiment_id}_correlation_matrix_pc1_removed.npy')
+        path = os.path.join(save_dir, f'{save_prefix}_correlation_matrix_pc1_removed.npy')
         np.save(path, correlation_matrix_pc1_removed)
         print(f'Saved: {path}')
 
@@ -136,7 +227,7 @@ def run_correlation_clustering_analysis(
     plt.show()
 
     if save_dir is not None:
-        path = os.path.join(save_dir, f'{ophys_experiment_id}_correlation_matrix_clustered.npy')
+        path = os.path.join(save_dir, f'{save_prefix}_correlation_matrix_clustered.npy')
         np.save(path, corr_reordered)
         print(f'Saved: {path}')
 
