@@ -3511,6 +3511,26 @@ def get_data_dict(ophys_experiment_ids, data_types=None):
     return data_dict
 
 
+def get_dataset_dict(ophys_experiment_ids):
+    """Load dataset objects for a list of ophys_experiment_ids.
+
+    Parameters
+    ----------
+    ophys_experiment_ids : list of int
+        Experiment IDs to load.
+
+    Returns
+    -------
+    dict
+        Mapping {ophys_experiment_id: dataset} for each ID in the input list.
+    """
+    dataset_dict = {}
+    for ophys_experiment_id in ophys_experiment_ids:
+        print(f'Loading ophys_experiment_id: {ophys_experiment_id}')
+        dataset_dict[ophys_experiment_id] = get_ophys_dataset(ophys_experiment_id, include_invalid_rois=False)
+    return dataset_dict
+
+
 def get_dataset_dict_for_containers(ophys_container_ids, platform_experiments, dataset_dict=None):
     '''
     Loop through platform ophys experiments belonging to this container
