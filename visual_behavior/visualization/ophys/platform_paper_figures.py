@@ -72,16 +72,18 @@ def plot_all_planes_all_sessions_for_mouse(dataset_dict, mouse_expts, session_id
 
                 dataset = dataset_dict[ophys_container_id][ophys_experiment_id]
                 ax[i] = plot_max_intensity_projection(dataset, ax=ax[i])
+                
+                if s == 0:
+                    if session_id_for_area_depths:
+                        tmp = mouse_expts[(mouse_expts.ophys_session_id == session_id_for_area_depths) &
+                                        (mouse_expts.ophys_container_id == ophys_container_id)]
+                        area = tmp.targeted_structure.values[0]
+                        depth = int(tmp.imaging_depth.values[0])
+                    ax[i].text(s=area + ' ' + str(depth), x=-20, y=dataset.max_projection.data.shape[0] / 2,
+                            ha='right', va='center', rotation=90, fontsize=8)
             except:
                 print('could not plot for experiment', ophys_experiment_id, session_type, area, depth)
-            if s == 0:
-                if session_id_for_area_depths:
-                    tmp = mouse_expts[(mouse_expts.ophys_session_id == session_id_for_area_depths) &
-                                      (mouse_expts.ophys_container_id == ophys_container_id)]
-                    area = tmp.targeted_structure.values[0]
-                    depth = int(tmp.imaging_depth.values[0])
-                ax[i].text(s=area + ' ' + str(depth), x=-20, y=dataset.max_projection.data.shape[0] / 2,
-                           ha='right', va='center', rotation=90, fontsize=8)
+            
             if c == 0:
                 ax[i].set_title(str(ophys_session_id) + '\n' + session_type, fontsize=6)
             i += 1

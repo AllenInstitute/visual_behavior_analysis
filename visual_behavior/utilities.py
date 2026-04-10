@@ -1239,7 +1239,7 @@ def get_behavior_stats_cache_dir(method='stimulus_based', engaged_only=True, per
     :param method:
     :return:
     """
-    base_dir = loading.get_platform_analysis_cache_dir()
+    base_dir = loading.get_performance_metrics_dir()
 
     if method == 'trial_based':
         if per_image == True:

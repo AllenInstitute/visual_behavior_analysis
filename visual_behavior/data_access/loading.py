@@ -96,7 +96,7 @@ def get_manifest_path():
     return manifest_path
 
 
-def get_visual_behavior_cache(from_s3=True, release_data_only=True, cache_dir=None):
+def get_visual_behavior_cache(from_s3=False, from_local_cache=True, release_data_only=True, cache_dir=None):
     """
     Gets the visual behavior dataset cache object from s3 or lims
     :param from_s3: If True, loads manifest from s3 and saves to provided cache_dir (or default cache_dir if None provided)
@@ -104,11 +104,14 @@ def get_visual_behavior_cache(from_s3=True, release_data_only=True, cache_dir=No
     :param cache_dir: directory where to save manifest & data files if using s3
     :return: SDK cache object
     """
-    if from_s3:
+    if from_s3_cache:
         if cache_dir is None:
             cache_dir = get_sdk_cache_dir()
             print(cache_dir)
         cache = bpc.from_local_cache(cache_dir=cache_dir, use_static_cache=True)
+    elif from_local_cache: 
+        platform_cache_dir = get_platform_analysis_cache_dir()
+        cache = bpc.from_local_cache(cache_dir=platform_cache_dir, use_static_cache=True)    
     else:
         if release_data_only:
             cache = bpc.from_lims(data_release_date=['2021-03-25', '2021-08-12'])
@@ -198,7 +201,7 @@ def get_flagged_ophys_experiment_ids():
     return oeids
 
 
-def get_released_ophys_experiment_table(exclude_ai94=True):
+def get_released_ophys_experiment_table_from_lims(exclude_ai94=True):
     '''
     gets the released ophys experiment table from lims
 
@@ -221,7 +224,8 @@ def get_released_ophys_experiment_table(exclude_ai94=True):
 
 
 def get_platform_paper_experiment_table(add_extra_columns=True, limit_to_closest_active=False,
-                                        include_4x2_data=False, remove_flagged=True, remove_Ai94=True):
+                                        include_4x2_data=False, remove_flagged=True, remove_Ai94=True,
+                                        from_s3_cache=False, from_local_cache=True):
     """
     loads the experiment table that was downloaded from AWS and saved to the the platform paper cache dir.
     Then filter out VisualBehaviorMultiscope4areasx2d and Ai94 data.
@@ -237,8 +241,14 @@ def get_platform_paper_experiment_table(add_extra_columns=True, limit_to_closest
 
 
     """
-    cache_dir = get_sdk_cache_dir()
-    cache = bpc.from_local_cache(cache_dir=cache_dir, use_static_cache=True)
+    if from_s3_cache:
+        cache_dir = get_sdk_cache_dir()
+        cache = bpc.from_local_cache(cache_dir=cache_dir, use_static_cache=True)
+    elif from_local_cache: 
+        platform_cache_dir = get_platform_analysis_cache_dir()
+        cache = bpc.from_local_cache(cache_dir=platform_cache_dir, use_static_cache=True)
+        dataset = cache.get_behavior_ophys_experiment(ophys_experiment_id)
+    
     experiment_table = cache.get_ophys_experiment_table()
 
     # REMOVE PROBLEMATIC SESSIONS
@@ -345,7 +355,8 @@ def get_active_passive_sessions_for_platform_dataset():
     return active_passive_experiment_table
 
 
-def get_platform_paper_behavior_session_table(include_4x2_data=False, add_extra_columns=True):
+def get_platform_paper_behavior_session_table(include_4x2_data=False, add_extra_columns=True, 
+                                            from_s3_cache=False, from_local_cache=True):
     """
     loads the behavior sessions table that was downloaded from AWS and saved to the the platform paper cache dir.
     Then optionally filter out VisualBehaviorMultiscope4areasx2d and remove Ai94 data.
@@ -355,8 +366,13 @@ def get_platform_paper_behavior_session_table(include_4x2_data=False, add_extra_
     add_extra_columns(bool), whether or not to add a bunch of useful columns to sort behavior sessions by
                                 such as whether a session has ophys, the abbreviated stimulus name, cell type, etc.
     """
-    cache_dir = get_sdk_cache_dir()
-    cache = bpc.from_s3_cache(cache_dir=cache_dir)
+    if from_s3_cache:
+        cache_dir = get_sdk_cache_dir()
+        cache = bpc.from_s3_cache(cache_dir=cache_dir)
+    elif from_local_cache: 
+        platform_cache_dir = get_platform_analysis_cache_dir()
+        cache = bpc.from_local_cache(cache_dir=platform_cache_dir, use_static_cache=True)
+    
     behavior_sessions = cache.get_behavior_session_table()
 
     # add project codes to behavior sessions - not needed in AllenSDK 2.16.0
@@ -402,7 +418,7 @@ def get_platform_paper_behavior_session_table(include_4x2_data=False, add_extra_
     return behavior_sessions
 
 
-def get_filtered_ophys_experiment_table(include_failed_data=False, release_data_only=True, exclude_ai94=True,
+def get_filtered_ophys_experiment_table_from_lims(include_failed_data=False, release_data_only=True, exclude_ai94=True,
                                         add_extra_columns=False, from_cached_file=False, overwrite_cached_file=False):
     """
     Loads a list of available ophys experiments FROM LIMS (not S3 cache) and adds additional useful columns to the table.
@@ -494,7 +510,7 @@ def get_filtered_ophys_experiment_table(include_failed_data=False, release_data_
     return experiments
 
 
-def get_filtered_ophys_session_table(release_data_only=True, include_failed_data=False):
+def get_filtered_ophys_session_table_from_lims(release_data_only=True, include_failed_data=False):
     """Get ophys sessions table from SDK, and add container_id and container_workflow_state to table,
         add session_workflow_state to table (defined as >1 experiment within session passing),
         and return only sessions where container and session workflow states are 'passed'.
@@ -546,7 +562,7 @@ def get_filtered_ophys_session_table(release_data_only=True, include_failed_data
     return sessions
 
 
-def get_filtered_behavior_session_table(release_data_only=True):
+def get_filtered_behavior_session_table_from_lims(release_data_only=True):
     """
     Loads list of behavior sessions from SDK BehaviorProjectCache, and does some basic filtering and addition of columns, such as changing mouse_id from str to int and adding project code.
 
@@ -580,7 +596,7 @@ def get_filtered_behavior_session_table(release_data_only=True):
     return behavior_sessions
 
 
-def get_second_release_candidates():
+def get_second_release_candidates_from_lims():
     """
     Preliminary function to get candidates for August release. Will be revised.
     :return:
@@ -943,8 +959,8 @@ class BehaviorOphysDataset(BehaviorOphysExperiment):
         return cell_specimen_id
 
 
-def get_ophys_dataset(ophys_experiment_id, include_invalid_rois=False, load_from_lims=False, load_from_nwb=True,
-                      get_extended_stimulus_presentations=False, get_behavior_movie_timestamps=False):
+def get_ophys_dataset(ophys_experiment_id, include_invalid_rois=False, load_from_lims=False, from_s3_cache=False,
+                      from_local_cache=True, get_extended_stimulus_presentations=False, get_behavior_movie_timestamps=False):
     """
     Gets behavior + ophys data for one experiment (single imaging plane), either using the SDK LIMS API,
     SDK NWB API, or using BehaviorOphysDataset wrapper which inherits the LIMS API BehaviorOphysSession object,
@@ -971,9 +987,13 @@ def get_ophys_dataset(ophys_experiment_id, include_invalid_rois=False, load_from
 
     if load_from_lims:
         dataset = BehaviorOphysExperiment.from_lims(int(ophys_experiment_id))
-    elif load_from_nwb:
+    elif from_s3_cache:
         cache_dir = get_sdk_cache_dir()
         cache = bpc.from_s3_cache(cache_dir=cache_dir)
+        dataset = cache.get_behavior_ophys_experiment(ophys_experiment_id)
+    elif from_local_cache: 
+        platform_cache_dir = get_platform_analysis_cache_dir()
+        cache = bpc.from_local_cache(cache_dir=platform_cache_dir, use_static_cache=True)
         dataset = cache.get_behavior_ophys_experiment(ophys_experiment_id)
     else:
         raise Exception('Set load_from_lims or load_from_nwb to True')
@@ -1082,7 +1102,7 @@ def get_extended_trials_table(trials, extended_stimulus_presentations):
     return extended_trials
 
 
-def get_behavior_dataset(behavior_session_id, from_lims=False, from_nwb=True,
+def get_behavior_dataset(behavior_session_id, from_lims=False, from_nwb=False, from_local_cache=True,
                          get_extended_stimulus_presentations=False, get_extended_trials=True):
     """
     Gets behavior data for one session, either using the SDK LIMS API, SDK NWB API, or using BehaviorDataset wrapper which inherits the LIMS API BehaviorSession object, and adds access to extended stimulus_presentations and trials.
@@ -1103,6 +1123,10 @@ def get_behavior_dataset(behavior_session_id, from_lims=False, from_nwb=True,
         cache_dir = get_sdk_cache_dir()
         cache = bpc.from_s3_cache(cache_dir=cache_dir)
         dataset = cache.get_behavior_session(behavior_session_id, skip_eye_tracking=True)
+    elif from_local_cache: 
+        platform_cache_dir = get_platform_analysis_cache_dir()
+        cache = bpc.from_local_cache(cache_dir=platform_cache_dir, use_static_cache=True)
+        dataset = cache.get_behavior_ophys_experiment(ophys_experiment_id)
     else:
         raise Exception('Set load_from_lims or load_from_nwb to True')
 
@@ -1135,16 +1159,21 @@ def get_behavior_dataset(behavior_session_id, from_lims=False, from_nwb=True,
 #     return container_ids
 
 
-def get_ophys_container_ids(platform_paper_only=False, add_extra_columns=True):
+def get_ophys_container_ids(platform_paper_only=False, add_extra_columns=True,
+                            from_s3_cache=False, from_local_cache=True):
     """
     Gets ophys_container_ids for all published datasets by default, or limits to platform paper containers if platform_paper_only is True
     :return:
     """
     if platform_paper_only:
         experiments = get_platform_paper_experiment_table(add_extra_columns=add_extra_columns, limit_to_closest_active=True)
-    else:
+    elif from_s3_cache:
         cache_dir = get_sdk_cache_dir()
         cache = bpc.from_s3_cache(cache_dir)
+        experiments = cache.get_ophys_experiment_table()
+    elif from_local_cache: 
+        platform_cache_dir = get_platform_analysis_cache_dir()
+        cache = bpc.from_local_cache(cache_dir=platform_cache_dir, use_static_cache=True)
         experiments = cache.get_ophys_experiment_table()
     container_ids = np.sort(experiments.ophys_container_id.unique())
     return container_ids
@@ -2947,7 +2976,9 @@ def get_file_name_for_saved_multi_session_df(data_type, event_type, conditions, 
     return filename
 
 
-def load_multi_session_df(data_type, event_type, conditions, inclusion_criteria, interpolate=True, output_sampling_rate=30, epoch_duration_mins=None, exclude_passive_sessions=True):
+def load_multi_session_df(data_type, event_type, conditions, inclusion_criteria, 
+                    interpolate=True, output_sampling_rate=30, epoch_duration_mins=None, exclude_passive_sessions=True,
+                    from_s3_cache=False, from_local_cache=True):
     """
     Loops through all experiments in the provided experiments_table and loads pre-generated dataframes containing
     trial averaged responses for each cell in each session, for the provided set of conditions, data_type, and event_type.
@@ -2960,8 +2991,14 @@ def load_multi_session_df(data_type, event_type, conditions, inclusion_criteria,
     :param epoch_duration_mins: epoch duration used when creating stim response df 'epoch' column
     :return:
     """
-    cache_dir = get_sdk_cache_dir()
-    cache = bpc.from_s3_cache(cache_dir=cache_dir)
+    if from_s3_cache: 
+        cache_dir = get_sdk_cache_dir()
+        cache = bpc.from_s3_cache(cache_dir=cache_dir)
+    elif from_local_cache: 
+        platform_cache_dir = get_platform_analysis_cache_dir()
+        cache = bpc.from_local_cache(cache_dir=platform_cache_dir, use_static_cache=True)
+    else: 
+        print('specify from s3 cache or from local cache')
     experiments_table = cache.get_ophys_experiment_table()
     print(len(experiments_table))
     # remove familiar session that was actually novel
@@ -3366,6 +3403,7 @@ def get_cell_table_from_lims(ophys_experiment_ids=None, columns_to_return='*', v
     # get ophys_experiment_ids from lims if none were passed
     # this includes failed experiments
     if ophys_experiment_ids is None:
+        
         cache = bpc.from_lims()
         experiment_table = cache.get_ophys_experiment_table()
 
@@ -3401,7 +3439,8 @@ def get_cell_table_from_lims(ophys_experiment_ids=None, columns_to_return='*', v
 
 
 def get_cell_table(platform_paper_only=True, add_extra_columns=True, limit_to_closest_active=False,
-                   limit_to_matched_cells=False, include_4x2_data=False, remove_Ai94=True):
+                   limit_to_matched_cells=False, include_4x2_data=False, remove_Ai94=True, 
+                   from_s3_cache=False, from_local_cache=True):
     """
     loads ophys_cells_table from the SDK using platform paper analysis cache and merges with experiment_table to get metadata
     if 'platform_paper_only' is True, will filter out Ai94 and VisuaBehaviorMultiscope4areasx2d and add extra columns
@@ -3411,8 +3450,13 @@ def get_cell_table(platform_paper_only=True, add_extra_columns=True, limit_to_cl
     if 'limit_to_matched_cells' is True, will only return cells that are matched in all 3 experience levels
     :return:
     """
-    cache_dir = get_sdk_cache_dir()
-    cache = bpc.from_s3_cache(cache_dir=cache_dir)
+    if from_s3_cache:
+        cache_dir = get_sdk_cache_dir()
+        cache = bpc.from_s3_cache(cache_dir=cache_dir)
+    elif from_local_cache: 
+        platform_cache_dir = get_platform_analysis_cache_dir()
+        cache = bpc.from_local_cache(cache_dir=platform_cache_dir, use_static_cache=True)
+    
     # load cell table
     cell_table = cache.get_ophys_cells_table()
     # optionally filter to limit to platform paper datasets
