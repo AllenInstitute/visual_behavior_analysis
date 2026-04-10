@@ -66,7 +66,8 @@ def get_stimulus_behavior_response_dir():
 def get_stimulus_population_response_dir():
     return os.path.join(get_platform_analysis_cache_dir(), 'visual_behavior_stimulus_population_response')
 
-
+def get_figures_save_dir():
+    return r'/scratch'
 
 def get_stimulus_response_df_dir(interpolate=True, output_sampling_rate=30, event_type='all'):
     base_dir = get_platform_analysis_cache_dir()
