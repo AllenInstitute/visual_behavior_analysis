@@ -28,7 +28,7 @@ def get_platform_analysis_cache_dir():
     This is the root directory to use for all saved analysis files
     """
     # return r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\platform_paper_cache_new'
-    return r'/data'
+    return r'/data/'
 
 
 def get_sdk_cache_dir():
@@ -66,6 +66,9 @@ def get_stimulus_behavior_response_dir():
 def get_stimulus_population_response_dir():
     return os.path.join(get_platform_analysis_cache_dir(), 'visual_behavior_stimulus_population_response')
 
+def get_behavior_model_output_dir(): 
+    return os.path.join(get_platform_analysis_cache_dir(), 'strategy_model')
+
 def get_figures_save_dir():
     return r'/scratch'
 
@@ -82,7 +85,8 @@ def get_stimulus_response_df_dir(interpolate=True, output_sampling_rate=30, even
 
 def get_multi_session_df_dir(interpolate=True, output_sampling_rate=30, event_type='all'):
     base_dir = get_platform_analysis_cache_dir()
-    save_dir = os.path.join(base_dir, 'visual_behavior_multi_session_mean_responses')
+    # save_dir = os.path.join(base_dir, 'visual_behavior_multi_session_mean_responses')
+    save_dir = os.path.join('/scratch/', 'visual_behavior_condition_averages')
     return save_dir
 
 
@@ -92,11 +96,11 @@ def get_manifest_path():
     Default location of manifest is the production cache directory at /visual_behavior/2020_cache/production_cache'
     This includes all VB production data and is not the same thing as the platform paper cache
     """
-    manifest_path = os.path.join(get_production_cache_dir(), "manifest.json")
+    manifest_path = os.path.join(get_platform_analysis_cache_dir(), "manifest.json")
     return manifest_path
 
 
-def get_visual_behavior_cache(from_s3=False, from_local_cache=True, release_data_only=True, cache_dir=None):
+def get_visual_behavior_cache(from_s3_cache=False, from_local_cache=True, release_data_only=True, cache_dir=None):
     """
     Gets the visual behavior dataset cache object from s3 or lims
     :param from_s3: If True, loads manifest from s3 and saves to provided cache_dir (or default cache_dir if None provided)
@@ -148,13 +152,13 @@ def convert_boolean_cols_to_bool(stimulus_presentations):
             if type(stimulus_presentations[column].dtype).__name__ == 'BooleanDtype':
                 row_ids = stimulus_presentations[stimulus_presentations[column].isnull()].index
                 stimulus_presentations.loc[row_ids, column] = False
-                stimulus_presentations.loc[row_ids, column] = stimulus_presentations[column].astype('bool', inplace=True)
+                stimulus_presentations[column] = stimulus_presentations[column].astype('bool')
         except Exception:
             if stimulus_presentations[column].dtype == 'boolean':
                 # remove NaNs and make bool
                 row_ids = stimulus_presentations[stimulus_presentations[column].isnull()].index
                 stimulus_presentations.loc[row_ids, column] = False
-                stimulus_presentations.loc[row_ids, column] = stimulus_presentations[column].astype('bool')
+                stimulus_presentations[column] = stimulus_presentations[column].astype('bool')
     return stimulus_presentations
 
 
@@ -247,7 +251,6 @@ def get_platform_paper_experiment_table(add_extra_columns=True, limit_to_closest
     elif from_local_cache: 
         platform_cache_dir = get_platform_analysis_cache_dir()
         cache = bpc.from_local_cache(cache_dir=platform_cache_dir, use_static_cache=True)
-        dataset = cache.get_behavior_ophys_experiment(ophys_experiment_id)
     
     experiment_table = cache.get_ophys_experiment_table()
 
@@ -438,7 +441,7 @@ def get_filtered_ophys_experiment_table_from_lims(include_failed_data=False, rel
                                     Note, if False, there is no guarantee on data quality or processing for these experiments.
         add_extra_columns {bool} -- Additional columns will be added, including fail tags, model availability and location string
         exclude_ai94 {bool} -- If True, exclude data from mice with Ai94(GCaMP6s) as the reporter line. (default: {True})
-        from_cached_file {bool} -- If True, loads experiments table from saved file in default cache location (returned by get_production_cache_dir())
+        from_cached_file {bool} -- If True, loads experiments table from saved file in default cache location (returned by get_platform_analysis_cache_dir())
         overwrite_cached_file {bool} -- If True, saves experiment_table to default cache folder, overwrites existing file
 
     Returns:
@@ -457,8 +460,8 @@ def get_filtered_ophys_experiment_table_from_lims(include_failed_data=False, rel
 
     if not release_data_only:
         if from_cached_file:
-            if 'filtered_ophys_experiment_table.csv' in os.listdir(get_production_cache_dir()):
-                filepath = os.path.join(get_production_cache_dir(), 'filtered_ophys_experiment_table.csv')
+            if 'filtered_ophys_experiment_table.csv' in os.listdir(get_platform_analysis_cache_dir()):
+                filepath = os.path.join(get_platform_analysis_cache_dir(), 'filtered_ophys_experiment_table.csv')
                 print('loading cached experiment_table')
                 print('last updated on:')
                 import time
@@ -466,7 +469,7 @@ def get_filtered_ophys_experiment_table_from_lims(include_failed_data=False, rel
                 # load the cached file
                 experiments = pd.read_csv(filepath)
             else:
-                print('there is no filtered_ophys_experiment_table.csv', get_production_cache_dir())
+                print('there is no filtered_ophys_experiment_table.csv', get_platform_analysis_cache_dir())
         else:
             print('getting up-to-date experiment_table from lims')
             # get everything in lims
@@ -477,7 +480,7 @@ def get_filtered_ophys_experiment_table_from_lims(include_failed_data=False, rel
             if add_extra_columns:
                 print('adding extra columns')
                 print('NOTE: this is slow. set from_cached_file to True to load cached version of experiments_table at:')
-                print(get_production_cache_dir())
+                print(get_platform_analysis_cache_dir())
                 # create cre_line column, set NaN session_types to None, add model output availability and location columns
                 experiments = reformat.reformat_experiments_table(experiments)
         if include_failed_data:
@@ -506,7 +509,7 @@ def get_filtered_ophys_experiment_table_from_lims(include_failed_data=False, rel
 
     if overwrite_cached_file == True:
         print('overwriting pre-saved experiments table file')
-        experiments.to_csv(os.path.join(get_production_cache_dir(), 'filtered_ophys_experiment_table.csv'))
+        experiments.to_csv(os.path.join(get_platform_analysis_cache_dir(), 'filtered_ophys_experiment_table.csv'))
     return experiments
 
 
@@ -549,7 +552,7 @@ def get_filtered_ophys_session_table_from_lims(release_data_only=True, include_f
         from_cached_file = True
     else:
         from_cached_file = False
-    experiment_table = get_filtered_ophys_experiment_table(release_data_only=release_data_only,
+    experiment_table = get_filtered_ophys_experiment_table_from_lims(release_data_only=release_data_only,
                                                            include_failed_data=include_failed_data,
                                                            from_cached_file=from_cached_file)
     sessions = filtering.limit_to_production_project_codes(sessions)
@@ -584,7 +587,7 @@ def get_filtered_behavior_session_table_from_lims(release_data_only=True):
     behavior_sessions = behavior_sessions.merge(all_experiments[['mouse_id']], on='mouse_id')
     if release_data_only:
         # limit to mice that are in the data release & have a valid session_type
-        release_experiments = get_filtered_ophys_experiment_table(release_data_only=True)
+        release_experiments = get_filtered_ophys_experiment_table_from_lims(release_data_only=True)
         release_mice = release_experiments.mouse_id.unique()
         behavior_sessions = behavior_sessions[behavior_sessions.mouse_id.isin(release_mice)]
         behavior_sessions = behavior_sessions[behavior_sessions.session_type.isnull() == False]
@@ -1126,9 +1129,9 @@ def get_behavior_dataset(behavior_session_id, from_lims=False, from_nwb=False, f
     elif from_local_cache: 
         platform_cache_dir = get_platform_analysis_cache_dir()
         cache = bpc.from_local_cache(cache_dir=platform_cache_dir, use_static_cache=True)
-        dataset = cache.get_behavior_ophys_experiment(ophys_experiment_id)
+        dataset = cache.get_behavior_session(behavior_session_id)
     else:
-        raise Exception('Set load_from_lims or load_from_nwb to True')
+        raise Exception('Set from_lims, from_nwb, or from_local_cache to True')
 
     if get_extended_stimulus_presentations:
         # add extended stimulus presentations
@@ -1188,7 +1191,7 @@ def get_ophys_session_ids_for_ophys_container_id(ophys_container_id):
             Returns:
                 ophys_session_ids -- list of ophys_session_ids that meet filtering criteria
             """
-    experiments = get_filtered_ophys_experiment_table()
+    experiments = get_filtered_ophys_experiment_table_from_lims()
     ophys_session_ids = np.sort(experiments[(experiments.ophys_container_id == ophys_container_id)].ophys_session_id.unique())
     return ophys_session_ids
 
@@ -1203,37 +1206,37 @@ def get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id):
                 Returns:
                     ophys_experiment_ids -- list of ophys_experiment_ids that meet filtering criteria
                 """
-    experiments = get_filtered_ophys_experiment_table()
+    experiments = get_filtered_ophys_experiment_table_from_lims()
     ophys_experiment_ids = np.sort(experiments[(experiments.ophys_container_id == ophys_container_id)].index.values)
     return ophys_experiment_ids
 
 
 def get_session_type_for_ophys_experiment_id(ophys_experiment_id):
-    experiments = get_filtered_ophys_experiment_table()
+    experiments = get_filtered_ophys_experiment_table_from_lims()
     session_type = experiments.loc[ophys_experiment_id].session_type
     return session_type
 
 
 def get_session_type_for_ophys_session_id(ophys_session_id):
-    sessions = get_filtered_ophys_session_table()
+    sessions = get_filtered_ophys_session_table_from_lims()
     session_type = sessions.loc[ophys_session_id].session_type
     return session_type
 
 
 def get_ophys_experiment_id_for_ophys_session_id(ophys_session_id):
-    experiments = get_filtered_ophys_experiment_table()
+    experiments = get_filtered_ophys_experiment_table_from_lims()
     ophys_experiment_id = experiments[(experiments.ophys_session_id == ophys_session_id)].index.values[0]
     return ophys_experiment_id
 
 
 def get_ophys_session_id_for_ophys_experiment_id(ophys_experiment_id):
-    experiments = get_filtered_ophys_experiment_table()
+    experiments = get_filtered_ophys_experiment_table_from_lims()
     ophys_session_id = experiments.loc[ophys_experiment_id].ophys_session_id
     return ophys_session_id
 
 
 def get_behavior_session_id_for_ophys_experiment_id(ophys_experiment_id):
-    experiments = get_filtered_ophys_experiment_table(include_failed_data=True)
+    experiments = get_filtered_ophys_experiment_table_from_lims(include_failed_data=True)
     behavior_session_id = experiments.loc[ophys_experiment_id].behavior_session_id
     return behavior_session_id
 
@@ -1284,7 +1287,7 @@ def get_extended_stimulus_presentations_for_session(session):
 
 
 def get_model_output_file(behavior_session_id):
-    model_output_dir = get_behavior_model_outputs_dir()
+    model_output_dir = get_behavior_model_output_dir()
     model_output_file = [file for file in os.listdir(model_output_dir) if
                          (str(behavior_session_id) in file) and ('training' not in file)]
     return model_output_file
@@ -1320,7 +1323,7 @@ def load_behavior_model_outputs(behavior_session_id):
     if check_if_model_output_available(behavior_session_id):
         model_outputs = pd.read_csv(
             os.path.join(
-                get_behavior_model_outputs_dir(),
+                get_behavior_model_output_dir(),
                 get_model_output_file(behavior_session_id)[0]
             )
         )
@@ -1368,21 +1371,9 @@ def add_model_outputs_to_stimulus_presentations(stimulus_presentations, behavior
 
 
 def get_behavior_model_summary_table():
-    data_dir = get_behavior_model_outputs_dir()
+    data_dir = get_behavior_model_output_dir()
     data = pd.read_pickle(os.path.join(data_dir, '_summary_table.pkl'))
     return data
-
-
-def check_for_events_file(ophys_experiment_id):
-    # events_folder = os.path.join(get_analysis_cache_dir(), 'events')
-    events_folder = os.path.join(get_events_dir())
-    if os.path.exists(events_folder):
-        events_file = [file for file in os.listdir(events_folder) if
-                       str(ophys_experiment_id) in file]
-        if len(events_file) > 0:
-            return True
-        else:
-            return False
 
 
 def get_behavior_movie_predictions_for_session(ophys_session_id):
@@ -1861,7 +1852,7 @@ def gen_roi_exclusion_labels_lists(experiment_id):
     """
     roi_exclusion_table = get_failed_roi_exclusion_labels(experiment_id)
     roi_exclusion_table = roi_exclusion_table[["cell_roi_id", "exclusion_label_name"]]
-    exclusion_list_per_invalid_roi = roi_exclusion_table.groupby(["cell_roi_id"]).agg(lambda x: tuple(x)).applymap(
+    exclusion_list_per_invalid_roi = roi_exclusion_table.groupby(["cell_roi_id"]).agg(lambda x: tuple(x)).apply(
         list).reset_index()
     return exclusion_list_per_invalid_roi
 
@@ -2045,7 +2036,7 @@ def get_average_depth_image(experiment_id):
 
     expt_dir = utilities.get_ophys_experiment_dir(utilities.get_lims_data(experiment_id))
     session_dir = utilities.get_ophys_session_dir(utilities.get_lims_data(experiment_id))
-    experiment_table = get_filtered_ophys_experiment_table(include_failed_data=True)
+    experiment_table = get_filtered_ophys_experiment_table_from_lims(include_failed_data=True)
     session_id = experiment_table.loc[experiment_id].ophys_session_id
 
     # try all combinations of potential file path locations...
@@ -2062,6 +2053,7 @@ def get_average_depth_image(experiment_id):
     else:
         print('problem for', experiment_id)
         print(session_dir)
+        im = None
     return im
 
 # CONTAINER  LEVEL
@@ -2733,7 +2725,7 @@ def get_unique_cell_specimen_ids_for_container(container_id):
     :param container_id: container ID
     :return: list of cell_specimen_ids for a given container
     """
-    experiments_table = get_filtered_ophys_experiment_table()
+    experiments_table = get_filtered_ophys_experiment_table_from_lims()
     container_expts = experiments_table[experiments_table.ophys_container_id == container_id]
     experiment_ids = np.sort(container_expts.index.values)
     cell_specimen_table = pd.DataFrame()
@@ -2840,7 +2832,7 @@ def get_annotated_experiments_table():
     project_codes = ['VisualBehavior', 'VisualBehaviorTask1B',
                      'VisualBehaviorMultiscope', 'VisualBehaviorMultiscope4areasx2d']
 
-    experiments_table = get_filtered_ophys_experiment_table()
+    experiments_table = get_filtered_ophys_experiment_table_from_lims()
     experiments_table = experiments_table[experiments_table.project_code.isin(project_codes)]
     # add columns
     experiments_table['depth'] = ['superficial' if experiments_table.loc[expt].imaging_depth <= 250 else 'deep' for expt
@@ -3139,8 +3131,8 @@ def get_concatenated_stimulus_presentations(project_codes=None, session_numbers=
     ex: project_codes = ['VisualBehaviorTask1B', 'VisualBehaviorMultiscope], session_numbers = [3, 4]
     """
 
-    save_dir = os.path.join(get_decoding_analysis_dir(), 'data')
-    experiments_table = get_filtered_ophys_experiment_table()
+    save_dir = os.path.join(get_platform_analysis_cache_dir(), 'stimulus_presentations')
+    experiments_table = get_filtered_ophys_experiment_table_from_lims()
     if project_codes is None:
         project_codes = experiments_table.project_code.unique()
     if session_numbers is None:
@@ -3172,7 +3164,7 @@ def get_concatenated_stimulus_response_dfs(project_codes=None, session_numbers=N
     """
 
     save_dir = os.path.join(get_decoding_analysis_dir(), 'data')
-    experiments_table = get_filtered_ophys_experiment_table()
+    experiments_table = get_filtered_ophys_experiment_table_from_lims()
     if project_codes is None:
         project_codes = experiments_table.project_code.unique()
     if session_numbers is None:
@@ -3205,7 +3197,7 @@ def get_stimulus_response_data_across_sessions(project_codes=None, session_numbe
     ex: project_codes = ['VisualBehaviorTask1B', 'VisualBehaviorMultiscope], session_numbers = [3, 4]
     """
 
-    experiments_table = get_filtered_ophys_experiment_table()
+    experiments_table = get_filtered_ophys_experiment_table_from_lims()
     if project_codes is None:
         project_codes = experiments_table.project_code.unique()
     if session_numbers is None:
@@ -3281,7 +3273,7 @@ def get_container_response_df(ophys_container_id, df_name='omission_response_df'
     using the ResponseAnalysis class to build event locked response dataframes
     """
     from visual_behavior.ophys.response_analysis.response_analysis import ResponseAnalysis
-    experiments_table = get_filtered_ophys_experiment_table()
+    experiments_table = get_filtered_ophys_experiment_table_from_lims()
     container_expts = experiments_table[experiments_table.ophys_container_id == ophys_container_id]
     container_df = pd.DataFrame()
     for ophys_experiment_id in container_expts.index.values:
@@ -3306,7 +3298,7 @@ def get_cell_summary(search_dict={}):
         see database.get_cell_dff_data for description of columns
     '''
     cell_table = db.get_cell_dff_data(search_dict=search_dict)
-    experiment_table = get_filtered_ophys_experiment_table().reset_index()
+    experiment_table = get_filtered_ophys_experiment_table_from_lims().reset_index()
     cell_table = cell_table.merge(
         experiment_table,
         left_on='ophys_experiment_id',

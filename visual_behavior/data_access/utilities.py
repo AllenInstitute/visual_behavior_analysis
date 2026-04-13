@@ -1705,11 +1705,14 @@ def add_area_depth_column(experiments_table):
 
 def add_binned_depth_column(df):
     """
-    for a dataframe with column 'depth', created by the function add_depth_per_container,
+    for a dataframe with column 'depth', created by the function add_average_depth_across_container,
     bin the depth values into 100um bins and assign the mean depth for each bin
     :param df:
     :return:
     """
+    if 'depth' not in df.keys():
+        df = add_average_depth_across_container(df)
+
     df.loc[:, 'binned_depth'] = None
 
     indices = df[(df.depth < 100)].index.values

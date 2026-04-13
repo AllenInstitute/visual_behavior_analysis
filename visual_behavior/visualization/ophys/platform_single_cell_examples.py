@@ -991,7 +991,7 @@ def plot_max_and_roi_outlines_for_container(ophys_container_id, platform_experim
             suffix = '_matched'
         experience_level = platform_experiments.loc[ophys_experiment_id].experience_level
         ax[i] = plot_roi_mask_outlines(dataset, cell_specimen_ids=cells_to_plot, label_rois=label_rois,
-                                       include_max_projection=False, roi_color='red', ax=ax[i])
+                                       include_max_projection=True, roi_color='red', ax=ax[i])
         ax[i].set_title(experience_level, color=experience_level_colors[i], fontsize=14)
     if save_dir:
         metadata = utils.get_metadata_string(dataset.metadata)

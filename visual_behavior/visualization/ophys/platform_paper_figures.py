@@ -244,10 +244,10 @@ def plot_cell_count_by_depth(cells_table, project_code=None, suptitle=None, hori
     binwidth = 50
     if ax is None:
         if horiz:
-            figsize = (10, 3)
+            figsize = (12, 3)
             fig, ax = plt.subplots(1, 3, figsize=figsize, sharey=True)
         else:
-            figsize = (3, 10)
+            figsize = (3, 12)
             fig, ax = plt.subplots(3, 1, figsize=figsize, sharey=True)
     for i, cell_type in enumerate(utils.get_cell_types()):
         if hue:
@@ -386,6 +386,135 @@ def plot_n_segmented_cells(multi_session_df, df_name, horizontal=True, save_dir=
 # population averages across session & within epochs #####################
 
 
+def plot_population_averages_for_condition(multi_session_df, data_type, event_type, hue_column,
+                                            project_code=None, timestamps=None, palette=None, 
+                                            title=None, suptitle=None, xlabel='Time (s)', ylabel='Response',
+                                            horizontal=True, xlim_seconds=None, interval_sec=1, legend=False,
+                                            save_dir=None, folder=None, suffix='', ax=None):
+    '''
+    Function to plot a population average response across for a single condition from a dataframe containing event aligned timeseries,
+    where axes_column defines the axes conditions and hue_column defines the colors of traces within each axes condition.
+    axes_column and hue_column must be columns of the multi_session_df.
+    multi_session_df must contain a column for 'mean_trace' and rows should be individual cells' average responses to a specific condition.
+    also works for behavior timeseries, in which case rows are averages across an experiment or subset of an experiment rather than individual cells.
+
+    event_type is one of ['changes', 'omissions', 'images']
+    this determines how stimuli will be plotted overlaid with the trace - changes in blue, omissions with dotted line, repeated images in gray
+
+    data_type is one of ['dff', 'events', 'filtered_events', 'running_speed', 'pupil_width', 'lick_rate']
+
+    interval_sec determines the interval of the xtick labels (ex: ticks every 1 second or 0.5 seconds)
+    xlim_seconds is the range of x-axis, which must be the same or shorter than the range of the data in the 'mean_response' column of the multi_session_df.
+    timestamps can be provided, or inferred from the 'trace_timestamps' column of the multi_session_df.
+
+    event aligned timeseries can be computed using brain_observatory_utilities function 'get_stimulus_response_df' here:
+    https://github.com/AllenInstitute/brain_observatory_utilities/blob/main/brain_observatory_utilities/datasets/optical_physiology/data_formatting.py#L441
+    Followed by a groupby and mean on the conditions of interest.
+
+    '''
+
+    if palette is None:
+        palette = utils.get_experience_level_colors()
+
+    sdf = multi_session_df.copy()
+
+    # get timestamps
+    if 'trace_timestamps' in sdf.keys():
+        timestamps = sdf.trace_timestamps.values[0]
+    elif timestamps is not None:
+        timestamps = timestamps
+    else:
+        print('provide timestamps or provide a multi_session_df with a trace_timestamps column')
+
+    # set formatting options
+    if xlim_seconds is None:
+        xlim_seconds = [timestamps[0], timestamps[-1]]
+    if event_type == 'omissions':
+        omitted = True
+        change = False
+    elif event_type == 'changes':
+        omitted = False
+        change = True
+    else:
+        omitted = False
+        change = False
+
+    # get conditions to plot
+    hue_conditions = np.sort(sdf[hue_column].unique())
+
+    # set plot size depending on what type of data it is
+    if data_type in ['dff', 'events', 'filtered_events']:
+        if horizontal:
+            figsize = (5, 2.5)
+        else:
+            figsize = (3, 3)  # for changes and omissions
+    elif data_type in ['running_speed', 'pupil_width', 'lick_rate']:
+        if horizontal:
+            figsize = (5, 4)  # for behavior timeseries
+        else:
+            figsize = (2.5, 3)  # for image response
+
+    # create axes
+    if ax == None:
+        if horizontal:
+            suffix = suffix+'_horiz'
+            fig, ax = plt.subplots(1, 1, figsize=figsize)
+        else:
+            fig, ax = plt.subplots(1, 1, figsize=figsize)
+    else:
+        format_fig = False
+
+    # loop over conditions and plot
+    for c, hue in enumerate(hue_conditions):
+        # try:
+        cdf = sdf[(sdf[hue_column] == hue)]
+        traces = cdf.mean_trace.values
+        # plot average of all traces for this condition
+        ax = utils.plot_mean_trace(np.asarray(traces), timestamps, ylabel=ylabel,
+                                        legend_label=hue, color=palette[c], interval_sec=interval_sec,
+                                        xlim_seconds=xlim_seconds, ax=ax)
+        # plot stimulus timing overlaid on trace
+        ax = utils.plot_flashes_on_trace(ax, timestamps, change=change, omitted=omitted)
+
+        # color title by experience level if axes are experience levels
+        if title:
+            ax.set_title(title)
+        ax.set_xlim(xlim_seconds)
+        ax.set_xlabel(xlabel)
+        ax.set_ylabel('')
+        ax.set_xlabel('')
+        ax.tick_params(axis='both', which='major', labelsize=14)
+
+        ax.set_ylabel(ylabel)
+        ax.set_xlabel(xlabel)
+
+    if legend:
+        if hue_column == 'passive':
+            ax.legend(['active', 'passive'], loc='upper center', fontsize='x-small', bbox_to_anchor=(1.3,1))
+        else:
+            ax.legend(title=hue_column, loc='upper center', fontsize='x-small', title_fontsize='x-small',
+                         bbox_to_anchor=(1.2, 1))
+    if project_code:
+        if suptitle is None:
+            suptitle = 'population average - ' + data_type + ' response - ' + project_code[14:]
+    if suptitle:
+        if horizontal:
+            y = 1.1
+        else:
+            y = 0.95
+        plt.suptitle(suptitle, x=0.51, y=y, fontsize=18)
+    
+    # plt.rcParams["savefig.bbox"] = "tight"
+    if save_dir:
+        fig.subplots_adjust(hspace=0.4, wspace=0.3)
+        plt.rcParams["savefig.bbox"] = "tight"
+
+        fig_title = 'population_average_' + hue_column + suffix
+        utils.save_figure(fig, figsize, save_dir, folder, fig_title)
+
+    return ax
+
+
 def plot_population_averages_for_conditions(multi_session_df, data_type, event_type, axes_column, hue_column,
                                             project_code=None, timestamps=None, palette=None, sharey=False,
                                             title=None, suptitle=None, xlabel='Time (s)', ylabel='Response',
@@ -495,7 +624,7 @@ def plot_population_averages_for_conditions(multi_session_df, data_type, event_t
             if title:
                 ax[i].set_title(title)
             ax[i].set_xlim(xlim_seconds)
-            ax[i].set_xlabel(xlabel, fontsize=16)
+            ax[i].set_xlabel(xlabel)
             ax[i].set_ylabel('')
             ax[i].set_xlabel('')
             ax[i].tick_params(axis='both', which='major', labelsize=14)
@@ -587,7 +716,6 @@ def plot_population_averages_for_cell_types_across_experience(multi_session_df, 
             ax[i].set_xlabel('')
         for i in [7]:
             ax[i].set_xlabel(xlabel)
-        fig.tight_layout()
     else:
         for i in range(len(cell_types)):
             ax[i][0].set_ylabel(ylabel)
@@ -605,7 +733,7 @@ def plot_population_averages_for_cell_types_across_experience(multi_session_df, 
     if save_dir:
         plt.subplots_adjust(hspace=0.4, wspace=0.3)
         fig_title = 'population_average_cell_types_exp_levels' + suffix
-        utils.save_figure(fig, figsize, save_dir, folder, fig_title, formats=['.png'])
+        utils.save_figure(fig, figsize, save_dir, folder, fig_title)
 
     return ax
 
@@ -634,7 +762,35 @@ def plot_population_averages_across_experience(multi_session_df, xlim_seconds=[-
 
     if save_dir:
         fig_title = 'population_average_exp_levels' + suffix
-        utils.save_figure(fig, figsize, save_dir, folder, fig_title, formats=['.png', '.pdf'])
+        utils.save_figure(fig, figsize, save_dir, folder, fig_title)
+
+    return ax
+
+
+def plot_population_average_across_experience(multi_session_df, xlim_seconds=[-1.25, 1.5], xlabel='time (s)', ylabel='population\nresponse',
+                                               data_type='events', event_type='changes', interval_sec=1,
+                                               save_dir=None, folder=None, suffix=None, ax=None):
+    # get important information
+    palette = utilities.get_experience_level_colors()
+
+    # define plot axes
+    hue_column = 'experience_level'
+
+    if ax is None:
+        figsize = (4, 3)
+        fig, ax = plt.subplots(1, 1, figsize=figsize)
+        ax = ax.ravel()
+
+    df = multi_session_df.copy()
+    ax = plot_population_averages_for_conditions(df, data_type, event_type,
+                                                 hue_column, horizontal=True,
+                                                 xlim_seconds=xlim_seconds, interval_sec=interval_sec,
+                                                 palette=palette, ax=ax)
+    ax.set_ylabel(ylabel)
+
+    if save_dir:
+        fig_title = 'population_average_exp_levels' + suffix
+        utils.save_figure(fig, figsize, save_dir, folder, fig_title)
 
     return ax
 
@@ -3304,7 +3460,7 @@ def plot_behavior_and_physio_timeseries_stacked(dataset, start_time, duration_se
     ax[8].set_yticklabels([])
     ax[8].set_ylabel('licks', rotation=0, horizontalalignment='right', verticalalignment='center')
 
-    ax[9].plot(reward_timestamps, rewards, 'o', label='rewards', color='gray', markersize=50)
+    ax[9].plot(reward_timestamps, rewards, '^', label='rewards', color='blue', markersize=10)
     ax[9].set_yticklabels([])
     ax[9].set_ylabel('rewards', rotation=0, horizontalalignment='right', verticalalignment='center')
 
@@ -3568,7 +3724,7 @@ def plot_matched_roi_and_traces_example(cell_metadata, include_omissions=True,
 
 ########## behavior plots - figure 1 #############
 
-def plot_behavior_metric_by_experience(stats, metric, title='', ylabel='', ylims=None, best_image=True, show_mice=False,
+def plot_behavior_metric_by_experience(stats, metric, title='', ylabel='', ylims=None, best_image=False, show_mice=False,
                                        stripplot=True, pointplot=True, plot_stats=False, show_ns=False,
                                        abbreviate_exp=True, save_dir=None, folder=None, suffix='', ax=None):
     """
@@ -3621,6 +3777,9 @@ def plot_behavior_metric_by_experience(stats, metric, title='', ylabel='', ylims
     else:
         data = stats.copy()
 
+    if metric == 'mean_dprime_engaged':
+        data = data[data[metric] > 0]
+
     colors = utils.get_experience_level_colors()
     # experience_levels = utils.get_experience_levels()
     experience_levels = np.sort(data.experience_level.unique())
@@ -3637,7 +3796,7 @@ def plot_behavior_metric_by_experience(stats, metric, title='', ylabel='', ylims
             ax = sns.pointplot(data=data[data.mouse_id == mouse_id], x='experience_level', y=metric,
                                order=experience_levels, linewidth=0.5, orient='v', color='gray',
                                markers='.', markersize=0.15, err_kws={'linewidth': 0.5}, ax=ax)
-        suffix = suffix + '_containers'
+        # suffix = suffix + '_show_mice'
 
     if pointplot:
         ax = sns.pointplot(data=data, x='experience_level', y=metric, order=experience_levels,
@@ -3741,6 +3900,9 @@ def plot_behavior_metric_by_experience_horiz(stats, metric, title='', xlabel='',
 
     else:
         data = stats.copy()
+    
+    if metric == 'mean_dprime_engaged':
+        data = data[data[metric] > 0]
 
     colors = utils.get_experience_level_colors()
     # experience_levels = utils.get_experience_levels()
@@ -3758,7 +3920,7 @@ def plot_behavior_metric_by_experience_horiz(stats, metric, title='', xlabel='',
             ax = sns.pointplot(data=data[data.ophys_container_id == ophys_container_id], y='experience_level', x=metric,
                                order=experience_levels, linewidth=0.5, orient='h', color='gray',
                                markers='.', markersize=0.15, err_kws={'linewidth': 0.5}, ax=ax)
-        suffix = suffix + '_containers'
+        # suffix = suffix + '_show_mice'
 
     if pointplot:
         ax = sns.pointplot(data=data, y='experience_level', x=metric, order=experience_levels,
@@ -3837,6 +3999,9 @@ def plot_behavior_metric_by_cohort(stats, metric, title='', ylabel='', ylims=Non
 
     data = stats.copy()
 
+    if metric == 'mean_dprime_engaged':
+        data = data[data[metric] > 0]
+
     # colors = utils.get_experience_level_colors()
     # experience_levels = utils.get_experience_levels()
     c = sns.color_palette()
@@ -3857,7 +4022,7 @@ def plot_behavior_metric_by_cohort(stats, metric, title='', ylabel='', ylims=Non
             ax = sns.pointplot(data=data[data.ophys_container_id == ophys_container_id], x='project_code', y=metric,
                                order=project_codes, linewidth=0.5, orient='v', color='gray',
                                markers='.', markersize=0.15, err_kws={'linewidth': 0.5}, ax=ax)
-        suffix = suffix + '_containers'
+        # suffix = suffix + '_show_mice'
 
     if pointplot:
         ax = sns.pointplot(data=data, x='project_code', y=metric, order=project_codes,
