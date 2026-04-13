@@ -3694,6 +3694,81 @@ def get_multi_session_df_for_conditions(data_type, event_type, conditions, inclu
     return multi_session_df
 
 
+
+def get_behavior_multi_session_df(data_type, condition, platform_experiments, inclusion_criteria='platform_experiment_table', 
+                            interpolate=True, output_sampling_rate=30, epoch_duration_mins=None, ):
+    """
+    Get multi-session dataframe for a given data type and event type, with specified conditions. 
+    This function is a wrapper for loading.get_multi_session_df_for_conditions that adds some additional processing steps specific to the platform paper figures.
+
+    Parameters
+    ----------
+    data_type : str
+        The type of data to load (e.g. 'running_speed', 'pupil_width', 'lick_rate').
+    condition : str
+        The condition to load (e.g. 'images', 'changes', 'omissions').
+    conditions : list
+        A list of conditions to load (e.g. ['ophys_experiment_id', 'is_change']).
+    inclusion_criteria : str
+        The criteria for including experiments (e.g. 'platform_experiment_table').
+    interpolate : bool, optional
+        Whether to interpolate the data to a common sampling rate (default is False).
+    output_sampling_rate : int, optional
+        The sampling rate to interpolate to if interpolate is True (default is 30).
+    epoch_duration_mins : float, optional
+        The duration of epochs in minutes if loading epoch-based data (default is None).
+
+    Returns
+    -------
+    pd.DataFrame
+        A multi-session dataframe containing the requested data.
+    """
+    # Set conditions for loading 
+    if condition == 'changes': 
+        conditions = ['ophys_experiment_id', 'is_change']
+        if epoch_duration_mins is not None:
+            conditions.append('epoch')
+    elif condition == 'omissions':
+        conditions = ['ophys_experiment_id', 'omitted']
+        if epoch_duration_mins is not None:
+            conditions.append('epoch')
+    elif condition == 'images': 
+        conditions = ['ophys_experiment_id', 'is_change']
+        if epoch_duration_mins is not None:
+            conditions.append('epoch')
+    else: 
+        conditions = ['ophys_experiment_id']
+
+    df = get_multi_session_df_for_conditions(data_type, 'all', conditions, inclusion_criteria,
+                                                      interpolate=interpolate, output_sampling_rate=output_sampling_rate,
+                                                      epoch_duration_mins=epoch_duration_mins)
+    # Limit to conditions of interest
+    if condition == 'changes': 
+        df = df[df.is_change == True]
+    elif condition == 'omissions':
+        df = df[df.omitted == True]
+    elif condition == 'images': 
+        df = df[df.is_change == False]
+    else: 
+        print('Please provide an acceptable value for "condition"')
+
+    # Limit to platform paper experiments 
+    df = df[df.behavior_session_id.isin(platform_experiments.behavior_session_id.unique())]
+    # Drop duplicates (only need behavior from 1 experiment per session, otherwise duplicating data)
+    df = df.drop_duplicates(subset='behavior_session_id')
+    
+    if data_type == 'pupil_width':
+        # Convert to percentage of baseline                                                       
+        df['mean_trace'] = [(mean_trace - 1)*100 for mean_trace in df.mean_trace.values]
+        df['mean_response'] = df['mean_response'] - 1
+        df['mean_response'] = df['mean_response'] * 100
+
+    if epoch_duration_mins is not None:
+        df['epoch'] = df['epoch'] + 1 # change epoch numbering to start at 1 instead of 0 for easier interpretation in plots
+
+    return df
+
+
 def get_behavior_stats_from_stimulus_presentations(stimulus_presentations):
     '''
     takes annotated stimulus presentations and computes response rates for changes, non-changes, omission, post-omission

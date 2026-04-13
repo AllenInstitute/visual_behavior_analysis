@@ -387,10 +387,10 @@ def plot_n_segmented_cells(multi_session_df, df_name, horizontal=True, save_dir=
 
 
 def plot_population_averages_for_condition(multi_session_df, data_type, event_type, hue_column,
-                                            project_code=None, timestamps=None, palette=None, 
+                                            project_code=None, timestamps=None, palette=None, ylims=None,
                                             title=None, suptitle=None, xlabel='Time (s)', ylabel='Response',
                                             horizontal=True, xlim_seconds=None, interval_sec=1, legend=False,
-                                            save_dir=None, folder=None, suffix='', ax=None):
+                                            linewidth=1, save_dir=None, folder=None, suffix='', ax=None):
     '''
     Function to plot a population average response across for a single condition from a dataframe containing event aligned timeseries,
     where axes_column defines the axes conditions and hue_column defines the colors of traces within each axes condition.
@@ -472,7 +472,7 @@ def plot_population_averages_for_condition(multi_session_df, data_type, event_ty
         # plot average of all traces for this condition
         ax = utils.plot_mean_trace(np.asarray(traces), timestamps, ylabel=ylabel,
                                         legend_label=hue, color=palette[c], interval_sec=interval_sec,
-                                        xlim_seconds=xlim_seconds, ax=ax)
+                                        xlim_seconds=xlim_seconds, linewidth=linewidth, ax=ax)
         # plot stimulus timing overlaid on trace
         ax = utils.plot_flashes_on_trace(ax, timestamps, change=change, omitted=omitted)
 
@@ -480,11 +480,9 @@ def plot_population_averages_for_condition(multi_session_df, data_type, event_ty
         if title:
             ax.set_title(title)
         ax.set_xlim(xlim_seconds)
-        ax.set_xlabel(xlabel)
-        ax.set_ylabel('')
-        ax.set_xlabel('')
+        if ylims is not None: 
+            ax.set_ylim(ylims)
         ax.tick_params(axis='both', which='major', labelsize=14)
-
         ax.set_ylabel(ylabel)
         ax.set_xlabel(xlabel)
 
@@ -519,7 +517,7 @@ def plot_population_averages_for_conditions(multi_session_df, data_type, event_t
                                             project_code=None, timestamps=None, palette=None, sharey=False,
                                             title=None, suptitle=None, xlabel='Time (s)', ylabel='Response',
                                             horizontal=True, xlim_seconds=None, interval_sec=1, legend=False,
-                                            save_dir=None, folder=None, suffix='', ax=None):
+                                            linewidth=1, save_dir=None, folder=None, suffix='', ax=None):
     '''
     Function to plot a population average response across multiple conditions from a dataframe containing event aligned timeseries,
     where axes_column defines the axes conditions and hue_column defines the colors of traces within each axes condition.
@@ -611,7 +609,7 @@ def plot_population_averages_for_conditions(multi_session_df, data_type, event_t
             # plot average of all traces for this condition
             ax[i] = utils.plot_mean_trace(np.asarray(traces), timestamps, ylabel=ylabel,
                                           legend_label=hue, color=palette[c], interval_sec=interval_sec,
-                                          xlim_seconds=xlim_seconds, ax=ax[i])
+                                          linewidth=linewidth, xlim_seconds=xlim_seconds, ax=ax[i])
             # plot stimulus timing overlaid on trace
             ax[i] = utils.plot_flashes_on_trace(ax[i], timestamps, change=change, omitted=omitted)
 
@@ -667,8 +665,7 @@ def plot_population_averages_for_conditions(multi_session_df, data_type, event_t
 
 
 def plot_population_averages_for_cell_types_across_experience(multi_session_df, xlim_seconds=[-1.25, 1.5], xlabel='time (s)',
-                                                              ylabel='population average',
-                                                              data_type='events', event_type='changes', interval_sec=1,
+                                                              ylabel='population average',  data_type='events', event_type='changes', interval_sec=1,
                                                               save_dir=None, folder=None, suffix=None, ax=None):
     # get important information
     experiments_table = loading.get_platform_paper_experiment_table()
@@ -842,7 +839,6 @@ def plot_mean_response_by_epoch(df, metric='mean_response', horizontal=True, ymi
     # experience_epoch = np.sort(df[df.experience_level==experience_levels[0]].experience_epoch.unique())
     # experience_epoch = np.sort(df.experience_epoch.unique())
     experience_epoch = np.sort(df.epoch.unique())
-    print(experience_epoch)
     # experience_epoch = ['Familiar epoch 1', 'Familiar epoch 2', 'Familiar epoch 3',
     #                      'Familiar epoch 4', 'Familiar epoch 5', 'Familiar epoch 6',
     #                      'Novel epoch 1', 'Novel epoch 2', 'Novel epoch 3',
@@ -883,17 +879,19 @@ def plot_mean_response_by_epoch(df, metric='mean_response', horizontal=True, ymi
             ax[i].get_legend().remove()
             ax[i].set_xlim((xticks[0] - 1, xticks[-1] + 1))
             ax[i].set_xticks(xticks)
-            ax[i].set_xticklabels(xticklabels)
+            ax[i].set_xticklabels(xticklabels+1)
             ax[i].vlines(x=max_n_sessions + 0.5, ymin=0, ymax=1, color='gray', linestyle='--')
             ax[i].vlines(x=max_n_sessions + max_n_sessions + 1.5, ymin=0, ymax=1, color='gray', linestyle='--')
             if horizontal:
-                ax[i].set_xlabel('epoch within session')
+                ax[i].set_xlabel('Epoch within session')
+                if i != 0: 
+                    ax[i].set_ylabel('')
             else:
                 ax[i].set_xlabel('')
         except Exception as e:
             print(e)
 
-    ax[i].set_xlabel('epoch within session')
+    ax[i].set_xlabel('Epoch within session')
     ax[i].tick_params(axis='both', which='major', labelsize=14)
 
     if legend:
@@ -908,6 +906,95 @@ def plot_mean_response_by_epoch(df, metric='mean_response', horizontal=True, ymi
         utils.save_figure(fig, figsize, save_dir, folder, fig_title)
     return ax
 
+
+def plot_mean_response_by_epoch_all_cell_types(df, metric='mean_response', horizontal=True, ymin=0, ymax=None,
+                                               ylabel='mean response', estimator=np.mean,
+                                               legend=False, save_dir=None, folder='epochs', max_epoch=6,
+                                               title=None, suptitle=None, palette=None, suffix='', ax=None):
+    """
+    Plots the mean metric value across 10 minute epochs within a session, averaged across cell types
+    Typically used for plotting behavior changes across sessions, averaged across all mice
+    :param df: dataframe of cell activity with one row per cell_specimen_id / ophys_experiment_id
+                must include columns 'cell_type', 'experience_level', 'epoch', and a column for the metric provided (ex: 'mean_response')
+    :param metric: metric value to average over epochs; must be a column of df
+    :param save_dir: top level directory to save figure to
+    :param folder: folder within save_dir to save figure to; will create folder if it doesnt exist
+    :param suffix: string to append at end of saved filename
+    :return:
+    """
+    # add experience epoch column if it doesnt already exist
+    # if 'experience_epoch' not in df.keys():
+    # df = annotate_epoch_df(df)
+
+    # experience_levels = utils.get_new_experience_levels()
+    # for novel + control
+    experience_levels = np.sort(df.experience_level.unique())
+    experience_levels = [experience_levels[-1]] + list(experience_levels[:-1])
+
+    df = df[df.epoch <= max_epoch]
+    max_n_sessions = len(df.epoch.unique())
+
+    # experience_epoch = np.sort(df[df.experience_level==experience_levels[0]].experience_epoch.unique())
+    # experience_epoch = np.sort(df.experience_epoch.unique())
+    experience_epoch = np.sort(df.epoch.unique())
+
+    xticks = np.arange(0, len(experience_epoch), 1)
+    xticklabels = experience_epoch #np.arange(0, len(experience_epoch), 1)+1
+    # xticklabels = [experience_epoch.split(' ')[1] for experience_epoch in experience_epoch]
+
+    if palette is None:
+        palette = utils.get_experience_level_colors()
+
+    if ax is None:
+        format_fig = True
+        if horizontal:
+            figsize = (5, 3)
+        else:
+            figsize = (5, 3)
+        fig, ax = plt.subplots(1, 1)
+    else:
+        format_fig = False
+
+    data = df.copy()
+    ax = sns.pointplot(data=data, x='epoch', y=metric, hue='experience_level', hue_order=experience_levels,
+                          order=experience_epoch, palette=palette, ax=ax, estimator=estimator)
+
+    if ymin is not None:
+        ax.set_ylim(ymin=ymin)
+    if ymax is not None:
+        ax.set_ylim(ymax=ymax)
+
+    if title is None:
+        title = metric.replace('_',' ')
+    ax.set_title(title)
+    ax.set_ylabel(ylabel)
+    ax.get_legend().remove()
+    ax.set_xlim((xticks[0] - 1, xticks[-1] + 1))
+    ax.set_xticks(xticks)
+    ax.set_xticklabels(xticklabels+1)
+    ax.vlines(x=max_n_sessions + 0.5, ymin=0, ymax=1, color='gray', linestyle='--')
+    ax.vlines(x=max_n_sessions + max_n_sessions + 1.5, ymin=0, ymax=1, color='gray', linestyle='--')
+
+    if horizontal:
+        ax.set_xlabel('Epoch within session')
+    else:
+        ax.set_xlabel('')
+    ax.set_xlabel('Epoch within session')
+    ax.tick_params(axis='both', which='major', labelsize=14)
+
+    if legend:
+        ax.legend(fontsize='x-small', bbox_to_anchor=(1,1))
+
+    if format_fig:
+        if suptitle is not None:
+            plt.suptitle(suptitle, x=0.52, y=1.01, fontsize=18)
+    plt.subplots_adjust(wspace=0.4, hspace=0.4)
+
+    if save_dir:
+        fig_title = metric + suffix
+        utils.save_figure(fig, figsize, save_dir, folder, fig_title)
+    return ax
+    
 
 def plot_mean_response_by_epoch_for_multiple_conditions(response_df_dict, metric='mean_response', horizontal=True,
                                                         ymin=0, suptitle=None, axes_condition='cell_type',
@@ -3517,7 +3604,7 @@ def plot_behavior_and_physio_timeseries_stacked(dataset, start_time, duration_se
 
 
 def plot_matched_roi_and_trace(ophys_container_id, cell_specimen_id, limit_to_last_familiar_second_novel=True,
-                               use_events=False, filter_events=False, save_figure=True):
+                               use_events=False, filter_events=False, linewidth=1, save_figure=True):
     """
     Generates plots characterizing single cell activity in response to stimulus, omissions, and changes.
     First row is the ROI mask in the 3 sessions, second row is the average change response for each session in gray
@@ -3578,7 +3665,7 @@ def plot_matched_roi_and_trace(ophys_container_id, cell_specimen_id, limit_to_la
 
                 ax[i + n] = utils.plot_mean_trace(cell_data.trace.values, cell_data.trace_timestamps.values[0],
                                                   ylabel=ylabel, legend_label=None, color='gray', interval_sec=0.5,
-                                                  xlim_seconds=window, plot_sem=True, ax=ax[i + n])
+                                                  linewidth=linewidth, xlim_seconds=window, plot_sem=True, ax=ax[i + n])
 
                 ax[i + n] = utils.plot_flashes_on_trace(ax[i + n], cell_data.trace_timestamps.values[0], change=True, omitted=False,
                                                         alpha=0.15, facecolor='gray')
@@ -3608,7 +3695,8 @@ def plot_matched_roi_and_trace(ophys_container_id, cell_specimen_id, limit_to_la
 
 
 def plot_matched_roi_and_traces_example(cell_metadata, include_omissions=True,
-                                        use_events=False, filter_events=False, save_dir=None, folder=None):
+                                        use_events=False, filter_events=False, linewidth=1,
+                                        save_dir=None, folder=None):
     """
     Plots the ROI masks and cell traces for a cell matched across sessions in a single row
     First 3 panels are ROIs, then change response across sessions, then omission response across sessions if include_omission=True
@@ -3684,7 +3772,7 @@ def plot_matched_roi_and_traces_example(cell_metadata, include_omissions=True,
                 cell_data = sdf[(sdf.cell_specimen_id == cell_specimen_id) & (sdf.is_change == True)]
 
                 ax[n_expts] = utils.plot_mean_trace(cell_data.trace.values, cell_data.trace_timestamps.values[0],
-                                                    ylabel=ylabel, legend_label=None, color=color, interval_sec=1,
+                                                    ylabel=ylabel, legend_label=None, color=color, interval_sec=1, linewidth=linewidth,
                                                     xlim_seconds=window, plot_sem=True, ax=ax[n_expts])
                 ax[n_expts] = utils.plot_flashes_on_trace(ax[n_expts], cell_data.trace_timestamps.values[0],
                                                           change=True, omitted=False)
@@ -3701,7 +3789,7 @@ def plot_matched_roi_and_traces_example(cell_metadata, include_omissions=True,
                     ax[n_expts + 1] = utils.plot_mean_trace(cell_data.trace.values,
                                                             cell_data.trace_timestamps.values[0],
                                                             ylabel=ylabel, legend_label=None, color=color,
-                                                            interval_sec=1,
+                                                            interval_sec=1, linewidth=linewidth,
                                                             xlim_seconds=window, plot_sem=True, ax=ax[n_expts + 1])
                     ax[n_expts + 1] = utils.plot_flashes_on_trace(ax[n_expts + 1],
                                                                   cell_data.trace_timestamps.values[0],
