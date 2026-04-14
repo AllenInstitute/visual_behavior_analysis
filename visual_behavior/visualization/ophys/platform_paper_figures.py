@@ -839,13 +839,7 @@ def plot_mean_response_by_epoch(df, metric='mean_response', horizontal=True, ymi
     # experience_epoch = np.sort(df[df.experience_level==experience_levels[0]].experience_epoch.unique())
     # experience_epoch = np.sort(df.experience_epoch.unique())
     experience_epoch = np.sort(df.epoch.unique())
-    # experience_epoch = ['Familiar epoch 1', 'Familiar epoch 2', 'Familiar epoch 3',
-    #                      'Familiar epoch 4', 'Familiar epoch 5', 'Familiar epoch 6',
-    #                      'Novel epoch 1', 'Novel epoch 2', 'Novel epoch 3',
-    #                      'Novel epoch 4', 'Novel epoch 5', 'Novel epoch 6',
-    #                      'Novel + epoch 1', 'Novel + epoch 2', 'Novel + epoch 3',
-    #                      'Novel + epoch 4', 'Novel + epoch 5', 'Novel + epoch 6']
-
+  
     xticks = np.arange(0, len(experience_epoch), 1)
     xticklabels = experience_epoch #np.arange(0, len(experience_epoch), 1)+1
     # xticklabels = [experience_epoch.split(' ')[1] for experience_epoch in experience_epoch]
@@ -865,7 +859,6 @@ def plot_mean_response_by_epoch(df, metric='mean_response', horizontal=True, ymi
 
     for i, cell_type in enumerate(cell_types):
         try:
-            print(cell_type, experience_epoch)
             data = df[df.cell_type == cell_type]
             ax[i] = sns.pointplot(data=data, x='epoch', y=metric, hue='experience_level', hue_order=experience_levels,
                                   order=experience_epoch, palette=palette, ax=ax[i], estimator=estimator)
@@ -1846,7 +1839,7 @@ def plot_metric_distribution_by_experience_no_cell_type(metrics_table, metric, e
             # ax = sns.pointplot(data=data, x='experience_level', y=metric,
             #                    palette=colors, ax=ax)
             ax = sns.pointplot(data=data, x=x, y=y, hue='experience_level', order=order,
-                                  hue_order=experience_levels, palette=palette, dodge=0, join=False,
+                                  hue_order=experience_levels, palette=palette, dodge=0, linestyle=None,
                                   markers='.', markersize=8, err_kws={'linewidth': 2}, errorbar=('ci', 95), ax=ax)
 
         else:
@@ -2250,6 +2243,60 @@ def plot_metric_distribution_all_conditions(metrics_table, metric, event_type, d
         #     plot_metric_distribution_by_experience(df, metric, stripplot=False, pointplot=True, event_type=event_type, data_type=data_type,
         #                                            suffix=project_code, add_zero_line=add_zero_line,
         #                                            hue='layer', ylabel=ylabel, ylims=ylims, save_dir=save_dir, ax=None)
+
+
+def plot_metric_over_repeats(df, metric, x, title='', xlabel=None, ylabel=None, save_dir=None, folder=None, ax=None):
+    '''   
+
+    '''
+    if ax is None: 
+        figsize = (10, 3)
+        fig, ax = plt.subplots(figsize=figsize)
+
+    experience_level_colors = utils.get_experience_level_colors()
+    
+    ax = sns.pointplot(data=df, x=x, y=metric, hue='experience_level',
+                            palette=experience_level_colors, hue_order=experience_levels, ax=ax)
+    ax.legend(bbox_to_anchor=(1,1), fontsize='xx-small', title='')
+    ax.set_title(title)
+    if xlabel is None: 
+        ax.set_xlabel(x.replace('_', ' ').capitalize())
+    else: 
+        ax.set_xlabel(xlabel)
+    if ylabel is None:
+        ax.set_ylabel(metric.replace('_', ' ').capitalize())
+    else: 
+        ax.set_ylabel(ylabel)
+    for j, label in enumerate(ax.get_xticklabels()):
+        label.set_visible(j % 4 == 0)
+
+    if save_dir:
+        utils.save_figure(fig, figsize, save_dir, folder, metric+'_'+x)
+    
+    return ax
+
+
+def plot_metric_over_repeats_for_cell_types(df, metric, x, xlabel=None, ylabel=None, save_dir=None, folder=None):
+    figsize = (12, 9)
+    fig, ax = plt.subplots(3, 1, figsize=figsize, sharex=True, sharey=True)
+    experience_level_colors = utils.get_experience_level_colors()
+    for i, cell_type in enumerate(utils.get_cell_types()):
+        cell_type_df = df[df.cell_type==cell_type]
+        ax[i] = plot_metric_over_repeats(cell_type_df, metric, x, title='', save_dir=None, folder=None, ax=ax[i])
+        ax[i].set_xlabel('')
+        ax[i].set_ylabel('')
+        ax[i].set_title(cell_type)
+    if xlabel is None: 
+        ax[i].set_xlabel(x.replace('_', ' ').capitalize())
+    else: 
+        ax[i].set_xlabel(xlabel)
+    if ylabel is None:
+        ax[1].set_ylabel(metric.replace('_', ' ').capitalize())
+    else: 
+        ax[1].set_ylabel(ylabel)
+
+    if save_dir:
+        utils.save_figure(fig, figsize, save_dir, folder, metric+'_'+x+'_cell_types')
 
 
 def plot_modulation_index_distribution(metrics_table, metric, x_axis_col=None, x_axis_label=None,
@@ -4774,7 +4821,7 @@ def plot_behavior_performance_for_one_mouse(behavior_stats, mouse_id, metric, me
     if ax is None:
         figsize = (10,3)
         fig, ax = plt.subplots(figsize=figsize)
-    ax = sns.pointplot(data=data, x=x, y=metric, hue=hue, hue_order=data[hue].unique(), join=False, palette=colors, ax=ax)
+    ax = sns.pointplot(data=data, x=x, y=metric, hue=hue, hue_order=data[hue].unique(), linestyle=None, palette=colors, ax=ax)
     ax.legend(bbox_to_anchor=(1,1), fontsize='x-small')
     ax.set_xticklabels(data[hue].values, rotation=90);
     ax.set_ylim(ymin=0)

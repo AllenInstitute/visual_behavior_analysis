@@ -3726,18 +3726,15 @@ def get_behavior_multi_session_df(data_type, condition, platform_experiments, in
     # Set conditions for loading 
     if condition == 'changes': 
         conditions = ['ophys_experiment_id', 'is_change']
-        if epoch_duration_mins is not None:
-            conditions.append('epoch')
     elif condition == 'omissions':
         conditions = ['ophys_experiment_id', 'omitted']
-        if epoch_duration_mins is not None:
-            conditions.append('epoch')
     elif condition == 'images': 
         conditions = ['ophys_experiment_id', 'is_change']
-        if epoch_duration_mins is not None:
-            conditions.append('epoch')
     else: 
         conditions = ['ophys_experiment_id']
+
+    if epoch_duration_mins is not None:
+            conditions.append('epoch')
 
     df = get_multi_session_df_for_conditions(data_type, 'all', conditions, inclusion_criteria,
                                                       interpolate=interpolate, output_sampling_rate=output_sampling_rate,
@@ -3755,16 +3752,22 @@ def get_behavior_multi_session_df(data_type, condition, platform_experiments, in
     # Limit to platform paper experiments 
     df = df[df.behavior_session_id.isin(platform_experiments.behavior_session_id.unique())]
     # Drop duplicates (only need behavior from 1 experiment per session, otherwise duplicating data)
-    df = df.drop_duplicates(subset='behavior_session_id')
+    if epoch_duration_mins is not None:
+        df = df.drop_duplicates(subset=['behavior_session_id', 'epoch'])
+    else: 
+        df = df.drop_duplicates(subset='behavior_session_id')
     
     if data_type == 'pupil_width':
         # Convert to percentage of baseline                                                       
         df['mean_trace'] = [(mean_trace - 1)*100 for mean_trace in df.mean_trace.values]
         df['mean_response'] = df['mean_response'] - 1
         df['mean_response'] = df['mean_response'] * 100
+    if data_type == 'lick_rate':
+        # Convert to lick rate in Hz 
+        df['mean_trace'] = [mean_trace*100 for mean_trace in df.mean_trace.values]
 
-    if epoch_duration_mins is not None:
-        df['epoch'] = df['epoch'] + 1 # change epoch numbering to start at 1 instead of 0 for easier interpretation in plots
+    # if epoch_duration_mins is not None:
+    #     df['epoch'] = df['epoch'] + 1 # change epoch numbering to start at 1 instead of 0 for easier interpretation in plots
 
     return df
 
