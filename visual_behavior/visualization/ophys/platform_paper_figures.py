@@ -1839,7 +1839,7 @@ def plot_metric_distribution_by_experience_no_cell_type(metrics_table, metric, e
             # ax = sns.pointplot(data=data, x='experience_level', y=metric,
             #                    palette=colors, ax=ax)
             ax = sns.pointplot(data=data, x=x, y=y, hue='experience_level', order=order,
-                                  hue_order=experience_levels, palette=palette, dodge=0, linestyle=None,
+                                  hue_order=experience_levels, palette=palette, dodge=0, linestyle='None',
                                   markers='.', markersize=8, err_kws={'linewidth': 2}, errorbar=('ci', 95), ax=ax)
 
         else:
@@ -4228,7 +4228,7 @@ def plot_behavior_metric_across_stages(data, metric, ylabel=None, save_dir=None,
 
     figsize = (7, 3)
     fig, ax = plt.subplots(figsize=figsize)
-    ax = sns.boxplot(data=data, x='cell_type', y=metric, width=0.8, order=cell_types,
+    ax = sns.boxplot(data=data, x='cell_type', y=metric, width=0.8, order=cell_types, 
                      hue='behavior_stage', hue_order=behavior_stages, palette=colors, ax=ax)
     ax.set_xlabel('')
     ax.set_ylabel(ylabel)
@@ -4821,7 +4821,7 @@ def plot_behavior_performance_for_one_mouse(behavior_stats, mouse_id, metric, me
     if ax is None:
         figsize = (10,3)
         fig, ax = plt.subplots(figsize=figsize)
-    ax = sns.pointplot(data=data, x=x, y=metric, hue=hue, hue_order=data[hue].unique(), linestyle=None, palette=colors, ax=ax)
+    ax = sns.pointplot(data=data, x=x, y=metric, hue=hue, hue_order=data[hue].unique(), linestyle='None', palette=colors, ax=ax)
     ax.legend(bbox_to_anchor=(1,1), fontsize='x-small')
     ax.set_xticklabels(data[hue].values, rotation=90);
     ax.set_ylim(ymin=0)
@@ -4834,9 +4834,12 @@ def plot_behavior_performance_for_one_mouse(behavior_stats, mouse_id, metric, me
         ax.set_xlabel('Session number')
     ax.set_ylabel(ylabel)
     if save_dir:
+        if os.path.exists(os.path.join(save_dir, folder)) == False:
+            os.makedirs(os.path.join(save_dir, folder))
         utils.save_figure(fig, figsize, os.path.join(save_dir, folder), 'behavior_performance_over_time_'+method,
                         metric+'_mouse_id_'+str(mouse_id)+'_'+hue)
     return ax
+
 
 def plot_response_rate_trial_types(data, save_dir=None, suffix='', ax=None):
     '''
