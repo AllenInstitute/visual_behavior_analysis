@@ -27,7 +27,7 @@ sns.set_palette('deep')
 
 
 def plot_reliable_example_cells(multi_session_mean_df, cells_to_plot, cell_type, event_type='changes',
-                                linewidth=1, save_dir=None, folder=None, suffix=''):
+                                xlim_seconds=None, linewidth=1, save_dir=None, folder=None, suffix=''):
     '''
     Plot mean response for each experience level for a subset of cells that are reliably responsive
 
@@ -42,9 +42,8 @@ def plot_reliable_example_cells(multi_session_mean_df, cells_to_plot, cell_type,
     if event_type == 'changes':
         change = True
         omitted = False
-        window = [-1, 0.75]
-        window = [-0.25, 0.75]
-        col_size = 0.75
+        if xlim_seconds is None:
+            xlim_seconds = [-0.25, 0.75]
         label = 'Image change'
         label_color = sns.color_palette()[0]
         if cell_type == 'Excitatory':
@@ -56,8 +55,8 @@ def plot_reliable_example_cells(multi_session_mean_df, cells_to_plot, cell_type,
     elif event_type == 'omissions':
         change = False
         omitted = True
-        window = [-1, 1.5]
-        col_size = 1.2
+        if xlim_seconds is None:
+            xlim_seconds = [-1, 1.5]
         label = 'Image omission'
         label_color = sns.color_palette()[9]
         if cell_type == 'Excitatory':
@@ -69,8 +68,8 @@ def plot_reliable_example_cells(multi_session_mean_df, cells_to_plot, cell_type,
     else:
         change = False
         omitted = False
-        window = [-0.5, 0.75]
-        col_size = 0.75
+        if xlim_seconds is None:
+            xlim_seconds = [-0.25, 0.75]
         if cell_type == 'Excitatory':
             scale = 1.2
         elif cell_type == 'Sst Inhibitory':
@@ -79,6 +78,8 @@ def plot_reliable_example_cells(multi_session_mean_df, cells_to_plot, cell_type,
             scale = 1.6
 
     interval_sec = 1
+    col_size = xlim_seconds[1]
+    dist = xlim_seconds[1]*0.1
 
     sdf = multi_session_mean_df.copy()
     experience_levels = utils.get_experience_levels()
@@ -106,10 +107,10 @@ def plot_reliable_example_cells(multi_session_mean_df, cells_to_plot, cell_type,
         traces = exp_data.mean_trace.values
         timestamps = exp_data.trace_timestamps.values[0]
         ax[i] = utils.plot_mean_trace(traces, timestamps,
-                                      ylabel='', legend_label=None, color=color, linewidth=linewidth,
-                                      interval_sec=interval_sec, xlim_seconds=window, plot_sem=True, ax=ax[i])
-        ax[i] = utils.plot_flashes_on_trace(ax[i], timestamps, change=change, omitted=omitted, alpha=0.15,
-                                            linewidth=0.75)
+                                      ylabel='', legend_label=None, color=color, linewidth=linewidth, alpha=0.3,
+                                      interval_sec=interval_sec, xlim_seconds=xlim_seconds, plot_sem=True, ax=ax[i])
+        ax[i] = utils.plot_flashes_on_trace(ax[i], timestamps, change=change, omitted=omitted, alpha=0.25,
+                                            linewidth=1)
         ax[i].set_xticklabels([])
         ax[i].set_xlabel('')
         ymin, ymax = ax[i].get_ylim()
@@ -123,12 +124,8 @@ def plot_reliable_example_cells(multi_session_mean_df, cells_to_plot, cell_type,
 
         if e == 0:
             # plot a line for 1/3 of the axis, corresponding to the yticklabel for y axis, which is set at 1/3 of the max y value
-            # ax[i].axvline(x=window[0] - 0.1, ymin=0, ymax=0.3, color='k', linewidth=1, clip_on=False)
-            if event_type == 'omissions':
-                dist = 0.18
-            else:
-                dist = 0.1
-            ax[i].axvline(x=window[0] - dist, ymin=0, ymax=0.3, color='k', linewidth=1, clip_on=False)
+            # ax[i].axvline(x=xlim_seconds[0] - 0.1, ymin=0, ymax=0.3, color='k', linewidth=1, clip_on=False)
+            ax[i].axvline(x=xlim_seconds[0] - dist, ymin=0, ymax=0.3, color='k', linewidth=1, clip_on=False)
         sns.despine(ax=ax[i], top=True, right=True, left=True, bottom=True)
         ax[i].tick_params(bottom=False, left=False, right=False, top=False, labelsize=7, pad=-1)
 
@@ -147,12 +144,12 @@ def plot_reliable_example_cells(multi_session_mean_df, cells_to_plot, cell_type,
         # ax[i].annotate('', xy=(0, -0.08), xycoords=ax[i].get_xaxis_transform(), xytext=(0.5, -0.08), fontsize=8,
         #                arrowprops=dict(arrowstyle='-', color='k', lw=1, shrinkA=0, shrinkB=0), clip_on=False)
 
-        xmax = 0.5 / (np.abs(window[0]) + window[1])  # 0.5 / of total time
+        xmax = 0.5 / (np.abs(xlim_seconds[0]) + xlim_seconds[1])  # 0.5 / of total time
         y_time = (ymax - ymin) * 0.1
         y_label = -(ymax - ymin) * 0.2
         ax[i].axhline(y=-y_time, xmin=0, xmax=xmax, color='k', linewidth=1, clip_on=False)
-        ax[i].annotate('0.5 s', xy=(window[0] - 0.1, y_label),
-                       xycoords='data', xytext=(window[0] - 0.1 + 0.5, y_label), ha='center', va='top',
+        ax[i].annotate('0.5 s', xy=(xlim_seconds[0] - 0.1, y_label),
+                       xycoords='data', xytext=(xlim_seconds[0] - 0.1 + 0.5, y_label), ha='center', va='top',
                        fontsize=8, clip_on=False, annotation_clip=False)
 
 
@@ -175,11 +172,11 @@ def plot_reliable_example_cells(multi_session_mean_df, cells_to_plot, cell_type,
             color = experience_level_colors[e]
             cell_data = sdf[(sdf.cell_specimen_id == cell_specimen_id) & (sdf.experience_level == experience_level)]
             if len(cell_data) > 0:  # only plot if there is data for this exp level
-                ax[i] = utils.plot_mean_trace_from_mean_df(cell_data, ylabel='', xlabel='', xlims=window,
+                ax[i] = utils.plot_mean_trace_from_mean_df(cell_data, ylabel='', xlabel='', xlims=xlim_seconds, alpha=0.3,
                                                            color=color, interval_sec=interval_sec, linewidth=linewidth,
                                                            ax=ax[i])
                 ax[i] = utils.plot_flashes_on_trace(ax[i], cell_data.trace_timestamps.values[0],
-                                                    change=change, omitted=omitted, alpha=0.15, linewidth=0.75)
+                                                    change=change, omitted=omitted, alpha=0.25, linewidth=1)
                 ax[i].set_xticklabels([])
             else:
                 ax[i].set_xticklabels([])
@@ -192,11 +189,7 @@ def plot_reliable_example_cells(multi_session_mean_df, cells_to_plot, cell_type,
             #     ax[i].set_title(experience_level, color=color, fontsize=12)
 
             if e == 0: # plot response magnitude bar
-                if event_type == 'omissions':
-                    dist = 0.18
-                else:
-                    dist = 0.1
-                ax[i].axvline(x=window[0] - dist, ymin=0, ymax=0.3, color='k', linewidth=1, clip_on=False)
+                ax[i].axvline(x=xlim_seconds[0] - dist, ymin=0, ymax=0.3, color='k', linewidth=1, clip_on=False)
                 ax[i].set_ylabel('cell ' + str(c + 1), rotation=0, fontsize=8, ha='right', y=0.4)
             sns.despine(ax=ax[i], top=True, right=True, left=True, bottom=True)
             ax[i].tick_params(bottom=False, left=False, right=False, top=False, labelsize=7, pad=-1, )
@@ -223,12 +216,12 @@ def plot_reliable_example_cells(multi_session_mean_df, cells_to_plot, cell_type,
             ax[i].set_ylim(ymax=ymax * 1.1)
             if (e == 0) & (c == len(cells_to_plot)-1): # if its the first axis, plot the time window
                 # plot 0.5 s time bar
-                xmax = 0.5 / (np.abs(window[0]) + window[1])  # 0.5 / of total time
+                xmax = 0.5 / (np.abs(xlim_seconds[0]) + xlim_seconds[1])  # 0.5 / of total time
                 y_time = (ymax - ymin) * 0.15
                 y_label = -(ymax - ymin) * 0.25
                 ax[i].axhline(y=-y_time, xmin=0, xmax=xmax, color='k', linewidth=1, clip_on=False)
-                ax[i].annotate('0.5 s', xy=(window[0] - 0.15, y_label),
-                               xycoords='data', xytext=(window[0] - 0.15 + 0.5, y_label), ha='center', va='top',
+                ax[i].annotate('0.5 s', xy=(xlim_seconds[0] - 0.15, y_label),
+                               xycoords='data', xytext=(xlim_seconds[0] - 0.15 + 0.5, y_label), ha='center', va='top',
                                fontsize=8, clip_on=False, annotation_clip=False)
 
 

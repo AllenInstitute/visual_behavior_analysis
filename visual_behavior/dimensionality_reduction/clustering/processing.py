@@ -25,15 +25,24 @@ import visual_behavior.visualization.utils as utils
 
 import visual_behavior_glm.GLM_analysis_tools as gat
 import visual_behavior_glm.GLM_across_session as gas
-
 import visual_behavior_glm.GLM_clustering as glm_clust
 import visual_behavior_glm.GLM_params as glm_params
 from statsmodels.stats.proportion import proportion_confint
 from statsmodels.stats.proportion import multinomial_proportions_confint
 from visual_behavior.dimensionality_reduction.clustering import plotting as plotting
 
-cache_dir = loading.get_sdk_cache_dir()
-cache = VisualBehaviorOphysProjectCache.from_local_cache(cache_dir=cache_dir, use_static_cache=True)
+_cache = None
+
+def get_cache():
+    """Lazily initialize and return the VisualBehaviorOphysProjectCache."""
+    global _cache
+    if _cache is None:
+        _cache = loading._get_cache()
+    return _cache
+
+# Keep module-level `cache` as a property-like accessor for backward compatibility
+# Functions that need the cache should call get_cache() instead
+cache = None  # Will be initialized on first use via get_cache()
 
 
 import seaborn as sns

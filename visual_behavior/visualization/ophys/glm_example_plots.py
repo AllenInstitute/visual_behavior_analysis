@@ -17,7 +17,7 @@ import visual_behavior.visualization.ophys.platform_paper_figures as ppf
 import brain_observatory_utilities.utilities.general_utilities as general_utils
 
 import visual_behavior.dimensionality_reduction.clustering.plotting as plotting
-import visual_behavior.dimensionality_reduction.clustering.processing as processing
+import visual_behavior.dimensionality_reduction.clustering.processing as cluster_processing
 
 from visual_behavior_glm.glm import GLM
 import visual_behavior_glm.GLM_params as glm_params
@@ -96,7 +96,7 @@ def load_glm_model_fit_results(ophys_experiment_id):
     '''
     # load GLM fit results
     platform_cache_dir = loading.get_platform_analysis_cache_dir()
-    fits_dir = os.path.join(platform_cache_dir, 'glm_results', 'model_fits')
+    fits_dir = os.path.join(platform_cache_dir, 'visual_behavior_ophys_glm_model_fits')
     filename = [file for file in os.listdir(fits_dir) if str(ophys_experiment_id) in file and 'cell_results_df.h5' in file]
     cell_results_df = pd.read_hdf(os.path.join(fits_dir, filename[0]), key='df', index_col=0)
     # all results
@@ -2235,8 +2235,8 @@ def plot_coding_score_components_for_cell(cell_specimen_id, ophys_experiment_id,
     cell_dropouts = results_pivoted[results_pivoted.identifier == identifier]
 
     # which features to plot
-    features = processing.get_features_for_clustering()
-    feature_labels = processing.get_feature_labels_for_clustering()
+    features = cluster_processing.get_features_for_clustering()
+    feature_labels = cluster_processing.get_feature_labels_for_clustering()
     feature_colors, feature_labels_dict = plotting.get_feature_colors_and_labels()
     c_vals, feature_labels_dict = plotting.get_feature_colors_and_labels()
 

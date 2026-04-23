@@ -655,7 +655,7 @@ def plot_flashes_on_trace(ax, timestamps, change=None, omitted=False, alpha=0.07
     return ax
 
 
-def plot_mean_trace(traces, timestamps, ylabel='dF/F', legend_label=None, color='k',
+def plot_mean_trace(traces, timestamps, ylabel='dF/F', legend_label=None, color='k', alpha=0.4,
                     interval_sec=1, xlim_seconds=[-2, 2], linewidth=1, plot_sem=True, ax=None):
     '''
     compute average and SEM of traces array and plot it on the specified axis
@@ -668,7 +668,7 @@ def plot_mean_trace(traces, timestamps, ylabel='dF/F', legend_label=None, color=
         sem = (np.std(traces)) / np.sqrt(float(len(traces)))
         ax.plot(timestamps, trace, label=legend_label, linewidth=linewidth, color=color)
         if plot_sem:
-            ax.fill_between(timestamps, trace + sem, trace - sem, alpha=0.4, color=color)
+            ax.fill_between(timestamps, trace + sem, trace - sem, alpha=alpha, color=color)
         ax.set_xticks(np.arange(int(timestamps[0]), int(timestamps[-1]) + 1, interval_sec))
         ax.set_xlim(xlim_seconds)
         ax.set_xlabel('Time (sec)')
@@ -678,7 +678,7 @@ def plot_mean_trace(traces, timestamps, ylabel='dF/F', legend_label=None, color=
 
 
 def plot_mean_trace_from_mean_df(cell_data, ylabel='dF/F', xlabel='time (s)', legend_label=None, color='k', interval_sec=1,
-                                 xlims=[-4, 4],  ax=None, plot_sem=True, linewidth=3):
+                                 xlims=[-4, 4],  ax=None, plot_sem=True, linewidth=3, alpha=0.4):
 
     xlim = [0, xlims[1] + np.abs(xlims[0])]
     if ax is None:
@@ -688,7 +688,7 @@ def plot_mean_trace_from_mean_df(cell_data, ylabel='dF/F', xlabel='time (s)', le
     sem = cell_data.sem_trace.values[0]
     ax.plot(timestamps, trace, label=legend_label, linewidth=linewidth, color=color)
     if plot_sem:
-        ax.fill_between(timestamps, trace + sem, trace - sem, alpha=0.5, color=color)
+        ax.fill_between(timestamps, trace + sem, trace - sem, alpha=alpha, color=color)
     ax.set_xticks(np.arange(int(timestamps[0]), int(timestamps[-1]) + 1, interval_sec))
     ax.set_xlim(xlims)
     ax.set_xlabel(xlabel)

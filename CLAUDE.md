@@ -1,3 +1,10 @@
+## Related code repositories
+Path: /Users/marinag/Documents/Code (contains visual_behavior_glm, brain_observatory_utilities, and other related repos)
+
+## Visual Behavior platform paper data files
+Path: /Users/marinag/Library/CloudStorage/Dropbox/JupyterNotebooks/FinalDataAssetsforCodeOcean
+
+## Task
 The goal of this task is to refactor the jupyter notebooks in visual_behavior_analysis/notebooks/platform_paper_tmp based on the organization of figures and results in the paper PDF, to produce a set of scripts and new notebooks that can produce all the figures of the paper in a reasonable, organized way. I believe the steps are as follows: 
 1) convert jupyter notebooks into scripts so they are easier to parse
 2) interpret the scripts and their contents, relating the plotting functions in the scripts to the figures in the paper PDF (main and supplemental figures)

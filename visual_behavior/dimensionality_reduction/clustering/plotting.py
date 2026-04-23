@@ -17,7 +17,7 @@ from statsmodels.stats.multicomp import MultiComparison
 
 import visual_behavior.visualization.utils as utils
 import visual_behavior.data_access.loading as loading
-from visual_behavior_glm import GLM_visualization_tools as gvt   
+from visual_behavior_glm import GLM_visualization_tools as gvt
 
 from visual_behavior_glm import GLM_clustering as glm_clust  # noqa E501
 
@@ -585,7 +585,7 @@ def plot_umap_for_clusters(cluster_meta, feature_matrix, umap_df=None, label_col
         cre_csids = cluster_meta_cre.index.values
         labels = [cluster_meta_cre.loc[cell_specimen_id][label_col] for cell_specimen_id in cre_csids]
         umap_df['labels'] = labels
-        if cre_line is 'all':
+        if cre_line == 'all':
             ax=axes
         else:
             ax=axes[i]
@@ -6733,7 +6733,7 @@ def plot_boxplot(data_array1, data_array2, exp_level_1, exp_level_2,
         test: (str) test to use for significance, default='MW', other other options are 'ttest' and 'W' for within sample comparison
         suffix: (str) suffix to add to plot title, default='' '''
         
-    from visual_behavior_glm import GLM_visualization_tools as gvt    
+    from visual_behavior_glm import GLM_visualization_tools as gvt
     if ax is None:
         fig, ax = plt.subplots(1,1)
     
