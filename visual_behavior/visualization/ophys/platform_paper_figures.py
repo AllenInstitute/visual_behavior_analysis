@@ -586,7 +586,7 @@ def plot_population_averages_for_conditions(multi_session_df, data_type, event_t
         if horizontal:
             figsize = (5 * n_axes_conditions, 2.5)
         else:
-            figsize = (3, 3 * n_axes_conditions)  # for changes and omissions
+            figsize = (3.8, 3 * n_axes_conditions)  # for changes and omissions
     elif data_type in ['running_speed', 'pupil_width', 'lick_rate']:
         if horizontal:
             figsize = (4 * n_axes_conditions, 3)  # for behavior timeseries
@@ -614,22 +614,22 @@ def plot_population_averages_for_conditions(multi_session_df, data_type, event_t
             ax[i] = utils.plot_mean_trace(np.asarray(traces), timestamps, ylabel=ylabel, alpha=0.3,
                                           legend_label=hue, color=palette[c], interval_sec=interval_sec,
                                           linewidth=linewidth, xlim_seconds=xlim_seconds, ax=ax[i])
-            # plot stimulus timing overlaid on trace
-            ax[i] = utils.plot_flashes_on_trace(ax[i], timestamps, change=change, omitted=omitted, alpha=0.25)
+        # plot stimulus timing overlaid on trace
+        ax[i] = utils.plot_flashes_on_trace(ax[i], timestamps, change=change, omitted=omitted, alpha=0.25)
 
-            # color title by experience level if axes are experience levels
-            if axes_column == 'experience_level':
-                title_colors = utils.get_experience_level_colors()
-                ax[i].set_title(axis, color=title_colors[i], fontsize=20)
-            else:
-                ax[i].set_title(axis)
-            if title:
-                ax[i].set_title(title)
-            ax[i].set_xlim(xlim_seconds)
-            ax[i].set_xlabel(xlabel)
-            ax[i].set_ylabel('')
-            ax[i].set_xlabel('')
-            ax[i].tick_params(axis='both', which='major', labelsize=14)
+        # color title by experience level if axes are experience levels
+        if axes_column == 'experience_level':
+            title_colors = utils.get_experience_level_colors()
+            ax[i].set_title(axis, color=title_colors[i], fontsize=20)
+        else:
+            ax[i].set_title(axis)
+        if title:
+            ax[i].set_title(title)
+        ax[i].set_xlim(xlim_seconds)
+        ax[i].set_xlabel(xlabel)
+        ax[i].set_ylabel('')
+        ax[i].set_xlabel('')
+        ax[i].tick_params(axis='both', which='major', labelsize=14)
     # formatting
     if format_fig:
         if horizontal:
@@ -659,7 +659,7 @@ def plot_population_averages_for_conditions(multi_session_df, data_type, event_t
     
     plt.rcParams["savefig.bbox"] = "tight"
     if save_dir:
-        fig.subplots_adjust(hspace=0.4, wspace=0.3)
+        fig.subplots_adjust(hspace=0.4, wspace=0.5)
         plt.rcParams["savefig.bbox"] = "tight"
 
         fig_title = 'population_average_' + axes_column + '_' + hue_column + suffix
@@ -3193,6 +3193,7 @@ def change_width(ax, new_value):
 
 # heatmaps ##########################
 
+
 def plot_cell_response_heatmap(data, timestamps, xlabel='time after change (s)', vmax=0.05,
                                microscope='Multiscope', cbar=True, cbar_label='Response', ax=None):
     if ax is None:
@@ -3224,9 +3225,27 @@ def plot_cell_response_heatmap(data, timestamps, xlabel='time after change (s)',
     return ax
 
 
+def find_cells_without_exactly_three_experience_levels(df, cell_id_col='cell_specimen_id',
+                        experience_col='experience_level', expected_n=3):
+
+    """Return cells that do not have exactly `expected_n` rows/experience levels."""
+
+    summary = (df.groupby(cell_id_col)
+        .agg(n_rows=(experience_col, 'size'),
+            n_unique_experience_levels=(experience_col, 'nunique'),
+            experience_levels_present=(experience_col, lambda s: sorted(s.dropna().unique().tolist())),
+        ).reset_index())
+
+    bad_cells = summary[(summary['n_rows'] != expected_n)
+        | (summary['n_unique_experience_levels'] != expected_n)].copy()
+
+    return bad_cells.sort_values(by=['n_unique_experience_levels', 'n_rows', cell_id_col]).reset_index(drop=True)
+
+
 def plot_response_heatmaps_for_conditions(multi_session_df, timestamps, data_type, event_type,
-                                          row_condition, col_condition, matched_cells_table=None, plot_epochs=False,
-                                          cols_to_sort_by=None, cell_order=None, suptitle=None,
+                                          row_condition, col_condition, matched_cells_table=None, 
+                                          plot_epochs=False, exp_to_match='Novel',
+                                          col_to_sort_by='mean_response', cell_order=None, suptitle=None,
                                           microscope=None, vmax=None, xlim_seconds=None, xlabel='time (s)',
                                           match_cells=False, cbar=True, cbar_label='Avg. calcium events',
                                           save_dir=None, folder=None, suffix='', ax=None):
@@ -3247,89 +3266,66 @@ def plot_response_heatmaps_for_conditions(multi_session_df, timestamps, data_typ
     i = 0
     for r, row in enumerate(row_conditions):
         cre_sdf = sdf[(sdf[row_condition] == row)]
-        for c, col in enumerate(col_conditions):
 
-            if vmax == None: 
-                if row == 'Excitatory':
-                    vmax = 0.005
-                elif row == 'Vip Inhibitory':
-                    vmax = 0.01
-                elif row == 'Sst Inhibitory':
-                    vmax = 0.015
-                else:
-                    vmax = 0.02
+        # Get cell order based on novel session
+        if match_cells:
+            if matched_cells_table is None:
+                print('Please provide the matched cells table to use match_cells=True') 
+                matched_cells_this_ct = np.array([])
+            else:
+                matched_cells_this_ct = matched_cells_table[(matched_cells_table[row_condition] == row)].cell_specimen_id.unique()
+            # Limit cre sdf to only matched cells for this cell type
+            cre_sdf = cre_sdf[cre_sdf.cell_specimen_id.isin(matched_cells_this_ct)]
+            # Find any cells that dont have exactly 3 exp levels and drop them
+            drop_cells = find_cells_without_exactly_three_experience_levels(cre_sdf)
+            cre_sdf = cre_sdf[cre_sdf.cell_specimen_id.isin(drop_cells.cell_specimen_id.unique())==False]
+        
+            # get cell order based on mean response in novel session
+            # use groupby to get one mean_response per cell, ensuring unique ordering regardless of data structure
+            if plot_epochs:
+                novel_data = cre_sdf[(cre_sdf.experience_level == exp_to_match) & (cre_sdf.epoch==0)]
+            else:
+                novel_data = cre_sdf[(cre_sdf.experience_level == exp_to_match)]
+            # to ensure that there are no duplicate cells messing with the ordering, average per cell first
+            novel_cell_order = novel_data.groupby('cell_specimen_id')[col_to_sort_by].mean().sort_values().index.values
+
+        for c, col in enumerate(col_conditions):
+            exp_data = cre_sdf[(cre_sdf[col_condition] == col)]
+            exp_data = exp_data.reset_index()
+
+            if match_cells:
+                exp_data = exp_data.set_index('cell_specimen_id')
+                # use reindex to apply novel session cell order to all experience levels
+                exp_data = exp_data.reindex(novel_cell_order)
+            else: 
+                exp_data = exp_data.sort_values(by=col_to_sort_by, ascending=True)
+
+            # if vmax == None: 
+            if row == 'Excitatory':
+                vmax = 0.0025
+            elif row == 'Vip Inhibitory':
+                vmax = 0.02
+            elif row == 'Sst Inhibitory':
+                vmax = 0.015
+            else:
+                vmax = 0.02
 
             if plot_epochs:
                 vmax = vmax*3
 
-            exp_data = cre_sdf[(cre_sdf[col_condition] == col)]
-            # if cols_to_sort_by is not None:
-            #     exp_data = exp_data.sort_values(by=cols_to_sort_by, ascending=True)
-            # else:
-            if match_cells:
-                if matched_cells_table != None: 
-                    matched_cells_this_ct = matched_cells_table[(matched_cells_table[row_condition] == row)].cell_specimen_id.unique()
-                    # print(len(matched_cells_this_ct))
-                else: 
-                    matched_cells_this_ct = cre_sdf[(cre_sdf[row_condition] == row)].cell_specimen_id.unique()
-                cre_sdf = cre_sdf[cre_sdf.cell_specimen_id.isin(matched_cells_this_ct)]
-                # print(row, col, 'match_cells')
-                    # cell_order = cre_sdf[(cre_sdf.experience_level=='Novel') &
-                    #                   (cre_sdf.cell_specimen_id.isin(exp_data.cell_specimen_id.unique()))].sort_values(by=['cell_type', 'mean_response']).cell_specimen_id.values
-                # get cell order for novel session
-                if plot_epochs:
-                    exp_data = exp_data.reset_index()
-                    exp_data = exp_data[exp_data.cell_specimen_id.isin(matched_cells_this_ct)]
-                    exp_data = exp_data.sort_values(by='cell_specimen_id')
-                    # exp_data = exp_data.set_index('cell_specimen_id')
-                    novel_cell_order = cre_sdf[(cre_sdf.experience_level == 'Novel') & (cre_sdf.epoch==0)]
-                    novel_cell_order = novel_cell_order[novel_cell_order.cell_specimen_id.isin(exp_data.cell_specimen_id.unique())]
-                    novel_cell_order = novel_cell_order.set_index('cell_specimen_id')
-                    novel_cell_order = novel_cell_order.sort_values(by=['mean_response'])
-                    novel_cell_order = novel_cell_order.index.values
-                else:
-                    exp_data = exp_data[exp_data.cell_specimen_id.isin(matched_cells_this_ct)]
-                    novel_cell_order = cre_sdf[(cre_sdf.experience_level == 'Novel')]
-                    novel_cell_order = novel_cell_order.set_index('cell_specimen_id')
-                    novel_cell_order = novel_cell_order.sort_values(by=['mean_response'])
-                    novel_cell_order = novel_cell_order.index.values
-
-                # apply it to current session
-                # print('sort by novel session order')
-                exp_data = exp_data.set_index('cell_specimen_id')
-                exp_data = exp_data.loc[novel_cell_order]
-                # print(row, novel_cell_order[:3], novel_cell_order[-3:])
-
-                # if novel_cell_order is not None:
-                #     exp_data = exp_data.set_index('cell_specimen_id')
-                #     exp_data = exp_data.loc[novel_cell_order]
-                # else:
-                #     if c == 0:
-                #         novel_cell_order = novel_cell_order.sort_values(by=['cell_type', 'mean_response'], ascending=True)
-                #         order = novel_cell_order.index.values
-                #     else:
-                #         novel_cell_order = novel_cell_order.loc[order]
-            else: # otherwise sort by mean response in session
-                # print('sort by mean response within session')
-                exp_data = exp_data.sort_values(by='mean_response', ascending=True)
             # turn responses it into a dataframe where columns are timestamps
-            # data = np.vstack(exp_data.mean_trace.values)
             if plot_epochs:
                 data = exp_data.reset_index().pivot(index=['cell_specimen_id'], columns='epoch', values='mean_response')
-                if match_cells:
-                    data = data.loc[novel_cell_order]
-                else:
-                    data = data.sort_values(by=[0], ascending=True)
             else:
                 data = pd.DataFrame(np.vstack(exp_data.mean_trace.values), columns=timestamps, index=exp_data.index.values)
-            n_cells = len(data)
-            # n_cells = data.shape[0]
-            # make sure its sorted properly
+            
             if match_cells:
-                data = data.loc[novel_cell_order]
-
+                data = data.reindex(novel_cell_order)
+            
+            n_cells = len(data)
+    
             ax[i] = plot_cell_response_heatmap(data, timestamps=timestamps, vmax=vmax, xlabel=xlabel, cbar=cbar,
-                                               microscope=microscope, cbar_label=cbar_label, ax=ax[i])
+                                               cbar_label=cbar_label, ax=ax[i])
             ax[i].set_title(str(row) + '\n' + str(col))
             if col_condition == 'experience_level':
                 colors = utils.get_experience_level_colors()
@@ -3359,16 +3355,12 @@ def plot_response_heatmaps_for_conditions(multi_session_df, timestamps, data_typ
                 ax[i].set_xticklabels(timestamps[::2])
             ax[i].set_ylabel('')
 
-            # zero_index = np.where(timestamps == 0)[0][0]
-            # ax.vlines(x=zero_index, ymin=0, ymax=len(data), color='gray', linestyle='--')
-
             if (r == len(row_conditions) - 1) and (c == 1):
                 ax[i].set_xlabel(xlabel)
             else:
                 ax[i].set_xlabel('')
             sns.despine(ax=ax[i], top=False, right=False, left=False, bottom=False, offset=None, trim=False)
             i += 1
-
     for c, i in enumerate(np.arange(0, (len(col_conditions) * len(row_conditions)), len(col_conditions))):
         ax[i].set_ylabel(str(row_conditions[c])+'\ncells')
 
@@ -3381,10 +3373,9 @@ def plot_response_heatmaps_for_conditions(multi_session_df, timestamps, data_typ
 
     return ax
 
-
 def plot_tuning_curve_heatmaps_for_conditions(multi_session_df, data_type, 
                                           row_condition, col_condition, vmax=None, 
-                                          cbar=True, cbar_label='Mean response',
+                                          cbar=True, cbar_label='Mean response', title='',
                                           save_dir=None, folder=None, suffix='', ax=None):
     sdf = multi_session_df.copy()
 
@@ -3432,6 +3423,8 @@ def plot_tuning_curve_heatmaps_for_conditions(multi_session_df, data_type,
             # make cbar fonts smaller
             # ax[i].figure.axes[-1].yaxis.label.set_size(12)
 
+            if title:
+                ax[i].set_title(title, va='bottom', ha='center')
             ax[i].set_xticks(np.arange(0, len(images), 1)+0.5)
             ax[i].set_xticklabels(images, rotation=90)
             ax[i].set_yticks((0, pivot.shape[0]));
@@ -3439,7 +3432,6 @@ def plot_tuning_curve_heatmaps_for_conditions(multi_session_df, data_type,
 
             if r == 0: 
                 ax[i].set_title(str(col), color=colors[c]);
-
 
             sns.despine(ax=ax[i], top=False, right=False, left=False, bottom=False, offset=None, trim=False)
             i += 1
@@ -3451,10 +3443,104 @@ def plot_tuning_curve_heatmaps_for_conditions(multi_session_df, data_type,
     fig.subplots_adjust(hspace=0.4, wspace=0.4)
     
     if save_dir:
-        utils.save_figure(fig, figsize, save_dir, folder, 'tuning_curve_heatmaps_across_experience_'+data_type)
+        if suffix:
+            suffix = '_'+suffix
+        utils.save_figure(fig, figsize, save_dir, folder, 'tuning_curve_heatmaps_across_experience_'+data_type+suffix)
 
     return ax
 
+
+def plot_population_tuning_curve_for_conditions(multi_session_df, data_type, 
+                                          row_condition, col_condition, ylabel='Normalized response',
+                                          save_dir=None, folder=None, suffix='', ax=None):
+    sdf = multi_session_df.copy()
+
+    row_conditions = np.sort(sdf[row_condition].unique())
+    col_conditions = np.sort(sdf[col_condition].unique())
+
+    if ax is None:
+        figsize = (1 * len(col_conditions), 3 * len(row_conditions))
+        fig, ax = plt.subplots(len(row_conditions), 1, figsize=figsize, sharey=True)
+        ax = ax.ravel()
+        
+    colors = utils.get_experience_level_colors()
+
+    i = 0
+    for r, row in enumerate(row_conditions):
+        cre_sdf = sdf[(sdf[row_condition] == row)]
+        for c, col in enumerate(col_conditions):
+
+            if row == 'Excitatory':
+                vmax = 0.01
+            elif row == 'Vip Inhibitory':
+                vmax = 0.015
+            elif row == 'Sst Inhibitory':
+                vmax = 0.015
+            else:
+                vmax = 0.02
+
+            exp_data = cre_sdf[(cre_sdf[col_condition] == col)]
+            df = exp_data.copy()
+
+            images = df.image_name.unique()
+            csids = []
+            for image in images: 
+                tmp = df[(df.pref_stim==True) & (df.image_name==image)].drop_duplicates(subset=['cell_specimen_id'])
+                tmp = tmp.sort_values(by='mean_response', ascending=False)
+                cells_this_image = list(tmp.cell_specimen_id.values)
+                csids = csids+cells_this_image
+            pivot = df.pivot_table(index='cell_specimen_id', columns='image_name', values='mean_response')
+            pivot = pivot.loc[csids]
+            pivot = pivot[images]
+
+            # gather TCs and plot each cell
+            all_tcs = []
+            for csid in pivot.index.values:
+                tc = pivot.loc[csid]
+                tc = tc.values/tc.max()
+                tc = np.sort(tc)[::-1]
+                all_tcs.append(tc)
+                # ax[i].plot(np.arange(0, len(images), 1), tc, color='gray', linewidth=0.5, linestyle='-')
+
+            # average over population
+            tc = np.nanmean(all_tcs, axis=0)
+            sem = np.nanstd(all_tcs, axis=0) / np.sqrt(len(all_tcs))
+            ax[i].plot(np.arange(0, len(images), 1), tc, color=colors[c], linewidth=1.5, linestyle='-', label=col)
+            ax[i].fill_between(np.arange(0, len(images), 1), tc + sem, tc - sem, alpha=0.4, color=colors[c])
+
+        ax[i].set_xticks(np.arange(0, len(images), 1))
+        ax[i].set_xticklabels(np.arange(0, len(images), 1))
+        if i < 2: 
+            ax[i].set_xticklabels('')
+        # ax[i].set_yticks((0, pivot.shape[0]));
+        # ax[i].set_yticklabels((0, pivot.shape[0]));
+
+        ax[i].set_title(str(row));
+        ax[i].set_ylim(-0.05, 1.1)
+        
+        if r == 2:
+            ax[i].set_xlabel('Sorted image ID')
+        
+
+        sns.despine(ax=ax[i], top=False, right=False, left=False, bottom=False, offset=None, trim=False)
+        i += 1
+
+
+    ax[0].legend(fontsize='xx-small')
+    ax[1].set_ylabel(ylabel)
+    
+    # for c, i in enumerate(np.arange(0, (len(col_conditions) * len(row_conditions)), len(col_conditions))):
+    #     ax[i].set_ylabel(str(row_conditions[c]));
+    
+
+    fig.subplots_adjust(hspace=0.4, wspace=0.4)
+    
+    if save_dir:
+        if suffix:
+            suffix = '_'+suffix
+        utils.save_figure(fig, figsize, save_dir, folder, 'population_tuning_curves_'+data_type+suffix)
+
+    return ax
 
 # timeseries plots #################
 
