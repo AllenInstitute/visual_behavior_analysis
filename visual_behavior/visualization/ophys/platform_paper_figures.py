@@ -2457,24 +2457,27 @@ def plot_metric_across_stimuli_by_experience_level(stimulus_response_df, metric,
 
 
 def plot_modulation_index_distribution(metrics_table, metric, x_axis_col=None, x_axis_label=None,
-                                       label=None, lims=(-1.1, 1.1), horiz=False, plot_type='violinplot', 
+                                       label=None, lims=(-1.1, 1.1), horiz=False, plot_type='violinplot',
                                        annot=('left', 'right'), abbreviate_exp=True, suptitle=None,
                                        fill=True, save_dir=None, suffix='', ax=None):
     '''
-    Plots distribution of metric values split by experience level, showing violinplot plus pointplot
-    if x_axis_col is provided, will plot metric on y axis and x_axis_col value on x-axis, with hues for exp levels
-        stats will be plotted across hue values for each x value
-        x_axis_label will be used for x-axis label, otherwise will be empty
-    if x_axis_col is not provided, will plot metric value on x-axis and experience levels on y axis and hues for exp levels
-        in this case, stats are plotted along y axis
+    Plots distribution of metric values split by experience level.
 
+    When x_axis_col is provided:
+        horiz=True (default): metric on y-axis, x_axis_col on x-axis, columns = cell types
+        horiz=False: metric on x-axis, x_axis_col on y-axis, rows = cell types
+            (flipped orientation — useful for compact vertical layouts)
+
+    When x_axis_col is not provided:
+        horiz=True: metric on x-axis, experience levels on y-axis, columns = cell types
+        horiz=False: metric on x-axis, experience levels on y-axis, rows = cell types
     '''
 
     data = metrics_table.copy()
 
     if x_axis_col:
         if x_axis_col == 'targeted_structure':
-            ax_size = 4
+            ax_size = 3
             order = np.sort(data[x_axis_col].unique())[::-1]
         else:
             ax_size = 3
@@ -2488,54 +2491,86 @@ def plot_modulation_index_distribution(metrics_table, metric, x_axis_col=None, x
     colors = utils.get_experience_level_colors()
     experience_levels = utils.get_experience_levels()
 
+    # Determine layout: flipped = x_axis_col provided with horiz=False
+    flipped = x_axis_col is not None and not horiz
+
     if ax is None:
-        if horiz:
-            orient = 'h'
-            if x_axis_col: 
-                figsize = (ax_size*len(order), 2.5)
+        if flipped:
+            figsize = (2.5, ax_size * len(order))
+            fig, ax = plt.subplots(3, 1, figsize=figsize, sharex=True, sharey=False)
+        elif horiz:
+            if x_axis_col:
+                figsize = (ax_size * len(order), 2.5)
             else:
-                figsize = (9, 2)
+                figsize = (9, 3)
             fig, ax = plt.subplots(1, 3, figsize=figsize, sharex=False, sharey=True)
         else:
-            orient = 'v'
-            if x_axis_col: 
-                figsize = (2, ax_size*len(order))
+            if x_axis_col:
+                figsize = (2, ax_size * len(order))
             else:
                 figsize = (2, 6)
             fig, ax = plt.subplots(3, 1, figsize=figsize, sharex=True, sharey=False)
         ax = ax.ravel()
 
-    
     # stats dataframe to save
     tukey = pd.DataFrame()
     cell_types = utils.get_cell_types()
     for i, cell_type in enumerate(cell_types):
         ct_data = data[data.cell_type == cell_type]
 
-        if 'index' in metric:
-            ax[i].axhline(y=0, xmin=0, xmax=1, color='gray', linestyle='--')
+        if x_axis_col and flipped:
+            # --- Flipped: metric on x-axis, x_axis_col on y-axis ---
+            if 'index' in metric:
+                ax[i].axvline(x=0, ymin=0, ymax=1, color='gray', linestyle='--')
 
-        if x_axis_col: 
             if plot_type == 'boxplot':
-                ax[i] = sns.boxplot(data=ct_data, x=x_axis_col, y=metric, orient=orient,
+                ax[i] = sns.boxplot(data=ct_data, x=metric, y=x_axis_col, orient='h',
                                     hue='experience_level', hue_order=experience_levels,
-                                    order=order, palette=colors, ax=ax[i], width=0.4, fliersize=0, notch=True)
+                                    order=order, palette=colors, ax=ax[i], width=0.6, fliersize=0, notch=True)
                 for box in ax[i].collections:
                     box.set_alpha(0.75)
             elif plot_type == 'violinplot':
-                ax[i] = sns.violinplot(data=ct_data, x=x_axis_col, y=metric, orient=orient,
+                ax[i] = sns.violinplot(data=ct_data, x=metric, y=x_axis_col, orient='h',
                                 hue='experience_level', hue_order=experience_levels,
                                 order=order, palette=colors, ax=ax[i], alpha=0.75, fill=fill, linewidth=1, gap=0.1, cut=0,
                                 inner='box', inner_kws=dict(box_width=2, whis_width=1, color="gray", alpha=0.75))
-                ax[i] = sns.pointplot(data=ct_data, x=x_axis_col, y=metric, orient=orient,
+                ax[i] = sns.pointplot(data=ct_data, x=metric, y=x_axis_col, orient='h',
                                     hue='experience_level', hue_order=experience_levels, linestyle='none', dodge=0.55,
                                     order=order, palette=colors, ax=ax[i], zorder=10000,
-                                    markers='.', markersize=5, err_kws={'linewidth': 2}, )
-            ax[i].set_title(cell_type)
-            ax[i].set_ylim(lims)
-            # ax[i].legend(fontsize='xx-small')
+                                    markers='.', markersize=5, err_kws={'linewidth': 2})
+            ax[i].set_xlim(lims)
             _legend = ax[i].get_legend()
+            if _legend: _legend.remove()
+            ax[i].set_xlabel('')
+            ax[i].set_ylabel('')
+            ax[i], tukey_table = add_stats_to_plot_for_hues_along_x(data, metric, ax[i],
+                                                            yorder=order, y=x_axis_col, hue='experience_level')
+            tukey_table['metric'] = metric
+            tukey_table['cell_type'] = cell_type
+            tukey = pd.concat([tukey, tukey_table])
 
+        elif x_axis_col:
+            # --- Standard: metric on y-axis, x_axis_col on x-axis ---
+            if 'index' in metric:
+                ax[i].axhline(y=0, xmin=0, xmax=1, color='gray', linestyle='--')
+
+            if plot_type == 'boxplot':
+                ax[i] = sns.boxplot(data=ct_data, x=x_axis_col, y=metric, orient='v',
+                                    hue='experience_level', hue_order=experience_levels,
+                                    order=order, palette=colors, ax=ax[i], width=0.6, fliersize=0, notch=True)
+                for box in ax[i].collections:
+                    box.set_alpha(0.75)
+            elif plot_type == 'violinplot':
+                ax[i] = sns.violinplot(data=ct_data, x=x_axis_col, y=metric, orient='v',
+                                hue='experience_level', hue_order=experience_levels,
+                                order=order, palette=colors, ax=ax[i], alpha=0.75, fill=fill, linewidth=1, gap=0.1, cut=0,
+                                inner='box', inner_kws=dict(box_width=2, whis_width=1, color="gray", alpha=0.75))
+                ax[i] = sns.pointplot(data=ct_data, x=x_axis_col, y=metric, orient='v',
+                                    hue='experience_level', hue_order=experience_levels, linestyle='none', dodge=0.55,
+                                    order=order, palette=colors, ax=ax[i], zorder=10000,
+                                    markers='.', markersize=5, err_kws={'linewidth': 2})
+            ax[i].set_ylim(lims)
+            _legend = ax[i].get_legend()
             if _legend: _legend.remove()
             ax[i].set_xlabel('')
             ax[i].set_ylabel(label)
@@ -2544,11 +2579,13 @@ def plot_modulation_index_distribution(metrics_table, metric, x_axis_col=None, x
             tukey_table['metric'] = metric
             tukey_table['cell_type'] = cell_type
             tukey = pd.concat([tukey, tukey_table])
-        else: 
+        else:
+            # --- No x_axis_col: metric on x, experience on y ---
+            orient = 'h' if horiz else 'v'
             if plot_type == 'boxplot':
                 ax[i] = sns.boxplot(data=ct_data, x=metric, y='experience_level', orient=orient,
                                     hue='experience_level', hue_order=experience_levels, order=experience_levels,
-                                    palette=colors, ax=ax[i], width=0.4, fliersize=0, notch=True)
+                                    palette=colors, ax=ax[i], width=0.6, fliersize=0, notch=True)
                 for box in ax[i].collections:
                     box.set_alpha(0.75)
             elif plot_type == 'violinplot':
@@ -2557,16 +2594,15 @@ def plot_modulation_index_distribution(metrics_table, metric, x_axis_col=None, x
                                         palette=colors, ax=ax[i], alpha=0.75, fill=fill, linewidth=1, gap=0.1, cut=0,
                                         inner='box', inner_kws=dict(box_width=2, whis_width=1, color="gray", alpha=0.75))
                 ax[i] = sns.pointplot(data=ct_data, x=metric, y='experience_level', order=experience_levels, orient=orient,
-                                        hue='experience_level', hue_order=experience_levels, linestyle='none', #dodge=0.1,
-                                        palette=colors, ax=ax[i], zorder=10000, 
-                                        markers='.', markersize=5, err_kws={'linewidth': 2}, )
+                                        hue='experience_level', hue_order=experience_levels, linestyle='none',
+                                        palette=colors, ax=ax[i], zorder=10000,
+                                        markers='.', markersize=5, err_kws={'linewidth': 2})
             ax[i].set_xlim(lims)
             if abbreviate_exp:
                 ax[i].set_yticks(np.arange(0, len(experience_levels)))
                 ax[i].set_yticklabels(utils.get_abbreviated_experience_levels(), rotation=0)
                 utils.color_yaxis_labels_by_experience(ax[i])
 
-            # add stats to plot
             ax[i], tukey_table = add_stats_to_plot_xaxis(ct_data, metric, ax[i], xmax=lims[1],
                                                             column_to_compare='experience_level')
             tukey_table['metric'] = metric
@@ -2575,26 +2611,27 @@ def plot_modulation_index_distribution(metrics_table, metric, x_axis_col=None, x
 
         ax[i].set_ylabel('')
         ax[i].set_xlabel('')
-
-        # set title
         ax[i].set_title(cell_type)
-        # set x and y axis properties
-        
-        # # set alpha on violinplots
         plt.setp(ax[i].collections, alpha=0.7)
-        # # line at zero value
-        # ax[i].axvline(x=0, ymin=0, ymax=1, color='gray', linestyle='--')
 
-
-    if x_axis_col: 
+    # --- Annotations ---
+    if x_axis_col and flipped:
+        ax[2].annotate(annot[0], xy=(lims[0] - 0.05, -0.05), xycoords=ax[2].get_xaxis_transform(),
+                       ha="right", va="center", fontsize=10)
+        ax[2].annotate(annot[1], xy=(lims[1] + 0.05, -0.05), xycoords=ax[2].get_xaxis_transform(),
+                       ha="left", va="center", fontsize=10)
+        ax[2].set_xlabel(label)
+        if x_axis_label:
+            ax[1].set_ylabel(x_axis_label)
+    elif x_axis_col:
         ax[0].annotate(annot[1], xy=(-0.6, 1.06), xycoords=ax[0].get_xaxis_transform(), ha="center", va="center",
                        fontsize=8)
         ax[0].annotate(annot[0], xy=(-0.6, -0.06), xycoords=ax[0].get_xaxis_transform(), ha="center", va="center",
                        fontsize=8)
         ax[0].set_ylabel(label)
-        if x_axis_label: 
+        if x_axis_label:
             ax[1].set_xlabel(x_axis_label)
-    else: 
+    else:
         if horiz:
             ax[0].annotate(annot[0], xy=(lims[0]-0.1, -0.05), xycoords=ax[0].get_xaxis_transform(), ha="right", va="center",
                         fontsize=10)
@@ -2608,24 +2645,23 @@ def plot_modulation_index_distribution(metrics_table, metric, x_axis_col=None, x
                         fontsize=10)
             ax[2].set_xlabel(label)
 
-
     if suptitle:
         plt.suptitle(suptitle, x=0.52, y=0.98, fontsize=16)
 
-    fig.subplots_adjust(hspace=0.5, wspace=wspace)
+    fig.subplots_adjust(hspace=0.3, wspace=wspace)
 
     if save_dir:
         if horiz:
             suffix = suffix + '_horiz'
+        if flipped:
+            suffix = suffix + '_flipped'
         folder = 'metric_distributions'
         filename = metric + '_distribution' + suffix
         stats_filename = metric + suffix
         utils.save_figure(fig, figsize, save_dir, folder, filename)
         try:
             print('saving_stats')
-            # save tukey
             tukey.to_csv(os.path.join(save_dir, folder, stats_filename + '_tukey.csv'))
-            # save descriptive stats
             cols_to_groupby = ['cell_type', 'experience_level']
             stats = get_descriptive_stats_for_metric(data, metric, cols_to_groupby)
             stats.to_csv(os.path.join(save_dir, folder, stats_filename + '_values.csv'))
