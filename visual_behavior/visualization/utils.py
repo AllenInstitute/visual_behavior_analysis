@@ -22,6 +22,19 @@ def get_single_cell_plots_dir():
     return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/single_cell_plots'
 
 
+def describe_df(df):
+    """Print the number of unique values for standard metadata columns in a dataframe."""
+    cols_to_check = ['mouse_id', 'ophys_container_id', 'ophys_experiment_id',
+                     'ophys_session_id', 'behavior_session_id', 'experience_level', 'cell_type']
+    available = [c for c in cols_to_check if c in df.columns]
+    print(f'{len(df)} rows')
+    for col in available:
+        n = df[col].nunique()
+        vals = f'  ({sorted(df[col].unique())})' if n <= 6 else ''
+        print(f'  {col}: {n} unique{vals}')
+    print()
+
+
 def save_figure(fig, figsize, save_dir, folder, fig_title, formats=['.png']):
     fig_dir = os.path.join(save_dir, folder)
     if not os.path.exists(fig_dir):

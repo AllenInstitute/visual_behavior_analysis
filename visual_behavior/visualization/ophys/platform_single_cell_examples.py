@@ -66,6 +66,8 @@ def plot_reliable_example_cells(multi_session_mean_df, cells_to_plot, cell_type,
         elif cell_type == 'Vip Inhibitory':
             scale = 1.025
     else:
+        label = 'Non-change image'
+        label_color = 'gray'
         change = False
         omitted = False
         if xlim_seconds is None:
