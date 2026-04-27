@@ -628,7 +628,7 @@ def add_stim_color_span(dataset, ax, xlim=None, color=None, label_changes=True, 
             addSpan(ax, start_time, end_time, color=image_color, alpha=alpha)
     return ax
 
-def plot_flashes_on_trace(ax, timestamps, change=None, omitted=False, alpha=0.075, facecolor='gray', linewidth=1.5):
+def plot_flashes_on_trace(ax, timestamps, change=None, omitted=False, alpha=0.075, facecolor='gray', linewidth=1):
     """
     plot stimulus flash durations on the given axis according to the provided timestamps
     will show repeated images in gray, image changes in blue, and image omissions with a dotted line
