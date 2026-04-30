@@ -1274,7 +1274,7 @@ def plot_percent_responsive_cells(multi_session_df, responsiveness_threshold=0.1
             figsize = (1.5, 8)
             fig, ax = plt.subplots(3, 1, figsize=figsize, sharex=True)
 
-    tukey = pd.DataFrame()
+    tukey_table = pd.DataFrame()
     for i, cell_type in enumerate(cell_types):
         data = fraction_responsive[fraction_responsive.cell_type == cell_type]
         # data[metric] = data['fraction_responsive']*100.
@@ -1303,11 +1303,11 @@ def plot_percent_responsive_cells(multi_session_df, responsiveness_threshold=0.1
             ax[i].set_ylim(ylim)
 
         # add stats to plot if only looking at experience levels
-        ax[i], tukey_table = add_stats_to_plot_yaxis(data, metric, ax[i], ymax=stats_max)
+        ax[i], tukey = add_stats_to_plot_yaxis(data, metric, ax[i], ymax=stats_max)
         # aggregate stats
-        tukey_table['metric'] = metric
-        tukey_table['cell_type'] = cell_type
-        tukey = pd.concat([tukey, tukey_table])
+        tukey['metric'] = metric
+        tukey['cell_type'] = cell_type
+        tukey_table = pd.concat([tukey_table, tukey])
 
         ax[i].set_xlim((-0.4, 2.4))
 
@@ -1324,7 +1324,7 @@ def plot_percent_responsive_cells(multi_session_df, responsiveness_threshold=0.1
         # try:
         print('saving_stats')
         # save tukey
-        tukey.to_csv(os.path.join(save_dir, folder, fig_title + '_tukey.csv'))
+        tukey_table.to_csv(os.path.join(save_dir, folder, fig_title + '_tukey.csv'))
         # save descriptive stats
         cols_to_groupby = ['cell_type', 'experience_level']
         stats = get_descriptive_stats_for_metric(fraction_responsive, metric, cols_to_groupby)
@@ -1420,6 +1420,7 @@ def test_significant_metric_averages(data, metric, column_to_compare='experience
         AnovaResult = namedtuple('AnovaResult', ['statistic', 'pvalue'])
         anova = AnovaResult(statistic=np.nan, pvalue=1.0)
         tukey_table = pd.DataFrame(columns=['group1', 'group2', 'x1', 'x2', 'reject', 'one_way_anova_p_val'])
+        tukey_table['column_to_compare'] = column_to_compare
         return anova, tukey_table
     else:
         group_data = [data[data[column_to_compare] == g][metric] for g in groups]
@@ -1444,6 +1445,9 @@ def test_significant_metric_averages(data, metric, column_to_compare='experience
         tukey_table['x1'] = [0]
         tukey_table['x2'] = [1]
 
+    tukey_table['column_to_compare'] = column_to_compare
+    # Store compared groups as one value per tukey row to avoid length mismatch.
+    tukey_table['groups'] = [tuple(groups)] * len(tukey_table)
     tukey_table['one_way_anova_p_val'] = anova[1]
     return anova, tukey_table
 
@@ -1467,28 +1471,34 @@ def add_stats_to_plot_for_hues(data, metric, ax, ymax=None, xorder=None, x='expe
     y = ytop
     yh = ytop# * (1 + scale)
 
-    tukey = pd.DataFrame()
+    tukey_table = pd.DataFrame()
     # do anova across experience levels or cell types followed by post-hoc tukey
     for loc, x_value in enumerate(xorder):
         test_data = data[data[x]==x_value]
-        hues = data[hue].unique()
-        anova, tukey = test_significant_metric_averages(test_data, metric, column_to_compare=hue)
-
-        if anova.pvalue < 0.05: # if something is significant, add some significance bars
-            for tindex, row in tukey.iterrows():
-                if len(hues)>2: # if more than 2 values, use the multiple corrections result
-                    if row.reject:
-                        ax.text(loc, yh, '*', fontsize=fontsize, horizontalalignment='center',
-                                verticalalignment='bottom', color='k')
-                elif len(hues)==2: # if there are only two values, use the p-value from anova
-                    if row.one_way_anova_p_val<0.05:
-                        ax.text(loc, yh, '*', fontsize=fontsize, horizontalalignment='center',
-                                verticalalignment='bottom', color='k')
+        hues = test_data[hue].unique()
+        if len(hues) >= 2: 
+            anova, tukey = test_significant_metric_averages(test_data, metric, column_to_compare=hue)
+            tukey['data_subset'] = [x_value for i in range(len(tukey))]
+            if anova.pvalue < 0.05: # if something is significant, add some significance bars
+                for tindex, row in tukey.iterrows():
+                    if len(hues)>2: # if more than 2 values, use the multiple corrections result
+                        if row.reject:
+                            ax.text(loc, yh, '*', fontsize=fontsize, horizontalalignment='center',
+                                    verticalalignment='bottom', color='k')
+                    elif len(hues)==2: # if there are only two values, use the p-value from anova
+                        if row.one_way_anova_p_val<0.05:
+                            ax.text(loc, yh, '*', fontsize=fontsize, horizontalalignment='center',
+                                    verticalalignment='bottom', color='k')
+            else:
+                tukey = pd.DataFrame()
         else:
+            print('cant compute ANOVA for less than 2 hue values')
             tukey = pd.DataFrame()
+
+        tukey_table = pd.concat([tukey_table, tukey])
     ax.set_ylim(ymax=ytop * (1 + (scale * 5))) # 3 works better for behavior plots
 
-    return ax, tukey
+    return ax, tukey_table
 
 
 def add_stats_to_plot_for_hues_along_x(data, metric, ax, yorder=None, y='experience_level', hue='layer'):
@@ -1504,32 +1514,32 @@ def add_stats_to_plot_for_hues_along_x(data, metric, ax, yorder=None, y='experie
         x_span = 1
     x_star = x_max - (0.03 * x_span)
 
-    tukey = pd.DataFrame()
+    tukey_table = pd.DataFrame()
     for loc, y_value in enumerate(yorder):
         test_data = data[data[y] == y_value]
         hues = test_data[hue].unique()
         if len(hues) < 2:
             continue
 
-        anova, tukey_table = test_significant_metric_averages(test_data, metric, column_to_compare=hue)
+        anova, tukey = test_significant_metric_averages(test_data, metric, column_to_compare=hue)
 
         has_sig = False
-        if anova.pvalue < 0.05 and isinstance(tukey_table, pd.DataFrame) and not tukey_table.empty:
-            if len(hues) > 2 and 'reject' in tukey_table.columns:
-                has_sig = bool(tukey_table['reject'].any())
-            elif len(hues) == 2 and 'one_way_anova_p_val' in tukey_table.columns:
-                has_sig = bool((tukey_table['one_way_anova_p_val'] < 0.05).any())
+        if anova.pvalue < 0.05 and isinstance(tukey, pd.DataFrame) and not tukey.empty:
+            if len(hues) > 2 and 'reject' in tukey.columns:
+                has_sig = bool(tukey['reject'].any())
+            elif len(hues) == 2 and 'one_way_anova_p_val' in tukey.columns:
+                has_sig = bool((tukey['one_way_anova_p_val'] < 0.05).any())
 
         if has_sig:
             ax.text(x_star, loc, '*', fontsize=fontsize, horizontalalignment='center',
                     verticalalignment='center', color='k')
 
-        if isinstance(tukey_table, pd.DataFrame) and not tukey_table.empty:
-            tukey_table = tukey_table.copy()
-            tukey_table[y] = y_value
-            tukey = pd.concat([tukey, tukey_table], ignore_index=True)
+        if isinstance(tukey, pd.DataFrame) and not tukey.empty:
+            tukey = tukey.copy()
+            tukey[y] = y_value
+            tukey_table = pd.concat([tukey_table, tukey], ignore_index=True)
 
-    return ax, tukey
+    return ax, tukey_table
 
 
 def add_stats_to_plot(data, metric, ax, ymax=None, column_to_compare='experience_level',
@@ -1670,8 +1680,11 @@ def add_stats_to_plot_yaxis(data, metric, ax, ymax=None, column_to_compare='expe
     else: # x pos is 0, 1, 2
         dist = 1
 
-    scale = 0.03#0.05 # 0.1
+    scale = 0.025 #0.03#0.05 # 0.1
     fontsize = 15
+    color = 'k'
+    alpha = 1
+    label = '*'
 
     if ymax is None:
         ytop = ax.get_ylim()[1]
@@ -1682,16 +1695,16 @@ def add_stats_to_plot_yaxis(data, metric, ax, ymax=None, column_to_compare='expe
     else:
         second_bar_scale = 4
     y1 = ytop * (1 + scale)
-    y1h = ytop * (1 + scale * 2)
+    y1h = ytop * (1 + scale * 1.5)
     y2 = ytop * (1 + (scale * second_bar_scale))
     y2h = ytop * (1 + (scale * (second_bar_scale+1)))
 
     top = [ytop]
     for tindex, row in tukey.iterrows():
-        if (anova.pvalue < 0.05) and (row.reject): # if something is significant, add some significance bars
-            label = '*'
-            color = 'k'
-            alpha = 1
+        # if (anova.pvalue < 0.05) and (row.reject): # if something is significant, add some significance bars
+        #     label = '*'
+        #     color = 'k'
+        #     alpha = 1
         if np.abs(row.x2 - row.x1) > dist: # if it is a comparison more than 2 x values away, put the significance bar higher
             y = y2
             yh = y2h
@@ -1909,7 +1922,7 @@ def plot_metric_distribution_by_experience_no_cell_type(metrics_table, metric, e
             fig, ax = plt.subplots(1, 1, figsize=figsize)
 
     # stats dataframe to save
-    tukey = pd.DataFrame()
+    tukey_table = pd.DataFrame()
     if hue:
         if pointplot:
             ax = sns.pointplot(data=data, y=y, x=x, order=order, dodge=0.3, linestyle='none',
@@ -1921,6 +1934,7 @@ def plot_metric_distribution_by_experience_no_cell_type(metrics_table, metric, e
         ax.legend(fontsize='xx-small', title='')  # , loc=loc)  # bbox_to_anchor=(1,1))
             # TBD add area or depth comparison stats / stats across hue variable
     else:
+        hue = 'experience_level'
         if show_containers:
             print('table includes', len(data.ophys_container_id.unique()), 'containers')
             for ophys_container_id in data.ophys_container_id.unique():
@@ -1937,8 +1951,8 @@ def plot_metric_distribution_by_experience_no_cell_type(metrics_table, metric, e
         if pointplot:
             # ax = sns.pointplot(data=data, x='experience_level', y=metric,
             #                    palette=colors, ax=ax)
-            ax = sns.pointplot(data=data, x=x, y=y, hue='experience_level', order=order,
-                                  hue_order=experience_levels, palette=palette, dodge=0, linestyle='None',
+            ax = sns.pointplot(data=data, x=x, y=y, hue=hue, order=order,
+                                  hue_order=order, palette=palette, dodge=0, linestyle='None',
                                   markers='.', markersize=8, err_kws={'linewidth': 2}, errorbar=('ci', 95), ax=ax)
 
         else:
@@ -1970,16 +1984,18 @@ def plot_metric_distribution_by_experience_no_cell_type(metrics_table, metric, e
         if horiz:
             ax.set_xlim(xmin=ymin)
             ax.set_ylim(-0.5, len(order) - 0.5)
-            ax, tukey_table = add_stats_to_plot_yaxis(data, metric, ax, ymax=ymax, hue_only=False)
+            ax, tukey = add_stats_to_plot_yaxis(data, metric, ax, ymax=ymax, hue_only=False)
         else:
             ax.set_ylim(ymin=ymin)
             ax.set_xlim(-0.5, len(order) - 0.5)
 
             # add stats to plot if only looking at experience levels
-            ax, tukey_table = add_stats_to_plot(data, metric, ax, ymax=ymax, show_ns=show_ns)
+            ax, tukey = add_stats_to_plot(data, metric, ax, ymax=ymax, show_ns=show_ns)
         # aggregate stats
-        tukey_table['metric'] = metric
-        tukey = pd.concat([tukey, tukey_table])
+        tukey['metric'] = metric
+        tukey['comparison'] = 'experience_level'
+        tukey['condition'] = 'experience_level'
+        tukey_table = pd.concat([tukey_table, tukey])
 
         # add line at y=0
         if add_zero_line:
@@ -2024,7 +2040,7 @@ def plot_metric_distribution_by_experience_no_cell_type(metrics_table, metric, e
         utils.save_figure(fig, figsize, save_dir, folder, filename)
         try:
             print('saving_stats')
-            tukey.to_csv(os.path.join(save_dir, folder, stats_filename + '_tukey.csv'))
+            tukey_table.to_csv(os.path.join(save_dir, folder, stats_filename + '_tukey.csv'))
             # save descriptive stats
             cols_to_groupby = ['experience_level']
             stats = get_descriptive_stats_for_metric(data, metric, cols_to_groupby)
@@ -2107,7 +2123,7 @@ def plot_metric_distribution_by_experience(metrics_table, metric, event_type, da
             figsize = (1.5, 8)
             fig, ax = plt.subplots(3, 1, figsize=figsize, sharex=True, sharey=False)
     # stats dataframe to save
-    tukey = pd.DataFrame()
+    tukey_table = pd.DataFrame()
     cell_types = utils.get_cell_types()
     for i, cell_type in enumerate(cell_types):
         ct_data = data[data.cell_type == cell_type]
@@ -2159,14 +2175,16 @@ def plot_metric_distribution_by_experience(metrics_table, metric, event_type, da
             if ylims is not None:
                 ax[i].set_ylim(ylims)
 
-            ax[i], tukey_table = add_stats_to_plot_for_hues(ct_data, metric, ax[i],
-                                                            xorder=order, x='experience_level', hue=hue)
-            ax[i], tukey_table = add_stats_to_plot(ct_data, metric, ax[i], ymax=ymax)
+            # ax[i], tukey = add_stats_to_plot_for_hues(ct_data, metric, ax[i],
+            #                                                 xorder=order, x='experience_level', hue=hue)
+            ax[i], tukey = add_stats_to_plot(ct_data, metric, ax[i], ymax=ymax)
+            
             # aggregate stats
-            tukey_table['hue'] = hue
-            tukey_table['metric'] = metric
-            tukey_table['cell_type'] = cell_type
-            tukey = pd.concat([tukey, tukey_table])
+            tukey['comparison'] = hue
+            tukey['metric'] = metric
+            tukey['cell_type'] = cell_type
+            tukey['condition'] = 'experience_level'
+            tukey_table = pd.concat([tukey_table, tukey])
         else:
             if plot_type == 'pointplot':
                 ax[i] = sns.pointplot(data=ct_data, x='experience_level', y=metric, palette=colors, hue='experience_level',
@@ -2218,11 +2236,12 @@ def plot_metric_distribution_by_experience(metrics_table, metric, event_type, da
             ax[i].set_xlim(-0.5, len(order) - 0.5)
             # add stats to plot if only looking at experience levels
             # add stats to plot for hues
-            ax[i], tukey_table = add_stats_to_plot(ct_data, metric, ax[i], ymax=ymax, show_ns=show_ns)
+            ax[i], tukey = add_stats_to_plot(ct_data, metric, ax[i], ymax=ymax, show_ns=show_ns)
             # aggregate stats
-            tukey_table['metric'] = metric
-            tukey_table['cell_type'] = cell_type
-            tukey = pd.concat([tukey, tukey_table])
+            tukey['comparison'] = hue
+            tukey['metric'] = metric
+            tukey['cell_type'] = cell_type
+            tukey_table = pd.concat([tukey_table, tukey])
             # set labels
             ax[i].set_xlabel('')
             if not horiz:
@@ -2284,7 +2303,7 @@ def plot_metric_distribution_by_experience(metrics_table, metric, event_type, da
         try:
             print('saving_stats')
             # save tukey
-            tukey.to_csv(os.path.join(save_dir, folder, stats_filename + '_tukey.csv'))
+            tukey_table.to_csv(os.path.join(save_dir, folder, stats_filename + '_tukey.csv'))
             # save descriptive stats
             cols_to_groupby = ['cell_type', 'experience_level']
             stats = get_descriptive_stats_for_metric(data, metric, cols_to_groupby)
@@ -2549,7 +2568,7 @@ def plot_modulation_index_distribution(metrics_table, metric, x_axis_col=None, x
         ax = ax.ravel()
 
     # stats dataframe to save
-    tukey = pd.DataFrame()
+    tukey_table = pd.DataFrame()
     cell_types = utils.get_cell_types()
     for i, cell_type in enumerate(cell_types):
         ct_data = data[data.cell_type == cell_type]
@@ -2589,16 +2608,18 @@ def plot_modulation_index_distribution(metrics_table, metric, x_axis_col=None, x
 
             if not metric_on_y: 
                 ax[i].set_xlim(lims)
-                ax[i], tukey_table = add_stats_to_plot_for_hues_along_x(ct_data, metric, ax[i],
+                ax[i], tukey = add_stats_to_plot_for_hues_along_x(ct_data, metric, ax[i],
                                                             yorder=order, y=x_axis_col, hue='experience_level')
             else: 
                 ax[i].set_ylim(lims)
-                ax[i], tukey_table = add_stats_to_plot_for_hues(ct_data, metric, ax[i], 
+                ax[i], tukey = add_stats_to_plot_for_hues(ct_data, metric, ax[i], 
                                                             xorder=order, x=x_axis_col, hue='experience_level')
-            
-            tukey_table['metric'] = metric
-            tukey_table['cell_type'] = cell_type
-            tukey = pd.concat([tukey, tukey_table])
+            tukey['comparison'] = 'experience_level'
+            tukey['metric'] = metric
+            tukey['cell_type'] = cell_type
+            tukey['condition'] = x_axis_col
+
+            tukey_table = pd.concat([tukey_table, tukey])
 
         else:
             if metric_on_y: 
@@ -2631,7 +2652,7 @@ def plot_modulation_index_distribution(metrics_table, metric, x_axis_col=None, x
                     ax[i].set_xticklabels(utils.get_abbreviated_experience_levels(), rotation=0)
                     utils.color_xaxis_labels_by_experience(ax[i])
                 ax[i].set_ylim(lims)
-                ax[i], tukey_table = add_stats_to_plot_yaxis(ct_data, metric, ax[i], ymax=lims[1], column_to_compare='experience_level',)
+                ax[i], tukey = add_stats_to_plot_yaxis(ct_data, metric, ax[i], ymax=lims[1], column_to_compare='experience_level',)
                 ymin, ymax = ax[i].get_ylim()
                 ax[i].set_ylim(ymax=ymax*1.3)
             else: 
@@ -2640,11 +2661,14 @@ def plot_modulation_index_distribution(metrics_table, metric, x_axis_col=None, x
                     ax[i].set_yticklabels(utils.get_abbreviated_experience_levels(), rotation=0)
                     utils.color_yaxis_labels_by_experience(ax[i])
                 ax[i].set_xlim(lims)
-                ax[i], tukey_table = add_stats_to_plot_xaxis(ct_data, metric, ax[i], xmax=lims[1], column_to_compare='experience_level')
+                ax[i], tukey = add_stats_to_plot_xaxis(ct_data, metric, ax[i], xmax=lims[1], column_to_compare='experience_level')
             
-            tukey_table['metric'] = metric
-            tukey_table['cell_type'] = cell_type
-            tukey = pd.concat([tukey, tukey_table])
+            tukey['comparison'] = 'experience_level'
+            tukey['metric'] = metric
+            tukey['cell_type'] = cell_type
+            tukey['condition'] = 'experience_level'
+            
+            tukey_table = pd.concat([tukey_table, tukey])
 
         ax[i].set_ylabel('')
         ax[i].set_xlabel('')
@@ -2696,7 +2720,7 @@ def plot_modulation_index_distribution(metrics_table, metric, x_axis_col=None, x
         utils.save_figure(fig, figsize, save_dir, folder, filename)
         try:
             print('saving_stats')
-            tukey.to_csv(os.path.join(save_dir, folder, stats_filename + '_tukey.csv'))
+            tukey_table.to_csv(os.path.join(save_dir, folder, stats_filename + '_tukey.csv'))
             cols_to_groupby = ['cell_type', 'experience_level']
             stats = get_descriptive_stats_for_metric(data, metric, cols_to_groupby)
             stats.to_csv(os.path.join(save_dir, folder, stats_filename + '_values.csv'))
@@ -2739,6 +2763,7 @@ def plot_metric_across_cohorts(metrics_table, metric,  ylabel, x_val='binned_dep
         fig, ax = plt.subplots(3, 3, figsize=figsize, gridspec_kw={'width_ratios':width_ratios})
         ax = ax.ravel()
 
+    tukey_table = pd.DataFrame()
     for c, cell_type in enumerate(cell_types): 
         ct_data = mdf[mdf.cell_type==cell_type]
         for p, project_code in enumerate(project_codes): 
@@ -2775,9 +2800,14 @@ def plot_metric_across_cohorts(metrics_table, metric,  ylabel, x_val='binned_dep
                 else: 
                     ax[i].set_ylabel(cell_type)
             # ax[i], tukey_table = ppf.add_stats_to_plot(data, metric, ax[i])
-            ax[i], tukey_table = add_stats_to_plot_for_hues(data, metric, ax[i],
+            ax[i], tukey = add_stats_to_plot_for_hues(data, metric, ax[i],
                                                             xorder=x_vals, x=x_val, hue='experience_level')
+            tukey['comparison'] = 'experience_level'
+            tukey['metric'] = metric
+            tukey['cell_type'] = cell_type
+            tukey['condition'] = x_val
             # , ymax=None, show_ns=False)
+            tukey_table = pd.concat([tukey_table, tukey])
             i+=1
     plt.subplots_adjust(wspace=0.5, hspace=0.35)
 
@@ -2825,6 +2855,7 @@ def plot_metric_across_cohorts_area_depth(metrics_table, metric,  ylabel,plot_ty
         figsize=(fig_width, 2)
         fig, ax = plt.subplots(1, 12, figsize=figsize, gridspec_kw={'width_ratios':width_ratios})
 
+    tukey_table = pd.DataFrame()
     for c, cell_type in enumerate(cell_types):
         ct_data = mdf[mdf.cell_type==cell_type]
         for p, project_code in enumerate(project_codes):
@@ -2864,8 +2895,14 @@ def plot_metric_across_cohorts_area_depth(metrics_table, metric,  ylabel,plot_ty
                 if _legend: _legend.remove()
                 ax[i].set_title('Cohort '+str(p+1))
                 # ax[i], tukey_table = ppf.add_stats_to_plot(data, metric, ax[i])
-                ax[i], tukey_table = add_stats_to_plot_for_hues(data, metric, ax[i],
+                ax[i], tukey = add_stats_to_plot_for_hues(data, metric, ax[i],
                                                                 xorder=x_vals, x=x_val, hue='experience_level')
+                tukey['comparison'] = 'experience_level'
+                tukey['metric'] = metric
+                tukey['cell_type'] = cell_type
+                tukey['condition'] = x_val
+
+                tukey_table = pd.concat([tukey_table, tukey])
                 # , ymax=None, show_ns=False)
                 i+=1
     ax[0].set_ylabel(ylabel)
@@ -2873,6 +2910,121 @@ def plot_metric_across_cohorts_area_depth(metrics_table, metric,  ylabel,plot_ty
 
     if save_dir:
         filename = metric+'_by_cohort_depth_area'
+        utils.save_figure(fig, figsize, save_dir, folder, filename)
+        try:
+            print('saving_stats')
+            # save tukey
+            tukey_table.to_csv(os.path.join(save_dir, folder, filename + '_tukey.csv'))
+            # save descriptive stats
+            cols_to_groupby = ['cell_type', 'experience_level']
+            stats = get_descriptive_stats_for_metric(data, metric, cols_to_groupby)
+            stats.to_csv(os.path.join(save_dir, folder, filename + '_values.csv'))
+        except BaseException:
+            print('STATS DID NOT SAVE FOR', metric, 'experience_level')
+    return ax
+
+
+def plot_metric_across_conditions(metrics_table, metric,  title='', xlabel='Imaging depth (um)', x_color='k',
+                              x_val='binned_depth', hue='experience_level', plot_type='barplot', 
+                               save_dir=None, folder=None, ax=None):
+    '''
+    Plot metric distributions across cre lines, with a unique axis for each cohort / project code, 
+    experience levels as colors, and x-axis defined by x_val (such as 'binned_depth' or 'targeted_structure'), 
+    or experience_levels as x-values and hue defined by something else (such as 'targeted_structure').
+    Will plot stats across hues as an asterisk above that x value
+    '''
+
+    mdf = metrics_table.copy()
+    cell_types = utils.get_cell_types()
+    experience_levels = utils.get_experience_levels()
+    experience_level_colors = utils.get_experience_level_colors()
+
+    if hue == 'experience_level':
+        hue_order = experience_levels
+        palette = utils.get_experience_level_colors()
+    else: 
+        hues = np.sort(mdf[hue].unique())
+        palette = sns.color_palette('Greys', len(hues)+1)
+        if hue == 'targeted_structure':
+            hues = hues[::-1]
+        palette = palette[1:]
+        hue_order = hues
+    if x_val == 'experience_level': 
+        x_vals = experience_levels
+    else:
+        x_vals = np.sort(mdf[x_val].unique())
+
+    i = 0 
+    if ax is None:
+        figsize=(len(x_vals), 8)
+        fig, ax = plt.subplots(3, 1, figsize=figsize, sharex=True)
+        ax = ax.ravel()
+    else: 
+        fig = None
+
+    tukey_table = pd.DataFrame()
+    for c, cell_type in enumerate(cell_types): 
+        data = mdf[mdf.cell_type==cell_type]
+        if plot_type == 'pointplot': 
+            ax[i] = sns.pointplot(data=data, x=x_val, y=metric, hue=hue, order=x_vals,
+                                        hue_order=hue_order, palette=palette, dodge=0.3, linestyle='none',
+                                        markers='.', markersize=8, err_kws={'linewidth': 2}, errorbar=('ci', 95), ax=ax[i])
+        elif plot_type == 'barplot': 
+            ax[i] = sns.barplot(data=data, x=x_val, y=metric, hue=hue, order=x_vals, width=0.6, alpha=0.75, 
+                                            hue_order=hue_order, palette=palette, err_kws={'linewidth': 2}, errorbar=('ci', 95), ax=ax[i])
+        elif plot_type == 'boxplot': 
+            ax[i] = sns.boxplot(data=data, x=x_val, y=metric, hue=hue, order=x_vals, 
+                                            hue_order=hue_order, palette=palette, 
+                                            width=0.5, fliersize=0, ax=ax[i])
+            plt.setp(ax[i].collections, alpha=0.75)
+        ax[i].set_ylabel('')
+        ax[i].set_xlabel('')
+        if hue == 'experience_level':
+            ax[i].get_legend().remove()
+            if c == 2: 
+                ax[i].set_xlabel(xlabel)
+        else: 
+            ax[i].get_legend().remove()
+            ax[0].legend(bbox_to_anchor=(1,1), fontsize='xx-small', title=xlabel, title_fontsize='xx-small')
+        if x_val == 'experience_level': 
+            ax[i].set_xticks(np.arange(0, len(experience_levels)))
+            ax[i].set_xticklabels(experience_levels)#, color=experience_level_colors)
+            # ax[i].set_xticks(range(len(x_vals)), labels=experience_levels)
+            for xtick, color in zip(ax[i].get_xticklabels(), experience_level_colors):
+                xtick.set_color(color)
+        # label = ax[i].get_yticklabels()
+        # label.set_fontsize(8)
+        ax[i].tick_params(axis='y', which='major', labelsize=12)
+        if c == 0: 
+            ax[i].set_title(title, color=x_color)
+
+        if c == 1: 
+            ax[i].set_ylabel(cell_type+'\nCoding score')
+        else: 
+            ax[i].set_ylabel(cell_type+'\n')
+
+        ax[i], tukey = add_stats_to_plot_for_hues(data, metric, ax[i],
+                                                        xorder=x_vals, x=x_val, hue=hue)
+        
+        tukey['comparison'] = hue
+        tukey['metric'] = metric
+        tukey['cell_type'] = cell_type
+        tukey['condition'] = x_val
+        tukey_table = pd.concat([tukey_table, tukey])
+        # , ymax=None, show_ns=False)
+        i+=1
+    plt.subplots_adjust(wspace=0.5, hspace=0.3)
+
+    # save stats
+    filename = metric+'_across_'+hue+'_for_'+x_val+'_'+plot_type
+    if save_dir: 
+        tukey_table.to_csv(os.path.join(save_dir, folder, filename + '_tukey.csv'))
+        cols_to_groupby = ['cell_type', hue, x_val]
+        stats = get_descriptive_stats_for_metric(data, metric, cols_to_groupby)
+        stats.to_csv(os.path.join(save_dir, folder, filename + '_values.csv'))
+
+    # save fig
+    if save_dir and fig: 
         utils.save_figure(fig, figsize, save_dir, folder, filename)
     return ax
 
@@ -2906,9 +3058,11 @@ def plot_experience_modulation_index(metric_data, event_type, hue=None, plot_typ
         suffix = suffix
 
     if hue:
-        data = data.melt(id_vars=['cell_specimen_id', 'cell_type', hue], var_name='comparison', value_vars=value_vars)
+        cols_to_group = ['cell_specimen_id', 'cell_type', hue]
+        data = data.melt(id_vars=cols_to_group, var_name='comparison', value_vars=value_vars)
     else:
-        data = data.melt(id_vars=['cell_specimen_id', 'cell_type'], var_name='comparison', value_vars=value_vars)
+        cols_to_group = ['cell_specimen_id', 'cell_type']
+        data = data.melt(id_vars=cols_to_group, var_name='comparison', value_vars=value_vars)
 
     metric = 'value'
     x = 'comparison'
@@ -2916,6 +3070,7 @@ def plot_experience_modulation_index(metric_data, event_type, hue=None, plot_typ
     cell_types = np.sort(data.cell_type.unique())
 
     # colors = utils.get_experience_level_colors()
+    tukey_table = pd.DataFrame()
     figsize = (fig_width, 9)
     fig, ax = plt.subplots(3, 1, figsize=figsize, sharex=True, sharey=True)
     for i, cell_type in enumerate(cell_types):
@@ -2952,15 +3107,14 @@ def plot_experience_modulation_index(metric_data, event_type, hue=None, plot_typ
             ax[i].set_ylim(ylims)
 
             # add stats to plot for hues
-            tukey = pd.DataFrame()
-            ax[i], tukey_table = add_stats_to_plot_for_hues(ct_data, metric, ax[i],
-                                                            xorder=xorder, x=x, hue=hue)
-            # ax[i], tukey_table = add_stats_to_plot(ct_data, metric, ax[i], ymax=ymax)
+            ax[i], tukey = add_stats_to_plot_for_hues(ct_data, metric, ax[i],
+                                                      xorder=xorder, x=x, hue=hue)
+            # ax[i], tukey = add_stats_to_plot(ct_data, metric, ax[i], ymax=ymax)
             # aggregate stats
-            tukey_table['hue'] = hue
-            tukey_table['metric'] = metric
-            tukey_table['cell_type'] = cell_type
-            tukey = pd.concat([tukey, tukey_table])
+            tukey['comparison'] = hue
+            tukey['metric'] = 'experience_modulation'
+            tukey['cell_type'] = cell_type
+            tukey_table = pd.concat([tukey_table, tukey])
         else:
             if plot_type == 'pointplot':
                 ax[i] = sns.pointplot(data=ct_data, order=xorder, linestyle='none',
@@ -2992,9 +3146,20 @@ def plot_experience_modulation_index(metric_data, event_type, hue=None, plot_typ
     if suptitle:
         plt.suptitle(suptitle, x=0.52, y=0.98, fontsize=16)
     fig.subplots_adjust(hspace=0.4, wspace=0.4)
+    
     if save_dir:
         filename = 'experience_modulation_' + event_type + '_' + plot_type + suffix
         utils.save_figure(fig, figsize, save_dir, 'metric_distributions', filename)
+        try:
+            print('saving_stats')
+            # save tukey
+            tukey_table.to_csv(os.path.join(save_dir, 'metric_distributions', filename + '_tukey.csv'))
+            # save descriptive stats
+            cols_to_groupby = ['cell_type', 'experience_level']
+            stats = get_descriptive_stats_for_metric(data, metric, cols_to_groupby)
+            stats.to_csv(os.path.join(save_dir, 'metric_distributions', filename + '_values.csv'))
+        except BaseException:
+            print('STATS DID NOT SAVE FOR', metric, hue)
 
 
 def plot_experience_modulation_index_annotated(metrics_table, event_type, metric, cells_table,
@@ -3039,7 +3204,7 @@ def plot_experience_modulation_index_annotated(metrics_table, event_type, metric
             figsize = (2, 8)
             fig, ax = plt.subplots(3, 1, figsize=figsize, sharex=True, sharey=False)
 
-    tukey = pd.DataFrame()
+    tukey_table = pd.DataFrame()
     for i, comparison in enumerate(value_vars):
         ax[i] = sns.violinplot(data=data[data.comparison == comparison], x='value', y='cell_type', order=cell_types,
                                color='gray', cut=0, inner='box', ax=ax[i], alpha=0.25, linewidth=1,    
@@ -3078,12 +3243,12 @@ def plot_experience_modulation_index_annotated(metrics_table, event_type, metric
         # ax[i].set_xticklabels([x.split('.')[0] + '\n' + x.split('.')[1] for x in xorder], rotation=90, ha='center')
 
         # add stats to plot
-        ax[i], tukey_table = add_stats_to_plot_xaxis(data[data.comparison == comparison], 'value', ax[i],
-                                                         xmax=xlims[1],
-                                                         column_to_compare='cell_type')
-        tukey_table['metric'] = metric
-        # tukey_table['cell_type'] = cell_type
-        tukey = pd.concat([tukey, tukey_table])
+        ax[i], tukey = add_stats_to_plot_xaxis(data[data.comparison == comparison], 'value', ax[i],
+                               xmax=xlims[1],
+                               column_to_compare='cell_type')
+        tukey['metric'] = metric
+        # tukey['cell_type'] = cell_type
+        tukey_table = pd.concat([tukey_table, tukey])
 
     if horiz:
 
@@ -3108,7 +3273,7 @@ def plot_experience_modulation_index_annotated(metrics_table, event_type, metric
         try:
             print('saving_stats')
             # save tukey
-            tukey.to_csv(os.path.join(save_dir, folder, stats_filename + '_tukey.csv'))
+            tukey_table.to_csv(os.path.join(save_dir, folder, stats_filename + '_tukey.csv'))
             # save descriptive stats
             cols_to_groupby = ['cell_type']
             stats = get_descriptive_stats_for_metric(data, metric, cols_to_groupby)
@@ -3165,7 +3330,7 @@ def plot_experience_modulation_index_annotated_by_cell_type(metrics_table, event
             figsize = (2, 8)
             fig, ax = plt.subplots(3, 1, figsize=figsize, sharex=True, sharey=False)
 
-    tukey = pd.DataFrame()
+    tukey_table = pd.DataFrame()
     for i, cell_type in enumerate(cell_types):
         ax[i] = sns.violinplot(data=data[data.cell_type == cell_type],
                                x='value', y='comparison', order=value_vars,
@@ -3213,12 +3378,12 @@ def plot_experience_modulation_index_annotated_by_cell_type(metrics_table, event
 
         if len(value_vars) > 2:
             # add stats to plot
-            ax[i], tukey_table = add_stats_to_plot_xaxis(data[data.cell_type == cell_type], 'value', ax[i],
-                                                             xmax=xlims[1],
-                                                             column_to_compare='comparison')
-            tukey_table['metric'] = metric
-            tukey_table['cell_type'] = cell_type
-            tukey = pd.concat([tukey, tukey_table])
+            ax[i], tukey = add_stats_to_plot_xaxis(data[data.cell_type == cell_type], 'value', ax[i],
+                                                   xmax=xlims[1],
+                                                   column_to_compare='comparison')
+            tukey['metric'] = metric
+            tukey['cell_type'] = cell_type
+            tukey_table = pd.concat([tukey_table, tukey])
 
         ax[i].invert_yaxis()
 
@@ -3244,7 +3409,7 @@ def plot_experience_modulation_index_annotated_by_cell_type(metrics_table, event
         try:
             print('saving_stats')
             # save tukey
-            tukey.to_csv(os.path.join(save_dir, folder, stats_filename + '_tukey.csv'))
+            tukey_table.to_csv(os.path.join(save_dir, folder, stats_filename + '_tukey.csv'))
             # save descriptive stats
             cols_to_groupby = ['cell_type']
             stats = get_descriptive_stats_for_metric(data, metric, cols_to_groupby)
@@ -4426,11 +4591,11 @@ def plot_behavior_metric_by_experience(stats, metric, title='', ylabel='', ylims
     # add stats to plot if only looking at experience levels
     if plot_stats:
         # stats dataframe to save
-        tukey = pd.DataFrame()
-        ax, tukey_table = add_stats_to_plot(data, metric, ax, ymax=ymax, show_ns=show_ns, behavior=True)
+        ax, tukey = add_stats_to_plot(data, metric, ax, ymax=ymax, show_ns=show_ns, behavior=True)
         # aggregate stats
-        tukey_table['metric'] = metric
-        tukey = pd.concat([tukey, tukey_table])
+        tukey['comparison'] = 'experience_level'
+        tukey['metric'] = metric
+        tukey['condition'] = 'experience_level'
 
     ax.set_ylim(ymin=ymin)
 
@@ -4544,11 +4709,11 @@ def plot_behavior_metric_by_experience_horiz(stats, metric, title='', xlabel='',
     # add stats to plot if only looking at experience levels
     if plot_stats:
         # stats dataframe to save
-        tukey = pd.DataFrame()
-        ax, tukey_table = add_stats_to_plot(data, metric, ax, ymax=xmax, show_ns=show_ns, behavior=True)
+        ax, tukey = add_stats_to_plot(data, metric, ax, ymax=xmax, show_ns=show_ns, behavior=True)
         # aggregate stats
-        tukey_table['metric'] = metric
-        tukey = pd.concat([tukey, tukey_table])
+        tukey['metric'] = metric
+        tukey['comparison'] = 'experience_level'
+        tukey['condition'] = 'experience_level'       
 
     ax.set_xlim(xmin=xmin)
 
@@ -4651,12 +4816,12 @@ def plot_behavior_metric_by_cohort(stats, metric, title='', ylabel='', ylims=Non
     # add stats to plot if only looking at experience levels
     if plot_stats:
         # stats dataframe to save
-        tukey = pd.DataFrame()
-        ax, tukey_table = add_stats_to_plot(data, metric, ax, ymax=ymax, show_ns=show_ns, behavior=True,
+        ax, tukey = add_stats_to_plot(data, metric, ax, ymax=ymax, show_ns=show_ns, behavior=True,
                                                 column_to_compare='project_code')
         # aggregate stats
-        tukey_table['metric'] = metric
-        tukey = pd.concat([tukey, tukey_table])
+        tukey['metric'] = metric
+        tukey['comparison'] = 'experience_level'
+        tukey['condition'] = 'experience_level'
 
     ax.set_ylim(ymin=ymin)
 
@@ -4871,17 +5036,19 @@ def plot_prior_exposures_per_cell_type_for_novel_plus(platform_experiments, beha
     ax.set_ylim(ymin=0)
 
     ymax = ax.get_ylim()[1]
-    tukey = pd.DataFrame()
-    ax, tukey_table = add_stats_to_plot(exposures, 'prior_exposures_to_image_set', ax, ymax=ymax,
+    ax, tukey = add_stats_to_plot(exposures, 'prior_exposures_to_image_set', ax, ymax=ymax,
                                         show_ns=True, column_to_compare='cell_type')
     # aggregate stats
-    tukey_table['metric'] = 'prior_exposures_to_image_set'
-    tukey = pd.concat([tukey, tukey_table])
+    tukey['metric'] = 'prior_exposures_to_image_set'
+    tukey['comparison'] = 'experience_level'
+    tukey['condition'] = 'experience_level'
 
     if save_dir:
         # save plot
         utils.save_figure(fig, figsize, save_dir, folder, 'stimulus_exposures_before_novel_plus' + suffix)
         # save stats
+        print('saving_stats')
+        tukey.to_csv(os.path.join(save_dir, folder, 'stimulus_exposures_before_novel_plus' + '_tukey.csv'))
         stats = exposures.groupby(['cell_type', 'experience_level']).describe()[['prior_exposures_to_image_set']]
         stats.to_csv(os.path.join(save_dir, folder, 'stimulus_exposures_before_novel_plus_stats.csv'))
 

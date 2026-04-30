@@ -80,12 +80,12 @@ def plot_matched_roi_mask_zoom(cell_specimen_id, ophys_cells_table, ophys_experi
 
         # load dataset for this experiment
         dataset = loading.get_ophys_dataset(ophys_experiment_id, get_extended_stimulus_presentations=False)
+        roi_masks = dataset.roi_masks.copy()  # save this to get approx ROI position if subsequent session is missing the ROI (fails if the first session is the one missing the ROI)
 
         try:  # attempt to generate plots for this cell in this this experience level. if cell does not have this exp level, skip
             # plot ROI mask for this experiment
             ct = dataset.cell_specimen_table.copy()
             cell_roi_id = ct.loc[cell_specimen_id].cell_roi_id  # typically will fail here if the cell_specimen_id isnt in the session
-            roi_masks = dataset.roi_masks.copy()  # save this to get approx ROI position if subsequent session is missing the ROI (fails if the first session is the one missing the ROI)
             ax[e] = sf.plot_cell_zoom(dataset.roi_masks, dataset.max_projection, cell_roi_id,
                                         spacex=50, spacey=50, show_mask=False, ax=ax[e])
             ax[e].set_title(experience_level, color=color)

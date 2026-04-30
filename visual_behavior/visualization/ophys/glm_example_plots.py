@@ -385,7 +385,8 @@ def plot_glm_methods_with_example_cells(ophys_experiment_id, cell_specimen_id_1,
 
 
 
-def plot_glm_features_for_window(dataset, xlim_seconds, save_dir=None, folder=None, ax=None, suffix=''):
+def plot_glm_features_for_window(dataset, xlim_seconds, title=None,
+                                 save_dir=None, folder=None, ax=None, suffix=''):
     """
     For a given period of time in an ophys or behavior session,
     plot the stimulus times in the background, along with the period over which each kernel is active (images, hits, misses, omissions),
@@ -497,7 +498,11 @@ def plot_glm_features_for_window(dataset, xlim_seconds, save_dir=None, folder=No
     metadata_string = utils.get_metadata_string(dataset.metadata) + suffix
     # ax[0].set_title(metadata_string + '\nFeatures')
     plt.suptitle(metadata_string, x=0.48, y=0.99, fontsize=12)
-    ax[0].set_title('Features')
+    if title is None: 
+        ax[0].set_title('Features')
+    else: 
+        ax[0].set_title(title)
+
     plt.subplots_adjust(hspace=0, wspace=0.9)
 
     if save_dir:
@@ -507,8 +512,8 @@ def plot_glm_features_for_window(dataset, xlim_seconds, save_dir=None, folder=No
     return ax
 
 
-def plot_stacked_kernels_for_cell(cell_specimen_id, dataset, weights_df, kernels,
-                                  scale_y=True, save_dir=None, folder=None, suffix='', ax=None):
+def plot_stacked_kernels_for_cell(cell_specimen_id, dataset, weights_df, kernels, sharey=True,
+                                  scale_y=False, title=None, save_dir=None, folder=None, suffix='', ax=None):
     """
     plots the kernel weights for each kernel type for a given cell, in a row
     weights_df and kernels can be obtained using `load_GLM_outputs` or by loading files directly from the cache
@@ -537,7 +542,7 @@ def plot_stacked_kernels_for_cell(cell_specimen_id, dataset, weights_df, kernels
     if ax is None:
         figsize = (3, 6)
         fig, ax = plt.subplots(n_rows, 1, figsize=figsize, sharex=True,
-                               sharey=False)  # gridspec_kw={'height_ratios':height_ratios})
+                               sharey=sharey)  # gridspec_kw={'height_ratios':height_ratios})
         ax = ax.ravel()
 
     # first plot each image
@@ -629,6 +634,12 @@ def plot_stacked_kernels_for_cell(cell_specimen_id, dataset, weights_df, kernels
         #                xycoords='data', xytext=(-1.2, ytop), ha='right',
         #                fontsize=10, clip_on=False, annotation_clip=False)
 
+    
+    if title is not None:
+        ax[0].set_title(title)
+    else: 
+        ax[0].set_title('Kernels')
+
     # Label last axis
     sns.despine(ax=ax[i], top=True, right=True, left=True, bottom=True)
     ax[i].tick_params(which='both', bottom=True, top=False, right=False, left=False,
@@ -637,7 +648,6 @@ def plot_stacked_kernels_for_cell(cell_specimen_id, dataset, weights_df, kernels
     ax[i].set_xticklabels(np.arange(-1, 4, 1), fontsize=12)
     ax[i].set_xlabel('Time (sec)')
 
-    ax[0].set_title('Kernels')
     plt.subplots_adjust(hspace=0, wspace=0.9)
 
     # ax[i-1].legend(fontsize='x-small')
@@ -660,7 +670,7 @@ def plot_stacked_kernels_for_cell(cell_specimen_id, dataset, weights_df, kernels
 
 def plot_model_fits_example_cell(cell_specimen_id, dataset, cell_results_df, dropouts, results,
                                  kernel=None, include_events=True, include_dff=False,
-                                 times=None, n_flashes=16, linewidth=1, twinx=False,
+                                 times=None, n_flashes=16, linewidth=1.5, twinx=False, title=None,
                                  fontsize=8, as_panel=False, save_dir=None, folder=None, suffix='', ax=None):
     '''
     For one cell, plot the cell trace, model fits, and model fits with a specific kernel (such as all-images or omissions) removed
@@ -781,7 +791,8 @@ def plot_model_fits_example_cell(cell_specimen_id, dataset, cell_results_df, dro
                 linewidth=linewidth, color=sns.color_palette()[2]) #sns.color_palette()[2])
         ax.spines['right'].set_visible(False)
 
-    ax.legend(bbox_to_anchor=(1,1), fontsize='xx-small')
+    # ax.legend(bbox_to_anchor=(1,1), fontsize='xx-small')
+    ax.legend(loc='upper right', fontsize=8)
 
     ax.set_xlim(xlim_seconds)
 
@@ -824,7 +835,10 @@ def plot_model_fits_example_cell(cell_specimen_id, dataset, cell_results_df, dro
         ax.set_xlabel('Time in session (seconds)', fontsize=style['fs1'])
         ax.tick_params(axis='x', labelsize=style['fs2'])
         ax.tick_params(axis='y', labelsize=style['fs2'])
-        ax.set_title('csid: ' + str(cell_specimen_id) + ', var_exp_full: '+str(np.round(var_exp, 3)))
+        if title is None: 
+            ax.set_title('csid: ' + str(cell_specimen_id) + ', var_exp_full: '+str(np.round(var_exp, 3)))
+        else:
+            ax.set_title(title + ', VE full model: '+str(np.round(var_exp, 3)))
         ax.spines[['bottom', 'left', 'right', 'top']].set_visible(False)
         ax.spines[['top', 'bottom', 'left', 'right']].set_visible(False)
         # ax2.spines[['top', 'bottom', 'left']].set_visible(False)
@@ -2224,7 +2238,7 @@ def plot_coding_scores_for_cell(cell_specimen_id, ophys_experiment_id, results_p
     return ax
 
 
-def plot_coding_score_components_for_cell(cell_specimen_id, ophys_experiment_id, results_pivoted, dataset,
+def plot_coding_score_components_for_cell(cell_specimen_id, ophys_experiment_id, results_pivoted, dataset, title=None,
                                           fontsize=12, as_panel=False, horiz=False, save_dir=None, folder=None, ax=None):
     '''
     Creates barplot of coding scores for a single cell in a single experiment and saves it
@@ -2241,7 +2255,7 @@ def plot_coding_score_components_for_cell(cell_specimen_id, ophys_experiment_id,
     c_vals, feature_labels_dict = plotting.get_feature_colors_and_labels()
 
     if ax is None:
-        figsize = (2, 2)
+        figsize = (1.8, 1.8)
         fig, ax = plt.subplots(figsize=figsize)
     # get dropouts just for one cell
     if horiz:
@@ -2250,15 +2264,18 @@ def plot_coding_score_components_for_cell(cell_specimen_id, ophys_experiment_id,
         ax.set_yticklabels(feature_labels, rotation=0, horizontalalignment='right', fontsize=fontsize)
         [t.set_color(i) for (i, t) in zip([c_vals[0], c_vals[1], c_vals[2], c_vals[3]], ax.yaxis.get_ticklabels())]
         ax.xaxis.set_tick_params(labelsize=fontsize)
-        ax.set_xlabel('Coding score', fontsize=fontsize)
+        ax.set_xlabel('Coding score', fontsize=fontsize+2)
     else:
         ax = sns.barplot(data=np.abs(cell_dropouts[features]),
                          order=features, palette=feature_colors, ax=ax)  # color=sns.color_palette('Blues_r')[0], ax=ax)
         ax.set_xticklabels(feature_labels, rotation=45, horizontalalignment='right', fontsize=fontsize)
         [t.set_color(i) for (i, t) in zip([c_vals[0], c_vals[1], c_vals[2], c_vals[3]], ax.xaxis.get_ticklabels())]
         ax.yaxis.set_tick_params(labelsize=fontsize)
-        ax.set_ylabel('Coding score', fontsize=fontsize)
-    ax.set_title('VE full model = ' + str(np.round(cell_dropouts.variance_explained_full.values[0], 3)), fontsize=fontsize)
+        ax.set_ylabel('Coding score', fontsize=fontsize+2)
+    if title is not None: 
+        ax.set_title(title, fontsize=fontsize)
+    else:   
+        ax.set_title('VE full model = ' + str(np.round(cell_dropouts.variance_explained_full.values[0], 3)), fontsize=fontsize)
 
     for x, feature in enumerate(features):
         cs = np.abs(cell_dropouts[feature].values[0])
@@ -2489,7 +2506,7 @@ def plot_model_fits_and_kernels_for_example_cell(ophys_experiment_id, cell_speci
 
 def plot_weights_and_coding_score_heatmaps_for_experience_levels(kernel, weights_df, run_params,
                                                                  row_condition='cre_line', col_condition='experience_level',
-                                                                 vmax=0.002, xlabel='Time (s)',
+                                                                 vmax=0.002, xlabel='Time (s)', suptitle=None,
                                                                  save_dir=None, folder=None):
     '''
     Plot a heatmap of kernel weights and coding scores for all cells
@@ -2512,15 +2529,22 @@ def plot_weights_and_coding_score_heatmaps_for_experience_levels(kernel, weights
     col_conditions = np.sort(kernel_weights[col_condition].unique())
 
     # get timestamps and intervals for xticklabels
-    timestamps = np.arange(run_params['kernels'][kernel]['offset'], run_params['kernels'][kernel]['offset'] + run_params['kernels'][kernel]['length'], 1 / 31.)
+    if kernel == 'all-images':
+        kernel_for_timestamps = 'image0'  # all images kernel is the same length as individual image kernels, so use that to get timestamps
+    else: 
+        kernel_for_timestamps = kernel
+    timestamps = np.arange(run_params['kernels'][kernel_for_timestamps]['offset'], run_params['kernels'][kernel_for_timestamps]['offset'] + run_params['kernels'][kernel_for_timestamps]['length'], 1 / 31.)
     timestamps = np.round(timestamps, 2)
     if 'image' in kernel:
         timestamps = timestamps[:-1]
-    if np.max(timestamps) <= 1:
+    if np.max(timestamps) < 0.7:
+        interval_sec = 0.2
+    elif np.max(timestamps) < 1:
         interval_sec = 0.5
     else:
         interval_sec = 1
     xlim_seconds = [timestamps[0], timestamps[-1]]
+    xticklabels = np.arange(timestamps[0], timestamps[-1], interval_sec)
 
     # settings for population average plot
     if kernel == 'omissions':
@@ -2552,24 +2576,25 @@ def plot_weights_and_coding_score_heatmaps_for_experience_levels(kernel, weights
 
         # create axes for this experience level
         xspan = ((c * .1) * 2.5, ((c * .1) * 2.5) + 0.18)
-        print(xspan)
-        ax = utils.placeAxesOnGrid(fig, dim=(len(row_conditions), 2), xspan=xspan, yspan=(0, 1), wspace=0, hspace=0.2, sharex='col', sharey='row', width_ratios=[8, 1])
+        ax = utils.placeAxesOnGrid(fig, dim=(len(row_conditions), 2), xspan=xspan, yspan=(0, 1), wspace=0, hspace=0.2, sharex='col', sharey=False, width_ratios=[8, 1])
 
         # loop through cre lines
         for r, row in enumerate(row_conditions):
             row_weights = col_weights[col_weights[row_condition] == row]
-            row_weights = row_weights.sort_values(by=kernel)
+            row_weights = row_weights.sort_values(by=kernel, ascending=True)
             row_weights = row_weights.dropna()
 
             # weights
-            cs = ["black", "white", "darkgreen"]
-            weights_cmap = colors.LinearSegmentedColormap.from_list("cmap_name", cs)
+            # cs = ["black", "white", "darkgreen"]
+            # weights_cmap = colors.LinearSegmentedColormap.from_list("cmap_name", cs)
 
             data = pd.DataFrame(np.vstack(row_weights[kernel + '_weights'].values), columns=timestamps)
-            cbar_weights = ax[r][0].imshow(data.values, aspect='auto', cmap=weights_cmap, vmin=-vmax, vmax=vmax, extent=[timestamps[0], timestamps[-1], 0, np.shape(data)[0]])
+            cbar_weights = ax[r][0].imshow(data.values, aspect='auto', cmap='PRGn', vmin=-vmax, vmax=vmax, extent=[timestamps[0], timestamps[-1], 0, np.shape(data)[0]])
             ax[r][0].set_yticks([0, len(data)])
-            ax[r][0].set_yticklabels([len(data), 0], fontsize=12)
+            ax[r][0].set_yticklabels((len(data), 0), fontsize=12)
             ax[r][0].tick_params(axis='y', labelsize=14)
+
+            ax[r][0].set_xticks(xticklabels)
 
             if c == 0:
                 ax[r][0].set_ylabel(utils.convert_cre_line_to_cell_type(row))
@@ -2579,11 +2604,19 @@ def plot_weights_and_coding_score_heatmaps_for_experience_levels(kernel, weights
             if r < 2:
                 ax[r][0].set_xticklabels([])
             else:
-                ax[r][0].set_xticks(np.arange(timestamps[0], timestamps[-1], interval_sec))
+                ax[r][0].set_xticks(xticklabels)
+                if interval_sec >= 1:
+                    xticklabels = [int(x) for x in xticklabels]
+                else: 
+                    xticklabels = [np.round(x, 2) for x in xticklabels]
+                ax[r][0].set_xticklabels(xticklabels)
                 # ax[r][0].xaxis.get_label().set_fontsize(14)
                 ax[r][0].tick_params(axis='x', labelsize=14)
-                # only label middle axis on bottom row
-                ax[r][1].set_xlabel(xlabel)
+                if c == 1: 
+                    # only label middle axis on bottom row
+                    ax[r][0].set_xlabel(xlabel, ha='center', fontsize=14)
+                else: 
+                    ax[r][0].set_xlabel('')
 
             # coding scores
             row_weights = col_weights[col_weights[row_condition] == row]
@@ -2614,7 +2647,7 @@ def plot_weights_and_coding_score_heatmaps_for_experience_levels(kernel, weights
     last_x_val = ((c * .1) * 2.5) + 0.2
     xspan = (last_x_val, last_x_val + 0.02)
     # weights colorbar
-    cax = utils.placeAxesOnGrid(fig, dim=(1, 1), xspan=xspan,yspan=(0.4, 0.6))
+    cax = utils.placeAxesOnGrid(fig, dim=(1, 1), xspan=xspan, yspan=(0.4, 0.6))
     color_bar = fig.colorbar(cbar_weights, cax=cax)
     color_bar.ax.set_title('Weight', fontsize=16, loc='left')
     # color_bar.set_clim(zlims[0], zlims[1])
@@ -2629,7 +2662,6 @@ def plot_weights_and_coding_score_heatmaps_for_experience_levels(kernel, weights
     # create axes for population averages
     c += 1
     xspan = (((c * .1) * 2.5) + 0.06, ((c * .1) * 2.5) + 0.23)
-    print(xspan)
     ax = utils.placeAxesOnGrid(fig, dim=(len(row_conditions), 1), xspan=xspan, yspan=(0, 1), wspace=0, hspace=0.2, sharex='col')
 
     # plot population average kernels for each cre line & experience level
@@ -2653,13 +2685,218 @@ def plot_weights_and_coding_score_heatmaps_for_experience_levels(kernel, weights
             ax[r].set_xticks([])
         if r != 1:
             ax[r].set_ylabel('')
-        sns.despine(ax=ax[r], left=True, bottom=False, right=True, )
+        sns.despine(ax=ax[r], left=True, bottom=False, right=True, top=True)
     ax[0].set_title('Average weights')
-    ax[r].set_xlabel(xlabel)
+    ax[r].set_xlabel(xlabel, fontsize=14)
 
-    plt.suptitle(kernel + ' kernels', x=0.5, y=1)
+    if suptitle is None: 
+        plt.suptitle(kernel.capitalize() + ' kernels', x=0.4, y=1, fontsize=18)
+    else: 
+        plt.suptitle(suptitle, x=0.4, y=1, fontsize=18)
+
+    if save_dir:
+        utils.save_figure(fig, figsize, save_dir, 'kernel_heatmaps', kernel)
+
+
+
+def plot_weights_and_coding_score_heatmaps_for_experience_levels_main_figure(kernel, weights_df, run_params,
+                                                                 row_condition='cre_line', col_condition='experience_level',
+                                                                 vmax=0.002, xlabel='Time (s)', suptitle=None,
+                                                                 save_dir=None, folder=None):
+    '''
+    Plot a heatmap of kernel weights and coding scores for all cells
+    Default values results in a figure with experience levels as columns and cre lines as rows
+
+    kernel: str, name of kernel to plot, must be column in weights_df
+    weights_df: dataframe of kernel weights for all cells & cell types
+    run_params: dict of run param values, including kernel durations
+    row_condition: column in weights_df to iterate over for rows
+    col_condition: column in weights_df to iterate over for columns
+    vmax: value of max and min weights to plot
+    xlabel: string to label xaxis with
+    '''
+
+    # get weights for this kernel
+    kernel_weights = weights_df[[kernel + '_weights', kernel, row_condition, col_condition]]
+
+    # conditions to iterate over
+    row_conditions = np.sort(kernel_weights[row_condition].unique())
+    col_conditions = np.sort(kernel_weights[col_condition].unique())
+
+    # get timestamps and intervals for xticklabels
+    if kernel == 'all-images':
+        kernel_for_timestamps = 'image0'  # all images kernel is the same length as individual image kernels, so use that to get timestamps
+    else: 
+        kernel_for_timestamps = kernel
+    timestamps = np.arange(run_params['kernels'][kernel_for_timestamps]['offset'], run_params['kernels'][kernel_for_timestamps]['offset'] + run_params['kernels'][kernel_for_timestamps]['length'], 1 / 31.)
+    timestamps = np.round(timestamps, 2)
+    if 'image' in kernel:
+        timestamps = timestamps[:-1]
+    if np.max(timestamps) < 1:
+        interval_sec = 0.2
+    else:
+        interval_sec = 1
+    xlim_seconds = [timestamps[0], timestamps[-1]]
+
+    # settings for population average plot
+    if kernel == 'omissions':
+        omitted = True
+    else:
+        omitted = False
+    if (kernel == 'hits') or (kernel == 'misses'):
+        change = True
+    else:
+        change = False
+    palette = utils.get_experience_level_colors()
+
+    # coding score colormap
+    try: # newer version of mpl
+        import matplotlib
+        cmap = matplotlib.colormaps.get_cmap('Blues')
+    except: # older version
+        cmap = plt.get_cmap('Blues')
+    cmap.set_under('black')
+
+    from matplotlib import colors
+
+    tick_legnth = 2
+    tick_width = 1
+    # create plot
+    figsize = [6, 4]
+    fig = plt.figure(figsize=figsize, facecolor='white')
+    # loop through experience levels
+    for c, col in enumerate(col_conditions):
+        col_weights = kernel_weights[kernel_weights[col_condition] == col]
+
+        # create axes for this experience level
+        xspan = ((c * .1) * 2.5, ((c * .1) * 2.5) + 0.18)
+        ax = utils.placeAxesOnGrid(fig, dim=(len(row_conditions), 2), xspan=xspan, yspan=(0, 1), wspace=0, hspace=0.2, sharex='col', sharey=False, width_ratios=[8, 1])
+
+        # loop through cre lines
+        for r, row in enumerate(row_conditions):
+            row_weights = col_weights[col_weights[row_condition] == row]
+            row_weights = row_weights.sort_values(by=kernel, ascending=True)
+            row_weights = row_weights.dropna()
+
+            # weights
+            # cs = ["black", "white", "darkgreen"]
+            # weights_cmap = colors.LinearSegmentedColormap.from_list("cmap_name", cs)
+
+            data = pd.DataFrame(np.vstack(row_weights[kernel + '_weights'].values), columns=timestamps)
+            cbar_weights = ax[r][0].imshow(data.values, aspect='auto', cmap='PRGn', vmin=-vmax, vmax=vmax, extent=[timestamps[0], timestamps[-1], 0, np.shape(data)[0]])
+            ax[r][0].set_yticks([0, len(data)])
+            ax[r][0].set_yticklabels((len(data), 0), fontsize=8)
+            ax[r][0].tick_params(axis='both', which='major', length=tick_legnth, width=tick_width)
+            sns.despine(ax=ax[r][0], left=False, bottom=False, right=False, top=False)
+            
+            # ax[r][0].set_xlims(xlim_seconds)
+            xticklabels = np.arange(timestamps[0], timestamps[-1], 0.2)
+            ax[r][0].set_xticks(xticklabels)
+            
+            if c == 0:
+                ax[r][0].set_ylabel(utils.convert_cre_line_to_cell_type(row), fontsize=16)
+                ax[r][0].set_ylabel(utils.convert_cre_line_to_cell_type(row).split(' ')[0], fontsize=16)
+            else:
+                ax[r][0].set_ylabel('')
+            if r < 2:
+                ax[r][0].set_xticklabels([])
+            else:
+                if interval_sec >= 1:
+                    xticklabels = [int(x) for x in xticklabels]
+                else: 
+                    xticklabels = [np.round(x, 2) for x in xticklabels]
+                ax[r][0].set_xticklabels(xticklabels, fontsize=8)
+                # ax[r][0].xaxis.get_label().set_fontsize(14)
+                # ax[r][0].tick_params(axis='x', labelsize=14)
+                if c == 1: 
+                    # only label middle axis on bottom row
+                    ax[r][0].set_xlabel(xlabel, ha='center', fontsize=16)
+                else: 
+                    ax[r][0].set_xlabel('')
+
+            # coding scores
+            row_weights = col_weights[col_weights[row_condition] == row]
+            row_weights = row_weights.sort_values(by=kernel, ascending=True)
+            # data = pd.DataFrame(np.sqrt(row_weights[kernel].values))
+            coding_scores = row_weights[kernel].values
+            coding_scores = np.sqrt(coding_scores[:, np.newaxis] * -1)
+            try:  # newer version of mpl
+                import matplotlib
+                cmap = matplotlib.colormaps.get_cmap('Blues')
+            except:  # older version
+                if c == 0:
+                    cmap = plt.get_cmap('Blues')
+                elif c == 1:
+                    cmap = plt.get_cmap('Reds')
+                elif c == 2:
+                    cmap = plt.get_cmap('Purples')
+            cmap.set_under('black')
+            cbar_coding = ax[r][1].imshow(coding_scores, aspect='auto', cmap=cmap, vmin=1e-10, vmax=1)
+            ax[r][1].set_yticks([0, len(data)])
+            ax[r][1].set_xticks([])
+            ax[r][1].set_yticklabels([])
+            # ax[r][1].set_ylabel(utils.convert_cre_line_to_cell_type(row))
+            ax[r][1].set_xticklabels([])
+
+        ax[0][0].set_title(utils.convert_experience_level(col), color=palette[c], fontsize=16)
+
+    last_x_val = ((c * .1) * 2.5) + 0.2
+    xspan = (last_x_val, last_x_val + 0.02)
+    # weights colorbar
+    cax = utils.placeAxesOnGrid(fig, dim=(1, 1), xspan=xspan, yspan=(0.4, 0.6))
+    color_bar = fig.colorbar(cbar_weights, cax=cax)
+    color_bar.ax.set_title('Weight', loc='left', fontsize=10)
+    # color_bar.set_clim(zlims[0], zlims[1])
+    color_bar.ax.tick_params(axis='both', labelsize=8, length=tick_legnth, width=tick_width)
+    # coding scores colorbar
+    cax = utils.placeAxesOnGrid(fig, dim=(1, 1), xspan=xspan, yspan=(0.8, 1))
+    color_bar = fig.colorbar(cbar_coding, cax=cax, extend='min')
+    color_bar.ax.set_title('Coding \nscore', loc='left', fontsize=10)
+    color_bar.set_ticks([0, .5, 1])
+    color_bar.ax.tick_params(axis='both', labelsize=8, length=tick_legnth, width=tick_width)
+
+    # create axes for population averages
+    c += 1
+    xspan = (((c * .1) * 2.5) + 0.08, ((c * .1) * 2.5) + 0.24)
+    ax = utils.placeAxesOnGrid(fig, dim=(len(row_conditions), 1), xspan=xspan, yspan=(0, 1), wspace=0, hspace=0.2, sharex='col')
+
+    # plot population average kernels for each cre line & experience level
+    for r, row in enumerate(row_conditions):
+        for c, col in enumerate(col_conditions):
+            # get weights for this cre line & experience level
+            condition_weights = kernel_weights[(kernel_weights[row_condition] == row) & (kernel_weights[col_condition] == col)]
+            condition_weights = condition_weights.dropna()
+            traces = np.vstack(np.asarray(condition_weights[kernel + '_weights']))
+            # plot average trace
+            ax[r] = utils.plot_mean_trace(traces, timestamps, ylabel='Kernel weights', legend_label=col, color=palette[c], interval_sec=interval_sec, xlim_seconds=xlim_seconds, ax=ax[r])
+            ax[r] = utils.plot_flashes_on_trace(ax[r], timestamps, change=change, omitted=omitted)
+            ax[r].tick_params(axis='both', which='major', length=tick_legnth, width=tick_width)
+            # ax.legend(loc='upper right', fontsize='xx-small')
+        ax[r].set_xlim(xlim_seconds)
+        ax[r].yaxis.set_label_position("right")
+        ax[r].tick_params(axis='y', labelsize=8)
+        ax[r].tick_params(axis='x', labelsize=8)
+        ax[r].yaxis.tick_right()
+        if r < 2:
+            ax[r].set_xlabel('')
+            ax[r].set_xticks([])
+        if r != 1:
+            ax[r].set_ylabel('')
+        else: 
+            ax[r].set_ylabel('Kernel weights', fontsize=12)
+        sns.despine(ax=ax[r], left=True, bottom=True, right=True, top=True)
+    ax[0].set_title('Average\nweights', fontsize=14)
+    ax[r].set_xlabel('Time (s)', fontsize=16)
+        
+
+    if plt.suptitle is not None: 
+        plt.suptitle(suptitle, x=0.4, y=1.01, fontsize=18)
+    else: 
+        plt.suptitle(kernel.capitalize() + ' kernels', x=0.4, y=1.01, fontsize=18)
+    plt.subplots_adjust(hspace=0.2, wspace=0.17)
     if save_dir:
         utils.save_figure(fig, figsize, save_dir, 'weight_heatmaps', kernel)
+
 
 
 if __name__ == '__main__':

@@ -693,7 +693,7 @@ def get_metrics_df_filename(ophys_experiment_id, condition, stimuli, session_sub
     return filename
 
 
-def get_cell_metrics_dir(interpolate=False, output_sampling_rate=None):
+def get_cell_metrics_dir(interpolate=False, output_sampling_rate=None, traces=False):
     """
     Get default directory for saving and loading cell metrics
     Separate directories are created for interpolated vs not interpolated traces
@@ -701,11 +701,14 @@ def get_cell_metrics_dir(interpolate=False, output_sampling_rate=None):
     :param output_sampling_rate: sampling rate used to create interpolated traces; if interpolate is False, output_sampling_rate is None
     :return:
     """
-    base_dir = os.path.join(loading.get_platform_analysis_cache_dir(), 'cell_metrics')
-    if interpolate:
-        save_dir = os.path.join(base_dir, 'interpolated_' + str(output_sampling_rate) + 'Hz')
-    else:
-        save_dir = os.path.join(base_dir, 'original_frame_rate')
+    base_dir = os.path.join(loading.get_platform_analysis_cache_dir(), 'visual_behavior_ophys_analysis_files', 'cell_metrics')
+    if traces: 
+        save_dir = base_dir
+    else: 
+        if interpolate:
+            save_dir = os.path.join(base_dir, 'interpolated_' + str(output_sampling_rate) + 'Hz')
+        else:
+            save_dir = os.path.join(base_dir, 'original_frame_rate')
     if not os.path.exists(save_dir):
         os.mkdir(save_dir)
     return save_dir
@@ -723,7 +726,11 @@ def get_metrics_df_filepath(ophys_experiment_id, condition, stimuli, session_sub
     :param output_sampling_rate: sampling rate used to create interpolated traces; if interpolate is False, output_sampling_rate is None
     :return:
     """
-    save_dir = get_cell_metrics_dir(interpolate=interpolate, output_sampling_rate=output_sampling_rate)
+    if condition == 'traces':
+        traces=True
+    else:
+        traces=False
+    save_dir = get_cell_metrics_dir(interpolate=interpolate, output_sampling_rate=output_sampling_rate, traces=traces)
     filename = get_metrics_df_filename(ophys_experiment_id, condition, stimuli, session_subset, data_type)
     filepath = os.path.join(save_dir, filename + '.h5')
     return filepath
@@ -919,6 +926,7 @@ def load_metrics_table_for_experiment(ophys_experiment_id, condition, stimuli, s
     """
     filepath = get_metrics_df_filepath(ophys_experiment_id, condition, stimuli, session_subset,
                                        data_type=data_type, interpolate=interpolate, output_sampling_rate=output_sampling_rate)
+    print(filepath)
     metrics_table = pd.read_hdf(filepath, key='df')
     return metrics_table
 
