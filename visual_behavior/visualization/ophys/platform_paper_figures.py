@@ -616,7 +616,7 @@ def plot_population_averages_for_conditions(multi_session_df, data_type, event_t
                                           linewidth=linewidth, xlim_seconds=xlim_seconds, ax=ax[i])
         # plot stimulus timing overlaid on trace
         ax[i] = utils.plot_flashes_on_trace(ax[i], timestamps, change=change, omitted=omitted, 
-                                                linewidth=linewidth, alpha=0.25)
+                                                linewidth=linewidth)
 
         # color title by experience level if axes are experience levels
         if axes_column == 'experience_level':
@@ -2982,18 +2982,16 @@ def plot_metric_across_conditions(metrics_table, metric,  title='', xlabel='Imag
         if hue == 'experience_level':
             ax[i].get_legend().remove()
             if c == 2: 
-                ax[i].set_xlabel(xlabel)
+                ax[i].set_xlabel(xlabel, fontsize=12)
         else: 
             ax[i].get_legend().remove()
             ax[0].legend(bbox_to_anchor=(1,1), fontsize='xx-small', title=xlabel, title_fontsize='xx-small')
         if x_val == 'experience_level': 
             ax[i].set_xticks(np.arange(0, len(experience_levels)))
             ax[i].set_xticklabels(experience_levels)#, color=experience_level_colors)
-            # ax[i].set_xticks(range(len(x_vals)), labels=experience_levels)
             for xtick, color in zip(ax[i].get_xticklabels(), experience_level_colors):
                 xtick.set_color(color)
-        # label = ax[i].get_yticklabels()
-        # label.set_fontsize(8)
+        ax[i].tick_params(axis='x', which='major', labelsize=10)
         ax[i].tick_params(axis='y', which='major', labelsize=12)
         if c == 0: 
             ax[i].set_title(title, color=x_color)
@@ -3552,7 +3550,8 @@ def plot_response_heatmaps_for_conditions(multi_session_df, timestamps, data_typ
                 # use reindex to apply novel session cell order to all experience levels
                 exp_data = exp_data.reindex(novel_cell_order)
             else: 
-                exp_data = exp_data.sort_values(by=col_to_sort_by, ascending=True)
+                if col_to_sort_by is not None: 
+                    exp_data = exp_data.sort_values(by=col_to_sort_by, ascending=True)
 
             # if vmax == None: 
             if row == 'Excitatory':
@@ -4345,7 +4344,7 @@ def plot_matched_roi_and_trace(ophys_container_id, cell_specimen_id, limit_to_la
                                                   linewidth=linewidth, xlim_seconds=window, plot_sem=True, ax=ax[i + n])
 
                 ax[i + n] = utils.plot_flashes_on_trace(ax[i + n], cell_data.trace_timestamps.values[0], change=True, omitted=False,
-                                                        alpha=0.15, facecolor='gray')
+                                                        facecolor='gray')
                 ax[i + n].set_title('')
                 if i != 0:
                     ax[i + n].set_ylabel('')

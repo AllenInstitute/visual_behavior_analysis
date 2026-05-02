@@ -1874,6 +1874,106 @@ def plot_matched_roi_and_coding_scores(cell_metadata, cell_dropouts, experiments
         print('saved')
 
 
+
+def plot_matched_roi_and_coding_scores_for_experience_levels(cell_metadata, cell_dropouts, experiments_table, save_dir=None):
+    """
+    This function will plot the following panels:
+        cell ROI masks matched across sessions for a given cell_specimen_id,
+        coding scores across features and sessions as a barplot,
+    Plots the ROI masks and coding scores barplot for a cell matched across sessions
+    Cell_metadata is a subset of the ophys_cells_table limited to the cell_specimen_id of interest
+    cell_dropouts is a subset of the results_pivoted version of GLM output limited to cell_specimen_id of interest
+    experiments_table should have experience levels as [Familiar, Novel, Novel +]
+    all input dataframes must be limited to last familiar and second novel active (i.e. max of one session per type)
+    if one session type is missing, the max projection but no ROI will be plotted and the traces and weights will be missing for that experience level
+    """
+
+    import visual_behavior.visualization.ophys.summary_figures as sf
+    import visual_behavior.visualization.ophys.glm_example_plots as gep
+
+    if len(cell_metadata.cell_specimen_id.unique()) > 1:
+        print('There is more than one cell_specimen_id in the provided cell_metadata table')
+        print('Please limit input to a single cell_specimen_id')
+
+    # set up plotting for each experience level
+    experience_levels = ['Familiar', 'Novel', 'Novel +']
+    colors = utils.get_experience_level_colors()
+    n_exp_levels = len(experience_levels)
+    # get relevant info for this cell
+    cell_metadata = cell_metadata.sort_values(by='experience_level')
+    cell_specimen_id = cell_metadata.cell_specimen_id.unique()[0]
+    ophys_container_id = cell_metadata.ophys_container_id.unique()[0]
+    # need to get all experiments for this container, not just for this cell
+    ophys_experiment_ids = experiments_table[experiments_table.ophys_container_id == ophys_container_id].index.values
+    n_expts = len(ophys_experiment_ids)
+    if n_expts > 3:
+        print('There are more than 3 experiments for this cell. There should be a max of 1 experiment per experience level')
+        print('Please limit input to only one experiment per experience level')
+
+    n_cols = n_exp_levels + 2
+    figsize = (6, 3)
+    fig, ax = plt.subplots(2, 3, figsize=figsize, sharex='row', sharey='row')
+    ax = ax.ravel()
+
+    print('cell_specimen_id:', cell_specimen_id)
+    # loop through experience levels for this cell
+    for e, experience_level in enumerate(experience_levels):
+        print('experience_level:', experience_level)
+
+        # get ophys_experiment_id for this experience level
+        # experiments_table must only include one experiment per experience level for a given container
+        ophys_experiment_id = experiments_table[(experiments_table.ophys_container_id == ophys_container_id) &
+                                                (experiments_table.experience_level == experience_level)].index.values[0]
+        print('ophys_experiment_id:', ophys_experiment_id)
+        ind = experience_levels.index(experience_level)
+        color = colors[ind]
+
+        # load dataset for this experiment
+        dataset = loading.get_ophys_dataset(ophys_experiment_id, get_extended_stimulus_presentations=False)
+
+        try:  # attempt to generate plots for this cell in this this experience level. if cell does not have this exp level, skip
+            # plot ROI mask for this experiment
+            ct = dataset.cell_specimen_table.copy()
+            cell_roi_id = ct.loc[cell_specimen_id].cell_roi_id  # typically will fail here if the cell_specimen_id isnt in the session
+            roi_masks = dataset.roi_masks.copy()  # save this to get approx ROI position if subsequent session is missing the ROI (fails if the first session is the one missing the ROI)
+            ax[e] = sf.plot_cell_zoom(dataset.roi_masks, dataset.max_projection, cell_roi_id,
+                                        spacex=50, spacey=50, show_mask=False, ax=ax[e])
+            ax[e].set_title(experience_level, color=color)
+
+        except BaseException:  # plot area of max projection where ROI would have been if it was in this session
+            # plot the max projection image with the xy location of the previous ROI
+            # this will fail if the familiar session is the one without the cell matched
+            print('no cell ROI for', experience_level)
+            ax[e] = sf.plot_cell_zoom(roi_masks, dataset.max_projection, cell_roi_id,
+                                        spacex=50, spacey=50, show_mask=False, ax=ax[e])
+            ax[e].set_title(experience_level)
+
+        except:
+            print('could not plot GLM kernels for', experience_level)
+
+        ax[e+3] = gep.plot_coding_score_components_for_cell(cell_specimen_id, ophys_experiment_id, 
+                                                                cell_dropouts.reset_index(), dataset,
+                                            title='', horiz=True, fontsize=14, as_panel=False, 
+                                            ax=ax[e+3], save_dir=None, folder=None);
+        if e == 1: 
+            ax[e+3].set_xlabel('Coding score')
+        else: 
+            ax[e+3].set_xlabel('')
+
+    metadata_string = utils.get_container_metadata_string(dataset.metadata)
+
+    # fig.tight_layout()
+    fig.subplots_adjust(wspace=0.4)
+    fig.suptitle(str(cell_specimen_id) + '_' + metadata_string, x=0.53, y=1.1,
+                    horizontalalignment='center', fontsize=16)
+
+    if save_dir:
+        print('saving plot for', cell_specimen_id)
+        utils.save_figure(fig, figsize, save_dir, 'single_cell_roi_and_coding_scores',
+                          str(cell_specimen_id) + '_' + metadata_string)
+        print('saved')
+        
+
 def plot_cell_change_and_omission_responses(change_mdf, omission_mdf, cell_specimen_id,
                                             save_dir=None, folder='single_cell_change_omission_response', suffix=''):
     '''

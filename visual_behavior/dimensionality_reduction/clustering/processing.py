@@ -1378,6 +1378,10 @@ def get_umap_results(feature_matrix, cluster_meta, save_dir, suffix=''):
     if os.path.exists(umap_results_file):
         print('loading umap results from', umap_results_file)
         umap_df = pd.read_hdf(umap_results_file, key='df')
+        umap_df['cluster_id'] = cluster_meta['cluster_id'].values
+        umap_df['cell_specimen_id'] = cluster_meta.index.values
+        umap_df = umap_df.set_index('cell_specimen_id')
+        umap_df.to_hdf(umap_results_file, key='df')
     else:
         print('generating umap results')
         import umap
@@ -1387,6 +1391,9 @@ def get_umap_results(feature_matrix, cluster_meta, save_dir, suffix=''):
         umap_df = pd.DataFrame()
         umap_df['x'] = u[:, 0]
         umap_df['y'] = u[:, 1]
+        umap_df['cell_specimen_id'] = X.index.values
+        umap_df['cluster_id'] = cluster_meta['cluster_id'].values
+        umap_df.set_index('cell_specimen_id', inplace=True)
         # save results
         umap_df.to_hdf(umap_results_file, key='df')
         print('umap results saved to', umap_results_file)
@@ -2053,6 +2060,8 @@ def add_stats_for_location_comparison_to_cluster_proportion_stats(n_cells_table)
             f_expected = n_cells_table.loc[(cre_line, cluster_id)]['n_cells_chance_location']
             # ask if the actual frequency values are significantly different than expected frequencies
             if len(f) > 1:  # needs to be at least 2 locations to compare
+                # rescale f_expected to match sum(f) to avoid floating-point tolerance errors in chisquare
+                f_expected = f_expected * (f.sum() / f_expected.sum())
                 out = chisquare(f, f_expected)
                 n_cells_table.loc[(cre_line, cluster_id), 'pvalue'] = out.pvalue
                 n_cells_table.loc[(cre_line, cluster_id), 'significant'] = out.pvalue < 0.05

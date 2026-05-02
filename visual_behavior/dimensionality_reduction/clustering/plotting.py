@@ -15,6 +15,7 @@ from sklearn.cluster import KMeans
 from statsmodels.stats.multicomp import pairwise_tukeyhsd
 from statsmodels.stats.multicomp import MultiComparison
 
+from visual_behavior.visualization.ophys.platform_paper_figures import plot_response_heatmaps_for_conditions
 import visual_behavior.visualization.utils as utils
 import visual_behavior.data_access.loading as loading
 from visual_behavior_glm import GLM_visualization_tools as gvt
@@ -2245,13 +2246,13 @@ def plot_coding_score_heatmap_matched(cluster_meta, feature_matrix, sort_by='clu
     fontsize = 16
     ymin, ymax = ax[0].get_ylim()
     ymax = ymax + (ymax * 0.22)
-    ax[0].text(s=features[0], y=ymax, x=1.5, rotation=rotation, color=feature_colors[0], fontsize=fontsize, va='center',
+    ax[0].text(s=features[0].capitalize(), y=ymax, x=1.5, rotation=rotation, color=feature_colors[0], fontsize=fontsize, va='center',
                ha='center')
-    ax[0].text(s=features[1], y=ymax, x=4.5, rotation=rotation, color=feature_colors[1], fontsize=fontsize, va='center',
+    ax[0].text(s=features[1].capitalize(), y=ymax, x=4.5, rotation=rotation, color=feature_colors[1], fontsize=fontsize, va='center',
                ha='center')
-    ax[0].text(s=features[2], y=ymax, x=7.5, rotation=rotation, color=feature_colors[2], fontsize=fontsize, va='center',
+    ax[0].text(s=features[2].capitalize(), y=ymax, x=7.5, rotation=rotation, color=feature_colors[2], fontsize=fontsize, va='center',
                ha='center')
-    ax[0].text(s=features[3], y=ymax, x=10.5, rotation=rotation, color=feature_colors[3], fontsize=fontsize, va='center',
+    ax[0].text(s=features[3].capitalize(), y=ymax, x=10.5, rotation=rotation, color=feature_colors[3], fontsize=fontsize, va='center',
                ha='center')
 
     if save_dir:
@@ -3884,7 +3885,7 @@ def plot_response_heatmap_for_concatenated_traces(multi_session_df, event_type='
 
 
 def plot_cell_response_heatmaps_for_clusters(multi_session_df, data_type='events', event_type='images',
-                                             xlim_seconds=[-0.3, 0.8], vmax=0.001, ax=None):
+                                             xlim_seconds=[-0.3, 0.8], vmax=0.001, ax=None, suptitle=None):
     '''
     Plot heatmaps for all cells in each cluster (as rows) for each experience level (as columns)
     Currently cells are not aligned across rows - TBD
@@ -3894,7 +3895,7 @@ def plot_cell_response_heatmaps_for_clusters(multi_session_df, data_type='events
 
     tmp = multi_session_df.copy()
 
-    threshold_percentile = 99.9
+    threshold_percentile = 99.8
     tmp, outliers = processing.remove_outliers(tmp, threshold_percentile)
     print(len(outliers), 'total removed')
 
@@ -3912,16 +3913,19 @@ def plot_cell_response_heatmaps_for_clusters(multi_session_df, data_type='events
 
     if ax is None:
         fig, ax = plt.subplots(len(cluster_ids), 3, figsize=(4, 12), sharex=True, sharey=False)
+        if suptitle is not None:
+            fig.suptitle(suptitle, x=0.5, y=1.01)
         ax = ax.ravel()
         plt.subplots_adjust(hspace=0, wspace=0)
 
 
     ax = ppf.plot_response_heatmaps_for_conditions(tmp, timestamps, data_type, event_type,
-                                                   row_condition, col_condition, cols_to_sort_by=None, suptitle=None,
+                                                   row_condition, col_condition, col_to_sort_by='mean_response', suptitle=None,
                                                    microscope=None, vmax=vmax, xlim_seconds=xlim_seconds,
                                                    xlabel='Time (s)',
                                                    match_cells=False, cbar=False, cbar_label='Avg. calcium events',
                                                    save_dir=None, folder=None, suffix='', ax=ax)
+
     i = 0
     for r, clust in enumerate(np.sort(cluster_ids)):
         for c, exp in enumerate(experience_levels):

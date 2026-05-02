@@ -2568,7 +2568,13 @@ def plot_weights_and_coding_score_heatmaps_for_experience_levels(kernel, weights
     from matplotlib import colors
 
     # create plot
-    figsize = [12, 6]
+    if row_condition == 'cluster_id':
+        figsize = [8, 12]
+        sharey = 'row'
+    else:
+        figsize = [12, 6]
+        sharey = False
+
     fig = plt.figure(figsize=figsize, facecolor='white')
     # loop through experience levels
     for c, col in enumerate(col_conditions):
@@ -2576,7 +2582,9 @@ def plot_weights_and_coding_score_heatmaps_for_experience_levels(kernel, weights
 
         # create axes for this experience level
         xspan = ((c * .1) * 2.5, ((c * .1) * 2.5) + 0.18)
-        ax = utils.placeAxesOnGrid(fig, dim=(len(row_conditions), 2), xspan=xspan, yspan=(0, 1), wspace=0, hspace=0.2, sharex='col', sharey=False, width_ratios=[8, 1])
+        ax = utils.placeAxesOnGrid(fig, dim=(len(row_conditions), 2), 
+                                   xspan=xspan, yspan=(0, 1), wspace=0, hspace=0.2, 
+                                   sharex='col', sharey=False, width_ratios=[8, 1])
 
         # loop through cre lines
         for r, row in enumerate(row_conditions):
@@ -2597,11 +2605,20 @@ def plot_weights_and_coding_score_heatmaps_for_experience_levels(kernel, weights
             ax[r][0].set_xticks(xticklabels)
 
             if c == 0:
-                ax[r][0].set_ylabel(utils.convert_cre_line_to_cell_type(row))
-                ax[r][0].set_ylabel(utils.convert_cre_line_to_cell_type(row).split(' ')[0])
+                if row_condition == 'cre_line':
+                    ax[r][0].set_ylabel(utils.convert_cre_line_to_cell_type(row))
+                    ax[r][0].set_ylabel(utils.convert_cre_line_to_cell_type(row).split(' ')[0])
+                elif row_condition == 'cluster_id':
+                    ax[r][0].set_ylabel(str(int(row)), rotation=0, ha='left')
+                    ax[r][0].tick_params(axis='y', labelsize=10)
+                else: 
+                    ax[r][0].set_ylabel(row)
             else:
                 ax[r][0].set_ylabel('')
-            if r < 2:
+                if row_condition == 'cluster_id':
+                    ax[r][0].set_yticklabels([])
+                    ax[r][0].tick_params(axis='y', labelsize=10)
+            if r < len(row_conditions)-1:
                 ax[r][0].set_xticklabels([])
             else:
                 ax[r][0].set_xticks(xticklabels)
@@ -2662,7 +2679,12 @@ def plot_weights_and_coding_score_heatmaps_for_experience_levels(kernel, weights
     # create axes for population averages
     c += 1
     xspan = (((c * .1) * 2.5) + 0.06, ((c * .1) * 2.5) + 0.23)
-    ax = utils.placeAxesOnGrid(fig, dim=(len(row_conditions), 1), xspan=xspan, yspan=(0, 1), wspace=0, hspace=0.2, sharex='col')
+    if row_condition == 'cluster_id':
+        sharey = 'col'
+    else:
+        sharey=False
+    ax = utils.placeAxesOnGrid(fig, dim=(len(row_conditions), 1), xspan=xspan, yspan=(0, 1), 
+                               wspace=0, hspace=0.2, sharex='col', sharey=sharey)
 
     # plot population average kernels for each cre line & experience level
     for r, row in enumerate(row_conditions):
@@ -2685,6 +2707,8 @@ def plot_weights_and_coding_score_heatmaps_for_experience_levels(kernel, weights
             ax[r].set_xticks([])
         if r != 1:
             ax[r].set_ylabel('')
+        if r != (len(row_conditions)-1):
+            ax[r].set_xticklabels([])
         sns.despine(ax=ax[r], left=True, bottom=False, right=True, top=True)
     ax[0].set_title('Average weights')
     ax[r].set_xlabel(xlabel, fontsize=14)
@@ -2732,8 +2756,10 @@ def plot_weights_and_coding_score_heatmaps_for_experience_levels_main_figure(ker
     timestamps = np.round(timestamps, 2)
     if 'image' in kernel:
         timestamps = timestamps[:-1]
-    if np.max(timestamps) < 1:
+    if np.max(timestamps) < 0.7:
         interval_sec = 0.2
+    elif np.max(timestamps) < 1:
+        interval_sec = 0.5
     else:
         interval_sec = 1
     xlim_seconds = [timestamps[0], timestamps[-1]]
@@ -2762,7 +2788,10 @@ def plot_weights_and_coding_score_heatmaps_for_experience_levels_main_figure(ker
     tick_legnth = 2
     tick_width = 1
     # create plot
-    figsize = [6, 4]
+    if row_condition == 'cluster_id':
+        figsize = [6, 6]
+    else: 
+        figsize = [6, 4]
     fig = plt.figure(figsize=figsize, facecolor='white')
     # loop through experience levels
     for c, col in enumerate(col_conditions):
@@ -2770,7 +2799,9 @@ def plot_weights_and_coding_score_heatmaps_for_experience_levels_main_figure(ker
 
         # create axes for this experience level
         xspan = ((c * .1) * 2.5, ((c * .1) * 2.5) + 0.18)
-        ax = utils.placeAxesOnGrid(fig, dim=(len(row_conditions), 2), xspan=xspan, yspan=(0, 1), wspace=0, hspace=0.2, sharex='col', sharey=False, width_ratios=[8, 1])
+        ax = utils.placeAxesOnGrid(fig, dim=(len(row_conditions), 2), 
+                                    xspan=xspan, yspan=(0, 1), wspace=0, hspace=0.2, 
+                                    sharex='col', sharey=False, width_ratios=[8, 1])
 
         # loop through cre lines
         for r, row in enumerate(row_conditions):
@@ -2785,20 +2816,27 @@ def plot_weights_and_coding_score_heatmaps_for_experience_levels_main_figure(ker
             data = pd.DataFrame(np.vstack(row_weights[kernel + '_weights'].values), columns=timestamps)
             cbar_weights = ax[r][0].imshow(data.values, aspect='auto', cmap='PRGn', vmin=-vmax, vmax=vmax, extent=[timestamps[0], timestamps[-1], 0, np.shape(data)[0]])
             ax[r][0].set_yticks([0, len(data)])
-            ax[r][0].set_yticklabels((len(data), 0), fontsize=8)
+            ax[r][0].set_yticklabels((len(data), ''), fontsize=8)
             ax[r][0].tick_params(axis='both', which='major', length=tick_legnth, width=tick_width)
             sns.despine(ax=ax[r][0], left=False, bottom=False, right=False, top=False)
             
             # ax[r][0].set_xlims(xlim_seconds)
-            xticklabels = np.arange(timestamps[0], timestamps[-1], 0.2)
+            xticklabels = np.arange(timestamps[0], timestamps[-1], interval_sec)
             ax[r][0].set_xticks(xticklabels)
             
             if c == 0:
-                ax[r][0].set_ylabel(utils.convert_cre_line_to_cell_type(row), fontsize=16)
-                ax[r][0].set_ylabel(utils.convert_cre_line_to_cell_type(row).split(' ')[0], fontsize=16)
+                if row_condition == 'cre_line':
+                    ax[r][0].set_ylabel(utils.convert_cre_line_to_cell_type(row), fontsize=16)
+                    ax[r][0].set_ylabel(utils.convert_cre_line_to_cell_type(row).split(' ')[0], fontsize=16)
+                elif row_condition == 'cluster_id':
+                    ax[r][0].set_ylabel(str(int(row)), rotation=0, ha='center', fontsize=16)
+                else: 
+                    ax[r][0].set_ylabel(row, fontsize=16)
             else:
                 ax[r][0].set_ylabel('')
-            if r < 2:
+                if row_condition == 'cluster_id':
+                    ax[r][0].set_yticklabels([])
+            if r < len(row_conditions)-1:
                 ax[r][0].set_xticklabels([])
             else:
                 if interval_sec >= 1:
@@ -2857,8 +2895,14 @@ def plot_weights_and_coding_score_heatmaps_for_experience_levels_main_figure(ker
 
     # create axes for population averages
     c += 1
+    if row_condition == 'cluster_id':
+        sharey = 'col'
+    else:
+        sharey = False
     xspan = (((c * .1) * 2.5) + 0.08, ((c * .1) * 2.5) + 0.24)
-    ax = utils.placeAxesOnGrid(fig, dim=(len(row_conditions), 1), xspan=xspan, yspan=(0, 1), wspace=0, hspace=0.2, sharex='col')
+    ax = utils.placeAxesOnGrid(fig, dim=(len(row_conditions), 1), 
+                               xspan=xspan, yspan=(0, 1), wspace=0, hspace=0.2, 
+                               sharex='col', sharey=sharey)
 
     # plot population average kernels for each cre line & experience level
     for r, row in enumerate(row_conditions):
@@ -2877,10 +2921,10 @@ def plot_weights_and_coding_score_heatmaps_for_experience_levels_main_figure(ker
         ax[r].tick_params(axis='y', labelsize=8)
         ax[r].tick_params(axis='x', labelsize=8)
         ax[r].yaxis.tick_right()
-        if r < 2:
+        if r < len(row_conditions)-1:
             ax[r].set_xlabel('')
             ax[r].set_xticks([])
-        if r != 1:
+        if r != len(row_conditions)-1:
             ax[r].set_ylabel('')
         else: 
             ax[r].set_ylabel('Kernel weights', fontsize=12)
