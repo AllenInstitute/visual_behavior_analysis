@@ -86,10 +86,10 @@ def get_rolling_performance_metrics_dir():
     return os.path.join(get_platform_analysis_cache_dir(), 'visual_behavior_ophys_analysis_files', 'rolling_performance_dfs')
 
 def get_stimulus_behavior_response_dir():
-    return os.path.join(get_platform_analysis_cache_dir(), 'visual_behavior_ophys_analysis_files', 'behavior_for_stimulus_presentations')
+    return os.path.join(get_platform_analysis_cache_dir(), 'visual_behavior_ophys_analysis_files', 'stimulus_behavior_response')
 
 def get_stimulus_population_response_dir():
-    return os.path.join(get_platform_analysis_cache_dir(), 'visual_behavior_ophys_analysis_files', 'population_response_for_stimulus_presentations')
+    return os.path.join(get_platform_analysis_cache_dir(), 'visual_behavior_ophys_analysis_files', 'stimulus_population_response')
 
 def get_glm_results_dir():
     return os.path.join(get_platform_analysis_cache_dir(), 'visual_behavior_ophys_glm_results')
