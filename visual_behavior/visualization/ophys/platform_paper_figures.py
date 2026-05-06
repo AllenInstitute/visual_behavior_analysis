@@ -1701,10 +1701,14 @@ def add_stats_to_plot_yaxis(data, metric, ax, ymax=None, column_to_compare='expe
 
     top = [ytop]
     for tindex, row in tukey.iterrows():
-        # if (anova.pvalue < 0.05) and (row.reject): # if something is significant, add some significance bars
-        #     label = '*'
-        #     color = 'k'
-        #     alpha = 1
+        if (anova.pvalue < 0.05) and (row.reject): # if something is significant, add some significance bars
+            label = '*'
+            color = 'k'
+            alpha = 1
+        else:
+            label = ''
+            color = 'w'
+            alpha = 0
         if np.abs(row.x2 - row.x1) > dist: # if it is a comparison more than 2 x values away, put the significance bar higher
             y = y2
             yh = y2h
@@ -1714,8 +1718,6 @@ def add_stats_to_plot_yaxis(data, metric, ax, ymax=None, column_to_compare='expe
         if len(data[column_to_compare].unique())>2: # if more than 2 values, use the multiple corrections result
             if row.reject:
                 ax.plot([row.x1+0.1, row.x1+0.1, row.x2-0.1, row.x2-0.1], [y, y, y, y], linestyle='-', color=color, alpha=alpha, clip_on=False)
-                # ax.annotate('*', xy=(xh, np.mean([row.x1, row.x2])), xycoords=ax.get_xaxis_transform(), ha="center", va="bottom",
-                #                fontsize=15, clip_on=False)
                 ax.text(np.mean([row.x1+scale*3, row.x2+scale*3]), yh+scale, label, fontsize=fontsize, horizontalalignment='center',
                         verticalalignment='center', clip_on=False)
                 top.append(yh)
