@@ -2191,6 +2191,10 @@ def plot_coding_score_heatmap_matched(cluster_meta, feature_matrix, sort_by='clu
         fig, ax = plt.subplots(len(cluster_order), 1, figsize=figsize, sharex=True)
         plt.subplots_adjust(wspace=0, hspace=0)
 
+    total_cells = sum(
+        (cluster_meta.cluster_id == cid).sum() for cid in cluster_order
+    )
+
     for i, cluster_id in enumerate(cluster_order):
 
         this_cluster_meta = cluster_meta[cluster_meta.cluster_id == cluster_id]
@@ -2214,7 +2218,10 @@ def plot_coding_score_heatmap_matched(cluster_meta, feature_matrix, sort_by='clu
         ax2.set_yticks([0, this_cluster_scores.shape[0]])
         ax2.set_yticklabels('')
         # ax[i].set_yticklabels((this_cluster_scores.shape[0]+1, ''), rotation=0, fontsize=12)
-        ax2.set_ylabel('n=' + str(this_cluster_scores.shape[0]), fontsize=10, rotation=90, ha='center', va='bottom')
+        n_cluster_cells = this_cluster_scores.shape[0]
+        pct = 100 * n_cluster_cells / total_cells if total_cells else 0
+        ax2.set_ylabel('n=' + str(n_cluster_cells) + ' (' + format(pct, '.1f') + '%)',
+                       fontsize=10, rotation=90, ha='center', va='bottom')
 
         if i == 6:
             # ax[i].text(s='  Cells', y=this_cluster_scores.shape[0]/2, x=14, ha='center', va='bottom', rotation=90)
