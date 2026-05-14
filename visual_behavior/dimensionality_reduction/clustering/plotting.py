@@ -2552,7 +2552,7 @@ def plot_percent_cells_per_cluster_per_cre_dominant_feature(cluster_meta, col_to
         figsize = (5, 10)
         suffix = '_matched_height'
     else:
-        figsize = (6, 5)
+        figsize = (4, 7)
         suffix = ''
 
     fig, ax = plt.subplots(1, 3, figsize=figsize, sharey=True, sharex=True)
@@ -2586,7 +2586,7 @@ def plot_percent_cells_per_cluster_per_cre_dominant_feature(cluster_meta, col_to
             except:
                 pass
 
-    ax[0].set_xlabel('Percent of cells in each cluster', ha='left')
+    ax[1].set_xlabel('% Cells')
     ax[0].set_ylabel('Cluster ID')
     sns.despine(fig=fig, top=True, right=True, left=False, bottom=False, offset=None, trim=False)
 
