@@ -731,7 +731,7 @@ def custom_sort(s):
     return extract_number(s)
 
 
-### selecting # K ###
+########## selecting # K ##############
 
 def compute_inertia(a, X, metric='euclidean'):
     W = [np.mean(pairwise_distances(X[a == c, :], metric=metric)) for c in np.unique(a)]
@@ -987,8 +987,233 @@ def load_eigengap(glm_version, feature_matrix, cell_metadata=None, cre_line='', 
         save_clustering_results(eigengap, filename_string=eigengap_filename, path=save_dir)
     return eigengap
 
+########### Prediction strength control #############
 
-### Clustering analysis ###
+def get_prediction_strength(test_labels, test_predictions):
+    """
+    Computes the prediction strength for a given clustering.
+    
+    Args:
+        test_labels: Labels obtained by clustering the test set independently.
+        test_predictions: Labels obtained by assigning test data to 
+                          training set centroids.
+    Returns:
+        Prediction strength (float).
+    """
+    from scipy.special import comb
+
+    unique_test_clusters = np.unique(test_labels)
+    k = len(unique_test_clusters)
+    
+    # Handle the k=1 case as defined in the paper
+    if k == 1:
+        return 1.0
+    
+    strengths = []
+    
+    for cluster_num in unique_test_clusters:
+        # 1. Identify indices of points in the current test cluster j
+        indices = np.where(test_labels == cluster_num)[0]
+        n_cells_in_test_cluster = len(indices)
+        # print(n_cells_in_test_cluster, 'cells in test cluster', cluster_num)
+        
+        if n_cells_in_test_cluster <= 2:
+            strengths.append([cluster_num, 0])
+            continue
+            
+        # 2. Within this test cluster, see how many points fall 
+        # into each predicted (training-derived) cluster
+        pred_in_cluster = test_predictions[indices]
+        cluster_ids, counts = np.unique(pred_in_cluster, return_counts=True)
+        # print('n_cells per predicted cluster:', cluster_ids, counts)
+        
+        # 3. Calculate number of pairs that share the same predicted label
+        # Sum of binom(count, 2) for each predicted group found in test cluster j
+        # which is the number of pairwise combinations that match in the predicted clusters
+        # This is somewhat similar to the co-clustering probability - whether the cell pair falls into the same cluster
+        # for test and predicted models, rather than whether it falls into the same cluster on repeated cluster iterations
+        same_predict_pairs = np.sum(comb(counts, 2))
+        # It doesnt matter whether the predicted pairs fall into the same cluster ID as in the test data, 
+        # just that they are co-clustered together again in the predicted data
+        # If the cell pairs fall into many clusters in the predicted data, that means they didnt co-cluster at the same rate as in the test data
+
+        # 4. Calculate total possible pairs in test cluster j
+        total_pairs = comb(n_cells_in_test_cluster, 2)
+        # print('there are ', same_predict_pairs, 'pairs that fall into the same cluster in the predicted data')
+        # print('and', total_pairs, 'pairs in the same cluster in the test data')
+        
+        # 5. Proportion for this specific cluster
+        # strengths.append(same_predict_pairs / total_pairs)
+        strength = same_predict_pairs / total_pairs
+        # print(np.round(strength, 3)*100, 'percent of pairs in test cluster', cluster_num, 'also fall into the same cluster in the predicted test data')
+        strengths.append([cluster_num, strength])
+            
+    # Prediction strength is the minimum across all clusters
+    return pd.DataFrame(strengths, columns=['cluster_number', 'prediction_strength'])
+
+
+def get_train_test_predict_labels_SpectralClustering(feature_matrix, n_clusters, iteration=42, affinity='rbf'):
+    '''
+    Run clustering on train and test sets, then predict the labels in the test set using the training set model
+    i.e. for each cell in the test set, find the nearest centroid in the training set and assign to that cluster
+
+    iteration is the random seed to use, to make sure that different splits are selected if different iterations are run 
+    '''
+    from sklearn.model_selection import train_test_split
+    from sklearn.cluster import SpectralClustering
+    from sklearn.neighbors import KNeighborsClassifier
+
+    # Assign coding scores over sessions to X (~3000 observations, 9 features)
+    # Use only the cells that got included in the final clusters (removing cells that fell into clusters with <5 cells)
+    # X = feature_matrix.loc[cluster_meta.index.values].copy()
+    # print(len(X))
+    X = feature_matrix.copy()
+
+    # 1. Split into Training (1500) and Test (1500) sets
+    X_train, X_test = train_test_split(X, test_size=0.5, random_state=iteration)
+
+    # 2. Cluster the Training Set
+    # In our analysis we used the default which is affinity = 'rbf' (radial basis function), example code used
+    spectral_train = SpectralClustering(n_clusters=n_clusters, affinity=affinity, random_state=iteration)
+    train_labels = spectral_train.fit_predict(X_train)
+
+    # 3. Create a 'Predictor' for Spectral Clustering
+    # Since Spectral has no .predict(), we train a KNN classifier on the training results
+    # This creates a decision boundary based on the spectral labels.
+    predictor = KNeighborsClassifier(n_neighbors=1)
+    # predictor = KNeighborsClassifier(n_neighbors=10, weights='distance')
+    predictor.fit(X_train, train_labels)
+
+    # 4. Generate Test Predictions (using the classifier)
+    test_predictions = predictor.predict(X_test)
+    # print("First 10 predictions for test data:", test_predictions[:10])
+
+    # 5. Cluster the Test Set independently
+    spectral_test = SpectralClustering(n_clusters=n_clusters, affinity=affinity, random_state=iteration)
+    test_labels = spectral_test.fit_predict(X_test)
+    # print("First 10 labels for test data:", test_labels[:10])
+
+    return X_train, X_test, train_labels, test_labels, test_predictions
+
+
+def get_prediction_strengths_for_values_of_k(X, n_iterations=5, max_n_clusters=20, model='SpectralClustering', affinity='rbf', save_dir=None):
+    '''
+    Produce a dataframe with mean prediction strength per cluster, across n_iterations of clustering, 
+    for clustering performed using a range of values for k 
+ 
+    X: feature matrix
+    max_n_clusters: max for range of cluster k values to quantify prediction strength over
+    model: 'SpectralClustering' or 'KMeans'
+    affinity: if using 'SpectralClustering', which method to use to construct affinity matrix (typically 'rbf' or 'nearest_neighbors') 
+    '''
+    if save_dir:
+        results_file_path = os.path.join(save_dir, 'prediction_strengths_across_k.h5')
+        if os.path.exists(results_file_path):
+            print(f"Loading existing results from {results_file_path}")
+            return pd.read_hdf(results_file_path, key='df')
+        else: 
+            print(f"No existing results found at {results_file_path}. Computing prediction strengths across k...")
+
+    range_of_k = range(2, max_n_clusters)
+    ps_scores_df = pd.DataFrame()
+    for n_clusters in range_of_k:
+        # print('n_clusters:', n_clusters)
+        for iteration in range(n_iterations): 
+            X_train, X_test, train_labels, test_labels, test_predictions = get_train_test_predict_labels_SpectralClustering(X,
+                                                                            n_clusters=n_clusters, iteration=iteration, affinity=affinity)
+            ps_scores = get_prediction_strength(test_labels, test_predictions)
+            # get new cluster ID based on cluster size
+            ps_scores['cluster_id'] = pd.Series(test_labels).value_counts().index
+            ps_scores['n_clusters'] = n_clusters
+            ps_scores['iteration'] = iteration
+            ps_scores_df = pd.concat([ps_scores_df, ps_scores])
+
+    if save_dir:
+        ps_scores_df.to_hdf(results_file_path, key='df', mode='w')
+        print(f"Saved prediction strengths across k to {results_file_path}")
+    return ps_scores_df
+
+
+def get_mean_and_sem_ps_for_k_clusters(group, col='min'):
+    import scipy.stats as stats
+    sem = stats.sem(group[col].values)
+    mean = np.mean(group[col].values)
+    n_clusters = group.index.values[0][0]
+    return pd.Series([mean, sem])
+
+
+def get_mean_and_sem_across_iterations(scores_df, col='min'): 
+    '''
+    Use col='min' to get traditional prediction strength (min across clusters)
+    or use col='mean' to get the mean prediction strength across clusters for each iteration
+    '''
+    # get stats for pred strength across clusters for each iteration 
+    scores_df = scores_df.groupby(['n_clusters', 'iteration']).describe().drop(columns=['cluster_number', 'cluster_id']) #.reset_index()
+    # drop 'prediction_strength' multi-index
+    scores_df.columns = scores_df.columns.droplevel(0)
+
+    # get the average and sem of the min ps across iterations
+    scores_df = scores_df.groupby(['n_clusters']).apply(get_mean_and_sem_ps_for_k_clusters, col=col)
+    scores_df.columns = ['mean_ps', 'sem_ps']
+    scores_df['threshold'] = scores_df['mean_ps']+scores_df['sem_ps']
+    scores_df = scores_df.reset_index()
+    return scores_df
+
+
+def get_prediction_score_for_clusters(X, pre_determined_labels, n_neighbors=5, n_iters=10):
+    """
+    Computes the prediction strength for a set of fixed labels.
+    
+    Args:
+        X: Feature matrix (3000, 9).
+        pre_determined_labels: The labels you want to test.
+        n_neighbors: KNN neighbors (best match for original spectral clustering method).
+    """
+    from sklearn.model_selection import train_test_split
+    from sklearn.neighbors import KNeighborsClassifier
+    from scipy.special import comb
+
+    cluster_ids = np.sort(np.unique(pre_determined_labels))
+
+    ps_df = []
+    for i in range(n_iters):
+        # 1. Split data and labels
+        X_train, X_test, labels_training, labels_test = train_test_split(
+            X, pre_determined_labels, test_size=0.5, random_state=i)
+
+        # 2. Train a KNN 'Surrogate' on the training labels
+        knn = KNeighborsClassifier(n_neighbors=n_neighbors)
+        knn.fit(X_train, labels_training)
+
+        # 3. Predict labels for the test set
+        test_predictions = knn.predict(X_test)
+
+        # 4. Calculate prediction strength for each original cluster
+        cluster_strengths = []
+        for cluster_id in cluster_ids:
+            # Indices of points that belong to this cluster in the TEST set
+            indices = np.where(labels_test == cluster_id)[0]
+            n_kj = len(indices)
+            
+            if n_kj < 2: continue
+            
+            # How many of these points share a predicted label?
+            preds = test_predictions[indices]
+            _, counts = np.unique(preds, return_counts=True)
+            
+            same_predict_pairs = np.sum(comb(counts, 2))
+            total_pairs = comb(n_kj, 2)
+            strength = same_predict_pairs / total_pairs
+            cluster_strengths.append(strength)
+            ps_df.append([i, cluster_id, strength])
+
+    ps_df = pd.DataFrame(data=ps_df, columns=['iteration', 'cluster_id', 'cluster_strength'])
+
+    return ps_df
+
+
+
+############ Clustering analysis ###########
 
 def get_labels_for_coclust_matrix(X, model=SpectralClustering, nboot=np.arange(100), n_clusters=8):
     '''

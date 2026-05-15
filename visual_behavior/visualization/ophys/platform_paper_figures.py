@@ -2993,7 +2993,7 @@ def plot_metric_across_conditions(metrics_table, metric,  title='', xlabel='Imag
             ax[i].set_xticklabels(experience_levels)#, color=experience_level_colors)
             for xtick, color in zip(ax[i].get_xticklabels(), experience_level_colors):
                 xtick.set_color(color)
-        ax[i].tick_params(axis='x', which='major', labelsize=10)
+        ax[i].tick_params(axis='x', which='major', labelsize=12)
         ax[i].tick_params(axis='y', which='major', labelsize=12)
         if c == 0: 
             ax[i].set_title(title, color=x_color)
@@ -3431,6 +3431,215 @@ def change_width(ax, new_value):
         # recenter the bar
         patch.set_x(locs[i // 4] - (new_value * .5))
 
+
+######## activity metrics vs behavior metrics ##########
+
+
+def plot_correlation_of_behavior_and_cell_metrics(behavior_metrics, cell_metrics,
+                                                  behavior_metric, cell_metric, use_median=True,
+                                                  save_dir=None, folder=None):
+    """
+    Plot correlation between behavior metrics and cell metrics.
+
+    Parameters
+    ----------
+    behavior_metrics : pd.DataFrame
+        Table containing behavior metrics with behavior_session_id
+    cell_metrics : pd.DataFrame
+        Table containing cell metrics
+    behavior_metric : str
+        Column name for behavior metric
+    cell_metric : str
+        Column name for cell metric
+    use_median : bool
+        If True, group and take median; if False, take mean
+    save_dir : str, optional
+        Directory to save figure
+    folder : str, optional
+        Subfolder for saving
+    """
+    metrics = [cell_metric, behavior_metric]
+
+    # Prepare data
+    behavior_metrics_prep = behavior_metrics[[behavior_metric, 'behavior_session_id']]
+    metric_data = cell_metrics.merge(behavior_metrics_prep, on='behavior_session_id')
+
+    # Group and compute statistics
+    if use_median:
+        data = metric_data.groupby(['behavior_session_id', 'experience_level', 'cell_type']).median()[metrics].reset_index()
+    else:
+        data = metric_data.groupby(['behavior_session_id', 'experience_level', 'cell_type']).mean()[metrics].reset_index()
+
+    # Plot
+    figsize = (15, 4)
+    fig, ax = plt.subplots(1, 3, figsize=figsize)
+    for i, cell_type in enumerate(cell_types):
+        ax[i] = sns.scatterplot(data=data[data.cell_type == cell_type], x=behavior_metric, y=cell_metric,
+                               hue='experience_level', palette=experience_colors, ax=ax[i])
+        ax[i].set_title(cell_type)
+        ax[i].get_legend().remove()
+    ax[i].legend(bbox_to_anchor=(1, 1), fontsize=10, title_fontsize=10)
+    plt.subplots_adjust(wspace=0.4)
+
+    if save_dir:
+        filename = 'correlation_' + cell_metric + '_' + behavior_metric
+        utils.save_figure(fig, figsize, save_dir, folder, filename)
+
+
+def get_metric_index_name(metric, exp_level_1='Familiar', exp_level_2='Novel'):
+    """Get the name for metric difference index."""
+    metric_name = 'delta_' + exp_level_1 + '_' + exp_level_2 + '_' + metric
+    return metric_name
+
+
+def get_difference_in_metric_across_experience_levels(metrics_table, metric,
+                                                      groupby=['cell_specimen_id', 'experience_level'],
+                                                      exp_level_1='Familiar', exp_level_2='Novel',
+                                                      compute_index=True):
+    """
+    Compute difference in metric values across experience levels.
+
+    Parameters
+    ----------
+    metrics_table : pd.DataFrame
+        Table with metrics and experience level
+    metric : str
+        Column name of metric to compute difference for
+    groupby : list
+        Columns to group by
+    exp_level_1 : str
+        First experience level
+    exp_level_2 : str
+        Second experience level
+    compute_index : bool
+        If True, compute normalized index; if False, compute raw difference
+
+    Returns
+    -------
+    pd.DataFrame
+        Table with difference metric column added
+    """
+    # Group and compute mean
+    metrics = metrics_table.groupby(groupby).mean(numeric_only=True)[[metric]]
+    metrics = metrics.unstack()
+    metrics.columns = metrics.columns.droplevel(0)
+
+    # Compute difference
+    metric_name = get_metric_index_name(metric, exp_level_1=exp_level_1, exp_level_2=exp_level_2)
+    if compute_index:
+        metrics[metric_name] = (metrics[exp_level_2] - metrics[exp_level_1]) / (metrics[exp_level_2] + metrics[exp_level_1])
+    else:
+        metrics[metric_name] = (metrics[exp_level_2] - metrics[exp_level_1])
+
+    return metrics
+
+
+def get_change_in_behavior_and_average_cell_metric_across_mice(cell_metrics_table, behavior_metrics_table,
+                                                               platform_experiments_table,
+                                                               behavior_metric='mean_dprime_engaged',
+                                                               cell_metric='mean_response_pref_image',
+                                                               avg_diff_per_cell=True):
+    """
+    Get change in behavior and cell metrics across experience levels for each mouse.
+
+    Parameters
+    ----------
+    cell_metrics_table : pd.DataFrame
+        Table with cell metrics
+    behavior_metrics_table : pd.DataFrame
+        Table with behavior metrics
+    platform_experiments_table : pd.DataFrame
+        Platform experiments table with metadata
+    behavior_metric : str
+        Name of behavior metric column
+    cell_metric : str
+        Name of cell metric column
+    avg_diff_per_cell : bool
+        If True, compute difference per cell first then average by mouse
+        If False, average metric per experience level first then compute difference per mouse
+
+    Returns
+    -------
+    pd.DataFrame
+        Merged table with difference metrics for each mouse
+    """
+    if avg_diff_per_cell:
+        # Compute difference across experience for each cell, then average within each mouse
+        cell_metrics = get_difference_in_metric_across_experience_levels(cell_metrics_table, cell_metric,
+                                                                        groupby=['cell_specimen_id', 'experience_level'],
+                                                                        exp_level_1='Familiar', exp_level_2='Novel',
+                                                                        compute_index=True)
+        # Merge with metadata to get mouse ID
+        cell_metrics = cell_metrics.reset_index()
+        # Load platform cells table to get mouse_id mapping
+        platform_cache_dir = loading.get_platform_analysis_cache_dir()
+        platform_cells_table = pd.read_csv(os.path.join(platform_cache_dir, 'platform_paper_ophys_cells_table.csv'), index_col=0)
+        cell_metrics = cell_metrics.merge(platform_cells_table[['cell_specimen_id', 'mouse_id']], on='cell_specimen_id')
+        # Average across cells per mouse
+        metric_name = get_metric_index_name(cell_metric)
+        cell_metrics = cell_metrics.groupby(['mouse_id']).mean()[[metric_name]]
+    else:
+        # Get average value per mouse then take the difference across experience levels
+        cell_metrics = get_difference_in_metric_across_experience_levels(cell_metrics_table, cell_metric,
+                                                                        groupby=['mouse_id', 'experience_level'],
+                                                                        exp_level_1='Familiar', exp_level_2='Novel',
+                                                                        compute_index=True)
+
+    # Limit behavior metrics to sessions with ophys
+    behavior_stats = behavior_metrics_table.copy()
+    behavior_stats = behavior_stats[behavior_stats.behavior_session_id.isin(platform_experiments_table.behavior_session_id.unique())]
+
+    # Compute behavior metric difference across experience levels
+    behavior_metrics_diff = get_difference_in_metric_across_experience_levels(behavior_stats, behavior_metric,
+                                                                             groupby=['mouse_id', 'experience_level'],
+                                                                             exp_level_1='Familiar', exp_level_2='Novel',
+                                                                             compute_index=False)
+
+    # Merge tables
+    metric_data = cell_metrics[[get_metric_index_name(cell_metric)]].merge(
+        behavior_metrics_diff[[get_metric_index_name(behavior_metric)]], on='mouse_id')
+
+    # Add metadata
+    metric_data = metric_data.merge(platform_experiments_table[['mouse_id', 'cell_type']].drop_duplicates(), on='mouse_id')
+
+    return metric_data
+
+
+def plot_correlation_of_behavior_and_cell_metrics_delta(
+        metric_data, behavior_metric, cell_metric,
+        metric_label=None, behavior_label=None, suptitle=None,
+        save_dir=None, folder=None):
+    
+    '''Plot the difference in metrics (F to N) for behavior vs. neural activity.'''
+    x = get_metric_index_name(behavior_metric)
+    y = get_metric_index_name(cell_metric)
+
+    if metric_label is None:
+        metric_label=cell_metric
+    if behavior_label is None:
+        behavior_label=behavior_metric  
+    if suptitle is None:
+        suptitle = f'Change in {metric_label} vs. change in {behavior_label}'
+
+    cell_types = utils.get_cell_types()
+
+    figsize = (14, 4)
+    fig, ax = plt.subplots(1, 3, figsize=figsize, sharex=True, sharey=True)
+    for i, cell_type in enumerate(cell_types):
+        sns.scatterplot(data=metric_data[metric_data.cell_type == cell_type],
+                        x=x, y=y, ax=ax[i])
+        n_mice = metric_data[metric_data.cell_type == cell_type]['mouse_id'].nunique()
+        ax[i].set_title(cell_type+'\n(n = '+str(n_mice)+' mice)')
+        ax[i].set_xlabel(behavior_label+'\nChange from F to N')
+        ax[i].set_ylabel(metric_label+'\nChange from F to N')
+        ax[i].axhline(y=0, linestyle='--', color='gray', linewidth=1)
+        ax[i].axvline(x=0, linestyle='--', color='gray', linewidth=1)
+    plt.suptitle(suptitle, x=0.5, y=1.11, fontsize=20)
+    plt.subplots_adjust(wspace=0.2)
+
+    if save_dir:
+        filename = 'difference_' + cell_metric + '_' + behavior_metric
+        utils.save_figure(fig, figsize, save_dir, folder, filename)
 
 # heatmaps ##########################
 
