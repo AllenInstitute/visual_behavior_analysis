@@ -3419,6 +3419,673 @@ def plot_experience_modulation_index_annotated_by_cell_type(metrics_table, event
     return ax
 
 
+
+def plot_experience_modulation_index_depth_heatmap_by_cell_type(metrics_table, event_type, metric, cells_table,
+                                                                all_comparisons=True, groupby_col='binned_depth',
+                                                                ylabel=None, vmin=-0.5, vmax=0.5,
+                                                                suptitle=None, suffix='', save_dir=None):
+    """
+    One heatmap per cell type. Rows = bins of `groupby_col`, columns = experience comparison, cell color =
+    mean experience modulation index. Each column uses its own diverging colormap whose endpoints come from
+    utils.get_experience_level_colors() — positive values use the color of the "novel-side" experience
+    level in the comparison, negative values use the "familiar-side" color, white at 0.
+    Cells annotated with mean and significance stars (* p<0.05) from a one-sample t-test against 0.
+
+    groupby_col: column to bin rows by. Defaults to 'binned_depth' (75/175/275/375 um). Pass any column on
+        cells_table — e.g. 'layer', 'targeted_structure', 'area_binned_depth'.
+    ylabel: optional y-axis label. Defaults to groupby_col with underscores replaced by spaces.
+    """
+    import visual_behavior.ophys.response_analysis.cell_metrics as cm
+    from scipy import stats as sstats
+    from matplotlib.colors import LinearSegmentedColormap, TwoSlopeNorm
+    from matplotlib import gridspec
+
+    exp_mod = cm.compute_experience_modulation_index_new(metrics_table, metric, cells_table)
+    exp_mod = exp_mod.drop_duplicates(subset='cell_specimen_id')
+
+    if groupby_col not in exp_mod.columns:
+        group_map = cells_table.drop_duplicates('cell_specimen_id').set_index('cell_specimen_id')[groupby_col]
+        exp_mod[groupby_col] = exp_mod['cell_specimen_id'].map(group_map)
+    exp_mod = exp_mod.dropna(subset=[groupby_col])
+
+    if all_comparisons:
+        value_vars = ['F N', 'N+ N', 'F N+']
+        comparison_labels = ['Novel\nvs. Familiar', 'Novel\nvs. Novel +', 'Novel +\nvs. Familiar']
+    else:
+        value_vars = ['F N', 'N+ N']
+        comparison_labels = ['Novel\nvs. Familiar', 'Novel\nvs. Novel +']
+
+    # build per-column diverging cmaps from experience-level colors.
+    # get_experience_level_colors() returns [Familiar=blue, Novel=red, Novel+=purple].
+    # modulation index sign convention: positive -> 2nd token of key, negative -> 1st token.
+    # 'F N'  -> +N(red),    -F(blue);  'N+ N' -> +N(red), -N+(purple);  'F N+' -> +N+(purple), -F(blue)
+    exp_colors = utils.get_experience_level_colors()
+    color_for = {'F': exp_colors[0], 'N': exp_colors[1], 'N+': exp_colors[2]}
+    cmaps = {}
+    for comp in value_vars:
+        neg_label, pos_label = comp.split(' ')
+        cmaps[comp] = LinearSegmentedColormap.from_list(
+            f'expmod_{comp.replace(" ", "_")}',
+            [color_for[neg_label], (1.0, 1.0, 1.0), color_for[pos_label]])
+
+    data = exp_mod.melt(id_vars=['cell_specimen_id', 'cell_type', groupby_col],
+                        var_name='comparison', value_vars=value_vars).dropna(subset=['value'])
+
+    cell_types = np.sort(data.cell_type.unique())
+    group_order = sorted(data[groupby_col].dropna().unique())
+    nrows = len(group_order)
+    ncols = len(value_vars)
+    norm = TwoSlopeNorm(vmin=vmin, vcenter=0.0, vmax=vmax)
+    if ylabel is None:
+        ylabel = groupby_col.replace('_', ' ')
+
+    # layout: top row = one heatmap-ax per cell_type (each drawn column-by-column with its own cmap);
+    # bottom row = one shared colorbar per comparison spanning across the figure.
+    figsize = (3.0 * len(cell_types), 0.55 * nrows + 2.2)
+    fig = plt.figure(figsize=figsize)
+    # 3-row gridspec: heatmap row, empty spacer row (constant size, ensures the colorbar always sits a
+    # consistent distance below the heatmap regardless of nrows), then the colorbar row.
+    gs = gridspec.GridSpec(3, len(cell_types), height_ratios=[nrows, 2.0, 0.18 * nrows],
+                           hspace=0.0, wspace=0.3)
+    heat_axes = [fig.add_subplot(gs[0, i]) for i in range(len(cell_types))]
+    cbar_gs = gridspec.GridSpecFromSubplotSpec(1, ncols, subplot_spec=gs[2, :], wspace=0.6)
+    cbar_axes = [fig.add_subplot(cbar_gs[0, j]) for j in range(ncols)]
+
+    stats_table = pd.DataFrame()
+    for i, cell_type in enumerate(cell_types):
+        sub = data[data.cell_type == cell_type]
+        ax_i = heat_axes[i]
+        for c, comparison in enumerate(value_vars):
+            col_vals = np.full((nrows, 1), np.nan)
+            for r, d in enumerate(group_order):
+                vals = sub.loc[(sub[groupby_col] == d) & (sub.comparison == comparison), 'value'].dropna().values
+                if len(vals) < 3:
+                    continue
+                m = float(np.mean(vals))
+                t, p = sstats.ttest_1samp(vals, 0.0)
+                stars = '***' if p < 0.001 else '**' if p < 0.01 else '*' if p < 0.05 else ''
+                col_vals[r, 0] = m
+                # text color: dark on light cells, light on saturated cells
+                text_color = 'black' if abs(m) < 0.35 else 'white'
+                if stars:
+                    ax_i.text(c + 0.5, r + 0.32, stars,
+                              ha='center', va='center', fontsize=16, fontweight='bold',
+                              color=text_color)
+                ax_i.text(c + 0.5, r + 0.55, f'{m:.2f}',
+                          ha='center', va='center', fontsize=11, color=text_color)
+                ax_i.text(c + 0.5, r + 0.82, f'n={len(vals)}',
+                          ha='center', va='center', fontsize=8, color=text_color)
+                stats_table = pd.concat([stats_table, pd.DataFrame([{
+                    'cell_type': cell_type, 'comparison': comparison, groupby_col: d,
+                    'mean': m, 't': t, 'p': p, 'n': len(vals)}])])
+            ax_i.imshow(col_vals, cmap=cmaps[comparison], norm=norm, aspect='auto',
+                        extent=(c, c + 1, nrows, 0), interpolation='nearest')
+
+        # cell borders
+        for r in range(nrows + 1):
+            ax_i.axhline(r, color='white', linewidth=1)
+        for c in range(ncols + 1):
+            ax_i.axvline(c, color='white', linewidth=1)
+
+        ax_i.set_xlim(0, ncols)
+        ax_i.set_ylim(nrows, 0)
+        ax_i.set_xticks(np.arange(ncols) + 0.5)
+        ax_i.set_xticklabels(comparison_labels, fontsize=12, rotation=45, ha='right')
+        ax_i.set_yticks(np.arange(nrows) + 0.5)
+        ax_i.set_yticklabels([str(d) for d in group_order] if i == 0 else [''] * nrows, fontsize=12)
+        ax_i.tick_params(left=(i == 0), bottom=False)
+        ax_i.set_title(cell_type, fontsize=14)
+        if i == 0:
+            ax_i.set_ylabel(ylabel, fontsize=13)
+        for side in ('top', 'bottom', 'left', 'right'):
+            ax_i.spines[side].set_visible(True)
+            ax_i.spines[side].set_color('black')
+            ax_i.spines[side].set_linewidth(1.0)
+
+    # per-comparison colorbars along the bottom (shared across cell types).
+    # label the positive end with the "novel-side" experience level and the negative end with the
+    # "familiar-side" one so the sign convention is clear without reading the cmap.
+    full_name = {'F': 'Familiar', 'N': 'Novel', 'N+': 'Novel +'}
+    for j, comparison in enumerate(value_vars):
+        sm = plt.cm.ScalarMappable(cmap=cmaps[comparison], norm=norm)
+        sm.set_array([])
+        cb = fig.colorbar(sm, cax=cbar_axes[j], orientation='horizontal')
+        cb.ax.tick_params(labelsize=10)
+        if j == len(value_vars) // 2:
+            cb.set_label('Experience modulation', fontsize=13)
+        neg_token, pos_token = comparison.split(' ')
+        cb.ax.text(-0.04, 0.5, full_name[neg_token], ha='right', va='center',
+                   transform=cb.ax.transAxes, fontsize=11, rotation=90)
+        cb.ax.text(1.04, 0.5, full_name[pos_token], ha='left', va='center',
+                   transform=cb.ax.transAxes, fontsize=11, rotation=90)
+
+    if suptitle:
+        plt.suptitle(suptitle, x=0.52, y=1.0, fontsize=15)
+
+    if save_dir:
+        folder = 'metric_distributions'
+        filename = 'experience_modulation_heatmap_by_cell_type_' + groupby_col + '_' + event_type + '_' + suffix
+        utils.save_figure(fig, figsize, save_dir, folder, filename)
+        try:
+            stats_table.to_csv(os.path.join(save_dir, folder, filename + '_ttest.csv'), index=False)
+        except BaseException:
+            print('STATS TABLE DID NOT SAVE FOR', metric)
+    return heat_axes, stats_table
+
+
+def plot_experience_modulation_index_depth_heatmap_by_comparison(metrics_table, event_type, metric, cells_table,
+                                                                 all_comparisons=True, groupby_col='binned_depth',
+                                                                 ylabel=None, vmin=-0.5, vmax=0.5,
+                                                                 suptitle=None, suffix='', save_dir=None):
+    """
+    Variant of plot_experience_modulation_index_depth_heatmap_by_cell_type that transposes the layout:
+    one subplot per experience-level comparison, with cell types along the x-axis (abbreviated to the
+    first 3 letters) and a grouping variable on the y-axis. Each subplot uses its own diverging colormap
+    built from utils.get_experience_level_colors() and has its own colorbar shared across cell types.
+    Cells annotated with significance stars on top of the mean (* p<0.05, one-sample t-test against 0)
+    and group n on the bottom.
+
+    groupby_col: column to bin rows by. Defaults to 'binned_depth' (75/175/275/375 um). Pass any column
+        present on cells_table — e.g. 'layer', 'targeted_structure', 'area_binned_depth'.
+    ylabel: optional y-axis label. Defaults to groupby_col with underscores replaced by spaces.
+    """
+    import visual_behavior.ophys.response_analysis.cell_metrics as cm
+    from scipy import stats as sstats
+    from matplotlib.colors import LinearSegmentedColormap, TwoSlopeNorm
+
+    exp_mod = cm.compute_experience_modulation_index_new(metrics_table, metric, cells_table)
+    exp_mod = exp_mod.drop_duplicates(subset='cell_specimen_id')
+
+    if groupby_col not in exp_mod.columns:
+        group_map = cells_table.drop_duplicates('cell_specimen_id').set_index('cell_specimen_id')[groupby_col]
+        exp_mod[groupby_col] = exp_mod['cell_specimen_id'].map(group_map)
+    exp_mod = exp_mod.dropna(subset=[groupby_col])
+
+    if all_comparisons:
+        value_vars = ['F N', 'N+ N', 'F N+']
+        comparison_labels = ['Novel vs. Familiar', 'Novel vs. Novel +', 'Novel + vs. Familiar']
+    else:
+        value_vars = ['F N', 'N+ N']
+        comparison_labels = ['Novel vs. Familiar', 'Novel vs. Novel +']
+
+    # per-comparison diverging cmaps (same convention as the by_cell_type version).
+    # [Familiar=blue, Novel=red, Novel+=purple]; positive -> 2nd token, negative -> 1st token of key.
+    exp_colors = utils.get_experience_level_colors()
+    color_for = {'F': exp_colors[0], 'N': exp_colors[1], 'N+': exp_colors[2]}
+    cmaps = {}
+    for comp in value_vars:
+        neg_label, pos_label = comp.split(' ')
+        cmaps[comp] = LinearSegmentedColormap.from_list(
+            f'expmod_{comp.replace(" ", "_")}',
+            [color_for[neg_label], (1.0, 1.0, 1.0), color_for[pos_label]])
+
+    data = exp_mod.melt(id_vars=['cell_specimen_id', 'cell_type', groupby_col],
+                        var_name='comparison', value_vars=value_vars).dropna(subset=['value'])
+
+    cell_types = list(np.sort(data.cell_type.unique()))
+    cell_type_labels = [str(ct)[:3] for ct in cell_types]
+    group_order = sorted(data[groupby_col].dropna().unique())
+    nrows = len(group_order)
+    ncols = len(cell_types)
+    norm = TwoSlopeNorm(vmin=vmin, vcenter=0.0, vmax=vmax)
+    if ylabel is None:
+        ylabel = groupby_col.replace('_', ' ')
+
+    # full experience-level names per token (for colorbar top/bottom labels)
+    full_name = {'F': 'Familiar', 'N': 'Novel', 'N+': 'Novel +'}
+
+    figsize = (3.4 * len(value_vars) + 1.6, 0.55 * nrows + 1.2)
+    fig, axes = plt.subplots(1, len(value_vars), figsize=figsize,
+                             gridspec_kw={'wspace': 0.35})
+    if len(value_vars) == 1:
+        axes = [axes]
+
+    stats_table = pd.DataFrame()
+    for j, comparison in enumerate(value_vars):
+        ax_j = axes[j]
+        mat = np.full((nrows, ncols), np.nan)
+        sub = data[data.comparison == comparison]
+        for r, d in enumerate(group_order):
+            for c, ct in enumerate(cell_types):
+                vals = sub.loc[(sub[groupby_col] == d) & (sub.cell_type == ct), 'value'].dropna().values
+                if len(vals) < 3:
+                    continue
+                m = float(np.mean(vals))
+                t, p = sstats.ttest_1samp(vals, 0.0)
+                stars = '***' if p < 0.001 else '**' if p < 0.01 else '*' if p < 0.05 else ''
+                mat[r, c] = m
+                text_color = 'black' if abs(m) < 0.35 else 'white'
+                if stars:
+                    ax_j.text(c + 0.5, r + 0.32, stars,
+                              ha='center', va='center', fontsize=16, fontweight='bold',
+                              color=text_color)
+                ax_j.text(c + 0.5, r + 0.55, f'{m:.2f}',
+                          ha='center', va='center', fontsize=11, color=text_color)
+                ax_j.text(c + 0.5, r + 0.82, f'n={len(vals)}',
+                          ha='center', va='center', fontsize=8, color=text_color)
+                stats_table = pd.concat([stats_table, pd.DataFrame([{
+                    'comparison': comparison, 'cell_type': ct, groupby_col: d,
+                    'mean': m, 't': t, 'p': p, 'n': len(vals)}])])
+
+        im = ax_j.imshow(mat, cmap=cmaps[comparison], norm=norm, aspect='auto',
+                         extent=(0, ncols, nrows, 0), interpolation='nearest')
+
+        for r in range(nrows + 1):
+            ax_j.axhline(r, color='white', linewidth=1)
+        for c in range(ncols + 1):
+            ax_j.axvline(c, color='white', linewidth=1)
+
+        ax_j.set_xlim(0, ncols)
+        ax_j.set_ylim(nrows, 0)
+        ax_j.set_xticks(np.arange(ncols) + 0.5)
+        ax_j.set_xticklabels(cell_type_labels, fontsize=12)
+        ax_j.set_yticks(np.arange(nrows) + 0.5)
+        ax_j.set_yticklabels([str(d) for d in group_order], fontsize=12)
+        ax_j.tick_params(left=True, bottom=False, labelleft=True)
+        ax_j.set_title(comparison_labels[j], fontsize=13, pad=8)
+        if j == 0:
+            ax_j.set_ylabel(ylabel, fontsize=13)
+        for side in ('top', 'bottom', 'left', 'right'):
+            ax_j.spines[side].set_visible(True)
+            ax_j.spines[side].set_color('black')
+            ax_j.spines[side].set_linewidth(1.0)
+
+        # duplicate cell-type labels along the top of each subplot, beneath the title
+        ax_top = ax_j.secondary_xaxis('top')
+        ax_top.set_xticks(np.arange(ncols) + 0.5)
+        ax_top.set_xticklabels(cell_type_labels, fontsize=12)
+        ax_top.tick_params(top=False, labeltop=True)
+
+        # colorbar: numeric ticks at vmin/0/vmax, with the comparison's "positive" experience level
+        # labeled at the top of the bar and the "negative" one at the bottom
+        neg_token, pos_token = comparison.split(' ')
+        cb = fig.colorbar(im, ax=ax_j, orientation='vertical', fraction=0.13, pad=0.14,
+                          ticks=[vmin, 0, vmax])
+        cb.ax.tick_params(labelsize=10)
+        if j == len(value_vars) - 1:
+            cb.set_label('Experience modulation', fontsize=13)
+        cb.ax.set_title(full_name[pos_token], fontsize=11, pad=6)
+        cb.ax.set_xlabel(full_name[neg_token], fontsize=11, labelpad=6)
+
+    if suptitle:
+        plt.suptitle(suptitle, x=0.52, y=1.02, fontsize=15)
+    fig.tight_layout()
+
+    if save_dir:
+        folder = 'metric_distributions'
+        filename = 'experience_modulation_heatmap_by_comparison_' + groupby_col + '_' + event_type + '_' + suffix
+        utils.save_figure(fig, figsize, save_dir, folder, filename)
+        try:
+            stats_table.to_csv(os.path.join(save_dir, folder, filename + '_ttest.csv'), index=False)
+        except BaseException:
+            print('STATS TABLE DID NOT SAVE FOR', metric)
+    return axes, stats_table
+
+
+def plot_metric_heatmap_grid_by_cell_type_and_metric(
+        results_pivoted, metric_cols, metric_labels=None,
+        groupby_col='binned_depth', exp_col='experience_level',
+        ylabel=None, vmax=None, multi_star=False,
+        suptitle=None, suffix='', save_dir=None,
+        folder=None):
+    """
+    Grid of heatmaps: rows = cell types (utils.get_cell_types()), columns = metric_cols (any numeric
+    columns of results_pivoted — e.g. coding score columns 'all-images', 'omissions', 'task',
+    'behavioral'). Each heatmap has rows = bins of `groupby_col` (e.g. binned_depth, targeted_structure)
+    and columns = experience levels (Familiar, Novel, Novel +).
+
+    Each experience-level column in every heatmap uses its own sequential colormap going from white
+    to that experience level's color (utils.get_experience_level_colors()), so the color *family*
+    encodes experience level and color *intensity* encodes metric value. Each heatmap is normalized
+    independently from 0 to its own panel max (override with `vmax` to share a scale).
+
+    Bottom of the figure has a 3-row legend with one mini-colorbar per experience level so it's
+    visually clear the three colormaps mean the same quantity at different intensities.
+
+    metric_cols: list of column names in results_pivoted (one heatmap column per metric).
+    metric_labels: optional list of subplot titles for each metric column. Defaults to metric_cols.
+    groupby_col: column to bin heatmap rows by. Defaults to 'binned_depth'.
+    ylabel: optional label for the y-axis (defaults to groupby_col with underscores replaced).
+    vmax: shared color limit. If None (default), each metric column shares a vmax across all cell
+        type rows (so panels are directly comparable down a column). The per-column max is printed
+        below the subplot in gray. Pass a scalar to force a single vmax across the whole figure.
+    multi_star: if True, annotate with tiered significance (* p<0.05, ** p<0.01, *** p<0.001).
+        Default False — single * for p<0.05 only (matches the convention used in other plots).
+    """
+    from matplotlib.colors import LinearSegmentedColormap
+    from matplotlib import gridspec
+    from scipy import stats as sstats
+
+    cell_types = utils.get_cell_types()
+    exp_levels = utils.get_experience_levels()
+    exp_colors = utils.get_experience_level_colors()
+    exp_abbrev = utils.get_abbreviated_experience_levels()
+
+    # try to look up feature/coding-score colors so subplot titles can be colored by metric
+    try:
+        from visual_behavior.dimensionality_reduction.clustering import plotting as cluster_plotting
+        feat_colors, feat_labels_dict = cluster_plotting.get_feature_colors_and_labels()
+        feature_color_map = {k: feat_colors[ix] for ix, k in enumerate(feat_labels_dict.keys())}
+    except Exception:
+        feature_color_map = {}
+
+    # white -> experience-level color sequential cmap per experience level
+    cmaps = {exp_levels[k]: LinearSegmentedColormap.from_list(
+        f'coding_{exp_levels[k].replace(" ", "_").replace("+", "p")}',
+        [(1.0, 1.0, 1.0), exp_colors[k]]) for k in range(len(exp_levels))}
+
+    if metric_labels is None:
+        metric_labels = list(metric_cols)
+    if ylabel is None:
+        ylabel = groupby_col.replace('_', ' ').capitalize()
+
+    group_order = sorted(results_pivoted[groupby_col].dropna().unique())
+    nrows = len(group_order)
+    ncols = len(exp_levels)
+    n_cell_types = len(cell_types)
+    n_metrics = len(metric_cols)
+
+    # compute per-(cell_type, metric) aggregated matrix, per-panel max, and per-cell stats
+    # (one-sample t-test vs 0 across the underlying rows of results_pivoted)
+    # tier_stars: turn an ANOVA p-value into a star string honoring `multi_star`
+    def tier_stars(p):
+        if p >= 0.05 or not np.isfinite(p):
+            return ''
+        if multi_star:
+            return '***' if p < 0.001 else '**' if p < 0.01 else '*'
+        return '*'
+
+    mats = {}
+    panel_max = {}
+    cell_n = {}            # (i, j, r, c) -> n cells contributing to that bin
+    col_stars = {}         # (i, j, c) -> star string for the experience-level column (ANOVA across groupby_col)
+    row_stars = {}         # (i, j, r) -> star string for the groupby_col row (ANOVA across experience levels)
+    stats_rows = []
+    for i, cell_type in enumerate(cell_types):
+        ct_data = results_pivoted[results_pivoted.cell_type == cell_type]
+        for j, metric in enumerate(metric_cols):
+            agg = (ct_data.groupby([groupby_col, exp_col])[metric].mean()
+                   .unstack(exp_col))
+            agg = agg.reindex(index=group_order, columns=exp_levels)
+            mat = agg.values.astype(float)
+            mats[(i, j)] = mat
+            finite = mat[np.isfinite(mat)]
+            panel_max[(i, j)] = float(finite.max()) if finite.size else 0.0
+            # per-cell n (for in-cell annotation)
+            for r, d in enumerate(group_order):
+                for c, exp in enumerate(exp_levels):
+                    vals = ct_data.loc[(ct_data[groupby_col] == d) & (ct_data[exp_col] == exp),
+                                       metric].dropna().values
+                    cell_n[(i, j, r, c)] = int(len(vals))
+
+            # column-direction stats: within each experience level, one-way ANOVA across
+            # groupby_col (e.g., "do depths differ for this experience level?")
+            for c, exp in enumerate(exp_levels):
+                col_subset = ct_data[ct_data[exp_col] == exp].dropna(subset=[metric, groupby_col])
+                anova, tukey = test_significant_metric_averages(col_subset, metric,
+                                                                column_to_compare=groupby_col)
+                p = float(anova.pvalue) if hasattr(anova, 'pvalue') else float(anova[1])
+                col_stars[(i, j, c)] = tier_stars(p)
+                stats_rows.append({'cell_type': cell_type, 'metric': metric,
+                                   'direction': 'across_groups_within_exp',
+                                   exp_col: exp, groupby_col: None,
+                                   'anova_p': p, 'stars': col_stars[(i, j, c)]})
+
+            # row-direction stats: within each groupby_col value, one-way ANOVA across
+            # experience levels (e.g., "do experience levels differ at this depth?")
+            for r, d in enumerate(group_order):
+                row_subset = ct_data[ct_data[groupby_col] == d].dropna(subset=[metric, exp_col])
+                anova, tukey = test_significant_metric_averages(row_subset, metric,
+                                                                column_to_compare=exp_col)
+                p = float(anova.pvalue) if hasattr(anova, 'pvalue') else float(anova[1])
+                row_stars[(i, j, r)] = tier_stars(p)
+                stats_rows.append({'cell_type': cell_type, 'metric': metric,
+                                   'direction': 'across_exp_within_group',
+                                   exp_col: None, groupby_col: d,
+                                   'anova_p': p, 'stars': row_stars[(i, j, r)]})
+    stats_table = pd.DataFrame(stats_rows)
+
+    # vmax handling:
+    #   None  -> per-column (per-metric) shared vmax across all cell-type rows (default)
+    #   float -> shared vmax across the entire figure
+    if vmax is None:
+        column_max = {j: max(panel_max[(i, j)] for i in range(n_cell_types))
+                      for j in range(n_metrics)}
+        norm_per_column = True
+    else:
+        column_max = {j: float(vmax) for j in range(n_metrics)}
+        norm_per_column = False
+
+    # cbar label per metric: "Coding score" if "coding" appears in the metric label,
+    # otherwise use the metric_label itself.
+    cbar_labels = ['Coding score' if 'coding' in str(metric_labels[j]).lower()
+                   else str(metric_labels[j]) for j in range(n_metrics)]
+
+    # When there's a single metric, put the colorbars on the right of the heatmap (vertical cbars)
+    # rather than below — leaves more vertical room and looks more standard for a single image.
+    right_side_cbar = (n_metrics == 1)
+
+    # hspace is a fraction of average row height; matplotlib row height scales with nrows here,
+    # so we invert the relationship so absolute gap is roughly constant across nrows variants.
+    cell_type_hspace = 1.4 / max(nrows, 1)
+
+    if right_side_cbar:
+        fig_w = 3.6
+        fig_h = 0.45 * nrows * n_cell_types + 1.6
+        figsize = (fig_w, fig_h)
+        fig = plt.figure(figsize=figsize)
+        outer = gridspec.GridSpec(1, 2, width_ratios=[1.4, 1.0], wspace=0.45)
+        main_gs = gridspec.GridSpecFromSubplotSpec(n_cell_types, n_metrics, subplot_spec=outer[0],
+                                                    hspace=cell_type_hspace, wspace=0.0)
+    else:
+        # layout: top = grid of heatmaps; bottom = stacked legend cbars
+        fig_w = 1.5 * n_metrics + 1.0
+        fig_h = 0.45 * nrows * n_cell_types + 1.8
+        figsize = (fig_w, fig_h)
+        fig = plt.figure(figsize=figsize)
+        # 3-row outer gridspec: heatmap region, constant-size spacer, colorbar region.
+        outer = gridspec.GridSpec(3, 1,
+                                  height_ratios=[0.45 * nrows * n_cell_types, 0.7, 0.4],
+                                  hspace=0.0)
+        main_gs = gridspec.GridSpecFromSubplotSpec(n_cell_types, n_metrics, subplot_spec=outer[0],
+                                                    hspace=cell_type_hspace, wspace=0.3)
+    # ensure enough left margin for the outside cell-type label + yticklabels (matters most for
+    # narrow single-metric figures)
+    fig.subplots_adjust(left=max(0.10, 0.85 / fig_w))
+
+    heat_axes = np.empty((n_cell_types, n_metrics), dtype=object)
+    for i, cell_type in enumerate(cell_types):
+        for j, metric in enumerate(metric_cols):
+            ax = fig.add_subplot(main_gs[i, j])
+            heat_axes[i, j] = ax
+            mat = mats[(i, j)]
+            this_vmax = column_max[j]
+            if not this_vmax or this_vmax <= 0:
+                this_vmax = 1.0
+
+            for c, exp in enumerate(exp_levels):
+                col_vals = mat[:, c:c + 1]
+                ax.imshow(col_vals, cmap=cmaps[exp], vmin=0, vmax=this_vmax,
+                          aspect='auto', extent=(c, c + 1, nrows, 0), interpolation='nearest')
+                for r in range(nrows):
+                    val = mat[r, c]
+                    if not np.isfinite(val):
+                        continue
+                    frac = val / this_vmax if this_vmax > 0 else 0.0
+                    text_color = 'black' if frac < 0.6 else 'white'
+                    ax.text(c + 0.5, r + 0.42, f'{val:.2f}',
+                            ha='center', va='center', fontsize=8, color=text_color)
+                    n = cell_n.get((i, j, r, c), 0)
+                    if n:
+                        ax.text(c + 0.5, r + 0.72, f'n={n}',
+                                ha='center', va='center', fontsize=6, color=text_color)
+
+            # column-direction significance stars (just above each experience-level column).
+            # Use a blended transform so x is in data coords but y is in axes fraction — this
+            # keeps the stars the same display distance from the top edge regardless of nrows.
+            from matplotlib.transforms import blended_transform_factory
+            col_trans = blended_transform_factory(ax.transData, ax.transAxes)
+            row_trans = blended_transform_factory(ax.transAxes, ax.transData)
+            for c in range(ncols):
+                s = col_stars.get((i, j, c), '')
+                if s:
+                    ax.text(c + 0.5, 1.0, s, transform=col_trans,
+                            ha='center', va='center',
+                            fontsize=12, fontweight='bold', color='k', clip_on=False)
+            # row-direction significance stars (just to the right of each row).
+            for r in range(nrows):
+                s = row_stars.get((i, j, r), '')
+                if s:
+                    ax.text(1.02, r + 0.5, s, transform=row_trans,
+                            ha='left', va='center',
+                            fontsize=12, fontweight='bold', color='k', clip_on=False)
+
+            for r in range(nrows + 1):
+                ax.axhline(r, color='white', linewidth=0.7)
+            for cc in range(ncols + 1):
+                ax.axvline(cc, color='white', linewidth=0.7)
+
+            ax.set_xlim(0, ncols)
+            ax.set_ylim(nrows, 0)
+            ax.set_xticks(np.arange(ncols) + 0.5)
+            if i == n_cell_types - 1:
+                ax.set_xticklabels(exp_abbrev, fontsize=10)
+                for lbl, color in zip(ax.get_xticklabels(), exp_colors):
+                    lbl.set_color(color)
+            else:
+                ax.set_xticklabels([''] * ncols)
+            ax.tick_params(bottom=False)
+
+            ax.set_yticks(np.arange(nrows) + 0.5)
+            if j == 0:
+                ax.set_yticklabels([str(d) for d in group_order], fontsize=9)
+                # put the groupby label (e.g. "Binned depth") next to the yticks on the
+                # middle cell-type row only — same convention as the prior version, but inverted
+                # so the cell-type name now sits on the outside (added via fig.text below)
+                if i == n_cell_types // 2:
+                    ax.set_ylabel(ylabel, fontsize=11)
+            else:
+                ax.set_yticklabels([''] * nrows)
+                ax.tick_params(labelleft=False)
+            ax.tick_params(left=(j == 0))
+
+            if i == 0:
+                title_color = feature_color_map.get(metric, 'black')
+                ax.set_title(metric_labels[j], fontsize=12, color=title_color, pad=10)
+
+            for side in ('top', 'bottom', 'left', 'right'):
+                ax.spines[side].set_visible(True)
+                ax.spines[side].set_color('black')
+                ax.spines[side].set_linewidth(0.8)
+
+    if right_side_cbar:
+        # right-side cbars are added later via fig.add_axes(), after heat_axes positions are
+        # finalized (so we can size them relative to the middle panel)
+        pass
+    else:
+        # per-column legend at the bottom: 3 stacked mini-cbars under each metric column
+        legend_outer_gs = gridspec.GridSpecFromSubplotSpec(1, n_metrics, subplot_spec=outer[2],
+                                                           wspace=0.2)
+        for j, metric in enumerate(metric_cols):
+            col_vmax = column_max[j] if column_max[j] > 0 else 1.0
+            col_legend_gs = gridspec.GridSpecFromSubplotSpec(3, 3, subplot_spec=legend_outer_gs[0, j],
+                                                             hspace=0.5, wspace=0.0,
+                                                             width_ratios=[0.15, 1.0, 0.15])
+            for k, exp in enumerate(exp_levels):
+                lax = fig.add_subplot(col_legend_gs[k, 1])
+                gradient = np.linspace(0.0, col_vmax, 200).reshape(1, -1)
+                lax.imshow(gradient, cmap=cmaps[exp], aspect='auto',
+                           vmin=0.0, vmax=col_vmax, extent=(0.0, col_vmax, 0, 1))
+                lax.set_yticks([])
+                if j == 0:
+                    lax.set_ylabel(exp_levels[k], rotation=0, ha='right', va='center', fontsize=9,
+                                   color=exp_colors[k], labelpad=6)
+                if k < 2:
+                    lax.set_xticks([])
+                else:
+                    lax.set_xticks([0.0, col_vmax])
+                    lax.set_xticklabels(['0', f'{col_vmax:.2f}'], fontsize=9)
+                    lax.tick_params(labelsize=9)
+                    lax.set_xlabel(cbar_labels[j], fontsize=10)
+                for side in ('top', 'bottom', 'left', 'right'):
+                    lax.spines[side].set_visible(True)
+                    lax.spines[side].set_color('black')
+                    lax.spines[side].set_linewidth(0.5)
+
+    # cell-type labels on the far outside-left of each cell-type row (was on the inside before).
+    # when there's very little vertical room (few y values), abbreviate to first 3 letters so the
+    # rotated label still fits comfortably alongside the short heatmap.
+    # offset is computed in inches (then converted to figure fraction) so the gap between the
+    # label and the yticklabels stays consistent across narrow vs. wide figures.
+    fig.canvas.draw()
+    abbreviate_cell_type = nrows <= 2
+    ct_offset_inches = 0.55
+    for i_ct, cell_type in enumerate(cell_types):
+        bbox = heat_axes[i_ct, 0].get_position()
+        label = cell_type[:3] if abbreviate_cell_type else cell_type
+        x_pos = max(bbox.x0 - ct_offset_inches / fig_w, 0.005)
+        fig.text(x_pos,
+                 (bbox.y0 + bbox.y1) / 2,
+                 label, rotation=90, ha='left', va='center', fontsize=12)
+
+    if right_side_cbar:
+        # fixed-size cbars (in inches) placed to the right of the heatmap area, vertically
+        # centered on the middle row of cell types.
+        cbar_h_in = 1.5
+        cbar_w_in = 0.12
+        cbar_gap_in = 0.18
+        gap_to_heatmap_in = 0.55  # gap between heatmap right edge and first cbar
+
+        middle_bbox = heat_axes[n_cell_types // 2, 0].get_position()
+        rightmost_bbox = heat_axes[0, n_metrics - 1].get_position()
+
+        cbar_h_frac = cbar_h_in / fig_h
+        cbar_w_frac = cbar_w_in / fig_w
+        cbar_gap_frac = cbar_gap_in / fig_w
+        cbar_y0 = (middle_bbox.y0 + middle_bbox.y1) / 2 - cbar_h_frac / 2
+        cbar_x_start = rightmost_bbox.x1 + gap_to_heatmap_in / fig_w
+
+        col_vmax = column_max[0] if column_max[0] > 0 else 1.0
+        for k, exp in enumerate(exp_levels):
+            x = cbar_x_start + k * (cbar_w_frac + cbar_gap_frac)
+            lax = fig.add_axes([x, cbar_y0, cbar_w_frac, cbar_h_frac])
+            gradient = np.linspace(0.0, col_vmax, 200).reshape(-1, 1)
+            lax.imshow(gradient, cmap=cmaps[exp], aspect='auto', origin='lower',
+                       vmin=0.0, vmax=col_vmax, extent=(0, 1, 0.0, col_vmax))
+            lax.set_xticks([])
+            # experience label rotated 90 above each cbar, colored
+            lax.text(0.5, 1.04, exp_levels[k], transform=lax.transAxes,
+                     rotation=90, ha='center', va='bottom',
+                     fontsize=10, color=exp_colors[k])
+            if k == 0:
+                lax.set_yticks([0.0, col_vmax])
+                lax.set_yticklabels(['0', f'{col_vmax:.2f}'], fontsize=9)
+                lax.tick_params(labelsize=9)
+            else:
+                lax.set_yticks([])
+            if k == len(exp_levels) - 1:  # rightmost cbar carries the metric label, vertical
+                lax.yaxis.set_label_position('right')
+                lax.set_ylabel(cbar_labels[0], fontsize=11, rotation=270, labelpad=15)
+            for side in ('top', 'bottom', 'left', 'right'):
+                lax.spines[side].set_visible(True)
+                lax.spines[side].set_color('black')
+                lax.spines[side].set_linewidth(0.5)
+
+    if suptitle:
+        plt.suptitle(suptitle, fontsize=14, y=0.99)
+
+    if save_dir:
+        if folder is None:
+            folder = 'coding_scores_and_kernels'
+        filename = 'metric_heatmap_grid_' + groupby_col + '_' + suffix
+        utils.save_figure(fig, figsize, save_dir, folder, filename)
+        try:
+            stats_table.to_csv(os.path.join(save_dir, folder, filename + '_ttest.csv'), index=False)
+        except BaseException:
+            print('STATS TABLE DID NOT SAVE')
+    return heat_axes, stats_table
+
+
 def change_width(ax, new_value):
     locs = ax.get_xticks()
     for i, patch in enumerate(ax.patches):
