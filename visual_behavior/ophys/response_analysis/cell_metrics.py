@@ -1331,13 +1331,20 @@ def compute_experience_modulation_index_new(metrics_table, metric, cells_table):
     """
 
     # get subset of data of interest
-    metric_data = metrics_table[['cell_specimen_id', 'ophys_experiment_id', metric]]
+    metric_data = metrics_table[['cell_specimen_id', 'ophys_experiment_id', 'mouse_id', metric]].copy()
     # print(len(metric_data.ophys_experiment_id.unique()), 'experiments in metric_data before merging with cells_table')
     # print(len(metric_data.cell_specimen_id.unique()), 'cells in metric_data before merging with cells_table')
 
+    # coerce mouse_id to a consistent dtype on both sides of the merge -- metrics_table
+    # and cells_table sometimes carry mouse_id as int64 vs object (string) which makes
+    # pandas refuse to merge on it. Cast both to str for the merge.
+    cells_subset = cells_table.reset_index()[['cell_specimen_id', 'ophys_experiment_id', 'mouse_id', 'experience_level']].copy()
+    metric_data['mouse_id'] = metric_data['mouse_id'].astype(str)
+    cells_subset['mouse_id'] = cells_subset['mouse_id'].astype(str)
+
     # merge in metadata for sessions to compare
-    metric_data = metric_data.merge(cells_table.reset_index()[['cell_specimen_id', 'ophys_experiment_id', 'experience_level']],
-                                    on=['cell_specimen_id', 'ophys_experiment_id'])
+    metric_data = metric_data.merge(cells_subset,
+                                    on=['cell_specimen_id', 'ophys_experiment_id', 'mouse_id'])
     # metric_data = metric_data.drop_duplicates(subset='cell_specimen_id')
     # print(len(metric_data.ophys_experiment_id.unique()), 'experiments in metric_data after merging with cells_table')
     # print(len(metric_data.cell_specimen_id.unique()), 'cells in metric_data after merging with cells_table')
@@ -1374,6 +1381,9 @@ def compute_experience_modulation_index_new(metrics_table, metric, cells_table):
                                                  'binned_depth', 'targeted_structure', 'project_code']], on='cell_specimen_id')
 
     return metric_data
+
+
+
 if __name__ == '__main__':
 
     # set params
