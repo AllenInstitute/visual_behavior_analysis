@@ -3740,8 +3740,8 @@ def get_behavior_multi_session_df(data_type, condition, platform_experiments, in
         df['mean_response'] = df['mean_response'] * 100
     if data_type == 'lick_rate':
         # Convert to lick rate in Hz 
-        df['mean_trace'] = [mean_trace*10 for mean_trace in df.mean_trace.values]
-        df['mean_response'] = [mean_response*10 for mean_response in df.mean_response.values]
+        df['mean_trace'] = [mean_trace*100 for mean_trace in df.mean_trace.values]
+        df['mean_response'] = [mean_response*100 for mean_response in df.mean_response.values]
 
     # if epoch_duration_mins is not None:
     #     df['epoch'] = df['epoch'] + 1 # change epoch numbering to start at 1 instead of 0 for easier interpretation in plots
