@@ -47,11 +47,16 @@ def compute_icc(data, metric, group_column):
     -------
     dict with keys: icc, mouse_variance, residual_variance
     """
-    # Fit an intercept-only mixed model to decompose variance
+    # Fit an intercept-only mixed model to decompose variance.
+    # Patsy parses hyphens / dots / spaces in column refs as operators, so
+    # rename the metric to a safe placeholder before building the formula
+    # (covers metrics like 'all-images').
+    safe_metric = '__metric__'
+    fit_data = data.rename(columns={metric: safe_metric})
     try:
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            null_model = smf.mixedlm(f'{metric} ~ 1', data=data, groups=data[group_column])
+            null_model = smf.mixedlm(f'{safe_metric} ~ 1', data=fit_data, groups=fit_data[group_column])
             null_result = null_model.fit(reml=True)
     except Exception:
         return {
@@ -413,10 +418,15 @@ def _run_mlm(data, metric, column_to_compare, group_column, groups, mapper,
     group_stats = _compute_group_descriptives(data, metric, column_to_compare, group_column)
 
     # --- Fit the full model ---
-    formula = f'{metric} ~ C({column_to_compare})'
+    # Patsy parses hyphens / dots / spaces in column refs as operators, so
+    # rename the metric to a safe placeholder before building the formula
+    # (covers metrics like 'all-images').
+    safe_metric = '__metric__'
+    fit_data = data.rename(columns={metric: safe_metric})
+    formula = f'{safe_metric} ~ C({column_to_compare})'
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        model = smf.mixedlm(formula=formula, data=data, groups=data[group_column])
+        model = smf.mixedlm(formula=formula, data=fit_data, groups=fit_data[group_column])
         result = model.fit(reml=True)
 
     # --- Omnibus test (Wald test for overall effect of the categorical variable) ---
@@ -750,9 +760,8 @@ def compute_stats(data, metric, column_to_compare='experience_level', *,
 
 # Columns that compute_stats already emits. Passing these as kwargs to
 # insert_stats_metadata is a no-op + warning -- the call site should stop
-# adding them. `comparison` is treated as an alias of `column_to_compare`.
+# adding them.
 _RESERVED_METADATA = ('metric', 'event_type', 'cell_type', 'column_to_compare')
-_METADATA_ALIASES = {'comparison': 'column_to_compare'}
 
 
 def insert_stats_metadata(stats_table, *, after='cell_type', **metadata):
@@ -770,9 +779,8 @@ def insert_stats_metadata(stats_table, *, after='cell_type', **metadata):
     Behavior:
       - None values are skipped (lets you pass through optional context cleanly).
       - Kwargs whose names duplicate columns that compute_stats already emits
-        (metric, event_type, cell_type, column_to_compare, or the alias
-        'comparison' -> 'column_to_compare') are dropped with a RuntimeWarning.
-        Fix the call site instead of relying on this.
+        (metric, event_type, cell_type, column_to_compare) are dropped with a
+        RuntimeWarning. Fix the call site instead of relying on this.
       - For non-reserved kwargs that already exist as columns, the value is
         replaced in place (preserving column position).
       - Remaining kwargs are inserted immediately after ``after``. If ``after``
@@ -787,7 +795,7 @@ def insert_stats_metadata(stats_table, *, after='cell_type', **metadata):
     # Drop None values up front.
     metadata = {k: v for k, v in metadata.items() if v is not None}
 
-    # Filter reserved / aliased keys.
+    # Filter reserved keys.
     cleaned = {}
     for k, v in metadata.items():
         if k in _RESERVED_METADATA:
@@ -795,14 +803,6 @@ def insert_stats_metadata(stats_table, *, after='cell_type', **metadata):
                 f"insert_stats_metadata: dropping '{k}'={v!r} -- compute_stats "
                 f"already emits this column. Pass it to compute_stats / "
                 f"add_stats_to_plot* directly instead.",
-                RuntimeWarning)
-            continue
-        alias_target = _METADATA_ALIASES.get(k)
-        if alias_target and alias_target in out.columns and out[alias_target].notna().any():
-            warnings.warn(
-                f"insert_stats_metadata: dropping '{k}'={v!r} -- duplicates "
-                f"existing column '{alias_target}'. Remove this metadata from "
-                f"the call site.",
                 RuntimeWarning)
             continue
         cleaned[k] = v

@@ -1777,7 +1777,8 @@ def plot_coding_scores_for_cell(cell_dropouts, ax=None):
     return ax
 
 
-def plot_matched_roi_and_coding_scores(cell_metadata, cell_dropouts, experiments_table, save_dir=None):
+def plot_matched_roi_and_coding_scores(cell_metadata, cell_dropouts, experiments_table, 
+                                        folder='single_cell_examples', save_dir=None):
     """
     This function will plot the following panels:
         cell ROI masks matched across sessions for a given cell_specimen_id,
@@ -1869,13 +1870,14 @@ def plot_matched_roi_and_coding_scores(cell_metadata, cell_dropouts, experiments
 
     if save_dir:
         print('saving plot for', cell_specimen_id)
-        utils.save_figure(fig, figsize, save_dir, 'single_cell_roi_and_coding_scores',
+        utils.save_figure(fig, figsize, save_dir, folder,
                           str(cell_specimen_id) + '_' + metadata_string)
         print('saved')
 
 
 
-def plot_matched_roi_and_coding_scores_for_experience_levels(cell_metadata, cell_dropouts, experiments_table, save_dir=None):
+def plot_matched_roi_and_coding_scores_for_experience_levels(cell_metadata, cell_dropouts, 
+                                            experiments_table, folder='single_cell_examples', save_dir=None):
     """
     This function will plot the following panels:
         cell ROI masks matched across sessions for a given cell_specimen_id,
@@ -1969,13 +1971,13 @@ def plot_matched_roi_and_coding_scores_for_experience_levels(cell_metadata, cell
 
     if save_dir:
         print('saving plot for', cell_specimen_id)
-        utils.save_figure(fig, figsize, save_dir, 'single_cell_roi_and_coding_scores',
+        utils.save_figure(fig, figsize, save_dir, folder,
                           str(cell_specimen_id) + '_' + metadata_string)
         print('saved')
         
 
 def plot_cell_change_and_omission_responses(change_mdf, omission_mdf, cell_specimen_id,
-                                            save_dir=None, folder='single_cell_change_omission_response', suffix=''):
+                                            save_dir=None, folder='single_cell_examples', suffix=''):
     '''
     Plot mean response for each experience level for one cell, for images and omissions
 

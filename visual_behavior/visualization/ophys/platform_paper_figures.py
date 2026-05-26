@@ -4,6 +4,7 @@ Created on Thursday September 23 2021
 @author: marinag
 """
 import os
+import re
 import numpy as np
 import pandas as pd
 import seaborn as sns
@@ -24,6 +25,39 @@ from visual_behavior.visualization.ophys.platform_paper_stats import (
 from visual_behavior_glm import GLM_visualization_tools as gvt
 from visual_behavior.ophys.response_analysis.response_analysis import ResponseAnalysis
 
+def _clean_filename(name):
+    """
+    Collapse runs of underscores to a single underscore and trim boundary
+    underscores. Wrap filename constructions with this to be robust to inputs
+    like ``suffix=''``, ``suffix='_foo'``, or ``suffix='foo'`` -- which would
+    otherwise produce ``foo__bar`` (double underscore), ``foo_`` (trailing
+    underscore), or ``foobar`` (missing separator) respectively. Operates on
+    each '/' component independently so directory separators are preserved.
+    """
+    parts = name.split('/')
+    parts = [re.sub(r'_{2,}', '_', p).strip('_') for p in parts]
+    return '/'.join(parts)
+
+
+def _norm_suffix(suffix):
+    """
+    Normalize a user-supplied filename suffix so that non-empty suffixes
+    always start with a single underscore. Returns ``''`` for None/empty
+    so it can be safely concatenated as ``<base> + suffix``.
+
+    Examples::
+
+        _norm_suffix(None)     -> ''
+        _norm_suffix('')       -> ''
+        _norm_suffix('v1')     -> '_v1'
+        _norm_suffix('_v1')    -> '_v1'
+        _norm_suffix('__v1')   -> '_v1'  (excess leading underscores collapsed)
+    """
+    if not suffix:
+        return ''
+    return '_' + suffix.lstrip('_')
+
+
 # formatting
 sns.set_context('notebook', font_scale=1.5, rc={'lines.markeredgewidth': 2})
 sns.set_style('white', {'axes.spines.top': False, 'axes.spines.right': False})  # ticks or white
@@ -33,25 +67,19 @@ plt.rcParams['xtick.bottom'] = True
 plt.rcParams['ytick.left'] = True
 
 
-def _heatmap_omnibus_fields(panel_stats):
+def _heatmap_omnibus_p(panel_stats):
     """
-    Extract the per-cell summary fields the heatmap functions need from a stats_table
-    returned by compute_stats. The heatmap saves a single row per (cell_type, grouping,
-    direction, ...) so we collapse the pairwise table into one omnibus p plus the MLM
-    context (model_type, icc, sample sizes). Returns: (p, model_type, icc, n_obs, n_grp).
+    Pull the omnibus p-value out of a stats_table returned by ``compute_stats``.
+    The heatmap functions use this only to decide whether to draw a significance
+    star on a given cell. The full pairwise table (with model_type, icc,
+    mouse_variance, descriptives, etc.) is saved alongside via
+    ``insert_stats_metadata`` -- it isn't collapsed away anymore.
 
-    n_obs and n_grp are kept as float (rather than int-cast) so that NaN values from
-    the ANOVA fallback path (when no group_column is present) survive unchanged
-    instead of raising on int(nan).
+    Returns NaN for empty input (no comparison possible).
     """
     if panel_stats is None or len(panel_stats) == 0:
-        return np.nan, 'none', np.nan, np.nan, np.nan
-    p = float(panel_stats['omnibus_pvalue'].iloc[0])
-    mt = panel_stats['model_type'].iloc[0] if 'model_type' in panel_stats.columns else 'anova'
-    icc_val = panel_stats['icc'].iloc[0] if 'icc' in panel_stats.columns else np.nan
-    n_obs = float(panel_stats['n_observations'].iloc[0]) if 'n_observations' in panel_stats.columns else np.nan
-    n_grp = float(panel_stats['n_groups'].iloc[0]) if 'n_groups' in panel_stats.columns else np.nan
-    return p, mt, icc_val, n_obs, n_grp
+        return np.nan
+    return float(panel_stats['omnibus_pvalue'].iloc[0])
 
 
 # plot data for a given session
@@ -122,7 +150,7 @@ def plot_all_planes_all_sessions_for_mouse(dataset_dict, mouse_expts, session_id
 
     if save_dir:
         cre = dataset.metadata['cre_line'][:3]
-        utils.save_figure(fig, figsize, save_dir, folder, str(mouse_id) + '_' + cre + '_max_projection_images')
+        utils.save_figure(fig, figsize, save_dir, folder, _clean_filename(str(mouse_id) + '_' + cre + '_max_projection_images'))
 
 
 def aggregate_traces_for_session(dataset_dict, session_metadata, trace_type='dff'):
@@ -240,10 +268,10 @@ def plot_all_traces_heatmap(all_traces, session_metadata, timestamps=None, cmap=
         cre = session_metadata.cre_line.values[0][:3]
         trace_type = session_metadata.trace_type.values[0]
         session_type = session_metadata.session_type.values[0]
-        filename = str(mouse_id) + '_' + str(
-            ophys_session_id) + '_' + session_type + '_' + cre + '_' + trace_type + '_' + cmap
+        filename = _clean_filename(str(mouse_id) + '_' + str(
+            ophys_session_id) + '_' + session_type + '_' + cre + '_' + trace_type + '_' + cmap)
         fig.suptitle(filename, x=0.4, y=1.1, fontsize=16)
-        utils.save_figure(fig, figsize, save_dir, 'traces_heatmaps', filename)
+        utils.save_figure(fig, figsize, save_dir, 'traces_heatmaps', _clean_filename(filename))
 
     return ax
 
@@ -253,6 +281,7 @@ def plot_all_traces_heatmap(all_traces, session_metadata, timestamps=None, cmap=
 
 def plot_cell_count_by_depth(cells_table, project_code=None, suptitle=None, horiz=True,
                              save_dir=None, folder=None, suffix='', ax=None):
+    suffix = _norm_suffix(suffix)
     if project_code == 'VisualBehaviorMultiscope4areasx2d':
         areas = ['VISp', 'VISl', 'VISal', 'VISam']
         colors = sns.color_palette('Paired')[:4]
@@ -314,7 +343,7 @@ def plot_cell_count_by_depth(cells_table, project_code=None, suptitle=None, hori
         plt.suptitle(suptitle, x=0.5, y=0.96, fontsize=18)
 
     if save_dir:
-        utils.save_figure(fig, figsize, save_dir, folder, 'cell_count_by_depth_areas' + suffix)
+        utils.save_figure(fig, figsize, save_dir, folder, _clean_filename('cell_count_by_depth_areas' + suffix))
     return ax
 
 
@@ -336,7 +365,7 @@ def plot_n_cells_per_plane_by_depth(cells_table, suptitle=None, save_dir=None, f
     plt.suptitle(suptitle, x=0.5, y=1.2)
 
     if save_dir:
-        utils.save_figure(fig, figsize, save_dir, folder, 'cell_count_by_depth_areas_'+suptitle)
+        utils.save_figure(fig, figsize, save_dir, folder, _clean_filename('cell_count_by_depth_areas_'+suptitle))
     return ax
 
 
@@ -359,7 +388,7 @@ def plot_n_planes_per_depth(experiments_table, suptitle=None, save_dir=None, fol
     plt.suptitle(suptitle, x=0.5, y=1.2)
 
     if save_dir:
-        utils.save_figure(fig, figsize, save_dir, folder, 'cell_count_by_depth_areas_'+suptitle)
+        utils.save_figure(fig, figsize, save_dir, folder, _clean_filename('cell_count_by_depth_areas_'+suptitle))
     return ax
 
 
@@ -373,6 +402,7 @@ def plot_n_segmented_cells(multi_session_df, df_name, horizontal=True, save_dir=
     :param suffix: string starting with '_' to append to end of filename of saved plot
     :return:
     """
+    suffix = _norm_suffix(suffix)
     df = multi_session_df.copy()
 
     experience_levels = np.sort(df.experience_level.unique())
@@ -414,8 +444,8 @@ def plot_n_segmented_cells(multi_session_df, df_name, horizontal=True, save_dir=
     if format_fig:
         fig.tight_layout()
     if save_dir:
-        fig_title = df_name.split('-')[0] + '_n_total_cells' + suffix
-        utils.save_figure(fig, figsize, save_dir, 'n_segmented_cells', fig_title)
+        fig_title = _clean_filename(df_name.split('-')[0] + '_n_total_cells' + suffix)
+        utils.save_figure(fig, figsize, save_dir, 'n_segmented_cells', _clean_filename(fig_title))
 
 # population averages across session & within epochs #####################
 
@@ -446,6 +476,7 @@ def plot_population_averages_for_condition(multi_session_df, data_type, event_ty
     Followed by a groupby and mean on the conditions of interest.
 
     '''
+    suffix = _norm_suffix(suffix)
 
     if palette is None:
         palette = utils.get_experience_level_colors()
@@ -541,8 +572,8 @@ def plot_population_averages_for_condition(multi_session_df, data_type, event_ty
         fig.subplots_adjust(hspace=0.4, wspace=0.3)
         plt.rcParams["savefig.bbox"] = "tight"
 
-        fig_title = 'population_average_' + hue_column + suffix
-        utils.save_figure(fig, figsize, save_dir, folder, fig_title)
+        fig_title = _clean_filename('population_average_' + hue_column + suffix)
+        utils.save_figure(fig, figsize, save_dir, folder, _clean_filename(fig_title))
 
     return ax
 
@@ -573,6 +604,7 @@ def plot_population_averages_for_conditions(multi_session_df, data_type, event_t
     Followed by a groupby and mean on the conditions of interest.
 
     '''
+    suffix = _norm_suffix(suffix)
 
     if palette is None:
         palette = utils.get_experience_level_colors()
@@ -698,8 +730,8 @@ def plot_population_averages_for_conditions(multi_session_df, data_type, event_t
         fig.subplots_adjust(hspace=0.4, wspace=0.3)
         plt.rcParams["savefig.bbox"] = "tight"
 
-        fig_title = 'population_average_' + axes_column + '_' + hue_column + suffix
-        utils.save_figure(fig, figsize, save_dir, folder, fig_title)
+        fig_title = _clean_filename('population_average_' + axes_column + '_' + hue_column + suffix)
+        utils.save_figure(fig, figsize, save_dir, folder, _clean_filename(fig_title))
 
     return ax
 
@@ -708,6 +740,7 @@ def plot_population_averages_for_cell_types_across_experience(multi_session_df, 
                                                               ylabel='population average',  data_type='events', event_type='changes', interval_sec=1,
                                                               save_dir=None, folder=None, suffix=None, ax=None):
     # get important information
+    suffix = _norm_suffix(suffix)
     experiments_table = loading.get_platform_paper_experiment_table()
     cell_types = np.sort(experiments_table.cell_type.unique())
     experience_levels = utils.get_experience_levels()
@@ -822,8 +855,8 @@ def plot_population_averages_for_cell_types_across_experience(multi_session_df, 
 
     if save_dir:
         plt.subplots_adjust(hspace=0.4, wspace=0.2)
-        fig_title = 'population_average_cell_types_exp_levels' + suffix
-        utils.save_figure(fig, figsize, save_dir, folder, fig_title)
+        fig_title = _clean_filename('population_average_cell_types_exp_levels' + suffix)
+        utils.save_figure(fig, figsize, save_dir, folder, _clean_filename(fig_title))
 
     return ax
 
@@ -832,6 +865,7 @@ def plot_population_averages_across_experience(multi_session_df, xlim_seconds=[-
                                                data_type='events', event_type='changes', interval_sec=1,
                                                save_dir=None, folder=None, suffix=None, ax=None):
     # get important information
+    suffix = _norm_suffix(suffix)
     palette = utilities.get_experience_level_colors()
 
     # define plot axes
@@ -851,8 +885,8 @@ def plot_population_averages_across_experience(multi_session_df, xlim_seconds=[-
     ax[0].set_ylabel(ylabel)
 
     if save_dir:
-        fig_title = 'population_average_exp_levels' + suffix
-        utils.save_figure(fig, figsize, save_dir, folder, fig_title)
+        fig_title = _clean_filename('population_average_exp_levels' + suffix)
+        utils.save_figure(fig, figsize, save_dir, folder, _clean_filename(fig_title))
 
     return ax
 
@@ -861,6 +895,7 @@ def plot_population_average_across_experience(multi_session_df, xlim_seconds=[-1
                                                data_type='events', event_type='changes', interval_sec=1,
                                                save_dir=None, folder=None, suffix=None, ax=None):
     # get important information
+    suffix = _norm_suffix(suffix)
     palette = utilities.get_experience_level_colors()
 
     # define plot axes
@@ -879,8 +914,8 @@ def plot_population_average_across_experience(multi_session_df, xlim_seconds=[-1
     ax.set_ylabel(ylabel)
 
     if save_dir:
-        fig_title = 'population_average_exp_levels' + suffix
-        utils.save_figure(fig, figsize, save_dir, folder, fig_title)
+        fig_title = _clean_filename('population_average_exp_levels' + suffix)
+        utils.save_figure(fig, figsize, save_dir, folder, _clean_filename(fig_title))
 
     return ax
 
@@ -916,6 +951,7 @@ def plot_mean_response_by_epoch(df, metric='mean_response', horizontal=True, ymi
     :param suffix: string to append at end of saved filename
     :return:
     """
+    suffix = _norm_suffix(suffix)
 
     # add experience epoch column if it doesnt already exist
     # if 'experience_epoch' not in df.keys():
@@ -993,8 +1029,8 @@ def plot_mean_response_by_epoch(df, metric='mean_response', horizontal=True, ymi
             plt.suptitle(suptitle, x=0.52, y=1.01, fontsize=18)
     plt.subplots_adjust(wspace=0.2, hspace=0.4)
     if save_dir:
-        fig_title = metric + suffix
-        utils.save_figure(fig, figsize, save_dir, folder, fig_title)
+        fig_title = _clean_filename(metric + suffix)
+        utils.save_figure(fig, figsize, save_dir, folder, _clean_filename(fig_title))
     return ax
 
 
@@ -1013,6 +1049,7 @@ def plot_mean_response_by_epoch_all_cell_types(df, metric='mean_response', horiz
     :param suffix: string to append at end of saved filename
     :return:
     """
+    suffix = _norm_suffix(suffix)
     # add experience epoch column if it doesnt already exist
     # if 'experience_epoch' not in df.keys():
     # df = annotate_epoch_df(df)
@@ -1084,8 +1121,8 @@ def plot_mean_response_by_epoch_all_cell_types(df, metric='mean_response', horiz
     plt.subplots_adjust(wspace=0.4, hspace=0.4)
 
     if save_dir:
-        fig_title = metric + suffix
-        utils.save_figure(fig, figsize, save_dir, folder, fig_title)
+        fig_title = _clean_filename(metric + suffix)
+        utils.save_figure(fig, figsize, save_dir, folder, _clean_filename(fig_title))
     return ax
     
 
@@ -1106,6 +1143,7 @@ def plot_mean_response_by_epoch_for_multiple_conditions(response_df_dict, metric
                       If False, will plot the two conditions as black and gray lines
     :return:
     """
+    suffix = _norm_suffix(suffix)
     import matplotlib.lines as mlines
 
     df_names = list(response_df_dict.keys())
@@ -1155,8 +1193,8 @@ def plot_mean_response_by_epoch_for_multiple_conditions(response_df_dict, metric
         plt.suptitle(suffix, x=0.52, y=1.02, fontsize=16)
     fig.tight_layout()
     if save_dir:
-        fig_title = metric + '_epochs_' + df_names[0] + '_' + df_names[1] + '_' + suffix
-        utils.save_figure(fig, figsize, save_dir, folder, fig_title)
+        fig_title = _clean_filename(metric + '_epochs_' + df_names[0] + '_' + df_names[1] + '_' + suffix)
+        utils.save_figure(fig, figsize, save_dir, folder, _clean_filename(fig_title))
 
 
 def get_timestamps_for_response_df_type(cache, experiment_id, df_name):
@@ -1227,6 +1265,7 @@ def plot_fraction_responsive_cells(multi_session_df, responsiveness_threshold=0.
     :param suffix: string starting with '_' to append to end of filename of saved plot
     :return:
     """
+    suffix = _norm_suffix(suffix)
     df = multi_session_df.copy()
 
     experience_levels = np.sort(df.experience_level.unique())
@@ -1272,8 +1311,8 @@ def plot_fraction_responsive_cells(multi_session_df, responsiveness_threshold=0.
         ax[1].set_ylabel(ylabel)
     if save_dir:
         fig.subplots_adjust(hspace=0.4, wspace=0.3)
-        fig_title = 'fraction_responsive_cells_' + suffix
-        utils.save_figure(fig, figsize, save_dir, folder, fig_title)
+        fig_title = _clean_filename('fraction_responsive_cells_' + suffix)
+        utils.save_figure(fig, figsize, save_dir, folder, _clean_filename(fig_title))
     return ax
 
 
@@ -1293,6 +1332,7 @@ def plot_percent_responsive_cells(multi_session_df, responsiveness_threshold=0.1
     :param suffix: string starting with '_' to append to end of filename of saved plot
     :return:
     """
+    suffix = _norm_suffix(suffix)
     df = multi_session_df.copy()
 
     experience_levels = np.sort(df.experience_level.unique())
@@ -1359,16 +1399,16 @@ def plot_percent_responsive_cells(multi_session_df, responsiveness_threshold=0.1
 
     if save_dir:
         fig.subplots_adjust(hspace=0.4, wspace=0.2)
-        fig_title = 'percent_responsive_cells' + suffix
-        utils.save_figure(fig, figsize, save_dir, folder, fig_title)
+        fig_title = _clean_filename('percent_responsive_cells' + suffix)
+        utils.save_figure(fig, figsize, save_dir, folder, _clean_filename(fig_title))
         # try:
         print('saving_stats')
         stats_suffix = '_mlm.csv' if use_mlm else '_tukey.csv'
-        combined_stats.to_csv(os.path.join(save_dir, folder, fig_title + stats_suffix))
+        combined_stats.to_csv(os.path.join(save_dir, folder, _clean_filename(fig_title + stats_suffix)))
         # save descriptive stats
         cols_to_groupby = ['cell_type', 'experience_level']
         stats = get_descriptive_stats_for_metric(fraction_responsive, metric, cols_to_groupby)
-        stats.to_csv(os.path.join(save_dir, folder, fig_title + '_values.csv'))
+        stats.to_csv(os.path.join(save_dir, folder, _clean_filename(fig_title + '_values.csv')))
         # except BaseException:
         #     print('STATS DID NOT SAVE FOR', metric)
     return ax
@@ -1389,6 +1429,7 @@ def plot_average_metric_value_for_experience_levels_across_containers(df, metric
     :param suffix: string starting with '_' to append to end of filename of saved plot
     :return:
     """
+    suffix = _norm_suffix(suffix)
 
     experience_levels = np.sort(df.experience_level.unique())
     cell_types = np.sort(df.cell_type.unique())
@@ -1431,10 +1472,10 @@ def plot_average_metric_value_for_experience_levels_across_containers(df, metric
             ax[i].set_ylim(ylim)
     if format_fig:
         fig.tight_layout()
-        fig_title = metric + '_across_containers' + suffix
+        fig_title = _clean_filename(metric + '_across_containers' + suffix)
         plt.suptitle(fig_title, x=0.52, y=1.02, fontsize=16)
     if save_dir:
-        utils.save_figure(fig, figsize, save_dir, folder, fig_title)
+        utils.save_figure(fig, figsize, save_dir, folder, _clean_filename(fig_title))
     return ax
 
 
@@ -1473,7 +1514,12 @@ def add_stats_to_plot_for_hues(data, metric, ax, ymax=None, xorder=None, x='expe
             panel_stats = compute_stats(test_data, metric, column_to_compare=hue,
                                         use_mlm=use_mlm, group_column=group_column,
                                         event_type=event_type, cell_type=cell_type)
-            panel_stats['data_subset'] = [x_value for i in range(len(panel_stats))]
+            # Position `data_subset` in the leading metadata block (right after
+            # cell_type). When the call site subsequently inserts `condition`
+            # via insert_stats_metadata with the default after='cell_type',
+            # condition slots between cell_type and data_subset -- placing
+            # data_subset directly after condition in the saved CSV.
+            panel_stats = insert_stats_metadata(panel_stats, data_subset=x_value)
             omnibus_pvalue = panel_stats['omnibus_pvalue'].iloc[0] if len(panel_stats) else 1.0
             # gate star drawing on the omnibus, but keep the panel_stats either way
             # so the saved CSV records every comparison that was tested.
@@ -1924,6 +1970,7 @@ def plot_metric_distribution_by_experience_no_cell_type(metrics_table, metric, e
     save_dir: directory to save to. if None, plot will not be saved
     ax: axes to plot figures on
     """
+    suffix = _norm_suffix(suffix)
     data = metrics_table.copy()
     experience_levels = utils.get_experience_levels()
 
@@ -2089,17 +2136,17 @@ def plot_metric_distribution_by_experience_no_cell_type(metrics_table, metric, e
 
     if save_dir:
         folder = 'response_metrics'
-        filename = event_type + '_' + data_type + '_' + metric + '_distribution' + suffix
-        stats_filename = event_type + '_' + data_type + '_' + metric + suffix + '_no_cell_type'
-        utils.save_figure(fig, figsize, save_dir, folder, filename)
+        filename = _clean_filename(event_type + '_' + data_type + '_' + metric + '_distribution' + suffix)
+        stats_filename = _clean_filename(event_type + '_' + data_type + '_' + metric + suffix + '_no_cell_type')
+        utils.save_figure(fig, figsize, save_dir, folder, _clean_filename(filename))
         try:
             print('saving_stats')
             stats_suffix = '_mlm.csv' if use_mlm else '_tukey.csv'
-            combined_stats.to_csv(os.path.join(save_dir, folder, stats_filename + stats_suffix))
+            combined_stats.to_csv(os.path.join(save_dir, folder, _clean_filename(stats_filename + stats_suffix)))
             # save descriptive stats
             cols_to_groupby = ['experience_level']
             stats = get_descriptive_stats_for_metric(data, metric, cols_to_groupby)
-            stats.to_csv(os.path.join(save_dir, folder, stats_filename + '_values.csv'))
+            stats.to_csv(os.path.join(save_dir, folder, _clean_filename(stats_filename + '_values.csv')))
         except BaseException:
             print('STATS DID NOT SAVE FOR', metric, hue)
     return ax
@@ -2135,6 +2182,7 @@ def plot_metric_distribution_by_experience(metrics_table, metric, event_type, da
     save_dir: directory to save to. if None, plot will not be saved
     ax: axes to plot figures on
     """
+    suffix = _norm_suffix(suffix)
     data = metrics_table.copy()
     experience_levels = utils.get_experience_levels()
 
@@ -2348,18 +2396,18 @@ def plot_metric_distribution_by_experience(metrics_table, metric, event_type, da
     fig.subplots_adjust(hspace=0.4, wspace=0.4)
     if save_dir:
         folder = 'response_metrics'
-        filename = event_type + '_' + data_type + '_' + metric + '_distribution' + suffix
-        stats_filename = event_type + '_' + data_type + '_' + metric + suffix
-        utils.save_figure(fig, figsize, save_dir, folder, filename)
+        filename = _clean_filename(event_type + '_' + data_type + '_' + metric + '_distribution' + suffix)
+        stats_filename = _clean_filename(event_type + '_' + data_type + '_' + metric + suffix)
+        utils.save_figure(fig, figsize, save_dir, folder, _clean_filename(filename))
         try:
             print('saving_stats')
             # save stats: '_mlm.csv' when MLM was used, '_tukey.csv' for the legacy path
             stats_suffix = '_mlm.csv' if use_mlm else '_tukey.csv'
-            combined_stats.to_csv(os.path.join(save_dir, folder, stats_filename + stats_suffix))
+            combined_stats.to_csv(os.path.join(save_dir, folder, _clean_filename(stats_filename + stats_suffix)))
             # save descriptive stats
             cols_to_groupby = ['cell_type', 'experience_level']
             stats = get_descriptive_stats_for_metric(data, metric, cols_to_groupby)
-            stats.to_csv(os.path.join(save_dir, folder, stats_filename + '_values.csv'))
+            stats.to_csv(os.path.join(save_dir, folder, _clean_filename(stats_filename + '_values.csv')))
         except BaseException:
             print('STATS DID NOT SAVE FOR', metric, hue)
     return ax
@@ -2468,7 +2516,7 @@ def plot_metric_over_repeats(df, metric, x, title='', xlabel=None, ylabel=None, 
         label.set_visible(j % 10 == 0)
 
     if save_dir:
-        utils.save_figure(fig, figsize, save_dir, folder, metric+'_'+x)
+        utils.save_figure(fig, figsize, save_dir, folder, _clean_filename(metric+'_'+x))
     
     return ax
 
@@ -2493,7 +2541,7 @@ def plot_metric_over_repeats_for_cell_types(df, metric, x, xlabel=None, ylabel=N
         ax[1].set_ylabel(ylabel)
 
     if save_dir:
-        utils.save_figure(fig, figsize, save_dir, folder, metric+'_'+x+'_cell_types')
+        utils.save_figure(fig, figsize, save_dir, folder, _clean_filename(metric+'_'+x+'_cell_types'))
 
 
 
@@ -2556,7 +2604,7 @@ def plot_metric_across_stimuli_by_experience_level(stimulus_response_df, metric,
 
 
     if save_dir is not None and folder is not None:
-        utils.save_figure(fig, figsize, save_dir, folder, metric+'_over_time_in_session')
+        utils.save_figure(fig, figsize, save_dir, folder, _clean_filename(metric+'_over_time_in_session'))
     
     return ax
 
@@ -2578,6 +2626,7 @@ def plot_modulation_index_distribution(metrics_table, metric, x_axis_col=None, x
         horiz=True: metric on x-axis, experience levels on y-axis, columns = cell types
         horiz=False: metric on x-axis, experience levels on y-axis, rows = cell types
     '''
+    suffix = _norm_suffix(suffix)
 
     data = metrics_table.copy()
 
@@ -2766,30 +2815,28 @@ def plot_modulation_index_distribution(metrics_table, metric, x_axis_col=None, x
     fig.subplots_adjust(hspace=0.3, wspace=wspace)
 
     if save_dir:
-        if suffix is not None and suffix != '' and '_' not in suffix:
-            suffix = '_' + suffix
         if horiz:
             suffix = suffix + 'horiz'
         if metric_on_y:
             suffix = suffix + 'yaxis'
         folder = 'response_metrics'
-        filename = metric + '_distribution' + suffix
-        stats_filename = metric + suffix
-        utils.save_figure(fig, figsize, save_dir, folder, filename)
+        filename = _clean_filename(metric + '_distribution' + suffix)
+        stats_filename = _clean_filename(metric + suffix)
+        utils.save_figure(fig, figsize, save_dir, folder, _clean_filename(filename))
         try:
             print('saving_stats')
             stats_suffix = '_mlm.csv' if use_mlm else '_tukey.csv'
-            combined_stats.to_csv(os.path.join(save_dir, folder, stats_filename + stats_suffix))
+            combined_stats.to_csv(os.path.join(save_dir, folder, _clean_filename(stats_filename + stats_suffix)))
             cols_to_groupby = ['cell_type', 'experience_level']
             stats = get_descriptive_stats_for_metric(data, metric, cols_to_groupby)
-            stats.to_csv(os.path.join(save_dir, folder, stats_filename + '_values.csv'))
+            stats.to_csv(os.path.join(save_dir, folder, _clean_filename(stats_filename + '_values.csv')))
         except BaseException:
             print('STATS DID NOT SAVE FOR', metric)
     return ax
 
 
 def plot_metric_across_cohorts(metrics_table, metric,  ylabel, x_val='binned_depth', plot_type='barplot',
-                               event_type=None,save_dir=None, folder=None, ax=None,
+                               event_type='Not specified', save_dir=None, folder=None, ax=None,
                                use_mlm=True, group_column='mouse_id'):
     '''
     Plot metric distributions across cre lines, with a unique axis for each cohort / project code, 
@@ -2864,7 +2911,9 @@ def plot_metric_across_cohorts(metrics_table, metric,  ylabel, x_val='binned_dep
                                                             xorder=x_vals, x=x_val, hue='experience_level',
                                                             use_mlm=use_mlm, group_column=group_column,
                                                             cell_type=cell_type)
-            panel_stats = insert_stats_metadata(panel_stats, condition=x_val, cohort=project_code)
+            # cohort first so it lands before condition; that keeps data_subset
+            # (added inside add_stats_to_plot_for_hues) directly after condition.
+            panel_stats = insert_stats_metadata(panel_stats, cohort=project_code, condition=x_val)
             combined_stats = pd.concat([combined_stats, panel_stats])
             i+=1
     plt.subplots_adjust(wspace=0.5, hspace=0.35)
@@ -2872,22 +2921,22 @@ def plot_metric_across_cohorts(metrics_table, metric,  ylabel, x_val='binned_dep
     if save_dir:
         if folder is None: 
             folder = 'response_metrics'
-        filename = metric+'_by_cohort_x_'+x_val
-        utils.save_figure(fig, figsize, save_dir, folder, filename)
+        filename = _clean_filename(metric+'_by_cohort_x_'+x_val)
+        utils.save_figure(fig, figsize, save_dir, folder, _clean_filename(filename))
         try:
             print('saving_stats')
             stats_suffix = '_mlm.csv' if use_mlm else '_tukey.csv'
-            combined_stats.to_csv(os.path.join(save_dir, folder, filename + stats_suffix))
+            combined_stats.to_csv(os.path.join(save_dir, folder, _clean_filename(filename + stats_suffix)))
             cols_to_groupby = ['cell_type', 'experience_level']
             stats = get_descriptive_stats_for_metric(data, metric, cols_to_groupby)
-            stats.to_csv(os.path.join(save_dir, folder, filename + '_values.csv'))
+            stats.to_csv(os.path.join(save_dir, folder, _clean_filename(filename + '_values.csv')))
         except BaseException:
             print('STATS DID NOT SAVE FOR', metric)
     return ax
 
 
-def plot_metric_across_cohorts_area_depth(metrics_table, metric,  ylabel,plot_type='barplot',
-                               event_type=None, save_dir=None, folder=None, ax=None,
+def plot_metric_across_cohorts_area_depth(metrics_table, metric,  ylabel, plot_type='barplot',
+                               event_type='Not specified', save_dir=None, folder=None, ax=None,
                                use_mlm=True, group_column='mouse_id'):
     '''
     Plot metric distributions across cre lines, with a unique axis for each cohort / project code, experience levels as colors.
@@ -2969,7 +3018,9 @@ def plot_metric_across_cohorts_area_depth(metrics_table, metric,  ylabel,plot_ty
                                                                 xorder=x_vals, x=x_val, hue='experience_level',
                                                                 use_mlm=use_mlm, group_column=group_column,
                                                                 cell_type=cell_type)
-                panel_stats = insert_stats_metadata(panel_stats, condition=x_val, cohort=project_code)
+                # cohort first so it lands before condition; that keeps data_subset
+                # (added inside add_stats_to_plot_for_hues) directly after condition.
+                panel_stats = insert_stats_metadata(panel_stats, cohort=project_code, condition=x_val)
                 combined_stats = pd.concat([combined_stats, panel_stats])
                 # , ymax=None, show_ns=False)
                 i+=1
@@ -2979,16 +3030,16 @@ def plot_metric_across_cohorts_area_depth(metrics_table, metric,  ylabel,plot_ty
     if save_dir:
         if folder is None: 
             folder = 'response_metrics'
-        filename = metric+'_by_cohort_depth_area'
-        utils.save_figure(fig, figsize, save_dir, folder, filename)
+        filename = _clean_filename(metric+'_by_cohort_depth_area')
+        utils.save_figure(fig, figsize, save_dir, folder, _clean_filename(filename))
         try:
             print('saving_stats')
             stats_suffix = '_mlm.csv' if use_mlm else '_tukey.csv'
-            combined_stats.to_csv(os.path.join(save_dir, folder, filename + stats_suffix))
+            combined_stats.to_csv(os.path.join(save_dir, folder, _clean_filename(filename + stats_suffix)))
             # save descriptive stats
             cols_to_groupby = ['cell_type', 'experience_level']
             stats = get_descriptive_stats_for_metric(data, metric, cols_to_groupby)
-            stats.to_csv(os.path.join(save_dir, folder, filename + '_values.csv'))
+            stats.to_csv(os.path.join(save_dir, folder, _clean_filename(filename + '_values.csv')))
         except BaseException:
             print('STATS DID NOT SAVE FOR', metric, 'experience_level')
     return ax
@@ -2996,7 +3047,7 @@ def plot_metric_across_cohorts_area_depth(metrics_table, metric,  ylabel,plot_ty
 
 def plot_metric_across_conditions(metrics_table, metric,  title='', xlabel='Imaging depth (um)', x_color='k',
                               x_val='binned_depth', hue='experience_level', plot_type='barplot',
-                               event_type=None,save_dir=None, folder=None, ax=None,
+                               event_type='Not specified', save_dir=None, folder=None, ax=None,
                                use_mlm=True, group_column='mouse_id'):
     '''
     Plot metric distributions across cre lines, with a unique axis for each cohort / project code, 
@@ -3083,19 +3134,19 @@ def plot_metric_across_conditions(metrics_table, metric,  title='', xlabel='Imag
     plt.subplots_adjust(wspace=0.5, hspace=0.3)
 
     # save stats
-    filename = metric+'_across_'+hue+'_for_'+x_val+'_'+plot_type
+    filename = _clean_filename(metric+'_across_'+hue+'_for_'+x_val+'_'+plot_type)
     if save_dir:
         if folder is None: 
             folder = 'response_metrics'
         stats_suffix = '_mlm.csv' if use_mlm else '_tukey.csv'
-        combined_stats.to_csv(os.path.join(save_dir, folder, filename + stats_suffix))
+        combined_stats.to_csv(os.path.join(save_dir, folder, _clean_filename(filename + stats_suffix)))
         cols_to_groupby = ['cell_type', hue, x_val]
         stats = get_descriptive_stats_for_metric(data, metric, cols_to_groupby)
-        stats.to_csv(os.path.join(save_dir, folder, filename + '_values.csv'))
+        stats.to_csv(os.path.join(save_dir, folder, _clean_filename(filename + '_values.csv')))
 
     # save fig
     if save_dir and fig: 
-        utils.save_figure(fig, figsize, save_dir, folder, filename)
+        utils.save_figure(fig, figsize, save_dir, folder, _clean_filename(filename))
     return ax
 
 
@@ -3112,6 +3163,7 @@ def plot_experience_modulation_index(metric_data, event_type, hue=None, plot_typ
     :param save_dir:
     :return:
     """
+    suffix = _norm_suffix(suffix)
 
     if include_all_comparisons:
         value_vars = ['Novel vs. Familiar', 'Novel + vs. Familiar',  'Novel vs. Novel +']
@@ -3223,16 +3275,16 @@ def plot_experience_modulation_index(metric_data, event_type, hue=None, plot_typ
     if save_dir:
         if folder is None: 
             folder = 'response_metrics'
-        filename = 'experience_modulation_' + event_type + '_' + plot_type + suffix
-        utils.save_figure(fig, figsize, save_dir, 'response_metrics', filename)
+        filename = _clean_filename('experience_modulation_' + event_type + '_' + plot_type + suffix)
+        utils.save_figure(fig, figsize, save_dir, 'response_metrics', _clean_filename(filename))
         try:
             print('saving_stats')
             stats_suffix = '_mlm.csv' if use_mlm else '_tukey.csv'
-            combined_stats.to_csv(os.path.join(save_dir, 'response_metrics', filename + stats_suffix))
+            combined_stats.to_csv(os.path.join(save_dir, 'response_metrics', _clean_filename(filename + stats_suffix)))
             # save descriptive stats
             cols_to_groupby = ['cell_type', 'experience_level']
             stats = get_descriptive_stats_for_metric(data, metric, cols_to_groupby)
-            stats.to_csv(os.path.join(save_dir, 'response_metrics', filename + '_values.csv'))
+            stats.to_csv(os.path.join(save_dir, 'response_metrics', _clean_filename(filename + '_values.csv')))
         except BaseException:
             print('STATS DID NOT SAVE FOR', metric, hue)
 
@@ -3251,6 +3303,7 @@ def plot_experience_modulation_index_annotated(metrics_table, event_type, metric
     :param save_dir:
     :return:
     """
+    suffix = _norm_suffix(suffix)
 
     import visual_behavior.ophys.response_analysis.cell_metrics as cm
 
@@ -3347,17 +3400,17 @@ def plot_experience_modulation_index_annotated(metrics_table, event_type, metric
         if horiz:
             suffix = suffix + '_horiz'
         folder = 'response_metrics'
-        filename = 'experience_modulation_annot_' + event_type + '_' + suffix
-        stats_filename = 'experience_modulation_' + event_type + '_' + suffix
-        utils.save_figure(fig, figsize, save_dir, folder, filename)
+        filename = _clean_filename('experience_modulation_annot_' + event_type + '_' + suffix)
+        stats_filename = _clean_filename('experience_modulation_' + event_type + '_' + suffix)
+        utils.save_figure(fig, figsize, save_dir, folder, _clean_filename(filename))
         try:
             print('saving_stats')
             stats_suffix = '_mlm.csv' if use_mlm else '_tukey.csv'
-            combined_stats.to_csv(os.path.join(save_dir, folder, stats_filename + stats_suffix))
+            combined_stats.to_csv(os.path.join(save_dir, folder, _clean_filename(stats_filename + stats_suffix)))
             # save descriptive stats
             cols_to_groupby = ['cell_type']
             stats = get_descriptive_stats_for_metric(data, metric, cols_to_groupby)
-            stats.to_csv(os.path.join(save_dir, folder, stats_filename + '_values.csv'))
+            stats.to_csv(os.path.join(save_dir, folder, _clean_filename(stats_filename + '_values.csv')))
         except BaseException:
             print('STATS DID NOT SAVE FOR', metric)
     return ax
@@ -3378,6 +3431,7 @@ def plot_experience_modulation_index_annotated_by_cell_type(metrics_table, event
     :param save_dir:
     :return:
     """
+    suffix = _norm_suffix(suffix)
 
     import visual_behavior.ophys.response_analysis.cell_metrics as cm
 
@@ -3488,17 +3542,17 @@ def plot_experience_modulation_index_annotated_by_cell_type(metrics_table, event
         if horiz:
             suffix = suffix + '_horiz'
         folder = 'response_metrics'
-        filename = 'experience_modulation_annot_by_cell_type_' + event_type + '_' + suffix
-        stats_filename = 'experience_modulation_by_cell_type_' + event_type + '_' + suffix
-        utils.save_figure(fig, figsize, save_dir, folder, filename)
+        filename = _clean_filename('experience_modulation_annot_by_cell_type_' + event_type + '_' + suffix)
+        stats_filename = _clean_filename('experience_modulation_by_cell_type_' + event_type + '_' + suffix)
+        utils.save_figure(fig, figsize, save_dir, folder, _clean_filename(filename))
         try:
             print('saving_stats')
             stats_suffix = '_mlm.csv' if use_mlm else '_tukey.csv'
-            combined_stats.to_csv(os.path.join(save_dir, folder, stats_filename + stats_suffix))
+            combined_stats.to_csv(os.path.join(save_dir, folder, _clean_filename(stats_filename + stats_suffix)))
             # save descriptive stats
             cols_to_groupby = ['cell_type']
             stats = get_descriptive_stats_for_metric(data, metric, cols_to_groupby)
-            stats.to_csv(os.path.join(save_dir, folder, stats_filename + '_values.csv'))
+            stats.to_csv(os.path.join(save_dir, folder, _clean_filename(stats_filename + '_values.csv')))
         except BaseException:
             print('STATS DID NOT SAVE FOR', metric)
     return ax
@@ -3520,6 +3574,7 @@ def plot_experience_modulation_index_depth_heatmap_by_cell_type(metrics_table, e
         cells_table — e.g. 'layer', 'targeted_structure', 'area_binned_depth'.
     ylabel: optional y-axis label. Defaults to groupby_col with underscores replaced by spaces.
     """
+    suffix = _norm_suffix(suffix)
     import visual_behavior.ophys.response_analysis.cell_metrics as cm
     from scipy import stats as sstats
     from matplotlib.colors import LinearSegmentedColormap, TwoSlopeNorm
@@ -3649,12 +3704,10 @@ def plot_experience_modulation_index_depth_heatmap_by_cell_type(metrics_table, e
 
     if save_dir:
         folder = 'response_metrics'
-        if suffix is not None and suffix != '':
-            suffix = '_' + suffix
-        filename = 'experience_modulation_heatmap_by_cell_type_' + groupby_col + '_' + event_type + suffix
-        utils.save_figure(fig, figsize, save_dir, folder, filename)
+        filename = _clean_filename('experience_modulation_heatmap_by_cell_type_' + groupby_col + '_' + event_type + suffix)
+        utils.save_figure(fig, figsize, save_dir, folder, _clean_filename(filename))
         try:
-            stats_table.to_csv(os.path.join(save_dir, folder, filename + '_ttest.csv'), index=False)
+            stats_table.to_csv(os.path.join(save_dir, folder, _clean_filename(filename + '_ttest.csv')), index=False)
         except BaseException:
             print('STATS TABLE DID NOT SAVE FOR', metric)
     return heat_axes, stats_table
@@ -3676,6 +3729,7 @@ def plot_experience_modulation_index_depth_heatmap_by_comparison(metrics_table, 
         present on cells_table — e.g. 'layer', 'targeted_structure', 'area_binned_depth'.
     ylabel: optional y-axis label. Defaults to groupby_col with underscores replaced by spaces.
     """
+    suffix = _norm_suffix(suffix)
     import visual_behavior.ophys.response_analysis.cell_metrics as cm
     from scipy import stats as sstats
     from matplotlib.colors import LinearSegmentedColormap, TwoSlopeNorm
@@ -3800,12 +3854,10 @@ def plot_experience_modulation_index_depth_heatmap_by_comparison(metrics_table, 
 
     if save_dir:
         folder = 'response_metrics'
-        if suffix is not None and suffix != '':
-            suffix = '_' + suffix
-        filename = 'experience_modulation_heatmap_by_comparison_' + groupby_col + '_' + event_type + suffix
-        utils.save_figure(fig, figsize, save_dir, folder, filename)
+        filename = _clean_filename('experience_modulation_heatmap_by_comparison_' + groupby_col + '_' + event_type + suffix)
+        utils.save_figure(fig, figsize, save_dir, folder, _clean_filename(filename))
         try:
-            stats_table.to_csv(os.path.join(save_dir, folder, filename + '_ttest.csv'), index=False)
+            stats_table.to_csv(os.path.join(save_dir, folder, _clean_filename(filename + '_ttest.csv')), index=False)
         except BaseException:
             print('STATS TABLE DID NOT SAVE FOR', metric)
     return axes, stats_table
@@ -3845,6 +3897,7 @@ def plot_metric_heatmap_grid_by_cell_type_and_metric(
         Colorbars move to the right of each metric row. Default False keeps the original layout
         (cell-types as rows, metrics as columns, cbars at the bottom).
     """
+    suffix = _norm_suffix(suffix)
     from matplotlib.colors import LinearSegmentedColormap
     from matplotlib import gridspec
     from scipy import stats as sstats
@@ -3891,9 +3944,10 @@ def plot_metric_heatmap_grid_by_cell_type_and_metric(
     mats = {}
     panel_max = {}
     cell_n = {}            # (i, j, r, c) -> n cells contributing to that bin
-    col_stars = {}         # (i, j, c) -> star string for the experience-level column (ANOVA across groupby_col)
-    row_stars = {}         # (i, j, r) -> star string for the groupby_col row (ANOVA across experience levels)
-    stats_rows = []
+    col_stars = {}         # (i, j, c) -> star string for the experience-level column
+    row_stars = {}         # (i, j, r) -> star string for the groupby_col row
+    pairwise_tables = []   # full pairwise output from each compute_stats call, tagged
+                           # with the slice it came from; concat'd at the end.
     for i, cell_type in enumerate(cell_types):
         ct_data = results_pivoted[results_pivoted.cell_type == cell_type]
         for j, metric in enumerate(metric_cols):
@@ -3918,15 +3972,17 @@ def plot_metric_heatmap_grid_by_cell_type_and_metric(
                 col_subset = ct_data[ct_data[exp_col] == exp].dropna(subset=[metric, groupby_col])
                 panel_stats = compute_stats(col_subset, metric, column_to_compare=groupby_col,
                                             use_mlm=use_mlm, group_column=group_column,
-                                            event_type=event_type)
-                p, mt, icc_val, n_obs, n_grp = _heatmap_omnibus_fields(panel_stats)
-                col_stars[(i, j, c)] = tier_stars(p)
-                stats_rows.append({'cell_type': cell_type, 'metric': metric,
-                                   'direction': 'across_groups_within_exp',
-                                   exp_col: exp, groupby_col: None,
-                                   'anova_p': p, 'stars': col_stars[(i, j, c)],
-                                   'model_type': mt, 'icc': icc_val,
-                                   'n_observations': n_obs, 'n_groups': n_grp})
+                                            event_type=event_type, cell_type=cell_type)
+                col_stars[(i, j, c)] = tier_stars(_heatmap_omnibus_p(panel_stats))
+                # Tag the full pairwise table with which slice this came from.
+                # `held_fixed_col` + `held_fixed_value` are generic columns
+                # (vs. dynamic-named columns) so every row has values populated
+                # in the same place regardless of direction.
+                panel_stats = insert_stats_metadata(panel_stats,
+                                                   direction='across_groups_within_exp',
+                                                   held_fixed_col=exp_col,
+                                                   held_fixed_value=exp)
+                pairwise_tables.append(panel_stats)
 
             # row-direction stats: within each groupby_col value, hierarchical test
             # (MLM by default) across experience levels (e.g., "do experience levels
@@ -3935,16 +3991,15 @@ def plot_metric_heatmap_grid_by_cell_type_and_metric(
                 row_subset = ct_data[ct_data[groupby_col] == d].dropna(subset=[metric, exp_col])
                 panel_stats = compute_stats(row_subset, metric, column_to_compare=exp_col,
                                             use_mlm=use_mlm, group_column=group_column,
-                                            event_type=event_type)
-                p, mt, icc_val, n_obs, n_grp = _heatmap_omnibus_fields(panel_stats)
-                row_stars[(i, j, r)] = tier_stars(p)
-                stats_rows.append({'cell_type': cell_type, 'metric': metric,
-                                   'direction': 'across_exp_within_group',
-                                   exp_col: None, groupby_col: d,
-                                   'anova_p': p, 'stars': row_stars[(i, j, r)],
-                                   'model_type': mt, 'icc': icc_val,
-                                   'n_observations': n_obs, 'n_groups': n_grp})
-    stats_table = pd.DataFrame(stats_rows)
+                                            event_type=event_type, cell_type=cell_type)
+                row_stars[(i, j, r)] = tier_stars(_heatmap_omnibus_p(panel_stats))
+                panel_stats = insert_stats_metadata(panel_stats,
+                                                   direction='across_exp_within_group',
+                                                   held_fixed_col=groupby_col,
+                                                   held_fixed_value=d)
+                pairwise_tables.append(panel_stats)
+    stats_table = (pd.concat(pairwise_tables, ignore_index=True)
+                   if pairwise_tables else pd.DataFrame())
 
     # cbar label per metric: "Coding score" if "coding" appears in the metric label,
     # otherwise use the metric_label itself.
@@ -4249,18 +4304,18 @@ def plot_metric_heatmap_grid_by_cell_type_and_metric(
         plt.suptitle(suptitle, fontsize=14, y=0.99)
 
     if save_dir:
-        if folder is None:
+        if folder is None and event_type == 'coding_score':
             folder = 'coding_scores_and_kernels'
-        if suffix is not None and suffix != '':
-            suffix = '_' + suffix
+        elif folder is None:
+            folder = 'response_metrics'
         filename = 'metric_heatmap_grid_' + groupby_col + suffix
-        utils.save_figure(fig, figsize, save_dir, folder, filename)
+        utils.save_figure(fig, figsize, save_dir, folder, _clean_filename(filename))
         try:
             # legacy ANOVA stats were saved with the _ttest.csv suffix; keep that
             # name for backward compat when use_mlm=False, use _anova_mlm.csv for the
             # new hierarchical path (consistent across all 4 heatmap functions).
             stats_suffix = '_anova_mlm.csv' if use_mlm else '_ttest.csv'
-            stats_table.to_csv(os.path.join(save_dir, folder, filename + stats_suffix), index=False)
+            stats_table.to_csv(os.path.join(save_dir, folder, _clean_filename(filename + stats_suffix)), index=False)
         except BaseException:
             print('STATS TABLE DID NOT SAVE')
     return heat_axes, stats_table
@@ -4292,6 +4347,7 @@ def plot_metric_heatmap_area_and_depth_by_cell_type(
         switch to 'std' the stars still ask "do group means differ?" — ignore them if that's
         not the question you want to answer.
     """
+    suffix = _norm_suffix(suffix)
     from matplotlib.colors import LinearSegmentedColormap
     from matplotlib import gridspec
     from matplotlib.transforms import blended_transform_factory
@@ -4332,7 +4388,7 @@ def plot_metric_heatmap_area_and_depth_by_cell_type(
     cell_n = {}
     col_stars = {}
     row_stars = {}
-    stats_rows = []
+    pairwise_tables = []
     for g, (gcol, _) in enumerate(groupings):
         group_order = group_orders[g]
         for i, cell_type in enumerate(cell_types):
@@ -4361,15 +4417,13 @@ def plot_metric_heatmap_area_and_depth_by_cell_type(
                 col_subset = ct_data[ct_data[exp_col] == exp].dropna(subset=[metric, gcol])
                 panel_stats = compute_stats(col_subset, metric, column_to_compare=gcol,
                                             use_mlm=use_mlm, group_column=group_column,
-                                            event_type=event_type)
-                p, mt, icc_val, n_obs, n_grp = _heatmap_omnibus_fields(panel_stats)
-                col_stars[(g, i, c)] = tier_stars(p)
-                stats_rows.append({'cell_type': cell_type, 'metric': metric, 'grouping': gcol,
-                                   'direction': 'across_groups_within_exp',
-                                   exp_col: exp, gcol: None,
-                                   'anova_p': p, 'stars': col_stars[(g, i, c)],
-                                   'model_type': mt, 'icc': icc_val,
-                                   'n_observations': n_obs, 'n_groups': n_grp})
+                                            event_type=event_type, cell_type=cell_type)
+                col_stars[(g, i, c)] = tier_stars(_heatmap_omnibus_p(panel_stats))
+                panel_stats = insert_stats_metadata(panel_stats, grouping=gcol,
+                                                   direction='across_groups_within_exp',
+                                                   held_fixed_col=exp_col,
+                                                   held_fixed_value=exp)
+                pairwise_tables.append(panel_stats)
 
             # row-direction: within each grouping bin, hierarchical test (MLM by default)
             # across experience levels (e.g., "do experience levels differ at this depth?")
@@ -4377,16 +4431,15 @@ def plot_metric_heatmap_area_and_depth_by_cell_type(
                 row_subset = ct_data[ct_data[gcol] == d].dropna(subset=[metric, exp_col])
                 panel_stats = compute_stats(row_subset, metric, column_to_compare=exp_col,
                                             use_mlm=use_mlm, group_column=group_column,
-                                            event_type=event_type)
-                p, mt, icc_val, n_obs, n_grp = _heatmap_omnibus_fields(panel_stats)
-                row_stars[(g, i, r)] = tier_stars(p)
-                stats_rows.append({'cell_type': cell_type, 'metric': metric, 'grouping': gcol,
-                                   'direction': 'across_exp_within_group',
-                                   exp_col: None, gcol: d,
-                                   'anova_p': p, 'stars': row_stars[(g, i, r)],
-                                   'model_type': mt, 'icc': icc_val,
-                                   'n_observations': n_obs, 'n_groups': n_grp})
-    stats_table = pd.DataFrame(stats_rows)
+                                            event_type=event_type, cell_type=cell_type)
+                row_stars[(g, i, r)] = tier_stars(_heatmap_omnibus_p(panel_stats))
+                panel_stats = insert_stats_metadata(panel_stats, grouping=gcol,
+                                                   direction='across_exp_within_group',
+                                                   held_fixed_col=gcol,
+                                                   held_fixed_value=d)
+                pairwise_tables.append(panel_stats)
+    stats_table = (pd.concat(pairwise_tables, ignore_index=True)
+                   if pairwise_tables else pd.DataFrame())
 
     # shared vmax across area + depth panels
     if vmax is None:
@@ -4548,15 +4601,13 @@ def plot_metric_heatmap_area_and_depth_by_cell_type(
     if save_dir:
         if folder is None:
             folder = 'response_metrics'
-        if suffix is not None and suffix != '':
-            suffix = '_' + suffix
-        filename = 'metric_heatmap_area_and_depth_' + metric + '_' + aggregate + suffix
-        utils.save_figure(fig, figsize, save_dir, folder, filename)
+        filename = _clean_filename('metric_heatmap_area_and_depth_' + metric + '_' + aggregate + suffix)
+        utils.save_figure(fig, figsize, save_dir, folder, _clean_filename(filename))
         try:
             stats_suffix = '_anova_mlm.csv' if use_mlm else '_anova.csv'
             # if suffix is None | suffix == '':
             #     stats_suffix = '_' + stats_suffix
-            stats_table.to_csv(os.path.join(save_dir, folder, filename + stats_suffix), index=False)
+            stats_table.to_csv(os.path.join(save_dir, folder, _clean_filename(filename + stats_suffix)), index=False)
         except BaseException:
             print('STATS TABLE DID NOT SAVE')
 
@@ -4584,6 +4635,7 @@ def plot_bidirectional_metric_heatmap_area_and_depth_by_cell_type(
 
     See plot_metric_heatmap_area_and_depth_by_cell_type for everything else.
     """
+    suffix = _norm_suffix(suffix)
     from matplotlib.colors import TwoSlopeNorm
     from matplotlib import gridspec
     from matplotlib.transforms import blended_transform_factory
@@ -4618,7 +4670,7 @@ def plot_bidirectional_metric_heatmap_area_and_depth_by_cell_type(
     cell_n = {}
     col_stars = {}
     row_stars = {}
-    stats_rows = []
+    pairwise_tables = []
     for g, (gcol, _) in enumerate(groupings):
         group_order = group_orders[g]
         for i, cell_type in enumerate(cell_types):
@@ -4641,30 +4693,27 @@ def plot_bidirectional_metric_heatmap_area_and_depth_by_cell_type(
                 col_subset = ct_data[ct_data[exp_col] == exp].dropna(subset=[metric, gcol])
                 panel_stats = compute_stats(col_subset, metric, column_to_compare=gcol,
                                             use_mlm=use_mlm, group_column=group_column,
-                                            event_type=event_type)
-                p, mt, icc_val, n_obs, n_grp = _heatmap_omnibus_fields(panel_stats)
-                col_stars[(g, i, c)] = tier_stars(p)
-                stats_rows.append({'cell_type': cell_type, 'metric': metric, 'grouping': gcol,
-                                   'direction': 'across_groups_within_exp',
-                                   exp_col: exp, gcol: None,
-                                   'anova_p': p, 'stars': col_stars[(g, i, c)],
-                                   'model_type': mt, 'icc': icc_val,
-                                   'n_observations': n_obs, 'n_groups': n_grp})
+                                            event_type=event_type, cell_type=cell_type)
+                col_stars[(g, i, c)] = tier_stars(_heatmap_omnibus_p(panel_stats))
+                panel_stats = insert_stats_metadata(panel_stats, grouping=gcol,
+                                                   direction='across_groups_within_exp',
+                                                   held_fixed_col=exp_col,
+                                                   held_fixed_value=exp)
+                pairwise_tables.append(panel_stats)
 
             for r, d in enumerate(group_order):
                 row_subset = ct_data[ct_data[gcol] == d].dropna(subset=[metric, exp_col])
                 panel_stats = compute_stats(row_subset, metric, column_to_compare=exp_col,
                                             use_mlm=use_mlm, group_column=group_column,
-                                            event_type=event_type)
-                p, mt, icc_val, n_obs, n_grp = _heatmap_omnibus_fields(panel_stats)
-                row_stars[(g, i, r)] = tier_stars(p)
-                stats_rows.append({'cell_type': cell_type, 'metric': metric, 'grouping': gcol,
-                                   'direction': 'across_exp_within_group',
-                                   exp_col: None, gcol: d,
-                                   'anova_p': p, 'stars': row_stars[(g, i, r)],
-                                   'model_type': mt, 'icc': icc_val,
-                                   'n_observations': n_obs, 'n_groups': n_grp})
-    stats_table = pd.DataFrame(stats_rows)
+                                            event_type=event_type, cell_type=cell_type)
+                row_stars[(g, i, r)] = tier_stars(_heatmap_omnibus_p(panel_stats))
+                panel_stats = insert_stats_metadata(panel_stats, grouping=gcol,
+                                                   direction='across_exp_within_group',
+                                                   held_fixed_col=gcol,
+                                                   held_fixed_value=d)
+                pairwise_tables.append(panel_stats)
+    stats_table = (pd.concat(pairwise_tables, ignore_index=True)
+                   if pairwise_tables else pd.DataFrame())
 
     # symmetric vmax across all panels (so 0 stays the diverging-cmap center)
     if vmax is None:
@@ -4809,13 +4858,11 @@ def plot_bidirectional_metric_heatmap_area_and_depth_by_cell_type(
     if save_dir:
         if folder is None:
             folder = 'response_metrics'
-        if suffix is not None and suffix != '':
-            suffix = '_' + suffix
-        filename = 'bidirectional_metric_heatmap_area_and_depth_' + metric + suffix
-        utils.save_figure(fig, figsize, save_dir, folder, filename)
+        filename = _clean_filename('bidirectional_metric_heatmap_area_and_depth_' + metric + suffix)
+        utils.save_figure(fig, figsize, save_dir, folder, _clean_filename(filename))
         try:
             stats_suffix = '_anova_mlm.csv' if use_mlm else '_anova.csv'
-            stats_table.to_csv(os.path.join(save_dir, folder, filename + stats_suffix), index=False)
+            stats_table.to_csv(os.path.join(save_dir, folder, _clean_filename(filename + stats_suffix)), index=False)
         except BaseException:
             print('STATS TABLE DID NOT SAVE')
 
@@ -4855,6 +4902,7 @@ def plot_experience_modulation_heatmap_area_and_depth_by_cell_type(
     vmax: symmetric color limit. Defaults to max(|value|) across all panels, clipped to 1.0
         (modulation indices are bounded -1..1).
     """
+    suffix = _norm_suffix(suffix)
     import visual_behavior.ophys.response_analysis.cell_metrics as cm
     from matplotlib.colors import LinearSegmentedColormap, TwoSlopeNorm
     from matplotlib import gridspec
@@ -4904,13 +4952,13 @@ def plot_experience_modulation_heatmap_area_and_depth_by_cell_type(
     nrows_per_grouping = [len(go) for go in group_orders]
     total_heatmap_rows = sum(nrows_per_grouping)
 
-    # compute matrices, n, panel absmax, and ANOVA-based stars
+    # compute matrices, n, panel absmax, and per-cell omnibus stars
     mats = {}
     panel_absmax = {}
     cell_n = {}
     col_stars = {}
     row_stars = {}
-    stats_rows = []
+    pairwise_tables = []
     for g, (gcol, _) in enumerate(groupings):
         group_order = group_orders[g]
         for i, cell_type in enumerate(cell_types):
@@ -4935,14 +4983,16 @@ def plot_experience_modulation_heatmap_area_and_depth_by_cell_type(
                 col_subset = col_subset.rename(columns={comp: 'value'})
                 panel_stats = compute_stats(col_subset, 'value', column_to_compare=gcol,
                                             use_mlm=use_mlm, group_column=group_column,
-                                            event_type=event_type)
-                p, mt, icc_val, n_obs, n_grp = _heatmap_omnibus_fields(panel_stats)
-                col_stars[(g, i, c)] = tier_stars(p)
-                stats_rows.append({'cell_type': cell_type, 'comparison': comp, 'grouping': gcol,
-                                   'direction': 'across_groups_within_comparison',
-                                   gcol: None, 'anova_p': p, 'stars': col_stars[(g, i, c)],
-                                   'model_type': mt, 'icc': icc_val,
-                                   'n_observations': n_obs, 'n_groups': n_grp})
+                                            event_type=event_type, cell_type=cell_type)
+                col_stars[(g, i, c)] = tier_stars(_heatmap_omnibus_p(panel_stats))
+                # The held-fixed dimension here is the modulation-index comparison
+                # name (e.g., 'F N') -- semantically distinct from column_to_compare
+                # which is the grouping (binned_depth/targeted_structure).
+                panel_stats = insert_stats_metadata(panel_stats, grouping=gcol,
+                                                   direction='across_groups_within_comparison',
+                                                   held_fixed_col='comparison',
+                                                   held_fixed_value=comp)
+                pairwise_tables.append(panel_stats)
 
             # row stars: within each grouping bin, hierarchical test (MLM by default)
             # across the 3 comparison values. Same caveat: melt strips mouse_id, so
@@ -4953,15 +5003,15 @@ def plot_experience_modulation_heatmap_area_and_depth_by_cell_type(
                                            value_vars=value_vars).dropna(subset=['value'])
                 panel_stats = compute_stats(row_long, 'value', column_to_compare='comparison',
                                             use_mlm=use_mlm, group_column=group_column,
-                                            event_type=event_type)
-                p, mt, icc_val, n_obs, n_grp = _heatmap_omnibus_fields(panel_stats)
-                row_stars[(g, i, r)] = tier_stars(p)
-                stats_rows.append({'cell_type': cell_type, 'comparison': None, 'grouping': gcol,
-                                   'direction': 'across_comparisons_within_group',
-                                   gcol: d, 'anova_p': p, 'stars': row_stars[(g, i, r)],
-                                   'model_type': mt, 'icc': icc_val,
-                                   'n_observations': n_obs, 'n_groups': n_grp})
-    stats_table = pd.DataFrame(stats_rows)
+                                            event_type=event_type, cell_type=cell_type)
+                row_stars[(g, i, r)] = tier_stars(_heatmap_omnibus_p(panel_stats))
+                panel_stats = insert_stats_metadata(panel_stats, grouping=gcol,
+                                                   direction='across_comparisons_within_group',
+                                                   held_fixed_col=gcol,
+                                                   held_fixed_value=d)
+                pairwise_tables.append(panel_stats)
+    stats_table = (pd.concat(pairwise_tables, ignore_index=True)
+                   if pairwise_tables else pd.DataFrame())
 
     # symmetric shared vmax (clip to 1 since modulation indices are bounded -1..1)
     if vmax is None:
@@ -5136,14 +5186,12 @@ def plot_experience_modulation_heatmap_area_and_depth_by_cell_type(
     if save_dir:
         if folder is None:
             folder = 'response_metrics'
-        if suffix is not None and suffix != '':
-            suffix = '_' + suffix
-        filename = ('experience_modulation_heatmap_area_and_depth_by_cell_type_'
-                    + event_type + suffix)
-        utils.save_figure(fig, figsize, save_dir, folder, filename)
+        filename = _clean_filename(('experience_modulation_heatmap_area_and_depth_by_cell_type_'
+                    + event_type + suffix))
+        utils.save_figure(fig, figsize, save_dir, folder, _clean_filename(filename))
         try:
             stats_suffix = '_anova_mlm.csv' if use_mlm else '_anova.csv'
-            stats_table.to_csv(os.path.join(save_dir, folder, filename + stats_suffix),
+            stats_table.to_csv(os.path.join(save_dir, folder, _clean_filename(filename + stats_suffix)),
                                index=False)
         except BaseException:
             print('STATS TABLE DID NOT SAVE')
@@ -5214,8 +5262,8 @@ def plot_correlation_of_behavior_and_cell_metrics(behavior_metrics, cell_metrics
     plt.subplots_adjust(wspace=0.4)
 
     if save_dir:
-        filename = 'correlation_' + cell_metric + '_' + behavior_metric
-        utils.save_figure(fig, figsize, save_dir, folder, filename)
+        filename = _clean_filename('correlation_' + cell_metric + '_' + behavior_metric)
+        utils.save_figure(fig, figsize, save_dir, folder, _clean_filename(filename))
 
 
 def get_metric_index_name(metric, exp_level_1='Familiar', exp_level_2='Novel'):
@@ -5370,10 +5418,133 @@ def plot_correlation_of_behavior_and_cell_metrics_delta(
     plt.subplots_adjust(wspace=0.2)
 
     if save_dir:
-        filename = 'difference_' + cell_metric + '_' + behavior_metric
-        utils.save_figure(fig, figsize, save_dir, folder, filename)
+        filename = _clean_filename('difference_' + cell_metric + '_' + behavior_metric)
+        utils.save_figure(fig, figsize, save_dir, folder, _clean_filename(filename))
 
-# heatmaps ##########################
+
+
+def plot_modulation_index_correlation(data, x_col, y_col, xlabel, ylabel,
+                            ax=None, save_dir=None, folder=None, filename=None):
+    """
+    Plots the correlation between two modulation indices (e.g., experience modulation index and change modulation index)
+    for each cell type, including a linear best-fit line and Pearson correlation coefficient.
+
+    Parameters:
+    - data: DataFrame containing the modulation indices and cell types.
+    - x_col: Column name for the x-axis modulation index.
+    - y_col: Column name for the y-axis modulation index.
+    - ax: Matplotlib axis to plot on (optional).
+    - save_dir: Directory to save the figure (optional).
+    - folder: Subfolder within save_dir to save the figure (optional).
+    - filename: Name of the file to save the figure (optional).
+    """
+
+    import numpy as np
+    from scipy.stats import pearsonr
+
+    if ax is None: 
+        figsize = (2, 8)
+        fig, ax = plt.subplots(3, 1, figsize=figsize, sharex=True, sharey=True)
+
+    cell_types = utils.get_cell_types()
+    for i, cell_type in enumerate(cell_types):
+        cell_type_data = data[data.cell_type == cell_type]
+        plot_data = cell_type_data[[x_col, y_col]].dropna()
+
+        ax[i] = sns.kdeplot(data=plot_data, x=x_col, y=y_col, ax=ax[i])
+
+        # Add linear best-fit line and Pearson correlation for the plotted x/y values.
+        if len(plot_data) >= 2:
+            x = plot_data[x_col].to_numpy()
+            y = plot_data[y_col].to_numpy()
+
+            if np.std(x) > 0 and np.std(y) > 0:
+                r, p = pearsonr(x, y)
+                slope, intercept = np.polyfit(x, y, 1)
+                x_fit = np.array([x.min(), x.max()])
+                y_fit = slope * x_fit + intercept
+                p_str = f"{p:.2e}" if p < 1e-3 else f"{p:.3f}"
+                ax[i].plot(x_fit, y_fit, color='black', linestyle='--', linewidth=1.5)
+                ax[i].set_title(f"{cell_type}\n(r={r:.2f}, p={p_str})")
+            else:
+                ax[i].set_title(f"{cell_type}\n(r=nan, p=nan)")
+        else:
+            ax[i].set_title(f"{cell_type}\n(r=nan, p=nan)")
+
+        ax[i].set_ylabel('')
+
+    ax[2].set_xlabel(xlabel)
+    ax[1].set_ylabel(ylabel)
+
+    plt.subplots_adjust(hspace=0.4)
+    if save_dir and folder:
+        filename = _clean_filename(filename or f"{y_col}_vs_{x_col}_correlation")
+        utils.save_figure(fig, figsize, save_dir, folder, _clean_filename(filename))
+
+
+def plot_metric_across_exposures(metrics_table, metric, ylabel, plot_type='barplot', 
+                               x_val='experience_level', x_vals=None, palette=None, 
+                               suptitle=None, save_dir=None, folder=None, ax=None):
+    '''
+    Plot metric distributions across cre lines, with a unique axis for each cohort / project code, 
+    experience levels as colors, and x-axis defined by x_val (such as 'binned_depth' or 'targeted_structure').
+    Will plot stats across exp levels as an asterisk above that x value
+    '''
+    
+    mdf = metrics_table.copy()
+    cell_types = utils.get_cell_types()
+
+    # x_val='experience_level'
+    if x_vals == None: 
+        x_vals = np.sort(df['x_val'].unique())
+    if palette == None: 
+        palette = sns.color_palette()
+
+    i = 0 
+    if ax is None:
+        figsize=(len(x_vals)*1.35, 2)
+        fig, ax = plt.subplots(1, 3, figsize=figsize)
+
+    for c, cell_type in enumerate(cell_types): 
+        data = mdf[mdf.cell_type==cell_type]
+
+        if plot_type == 'pointplot': 
+            ax[i] = sns.pointplot(data=data, x=x_val, y=metric, order=x_vals, hue=x_val, legend=False,
+                                        palette=palette, hue_order=x_vals, dodge=0.3, linestyle='none',
+                                        markers='.', markersize=8, err_kws={'linewidth': 2}, errorbar=('ci', 95), ax=ax[i])
+        elif plot_type == 'barplot': 
+            ax[i] = sns.barplot(data=data, x=x_val, y=metric, order=x_vals, hue=x_val, legend=False,
+                                        palette=palette, hue_order=x_vals, width=0.5, alpha=0.75, 
+                                        err_kws={'linewidth': 2}, errorbar=('ci', 95), ax=ax[i])
+        elif plot_type == 'boxplot': 
+            ax[i] = sns.boxplot(data=data, x=x_val, y=metric, order=x_vals, hue=x_val, legend=False,
+                                        palette=palette, hue_order=x_vals, width=0.5, fliersize=0, ax=ax[i])
+            plt.setp(ax[i].collections, alpha=0.75)
+        
+        ax[i].set_ylabel('')
+        ax[i].set_xlabel('')
+        ax[i].set_xticks(np.arange(len(x_vals)))
+        ax[i].set_xticklabels(x_vals, rotation=90)
+        # ax[i].get_legend().remove()
+        ax[i].set_title(cell_type)
+        # ax[i], stats_table = ppf.add_stats_to_plot(data, metric, ax[i])
+        # ax[i], stats_table = ppf.add_stats_to_plot_for_hues(data, metric, ax[i],
+        #                                                 xorder=x_vals, x=x_val, hue='experience_level')
+        # , ymax=None, show_ns=False)
+        i+=1
+    ax[0].set_ylabel(ylabel)
+
+    plt.subplots_adjust(wspace=0.4, hspace=0.5)
+    if suptitle: 
+        plt.suptitle(suptitle, x=0.5, y=1.15, fontsize=18)
+
+    if save_dir: 
+        filename = _clean_filename(metric+'_by_exp_novel_control')
+        utils.save_figure(fig, figsize, save_dir, folder, _clean_filename(filename))
+    return ax
+
+
+######### heatmaps ##########################
 
 
 def plot_cell_response_heatmap(data, timestamps, xlabel='time after change (s)', vmax=0.05,
@@ -5443,6 +5614,7 @@ def plot_response_heatmaps_for_conditions(multi_session_df, timestamps, data_typ
                                           microscope=None, vmax=None, xlim_seconds=None, xlabel='time (s)',
                                           match_cells=False, cbar=True, cbar_label='Avg. calcium events',
                                           save_dir=None, folder=None, suffix='', ax=None):
+    suffix = _norm_suffix(suffix)
     sdf = multi_session_df.copy()
 
     if xlim_seconds is None:
@@ -5567,8 +5739,8 @@ def plot_response_heatmaps_for_conditions(multi_session_df, timestamps, data_typ
     #     plt.suptitle(suptitle, x=0.52, y=1.0, fontsize=18)
 
     if save_dir:
-        fig_title = event_type + '_response_heatmap_' + data_type + '_' + col_condition + '_' + row_condition + suffix
-        utils.save_figure(fig, figsize, save_dir, folder, fig_title)
+        fig_title = _clean_filename(event_type + '_response_heatmap_' + data_type + '_' + col_condition + '_' + row_condition + suffix)
+        utils.save_figure(fig, figsize, save_dir, folder, _clean_filename(fig_title))
 
     return ax
 
@@ -5576,6 +5748,7 @@ def plot_tuning_curve_heatmaps_for_conditions(multi_session_df, data_type,
                                           row_condition, col_condition, vmax=None, 
                                           cbar=True, cbar_label='Mean response', title='',
                                           save_dir=None, folder=None, suffix='', ax=None):
+    suffix = _norm_suffix(suffix)
     sdf = multi_session_df.copy()
 
     row_conditions = np.sort(sdf[row_condition].unique())
@@ -5642,9 +5815,7 @@ def plot_tuning_curve_heatmaps_for_conditions(multi_session_df, data_type,
     fig.subplots_adjust(hspace=0.4, wspace=0.4)
     
     if save_dir:
-        if suffix:
-            suffix = '_'+suffix
-        utils.save_figure(fig, figsize, save_dir, folder, 'tuning_curve_heatmaps_across_experience_'+data_type+suffix)
+        utils.save_figure(fig, figsize, save_dir, folder, _clean_filename('tuning_curve_heatmaps_across_experience_'+data_type+suffix))
 
     return ax
 
@@ -5652,6 +5823,7 @@ def plot_tuning_curve_heatmaps_for_conditions(multi_session_df, data_type,
 def plot_population_tuning_curve_for_conditions(multi_session_df, data_type, 
                                           row_condition, col_condition, ylabel='Normalized response',
                                           save_dir=None, folder=None, suffix='', ax=None):
+    suffix = _norm_suffix(suffix)
     sdf = multi_session_df.copy()
 
     row_conditions = np.sort(sdf[row_condition].unique())
@@ -5735,9 +5907,7 @@ def plot_population_tuning_curve_for_conditions(multi_session_df, data_type,
     fig.subplots_adjust(hspace=0.4, wspace=0.4)
     
     if save_dir:
-        if suffix:
-            suffix = '_'+suffix
-        utils.save_figure(fig, figsize, save_dir, folder, 'population_tuning_curves_'+data_type+suffix)
+        utils.save_figure(fig, figsize, save_dir, folder, _clean_filename('population_tuning_curves_'+data_type+suffix))
 
     return ax
 
@@ -5941,7 +6111,7 @@ def plot_behavior_timeseries(dataset, start_time, duration_seconds=20, xlim_seco
     #                 labelbottom=True, labeltop=False, labelright=True, labelleft=True)
     if save_dir:
         folder = 'behavior_timeseries'
-        utils.save_figure(fig, figsize, save_dir, folder, metadata_string + '_' + str(int(start_time)))
+        utils.save_figure(fig, figsize, save_dir, folder, _clean_filename(metadata_string + '_' + str(int(start_time))))
     return ax
 
 
@@ -6076,7 +6246,7 @@ def plot_behavior_timeseries_stacked(dataset, start_time, fontsize=12,
 
         plt.subplots_adjust(hspace=0)
         folder = 'behavior_timeseries_stacked'
-        utils.save_figure(fig, figsize, save_dir, folder, metadata_string + '_' + str(int(start_time)) + '_' + suffix)
+        utils.save_figure(fig, figsize, save_dir, folder, _clean_filename(metadata_string + '_' + str(int(start_time)) + '_' + suffix))
     return ax
 
 
@@ -6215,7 +6385,8 @@ def plot_behavior_and_physio_timeseries_stacked(dataset, start_time, duration_se
     if save_dir:
         print('saving')
         folder = 'behavior_physio_timeseries_stacked'
-        utils.save_figure(fig, figsize, save_dir, folder, metadata_string + '_' + str(int(start_time)) + '_' + suffix,
+        utils.save_figure(fig, figsize, save_dir, folder,
+                          _clean_filename(metadata_string + '_' + str(int(start_time)) + '_' + suffix),
                           formats=['.png', '.pdf'])
     return ax
 
@@ -6309,7 +6480,7 @@ def plot_matched_roi_and_trace(ophys_container_id, cell_specimen_id, limit_to_la
     if save_figure:
         save_dir = r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/platform_paper_plots/cell_matching'
         metadata_string = utils.get_metadata_string(dataset.metadata)
-        utils.save_figure(fig, figsize, save_dir, folder, str(cell_specimen_id) + '_' + metadata_string + '_' + data_type)
+        utils.save_figure(fig, figsize, save_dir, folder, _clean_filename(str(cell_specimen_id) + '_' + metadata_string + '_' + data_type))
         plt.close()
 
 
@@ -6425,7 +6596,7 @@ def plot_matched_roi_and_traces_example(cell_metadata, include_omissions=True,
             print(e)
     if save_dir:
         utils.save_figure(fig, figsize, save_dir, folder,
-                          str(cell_specimen_id) + '_' + metadata_string + '_' + suffix)
+                          _clean_filename(str(cell_specimen_id) + '_' + metadata_string + '_' + suffix))
         plt.close()
 
 
@@ -6451,6 +6622,7 @@ def plot_behavior_metric_by_experience(stats, metric, title='', ylabel='', ylims
     if show_ns = True, indicates whether results are non-significant on plot. otherwise only puts asterisk for significant results
     returns axis handle
     """
+    suffix = _norm_suffix(suffix)
     # experience_levels = utils.get_new_experience_levels()
     # new_experience_levels = utils.get_new_experience_levels()
     # colors = utils.get_experience_level_colors()
@@ -6543,17 +6715,17 @@ def plot_behavior_metric_by_experience(stats, metric, title='', ylabel='', ylims
     plt.subplots_adjust(top=0.96)
     plt.subplots_adjust(hspace=0.3)
     if save_dir:
-        utils.save_figure(fig, figsize, save_dir, folder, metric + suffix)
-    stats_filename = metric + '_stats' + suffix
+        utils.save_figure(fig, figsize, save_dir, folder, _clean_filename(metric + suffix))
+    stats_filename = _clean_filename(metric + '_stats' + suffix)
     try:
         if plot_stats:
             print('saving_stats')
             stats_suffix = '_mlm.csv' if use_mlm else '_tukey.csv'
-            stats_table.to_csv(os.path.join(save_dir, folder, stats_filename + stats_suffix))
+            stats_table.to_csv(os.path.join(save_dir, folder, _clean_filename(stats_filename + stats_suffix)))
         # save metric values
         cols_to_groupby = ['experience_level']
         descriptive_stats = get_descriptive_stats_for_metric(data, metric, cols_to_groupby)
-        descriptive_stats.to_csv(os.path.join(save_dir, folder, stats_filename + '_values.csv'))
+        descriptive_stats.to_csv(os.path.join(save_dir, folder, _clean_filename(stats_filename + '_values.csv')))
     except BaseException:
         print('stats did not save for', metric)
     return ax
@@ -6578,6 +6750,7 @@ def plot_behavior_metric_by_experience_horiz(stats, metric, title='', xlabel='',
     if show_ns = True, indicates whether results are non-significant on plot. otherwise only puts asterisk for significant results
     returns axis handle
     """
+    suffix = _norm_suffix(suffix)
     # experience_levels = utils.get_new_experience_levels()
     # new_experience_levels = utils.get_new_experience_levels()
     # colors = utils.get_experience_level_colors()
@@ -6662,17 +6835,17 @@ def plot_behavior_metric_by_experience_horiz(stats, metric, title='', xlabel='',
     ax.set_xlim(xmin=xmin)
 
     if save_dir:
-        utils.save_figure(fig, figsize, save_dir, folder, metric + '_horiz' + suffix)
-    stats_filename = metric + '_stats' + suffix
+        utils.save_figure(fig, figsize, save_dir, folder, _clean_filename(metric + '_horiz' + suffix))
+    stats_filename = _clean_filename(metric + '_stats' + suffix)
     try:
         if plot_stats:
             print('saving_stats')
             stats_suffix = '_mlm.csv' if use_mlm else '_tukey.csv'
-            stats_table.to_csv(os.path.join(save_dir, folder, stats_filename + stats_suffix))
+            stats_table.to_csv(os.path.join(save_dir, folder, _clean_filename(stats_filename + stats_suffix)))
         # save metric values
         cols_to_groupby = ['experience_level']
         descriptive_stats = get_descriptive_stats_for_metric(data, metric, cols_to_groupby)
-        descriptive_stats.to_csv(os.path.join(save_dir, folder, stats_filename + '_values.csv'))
+        descriptive_stats.to_csv(os.path.join(save_dir, folder, _clean_filename(stats_filename + '_values.csv')))
     except BaseException:
         print('stats did not save for', metric)
     return ax
@@ -6698,6 +6871,7 @@ def plot_behavior_metric_by_cohort(stats, metric, title='', ylabel='', ylims=Non
     if show_ns = True, indicates whether results are non-significant on plot. otherwise only puts asterisk for significant results
     returns axis handle
     """
+    suffix = _norm_suffix(suffix)
     # experience_levels = utils.get_new_experience_levels()
     # new_experience_levels = utils.get_new_experience_levels()
     # colors = utils.get_experience_level_colors()
@@ -6771,17 +6945,17 @@ def plot_behavior_metric_by_cohort(stats, metric, title='', ylabel='', ylims=Non
     ax.set_ylim(ymin=ymin)
 
     if save_dir:
-        utils.save_figure(fig, figsize, save_dir, folder, metric + suffix)
-    stats_filename = metric + '_stats' + suffix
+        utils.save_figure(fig, figsize, save_dir, folder, _clean_filename(metric + suffix))
+    stats_filename = _clean_filename(metric + '_stats' + suffix)
     try:
         if plot_stats:
             print('saving_stats')
             stats_suffix = '_mlm.csv' if use_mlm else '_tukey.csv'
-            stats_table.to_csv(os.path.join(save_dir, folder, stats_filename + stats_suffix))
+            stats_table.to_csv(os.path.join(save_dir, folder, _clean_filename(stats_filename + stats_suffix)))
         # save metric values
         cols_to_groupby = ['project_code']
         descriptive_stats = get_descriptive_stats_for_metric(data, metric, cols_to_groupby)
-        descriptive_stats.to_csv(os.path.join(save_dir, folder, stats_filename + '_values.csv'))
+        descriptive_stats.to_csv(os.path.join(save_dir, folder, _clean_filename(stats_filename + '_values.csv')))
     except BaseException:
         print('stats did not save for', metric)
     return ax
@@ -6794,6 +6968,7 @@ def plot_behavior_metric_across_stages(data, metric, ylabel=None, save_dir=None,
     data: dataframe with one row for each behavior session and columns with metric values
     data must contain 'behavior_stages' column
     """
+    suffix = _norm_suffix(suffix)
     cell_types = utils.get_cell_types()
     if ylabel is None:
         ylabel = metric
@@ -6817,10 +6992,10 @@ def plot_behavior_metric_across_stages(data, metric, ylabel=None, save_dir=None,
 
     fig.subplots_adjust(hspace=0.3)
     if save_dir:
-        utils.save_figure(fig, figsize, save_dir, folder, 'metric_across_stages_' + metric + suffix)
+        utils.save_figure(fig, figsize, save_dir, folder, _clean_filename('metric_across_stages_' + metric + suffix))
         # save stats
         stats = data.groupby(['cell_type', 'behavior_stage']).describe()[[metric]]
-        stats.to_csv(os.path.join(save_dir, folder, 'metric_across_stages_' + metric + suffix + '_values.csv'))
+        stats.to_csv(os.path.join(save_dir, folder, _clean_filename('metric_across_stages_' + metric + suffix + '_values.csv')))
 
 
 def plot_days_in_stage(behavior_sessions, stage_column, save_dir=None, folder=None, suffix=None):
@@ -6832,6 +7007,7 @@ def plot_days_in_stage(behavior_sessions, stage_column, save_dir=None, folder=No
     to add 'behavior_stage' column to behavior_sessions, use add_behavior_stage_to_behavior_sessions(behavior_sessions)
 
     """
+    suffix = _norm_suffix(suffix)
 
     days_in_stage = \
         behavior_sessions.groupby(['mouse_id', stage_column]).count().rename(columns={'equipment_name': 'days_in_stage'})[
@@ -6871,10 +7047,10 @@ def plot_days_in_stage(behavior_sessions, stage_column, save_dir=None, folder=No
     fig.subplots_adjust(hspace=0.3)
     if save_dir:
         # save plot
-        utils.save_figure(fig, figsize, save_dir, folder, 'days_in_stage' + '_' + stage_column + suffix)
+        utils.save_figure(fig, figsize, save_dir, folder, _clean_filename('days_in_stage' + '_' + stage_column + suffix))
         # save stats
         days_in_stage_stats = data.groupby(['cell_type', stage_column]).describe()
-        days_in_stage_stats.to_csv(os.path.join(save_dir, folder, 'days_in_stage_stats.csv'))
+        days_in_stage_stats.to_csv(os.path.join(save_dir, folder, _clean_filename('days_in_stage_stats.csv')))
 
 
 def plot_prior_exposures_to_image_set_before_platform_ophys_sessions(platform_experiments, behavior_sessions, save_dir=None, folder=None, suffix='', ax=None):
@@ -6883,6 +7059,7 @@ def plot_prior_exposures_to_image_set_before_platform_ophys_sessions(platform_ex
     for the set of mice and sessions in platform_experiments
     Boxplot is distribution of number of prior exposures across mice
     """
+    suffix = _norm_suffix(suffix)
 
     # get the behavior sessions corresponding to the ophys sessions included in platform dataset
     paper_ophys_behavior_sessions = behavior_sessions.loc[platform_experiments.behavior_session_id.unique()]
@@ -6923,10 +7100,10 @@ def plot_prior_exposures_to_image_set_before_platform_ophys_sessions(platform_ex
 
     if save_dir:
         # save plot
-        utils.save_figure(fig, figsize, save_dir, folder, 'stimulus_exposures_before_platform_expts_boxplot' + suffix)
+        utils.save_figure(fig, figsize, save_dir, folder, _clean_filename('stimulus_exposures_before_platform_expts_boxplot' + suffix))
         # save stats
         stats = exposures.groupby(['experience_level']).describe()[['prior_exposures_to_image_set']]
-        stats.to_csv(os.path.join(save_dir, folder, 'stimulus_exposures_before_platform_expts_stats.csv'))
+        stats.to_csv(os.path.join(save_dir, folder, _clean_filename('stimulus_exposures_before_platform_expts_stats.csv')))
 
 
 def plot_prior_exposures_per_cell_type_for_novel_plus(platform_experiments, behavior_sessions, save_dir=None,
@@ -6936,6 +7113,7 @@ def plot_prior_exposures_per_cell_type_for_novel_plus(platform_experiments, beha
     Creates a boxplot showing the number of  prior exposures to novel image set for Novel + sessions included in the platform paper
     shows striplot of prior exposures across mice and pointplot of averages plus stats
     """
+    suffix = _norm_suffix(suffix)
 
     cell_types = utils.get_cell_types()
 
@@ -6991,13 +7169,13 @@ def plot_prior_exposures_per_cell_type_for_novel_plus(platform_experiments, beha
 
     if save_dir:
         # save plot
-        utils.save_figure(fig, figsize, save_dir, folder, 'stimulus_exposures_before_novel_plus' + suffix)
+        utils.save_figure(fig, figsize, save_dir, folder, _clean_filename('stimulus_exposures_before_novel_plus' + suffix))
         # save stats
         print('saving_stats')
         stats_suffix = '_mlm.csv' if use_mlm else '_tukey.csv'
-        stats_table.to_csv(os.path.join(save_dir, folder, 'stimulus_exposures_before_novel_plus' + stats_suffix))
+        stats_table.to_csv(os.path.join(save_dir, folder, _clean_filename('stimulus_exposures_before_novel_plus' + stats_suffix)))
         descriptive_stats = exposures.groupby(['cell_type', 'experience_level']).describe()[['prior_exposures_to_image_set']]
-        descriptive_stats.to_csv(os.path.join(save_dir, folder, 'stimulus_exposures_before_novel_plus_stats.csv'))
+        descriptive_stats.to_csv(os.path.join(save_dir, folder, _clean_filename('stimulus_exposures_before_novel_plus_stats.csv')))
 
 
 def plot_prior_exposures_to_image_set_before_platform_ophys_sessions_horiz(platform_experiments, behavior_sessions, save_dir=None, folder=None, suffix='', ax=None):
@@ -7006,6 +7184,7 @@ def plot_prior_exposures_to_image_set_before_platform_ophys_sessions_horiz(platf
     for the set of mice and sessions in platform_experiments
     Boxplot is distribution of number of prior exposures across mice
     """
+    suffix = _norm_suffix(suffix)
 
     # get the behavior sessions corresponding to the ophys sessions included in platform dataset
     paper_ophys_behavior_sessions = behavior_sessions.loc[platform_experiments.behavior_session_id.unique()]
@@ -7049,16 +7228,17 @@ def plot_prior_exposures_to_image_set_before_platform_ophys_sessions_horiz(platf
 
     if save_dir:
         # save plot
-        utils.save_figure(fig, figsize, save_dir, folder, 'stimulus_exposures_before_platform_expts_boxplot_horiz' + suffix)
+        utils.save_figure(fig, figsize, save_dir, folder, _clean_filename('stimulus_exposures_before_platform_expts_boxplot_horiz' + suffix))
         # save stats
         stats = exposures.groupby(['experience_level']).describe()[['prior_exposures_to_image_set']]
-        stats.to_csv(os.path.join(save_dir, folder, 'stimulus_exposures_before_platform_expts_stats.csv'))
+        stats.to_csv(os.path.join(save_dir, folder, _clean_filename('stimulus_exposures_before_platform_expts_stats.csv')))
 
 def plot_total_stimulus_exposures(behavior_sessions, save_dir=None, folder=None, suffix='', ax=None):
     """
     Creates a boxplot showing the number of sessions for each experience level (Familiar, Novel, Novel +)
     for the set of mice included in behavior_sessions
     """
+    suffix = _norm_suffix(suffix)
 
     # count number of sessions for each experience level
     exposures = behavior_sessions.groupby(['experience_level', 'mouse_id']).count()[
@@ -7102,10 +7282,10 @@ def plot_total_stimulus_exposures(behavior_sessions, save_dir=None, folder=None,
         ax.text(i + 0.1, y, text, fontsize=14, rotation='horizontal')
 
     if save_dir:
-        utils.save_figure(fig, figsize, save_dir, folder, 'total_stimulus_exposures_all_sessions_boxplot' + suffix)
+        utils.save_figure(fig, figsize, save_dir, folder, _clean_filename('total_stimulus_exposures_all_sessions_boxplot' + suffix))
         # save stats
         stats = exposures.groupby(['experience_level']).describe()[['n_sessions']]
-        stats.to_csv(os.path.join(save_dir, folder, 'total_stimulus_exposures_all_sessions_stats.csv'))
+        stats.to_csv(os.path.join(save_dir, folder, _clean_filename('total_stimulus_exposures_all_sessions_stats.csv')))
 
 
 def plot_stimulus_exposure_prior_to_imaging(behavior_sessions, column_to_group='behavior_stage',
@@ -7114,6 +7294,7 @@ def plot_stimulus_exposure_prior_to_imaging(behavior_sessions, column_to_group='
     Creates a boxplot showing the number of sessions for each experience level or session type
     prior to the start of 2P imaging, for the set of mice included in behavior_sessions
     """
+    suffix = _norm_suffix(suffix)
 
     data = behavior_sessions.copy()
     # limit to non-ophys sessions
@@ -7160,10 +7341,10 @@ def plot_stimulus_exposure_prior_to_imaging(behavior_sessions, column_to_group='
     ax.set_xticklabels([col_value.replace('_', ' ') for col_value in col_values], rotation=90)
 
     if save_dir:
-        utils.save_figure(fig, figsize, save_dir, folder, 'stimulus_exposure_prior_to_imaging_boxplot_'+ column_to_group + suffix)
+        utils.save_figure(fig, figsize, save_dir, folder, _clean_filename('stimulus_exposure_prior_to_imaging_boxplot_'+ column_to_group + suffix))
         # save stats
         stats = exposures.groupby(column_to_group).describe()[['n_sessions']]
-        stats.to_csv(os.path.join(save_dir, folder, 'stimulus_exposure_prior_to_imaging_stats_'+column_to_group+'.csv'))
+        stats.to_csv(os.path.join(save_dir, folder, _clean_filename('stimulus_exposure_prior_to_imaging_stats_'+column_to_group+'.csv')))
 
 def plot_training_history_for_mice(behavior_sessions, color_column='session_type', color_map=sns.color_palette(),
                                    group_by_cre_line=True, save_dir=None, folder=None, suffix='', ax=None):
@@ -7178,6 +7359,7 @@ def plot_training_history_for_mice(behavior_sessions, color_column='session_type
     color_column = 'stimulus_phase' : color_map = utils.get_stimulus_phase_color_map(as_rgb=True)
 
     """
+    suffix = _norm_suffix(suffix)
 
     if group_by_cre_line:
         # group by mice and count n_session per mouse to get the max n_sessions and list of mouse_ids to plot
@@ -7234,7 +7416,7 @@ def plot_training_history_for_mice(behavior_sessions, color_column='session_type
         ax.set_yticks((0, n_mouse_ids))
 
     if save_dir:
-        utils.save_figure(fig, figsize, save_dir, folder, 'training_history' + suffix)
+        utils.save_figure(fig, figsize, save_dir, folder, _clean_filename('training_history' + suffix))
     return ax
 
 
@@ -7255,6 +7437,7 @@ def plot_ophys_history_for_mice(behavior_sessions, color_column='ophys_stage', c
     label_rows_by_cre: Bool, whether or not to put little symbols on each row to indicate the cre line
     label_with_mouse_id: Bool, whether or not to include mouse IDs on y axis
     """
+    suffix = _norm_suffix(suffix)
     # group by mice and cre line and count n_session per mouse to get the max n_sessions and list of mouse_ids to plot
     if group_by_cre:
         n_sessions = \
@@ -7361,7 +7544,7 @@ def plot_ophys_history_for_mice(behavior_sessions, color_column='ophys_stage', c
             elif cre_line == 'Vip-IRES-Cre':  # circle
                 ax.text(-1, mouse, '\u25cf', fontsize=8, ha='center', va='center', color='black')
     if save_dir:
-        utils.save_figure(fig, figsize, save_dir, 'training_history', 'ophys_session_sequence' + suffix)
+        utils.save_figure(fig, figsize, save_dir, 'training_history', _clean_filename('ophys_session_sequence' + suffix))
 
     return ax
 
@@ -7420,7 +7603,7 @@ def plot_behavior_performance_for_one_mouse(behavior_stats, mouse_id, metric, me
         if os.path.exists(os.path.join(save_dir, folder)) == False:
             os.makedirs(os.path.join(save_dir, folder))
         utils.save_figure(fig, figsize, os.path.join(save_dir, folder), 'behavior_performance_over_time_'+method,
-                        metric+'_mouse_id_'+str(mouse_id)+'_'+hue)
+                        _clean_filename(metric+'_mouse_id_'+str(mouse_id)+'_'+hue))
     return ax
 
 
@@ -7433,6 +7616,7 @@ def plot_response_rate_trial_types(data, save_dir=None, suffix='', ax=None):
     data: dataframe of behavior statistics where every row is one behavior session and the columns are performance metrics
         should include column "response_probability"
     '''
+    suffix = _norm_suffix(suffix)
     trial_types = data.trial_type.unique()
     if ax is None:
         figsize = (2,3)
@@ -7447,7 +7631,7 @@ def plot_response_rate_trial_types(data, save_dir=None, suffix='', ax=None):
     ax.set_ylim(-0.01, 1)
 
     if save_dir:
-        utils.save_figure(fig, figsize, save_dir, 'response_rate', 'response_rate_trial_types' + suffix)
+        utils.save_figure(fig, figsize, save_dir, 'response_rate', _clean_filename('response_rate_trial_types' + suffix))
     return ax
 
 
@@ -7456,6 +7640,7 @@ def plot_lick_raster_for_trials(trials, title='', legend=False, save_dir=None, f
     # trials = dataset.trials
     # image_set = dataset.metadata.session_type.values[0][-1]
     # mouse_id = str(dataset.metadata.donor_id.values[0])
+    suffix = _norm_suffix(suffix)
     if ax is None:
         figsize = (4, 5)
         fig, ax = plt.subplots(figsize=figsize)
@@ -7504,7 +7689,7 @@ def plot_lick_raster_for_trials(trials, title='', legend=False, save_dir=None, f
         h[1].set_markersize(6)
     plt.subplots_adjust(left=0.3)
     if save_dir:
-        utils.save_figure(fig, figsize, save_dir, 'lick_rasters', filename+suffix)
+        utils.save_figure(fig, figsize, save_dir, 'lick_rasters', _clean_filename(filename+suffix))
     return ax
 
 
@@ -7587,7 +7772,7 @@ def plot_response_probability_heatmaps_for_cohorts(behavior_sessions, save_dir=N
 
     fig.tight_layout()
     if save_dir:
-        utils.save_figure(fig, figsize, save_dir, 'response_probability', 'response_probability_heatmaps_engaged_only')
+        utils.save_figure(fig, figsize, save_dir, 'response_probability', _clean_filename('response_probability_heatmaps_engaged_only'))
 
 ####### figure 4 plots ########
 
@@ -7675,5 +7860,371 @@ if __name__ == '__main__':
                                             axes_column, hue_column, palette,
                                             use_events=True, filter_events=True, xlim_seconds=xlim_seconds,
                                             horizontal=True, save_dir=None, folder=None)
+
+
+############### GLM coding score / feature fraction plots (figure 4) ###############
+
+
+def compute_feature_coding_fractions(results_pivoted, run_params, coding_thresh=0.1,
+                                     exclude_passive=True):
+    """
+    For each cre_line, compute the fraction of cells whose coding score for each
+    main feature ('all-images', 'omissions', 'behavioral', 'task') exceeds
+    `coding_thresh`, restricted to cells that 'code anything' (variance_explained_full
+    > run_params['dropout_threshold']).
+
+    Returns a long-form dataframe with columns:
+        cre_line, cell_type, feature, fraction, percent, <feature>_ci
+    where feature labels are: images, omissions, behavior, task.
+    """
+    df = results_pivoted.copy()
+    if exclude_passive and 'passive' in df.columns:
+        df = df.query('not passive').copy()
+
+    df['code_anything'] = df['variance_explained_full'] > run_params['dropout_threshold']
+    df['code_images'] = df['code_anything'] & (df['all-images'] > coding_thresh)
+    df['code_omissions'] = df['code_anything'] & (df['omissions'] > coding_thresh)
+    df['code_behavioral'] = df['code_anything'] & (df['behavioral'] > coding_thresh)
+    df['code_task'] = df['code_anything'] & (df['task'] > coding_thresh)
+
+    code_cols = ['code_anything', 'code_images', 'code_omissions', 'code_behavioral', 'code_task']
+    summary_df = df.groupby(['cre_line'])[code_cols].mean()
+    summary_df['n'] = df.groupby(['cre_line'])[code_cols].count()['code_anything']
+    for feat in ['images', 'omissions', 'behavioral', 'task']:
+        p = summary_df['code_' + feat]
+        summary_df['code_' + feat + '_ci'] = 1.96 * np.sqrt((p * (1 - p)) / summary_df['n'])
+
+    fractions = summary_df.drop(columns=['code_anything', 'n']).copy()
+    fractions.columns = [c.split('_')[1] if 'ci' not in c else c.split('_')[1] + '_' + c.split('_')[2]
+                         for c in fractions.columns]
+    fractions = fractions.rename(columns={'behavioral': 'behavior',
+                                          'behavioral_ci': 'behavior_ci'})
+    fractions = fractions.reset_index()
+    fractions = fractions.melt(id_vars=['cre_line'], var_name='feature', value_name='fraction')
+    fractions['cell_type'] = [utils.convert_cre_line_to_cell_type(c) for c in fractions.cre_line.values]
+    fractions['percent'] = fractions['fraction'] * 100
+    return fractions
+
+
+def plot_percent_cells_coding_for_features(fractions, save_dir=None, folder='coding_properties',
+                                           filename='percent_cells_coding_feature', suffix=''):
+    """
+    Bar plot of the percent of cells coding for each feature, one panel per cell type.
+
+    Expects the long-form `fractions` dataframe produced by
+    `compute_feature_coding_fractions`.
+    """
+    from visual_behavior.dimensionality_reduction.clustering import plotting
+    from visual_behavior.dimensionality_reduction.clustering import processing as processing
+
+    cell_types = utils.get_cell_types()
+    features = processing.get_feature_labels_for_clustering()
+    feature_colors, _ = plotting.get_feature_colors_and_labels()
+
+    figsize = (8, 2.5)
+    fig, ax = plt.subplots(1, len(cell_types), figsize=figsize, sharey=True, sharex=True)
+    ax = ax.ravel()
+
+    for i, cell_type in enumerate(cell_types):
+        ct_data = fractions[fractions.cell_type == cell_type]
+        ax[i] = sns.barplot(data=ct_data, x='feature', y='percent', order=features,
+                            palette=feature_colors, width=0.8, alpha=0.75, ax=ax[i])
+        ax[i].set_xlabel('')
+        ax[i].set_ylabel('')
+        ax[i].set_ylim(0, 100)
+        if i == 0:
+            ax[i].set_ylabel('Percent of cells\ncoding for feature')
+        ax[i].set_title(cell_type)
+
+        for x, feature in enumerate(features):
+            pct = ct_data[ct_data['feature'] == feature].percent.values[0]
+            ax[i].text(s=str(np.round(pct, 1)), y=pct, x=x, rotation=0, fontsize=10,
+                       color='k', va='bottom', ha='center')
+
+        ax[i].set_xticklabels(features, rotation=45, ha='right', fontsize=14)
+        [t.set_color(c) for (c, t) in zip(feature_colors[:len(features)], ax[i].xaxis.get_ticklabels())]
+
+    fig.subplots_adjust(hspace=0.3, wspace=0.3)
+    if save_dir:
+        utils.save_figure(fig, figsize, save_dir, folder, filename + suffix)
+    return fig, ax
+
+
+def compute_maximally_contributing_feature(results_pivoted, cells_table):
+    """
+    For each cell (averaged across sessions), identify the main feature with the
+    largest absolute coding score, then count what fraction of cells in each
+    cre line max out on each feature.
+
+    Returns a long-form dataframe with columns: cre_line, max_feature, fraction, percent.
+    """
+    from visual_behavior.dimensionality_reduction.clustering import plotting
+    from visual_behavior.dimensionality_reduction.clustering import processing as processing
+
+    feature_cols = processing.get_features_for_clustering()
+
+    results_avg = results_pivoted.groupby(['cre_line', 'cell_specimen_id']).mean().reset_index()
+    df = results_avg.set_index(['cell_specimen_id'])[feature_cols]
+    df = np.abs(df)
+
+    max_feature = pd.DataFrame(df.index.values, columns=['cell_specimen_id']).set_index('cell_specimen_id')
+    max_feature['max_feature'] = None
+    for csid in df.index.values:
+        max_feature.loc[csid, 'max_feature'] = df.loc[csid].idxmax()
+    max_feature = max_feature.merge(cells_table[['cell_specimen_id', 'cre_line']], on=['cell_specimen_id'])
+
+    feature_counts = plotting.get_fraction_cells_for_column(max_feature, column_to_group='max_feature')
+    feature_counts['percent'] = feature_counts.fraction * 100
+    return feature_counts
+
+
+def plot_maximally_contributing_feature_distribution(feature_counts, save_dir=None,
+                                                     folder='coding_properties',
+                                                     filename='maximally_contributing_feature_dimension',
+                                                     suffix=''):
+    """
+    Stacked bar plot showing the distribution of each cre line's maximally
+    contributing GLM feature. `feature_counts` is the output of
+    `compute_maximally_contributing_feature`.
+    """
+    from visual_behavior.dimensionality_reduction.clustering import plotting
+    from visual_behavior.dimensionality_reduction.clustering import processing as processing
+
+    feature_colors, _ = plotting.get_feature_colors_and_labels()
+    feature_order = processing.get_features_for_clustering()
+    # legend ends up showing colors in reverse order
+    feature_labels = processing.get_feature_labels_for_clustering()[::-1]
+
+    figsize = (3.5, 2.5)
+    fig, ax = plt.subplots(figsize=figsize)
+    ax = sns.histplot(feature_counts, y='cre_line', hue='max_feature', hue_order=feature_order,
+                      weights='percent', multiple='stack', palette=feature_colors,
+                      shrink=0.8, alpha=0.75, ax=ax)
+    ax.set_yticklabels([utils.get_abbreviated_cell_type(cre_line) for cre_line in utils.get_cre_lines()])
+    ax.legend(feature_labels, bbox_to_anchor=(1, 1))
+    ax.set_xlabel('Percent of cells')
+    ax.set_ylabel('')
+    ax.set_title('Maxmially contributing\nfeature distribution')
+
+    if save_dir:
+        utils.save_figure(fig, figsize, save_dir, folder, filename + suffix)
+    return fig, ax
+
+
+def convert_coding_scores_to_long_form_df(results_pivoted):
+    """
+    Reshape `results_pivoted` into a long-form dataframe of (absolute) coding
+    scores for the four main features, keyed by cell / experiment / cre line /
+    experience level. Used by `plot_coding_score_distributions_by_experience`.
+
+    Carries `cell_type` and (if present) `mouse_id` through so they can be used
+    for stats grouping / descriptive tables downstream.
+    """
+    from visual_behavior.dimensionality_reduction.clustering import processing
+
+    features = processing.get_feature_labels_for_clustering()
+    metadata = ['cell_specimen_id', 'ophys_experiment_id', 'cre_line', 'experience_level']
+    for extra in ('cell_type', 'mouse_id'):
+        if extra in results_pivoted.columns and extra not in metadata:
+            metadata.append(extra)
+
+    results_melted = results_pivoted.copy()
+    results_melted['images'] = results_melted['all-images']
+    results_melted['behavior'] = results_melted['behavioral']
+    if 'cell_type' not in results_melted.columns:
+        results_melted['cell_type'] = [utils.convert_cre_line_to_cell_type(c)
+                                       for c in results_melted.cre_line.values]
+        metadata.append('cell_type')
+
+    results_melted = results_melted[features + metadata]
+    results_melted = results_melted.melt(id_vars=metadata, value_vars=features,
+                                         var_name='feature', value_name='coding_score')
+    results_melted['coding_score'] = np.abs(results_melted['coding_score'])
+    return results_melted
+
+
+def plot_coding_score_distributions_by_experience(results_melted, cre_lines=None,
+                                                  save_dir=None, folder='coding_scores_and_kernels',
+                                                  filename='coding_score_distributions_by_experience',
+                                                  suffix='', use_mlm=True, group_column='mouse_id',
+                                                  event_type='coding_score'):
+    """
+    Grid of boxplots (rows: cre line, cols: feature) of coding scores by
+    experience level, with significance annotations. Expects the long-form
+    output of `convert_coding_scores_to_long_form_df`.
+
+    Stats tables are saved alongside the figure when `save_dir` is provided:
+      <filename>_mlm.csv (or _tukey.csv) -- pairwise stats across experience
+          levels, with metric/event_type/cell_type/feature columns prepended.
+      <filename>_values.csv -- descriptive stats grouped by
+          (cell_type, feature, experience_level).
+    """
+    from visual_behavior.dimensionality_reduction.clustering import plotting
+    from visual_behavior.dimensionality_reduction.clustering import processing as processing
+
+    if cre_lines is None:
+        cre_lines = np.sort(results_melted.cre_line.unique())
+    features = processing.get_feature_labels_for_clustering()
+    experience_levels = utils.get_experience_levels()
+    experience_level_colors = utils.get_experience_level_colors()
+    feature_colors, _ = plotting.get_feature_colors_and_labels()
+
+    figsize = (7, 8)
+    fig, ax = plt.subplots(len(cre_lines), len(features), figsize=figsize, sharey=True)
+    ax = ax.ravel()
+    combined_stats = pd.DataFrame()
+    i = 0
+    for c, cre_line in enumerate(cre_lines):
+        cell_type = utils.convert_cre_line_to_cell_type(cre_line)
+        for f, feature in enumerate(features):
+            sub = results_melted[(results_melted.cre_line == cre_line)
+                                 & (results_melted.feature == feature)].copy()
+
+            ax[i] = sns.boxplot(data=sub, x='experience_level', y='coding_score',
+                                order=experience_levels, hue='experience_level',
+                                hue_order=experience_levels, palette=experience_level_colors,
+                                legend=False, linewidth=1.5, width=0.7, fliersize=0,
+                                whis=1.5, notch=True,
+                                flierprops=dict(markerfacecolor='0.75', markersize=3, marker='_',
+                                                linestyle='none', markeredgecolor='0.75'),
+                                boxprops={'alpha': 0}, ax=ax[i])
+            ax[i] = sns.boxplot(data=sub, x='experience_level', y='coding_score',
+                                order=experience_levels, hue='experience_level',
+                                hue_order=experience_levels, legend=False,
+                                palette=experience_level_colors, notch=True,
+                                medianprops={"color": "k", "linewidth": 2},
+                                linewidth=1.5, width=0.8, showfliers=False, whis=1.5, dodge=False,
+                                boxprops={'alpha': 0.8}, ax=ax[i])
+
+            ax[i].set_ylabel('')
+            ax[i].set_xlabel('')
+            ax[i].set_xticklabels([])
+            if c == 0:
+                ax[i].set_title(feature.capitalize() + '\n', color=feature_colors[f])
+            if f == 0:
+                if c == 1:
+                    ax[i].set_ylabel('Coding score\n\n' + cell_type)
+                else:
+                    ax[i].set_ylabel(cell_type)
+
+            if c == len(cre_lines) - 1:
+                exp_level_abbreviations = [
+                    el.split(' ')[0][0] if len(el.split(' ')) == 1
+                    else el.split(' ')[0][0] + el.split(' ')[1][:2]
+                    for el in experience_levels
+                ]
+                ax[i].set_xticklabels(exp_level_abbreviations)
+                plotting.color_xaxis_labels_by_experience(ax[i])
+
+            ax[i].set_ylim(-0.1, 1.1)
+            ax[i].set_xlim(-0.75, 2.75)
+
+            ax[i], panel_stats = add_stats_to_plot_yaxis(
+                sub, 'coding_score', ax=ax[i], ymax=1.05,
+                column_to_compare='experience_level',
+                use_mlm=use_mlm, group_column=group_column,
+                event_type=event_type, cell_type=cell_type,
+            )
+            # Attach the per-panel iteration variable (feature) that compute_stats
+            # can't see on its own.
+            panel_stats = insert_stats_metadata(panel_stats, feature=feature)
+            combined_stats = pd.concat([combined_stats, panel_stats])
+
+            ax[i].set_ylim(-0.1, 1.2)
+            i += 1
+
+    fig.subplots_adjust(hspace=0.3, wspace=0.3)
+    if save_dir:
+        utils.save_figure(fig, figsize, save_dir, folder, filename + suffix)
+        try:
+            print('saving_stats')
+            stats_suffix = '_mlm.csv' if use_mlm else '_tukey.csv'
+            combined_stats.to_csv(
+                os.path.join(save_dir, folder, _clean_filename(filename + suffix + stats_suffix))
+            )
+            cols_to_groupby = ['cell_type', 'feature', 'experience_level']
+            descriptive = get_descriptive_stats_for_metric(results_melted, 'coding_score', cols_to_groupby)
+            descriptive.to_csv(
+                os.path.join(save_dir, folder, _clean_filename(filename + suffix + '_values.csv'))
+            )
+        except BaseException:
+            print('STATS DID NOT SAVE FOR coding_score')
+    return fig, ax, combined_stats
+
+
+def plot_coding_scores_across_conditions_grid(data, x_val='experience_level', hue='targeted_structure',
+                                              plot_type='barplot', xlabel='', figsize=None,
+                                              event_type='coding_score',
+                                              save_dir=None, folder='coding_scores_and_kernels',
+                                              filename=None, suffix='',
+                                              use_mlm=True, group_column='mouse_id'):
+    """
+    Grid of coding score bar/box/point plots: 3 rows (cell types) by 4 columns
+    (GLM features: image, omission, behavior, task). Each column is one call to
+    `plot_metric_across_conditions` (which handles the per-cell-type stats and
+    saves its own stats CSVs per feature).
+
+    Used to make the "population averages by area and depth" panels in figure 4
+    supplemental, where the grid varies by:
+        x_val='experience_level', hue='targeted_structure'  (area as hue)
+        x_val='experience_level', hue='binned_depth'        (depth as hue)
+        x_val='targeted_structure', hue='experience_level'  (area on x)
+        x_val='binned_depth',      hue='experience_level'   (depth on x)
+
+    Stats saving (delegated to `plot_metric_across_conditions`):
+        One stats CSV per feature is written to <save_dir>/<folder>/, with
+        `event_type='coding_score'` recorded in the table.
+
+    The combined figure is saved at the wrapper level if `save_dir` is provided.
+    Returns (fig, ax).
+    """
+    from visual_behavior.dimensionality_reduction.clustering import plotting
+
+    feature_colors = plotting.get_feature_colors_and_labels()[0]
+    feature_specs = [
+        ('all-images', 'Image coding', feature_colors[0]),
+        ('omissions', 'Omission coding', feature_colors[1]),
+        ('behavioral', 'Behavior coding', feature_colors[2]),
+        ('task', 'Task coding', feature_colors[3]),
+    ]
+
+    if figsize is None:
+        # depth (4 bins) needs a wider figure than area (2 areas)
+        figsize = (14, 8) if hue == 'binned_depth' or x_val == 'binned_depth' else (12, 8)
+
+    fig, ax = plt.subplots(3, 4, figsize=figsize, sharex=True)
+
+    for col, (metric, title, color) in enumerate(feature_specs):
+        ax[:, col] = plot_metric_across_conditions(
+            data, metric, title=title, x_color=color,
+            xlabel=xlabel, x_val=x_val, hue=hue, plot_type=plot_type,
+            event_type=event_type,
+            save_dir=save_dir, folder=folder, ax=ax[:, col],
+            use_mlm=use_mlm, group_column=group_column,
+        )
+        # Strip duplicated y-axis labels in non-leftmost columns.
+        if col > 0:
+            for row in range(3):
+                ax[row, col].set_ylabel('')
+
+    # When hue is something other than experience_level, the inner function
+    # leaves a legend on each panel; drop everything except the one in the top
+    # row to avoid clutter.
+    if hue != 'experience_level':
+        for col in range(4):
+            for row in range(3):
+                leg = ax[row, col].get_legend()
+                if leg is not None and not (row == 0 and col == 0):
+                    leg.remove()
+
+    wspace = 0.3 if (hue == 'binned_depth' or x_val == 'binned_depth') else 0.4
+    plt.subplots_adjust(wspace=wspace, hspace=0.3)
+
+    if save_dir:
+        if filename is None:
+            filename = 'coding_scores_for_' + hue + '_by_' + x_val + '_' + plot_type
+        utils.save_figure(fig, figsize, save_dir, folder, _clean_filename(filename + suffix))
+
+    return fig, ax
 
 

@@ -661,8 +661,7 @@ def plot_stacked_kernels_for_cell(cell_specimen_id, dataset, weights_df, kernels
         plt.suptitle(title_string, x=0.48, y=0.99, fontsize=12)
         filename = str(cell_specimen_id) + '_' + metadata_string + '_kernels' + suffix
         if folder is None:
-            utils.save_figure(fig, figsize, save_dir, 'example_kernels_stacked', filename)
-            utils.save_figure(fig, figsize, save_dir, 'example_cell_kernels_coding_scores_and_fits', filename)
+            utils.save_figure(fig, figsize, save_dir, 'example_cells', filename)
         else:
             utils.save_figure(fig, figsize, save_dir, folder, filename)
     return ax
@@ -866,8 +865,7 @@ def plot_model_fits_example_cell(cell_specimen_id, dataset, cell_results_df, dro
         #     cell_specimen_id) + '_' + m['cre_line'].split('-')[0] +'_'+ str(int(times[0])) + '_model_fit' + suffix
         filename = str(int(times[0])) + '_' + str(cell_specimen_id) + '_' + metadata_string + '_model_fit' + suffix
         if folder is None:
-            utils.save_figure(fig, figsize, save_dir, 'example_model_fits', filename)
-            utils.save_figure(fig, figsize, save_dir, 'example_cell_kernels_coding_scores_and_fits', filename)
+            utils.save_figure(fig, figsize, save_dir, 'example_cells', filename)
         else:
             utils.save_figure(fig, figsize, save_dir, folder, filename)
 
@@ -1864,7 +1862,7 @@ def plot_image_kernels_and_traces_for_cell(cell_specimen_id, dataset,
     if save_dir:
         title_string = str(ophys_experiment_id) + '_' + str(cell_specimen_id) + '_' + cre_line
         fig.suptitle(title_string, x=0.5, y=1.15, fontsize=16)
-        utils.save_figure(fig, figsize, save_dir, 'example_model_fits', title_string + '_kernels_images')
+        utils.save_figure(fig, figsize, save_dir, 'example_cells', title_string + '_kernels_images')
 
     return ax
 
@@ -2151,7 +2149,7 @@ def plot_all_kernels_and_traces_for_cell(cell_specimen_id, dataset, image_sdf, o
     if save_dir:
         title_string = str(ophys_experiment_id) + '_' + str(cell_specimen_id) + '_' + cre_line
         plt.suptitle(title_string, x=0.5, y=1.15, fontsize=18)
-        utils.save_figure(fig, figsize, save_dir, 'example_model_fits', title_string + '_kernels_other')
+        utils.save_figure(fig, figsize, save_dir, 'example_cells', title_string + '_kernels_other')
 
     return ax
 
@@ -2233,7 +2231,7 @@ def plot_coding_scores_for_cell(cell_specimen_id, ophys_experiment_id, results_p
         cre_line = cell_dropouts['cre_line'].values[0].split('-')[0]
         title_string = str(ophys_experiment_id) + '_' + str(cell_specimen_id) + '_' + cre_line
         fig.suptitle(title_string, x=0.5, y=1., fontsize=16)
-        utils.save_figure(fig, figsize, save_dir, 'example_model_fits', title_string + '_coding_scores')
+        utils.save_figure(fig, figsize, save_dir, 'example_cells', title_string + '_coding_scores')
 
     return ax
 
@@ -2317,8 +2315,7 @@ def plot_coding_score_components_for_cell(cell_specimen_id, ophys_experiment_id,
         metadata_string = utils.get_metadata_string(dataset.metadata)
         filename = str(cell_specimen_id) + '_' + metadata_string + '_coding_scores'
         if folder is None:
-            utils.save_figure(fig, figsize, save_dir, 'example_model_fits', filename)
-            utils.save_figure(fig, figsize, save_dir, 'example_cell_kernels_coding_scores_and_fits',  filename)
+            utils.save_figure(fig, figsize, save_dir, 'example_cells', filename)
         else:
             utils.save_figure(fig, figsize, save_dir, folder, filename)
 
@@ -2500,6 +2497,44 @@ def plot_model_fits_and_kernels_for_example_cell(ophys_experiment_id, cell_speci
         metadata_string = utils.get_metadata_string(dataset.metadata)
         utils.save_figure(fig, figsize, save_dir, folder, metadata_string + '_' + str(cell_specimen_id))
 
+
+def plot_example_cell_all_panels(cell_specimen_id, ophys_experiment_id, start_time,
+                                 results_pivoted, weights_df, kernels,
+                                 cell_label='Cell', flashes_between_changes=12, four_flash_dur=4.5,
+                                 dataset=None, cell_results_df=None, expt_results=None, dropouts=None,
+                                 save_dir=None, folder='example_cells'):
+    """
+    Plot the four standard panels for a single example cell over a fixed time window:
+        1) GLM features for the window
+        2) Cell events trace with model fit (images dropout)
+        3) Coding score components
+        4) Stacked kernels
+
+    If dataset / GLM fit results are not provided, they are loaded from disk.
+    """
+    if dataset is None:
+        dataset = loading.get_ophys_dataset(ophys_experiment_id)
+    if cell_results_df is None or expt_results is None or dropouts is None:
+        cell_results_df, expt_results, dropouts = load_glm_model_fit_results(ophys_experiment_id)
+
+    xlim_seconds = [start_time, start_time + (flashes_between_changes * 0.75) + four_flash_dur]
+    suffix = '_' + str(int(xlim_seconds[0]))
+
+    plot_glm_features_for_window(dataset, xlim_seconds, title='GLM features',
+                                 save_dir=save_dir, folder=folder, ax=None, suffix=suffix)
+
+    plot_model_fits_example_cell(cell_specimen_id, dataset, cell_results_df, dropouts, expt_results,
+                                 'all-images', title=cell_label + ' model fit',
+                                 twinx=False, include_events=True, include_dff=False,
+                                 times=xlim_seconds, save_dir=save_dir, folder=folder)
+
+    plot_coding_score_components_for_cell(cell_specimen_id, ophys_experiment_id, results_pivoted, dataset,
+                                          title='', horiz=False, fontsize=14, as_panel=False,
+                                          save_dir=save_dir, folder=folder)
+
+    plot_stacked_kernels_for_cell(cell_specimen_id, dataset, weights_df, kernels, sharey=True,
+                                  title=cell_label + ' kernels',
+                                  save_dir=save_dir, folder=folder, scale_y=False)
 
 
 ##### plot weights of all cells plus population averages #######
@@ -2939,7 +2974,7 @@ def plot_weights_and_coding_score_heatmaps_for_experience_levels_main_figure(ker
         plt.suptitle(kernel.capitalize() + ' kernels', x=0.4, y=1.01, fontsize=18)
     plt.subplots_adjust(hspace=0.2, wspace=0.17)
     if save_dir:
-        utils.save_figure(fig, figsize, save_dir, 'weight_heatmaps', kernel)
+        utils.save_figure(fig, figsize, save_dir, 'kernel_weight_heatmaps', kernel)
 
 
 
