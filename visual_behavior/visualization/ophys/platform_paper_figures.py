@@ -19,6 +19,7 @@ from visual_behavior.visualization.ophys.platform_paper_stats import (
     test_significant_metric_averages,
     test_significant_metric_averages_mlm,
     compute_stats,
+    insert_stats_metadata,
 )
 from visual_behavior_glm import GLM_visualization_tools as gvt
 from visual_behavior.ophys.response_analysis.response_analysis import ResponseAnalysis
@@ -1278,7 +1279,7 @@ def plot_fraction_responsive_cells(multi_session_df, responsiveness_threshold=0.
 
 def plot_percent_responsive_cells(multi_session_df, responsiveness_threshold=0.1, horizontal=True, ylim=(0, 100), stats_max=80,
                                    ylabel='% responsive', save_dir=None, folder=None, suffix='', ax=None,
-                                   use_mlm=True, group_column='mouse_id'):
+                                   use_mlm=True, group_column='mouse_id', event_type='Not specified'):
     """
     Plots the fraction of responsive cells across cre lines
     :param multi_session_df: dataframe of trial averaged responses for each cell for some set of conditions
@@ -1344,10 +1345,8 @@ def plot_percent_responsive_cells(multi_session_df, responsiveness_threshold=0.1
 
         # add stats to plot if only looking at experience levels
         ax[i], panel_stats = add_stats_to_plot_yaxis(data, metric, ax[i], ymax=stats_max,
-                                                     use_mlm=use_mlm, group_column=group_column)
-        # aggregate stats
-        panel_stats['metric'] = metric
-        panel_stats['cell_type'] = cell_type
+                                                     use_mlm=use_mlm, group_column=group_column,
+                                                     event_type=event_type, cell_type=cell_type)
         combined_stats = pd.concat([combined_stats, panel_stats])
 
         ax[i].set_xlim((-0.4, 2.4))
@@ -1440,7 +1439,8 @@ def plot_average_metric_value_for_experience_levels_across_containers(df, metric
 
 
 def add_stats_to_plot_for_hues(data, metric, ax, ymax=None, xorder=None, x='experience_level', hue='layer',
-                               use_mlm=True, group_column='mouse_id', event_type='Not specified'):
+                               use_mlm=True, group_column='mouse_id',
+                               event_type='Not specified', cell_type='Not specified'):
     """
     add stars to axis indicating statistics across hue values
     x-axis of plots must be experience_levels
@@ -1472,7 +1472,7 @@ def add_stats_to_plot_for_hues(data, metric, ax, ymax=None, xorder=None, x='expe
         if len(hues) >= 2:
             panel_stats = compute_stats(test_data, metric, column_to_compare=hue,
                                         use_mlm=use_mlm, group_column=group_column,
-                                        event_type=event_type)
+                                        event_type=event_type, cell_type=cell_type)
             panel_stats['data_subset'] = [x_value for i in range(len(panel_stats))]
             omnibus_pvalue = panel_stats['omnibus_pvalue'].iloc[0] if len(panel_stats) else 1.0
             # gate star drawing on the omnibus, but keep the panel_stats either way
@@ -1501,7 +1501,8 @@ def add_stats_to_plot_for_hues(data, metric, ax, ymax=None, xorder=None, x='expe
 
 
 def add_stats_to_plot_for_hues_along_x(data, metric, ax, yorder=None, y='experience_level', hue='layer',
-                                       use_mlm=True, group_column='mouse_id', event_type='Not specified'):
+                                       use_mlm=True, group_column='mouse_id',
+                                       event_type='Not specified', cell_type='Not specified'):
     """
     Add significance stars when metric is on the x-axis and categorical groups are on the y-axis.
     Tests are run across hue values within each y category.
@@ -1532,7 +1533,7 @@ def add_stats_to_plot_for_hues_along_x(data, metric, ax, yorder=None, y='experie
 
         panel_stats = compute_stats(test_data, metric, column_to_compare=hue,
                                     use_mlm=use_mlm, group_column=group_column,
-                                    event_type=event_type)
+                                    event_type=event_type, cell_type=cell_type)
         omnibus_pvalue = panel_stats['omnibus_pvalue'].iloc[0] if len(panel_stats) else 1.0
 
         has_sig = False
@@ -1556,7 +1557,8 @@ def add_stats_to_plot_for_hues_along_x(data, metric, ax, yorder=None, y='experie
 
 def add_stats_to_plot(data, metric, ax, ymax=None, column_to_compare='experience_level',
                       show_ns=False, hue_only=False, behavior=False,
-                      use_mlm=True, group_column='mouse_id', event_type='Not specified'):
+                      use_mlm=True, group_column='mouse_id',
+                      event_type='Not specified', cell_type='Not specified'):
     """
     add stars to axis indicating across experience level statistics
     x-axis of plots must be experience_levels or cell_types
@@ -1577,7 +1579,7 @@ def add_stats_to_plot(data, metric, ax, ymax=None, column_to_compare='experience
     # hierarchical stats (MLM by default) across experience levels or cell types
     stats_table = compute_stats(data, metric, column_to_compare,
                                 use_mlm=use_mlm, group_column=group_column,
-                                event_type=event_type)
+                                event_type=event_type, cell_type=cell_type)
     omnibus_pvalue = stats_table['omnibus_pvalue'].iloc[0] if len(stats_table) else 1.0
     if hue_only: # makes things from -0.25 to 0.25
         stats_table['x1'] = stats_table['x1'] - 1
@@ -1679,7 +1681,8 @@ def add_stats_to_plot(data, metric, ax, ymax=None, column_to_compare='experience
 
 
 def add_stats_to_plot_yaxis(data, metric, ax, ymax=None, column_to_compare='experience_level', hue_only=False,
-                            use_mlm=True, group_column='mouse_id', event_type='Not specified'):
+                            use_mlm=True, group_column='mouse_id',
+                            event_type='Not specified', cell_type='Not specified'):
     """
     add stars to axis indicating across experience level statistics
     y-axis of plots must be experience_levels or cell_types
@@ -1700,7 +1703,7 @@ def add_stats_to_plot_yaxis(data, metric, ax, ymax=None, column_to_compare='expe
     # do anova across experience levels or cell types followed by post-hoc tukey
     stats_table = compute_stats(data, metric, column_to_compare,
                                 use_mlm=use_mlm, group_column=group_column,
-                                event_type=event_type)
+                                event_type=event_type, cell_type=cell_type)
     omnibus_pvalue = stats_table['omnibus_pvalue'].iloc[0] if len(stats_table) else 1.0
     if hue_only: # makes things from -0.25 to 0.25
         stats_table['x1'] = stats_table['x1'] - 1
@@ -1764,7 +1767,8 @@ def add_stats_to_plot_yaxis(data, metric, ax, ymax=None, column_to_compare='expe
 
 def add_stats_to_plot_xaxis(data, metric, ax, xmax=None, column_to_compare='experience_level',
                       show_ns=False, hue_only=False,
-                      use_mlm=True, group_column='mouse_id', event_type='Not specified'):
+                      use_mlm=True, group_column='mouse_id',
+                      event_type='Not specified', cell_type='Not specified'):
     """
     add stars to axis indicating across experience level statistics
     x-axis of plots must be experience_levels or cell_types
@@ -1784,7 +1788,7 @@ def add_stats_to_plot_xaxis(data, metric, ax, xmax=None, column_to_compare='expe
     """
     stats_table = compute_stats(data, metric, column_to_compare,
                                 use_mlm=use_mlm, group_column=group_column,
-                                event_type=event_type)
+                                event_type=event_type, cell_type=cell_type)
     omnibus_pvalue = stats_table['omnibus_pvalue'].iloc[0] if len(stats_table) else 1.0
     if hue_only: # makes things from -0.25 to 0.25
         stats_table['x1'] = stats_table['x1'] - 1
@@ -2044,10 +2048,7 @@ def plot_metric_distribution_by_experience_no_cell_type(metrics_table, metric, e
             ax, panel_stats = add_stats_to_plot(data, metric, ax, ymax=ymax, show_ns=show_ns,
                                                 use_mlm=use_mlm, group_column=group_column,
                                                 event_type=event_type)
-        # aggregate stats
-        panel_stats['metric'] = metric
-        panel_stats['comparison'] = 'experience_level'
-        panel_stats['condition'] = 'experience_level'
+        panel_stats = insert_stats_metadata(panel_stats, condition='experience_level')
         combined_stats = pd.concat([combined_stats, panel_stats])
 
         # add line at y=0
@@ -2232,14 +2233,10 @@ def plot_metric_distribution_by_experience(metrics_table, metric, event_type, da
 
             # ax[i], panel_stats = add_stats_to_plot_for_hues(ct_data, metric, ax[i],
             #                                                 xorder=order, x='experience_level', hue=hue)
-            ax[i], panel_stats = add_stats_to_plot(ct_data, metric, ax[i], ymax=ymax, 
+            ax[i], panel_stats = add_stats_to_plot(ct_data, metric, ax[i], ymax=ymax,
                                                    use_mlm=use_mlm, group_column=group_column,
-                                                   event_type=event_type)
-
-            # aggregate stats
-            panel_stats['metric'] = metric
-            panel_stats['cell_type'] = cell_type
-            panel_stats['condition'] = 'experience_level'
+                                                   event_type=event_type, cell_type=cell_type)
+            panel_stats = insert_stats_metadata(panel_stats, condition='experience_level')
             combined_stats = pd.concat([combined_stats, panel_stats])
         else:
             if plot_type == 'pointplot':
@@ -2294,11 +2291,7 @@ def plot_metric_distribution_by_experience(metrics_table, metric, event_type, da
             # add stats to plot for hues
             ax[i], panel_stats = add_stats_to_plot(ct_data, metric, ax[i], ymax=ymax, show_ns=show_ns,
                                                    use_mlm=use_mlm, group_column=group_column,
-                                                   event_type=event_type)
-            # aggregate stats
-            panel_stats['comparison'] = hue
-            panel_stats['metric'] = metric
-            panel_stats['cell_type'] = cell_type
+                                                   event_type=event_type, cell_type=cell_type)
             combined_stats = pd.concat([combined_stats, panel_stats])
             # set labels
             ax[i].set_xlabel('')
@@ -2572,7 +2565,7 @@ def plot_modulation_index_distribution(metrics_table, metric, x_axis_col=None, x
                                        label=None, lims=(-1.1, 1.1), horiz=False, plot_type='violinplot',
                                        metric_on_y=True, annot=('left', 'right'), abbreviate_exp=True, suptitle=None,
                                        fill=True, save_dir=None, suffix='', ax=None,
-                                       use_mlm=True, group_column='mouse_id'):
+                                       use_mlm=True, group_column='mouse_id', event_type='Not specified'):
     '''
     Plots distribution of metric values split by experience level.
 
@@ -2673,17 +2666,15 @@ def plot_modulation_index_distribution(metrics_table, metric, x_axis_col=None, x
                 ax[i].set_xlim(lims)
                 ax[i], panel_stats = add_stats_to_plot_for_hues_along_x(ct_data, metric, ax[i],
                                                             yorder=order, y=x_axis_col, hue='experience_level',
-                                                            use_mlm=use_mlm, group_column=group_column)
+                                                            use_mlm=use_mlm, group_column=group_column,
+                                                            event_type=event_type, cell_type=cell_type)
             else:
                 ax[i].set_ylim(lims)
                 ax[i], panel_stats = add_stats_to_plot_for_hues(ct_data, metric, ax[i],
                                                             xorder=order, x=x_axis_col, hue='experience_level',
-                                                            use_mlm=use_mlm, group_column=group_column)
-            panel_stats['comparison'] = 'experience_level'
-            panel_stats['metric'] = metric
-            panel_stats['cell_type'] = cell_type
-            panel_stats['condition'] = x_axis_col
-
+                                                            use_mlm=use_mlm, group_column=group_column,
+                                                            event_type=event_type, cell_type=cell_type)
+            panel_stats = insert_stats_metadata(panel_stats, condition=x_axis_col)
             combined_stats = pd.concat([combined_stats, panel_stats])
 
         else:
@@ -2718,7 +2709,8 @@ def plot_modulation_index_distribution(metrics_table, metric, x_axis_col=None, x
                     utils.color_xaxis_labels_by_experience(ax[i])
                 ax[i].set_ylim(lims)
                 ax[i], panel_stats = add_stats_to_plot_yaxis(ct_data, metric, ax[i], ymax=lims[1], column_to_compare='experience_level',
-                                                             use_mlm=use_mlm, group_column=group_column)
+                                                             use_mlm=use_mlm, group_column=group_column,
+                                                             event_type=event_type, cell_type=cell_type)
                 ymin, ymax = ax[i].get_ylim()
                 ax[i].set_ylim(ymax=ymax*1.3)
             else:
@@ -2728,13 +2720,10 @@ def plot_modulation_index_distribution(metrics_table, metric, x_axis_col=None, x
                     utils.color_yaxis_labels_by_experience(ax[i])
                 ax[i].set_xlim(lims)
                 ax[i], panel_stats = add_stats_to_plot_xaxis(ct_data, metric, ax[i], xmax=lims[1], column_to_compare='experience_level',
-                                                             use_mlm=use_mlm, group_column=group_column)
+                                                             use_mlm=use_mlm, group_column=group_column,
+                                                             event_type=event_type, cell_type=cell_type)
 
-            panel_stats['comparison'] = 'experience_level'
-            panel_stats['metric'] = metric
-            panel_stats['cell_type'] = cell_type
-            panel_stats['condition'] = 'experience_level'
-
+            panel_stats = insert_stats_metadata(panel_stats, condition='experience_level')
             combined_stats = pd.concat([combined_stats, panel_stats])
 
         ax[i].set_ylabel('')
@@ -2873,13 +2862,9 @@ def plot_metric_across_cohorts(metrics_table, metric,  ylabel, x_val='binned_dep
             # ax[i], combined_stats = ppf.add_stats_to_plot(data, metric, ax[i])
             ax[i], panel_stats = add_stats_to_plot_for_hues(data, metric, ax[i], event_type=event_type,
                                                             xorder=x_vals, x=x_val, hue='experience_level',
-                                                            use_mlm=use_mlm, group_column=group_column)
-            panel_stats['comparison'] = 'experience_level'
-            panel_stats['metric'] = metric
-            panel_stats['cell_type'] = cell_type
-            panel_stats['condition'] = x_val
-            panel_stats['cohort'] = project_code
-            # , ymax=None, show_ns=False)
+                                                            use_mlm=use_mlm, group_column=group_column,
+                                                            cell_type=cell_type)
+            panel_stats = insert_stats_metadata(panel_stats, condition=x_val, cohort=project_code)
             combined_stats = pd.concat([combined_stats, panel_stats])
             i+=1
     plt.subplots_adjust(wspace=0.5, hspace=0.35)
@@ -2982,13 +2967,9 @@ def plot_metric_across_cohorts_area_depth(metrics_table, metric,  ylabel,plot_ty
                 # ax[i], combined_stats = ppf.add_stats_to_plot(data, metric, ax[i])
                 ax[i], panel_stats = add_stats_to_plot_for_hues(data, metric, ax[i], event_type=event_type,
                                                                 xorder=x_vals, x=x_val, hue='experience_level',
-                                                                use_mlm=use_mlm, group_column=group_column)
-                panel_stats['comparison'] = 'experience_level'
-                panel_stats['metric'] = metric
-                panel_stats['cell_type'] = cell_type
-                panel_stats['condition'] = x_val
-                panel_stats['cohort'] = project_code
-
+                                                                use_mlm=use_mlm, group_column=group_column,
+                                                                cell_type=cell_type)
+                panel_stats = insert_stats_metadata(panel_stats, condition=x_val, cohort=project_code)
                 combined_stats = pd.concat([combined_stats, panel_stats])
                 # , ymax=None, show_ns=False)
                 i+=1
@@ -3093,11 +3074,9 @@ def plot_metric_across_conditions(metrics_table, metric,  title='', xlabel='Imag
 
         ax[i], panel_stats = add_stats_to_plot_for_hues(data, metric, ax[i], event_type=event_type,
                                                         xorder=x_vals, x=x_val, hue=hue,
-                                                        use_mlm=use_mlm, group_column=group_column)
-
-        panel_stats['metric'] = metric
-        panel_stats['cell_type'] = cell_type
-        panel_stats['condition'] = x_val
+                                                        use_mlm=use_mlm, group_column=group_column,
+                                                        cell_type=cell_type)
+        panel_stats = insert_stats_metadata(panel_stats, condition=x_val)
         combined_stats = pd.concat([combined_stats, panel_stats])
         # , ymax=None, show_ns=False)
         i+=1
@@ -3156,7 +3135,11 @@ def plot_experience_modulation_index(metric_data, event_type, hue=None, plot_typ
         cols_to_group = ['cell_specimen_id', 'cell_type', 'mouse_id']
         data = data.melt(id_vars=cols_to_group, var_name='comparison', value_vars=value_vars)
 
-    metric = 'value'
+    # Rename the melted value column so the saved stats CSV records a meaningful
+    # metric name (instead of literally 'value'). This replaces the previous
+    # post-hoc panel_stats['metric'] = 'experience_modulation' relabel.
+    data = data.rename(columns={'value': 'experience_modulation'})
+    metric = 'experience_modulation'
     x = 'comparison'
 
     cell_types = np.sort(data.cell_type.unique())
@@ -3202,12 +3185,8 @@ def plot_experience_modulation_index(metric_data, event_type, hue=None, plot_typ
             ax[i], panel_stats = add_stats_to_plot_for_hues(ct_data, metric, ax[i],
                                                             xorder=xorder, x=x, hue=hue,
                                                             use_mlm=use_mlm, group_column=group_column,
-                                                            event_type=event_type)
+                                                            event_type=event_type, cell_type=cell_type)
             # ax[i], panel_stats = add_stats_to_plot(ct_data, metric, ax[i], ymax=ymax)
-            # aggregate stats
-            panel_stats['comparison'] = hue
-            panel_stats['metric'] = 'experience_modulation'
-            panel_stats['cell_type'] = cell_type
             combined_stats = pd.concat([combined_stats, panel_stats])
         else:
             if plot_type == 'pointplot':
@@ -3287,7 +3266,11 @@ def plot_experience_modulation_index_annotated(metrics_table, event_type, metric
     # else:
     #     data = data.melt(id_vars=['cell_specimen_id', 'cell_type'], var_name='comparison', value_vars=value_vars)
 
-    metric = 'value'
+    # Rename the melted value column so the saved stats CSV records a meaningful
+    # metric name (instead of literally 'value'). Preserves the caller-supplied
+    # `metric` arg in the saved filename via the prefix.
+    data = data.rename(columns={'value': metric + '_experience_modulation'})
+    metric = metric + '_experience_modulation'
     x = 'comparison'
 
     cell_types = np.sort(data.cell_type.unique())
@@ -3303,13 +3286,13 @@ def plot_experience_modulation_index_annotated(metrics_table, event_type, metric
 
     combined_stats = pd.DataFrame()
     for i, comparison in enumerate(value_vars):
-        ax[i] = sns.violinplot(data=data[data.comparison == comparison], x='value', y='cell_type', order=cell_types,
-                               color='gray', cut=0, inner='box', ax=ax[i], alpha=0.25, linewidth=1,    
+        ax[i] = sns.violinplot(data=data[data.comparison == comparison], x=metric, y='cell_type', order=cell_types,
+                               color='gray', cut=0, inner='box', ax=ax[i], alpha=0.25, linewidth=1,
                                 inner_kws=dict(box_width=2, whis_width=1, color="k", alpha=0.75))
 
-        ax[i] = sns.pointplot(data=data[data.comparison == comparison], x='value', y='cell_type', order=cell_types,
+        ax[i] = sns.pointplot(data=data[data.comparison == comparison], x=metric, y='cell_type', order=cell_types,
                                     color='k', ax=ax[i], zorder=10000, linestyle='none',
-                                    markers='|', markersize=15, err_kws={'linewidth': 2}) 
+                                    markers='|', markersize=15, err_kws={'linewidth': 2})
   
         ax[i].set_xlim(xlims)
 
@@ -3340,13 +3323,11 @@ def plot_experience_modulation_index_annotated(metrics_table, event_type, metric
         # ax[i].set_xticklabels([x.split('.')[0] + '\n' + x.split('.')[1] for x in xorder], rotation=90, ha='center')
 
         # add stats to plot
-        ax[i], panel_stats = add_stats_to_plot_xaxis(data[data.comparison == comparison], 'value', ax[i],
+        ax[i], panel_stats = add_stats_to_plot_xaxis(data[data.comparison == comparison], metric, ax[i],
                                xmax=xlims[1],
                                column_to_compare='cell_type',
                                use_mlm=use_mlm, group_column=group_column,
                                event_type=event_type)
-        panel_stats['metric'] = metric
-        # panel_stats['cell_type'] = cell_type
         combined_stats = pd.concat([combined_stats, panel_stats])
 
     if horiz:
@@ -3411,7 +3392,11 @@ def plot_experience_modulation_index_annotated_by_cell_type(metrics_table, event
         titles = ['Novel vs. Familiar', 'Novel vs. Novel +', ]
     data = exp_mod.melt(id_vars=['cell_specimen_id', 'cell_type'], var_name='comparison', value_vars=value_vars)
 
-    metric = 'value'
+    # Rename the melted value column so the saved stats CSV records a meaningful
+    # metric name (instead of literally 'value'). Preserves the caller-supplied
+    # `metric` arg in the saved filename via the prefix.
+    data = data.rename(columns={'value': metric + '_experience_modulation'})
+    metric = metric + '_experience_modulation'
     x = 'comparison'
 
     cell_types = np.sort(data.cell_type.unique())
@@ -3433,13 +3418,13 @@ def plot_experience_modulation_index_annotated_by_cell_type(metrics_table, event
     combined_stats = pd.DataFrame()
     for i, cell_type in enumerate(cell_types):
         ax[i] = sns.violinplot(data=data[data.cell_type == cell_type],
-                               x='value', y='comparison', order=value_vars,
+                               x=metric, y='comparison', order=value_vars,
                                color='gray', cut=0, ax=ax[i], linewidth=1, alpha=0.25, inner='box',
                                inner_kws=dict(box_width=2, whis_width=1, color="k", alpha=0.75))
         ax[i] = sns.pointplot(data=data[data.cell_type == cell_type],
-                               x='value', y='comparison', order=value_vars,
+                               x=metric, y='comparison', order=value_vars,
                                 color='k', ax=ax[i], zorder=100000, linestyle='none',
-                                markers='|', markersize=15, err_kws={'linewidth': 2}) 
+                                markers='|', markersize=15, err_kws={'linewidth': 2})
         
         ax[i].set_xlim(xlims)
 
@@ -3478,13 +3463,11 @@ def plot_experience_modulation_index_annotated_by_cell_type(metrics_table, event
 
         if len(value_vars) > 2:
             # add stats to plot
-            ax[i], panel_stats = add_stats_to_plot_xaxis(data[data.cell_type == cell_type], 'value', ax[i],
+            ax[i], panel_stats = add_stats_to_plot_xaxis(data[data.cell_type == cell_type], metric, ax[i],
                                                          xmax=xlims[1],
                                                          column_to_compare='comparison',
                                                          use_mlm=use_mlm, group_column=group_column,
-                                                         event_type=event_type)
-            panel_stats['metric'] = metric
-            panel_stats['cell_type'] = cell_type
+                                                         event_type=event_type, cell_type=cell_type)
             combined_stats = pd.concat([combined_stats, panel_stats])
 
         ax[i].invert_yaxis()
@@ -6552,11 +6535,9 @@ def plot_behavior_metric_by_experience(stats, metric, title='', ylabel='', ylims
     if plot_stats:
         # stats dataframe to save
         ax, stats_table = add_stats_to_plot(data, metric, ax, ymax=ymax, show_ns=show_ns, behavior=True,
-                                            use_mlm=use_mlm, group_column=group_column)
-        # aggregate stats
-        stats_table['comparison'] = 'experience_level'
-        stats_table['metric'] = metric
-        stats_table['condition'] = 'experience_level'
+                                            use_mlm=use_mlm, group_column=group_column,
+                                            event_type='behavior')
+        stats_table = insert_stats_metadata(stats_table, condition='experience_level')
 
     ax.set_ylim(ymin=ymin)
     plt.subplots_adjust(top=0.96)
@@ -6674,11 +6655,9 @@ def plot_behavior_metric_by_experience_horiz(stats, metric, title='', xlabel='',
     if plot_stats:
         # stats dataframe to save
         ax, stats_table = add_stats_to_plot(data, metric, ax, ymax=xmax, show_ns=show_ns, behavior=True,
-                                            use_mlm=use_mlm, group_column=group_column)
-        # aggregate stats
-        stats_table['metric'] = metric
-        stats_table['comparison'] = 'experience_level'
-        stats_table['condition'] = 'experience_level'
+                                            use_mlm=use_mlm, group_column=group_column,
+                                            event_type='behavior')
+        stats_table = insert_stats_metadata(stats_table, condition='experience_level')
 
     ax.set_xlim(xmin=xmin)
 
@@ -6785,11 +6764,9 @@ def plot_behavior_metric_by_cohort(stats, metric, title='', ylabel='', ylims=Non
         # stats dataframe to save
         ax, stats_table = add_stats_to_plot(data, metric, ax, ymax=ymax, show_ns=show_ns, behavior=True,
                                             column_to_compare='project_code',
-                                            use_mlm=use_mlm, group_column=group_column)
-        # aggregate stats
-        stats_table['metric'] = metric
-        stats_table['comparison'] = 'experience_level'
-        stats_table['condition'] = 'experience_level'
+                                            use_mlm=use_mlm, group_column=group_column,
+                                            event_type='behavior')
+        stats_table = insert_stats_metadata(stats_table, condition='experience_level')
 
     ax.set_ylim(ymin=ymin)
 
@@ -7008,11 +6985,9 @@ def plot_prior_exposures_per_cell_type_for_novel_plus(platform_experiments, beha
     ymax = ax.get_ylim()[1]
     ax, stats_table = add_stats_to_plot(exposures, 'prior_exposures_to_image_set', ax, ymax=ymax,
                                         show_ns=True, column_to_compare='cell_type',
-                                        use_mlm=use_mlm, group_column=group_column)
-    # aggregate stats
-    stats_table['metric'] = 'prior_exposures_to_image_set'
-    stats_table['comparison'] = 'experience_level'
-    stats_table['condition'] = 'experience_level'
+                                        use_mlm=use_mlm, group_column=group_column,
+                                        event_type='session_metadata')
+    stats_table = insert_stats_metadata(stats_table, condition='experience_level')
 
     if save_dir:
         # save plot

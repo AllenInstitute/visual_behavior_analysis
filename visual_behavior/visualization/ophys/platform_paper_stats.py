@@ -223,7 +223,11 @@ def _pairwise_descriptives(group_stats, g1, g2):
 
 # Column ordering: metadata first, then comparison fields, then model/sample-size
 # context, then cell-level descriptives, then mouse-level descriptives.
-_LEADING_COLUMNS = ['metric', 'event_type', 'column_to_compare', 'groups',
+# `cell_type` sits alongside `event_type` because nearly every analysis is
+# stratified by cell type before the within-cell-type comparison; recording it
+# at construction time keeps the column in canonical position without callers
+# needing to append it post hoc.
+_LEADING_COLUMNS = ['metric', 'event_type', 'cell_type', 'column_to_compare', 'groups',
                     'group1', 'group2', 'x1', 'x2',
                     'diff', 'pvalue_raw', 'pvalue_adj', 'pvalue', 'reject',
                     'model_type', 'omnibus_pvalue', 'icc',
@@ -239,10 +243,11 @@ def _empty_pairwise_columns():
     return _LEADING_COLUMNS + desc
 
 
-def test_significant_metric_averages_mlm(data, metric, 
+def test_significant_metric_averages_mlm(data, metric,
                                           column_to_compare='experience_level',
                                           group_column='mouse_id',
                                           event_type='Not specified',
+                                          cell_type='Not specified',
                                           infer_event_type_from_metric=False):
     """
     Test for significant differences in a metric across conditions using a mixed linear
@@ -344,16 +349,19 @@ def test_significant_metric_averages_mlm(data, metric,
 
     if use_mlm:
         try:
-            return _run_mlm(data, metric, column_to_compare, group_column, groups, mapper, event_type)
+            return _run_mlm(data, metric, column_to_compare, group_column, groups, mapper,
+                            event_type, cell_type)
         except Exception as exc:
             warnings.warn(f'MLM failed ({exc}); falling back to ANOVA/Tukey.', RuntimeWarning)
-            return _run_anova_tukey(data, metric, column_to_compare, group_column, groups, mapper, event_type)
+            return _run_anova_tukey(data, metric, column_to_compare, group_column, groups, mapper,
+                                    event_type, cell_type)
     else:
-        return _run_anova_tukey(data, metric, column_to_compare, group_column, groups, mapper, event_type)
+        return _run_anova_tukey(data, metric, column_to_compare, group_column, groups, mapper,
+                                event_type, cell_type)
 
 
 def _build_pairwise_row(metric, column_to_compare, groups, g1, g2, mapper,
-                         diff, pval, group_stats, event_type):
+                         diff, pval, group_stats, event_type, cell_type):
     """
     Build a pairwise row using the canonical column ordering. Trailing fields
     (model_type, omnibus_pvalue, etc.) are left empty here and filled in by the
@@ -362,6 +370,7 @@ def _build_pairwise_row(metric, column_to_compare, groups, g1, g2, mapper,
     row = {
         'metric': metric,
         'event_type': event_type,
+        'cell_type': cell_type,
         'column_to_compare': column_to_compare,
         'groups': tuple(groups),
         'group1': g1,
@@ -387,7 +396,8 @@ def _build_pairwise_row(metric, column_to_compare, groups, g1, g2, mapper,
     return row
 
 
-def _run_mlm(data, metric, column_to_compare, group_column, groups, mapper, event_type='Not specified'):
+def _run_mlm(data, metric, column_to_compare, group_column, groups, mapper,
+             event_type='Not specified', cell_type='Not specified'):
     """Run mixed linear model with random intercept and extract pairwise comparisons."""
 
     # --- Compute ICC from intercept-only model ---
@@ -464,7 +474,7 @@ def _run_mlm(data, metric, column_to_compare, group_column, groups, mapper, even
 
             row = _build_pairwise_row(metric, column_to_compare, groups,
                                        g1, g2, mapper, diff, pval, group_stats,
-                                       event_type)
+                                       event_type, cell_type)
             row['model_type'] = 'mlm'
             row['omnibus_pvalue'] = omnibus_pvalue
             row['icc'] = icc_results['icc']
@@ -500,7 +510,8 @@ def _run_mlm(data, metric, column_to_compare, group_column, groups, mapper, even
     }
 
 
-def _run_anova_tukey(data, metric, column_to_compare, group_column, groups, mapper, event_type='Not specified'):
+def _run_anova_tukey(data, metric, column_to_compare, group_column, groups, mapper,
+                     event_type='Not specified', cell_type='Not specified'):
     """Fallback: standard ANOVA + Tukey HSD for non-nested data."""
 
     group_data = [data[data[column_to_compare] == g][metric] for g in groups]
@@ -545,7 +556,7 @@ def _run_anova_tukey(data, metric, column_to_compare, group_column, groups, mapp
             new_row = _build_pairwise_row(metric, column_to_compare, groups,
                                            g1, g2, mapper,
                                            row.get('meandiff', np.nan), pval, group_stats,
-                                           event_type)
+                                           event_type, cell_type)
             # The Tukey table's reject is multiple-comparison-corrected, so
             # prefer it over the naive pval < 0.05 check from _build_pairwise_row.
             if 'reject' in row:
@@ -561,7 +572,7 @@ def _run_anova_tukey(data, metric, column_to_compare, group_column, groups, mapp
                                        g1, g2, mapper,
                                        group_data[1].mean() - group_data[0].mean(),
                                        omnibus_pvalue, group_stats,
-                                       event_type)
+                                       event_type, cell_type)
         new_row['pvalue_raw'] = omnibus_pvalue
         new_row['pvalue_adj'] = omnibus_pvalue
         new_row['pvalue'] = omnibus_pvalue
@@ -651,7 +662,8 @@ def test_significant_metric_averages(data, metric, column_to_compare='experience
 
 def compute_stats(data, metric, column_to_compare='experience_level', *,
                   use_mlm=True, group_column='mouse_id',
-                  event_type='Not specified'):
+                  event_type='Not specified',
+                  cell_type='Not specified'):
     """
     Unified stats entry point for the ``add_stats_to_plot*`` family.
 
@@ -703,7 +715,7 @@ def compute_stats(data, metric, column_to_compare='experience_level', *,
     if use_mlm:
         results = test_significant_metric_averages_mlm(
             data, metric, column_to_compare,
-            group_column=group_column, event_type=event_type,
+            group_column=group_column, event_type=event_type, cell_type=cell_type,
         )
         stats_table = results['pairwise'].copy()
         # legacy 2-group plotter branch reads `one_way_anova_p_val`; in MLM the
@@ -718,4 +730,100 @@ def compute_stats(data, metric, column_to_compare='experience_level', *,
         stats_table = tukey.copy()
         # broadcast the omnibus p to a column so the plotter can read it uniformly
         stats_table['omnibus_pvalue'] = float(anova.pvalue) if hasattr(anova, 'pvalue') else float(anova[1])
+        # Inject canonical leading metadata so the legacy path produces a table
+        # with the same first few columns as the MLM path (metric, event_type,
+        # cell_type, then column_to_compare, ...). Without this, the two paths
+        # save CSVs with different column orderings.
+        for col, val in (('cell_type', cell_type),
+                         ('event_type', event_type),
+                         ('metric', metric)):
+            if col in stats_table.columns:
+                stats_table[col] = val  # overwrite if already present
+                continue
+            stats_table.insert(0, col, val)
     return stats_table
+
+
+# ---------------------------------------------------------------------------
+# Post-hoc metadata insertion (used by the figures-file callers)
+# ---------------------------------------------------------------------------
+
+# Columns that compute_stats already emits. Passing these as kwargs to
+# insert_stats_metadata is a no-op + warning -- the call site should stop
+# adding them. `comparison` is treated as an alias of `column_to_compare`.
+_RESERVED_METADATA = ('metric', 'event_type', 'cell_type', 'column_to_compare')
+_METADATA_ALIASES = {'comparison': 'column_to_compare'}
+
+
+def insert_stats_metadata(stats_table, *, after='cell_type', **metadata):
+    """
+    Insert caller-supplied metadata columns into ``stats_table`` immediately
+    after the ``after`` column (default 'cell_type'), so they appear up front
+    in saved CSVs but after the canonical leading columns
+    (metric, event_type, cell_type) that compute_stats emits.
+
+    Use this for caller-known context that compute_stats doesn't have access to
+    -- typically ``condition`` (the outer loop variable) and ``cohort`` /
+    ``project_code``. ``cell_type`` and ``event_type`` should be passed to
+    compute_stats / add_stats_to_plot* directly, not through here.
+
+    Behavior:
+      - None values are skipped (lets you pass through optional context cleanly).
+      - Kwargs whose names duplicate columns that compute_stats already emits
+        (metric, event_type, cell_type, column_to_compare, or the alias
+        'comparison' -> 'column_to_compare') are dropped with a RuntimeWarning.
+        Fix the call site instead of relying on this.
+      - For non-reserved kwargs that already exist as columns, the value is
+        replaced in place (preserving column position).
+      - Remaining kwargs are inserted immediately after ``after``. If ``after``
+        isn't in the table, they're inserted at the front.
+      - Returns a new DataFrame; does not mutate the input.
+    """
+    if stats_table is None or len(stats_table) == 0:
+        return stats_table
+
+    out = stats_table.copy()
+
+    # Drop None values up front.
+    metadata = {k: v for k, v in metadata.items() if v is not None}
+
+    # Filter reserved / aliased keys.
+    cleaned = {}
+    for k, v in metadata.items():
+        if k in _RESERVED_METADATA:
+            warnings.warn(
+                f"insert_stats_metadata: dropping '{k}'={v!r} -- compute_stats "
+                f"already emits this column. Pass it to compute_stats / "
+                f"add_stats_to_plot* directly instead.",
+                RuntimeWarning)
+            continue
+        alias_target = _METADATA_ALIASES.get(k)
+        if alias_target and alias_target in out.columns and out[alias_target].notna().any():
+            warnings.warn(
+                f"insert_stats_metadata: dropping '{k}'={v!r} -- duplicates "
+                f"existing column '{alias_target}'. Remove this metadata from "
+                f"the call site.",
+                RuntimeWarning)
+            continue
+        cleaned[k] = v
+
+    # In-place replace for keys already in the table.
+    in_place_keys = [k for k in cleaned if k in out.columns]
+    for k in in_place_keys:
+        out[k] = cleaned[k]
+        del cleaned[k]
+
+    if not cleaned:
+        return out
+
+    # Insert remaining keys after `after`.
+    cols = list(out.columns)
+    try:
+        anchor = cols.index(after) + 1
+    except ValueError:
+        anchor = 0
+    for k, v in cleaned.items():
+        out[k] = v
+    new_keys = list(cleaned.keys())
+    rest = [c for c in cols[anchor:] if c not in new_keys]
+    return out[cols[:anchor] + new_keys + rest]
