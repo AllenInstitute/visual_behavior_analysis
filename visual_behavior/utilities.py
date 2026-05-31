@@ -90,6 +90,175 @@ def get_response_rates(df_in, sliding_window=100, apply_trial_number_limit=False
     return hit_rate, catch_rate, d_prime
 
 
+def get_stimulus_based_rolling_performance_df(stimulus_presentations, sliding_window=100,
+                                              response_col='licked',
+                                              reward_col='rewarded',
+                                              reward_rate_window=320):
+    """
+    Computes the rolling hit rate, false alarm rate, d-prime, and reward rate from
+    stimulus-based (flash-level) responses, analogous to the SDK's get_rolling_performance_df
+    but using every stimulus on which a change *could* have occurred (could_change == True)
+    rather than only the single 'catch' stimulus per catch trial.
+
+    Because there are many more catch opportunities per unit time than there are SDK catch
+    trials, the trial-count (Macmillan & Creelman) correction no longer pins the early-session
+    false alarm rate near 0.5, so the rolling FA rate and d-prime are no longer dominated by
+    the small-N artifact at the start of each session.
+
+    Mirrors the 'stimulus_based' definitions in get_behavior_stats():
+        opportunities = (could_change == True) & (auto_rewarded == False)
+        hit  = response on opportunities where is_change == True
+        FA   = response on opportunities where is_change == False
+    The rolling window slides over the could-change opportunities in time order (one row per
+    opportunity), exactly as get_response_rates() slides over non-aborted trials.
+
+    The reward rate is a *time-based* rate, so it is computed over ALL stimulus presentations
+    (every ~0.75 s flash) with a triangular window, matching get_extended_stimulus_presentations,
+    and then sampled at the could-change opportunity rows. This is the same quantity the
+    2/3-rewards/min engagement threshold is based on.
+
+    Parameters
+    ----------
+    stimulus_presentations : pd.DataFrame
+        Annotated stimulus presentations for a SINGLE session (e.g. from
+        behavior_formatting.annotate_stimuli). Must contain the columns:
+        'could_change', 'is_change', 'auto_rewarded', 'start_time', and `response_col`.
+        'stimulus_presentations_id' and 'engagement_state' are carried through if present;
+        reward rate is computed if `reward_col` is present, otherwise an existing
+        'reward_rate' column is sampled if available.
+    sliding_window : int
+        Number of could-change opportunities (go + catch) over which to roll. Default 100,
+        matching get_response_rates. Note this is opportunities, not seconds.
+    response_col : str
+        Name of the boolean response column (lick in the response window), used as the
+        hit / false-alarm indicator and as the name of the response column in the output.
+        Default 'licked' to match the annotated stimulus presentations table; pass
+        'response_lick' to match get_behavior_stats (the two are equivalent — both are a
+        lick in the [0, 0.75 s] response window).
+    reward_col : str
+        Name of the per-flash boolean reward column used to compute reward rate. Default
+        'rewarded'. If absent, an existing 'reward_rate' column is used instead if present.
+    reward_rate_window : int
+        Number of stimulus presentations (all flashes) in the triangular reward-rate window.
+        Default 320 (~4 min at 0.75 s/flash), matching get_extended_stimulus_presentations.
+
+    Returns
+    -------
+    pd.DataFrame
+        One row per could-change opportunity, in time order, with columns:
+        'stimulus_presentations_id' (if available, for linking to other tables),
+        'start_time', 'time_in_session' (seconds since first opportunity),
+        'is_change', `response_col` (the response indicator, named to match the input column,
+        e.g. 'licked' or 'response_lick'),
+        'hit_rate_raw', 'hit_rate', 'false_alarm_rate_raw', 'false_alarm_rate',
+        'rolling_dprime', 'n_go_opportunities', 'n_catch_opportunities',
+        'reward_rate' (rewards/min, if computable), and 'engagement_state' (if present in the
+        input). Also preserves the original stimulus_presentations index.
+    """
+    # work on a time-ordered copy of the full flash table so the reward rate (a time-based
+    # rate over every flash) and the opportunity subset share the same ordering / index
+    sp = stimulus_presentations.sort_values('start_time')
+
+    # reward rate over ALL flashes: rewards/min = mean(rewarded) * (flashes per minute),
+    # with a triangular window, matching loading.get_extended_stimulus_presentations
+    reward_rate = None
+    if reward_col in sp.columns:
+        reward_rate = (sp[reward_col].astype(float)
+                       .rolling(window=reward_rate_window, min_periods=1, win_type='triang')
+                       .mean() * (60. / 0.75))
+    elif 'reward_rate' in sp.columns:
+        reward_rate = sp['reward_rate']
+
+    # restrict to the stimuli that were genuine change opportunities (already time-ordered)
+    opportunities = sp[
+        (sp['could_change'] == True) &        # noqa: E712
+        (sp['auto_rewarded'] == False)        # noqa: E712
+    ]
+
+    is_change = opportunities['is_change'].astype(bool)
+    response = opportunities[response_col].astype(float)
+
+    # hit indicator is only defined on go opportunities (NaN elsewhere) so the rolling mean
+    # averages over go opportunities only; FA indicator only on catch opportunities.
+    # This matches how get_response_rates uses is_hit / is_catch (NaN on the other trial type).
+    hit_response = response.where(is_change, np.nan)
+    fa_response = response.where(~is_change, np.nan)
+
+    hit_rate = hit_response.rolling(window=sliding_window, min_periods=0).mean().values
+    fa_rate = fa_response.rolling(window=sliding_window, min_periods=0).mean().values
+
+    # number of go / catch opportunities currently in the window (count ignores NaN)
+    n_go = hit_response.rolling(window=sliding_window, min_periods=0).count().values
+    n_catch = fa_response.rolling(window=sliding_window, min_periods=0).count().values
+
+    # raw (uncorrected) rolling rates -- can be exactly 0 or 1
+    hit_rate_raw = hit_rate
+    fa_rate_raw = fa_rate
+    # trial-number-corrected rates (Macmillan & Creelman bound 1/(2N) <= P <= 1-1/(2N));
+    # these feed rolling_dprime. Always computed alongside the raw rates so you can see
+    # directly whether/where the correction actually moves the rate for your data.
+    hit_rate = np.vectorize(trial_number_limit)(hit_rate_raw, n_go)
+    fa_rate = np.vectorize(trial_number_limit)(fa_rate_raw, n_catch)
+
+    rolling_dprime = dprime(hit_rate, fa_rate)
+
+    out = pd.DataFrame({
+        'start_time': opportunities['start_time'].values,
+        'time_in_session': (opportunities['start_time'] - opportunities['start_time'].iloc[0]).values,
+        'is_change': is_change.values,
+        response_col: response.values,
+        'hit_rate_raw': hit_rate_raw,
+        'hit_rate': hit_rate,
+        'false_alarm_rate_raw': fa_rate_raw,
+        'false_alarm_rate': fa_rate,
+        'rolling_dprime': rolling_dprime,
+        'n_go_opportunities': n_go,
+        'n_catch_opportunities': n_catch,
+    }, index=opportunities.index)
+    # id for linking back to stimulus_presentations / other tables (column if present, else index)
+    if 'stimulus_presentations_id' in opportunities.columns:
+        out.insert(0, 'stimulus_presentations_id', opportunities['stimulus_presentations_id'].values)
+    else:
+        out.insert(0, 'stimulus_presentations_id', opportunities.index.values)
+    if reward_rate is not None:
+        out['reward_rate'] = reward_rate.loc[opportunities.index].values
+    if 'engagement_state' in opportunities.columns:
+        out['engagement_state'] = opportunities['engagement_state'].values
+    return out
+
+
+def get_stimulus_based_rolling_performance_df_for_dataset(stimulus_presentations,
+                                                          session_key='behavior_session_id',
+                                                          **kwargs):
+    """
+    Applies get_stimulus_based_rolling_performance_df to each session in a multi-session
+    stimulus_presentations table and concatenates the results.
+
+    Parameters
+    ----------
+    stimulus_presentations : pd.DataFrame
+        Annotated stimulus presentations spanning multiple sessions, with a `session_key`
+        column identifying each session, plus the columns required by
+        get_stimulus_based_rolling_performance_df.
+    session_key : str
+        Column used to group sessions (e.g. 'behavior_session_id').
+    **kwargs :
+        Passed through to get_stimulus_based_rolling_performance_df (sliding_window,
+        response_col, reward_col, reward_rate_window).
+
+    Returns
+    -------
+    pd.DataFrame
+        Concatenation of the per-session rolling dataframes, with `session_key` added as a column.
+    """
+    dfs = []
+    for session_id, session_sp in stimulus_presentations.groupby(session_key):
+        roll = get_stimulus_based_rolling_performance_df(session_sp, **kwargs)
+        roll[session_key] = session_id
+        dfs.append(roll)
+    return pd.concat(dfs, ignore_index=False)
+
+
 class RisingEdge():
     """
     This object implements a "rising edge" detector on a boolean array.

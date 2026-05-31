@@ -1502,8 +1502,8 @@ def add_stats_to_plot_for_hues(data, metric, ax, ymax=None, xorder=None, x='expe
     fontsize = 15
 
     ytop = ax.get_ylim()[1]
-    y = ytop
-    yh = ytop# * (1 + scale)
+    y = ytop - scale
+    yh = ytop #* (1 + scale)
 
     stats_table = pd.DataFrame()
     # do hierarchical stats (MLM by default) across hue values within each x value
@@ -1638,7 +1638,7 @@ def add_stats_to_plot(data, metric, ax, ymax=None, column_to_compare='experience
 
     scale = 0.05#0.05 # 0.1
     if behavior:
-        scale = 0.01
+        scale = 0.025
     fontsize = 15
 
     if ymax is None:
@@ -2521,6 +2521,82 @@ def plot_metric_over_repeats(df, metric, x, title='', xlabel=None, ylabel=None, 
     return ax
 
 
+def plot_rolling_metric_over_time_in_session(rolling_df, metric='rolling_dprime', bin_size_seconds=120,
+                                             max_minutes=60, label_every=5, linewidth=1.5, ylabel=None,
+                                             save_dir=None, folder=None, ax=None):
+    '''
+    Plot a rolling behavioral performance metric averaged across sessions in equal-width time
+    bins over the course of the session, split by experience level.
+
+    Time in session is binned into `bin_size_seconds` bins and plotted in minutes on the x-axis.
+    x tick labels are shown as integers (minutes) and only every `label_every`-th bin is labeled,
+    so with the defaults (120 s bins, label_every=5) labels appear in 10 minute increments.
+
+    Parameters
+    ----------
+    rolling_df : pd.DataFrame
+        Rolling performance data with columns 'time_in_session' (seconds), `metric`, and
+        'experience_level'. E.g. the output of
+        utilities.get_stimulus_based_rolling_performance_df_for_dataset joined with experience_level.
+    metric : str
+        Column to plot on the y-axis (e.g. 'rolling_dprime', 'hit_rate', 'false_alarm_rate',
+        'reward_rate'). Default 'rolling_dprime'.
+    bin_size_seconds : float
+        Width of the time-in-session bins, in seconds. Default 120 (2 min).
+    max_minutes : float
+        Only include bins below this many minutes into the session. Default 60.
+    label_every : int
+        Label every Nth x tick; the rest are hidden. Default 5 (=> every 10 min for 120 s bins).
+    linewidth : float
+        Width of the lines connecting the point estimates. Default 1.5.
+    ylabel : str or None
+        y-axis label. If None, derived from `metric`.
+    save_dir : str or None
+        If provided, the figure is saved under save_dir/folder via utils.save_figure.
+    folder : str or None
+        Sub-folder within save_dir to save into.
+    ax : matplotlib.axes.Axes or None
+        Axis to plot on. If None, a new figure and axis are created.
+
+    Returns
+    -------
+    matplotlib.axes.Axes
+    '''
+    if ax is None:
+        figsize = (5, 3)
+        fig, ax = plt.subplots(figsize=figsize)
+
+    data = rolling_df.copy().reset_index(drop=True)
+    # bin time in session and express the bin label in minutes
+    data['time_bin'] = ((data['time_in_session'] // bin_size_seconds) * bin_size_seconds) / 60.
+    data = data[data['time_bin'] < max_minutes]
+
+    experience_level_colors = utils.get_experience_level_colors()
+    experience_levels = utils.get_new_experience_levels()
+
+    # fix the category order so x positions line up with bin_centers below
+    bin_centers = np.sort(data['time_bin'].unique())
+    ax = sns.pointplot(data=data, x='time_bin', y=metric, hue='experience_level', order=bin_centers,
+                       linewidth=linewidth, markers='.', markersize=5, err_kws={'linewidth': linewidth}, estimator=np.mean,
+                       palette=experience_level_colors, hue_order=experience_levels, ax=ax)
+    ax.legend(fontsize='xx-small', title_fontsize='xx-small', title='')
+
+    # integer (minute) x tick labels, labeling only every `label_every`-th bin
+    ax.set_xticks(range(len(bin_centers)))
+    ax.set_xticklabels([str(int(round(b))) if (j % label_every == 0) else ''
+                        for j, b in enumerate(bin_centers)])
+    ax.set_xlabel('Time in session (min)')
+    if ylabel is None:
+        ax.set_ylabel(metric.replace('_', ' ').capitalize())
+    else:
+        ax.set_ylabel(ylabel)
+
+    if save_dir:
+        utils.save_figure(fig, figsize, save_dir, folder, _clean_filename(metric + '_over_time_in_session'))
+
+    return ax
+
+
 def plot_metric_over_repeats_for_cell_types(df, metric, x, xlabel=None, ylabel=None, save_dir=None, folder=None):
     figsize = (12, 7)
     fig, ax = plt.subplots(3, 1, figsize=figsize, sharex=True, sharey=True)
@@ -2566,7 +2642,7 @@ def plot_metric_across_stimuli_by_experience_level(stimulus_response_df, metric,
     df = df[df.stimulus_number<=max_stim+1] 
     
     if ax is None:
-        figsize = (7, 3)
+        figsize = (9, 3)
         fig, ax = plt.subplots(figsize=figsize)
 
     experience_levels = utils.get_experience_levels()
@@ -6681,14 +6757,16 @@ def plot_behavior_metric_by_experience(stats, metric, title='', ylabel='', ylims
 
     if pointplot:
         ax = sns.pointplot(data=data, x='experience_level', y=metric, order=experience_levels,
-                       orient='v', palette=colors, ax=ax,
+                       orient='v', palette=colors, ax=ax, hue='experience_level', legend=False,
                        markers='.', markersize=8, err_kws={'linewidth': 2},)
     else:
         ax = sns.boxplot(data=data, x='experience_level', y=metric, order=experience_levels,
+                            hue='experience_level', legend=False,
                            orient='v', palette=colors, width=0.6, boxprops=dict(alpha=0.8), ax=ax)
 
     ax.set_xlim(-0.5, len(experience_levels)-0.5)
     if abbreviate_exp:
+        ax.set_xticks(range(len(experience_levels)))
         ax.set_xticklabels(utils.get_abbreviated_experience_levels(), rotation=0)
         utils.color_xaxis_labels_by_experience(ax)
     else:
@@ -6728,6 +6806,77 @@ def plot_behavior_metric_by_experience(stats, metric, title='', ylabel='', ylims
         descriptive_stats.to_csv(os.path.join(save_dir, folder, _clean_filename(stats_filename + '_values.csv')))
     except BaseException:
         print('stats did not save for', metric)
+    return ax
+
+
+def plot_response_rate_by_trial_type(behavior_stats, metric='response_probability', fraction_engaged_thresh=0.7,
+                                     title='', ylabel='Response rate', ylims=(-0.01, 1),
+                                     save_dir=None, folder=None, suffix='', ax=None,
+                                     use_mlm=True, group_column='mouse_id'):
+    """
+    plots response rate across trial types (change, non-change, omission, post-omission), split by experience level,
+    as a boxplot using experience level colors. Stats are computed across experience levels within each trial type
+    (using a hierarchical mixed linear model by default) and saved out alongside the figure.
+
+    behavior_stats: stimulus-based behavior metrics table (e.g. platform_behavior_stats), already limited to the
+        sessions of interest. Must contain columns 'fraction_engaged', 'trial_type', 'experience_level',
+        the metric column, and group_column.
+    metric: column in behavior_stats containing the response rate values (default 'response_probability')
+    fraction_engaged_thresh: only sessions with fraction_engaged greater than this value are included
+    use_mlm: if True (default), use hierarchical mixed linear model with random intercept for group_column for stats
+    group_column: nesting variable for MLM (e.g., 'mouse_id')
+
+    returns axis handle
+    """
+    suffix = _norm_suffix(suffix)
+
+    # limit to engaged sessions and the trial types of interest, renaming 'could_change' to 'non-change'
+    data = behavior_stats.copy()
+    data = data[data.fraction_engaged > fraction_engaged_thresh]
+    data = data[data.trial_type.isin(['change', 'could_change', 'omission', 'post-omission'])]
+    data['trial_type'] = ['non-change' if trial_type == 'could_change' else trial_type
+                          for trial_type in data.trial_type.values]
+
+    trial_types = data.trial_type.unique()
+
+    if ax is None:
+        figsize = (5, 3)
+        fig, ax = plt.subplots(figsize=figsize)
+
+    ax = sns.boxplot(data=data, x='trial_type', y=metric, hue='experience_level',
+                     order=trial_types, palette=utils.get_experience_level_colors(),
+                     width=0.6, boxprops=dict(alpha=0.7), ax=ax)
+    ax.set_ylabel(ylabel)
+    ax.set_xticklabels(trial_types, rotation=45)
+    ax.set_xlabel('')
+    if ylims is not None:
+        ax.set_ylim(ylims[0], ylims[1])
+    ax.legend(loc='upper right', fontsize='xx-small')
+    ax.set_title(title)
+
+    # stats across experience levels within each trial type
+    ax, stats_table = add_stats_to_plot_for_hues(data, metric, ax, ymax=None,
+                                                 xorder=trial_types, x='trial_type', hue='experience_level',
+                                                 use_mlm=use_mlm, group_column=group_column,
+                                                 event_type='behavior')
+    # data_subset (trial_type) is added inside add_stats_to_plot_for_hues; add condition after cell_type
+    # so condition lands directly before data_subset in the saved CSV
+    stats_table = insert_stats_metadata(stats_table, condition='experience_level')
+
+    plt.subplots_adjust(top=0.96)
+    if save_dir:
+        filename = _clean_filename(metric + '_by_trial_type' + suffix)
+        utils.save_figure(fig, figsize, save_dir, folder, filename)
+        try:
+            print('saving_stats')
+            stats_suffix = '_mlm.csv' if use_mlm else '_tukey.csv'
+            stats_table.to_csv(os.path.join(save_dir, folder, _clean_filename(filename + '_stats' + stats_suffix)))
+            # save descriptive metric values
+            cols_to_groupby = ['trial_type', 'experience_level']
+            descriptive_stats = get_descriptive_stats_for_metric(data, metric, cols_to_groupby)
+            descriptive_stats.to_csv(os.path.join(save_dir, folder, _clean_filename(filename + '_stats_values.csv')))
+        except BaseException:
+            print('stats did not save for', metric)
     return ax
 
 
@@ -6961,7 +7110,8 @@ def plot_behavior_metric_by_cohort(stats, metric, title='', ylabel='', ylims=Non
     return ax
 
 
-def plot_behavior_metric_across_stages(data, metric, ylabel=None, save_dir=None, folder=None, suffix=''):
+def plot_behavior_metric_across_stages(data, metric, ylabel=None, ax=None,
+                                       save_dir=None, folder=None, suffix=''):
     """
     generate boxplot of metric values across behavior stages (gratings flashed, gratings static, familiar, novel)
     with cre line on x-axis and behavior stages as hue
@@ -6981,8 +7131,9 @@ def plot_behavior_metric_across_stages(data, metric, ylabel=None, save_dir=None,
     colors = [list(color_map[behavior_stage]) for behavior_stage in behavior_stages]
     colors = [[c / 255. for c in color] for color in colors]
 
-    figsize = (7, 3)
-    fig, ax = plt.subplots(figsize=figsize)
+    if ax is None: 
+        figsize = (7, 3)
+        fig, ax = plt.subplots(figsize=figsize)
     ax = sns.boxplot(data=data, x='cell_type', y=metric, width=0.8, order=cell_types, 
                      hue='behavior_stage', hue_order=behavior_stages, palette=colors, ax=ax)
     ax.set_xlabel('')
@@ -6990,12 +7141,13 @@ def plot_behavior_metric_across_stages(data, metric, ylabel=None, save_dir=None,
     ax.legend().remove()
     ax.legend(bbox_to_anchor=(1, 1), fontsize='x-small')
 
-    fig.subplots_adjust(hspace=0.3)
     if save_dir:
+        fig.subplots_adjust(hspace=0.3)
         utils.save_figure(fig, figsize, save_dir, folder, _clean_filename('metric_across_stages_' + metric + suffix))
         # save stats
         stats = data.groupby(['cell_type', 'behavior_stage']).describe()[[metric]]
         stats.to_csv(os.path.join(save_dir, folder, _clean_filename('metric_across_stages_' + metric + suffix + '_values.csv')))
+    return ax
 
 
 def plot_days_in_stage(behavior_sessions, stage_column, save_dir=None, folder=None, suffix=None):
