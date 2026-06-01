@@ -1234,7 +1234,8 @@ def get_behavior_stats(behavior_session_id, method='stimulus_based', engaged_onl
         behavior session ID of interest
     engaged_only : boolean
         If True (default), calculates behavior stats only on engaged trials
-        NOTE: There is currently no functionality to support engaged_only=False!! The metrics are always computed for engaged_only=True
+        NOTE: There is currently no functionality to support engaged_only=False!! 
+        The metrics are always computed for engaged_only=True
     per_image : boolean
         default = False
         if True, will compute each metric for each image_name

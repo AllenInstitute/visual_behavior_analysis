@@ -291,6 +291,11 @@ def get_cre_line_color_dict():
     return colors
 
 
+def wrap_at_middle(s, max_len=25):
+    import textwrap
+    return '\n'.join(textwrap.wrap(s, width=max_len)) if len(s) > max_len else s
+
+
 def get_stimulus_color_map(as_rgb=False):
     session_number_colors = get_colors_for_session_numbers()
     session_number_colors_GH = get_colors_for_session_numbers_GH()

@@ -66,6 +66,45 @@ sns.set_palette('deep')
 plt.rcParams['xtick.bottom'] = True
 plt.rcParams['ytick.left'] = True
 
+# Statistics configuration
+# Single switch for the statistical test used by all add_stats_to_plot* functions
+# (and the saved-stats CSV filename suffix). Set to True for hierarchical mixed
+# linear models (with ANOVA/t-test fallback when data are too sparse), or False
+# for the legacy ANOVA + Tukey HSD path. Changing it here applies everywhere.
+USE_MLM = True
+
+
+def _stats_suffix_for_table(stats_table):
+    """
+    Return the saved-stats CSV suffix reflecting the test that was ACTUALLY run,
+    read from the per-row ``model_type`` column, rather than blindly from the
+    ``USE_MLM`` flag.
+
+    ``compute_stats(use_mlm=True)`` runs the hierarchical MLM but auto-falls back
+    to ANOVA / Welch's t-test per panel when the data are too sparse, tagging
+    those rows ``model_type='anova'`` instead of ``'mlm'``. A concatenated table
+    can therefore be mixed. The naming rule (lean-mlm):
+
+    - any genuine MLM row present -> ``_mlm.csv``
+    - otherwise, if a fallback test ran            -> ``_anova.csv``
+    - legacy ANOVA+Tukey path (``use_mlm=False``)  -> ``_tukey.csv``
+      (that path emits no ``model_type`` column at all)
+
+    This keeps the filename from ever claiming MLM when nothing in the table was
+    fit with a mixed model.
+    """
+    if stats_table is None or 'model_type' not in getattr(stats_table, 'columns', ()):
+        # legacy ANOVA + Tukey HSD path emits no model_type column
+        return '_tukey.csv'
+    kinds = set(stats_table['model_type'].dropna().unique())
+    if 'mlm' in kinds:
+        return '_mlm.csv'
+    if 'anova' in kinds:
+        return '_anova.csv'
+    # model_type present but only 'none' (no testable groups) -> MLM was the
+    # requested/attempted model; keep the mlm name.
+    return '_mlm.csv'
+
 
 def _heatmap_omnibus_p(panel_stats):
     """
@@ -98,7 +137,7 @@ def plot_max_intensity_projection(dataset, ax=None):
 # ophys_container_id = ophys_container_ids[0]
 
 def plot_all_planes_all_sessions_for_mouse(dataset_dict, mouse_expts, session_id_for_area_depths=None,
-                                           save_dir=None, folder=None, ax=None):
+                                           save_dir=None, folder='imaging_planes', ax=None):
     '''
     For a given mouse, plot all FOVs across all sessions in a grid. If an FOV for a particular container is missing, leave a blank axis
     '''
@@ -280,7 +319,7 @@ def plot_all_traces_heatmap(all_traces, session_metadata, timestamps=None, cmap=
 # basic characterization #########################
 
 def plot_cell_count_by_depth(cells_table, project_code=None, suptitle=None, horiz=True,
-                             save_dir=None, folder=None, suffix='', ax=None):
+                             save_dir=None, folder='dataset_stats', suffix='', ax=None):
     suffix = _norm_suffix(suffix)
     if project_code == 'VisualBehaviorMultiscope4areasx2d':
         areas = ['VISp', 'VISl', 'VISal', 'VISam']
@@ -347,7 +386,7 @@ def plot_cell_count_by_depth(cells_table, project_code=None, suptitle=None, hori
     return ax
 
 
-def plot_n_cells_per_plane_by_depth(cells_table, suptitle=None, save_dir=None, folder=None, ax=None):
+def plot_n_cells_per_plane_by_depth(cells_table, suptitle=None, save_dir=None, folder='dataset_stats', ax=None):
 
     n_cells = cells_table.groupby(['cell_type', 'binned_depth', 'ophys_experiment_id']).count().rename(columns={'cell_specimen_id':'n_cells'}).reset_index()
 
@@ -369,7 +408,7 @@ def plot_n_cells_per_plane_by_depth(cells_table, suptitle=None, save_dir=None, f
     return ax
 
 
-def plot_n_planes_per_depth(experiments_table, suptitle=None, save_dir=None, folder=None, ax=None):
+def plot_n_planes_per_depth(experiments_table, suptitle=None, save_dir=None, folder='dataset_stats', ax=None):
 
     n_expts = experiments_table.groupby(['cell_type', 'binned_depth']).count().rename(columns={'ophys_session_id':'n_expts'}).reset_index()
 
@@ -454,7 +493,7 @@ def plot_population_averages_for_condition(multi_session_df, data_type, event_ty
                                             project_code=None, timestamps=None, palette=None, ylims=None,
                                             title=None, suptitle=None, xlabel='Time (s)', ylabel='Response',
                                             horizontal=True, xlim_seconds=None, interval_sec=1, legend=False,
-                                            linewidth=1, save_dir=None, folder=None, suffix='', ax=None):
+                                            linewidth=1, save_dir=None, folder='population_activity', suffix='', ax=None):
     '''
     Function to plot a population average response across for a single condition from a dataframe containing event aligned timeseries,
     where axes_column defines the axes conditions and hue_column defines the colors of traces within each axes condition.
@@ -582,7 +621,7 @@ def plot_population_averages_for_conditions(multi_session_df, data_type, event_t
                                             project_code=None, timestamps=None, palette=None, sharey=False,
                                             title=None, suptitle=None, xlabel='Time (s)', ylabel='Response',
                                             horizontal=True, xlim_seconds=None, interval_sec=1, legend=False,
-                                            linewidth=1, save_dir=None, folder=None, suffix='', ax=None):
+                                            linewidth=1, save_dir=None, folder='population_activity', suffix='', ax=None):
     '''
     Function to plot a population average response across multiple conditions from a dataframe containing event aligned timeseries,
     where axes_column defines the axes conditions and hue_column defines the colors of traces within each axes condition.
@@ -738,7 +777,7 @@ def plot_population_averages_for_conditions(multi_session_df, data_type, event_t
 
 def plot_population_averages_for_cell_types_across_experience(multi_session_df, xlim_seconds=[-1.25, 1.5], xlabel='time (s)',
                                                               ylabel='population average',  data_type='events', event_type='changes', interval_sec=1,
-                                                              save_dir=None, folder=None, suffix=None, ax=None):
+                                                              save_dir=None, folder='population_activity', suffix=None, ax=None):
     # get important information
     suffix = _norm_suffix(suffix)
     experiments_table = loading.get_platform_paper_experiment_table()
@@ -863,7 +902,7 @@ def plot_population_averages_for_cell_types_across_experience(multi_session_df, 
 
 def plot_population_averages_across_experience(multi_session_df, xlim_seconds=[-1.25, 1.5], xlabel='time (s)', ylabel='population\nresponse',
                                                data_type='events', event_type='changes', interval_sec=1,
-                                               save_dir=None, folder=None, suffix=None, ax=None):
+                                               save_dir=None, folder='population_activity', suffix=None, ax=None):
     # get important information
     suffix = _norm_suffix(suffix)
     palette = utilities.get_experience_level_colors()
@@ -893,7 +932,7 @@ def plot_population_averages_across_experience(multi_session_df, xlim_seconds=[-
 
 def plot_population_average_across_experience(multi_session_df, xlim_seconds=[-1.25, 1.5], xlabel='time (s)', ylabel='population\nresponse',
                                                data_type='events', event_type='changes', interval_sec=1,
-                                               save_dir=None, folder=None, suffix=None, ax=None):
+                                               save_dir=None, folder='population_activity', suffix=None, ax=None):
     # get important information
     suffix = _norm_suffix(suffix)
     palette = utilities.get_experience_level_colors()
@@ -1085,7 +1124,7 @@ def plot_mean_response_by_epoch_all_cell_types(df, metric='mean_response', horiz
 
     data = df.copy()
     ax = sns.pointplot(data=data, x='epoch', y=metric, hue='experience_level', hue_order=experience_levels,
-                          order=experience_epoch, palette=palette, ax=ax, estimator=estimator)
+                          linewidth=1.5, order=experience_epoch, palette=palette, ax=ax, estimator=estimator)
 
     if ymin is not None:
         ax.set_ylim(ymin=ymin)
@@ -1254,7 +1293,7 @@ def get_fraction_responsive_cells(multi_session_df, conditions=['cell_type', 'ex
 
 
 def plot_fraction_responsive_cells(multi_session_df, responsiveness_threshold=0.1, horizontal=True, ylim=(0, 1),
-                                   ylabel='Fraction responsive', save_dir=None, folder=None, suffix='', ax=None):
+                                   ylabel='Fraction responsive', save_dir=None, folder='response_metrics', suffix='', ax=None):
     """
     Plots the fraction of responsive cells across cre lines
     :param multi_session_df: dataframe of trial averaged responses for each cell for some set of conditions
@@ -1317,8 +1356,8 @@ def plot_fraction_responsive_cells(multi_session_df, responsiveness_threshold=0.
 
 
 def plot_percent_responsive_cells(multi_session_df, responsiveness_threshold=0.1, horizontal=True, ylim=(0, 100), stats_max=80,
-                                   ylabel='% responsive', save_dir=None, folder=None, suffix='', ax=None,
-                                   use_mlm=True, group_column='mouse_id', event_type='Not specified'):
+                                   ylabel='% responsive', save_dir=None, folder='response_metrics', suffix='', ax=None,
+                                   group_column='mouse_id', event_type='Not specified'):
     """
     Plots the fraction of responsive cells across cre lines
     :param multi_session_df: dataframe of trial averaged responses for each cell for some set of conditions
@@ -1385,7 +1424,7 @@ def plot_percent_responsive_cells(multi_session_df, responsiveness_threshold=0.1
 
         # add stats to plot if only looking at experience levels
         ax[i], panel_stats = add_stats_to_plot_yaxis(data, metric, ax[i], ymax=stats_max,
-                                                     use_mlm=use_mlm, group_column=group_column,
+                                                     group_column=group_column,
                                                      event_type=event_type, cell_type=cell_type)
         combined_stats = pd.concat([combined_stats, panel_stats])
 
@@ -1403,7 +1442,7 @@ def plot_percent_responsive_cells(multi_session_df, responsiveness_threshold=0.1
         utils.save_figure(fig, figsize, save_dir, folder, _clean_filename(fig_title))
         # try:
         print('saving_stats')
-        stats_suffix = '_mlm.csv' if use_mlm else '_tukey.csv'
+        stats_suffix = _stats_suffix_for_table(combined_stats)
         combined_stats.to_csv(os.path.join(save_dir, folder, _clean_filename(fig_title + stats_suffix)))
         # save descriptive stats
         cols_to_groupby = ['cell_type', 'experience_level']
@@ -1415,7 +1454,7 @@ def plot_percent_responsive_cells(multi_session_df, responsiveness_threshold=0.1
 
 
 def plot_average_metric_value_for_experience_levels_across_containers(df, metric, ylim=None, horizontal=True,
-                                                                      save_dir=None, folder=None, suffix='', ax=None):
+                                                                      save_dir=None, folder='response_metrics', suffix='', ax=None):
     """
     Plots the average metric value across experience levels for each cre line in color,
     with individual containers shown as connected gray lines
@@ -1480,7 +1519,8 @@ def plot_average_metric_value_for_experience_levels_across_containers(df, metric
 
 
 def add_stats_to_plot_for_hues(data, metric, ax, ymax=None, xorder=None, x='experience_level', hue='layer',
-                               use_mlm=True, group_column='mouse_id',
+                               compact_bars=False,
+                               group_column='mouse_id',
                                event_type='Not specified', cell_type='Not specified'):
     """
     add stars to axis indicating statistics across hue values
@@ -1490,10 +1530,15 @@ def add_stats_to_plot_for_hues(data, metric, ax, ymax=None, xorder=None, x='expe
     data: metrics dataframe, each row is one cell_specimen_id in a given ophys_experiment
     metric: column in data representing metric values of interest
     column_to_compare: column in data to do stats over (after splitting by x values), such as 'layer' or 'targeted_structure'
-    use_mlm: if True (default), use hierarchical mixed linear model with random intercept for group_column;
+    compact_bars: Bool. If False (default, legacy) the star sits at the current axis top
+             and the axis is then expanded by 25%. If True, the star is placed a small
+             fraction of the visible data RANGE above the data and the axis is expanded
+             only slightly -- keeping the stars close to the data regardless of scale.
+             Opt-in so existing callers are unchanged.
+    MLM vs ANOVA/Tukey is set by the module-level ``USE_MLM`` constant: when True, use hierarchical mixed linear model with random intercept for group_column;
              falls back automatically to ANOVA/t-test when data is too sparse for MLM.
              If False, use the legacy ANOVA + Tukey HSD path.
-    group_column: nesting variable for MLM (e.g., 'mouse_id'). Ignored when use_mlm=False.
+    group_column: nesting variable for MLM (e.g., 'mouse_id'). Ignored when ``USE_MLM`` is False.
     event_type: optional label recorded in the saved stats table.
     """
 
@@ -1503,7 +1548,16 @@ def add_stats_to_plot_for_hues(data, metric, ax, ymax=None, xorder=None, x='expe
 
     ytop = ax.get_ylim()[1]
     y = ytop - scale
-    yh = ytop #* (1 + scale)
+    if compact_bars:
+        lo = ax.get_ylim()[0]
+        rng = ytop - min(lo, 0.0)
+        if rng <= 0:
+            rng = ytop if ytop > 0 else 1.0
+        yh = ytop + 0.03 * rng        # star just above the data
+        final_top = ytop + 0.10 * rng  # small headroom
+    else:
+        yh = ytop  # * (1 + scale)
+        final_top = ytop * (1 + (scale * 5))
 
     stats_table = pd.DataFrame()
     # do hierarchical stats (MLM by default) across hue values within each x value
@@ -1512,13 +1566,9 @@ def add_stats_to_plot_for_hues(data, metric, ax, ymax=None, xorder=None, x='expe
         hues = test_data[hue].unique()
         if len(hues) >= 2:
             panel_stats = compute_stats(test_data, metric, column_to_compare=hue,
-                                        use_mlm=use_mlm, group_column=group_column,
+                                        use_mlm=USE_MLM, group_column=group_column,
                                         event_type=event_type, cell_type=cell_type)
-            # Position `data_subset` in the leading metadata block (right after
-            # cell_type). When the call site subsequently inserts `condition`
-            # via insert_stats_metadata with the default after='cell_type',
-            # condition slots between cell_type and data_subset -- placing
-            # data_subset directly after condition in the saved CSV.
+            # Add `data_subset` in the leading metadata block (right after cell_type)
             panel_stats = insert_stats_metadata(panel_stats, data_subset=x_value)
             omnibus_pvalue = panel_stats['omnibus_pvalue'].iloc[0] if len(panel_stats) else 1.0
             # gate star drawing on the omnibus, but keep the panel_stats either way
@@ -1541,19 +1591,19 @@ def add_stats_to_plot_for_hues(data, metric, ax, ymax=None, xorder=None, x='expe
             panel_stats = pd.DataFrame()
 
         stats_table = pd.concat([stats_table, panel_stats])
-    ax.set_ylim(ymax=ytop * (1 + (scale * 5))) # 3 works better for behavior plots
+    ax.set_ylim(ymax=final_top)
 
     return ax, stats_table
 
 
 def add_stats_to_plot_for_hues_along_x(data, metric, ax, yorder=None, y='experience_level', hue='layer',
-                                       use_mlm=True, group_column='mouse_id',
+                                       group_column='mouse_id',
                                        event_type='Not specified', cell_type='Not specified'):
     """
     Add significance stars when metric is on the x-axis and categorical groups are on the y-axis.
     Tests are run across hue values within each y category.
 
-    use_mlm: if True (default), use hierarchical mixed linear model; falls back to ANOVA/t-test
+    MLM vs ANOVA/Tukey is set by the module-level ``USE_MLM`` constant: when True, use hierarchical mixed linear model; falls back to ANOVA/t-test
              when data is too sparse for MLM. If False, use the legacy ANOVA + Tukey HSD path.
     group_column: nesting variable for MLM (e.g., 'mouse_id').
     event_type: optional label recorded in the saved stats table.
@@ -1578,7 +1628,7 @@ def add_stats_to_plot_for_hues_along_x(data, metric, ax, yorder=None, y='experie
             continue
 
         panel_stats = compute_stats(test_data, metric, column_to_compare=hue,
-                                    use_mlm=use_mlm, group_column=group_column,
+                                    use_mlm=USE_MLM, group_column=group_column,
                                     event_type=event_type, cell_type=cell_type)
         omnibus_pvalue = panel_stats['omnibus_pvalue'].iloc[0] if len(panel_stats) else 1.0
 
@@ -1603,7 +1653,8 @@ def add_stats_to_plot_for_hues_along_x(data, metric, ax, yorder=None, y='experie
 
 def add_stats_to_plot(data, metric, ax, ymax=None, column_to_compare='experience_level',
                       show_ns=False, hue_only=False, behavior=False,
-                      use_mlm=True, group_column='mouse_id',
+                      compact_bars=False,
+                      group_column='mouse_id',
                       event_type='Not specified', cell_type='Not specified'):
     """
     add stars to axis indicating across experience level statistics
@@ -1616,7 +1667,16 @@ def add_stats_to_plot(data, metric, ax, ymax=None, column_to_compare='experience
                 set this to True so that the stats are plotted in reasonable positions centered around x=0
                 (otherwise depends on there being x values)
     show_ns: Bool, whether or not to label non-significant results on the plot
-    use_mlm: if True (default), use hierarchical mixed linear model with random intercept for group_column;
+    compact_bars: Bool. If False (default, legacy behavior) significance bars are placed
+                at MULTIPLES of the reference top ``ytop`` -- adjacent comparisons at
+                1.05x/1.10x and "far" comparisons at 1.5x/1.55x -- which floats bars far
+                above the data when ``ytop`` is large (e.g. percent-scale metrics) or
+                when the data doesn't start near 0. If True, bars are placed at small
+                ADDITIVE offsets expressed as a fraction of the visible data RANGE, with
+                the star sitting right on its bar; this keeps bars just above the data and
+                looks consistent across metrics of very different scales. Opt-in so the
+                default placement of all existing callers is unchanged.
+    MLM vs ANOVA/Tukey is set by the module-level ``USE_MLM`` constant: when True, use hierarchical mixed linear model with random intercept for group_column;
              falls back automatically to ANOVA/t-test when data is too sparse for MLM.
              If False, use the legacy ANOVA + Tukey HSD path.
     group_column: nesting variable for MLM (e.g., 'mouse_id').
@@ -1624,7 +1684,7 @@ def add_stats_to_plot(data, metric, ax, ymax=None, column_to_compare='experience
     """
     # hierarchical stats (MLM by default) across experience levels or cell types
     stats_table = compute_stats(data, metric, column_to_compare,
-                                use_mlm=use_mlm, group_column=group_column,
+                                use_mlm=USE_MLM, group_column=group_column,
                                 event_type=event_type, cell_type=cell_type)
     omnibus_pvalue = stats_table['omnibus_pvalue'].iloc[0] if len(stats_table) else 1.0
     if hue_only: # makes things from -0.25 to 0.25
@@ -1645,14 +1705,30 @@ def add_stats_to_plot(data, metric, ax, ymax=None, column_to_compare='experience
         ytop = ax.get_ylim()[1]
     else:
         ytop = ymax
-    if ytop > 1:
-        second_bar_scale = 12 #yaxis uses 6
+    rng = None
+    if compact_bars:
+        # additive placement: bars sit a small fraction of the visible data RANGE above
+        # the data top, with the star essentially on the bar. Scale-independent.
+        lo = ax.get_ylim()[0]
+        rng = ytop - min(lo, 0.0)
+        if rng <= 0:
+            rng = ytop if ytop > 0 else 1.0
+        pad = 0.05 * rng        # gap above data to the first (adjacent) bar
+        step = 0.09 * rng       # extra height for "far" (non-adjacent) comparison bars
+        star_gap = 0.012 * rng  # tiny line -> star gap so the star sits on the bar
+        y1 = ytop + pad
+        y1h = y1 + star_gap
+        y2 = ytop + pad + step
+        y2h = y2 + star_gap
     else:
-        second_bar_scale = 10 #yaxis uses 4
-    y1 = ytop * (1 + scale)
-    y1h = ytop * (1 + scale * 2)
-    y2 = ytop * (1 + (scale * second_bar_scale))
-    y2h = ytop * (1 + (scale * (second_bar_scale+1)))
+        if ytop > 1:
+            second_bar_scale = 12 #yaxis uses 6
+        else:
+            second_bar_scale = 10 #yaxis uses 4
+        y1 = ytop * (1 + scale)
+        y1h = ytop * (1 + scale * 2)
+        y2 = ytop * (1 + (scale * second_bar_scale))
+        y2h = ytop * (1 + (scale * (second_bar_scale+1)))
 
 
     top = [ytop]
@@ -1720,14 +1796,18 @@ def add_stats_to_plot(data, metric, ax, ymax=None, column_to_compare='experience
                     ax.text(np.mean([row.x1, row.x2]), yh*(1+scale), 'ns', fontsize=fontsize-8, horizontalalignment='center',
                             verticalalignment='bottom')
                     top.append(yh)
-    # ax.set_ylim(ymax=ytop * (1 + (scale * 7))) # 3 works better for non-behavior plots
-    ax.set_ylim(ymax=np.amax(top) * (1 + scale*scale_factor))  # scale factor determined by number of sig points # 3 works better for behavior plots, 2 for regular
+    if compact_bars:
+        # small fixed headroom above the tallest bar (range-relative, not multiplicative)
+        ax.set_ylim(top=np.amax(top) + 0.05 * rng)
+    else:
+        # ax.set_ylim(ymax=ytop * (1 + (scale * 7))) # 3 works better for non-behavior plots
+        ax.set_ylim(ymax=np.amax(top) * (1 + scale*scale_factor))  # scale factor determined by number of sig points # 3 works better for behavior plots, 2 for regular
 
     return ax, stats_table
 
 
 def add_stats_to_plot_yaxis(data, metric, ax, ymax=None, column_to_compare='experience_level', hue_only=False,
-                            use_mlm=True, group_column='mouse_id',
+                            group_column='mouse_id',
                             event_type='Not specified', cell_type='Not specified'):
     """
     add stars to axis indicating across experience level statistics
@@ -1740,7 +1820,7 @@ def add_stats_to_plot_yaxis(data, metric, ax, ymax=None, column_to_compare='expe
                 set this to True so that the stats are plotted in reasonable positions centered around x=0
                 (otherwise depends on there being x values)
     show_ns: Bool, whether or not to label non-significant results on the plot
-    use_mlm: if True (default), use hierarchical mixed linear model with random intercept for group_column;
+    MLM vs ANOVA/Tukey is set by the module-level ``USE_MLM`` constant: when True, use hierarchical mixed linear model with random intercept for group_column;
              falls back automatically to ANOVA/t-test when data is too sparse for MLM.
              If False, use the legacy ANOVA + Tukey HSD path.
     group_column: nesting variable for MLM (e.g., 'mouse_id').
@@ -1748,7 +1828,7 @@ def add_stats_to_plot_yaxis(data, metric, ax, ymax=None, column_to_compare='expe
     """
     # do anova across experience levels or cell types followed by post-hoc tukey
     stats_table = compute_stats(data, metric, column_to_compare,
-                                use_mlm=use_mlm, group_column=group_column,
+                                use_mlm=USE_MLM, group_column=group_column,
                                 event_type=event_type, cell_type=cell_type)
     omnibus_pvalue = stats_table['omnibus_pvalue'].iloc[0] if len(stats_table) else 1.0
     if hue_only: # makes things from -0.25 to 0.25
@@ -1813,7 +1893,7 @@ def add_stats_to_plot_yaxis(data, metric, ax, ymax=None, column_to_compare='expe
 
 def add_stats_to_plot_xaxis(data, metric, ax, xmax=None, column_to_compare='experience_level',
                       show_ns=False, hue_only=False,
-                      use_mlm=True, group_column='mouse_id',
+                      group_column='mouse_id',
                       event_type='Not specified', cell_type='Not specified'):
     """
     add stars to axis indicating across experience level statistics
@@ -1826,14 +1906,14 @@ def add_stats_to_plot_xaxis(data, metric, ax, xmax=None, column_to_compare='expe
                 set this to True so that the stats are plotted in reasonable positions centered around x=0
                 (otherwise depends on there being x values)
     show_ns: Bool, whether or not to label non-significant results on the plot
-    use_mlm: if True (default), use hierarchical mixed linear model with random intercept for group_column;
+    MLM vs ANOVA/Tukey is set by the module-level ``USE_MLM`` constant: when True, use hierarchical mixed linear model with random intercept for group_column;
              falls back automatically to ANOVA/t-test when data is too sparse for MLM.
              If False, use the legacy ANOVA + Tukey HSD path.
     group_column: nesting variable for MLM (e.g., 'mouse_id').
     event_type: optional label recorded in the saved stats table.
     """
     stats_table = compute_stats(data, metric, column_to_compare,
-                                use_mlm=use_mlm, group_column=group_column,
+                                use_mlm=USE_MLM, group_column=group_column,
                                 event_type=event_type, cell_type=cell_type)
     omnibus_pvalue = stats_table['omnibus_pvalue'].iloc[0] if len(stats_table) else 1.0
     if hue_only: # makes things from -0.25 to 0.25
@@ -1942,8 +2022,8 @@ def plot_metric_distribution_by_experience_no_cell_type(metrics_table, metric, e
                                                         stripplot=False, pointplot=True, boxplot=False,
                                                         add_zero_line=False, show_ns=False, abbreviate_exp=True,
                                                         show_containers=False, show_mice=False, horiz=False,
-                                                        title='', ylabel=None, ylims=None, save_dir=None, ax=None, suffix='',
-                                                        use_mlm=True, group_column='mouse_id'):
+                                                        title='', ylabel=None, ylims=None, save_dir=None, folder='response_metrics', ax=None, suffix='',
+                                                        group_column='mouse_id'):
     """
     plot metric distribution across experience levels in metrics_table, with stats across experience levels
     if hue is provided, plots will be split by hue column and stats will be done on hue column differences instead of across experience levels
@@ -2020,6 +2100,9 @@ def plot_metric_distribution_by_experience_no_cell_type(metrics_table, metric, e
         else:
             figsize = (1.75, 2.5)
             fig, ax = plt.subplots(1, 1, figsize=figsize)
+        save_fig = True
+    else:
+        save_fig = False
 
     # stats dataframe to save
     combined_stats = pd.DataFrame()
@@ -2085,7 +2168,7 @@ def plot_metric_distribution_by_experience_no_cell_type(metrics_table, metric, e
             ax.set_xlim(xmin=ymin)
             ax.set_ylim(-0.5, len(order) - 0.5)
             ax, panel_stats = add_stats_to_plot_yaxis(data, metric, ax, ymax=ymax, hue_only=False,
-                                                      use_mlm=use_mlm, group_column=group_column,
+                                                      group_column=group_column,
                                                       event_type=event_type)
         else:
             ax.set_ylim(ymin=ymin)
@@ -2093,7 +2176,7 @@ def plot_metric_distribution_by_experience_no_cell_type(metrics_table, metric, e
 
             # add stats to plot if only looking at experience levels
             ax, panel_stats = add_stats_to_plot(data, metric, ax, ymax=ymax, show_ns=show_ns,
-                                                use_mlm=use_mlm, group_column=group_column,
+                                                group_column=group_column,
                                                 event_type=event_type)
         panel_stats = insert_stats_metadata(panel_stats, condition='experience_level')
         combined_stats = pd.concat([combined_stats, panel_stats])
@@ -2135,28 +2218,25 @@ def plot_metric_distribution_by_experience_no_cell_type(metrics_table, metric, e
                 utils.color_xaxis_labels_by_experience(ax)
 
     if save_dir:
-        folder = 'response_metrics'
         filename = _clean_filename(event_type + '_' + data_type + '_' + metric + '_distribution' + suffix)
         stats_filename = _clean_filename(event_type + '_' + data_type + '_' + metric + suffix + '_no_cell_type')
-        utils.save_figure(fig, figsize, save_dir, folder, _clean_filename(filename))
-        try:
-            print('saving_stats')
-            stats_suffix = '_mlm.csv' if use_mlm else '_tukey.csv'
-            combined_stats.to_csv(os.path.join(save_dir, folder, _clean_filename(stats_filename + stats_suffix)))
-            # save descriptive stats
-            cols_to_groupby = ['experience_level']
-            stats = get_descriptive_stats_for_metric(data, metric, cols_to_groupby)
-            stats.to_csv(os.path.join(save_dir, folder, _clean_filename(stats_filename + '_values.csv')))
-        except BaseException:
-            print('STATS DID NOT SAVE FOR', metric, hue)
+        if save_fig:
+            utils.save_figure(fig, figsize, save_dir, folder, _clean_filename(filename))
+        print('saving_stats')
+        stats_suffix = _stats_suffix_for_table(combined_stats)
+        combined_stats.to_csv(os.path.join(save_dir, folder, _clean_filename(stats_filename + stats_suffix)))
+        # save descriptive stats
+        cols_to_groupby = ['experience_level']
+        stats = get_descriptive_stats_for_metric(data, metric, cols_to_groupby)
+        stats.to_csv(os.path.join(save_dir, folder, _clean_filename(stats_filename + '_values.csv')))
     return ax
 
 
 def plot_metric_distribution_by_experience(metrics_table, metric, event_type, data_type, hue=None,
                                                plot_type='pointplot', legend=True, show_containers=False, estimator=np.mean,
                                                add_zero_line=False, show_ns=False, ylabel=None, ylims=None, horiz=True,
-                                               abbreviate_exp=True, suptitle=None, save_dir=None, ax=None, suffix='',
-                                               use_mlm=True, group_column='mouse_id'):
+                                               abbreviate_exp=True, suptitle=None, save_dir=None, folder='response_metrics', ax=None, suffix='',
+                                               group_column='mouse_id'):
     """
     plot metric distribution across experience levels for each cell_type in metrics_table, with stats across experience levels
     if hue is provided, plots will be split by hue column and stats will be done on hue column differences instead of across experience levels
@@ -2282,7 +2362,7 @@ def plot_metric_distribution_by_experience(metrics_table, metric, event_type, da
             # ax[i], panel_stats = add_stats_to_plot_for_hues(ct_data, metric, ax[i],
             #                                                 xorder=order, x='experience_level', hue=hue)
             ax[i], panel_stats = add_stats_to_plot(ct_data, metric, ax[i], ymax=ymax,
-                                                   use_mlm=use_mlm, group_column=group_column,
+                                                   group_column=group_column,
                                                    event_type=event_type, cell_type=cell_type)
             panel_stats = insert_stats_metadata(panel_stats, condition='experience_level')
             combined_stats = pd.concat([combined_stats, panel_stats])
@@ -2338,7 +2418,7 @@ def plot_metric_distribution_by_experience(metrics_table, metric, event_type, da
             # add stats to plot if only looking at experience levels
             # add stats to plot for hues
             ax[i], panel_stats = add_stats_to_plot(ct_data, metric, ax[i], ymax=ymax, show_ns=show_ns,
-                                                   use_mlm=use_mlm, group_column=group_column,
+                                                   group_column=group_column,
                                                    event_type=event_type, cell_type=cell_type)
             combined_stats = pd.concat([combined_stats, panel_stats])
             # set labels
@@ -2395,14 +2475,13 @@ def plot_metric_distribution_by_experience(metrics_table, metric, event_type, da
             plt.suptitle(suptitle, x=0.52, y=0.96, fontsize=18)
     fig.subplots_adjust(hspace=0.4, wspace=0.4)
     if save_dir:
-        folder = 'response_metrics'
         filename = _clean_filename(event_type + '_' + data_type + '_' + metric + '_distribution' + suffix)
         stats_filename = _clean_filename(event_type + '_' + data_type + '_' + metric + suffix)
         utils.save_figure(fig, figsize, save_dir, folder, _clean_filename(filename))
         try:
             print('saving_stats')
             # save stats: '_mlm.csv' when MLM was used, '_tukey.csv' for the legacy path
-            stats_suffix = '_mlm.csv' if use_mlm else '_tukey.csv'
+            stats_suffix = _stats_suffix_for_table(combined_stats)
             combined_stats.to_csv(os.path.join(save_dir, folder, _clean_filename(stats_filename + stats_suffix)))
             # save descriptive stats
             cols_to_groupby = ['cell_type', 'experience_level']
@@ -2487,7 +2566,7 @@ def plot_metric_distribution_all_conditions(metrics_table, metric, event_type, d
         #                                            hue='layer', ylabel=ylabel, ylims=ylims, save_dir=save_dir, ax=None)
 
 
-def plot_metric_over_repeats(df, metric, x, title='', xlabel=None, ylabel=None, save_dir=None, folder=None, ax=None):
+def plot_metric_over_repeats(df, metric, x, title='', xlabel=None, ylabel=None, save_dir=None, folder='response_metrics', ax=None):
     '''   
     Plot metric value for epochs, stim presentations, or time in session, averaged across mice or sessions
     x value determines bins for averaging (ex: epoch, stimulus presentation number, time bin in session)
@@ -2522,8 +2601,8 @@ def plot_metric_over_repeats(df, metric, x, title='', xlabel=None, ylabel=None, 
 
 
 def plot_rolling_metric_over_time_in_session(rolling_df, metric='rolling_dprime', bin_size_seconds=120,
-                                             max_minutes=60, label_every=5, linewidth=1.5, ylabel=None,
-                                             save_dir=None, folder=None, ax=None):
+                                             max_minutes=60, label_every=5, linewidth=1.5, ylabel=None, title='',
+                                             save_dir=None, folder='within_session_behavior', suffix='', ax=None):
     '''
     Plot a rolling behavioral performance metric averaged across sessions in equal-width time
     bins over the course of the session, split by experience level.
@@ -2580,7 +2659,7 @@ def plot_rolling_metric_over_time_in_session(rolling_df, metric='rolling_dprime'
                        linewidth=linewidth, markers='.', markersize=5, err_kws={'linewidth': linewidth}, estimator=np.mean,
                        palette=experience_level_colors, hue_order=experience_levels, ax=ax)
     ax.legend(fontsize='xx-small', title_fontsize='xx-small', title='')
-
+    ax.set_title(title)
     # integer (minute) x tick labels, labeling only every `label_every`-th bin
     ax.set_xticks(range(len(bin_centers)))
     ax.set_xticklabels([str(int(round(b))) if (j % label_every == 0) else ''
@@ -2592,12 +2671,12 @@ def plot_rolling_metric_over_time_in_session(rolling_df, metric='rolling_dprime'
         ax.set_ylabel(ylabel)
 
     if save_dir:
-        utils.save_figure(fig, figsize, save_dir, folder, _clean_filename(metric + '_over_time_in_session'))
+        utils.save_figure(fig, figsize, save_dir, folder, _clean_filename(metric + '_over_time_in_session'+suffix))
 
     return ax
 
 
-def plot_metric_over_repeats_for_cell_types(df, metric, x, xlabel=None, ylabel=None, save_dir=None, folder=None):
+def plot_metric_over_repeats_for_cell_types(df, metric, x, xlabel=None, ylabel=None, save_dir=None, folder='response_metrics'):
     figsize = (12, 7)
     fig, ax = plt.subplots(3, 1, figsize=figsize, sharex=True, sharey=True)
     experience_level_colors = utils.get_experience_level_colors()
@@ -2624,7 +2703,7 @@ def plot_metric_over_repeats_for_cell_types(df, metric, x, xlabel=None, ylabel=N
 def plot_metric_across_stimuli_by_experience_level(stimulus_response_df, metric,
                                                    time_window_min=None, interval=20, show_x_in_minutes=False,
                                                    ylim=None, ylabel=None, title=None, 
-                                                   ax=None, save_dir=None, folder=None):
+                                                   ax=None, save_dir=None, folder='response_metrics'):
     
     '''
     Take the metric value across stimulus presentations for each session, 
@@ -2642,7 +2721,7 @@ def plot_metric_across_stimuli_by_experience_level(stimulus_response_df, metric,
     df = df[df.stimulus_number<=max_stim+1] 
     
     if ax is None:
-        figsize = (9, 3)
+        figsize = (6, 3)
         fig, ax = plt.subplots(figsize=figsize)
 
     experience_levels = utils.get_experience_levels()
@@ -2688,8 +2767,8 @@ def plot_metric_across_stimuli_by_experience_level(stimulus_response_df, metric,
 def plot_modulation_index_distribution(metrics_table, metric, x_axis_col=None, x_axis_label=None,
                                        label=None, lims=(-1.1, 1.1), horiz=False, plot_type='violinplot',
                                        metric_on_y=True, annot=('left', 'right'), abbreviate_exp=True, suptitle=None,
-                                       fill=True, save_dir=None, suffix='', ax=None,
-                                       use_mlm=True, group_column='mouse_id', event_type='Not specified'):
+                                       fill=True, save_dir=None, folder='response_metrics', suffix='', ax=None,
+                                       group_column='mouse_id', event_type='Not specified'):
     '''
     Plots distribution of metric values split by experience level.
 
@@ -2791,13 +2870,13 @@ def plot_modulation_index_distribution(metrics_table, metric, x_axis_col=None, x
                 ax[i].set_xlim(lims)
                 ax[i], panel_stats = add_stats_to_plot_for_hues_along_x(ct_data, metric, ax[i],
                                                             yorder=order, y=x_axis_col, hue='experience_level',
-                                                            use_mlm=use_mlm, group_column=group_column,
+                                                            group_column=group_column,
                                                             event_type=event_type, cell_type=cell_type)
             else:
                 ax[i].set_ylim(lims)
                 ax[i], panel_stats = add_stats_to_plot_for_hues(ct_data, metric, ax[i],
                                                             xorder=order, x=x_axis_col, hue='experience_level',
-                                                            use_mlm=use_mlm, group_column=group_column,
+                                                            group_column=group_column,
                                                             event_type=event_type, cell_type=cell_type)
             panel_stats = insert_stats_metadata(panel_stats, condition=x_axis_col)
             combined_stats = pd.concat([combined_stats, panel_stats])
@@ -2834,7 +2913,7 @@ def plot_modulation_index_distribution(metrics_table, metric, x_axis_col=None, x
                     utils.color_xaxis_labels_by_experience(ax[i])
                 ax[i].set_ylim(lims)
                 ax[i], panel_stats = add_stats_to_plot_yaxis(ct_data, metric, ax[i], ymax=lims[1], column_to_compare='experience_level',
-                                                             use_mlm=use_mlm, group_column=group_column,
+                                                             group_column=group_column,
                                                              event_type=event_type, cell_type=cell_type)
                 ymin, ymax = ax[i].get_ylim()
                 ax[i].set_ylim(ymax=ymax*1.3)
@@ -2845,7 +2924,7 @@ def plot_modulation_index_distribution(metrics_table, metric, x_axis_col=None, x
                     utils.color_yaxis_labels_by_experience(ax[i])
                 ax[i].set_xlim(lims)
                 ax[i], panel_stats = add_stats_to_plot_xaxis(ct_data, metric, ax[i], xmax=lims[1], column_to_compare='experience_level',
-                                                             use_mlm=use_mlm, group_column=group_column,
+                                                             group_column=group_column,
                                                              event_type=event_type, cell_type=cell_type)
 
             panel_stats = insert_stats_metadata(panel_stats, condition='experience_level')
@@ -2895,13 +2974,12 @@ def plot_modulation_index_distribution(metrics_table, metric, x_axis_col=None, x
             suffix = suffix + 'horiz'
         if metric_on_y:
             suffix = suffix + 'yaxis'
-        folder = 'response_metrics'
         filename = _clean_filename(metric + '_distribution' + suffix)
         stats_filename = _clean_filename(metric + suffix)
         utils.save_figure(fig, figsize, save_dir, folder, _clean_filename(filename))
         try:
             print('saving_stats')
-            stats_suffix = '_mlm.csv' if use_mlm else '_tukey.csv'
+            stats_suffix = _stats_suffix_for_table(combined_stats)
             combined_stats.to_csv(os.path.join(save_dir, folder, _clean_filename(stats_filename + stats_suffix)))
             cols_to_groupby = ['cell_type', 'experience_level']
             stats = get_descriptive_stats_for_metric(data, metric, cols_to_groupby)
@@ -2912,8 +2990,8 @@ def plot_modulation_index_distribution(metrics_table, metric, x_axis_col=None, x
 
 
 def plot_metric_across_cohorts(metrics_table, metric,  ylabel, x_val='binned_depth', plot_type='barplot',
-                               event_type='Not specified', save_dir=None, folder=None, ax=None,
-                               use_mlm=True, group_column='mouse_id'):
+                               event_type='Not specified', save_dir=None, folder='response_metrics', ax=None,
+                               group_column='mouse_id'):
     '''
     Plot metric distributions across cre lines, with a unique axis for each cohort / project code, 
     experience levels as colors, and x-axis defined by x_val (such as 'binned_depth' or 'targeted_structure').
@@ -2985,7 +3063,7 @@ def plot_metric_across_cohorts(metrics_table, metric,  ylabel, x_val='binned_dep
             # ax[i], combined_stats = ppf.add_stats_to_plot(data, metric, ax[i])
             ax[i], panel_stats = add_stats_to_plot_for_hues(data, metric, ax[i], event_type=event_type,
                                                             xorder=x_vals, x=x_val, hue='experience_level',
-                                                            use_mlm=use_mlm, group_column=group_column,
+                                                            group_column=group_column,
                                                             cell_type=cell_type)
             # cohort first so it lands before condition; that keeps data_subset
             # (added inside add_stats_to_plot_for_hues) directly after condition.
@@ -2995,13 +3073,11 @@ def plot_metric_across_cohorts(metrics_table, metric,  ylabel, x_val='binned_dep
     plt.subplots_adjust(wspace=0.5, hspace=0.35)
 
     if save_dir:
-        if folder is None: 
-            folder = 'response_metrics'
         filename = _clean_filename(metric+'_by_cohort_x_'+x_val)
         utils.save_figure(fig, figsize, save_dir, folder, _clean_filename(filename))
         try:
             print('saving_stats')
-            stats_suffix = '_mlm.csv' if use_mlm else '_tukey.csv'
+            stats_suffix = _stats_suffix_for_table(combined_stats)
             combined_stats.to_csv(os.path.join(save_dir, folder, _clean_filename(filename + stats_suffix)))
             cols_to_groupby = ['cell_type', 'experience_level']
             stats = get_descriptive_stats_for_metric(data, metric, cols_to_groupby)
@@ -3012,8 +3088,8 @@ def plot_metric_across_cohorts(metrics_table, metric,  ylabel, x_val='binned_dep
 
 
 def plot_metric_across_cohorts_area_depth(metrics_table, metric,  ylabel, plot_type='barplot',
-                               event_type='Not specified', save_dir=None, folder=None, ax=None,
-                               use_mlm=True, group_column='mouse_id'):
+                               event_type='Not specified', save_dir=None, folder='response_metrics', ax=None,
+                               group_column='mouse_id'):
     '''
     Plot metric distributions across cre lines, with a unique axis for each cohort / project code, experience levels as colors.
     Will first plot values with binned_depth on the x-axis for the first 2 cohorts, then for cohort 3, will plot data split by 'binned_depth' and 'targeted_structure'
@@ -3092,7 +3168,7 @@ def plot_metric_across_cohorts_area_depth(metrics_table, metric,  ylabel, plot_t
                 # ax[i], combined_stats = ppf.add_stats_to_plot(data, metric, ax[i])
                 ax[i], panel_stats = add_stats_to_plot_for_hues(data, metric, ax[i], event_type=event_type,
                                                                 xorder=x_vals, x=x_val, hue='experience_level',
-                                                                use_mlm=use_mlm, group_column=group_column,
+                                                                group_column=group_column,
                                                                 cell_type=cell_type)
                 # cohort first so it lands before condition; that keeps data_subset
                 # (added inside add_stats_to_plot_for_hues) directly after condition.
@@ -3104,13 +3180,11 @@ def plot_metric_across_cohorts_area_depth(metrics_table, metric,  ylabel, plot_t
     plt.subplots_adjust(wspace=0.5, hspace=0.5)
 
     if save_dir:
-        if folder is None: 
-            folder = 'response_metrics'
         filename = _clean_filename(metric+'_by_cohort_depth_area')
         utils.save_figure(fig, figsize, save_dir, folder, _clean_filename(filename))
         try:
             print('saving_stats')
-            stats_suffix = '_mlm.csv' if use_mlm else '_tukey.csv'
+            stats_suffix = _stats_suffix_for_table(combined_stats)
             combined_stats.to_csv(os.path.join(save_dir, folder, _clean_filename(filename + stats_suffix)))
             # save descriptive stats
             cols_to_groupby = ['cell_type', 'experience_level']
@@ -3123,8 +3197,9 @@ def plot_metric_across_cohorts_area_depth(metrics_table, metric,  ylabel, plot_t
 
 def plot_metric_across_conditions(metrics_table, metric,  title='', xlabel='Imaging depth (um)', x_color='k',
                               x_val='binned_depth', hue='experience_level', plot_type='barplot',
-                               event_type='Not specified', save_dir=None, folder=None, ax=None,
-                               use_mlm=True, group_column='mouse_id'):
+                               event_type='Not specified', compact_bars=False,
+                               save_dir=None, folder='response_metrics', ax=None,
+                               group_column='mouse_id'):
     '''
     Plot metric distributions across cre lines, with a unique axis for each cohort / project code, 
     experience levels as colors, and x-axis defined by x_val (such as 'binned_depth' or 'targeted_structure'), 
@@ -3171,9 +3246,9 @@ def plot_metric_across_conditions(metrics_table, metric,  title='', xlabel='Imag
             ax[i] = sns.barplot(data=data, x=x_val, y=metric, hue=hue, order=x_vals, width=0.6, alpha=0.75, 
                                             hue_order=hue_order, palette=palette, err_kws={'linewidth': 2}, errorbar=('ci', 95), ax=ax[i])
         elif plot_type == 'boxplot': 
-            ax[i] = sns.boxplot(data=data, x=x_val, y=metric, hue=hue, order=x_vals, 
-                                            hue_order=hue_order, palette=palette, 
-                                            width=0.5, fliersize=0, ax=ax[i])
+            ax[i] = sns.boxplot(data=data, x=x_val, y=metric, hue=hue, order=x_vals,
+                                            hue_order=hue_order, palette=palette, notch=True,
+                                            width=0.5, showfliers=False, ax=ax[i])
             plt.setp(ax[i].collections, alpha=0.75)
         ax[i].set_ylabel('')
         ax[i].set_xlabel('')
@@ -3184,9 +3259,9 @@ def plot_metric_across_conditions(metrics_table, metric,  title='', xlabel='Imag
         else: 
             ax[i].get_legend().remove()
             ax[0].legend(bbox_to_anchor=(1,1), fontsize='xx-small', title=xlabel, title_fontsize='xx-small')
-        if x_val == 'experience_level': 
+        if x_val == 'experience_level':
             ax[i].set_xticks(np.arange(0, len(experience_levels)))
-            ax[i].set_xticklabels(experience_levels)#, color=experience_level_colors)
+            ax[i].set_xticklabels(utils.get_abbreviated_experience_levels())  # F, N, N+
             for xtick, color in zip(ax[i].get_xticklabels(), experience_level_colors):
                 xtick.set_color(color)
         ax[i].tick_params(axis='x', which='major', labelsize=12)
@@ -3201,7 +3276,8 @@ def plot_metric_across_conditions(metrics_table, metric,  title='', xlabel='Imag
 
         ax[i], panel_stats = add_stats_to_plot_for_hues(data, metric, ax[i], event_type=event_type,
                                                         xorder=x_vals, x=x_val, hue=hue,
-                                                        use_mlm=use_mlm, group_column=group_column,
+                                                        compact_bars=compact_bars,
+                                                        group_column=group_column,
                                                         cell_type=cell_type)
         panel_stats = insert_stats_metadata(panel_stats, condition=x_val)
         combined_stats = pd.concat([combined_stats, panel_stats])
@@ -3212,9 +3288,7 @@ def plot_metric_across_conditions(metrics_table, metric,  title='', xlabel='Imag
     # save stats
     filename = _clean_filename(metric+'_across_'+hue+'_for_'+x_val+'_'+plot_type)
     if save_dir:
-        if folder is None: 
-            folder = 'response_metrics'
-        stats_suffix = '_mlm.csv' if use_mlm else '_tukey.csv'
+        stats_suffix = _stats_suffix_for_table(combined_stats)
         combined_stats.to_csv(os.path.join(save_dir, folder, _clean_filename(filename + stats_suffix)))
         cols_to_groupby = ['cell_type', hue, x_val]
         stats = get_descriptive_stats_for_metric(data, metric, cols_to_groupby)
@@ -3228,7 +3302,7 @@ def plot_metric_across_conditions(metrics_table, metric,  title='', xlabel='Imag
 
 def plot_experience_modulation_index(metric_data, event_type, hue=None, plot_type='pointplot', ylims=(-1, 1),
                                      suptitle=None, suffix='', include_all_comparisons=True, save_dir=None,
-                                     use_mlm=True, group_column='mouse_id'):
+                                     folder='response_metrics', group_column='mouse_id'):
     """
     plots experience modulation for some event_type, which is the mean repsonse in familiar vs. novel 1 over the sum,
     and the mean response in novel 1 vs. novel >1 over the sum, giving a value between -1 and 1
@@ -3312,7 +3386,7 @@ def plot_experience_modulation_index(metric_data, event_type, hue=None, plot_typ
             # add stats to plot for hues
             ax[i], panel_stats = add_stats_to_plot_for_hues(ct_data, metric, ax[i],
                                                             xorder=xorder, x=x, hue=hue,
-                                                            use_mlm=use_mlm, group_column=group_column,
+                                                            group_column=group_column,
                                                             event_type=event_type, cell_type=cell_type)
             # ax[i], panel_stats = add_stats_to_plot(ct_data, metric, ax[i], ymax=ymax)
             combined_stats = pd.concat([combined_stats, panel_stats])
@@ -3349,26 +3423,24 @@ def plot_experience_modulation_index(metric_data, event_type, hue=None, plot_typ
     fig.subplots_adjust(hspace=0.4, wspace=0.4)
     
     if save_dir:
-        if folder is None: 
-            folder = 'response_metrics'
         filename = _clean_filename('experience_modulation_' + event_type + '_' + plot_type + suffix)
-        utils.save_figure(fig, figsize, save_dir, 'response_metrics', _clean_filename(filename))
+        utils.save_figure(fig, figsize, save_dir, folder, _clean_filename(filename))
         try:
             print('saving_stats')
-            stats_suffix = '_mlm.csv' if use_mlm else '_tukey.csv'
-            combined_stats.to_csv(os.path.join(save_dir, 'response_metrics', _clean_filename(filename + stats_suffix)))
+            stats_suffix = _stats_suffix_for_table(combined_stats)
+            combined_stats.to_csv(os.path.join(save_dir, folder, _clean_filename(filename + stats_suffix)))
             # save descriptive stats
             cols_to_groupby = ['cell_type', 'experience_level']
             stats = get_descriptive_stats_for_metric(data, metric, cols_to_groupby)
-            stats.to_csv(os.path.join(save_dir, 'response_metrics', _clean_filename(filename + '_values.csv')))
+            stats.to_csv(os.path.join(save_dir, folder, _clean_filename(filename + '_values.csv')))
         except BaseException:
             print('STATS DID NOT SAVE FOR', metric, hue)
 
 
 def plot_experience_modulation_index_annotated(metrics_table, event_type, metric, cells_table,
                                                horiz=False, xlims=(-1.1, 1.1), xlabel='Experience modulation',
-                                               suptitle=None, suffix='', save_dir=None, ax=None,
-                                               use_mlm=True, group_column='mouse_id'):
+                                               suptitle=None, suffix='', save_dir=None, folder='response_metrics', ax=None,
+                                               group_column='mouse_id'):
     """
     plots experience modulation for some event_type, which is the mean repsonse in familiar vs. novel 1 over the sum,
     and the mean response in novel 1 vs. novel >1 over the sum, giving a value between -1 and 1
@@ -3455,7 +3527,7 @@ def plot_experience_modulation_index_annotated(metrics_table, event_type, metric
         ax[i], panel_stats = add_stats_to_plot_xaxis(data[data.comparison == comparison], metric, ax[i],
                                xmax=xlims[1],
                                column_to_compare='cell_type',
-                               use_mlm=use_mlm, group_column=group_column,
+                               group_column=group_column,
                                event_type=event_type)
         combined_stats = pd.concat([combined_stats, panel_stats])
 
@@ -3475,13 +3547,12 @@ def plot_experience_modulation_index_annotated(metrics_table, event_type, metric
     if save_dir:
         if horiz:
             suffix = suffix + '_horiz'
-        folder = 'response_metrics'
         filename = _clean_filename('experience_modulation_annot_' + event_type + '_' + suffix)
         stats_filename = _clean_filename('experience_modulation_' + event_type + '_' + suffix)
         utils.save_figure(fig, figsize, save_dir, folder, _clean_filename(filename))
         try:
             print('saving_stats')
-            stats_suffix = '_mlm.csv' if use_mlm else '_tukey.csv'
+            stats_suffix = _stats_suffix_for_table(combined_stats)
             combined_stats.to_csv(os.path.join(save_dir, folder, _clean_filename(stats_filename + stats_suffix)))
             # save descriptive stats
             cols_to_groupby = ['cell_type']
@@ -3495,8 +3566,8 @@ def plot_experience_modulation_index_annotated(metrics_table, event_type, metric
 def plot_experience_modulation_index_annotated_by_cell_type(metrics_table, event_type, metric, cells_table,
                                                             xlims=(-1.1, 1.1), xlabel='Experience modulation',
                                                             all_comparisons=True, horiz=False,
-                                                            suptitle=None, suffix='', save_dir=None, ax=None,
-                                                            use_mlm=True, group_column='mouse_id'):
+                                                            suptitle=None, suffix='', save_dir=None, folder='response_metrics', ax=None,
+                                                            group_column='mouse_id'):
     """
     plots experience modulation for some event_type, which is the mean repsonse in familiar vs. novel 1 over the sum,
     and the mean response in novel 1 vs. novel >1 over the sum, giving a value between -1 and 1
@@ -3596,7 +3667,7 @@ def plot_experience_modulation_index_annotated_by_cell_type(metrics_table, event
             ax[i], panel_stats = add_stats_to_plot_xaxis(data[data.cell_type == cell_type], metric, ax[i],
                                                          xmax=xlims[1],
                                                          column_to_compare='comparison',
-                                                         use_mlm=use_mlm, group_column=group_column,
+                                                         group_column=group_column,
                                                          event_type=event_type, cell_type=cell_type)
             combined_stats = pd.concat([combined_stats, panel_stats])
 
@@ -3617,13 +3688,12 @@ def plot_experience_modulation_index_annotated_by_cell_type(metrics_table, event
     if save_dir:
         if horiz:
             suffix = suffix + '_horiz'
-        folder = 'response_metrics'
         filename = _clean_filename('experience_modulation_annot_by_cell_type_' + event_type + '_' + suffix)
         stats_filename = _clean_filename('experience_modulation_by_cell_type_' + event_type + '_' + suffix)
         utils.save_figure(fig, figsize, save_dir, folder, _clean_filename(filename))
         try:
             print('saving_stats')
-            stats_suffix = '_mlm.csv' if use_mlm else '_tukey.csv'
+            stats_suffix = _stats_suffix_for_table(combined_stats)
             combined_stats.to_csv(os.path.join(save_dir, folder, _clean_filename(stats_filename + stats_suffix)))
             # save descriptive stats
             cols_to_groupby = ['cell_type']
@@ -3638,7 +3708,7 @@ def plot_experience_modulation_index_annotated_by_cell_type(metrics_table, event
 def plot_experience_modulation_index_depth_heatmap_by_cell_type(metrics_table, event_type, metric, cells_table,
                                                                 all_comparisons=True, groupby_col='binned_depth',
                                                                 ylabel=None, vmin=-0.5, vmax=0.5,
-                                                                suptitle=None, suffix='', save_dir=None):
+                                                                suptitle=None, suffix='', save_dir=None, folder='response_metrics'):
     """
     One heatmap per cell type. Rows = bins of `groupby_col`, columns = experience comparison, cell color =
     mean experience modulation index. Each column uses its own diverging colormap whose endpoints come from
@@ -3779,7 +3849,6 @@ def plot_experience_modulation_index_depth_heatmap_by_cell_type(metrics_table, e
         plt.suptitle(suptitle, x=0.52, y=1.0, fontsize=15)
 
     if save_dir:
-        folder = 'response_metrics'
         filename = _clean_filename('experience_modulation_heatmap_by_cell_type_' + groupby_col + '_' + event_type + suffix)
         utils.save_figure(fig, figsize, save_dir, folder, _clean_filename(filename))
         try:
@@ -3792,7 +3861,7 @@ def plot_experience_modulation_index_depth_heatmap_by_cell_type(metrics_table, e
 def plot_experience_modulation_index_depth_heatmap_by_comparison(metrics_table, event_type, metric, cells_table,
                                                                  all_comparisons=True, groupby_col='binned_depth',
                                                                  ylabel=None, vmin=-0.5, vmax=0.5,
-                                                                 suptitle=None, suffix='', save_dir=None):
+                                                                 suptitle=None, suffix='', save_dir=None, folder='response_metrics'):
     """
     Variant of plot_experience_modulation_index_depth_heatmap_by_cell_type that transposes the layout:
     one subplot per experience-level comparison, with cell types along the x-axis (abbreviated to the
@@ -3929,7 +3998,6 @@ def plot_experience_modulation_index_depth_heatmap_by_comparison(metrics_table, 
     fig.tight_layout()
 
     if save_dir:
-        folder = 'response_metrics'
         filename = _clean_filename('experience_modulation_heatmap_by_comparison_' + groupby_col + '_' + event_type + suffix)
         utils.save_figure(fig, figsize, save_dir, folder, _clean_filename(filename))
         try:
@@ -3943,8 +4011,8 @@ def plot_metric_heatmap_grid_by_cell_type_and_metric(
         results_pivoted, metric_cols, metric_labels=None,
         groupby_col='binned_depth', exp_col='experience_level',
         ylabel=None, vmax=None, multi_star=False, horiz=False,
-        suptitle=None, suffix='', save_dir=None, folder=None,
-        use_mlm=True, group_column='mouse_id', event_type='Not specified'):
+        suptitle=None, suffix='', save_dir=None, folder='response_metrics',
+        group_column='mouse_id', event_type='Not specified'):
     """
     Grid of heatmaps: rows = cell types (utils.get_cell_types()), columns = metric_cols (any numeric
     columns of results_pivoted — e.g. coding score columns 'all-images', 'omissions', 'task',
@@ -4047,7 +4115,7 @@ def plot_metric_heatmap_grid_by_cell_type_and_metric(
             for c, exp in enumerate(exp_levels):
                 col_subset = ct_data[ct_data[exp_col] == exp].dropna(subset=[metric, groupby_col])
                 panel_stats = compute_stats(col_subset, metric, column_to_compare=groupby_col,
-                                            use_mlm=use_mlm, group_column=group_column,
+                                            use_mlm=USE_MLM, group_column=group_column,
                                             event_type=event_type, cell_type=cell_type)
                 col_stars[(i, j, c)] = tier_stars(_heatmap_omnibus_p(panel_stats))
                 # Tag the full pairwise table with which slice this came from.
@@ -4066,7 +4134,7 @@ def plot_metric_heatmap_grid_by_cell_type_and_metric(
             for r, d in enumerate(group_order):
                 row_subset = ct_data[ct_data[groupby_col] == d].dropna(subset=[metric, exp_col])
                 panel_stats = compute_stats(row_subset, metric, column_to_compare=exp_col,
-                                            use_mlm=use_mlm, group_column=group_column,
+                                            use_mlm=USE_MLM, group_column=group_column,
                                             event_type=event_type, cell_type=cell_type)
                 row_stars[(i, j, r)] = tier_stars(_heatmap_omnibus_p(panel_stats))
                 panel_stats = insert_stats_metadata(panel_stats,
@@ -4386,14 +4454,8 @@ def plot_metric_heatmap_grid_by_cell_type_and_metric(
             folder = 'response_metrics'
         filename = 'metric_heatmap_grid_' + groupby_col + suffix
         utils.save_figure(fig, figsize, save_dir, folder, _clean_filename(filename))
-        try:
-            # legacy ANOVA stats were saved with the _ttest.csv suffix; keep that
-            # name for backward compat when use_mlm=False, use _anova_mlm.csv for the
-            # new hierarchical path (consistent across all 4 heatmap functions).
-            stats_suffix = '_anova_mlm.csv' if use_mlm else '_ttest.csv'
-            stats_table.to_csv(os.path.join(save_dir, folder, _clean_filename(filename + stats_suffix)), index=False)
-        except BaseException:
-            print('STATS TABLE DID NOT SAVE')
+        stats_suffix = _stats_suffix_for_table(stats_table)
+        stats_table.to_csv(os.path.join(save_dir, folder, _clean_filename(filename + stats_suffix)), index=False)
     return heat_axes, stats_table
 
 
@@ -4403,8 +4465,8 @@ def plot_metric_heatmap_area_and_depth_by_cell_type(
         area_label='Visual area', depth_label='Imaging depth (um)',
         exp_col='experience_level', aggregate='mean',
         vmax=None, multi_star=False,
-        suptitle=None, suffix='', save_dir=None, folder=None,
-        use_mlm=True, group_column='mouse_id', event_type='Not specified'):
+        suptitle=None, suffix='', save_dir=None, folder='response_metrics',
+        group_column='mouse_id', event_type='Not specified'):
     """
     Two-row figure with the same panel layout as plot_metric_heatmap_grid_by_cell_type_and_metric
     but groupby_col differs by row:
@@ -4492,7 +4554,7 @@ def plot_metric_heatmap_area_and_depth_by_cell_type(
             for c, exp in enumerate(exp_levels):
                 col_subset = ct_data[ct_data[exp_col] == exp].dropna(subset=[metric, gcol])
                 panel_stats = compute_stats(col_subset, metric, column_to_compare=gcol,
-                                            use_mlm=use_mlm, group_column=group_column,
+                                            use_mlm=USE_MLM, group_column=group_column,
                                             event_type=event_type, cell_type=cell_type)
                 col_stars[(g, i, c)] = tier_stars(_heatmap_omnibus_p(panel_stats))
                 panel_stats = insert_stats_metadata(panel_stats, grouping=gcol,
@@ -4506,7 +4568,7 @@ def plot_metric_heatmap_area_and_depth_by_cell_type(
             for r, d in enumerate(group_order):
                 row_subset = ct_data[ct_data[gcol] == d].dropna(subset=[metric, exp_col])
                 panel_stats = compute_stats(row_subset, metric, column_to_compare=exp_col,
-                                            use_mlm=use_mlm, group_column=group_column,
+                                            use_mlm=USE_MLM, group_column=group_column,
                                             event_type=event_type, cell_type=cell_type)
                 row_stars[(g, i, r)] = tier_stars(_heatmap_omnibus_p(panel_stats))
                 panel_stats = insert_stats_metadata(panel_stats, grouping=gcol,
@@ -4675,17 +4737,10 @@ def plot_metric_heatmap_area_and_depth_by_cell_type(
     fig.suptitle(suptitle if suptitle else metric_label, fontsize=14, x=0.38, y=1.05)
 
     if save_dir:
-        if folder is None:
-            folder = 'response_metrics'
         filename = _clean_filename('metric_heatmap_area_and_depth_' + metric + '_' + aggregate + suffix)
         utils.save_figure(fig, figsize, save_dir, folder, _clean_filename(filename))
-        try:
-            stats_suffix = '_anova_mlm.csv' if use_mlm else '_anova.csv'
-            # if suffix is None | suffix == '':
-            #     stats_suffix = '_' + stats_suffix
-            stats_table.to_csv(os.path.join(save_dir, folder, _clean_filename(filename + stats_suffix)), index=False)
-        except BaseException:
-            print('STATS TABLE DID NOT SAVE')
+        stats_suffix = _stats_suffix_for_table(stats_table)
+        stats_table.to_csv(os.path.join(save_dir, folder, _clean_filename(filename + stats_suffix)), index=False)
 
     return heat_axes, stats_table
 
@@ -4696,8 +4751,8 @@ def plot_bidirectional_metric_heatmap_area_and_depth_by_cell_type(
         area_label='Visual area', depth_label='Imaging depth (um)',
         exp_col='experience_level',
         cmap='PRGn', vmax=None, multi_star=False,
-        suptitle=None, suffix='', save_dir=None, folder=None,
-        use_mlm=True, group_column='mouse_id', event_type='Not specified'):
+        suptitle=None, suffix='', save_dir=None, folder='response_metrics',
+        group_column='mouse_id', event_type='Not specified'):
     """
     Variant of plot_metric_heatmap_area_and_depth_by_cell_type for bidirectional indices
     (e.g., change_modulation_index, experience modulation indices — values can be negative or
@@ -4768,7 +4823,7 @@ def plot_bidirectional_metric_heatmap_area_and_depth_by_cell_type(
             for c, exp in enumerate(exp_levels):
                 col_subset = ct_data[ct_data[exp_col] == exp].dropna(subset=[metric, gcol])
                 panel_stats = compute_stats(col_subset, metric, column_to_compare=gcol,
-                                            use_mlm=use_mlm, group_column=group_column,
+                                            use_mlm=USE_MLM, group_column=group_column,
                                             event_type=event_type, cell_type=cell_type)
                 col_stars[(g, i, c)] = tier_stars(_heatmap_omnibus_p(panel_stats))
                 panel_stats = insert_stats_metadata(panel_stats, grouping=gcol,
@@ -4780,7 +4835,7 @@ def plot_bidirectional_metric_heatmap_area_and_depth_by_cell_type(
             for r, d in enumerate(group_order):
                 row_subset = ct_data[ct_data[gcol] == d].dropna(subset=[metric, exp_col])
                 panel_stats = compute_stats(row_subset, metric, column_to_compare=exp_col,
-                                            use_mlm=use_mlm, group_column=group_column,
+                                            use_mlm=USE_MLM, group_column=group_column,
                                             event_type=event_type, cell_type=cell_type)
                 row_stars[(g, i, r)] = tier_stars(_heatmap_omnibus_p(panel_stats))
                 panel_stats = insert_stats_metadata(panel_stats, grouping=gcol,
@@ -4932,15 +4987,10 @@ def plot_bidirectional_metric_heatmap_area_and_depth_by_cell_type(
     fig.suptitle(suptitle if suptitle else metric_label, fontsize=14, x=0.38, y=1.05)
 
     if save_dir:
-        if folder is None:
-            folder = 'response_metrics'
         filename = _clean_filename('bidirectional_metric_heatmap_area_and_depth_' + metric + suffix)
         utils.save_figure(fig, figsize, save_dir, folder, _clean_filename(filename))
-        try:
-            stats_suffix = '_anova_mlm.csv' if use_mlm else '_anova.csv'
-            stats_table.to_csv(os.path.join(save_dir, folder, _clean_filename(filename + stats_suffix)), index=False)
-        except BaseException:
-            print('STATS TABLE DID NOT SAVE')
+        stats_suffix = _stats_suffix_for_table(stats_table)
+        stats_table.to_csv(os.path.join(save_dir, folder, _clean_filename(filename + stats_suffix)), index=False)
 
     return heat_axes, stats_table
 
@@ -4950,8 +5000,8 @@ def plot_experience_modulation_heatmap_area_and_depth_by_cell_type(
         area_col='targeted_structure', depth_col='binned_depth',
         area_label='Visual area', depth_label='Imaging depth (um)',
         all_comparisons=True, vmax=None, multi_star=False,
-        suptitle=None, suffix='', save_dir=None, folder=None,
-        use_mlm=True, group_column='mouse_id'):
+        suptitle=None, suffix='', save_dir=None, folder='response_metrics',
+        group_column='mouse_id'):
     """
     Combines plot_experience_modulation_index_depth_heatmap_by_cell_type with the area + depth
     layout of plot_metric_heatmap_area_and_depth_by_cell_type. Two rows of panels:
@@ -5058,7 +5108,7 @@ def plot_experience_modulation_heatmap_area_and_depth_by_cell_type(
                 col_subset = ct_data[[comp, gcol]].dropna()
                 col_subset = col_subset.rename(columns={comp: 'value'})
                 panel_stats = compute_stats(col_subset, 'value', column_to_compare=gcol,
-                                            use_mlm=use_mlm, group_column=group_column,
+                                            use_mlm=USE_MLM, group_column=group_column,
                                             event_type=event_type, cell_type=cell_type)
                 col_stars[(g, i, c)] = tier_stars(_heatmap_omnibus_p(panel_stats))
                 # The held-fixed dimension here is the modulation-index comparison
@@ -5078,7 +5128,7 @@ def plot_experience_modulation_heatmap_area_and_depth_by_cell_type(
                 row_long = row_subset.melt(id_vars='cell_specimen_id', var_name='comparison',
                                            value_vars=value_vars).dropna(subset=['value'])
                 panel_stats = compute_stats(row_long, 'value', column_to_compare='comparison',
-                                            use_mlm=use_mlm, group_column=group_column,
+                                            use_mlm=USE_MLM, group_column=group_column,
                                             event_type=event_type, cell_type=cell_type)
                 row_stars[(g, i, r)] = tier_stars(_heatmap_omnibus_p(panel_stats))
                 panel_stats = insert_stats_metadata(panel_stats, grouping=gcol,
@@ -5260,17 +5310,12 @@ def plot_experience_modulation_heatmap_area_and_depth_by_cell_type(
                  fontsize=14, x=0.38, y=1.05)
 
     if save_dir:
-        if folder is None:
-            folder = 'response_metrics'
         filename = _clean_filename(('experience_modulation_heatmap_area_and_depth_by_cell_type_'
                     + event_type + suffix))
         utils.save_figure(fig, figsize, save_dir, folder, _clean_filename(filename))
-        try:
-            stats_suffix = '_anova_mlm.csv' if use_mlm else '_anova.csv'
-            stats_table.to_csv(os.path.join(save_dir, folder, _clean_filename(filename + stats_suffix)),
-                               index=False)
-        except BaseException:
-            print('STATS TABLE DID NOT SAVE')
+        stats_suffix = _stats_suffix_for_table(stats_table)
+        stats_table.to_csv(os.path.join(save_dir, folder, _clean_filename(filename + stats_suffix)),
+                           index=False)
 
     return heat_axes, stats_table
 
@@ -5293,7 +5338,7 @@ def change_width(ax, new_value):
 
 def plot_correlation_of_behavior_and_cell_metrics(behavior_metrics, cell_metrics,
                                                   behavior_metric, cell_metric, use_median=True,
-                                                  save_dir=None, folder=None):
+                                                  save_dir=None, folder='physio_behavior_correlation'):
     """
     Plot correlation between behavior metrics and cell metrics.
 
@@ -5464,7 +5509,7 @@ def get_change_in_behavior_and_average_cell_metric_across_mice(cell_metrics_tabl
 def plot_correlation_of_behavior_and_cell_metrics_delta(
         metric_data, behavior_metric, cell_metric,
         metric_label=None, behavior_label=None, suptitle=None,
-        save_dir=None, folder=None):
+        save_dir=None, folder='physio_behavior_correlation'):
     
     '''Plot the difference in metrics (F to N) for behavior vs. neural activity.'''
     x = get_metric_index_name(behavior_metric)
@@ -5500,7 +5545,7 @@ def plot_correlation_of_behavior_and_cell_metrics_delta(
 
 
 def plot_modulation_index_correlation(data, x_col, y_col, xlabel, ylabel,
-                            ax=None, save_dir=None, folder=None, filename=None):
+                            ax=None, save_dir=None, folder='response_metrics', filename=None):
     """
     Plots the correlation between two modulation indices (e.g., experience modulation index and change modulation index)
     for each cell type, including a linear best-fit line and Pearson correlation coefficient.
@@ -5560,7 +5605,7 @@ def plot_modulation_index_correlation(data, x_col, y_col, xlabel, ylabel,
 
 def plot_metric_across_exposures(metrics_table, metric, ylabel, plot_type='barplot', 
                                x_val='experience_level', x_vals=None, palette=None, 
-                               suptitle=None, save_dir=None, folder=None, ax=None):
+                               suptitle=None, save_dir=None, folder='response_metrics', ax=None):
     '''
     Plot metric distributions across cre lines, with a unique axis for each cohort / project code, 
     experience levels as colors, and x-axis defined by x_val (such as 'binned_depth' or 'targeted_structure').
@@ -5689,7 +5734,7 @@ def plot_response_heatmaps_for_conditions(multi_session_df, timestamps, data_typ
                                           col_to_sort_by='mean_response', cell_order=None, suptitle=None,
                                           microscope=None, vmax=None, xlim_seconds=None, xlabel='time (s)',
                                           match_cells=False, cbar=True, cbar_label='Avg. calcium events',
-                                          save_dir=None, folder=None, suffix='', ax=None):
+                                          save_dir=None, folder='population_activity', suffix='', ax=None):
     suffix = _norm_suffix(suffix)
     sdf = multi_session_df.copy()
 
@@ -5823,7 +5868,7 @@ def plot_response_heatmaps_for_conditions(multi_session_df, timestamps, data_typ
 def plot_tuning_curve_heatmaps_for_conditions(multi_session_df, data_type, 
                                           row_condition, col_condition, vmax=None, 
                                           cbar=True, cbar_label='Mean response', title='',
-                                          save_dir=None, folder=None, suffix='', ax=None):
+                                          save_dir=None, folder='image_tuning', suffix='', ax=None):
     suffix = _norm_suffix(suffix)
     sdf = multi_session_df.copy()
 
@@ -5898,7 +5943,7 @@ def plot_tuning_curve_heatmaps_for_conditions(multi_session_df, data_type,
 
 def plot_population_tuning_curve_for_conditions(multi_session_df, data_type, 
                                           row_condition, col_condition, ylabel='Normalized response',
-                                          save_dir=None, folder=None, suffix='', ax=None):
+                                          save_dir=None, folder='image_tuning', suffix='', ax=None):
     suffix = _norm_suffix(suffix)
     sdf = multi_session_df.copy()
 
@@ -6562,7 +6607,7 @@ def plot_matched_roi_and_trace(ophys_container_id, cell_specimen_id, limit_to_la
 
 def plot_matched_roi_and_traces_example(cell_metadata, include_omissions=True,
                                         use_events=False, filter_events=False, linewidth=1,
-                                        save_dir=None, folder=None):
+                                        save_dir=None, folder='example_cells'):
     """
     Plots the ROI masks and cell traces for a cell matched across sessions in a single row
     First 3 panels are ROIs, then change response across sessions, then omission response across sessions if include_omission=True
@@ -6680,8 +6725,8 @@ def plot_matched_roi_and_traces_example(cell_metadata, include_omissions=True,
 
 def plot_behavior_metric_by_experience(stats, metric, title='', ylabel='', ylims=None, best_image=False, show_mice=False,
                                        stripplot=True, pointplot=True, plot_stats=False, show_ns=False,
-                                       abbreviate_exp=True, save_dir=None, folder=None, suffix='', ax=None,
-                                       use_mlm=True, group_column='mouse_id'):
+                                       abbreviate_exp=True, save_dir=None, folder='behavior_metrics', suffix='', ax=None,
+                                       group_column='mouse_id'):
     """
     plots average metric value across experience levels, using experience level colors for average, gray for individual points.
     plots a stripplot of all datapoints and a pointplot of means by default. if pointplot is False, a boxplot will be shown.
@@ -6744,6 +6789,9 @@ def plot_behavior_metric_by_experience(stats, metric, title='', ylabel='', ylims
         figsize = (2, 3)
         figsize = (1.75, 2.5)
         fig, ax = plt.subplots(1, 1, figsize=figsize)
+        save_fig = True
+    else: 
+        save_fig = False
 
     if stripplot:
         ax = sns.stripplot(data=data, x='experience_level', y=metric, order=experience_levels,
@@ -6785,34 +6833,35 @@ def plot_behavior_metric_by_experience(stats, metric, title='', ylabel='', ylims
     if plot_stats:
         # stats dataframe to save
         ax, stats_table = add_stats_to_plot(data, metric, ax, ymax=ymax, show_ns=show_ns, behavior=True,
-                                            use_mlm=use_mlm, group_column=group_column,
+                                            group_column=group_column,
                                             event_type='behavior')
         stats_table = insert_stats_metadata(stats_table, condition='experience_level')
 
     ax.set_ylim(ymin=ymin)
     plt.subplots_adjust(top=0.96)
     plt.subplots_adjust(hspace=0.3)
-    if save_dir:
+    if save_fig and save_dir:
         utils.save_figure(fig, figsize, save_dir, folder, _clean_filename(metric + suffix))
     stats_filename = _clean_filename(metric + '_stats' + suffix)
-    try:
+    # try:
+    if save_dir: 
         if plot_stats:
             print('saving_stats')
-            stats_suffix = '_mlm.csv' if use_mlm else '_tukey.csv'
+            stats_suffix = _stats_suffix_for_table(stats_table)
             stats_table.to_csv(os.path.join(save_dir, folder, _clean_filename(stats_filename + stats_suffix)))
         # save metric values
         cols_to_groupby = ['experience_level']
         descriptive_stats = get_descriptive_stats_for_metric(data, metric, cols_to_groupby)
         descriptive_stats.to_csv(os.path.join(save_dir, folder, _clean_filename(stats_filename + '_values.csv')))
-    except BaseException:
-        print('stats did not save for', metric)
+        # except BaseException:
+        #     print('stats did not save for', metric)
     return ax
 
 
 def plot_response_rate_by_trial_type(behavior_stats, metric='response_probability', fraction_engaged_thresh=0.7,
                                      title='', ylabel='Response rate', ylims=(-0.01, 1),
-                                     save_dir=None, folder=None, suffix='', ax=None,
-                                     use_mlm=True, group_column='mouse_id'):
+                                     save_dir=None, folder='behavior_metrics', suffix='', ax=None,
+                                     group_column='mouse_id'):
     """
     plots response rate across trial types (change, non-change, omission, post-omission), split by experience level,
     as a boxplot using experience level colors. Stats are computed across experience levels within each trial type
@@ -6823,7 +6872,7 @@ def plot_response_rate_by_trial_type(behavior_stats, metric='response_probabilit
         the metric column, and group_column.
     metric: column in behavior_stats containing the response rate values (default 'response_probability')
     fraction_engaged_thresh: only sessions with fraction_engaged greater than this value are included
-    use_mlm: if True (default), use hierarchical mixed linear model with random intercept for group_column for stats
+    MLM vs ANOVA/Tukey is set by the module-level ``USE_MLM`` constant: when True, use hierarchical mixed linear model with random intercept for group_column for stats
     group_column: nesting variable for MLM (e.g., 'mouse_id')
 
     returns axis handle
@@ -6842,6 +6891,9 @@ def plot_response_rate_by_trial_type(behavior_stats, metric='response_probabilit
     if ax is None:
         figsize = (5, 3)
         fig, ax = plt.subplots(figsize=figsize)
+        save_fig = True
+    else:
+        save_fig = False
 
     ax = sns.boxplot(data=data, x='trial_type', y=metric, hue='experience_level',
                      order=trial_types, palette=utils.get_experience_level_colors(),
@@ -6857,7 +6909,7 @@ def plot_response_rate_by_trial_type(behavior_stats, metric='response_probabilit
     # stats across experience levels within each trial type
     ax, stats_table = add_stats_to_plot_for_hues(data, metric, ax, ymax=None,
                                                  xorder=trial_types, x='trial_type', hue='experience_level',
-                                                 use_mlm=use_mlm, group_column=group_column,
+                                                 group_column=group_column,
                                                  event_type='behavior')
     # data_subset (trial_type) is added inside add_stats_to_plot_for_hues; add condition after cell_type
     # so condition lands directly before data_subset in the saved CSV
@@ -6866,23 +6918,21 @@ def plot_response_rate_by_trial_type(behavior_stats, metric='response_probabilit
     plt.subplots_adjust(top=0.96)
     if save_dir:
         filename = _clean_filename(metric + '_by_trial_type' + suffix)
-        utils.save_figure(fig, figsize, save_dir, folder, filename)
-        try:
-            print('saving_stats')
-            stats_suffix = '_mlm.csv' if use_mlm else '_tukey.csv'
-            stats_table.to_csv(os.path.join(save_dir, folder, _clean_filename(filename + '_stats' + stats_suffix)))
-            # save descriptive metric values
-            cols_to_groupby = ['trial_type', 'experience_level']
-            descriptive_stats = get_descriptive_stats_for_metric(data, metric, cols_to_groupby)
-            descriptive_stats.to_csv(os.path.join(save_dir, folder, _clean_filename(filename + '_stats_values.csv')))
-        except BaseException:
-            print('stats did not save for', metric)
+        if save_fig:
+            utils.save_figure(fig, figsize, save_dir, folder, filename)
+        print('saving_stats')
+        stats_suffix = _stats_suffix_for_table(stats_table)
+        stats_table.to_csv(os.path.join(save_dir, folder, _clean_filename(filename + '_stats' + stats_suffix)))
+        # save descriptive metric values
+        cols_to_groupby = ['trial_type', 'experience_level']
+        descriptive_stats = get_descriptive_stats_for_metric(data, metric, cols_to_groupby)
+        descriptive_stats.to_csv(os.path.join(save_dir, folder, _clean_filename(filename + '_stats_values.csv')))
     return ax
 
 
 def plot_behavior_metric_by_experience_horiz(stats, metric, title='', xlabel='', xlims=None, best_image=True, show_containers=False,
-                                       stripplot=True, pointplot=True, plot_stats=False, show_ns=False, save_dir=None, folder=None, suffix='', ax=None,
-                                       use_mlm=True, group_column='mouse_id'):
+                                       stripplot=True, pointplot=True, plot_stats=False, show_ns=False, save_dir=None, folder='behavior_metrics', suffix='', ax=None,
+                                       group_column='mouse_id'):
     """
     plots average metric value across experience levels, using experience level colors for average, gray for individual points.
     plots a stripplot of all datapoints and a pointplot of means by default. if pointplot is False, a boxplot will be shown.
@@ -6944,6 +6994,9 @@ def plot_behavior_metric_by_experience_horiz(stats, metric, title='', xlabel='',
     if ax is None:
         figsize = (3.5, 2)
         fig, ax = plt.subplots(1, 1, figsize=figsize)
+        save_fig = True
+    else:
+        save_fig = False
 
     if stripplot:
         ax = sns.stripplot(data=data, y='experience_level', x=metric, order=experience_levels,
@@ -6977,34 +7030,32 @@ def plot_behavior_metric_by_experience_horiz(stats, metric, title='', xlabel='',
     if plot_stats:
         # stats dataframe to save
         ax, stats_table = add_stats_to_plot(data, metric, ax, ymax=xmax, show_ns=show_ns, behavior=True,
-                                            use_mlm=use_mlm, group_column=group_column,
+                                            group_column=group_column,
                                             event_type='behavior')
         stats_table = insert_stats_metadata(stats_table, condition='experience_level')
 
     ax.set_xlim(xmin=xmin)
 
-    if save_dir:
+    if save_fig and save_dir:
         utils.save_figure(fig, figsize, save_dir, folder, _clean_filename(metric + '_horiz' + suffix))
     stats_filename = _clean_filename(metric + '_stats' + suffix)
-    try:
+    if save_dir:
         if plot_stats:
             print('saving_stats')
-            stats_suffix = '_mlm.csv' if use_mlm else '_tukey.csv'
+            stats_suffix = _stats_suffix_for_table(stats_table)
             stats_table.to_csv(os.path.join(save_dir, folder, _clean_filename(stats_filename + stats_suffix)))
         # save metric values
         cols_to_groupby = ['experience_level']
         descriptive_stats = get_descriptive_stats_for_metric(data, metric, cols_to_groupby)
         descriptive_stats.to_csv(os.path.join(save_dir, folder, _clean_filename(stats_filename + '_values.csv')))
-    except BaseException:
-        print('stats did not save for', metric)
     return ax
 
 
 
 def plot_behavior_metric_by_cohort(stats, metric, title='', ylabel='', ylims=None, show_containers=False,
                                        stripplot=True, pointplot=True, plot_stats=False, show_ns=False,
-                                   save_dir=None, folder=None, suffix='', ax=None,
-                                   use_mlm=True, group_column='mouse_id'):
+                                   save_dir=None, folder='behavior_metrics', suffix='', ax=None,
+                                   group_column='mouse_id'):
     """
     plots average metric value across project codes
     plots a stripplot of all datapoints and a pointplot of means by default. if pointplot is False, a boxplot will be shown.
@@ -7048,6 +7099,9 @@ def plot_behavior_metric_by_cohort(stats, metric, title='', ylabel='', ylims=Non
     if ax is None:
         figsize = (2, 3)
         fig, ax = plt.subplots(1, 1, figsize=figsize)
+        save_fig = True
+    else:
+        save_fig = False
 
     if stripplot:
         ax = sns.stripplot(data=data, x='project_code', y=metric, order=project_codes,
@@ -7087,31 +7141,29 @@ def plot_behavior_metric_by_cohort(stats, metric, title='', ylabel='', ylims=Non
         # stats dataframe to save
         ax, stats_table = add_stats_to_plot(data, metric, ax, ymax=ymax, show_ns=show_ns, behavior=True,
                                             column_to_compare='project_code',
-                                            use_mlm=use_mlm, group_column=group_column,
+                                            group_column=group_column,
                                             event_type='behavior')
         stats_table = insert_stats_metadata(stats_table, condition='experience_level')
 
     ax.set_ylim(ymin=ymin)
 
-    if save_dir:
+    if save_fig and save_dir:
         utils.save_figure(fig, figsize, save_dir, folder, _clean_filename(metric + suffix))
     stats_filename = _clean_filename(metric + '_stats' + suffix)
-    try:
+    if save_dir:
         if plot_stats:
             print('saving_stats')
-            stats_suffix = '_mlm.csv' if use_mlm else '_tukey.csv'
+            stats_suffix = _stats_suffix_for_table(stats_table)
             stats_table.to_csv(os.path.join(save_dir, folder, _clean_filename(stats_filename + stats_suffix)))
         # save metric values
         cols_to_groupby = ['project_code']
         descriptive_stats = get_descriptive_stats_for_metric(data, metric, cols_to_groupby)
         descriptive_stats.to_csv(os.path.join(save_dir, folder, _clean_filename(stats_filename + '_values.csv')))
-    except BaseException:
-        print('stats did not save for', metric)
     return ax
 
 
 def plot_behavior_metric_across_stages(data, metric, ylabel=None, ax=None,
-                                       save_dir=None, folder=None, suffix=''):
+                                       save_dir=None, folder='behavior_metrics', suffix=''):
     """
     generate boxplot of metric values across behavior stages (gratings flashed, gratings static, familiar, novel)
     with cre line on x-axis and behavior stages as hue
@@ -7131,26 +7183,30 @@ def plot_behavior_metric_across_stages(data, metric, ylabel=None, ax=None,
     colors = [list(color_map[behavior_stage]) for behavior_stage in behavior_stages]
     colors = [[c / 255. for c in color] for color in colors]
 
-    if ax is None: 
+    if ax is None:
         figsize = (7, 3)
         fig, ax = plt.subplots(figsize=figsize)
-    ax = sns.boxplot(data=data, x='cell_type', y=metric, width=0.8, order=cell_types, 
+        save_fig = True
+    else:
+        save_fig = False
+    ax = sns.boxplot(data=data, x='cell_type', y=metric, width=0.8, order=cell_types,
                      hue='behavior_stage', hue_order=behavior_stages, palette=colors, ax=ax)
     ax.set_xlabel('')
     ax.set_ylabel(ylabel)
     ax.legend().remove()
     ax.legend(bbox_to_anchor=(1, 1), fontsize='x-small')
 
-    if save_dir:
+    if save_fig and save_dir:
         fig.subplots_adjust(hspace=0.3)
         utils.save_figure(fig, figsize, save_dir, folder, _clean_filename('metric_across_stages_' + metric + suffix))
+    if save_dir:
         # save stats
         stats = data.groupby(['cell_type', 'behavior_stage']).describe()[[metric]]
         stats.to_csv(os.path.join(save_dir, folder, _clean_filename('metric_across_stages_' + metric + suffix + '_values.csv')))
     return ax
 
 
-def plot_days_in_stage(behavior_sessions, stage_column, save_dir=None, folder=None, suffix=None):
+def plot_days_in_stage(behavior_sessions, stage_column, save_dir=None, folder='training_history', suffix=None):
     """
     Plot the number of days in each stage, as a boxplot using stage as the hue and cell types on y-axis
 
@@ -7202,10 +7258,10 @@ def plot_days_in_stage(behavior_sessions, stage_column, save_dir=None, folder=No
         utils.save_figure(fig, figsize, save_dir, folder, _clean_filename('days_in_stage' + '_' + stage_column + suffix))
         # save stats
         days_in_stage_stats = data.groupby(['cell_type', stage_column]).describe()
-        days_in_stage_stats.to_csv(os.path.join(save_dir, folder, _clean_filename('days_in_stage_stats.csv')))
+        days_in_stage_stats.to_csv(os.path.join(save_dir, folder, _clean_filename('days_in_stage_values.csv')))
 
 
-def plot_prior_exposures_to_image_set_before_platform_ophys_sessions(platform_experiments, behavior_sessions, save_dir=None, folder=None, suffix='', ax=None):
+def plot_prior_exposures_to_image_set_before_platform_ophys_sessions(platform_experiments, behavior_sessions, save_dir=None, folder='stimulus_history', suffix='', ax=None):
     """
     Creates a boxplot showing the number of prior exposures to each image set for each experience level (Familiar, Novel, Novel +)
     for the set of mice and sessions in platform_experiments
@@ -7220,6 +7276,9 @@ def plot_prior_exposures_to_image_set_before_platform_ophys_sessions(platform_ex
     if ax is None:
         figsize = (2, 3)
         fig, ax = plt.subplots(figsize=figsize)
+        save_fig = True
+    else:
+        save_fig = False
 
     colors = utils.get_experience_level_colors()
     experience_levels = np.sort(platform_experiments.experience_level.unique())
@@ -7250,17 +7309,18 @@ def plot_prior_exposures_to_image_set_before_platform_ophys_sessions(platform_ex
             text = str(int(np.round(stats.loc[experience_level]['mean'], 0))) + '+/-' + str(int(np.round(stats.loc[experience_level]['std'], 0)))
         ax.text(i + 0.1, y, text, fontsize=14, rotation='horizontal')
 
-    if save_dir:
+    if save_fig and save_dir:
         # save plot
         utils.save_figure(fig, figsize, save_dir, folder, _clean_filename('stimulus_exposures_before_platform_expts_boxplot' + suffix))
+    if save_dir:
         # save stats
         stats = exposures.groupby(['experience_level']).describe()[['prior_exposures_to_image_set']]
-        stats.to_csv(os.path.join(save_dir, folder, _clean_filename('stimulus_exposures_before_platform_expts_stats.csv')))
+        stats.to_csv(os.path.join(save_dir, folder, _clean_filename('stimulus_exposures_before_platform_expts_values.csv')))
 
 
 def plot_prior_exposures_per_cell_type_for_novel_plus(platform_experiments, behavior_sessions, save_dir=None,
-                                                      folder=None, suffix='', ax=None,
-                                                      use_mlm=True, group_column='mouse_id'):
+                                                      folder='stimulus_history', suffix='', ax=None,
+                                                      group_column='mouse_id'):
     """
     Creates a boxplot showing the number of  prior exposures to novel image set for Novel + sessions included in the platform paper
     shows striplot of prior exposures across mice and pointplot of averages plus stats
@@ -7287,6 +7347,9 @@ def plot_prior_exposures_per_cell_type_for_novel_plus(platform_experiments, beha
     if ax is None:
         figsize = (2.5, 3)
         fig, ax = plt.subplots(figsize=figsize)
+        save_fig = True
+    else:
+        save_fig = False
 
     #     ax = sns.boxplot(data=exposures, x='cell_type', y='prior_exposures_to_image_set',
     #                order=cell_types, palette='gray', width=0.5, ax=ax)
@@ -7315,22 +7378,23 @@ def plot_prior_exposures_per_cell_type_for_novel_plus(platform_experiments, beha
     ymax = ax.get_ylim()[1]
     ax, stats_table = add_stats_to_plot(exposures, 'prior_exposures_to_image_set', ax, ymax=ymax,
                                         show_ns=True, column_to_compare='cell_type',
-                                        use_mlm=use_mlm, group_column=group_column,
+                                        group_column=group_column,
                                         event_type='session_metadata')
     stats_table = insert_stats_metadata(stats_table, condition='experience_level')
 
-    if save_dir:
+    if save_fig and save_dir:
         # save plot
         utils.save_figure(fig, figsize, save_dir, folder, _clean_filename('stimulus_exposures_before_novel_plus' + suffix))
+    if save_dir:
         # save stats
         print('saving_stats')
-        stats_suffix = '_mlm.csv' if use_mlm else '_tukey.csv'
+        stats_suffix = _stats_suffix_for_table(stats_table)
         stats_table.to_csv(os.path.join(save_dir, folder, _clean_filename('stimulus_exposures_before_novel_plus' + stats_suffix)))
         descriptive_stats = exposures.groupby(['cell_type', 'experience_level']).describe()[['prior_exposures_to_image_set']]
-        descriptive_stats.to_csv(os.path.join(save_dir, folder, _clean_filename('stimulus_exposures_before_novel_plus_stats.csv')))
+        descriptive_stats.to_csv(os.path.join(save_dir, folder, _clean_filename('stimulus_exposures_before_novel_plus_values.csv')))
 
 
-def plot_prior_exposures_to_image_set_before_platform_ophys_sessions_horiz(platform_experiments, behavior_sessions, save_dir=None, folder=None, suffix='', ax=None):
+def plot_prior_exposures_to_image_set_before_platform_ophys_sessions_horiz(platform_experiments, behavior_sessions, save_dir=None, folder='stimulus_history', suffix='', ax=None):
     """
     Creates a boxplot showing the number of prior exposures to each image set for each experience level (Familiar, Novel, Novel +)
     for the set of mice and sessions in platform_experiments
@@ -7345,6 +7409,9 @@ def plot_prior_exposures_to_image_set_before_platform_ophys_sessions_horiz(platf
     if ax is None:
         figsize = (3.5, 2)
         fig, ax = plt.subplots(figsize=figsize)
+        save_fig = True
+    else:
+        save_fig = False
 
     colors = utils.get_experience_level_colors()
     experience_levels = np.sort(platform_experiments.experience_level.unique())
@@ -7378,14 +7445,15 @@ def plot_prior_exposures_to_image_set_before_platform_ophys_sessions_horiz(platf
             text = str(int(np.round(stats.loc[experience_level]['mean'], 0))) + '+/-' + str(int(np.round(stats.loc[experience_level]['std'], 0)))
         ax.text(x, i + pos, text, fontsize=14, rotation='horizontal')
 
-    if save_dir:
+    if save_fig and save_dir:
         # save plot
         utils.save_figure(fig, figsize, save_dir, folder, _clean_filename('stimulus_exposures_before_platform_expts_boxplot_horiz' + suffix))
+    if save_dir:
         # save stats
         stats = exposures.groupby(['experience_level']).describe()[['prior_exposures_to_image_set']]
-        stats.to_csv(os.path.join(save_dir, folder, _clean_filename('stimulus_exposures_before_platform_expts_stats.csv')))
+        stats.to_csv(os.path.join(save_dir, folder, _clean_filename('stimulus_exposures_before_platform_expts_values.csv')))
 
-def plot_total_stimulus_exposures(behavior_sessions, save_dir=None, folder=None, suffix='', ax=None):
+def plot_total_stimulus_exposures(behavior_sessions, save_dir=None, folder='stimulus_history', suffix='', ax=None):
     """
     Creates a boxplot showing the number of sessions for each experience level (Familiar, Novel, Novel +)
     for the set of mice included in behavior_sessions
@@ -7400,6 +7468,9 @@ def plot_total_stimulus_exposures(behavior_sessions, save_dir=None, folder=None,
     if ax is None:
         figsize = (2.5, 3)
         fig, ax = plt.subplots(figsize=figsize)
+        save_fig = True
+    else:
+        save_fig = False
 
     colors = utils.get_experience_level_colors()
     experience_levels = utils.get_experience_levels()
@@ -7433,15 +7504,16 @@ def plot_total_stimulus_exposures(behavior_sessions, save_dir=None, folder=None,
                 int(np.round(stats.loc[experience_level]['std'], 0)))
         ax.text(i + 0.1, y, text, fontsize=14, rotation='horizontal')
 
-    if save_dir:
+    if save_fig and save_dir:
         utils.save_figure(fig, figsize, save_dir, folder, _clean_filename('total_stimulus_exposures_all_sessions_boxplot' + suffix))
+    if save_dir:
         # save stats
         stats = exposures.groupby(['experience_level']).describe()[['n_sessions']]
-        stats.to_csv(os.path.join(save_dir, folder, _clean_filename('total_stimulus_exposures_all_sessions_stats.csv')))
+        stats.to_csv(os.path.join(save_dir, folder, _clean_filename('total_stimulus_exposures_all_sessions_values.csv')))
 
 
 def plot_stimulus_exposure_prior_to_imaging(behavior_sessions, column_to_group='behavior_stage',
-                                            save_dir=None, folder=None, suffix='', ax=None):
+                                            save_dir=None, folder='stimulus_history', suffix='', ax=None):
     """
     Creates a boxplot showing the number of sessions for each experience level or session type
     prior to the start of 2P imaging, for the set of mice included in behavior_sessions
@@ -7460,6 +7532,9 @@ def plot_stimulus_exposure_prior_to_imaging(behavior_sessions, column_to_group='
     if ax is None:
         figsize = (2.5, 3)
         fig, ax = plt.subplots(figsize=figsize)
+        save_fig = True
+    else:
+        save_fig = False
 
     col_values = np.sort(exposures[column_to_group].unique())
 
@@ -7492,14 +7567,15 @@ def plot_stimulus_exposure_prior_to_imaging(behavior_sessions, column_to_group='
 
     ax.set_xticklabels([col_value.replace('_', ' ') for col_value in col_values], rotation=90)
 
-    if save_dir:
+    if save_fig and save_dir:
         utils.save_figure(fig, figsize, save_dir, folder, _clean_filename('stimulus_exposure_prior_to_imaging_boxplot_'+ column_to_group + suffix))
+    if save_dir:
         # save stats
         stats = exposures.groupby(column_to_group).describe()[['n_sessions']]
-        stats.to_csv(os.path.join(save_dir, folder, _clean_filename('stimulus_exposure_prior_to_imaging_stats_'+column_to_group+'.csv')))
+        stats.to_csv(os.path.join(save_dir, folder, _clean_filename('stimulus_exposure_prior_to_imaging_'+column_to_group+'_values.csv')))
 
 def plot_training_history_for_mice(behavior_sessions, color_column='session_type', color_map=sns.color_palette(),
-                                   group_by_cre_line=True, save_dir=None, folder=None, suffix='', ax=None):
+                                   group_by_cre_line=True, save_dir=None, folder='training_history', suffix='', ax=None):
     """
     plots the session sequence for all mice in behavior_sessions table, sorted by total # of sessions per mouse
 
@@ -8198,7 +8274,7 @@ def convert_coding_scores_to_long_form_df(results_pivoted):
 def plot_coding_score_distributions_by_experience(results_melted, cre_lines=None,
                                                   save_dir=None, folder='coding_scores_and_kernels',
                                                   filename='coding_score_distributions_by_experience',
-                                                  suffix='', use_mlm=True, group_column='mouse_id',
+                                                  suffix='', group_column='mouse_id',
                                                   event_type='coding_score'):
     """
     Grid of boxplots (rows: cre line, cols: feature) of coding scores by
@@ -8274,7 +8350,7 @@ def plot_coding_score_distributions_by_experience(results_melted, cre_lines=None
             ax[i], panel_stats = add_stats_to_plot_yaxis(
                 sub, 'coding_score', ax=ax[i], ymax=1.05,
                 column_to_compare='experience_level',
-                use_mlm=use_mlm, group_column=group_column,
+                group_column=group_column,
                 event_type=event_type, cell_type=cell_type,
             )
             # Attach the per-panel iteration variable (feature) that compute_stats
@@ -8290,7 +8366,7 @@ def plot_coding_score_distributions_by_experience(results_melted, cre_lines=None
         utils.save_figure(fig, figsize, save_dir, folder, filename + suffix)
         try:
             print('saving_stats')
-            stats_suffix = '_mlm.csv' if use_mlm else '_tukey.csv'
+            stats_suffix = _stats_suffix_for_table(combined_stats)
             combined_stats.to_csv(
                 os.path.join(save_dir, folder, _clean_filename(filename + suffix + stats_suffix))
             )
@@ -8306,10 +8382,10 @@ def plot_coding_score_distributions_by_experience(results_melted, cre_lines=None
 
 def plot_coding_scores_across_conditions_grid(data, x_val='experience_level', hue='targeted_structure',
                                               plot_type='barplot', xlabel='', figsize=None,
-                                              event_type='coding_score',
+                                              event_type='coding_score', legend=True, compact_bars=True,
                                               save_dir=None, folder='coding_scores_and_kernels',
                                               filename=None, suffix='',
-                                              use_mlm=True, group_column='mouse_id'):
+                                              group_column='mouse_id'):
     """
     Grid of coding score bar/box/point plots: 3 rows (cell types) by 4 columns
     (GLM features: image, omission, behavior, task). Each column is one call to
@@ -8350,24 +8426,33 @@ def plot_coding_scores_across_conditions_grid(data, x_val='experience_level', hu
         ax[:, col] = plot_metric_across_conditions(
             data, metric, title=title, x_color=color,
             xlabel=xlabel, x_val=x_val, hue=hue, plot_type=plot_type,
-            event_type=event_type,
+            event_type=event_type, compact_bars=compact_bars,
             save_dir=save_dir, folder=folder, ax=ax[:, col],
-            use_mlm=use_mlm, group_column=group_column,
+            group_column=group_column,
         )
         # Strip duplicated y-axis labels in non-leftmost columns.
         if col > 0:
             for row in range(3):
                 ax[row, col].set_ylabel('')
 
-    # When hue is something other than experience_level, the inner function
-    # leaves a legend on each panel; drop everything except the one in the top
-    # row to avoid clutter.
-    if hue != 'experience_level':
-        for col in range(4):
-            for row in range(3):
-                leg = ax[row, col].get_legend()
-                if leg is not None and not (row == 0 and col == 0):
-                    leg.remove()
+    # The inner function may leave a legend on a per-column panel (usually top-left).
+    # Collect the hue handles, clear every panel's legend, then -- if requested --
+    # put a single legend on the TOP-RIGHT axis, anchored just outside the axes.
+    handles, labels = ax[0, 3].get_legend_handles_labels()
+    if not handles:
+        for a in ax.ravel():
+            h, l = a.get_legend_handles_labels()
+            if h:
+                handles, labels = h, l
+                break
+    for a in ax.ravel():
+        leg = a.get_legend()
+        if leg is not None:
+            leg.remove()
+    if legend and handles:
+        ax[0, 3].legend(handles, labels, bbox_to_anchor=(1, 1), loc='upper left',
+                        fontsize='xx-small', title=hue.replace('_', ' '),
+                        title_fontsize='xx-small')
 
     wspace = 0.3 if (hue == 'binned_depth' or x_val == 'binned_depth') else 0.4
     plt.subplots_adjust(wspace=wspace, hspace=0.3)
@@ -8378,5 +8463,919 @@ def plot_coding_scores_across_conditions_grid(data, x_val='experience_level', hu
         utils.save_figure(fig, figsize, save_dir, folder, _clean_filename(filename + suffix))
 
     return fig, ax
+
+
+# =============================================================================
+# GLM coding-score figures (ported from visual_behavior_glm.GLM_visualization_tools)
+#
+# These reproduce the Figure 4 supplemental coding-score / variance-explained
+# panels that were previously made by ``gvt.*`` functions in the visual_behavior_glm
+# repo, but re-implemented here so they (a) follow the platform_paper_figures
+# conventions (save_dir/folder/suffix, save_figure, _values.csv export) and
+# (b) run their statistics through the same MLM stack as the rest of this module
+# (``compute_stats`` / ``add_stats_to_plot*``, grouped by ``mouse_id``, gated by the
+# module-level ``USE_MLM`` switch).
+#
+# Input data (built in figure_4_supplemental.ipynb):
+#   - results_pivoted : one row per cell per experiment; wide dropout (coding score)
+#       columns ('all-images', 'omissions', 'behavioral', 'task', ...), plus
+#       'variance_explained_full', 'cre_line', 'experience_level', 'cell_specimen_id',
+#       'ophys_experiment_id', and (in the notebook) 'cell_type', 'binned_depth'.
+#   - results : long format, one row per cell per dropout, with 'dropout',
+#       'adj_fraction_change_from_full', 'cre_line', 'variance_explained_full'.
+# =============================================================================
+
+# cre_line -> cell_type mapping used throughout the GLM results tables
+_GLM_CRE_TO_CELL_TYPE = {
+    'Slc17a7-IRES2-Cre': 'Excitatory',
+    'Sst-IRES-Cre': 'Sst Inhibitory',
+    'Vip-IRES-Cre': 'Vip Inhibitory',
+}
+
+
+def _coarse_bin_depth(imaging_depth):
+    """Bin imaging depth into 'upper' (<250 um) / 'lower' (>=250 um), matching
+    gvt.coarse_bin_depth."""
+    return 'upper' if imaging_depth < 250 else 'lower'
+
+
+def _glm_add_cell_type(df):
+    """Add a 'cell_type' column from 'cre_line' if it is not already present."""
+    if 'cell_type' not in df.columns and 'cre_line' in df.columns:
+        df['cell_type'] = df['cre_line'].map(_GLM_CRE_TO_CELL_TYPE)
+    return df
+
+
+def _prepare_glm_metrics_table(results_pivoted, experiment_table=None, include_4x2_data=False,
+                               drop_passive=True, include_zero_cells=True):
+    """
+    Coerce a GLM ``results_pivoted`` dataframe into the platform ``metrics_table``
+    shape expected by the stats helpers: one row per cell_specimen_id per
+    ophys_experiment_id, with 'cell_type', platform-named 'experience_level', and a
+    'mouse_id' column (the MLM grouping variable).
+
+    - drops passive sessions (matches the gvt originals) when ``drop_passive``
+    - if ``include_zero_cells`` is False, keeps only cells with
+      variance_explained_full > 0.005 (matches the gvt originals)
+    - converts experience-level names via utils.convert_experience_level
+      ('Novel 1'->'Novel', 'Novel >1'->'Novel +')
+    - merges any missing metadata columns (mouse_id, cell_type, targeted_structure,
+      binned_depth, imaging_depth, equipment_name) from the platform experiment table
+    """
+    data = results_pivoted.copy()
+    if drop_passive and 'passive' in data.columns:
+        data = data[data.passive == False].copy()  # noqa: E712
+    if (not include_zero_cells) and ('variance_explained_full' in data.columns):
+        data = data[data.variance_explained_full > 0.005].copy()
+    if 'experience_level' in data.columns:
+        data['experience_level'] = [utils.convert_experience_level(e)
+                                    for e in data['experience_level'].values]
+    data = _glm_add_cell_type(data)
+    # ensure metadata needed for plotting / MLM grouping is present
+    wanted = ['mouse_id', 'cell_type', 'targeted_structure', 'binned_depth',
+              'imaging_depth', 'equipment_name']
+    missing = [c for c in wanted if c not in data.columns]
+    if missing and ('ophys_experiment_id' in data.columns):
+        if experiment_table is None:
+            experiment_table = loading.get_platform_paper_experiment_table(
+                include_4x2_data=include_4x2_data)
+        et = experiment_table.reset_index()
+        merge_cols = ['ophys_experiment_id'] + [c for c in missing if c in et.columns]
+        data = data.merge(et[merge_cols], on='ophys_experiment_id', how='left')
+        data = _glm_add_cell_type(data)
+    return data
+
+
+def _prepare_glm_dropout_long(results, drop_passive=True, include_zero_cells=True, threshold=0.005):
+    """
+    Prepare the long-format GLM ``results`` dataframe for the dropout overview plots:
+    drop passive, (optionally) threshold on variance_explained_full, add a
+    'cell_type' column from 'cre_line', and compute
+    ``explained_variance = -1 * adj_fraction_change_from_full`` (the coding score).
+    """
+    data = results.copy()
+    if drop_passive and 'passive' in data.columns:
+        data = data[data.passive == False].copy()  # noqa: E712
+        
+    if include_zero_cells: 
+        threshold = 0
+    data = data[data.variance_explained_full > threshold].copy()
+
+    data = _glm_add_cell_type(data)
+    data['explained_variance'] = -1 * data['adj_fraction_change_from_full']
+    return data
+
+
+def _format_experience_axis(ax, abbreviate=True):
+    """Apply the standard platform experience-level x-axis ticks + label coloring."""
+    if abbreviate:
+        ax.set_xticks(np.arange(len(utils.get_abbreviated_experience_levels())))
+        ax.set_xticklabels(utils.get_abbreviated_experience_levels(), rotation=0)
+    else:
+        ax.set_xticks(np.arange(len(utils.get_experience_levels())))
+        ax.set_xticklabels(utils.get_experience_levels(), rotation=90)
+    utils.color_xaxis_labels_by_experience(ax)
+
+
+def _clean_dropout_title(feature):
+    """Human-readable panel title for a dropout/coding-score feature name."""
+    title = feature.replace('all-images', 'images')
+    title = title.replace('omissions_positive', 'excited')
+    title = title.replace('omissions_negative', 'inhibited')
+    title = title.replace('_', ' ')
+    return title
+
+
+def _get_feature_title_and_color(feature):
+    """
+    Return a (capitalized title, color) for a GLM coding-score feature, using the
+    same feature palette as plot_coding_scores_across_conditions_grid
+    (``plotting.get_feature_colors_and_labels()[0]``). Features outside the standard
+    image/omission/behavior/task set fall back to a cleaned, capitalized title in
+    black.
+    """
+    from visual_behavior.dimensionality_reduction.clustering import plotting
+    feature_colors = plotting.get_feature_colors_and_labels()[0]
+    feature_specs = {
+        'all-images': ('Image coding', feature_colors[0]),
+        'omissions': ('Omission coding', feature_colors[1]),
+        'behavioral': ('Behavior coding', feature_colors[2]),
+        'task': ('Task coding', feature_colors[3]),
+    }
+    if feature in feature_specs:
+        return feature_specs[feature]
+    return (_clean_dropout_title(feature).capitalize(), 'k')
+
+
+def _get_matched_cells_with_ve(cells_table, results_pivoted, threshold):
+    """
+    cell_specimen_ids present in ``cells_table`` whose maximum full-model variance
+    explained (across sessions) is >= ``threshold``. Same intent as
+    gvt.get_matched_cells_with_ve, but joins on 'cell_specimen_id' (always present)
+    rather than 'cell_roi_id' (absent from the curated platform cells table).
+    """
+    matched_ids = set(np.asarray(cells_table.cell_specimen_id.unique()))
+    max_ve = results_pivoted.groupby('cell_specimen_id')['variance_explained_full'].max()
+    ve_ok = set(max_ve[max_ve >= threshold].index.values)
+    return np.array(sorted(matched_ids & ve_ok))
+
+
+def plot_coding_score_distribution_by_experience(
+        results_pivoted,
+        dropouts_to_show=['all-images', 'omissions', 'behavioral', 'task'],
+        plot_type='pointplot', include_zero_cells=True,
+        experiment_table=None, include_4x2_data=False,
+        show_matched=True, matched_cells=None, cells_table=None,
+        strict_experience_matching=False, strict_matched_cells=None,
+        matched_with_variance_explained=False, matched_ve_threshold=0, ve_matched_cells=None,
+        add_combined_panel=True, cell_type_order=None,
+        ylabel=None, ylims=None, abbreviate_exp=True, suptitle=None,
+        save_dir=None, folder='coding_scores_and_kernels', suffix='', group_column='mouse_id'):
+    """
+    Coding score (dropout) across experience levels for each cell type, with stats
+    across experience levels (MLM by default, per the ``USE_MLM`` switch).
+
+    Full platform-style re-implementation of ``gvt.plot_population_averages`` (the
+    transposed / default layout): one figure per dropout in ``dropouts_to_show`` with
+    a panel per cell type (x = experience level, y = coding-score value, colored by
+    experience level) plus an optional 'Combined' panel showing all cell types
+    together. Subsets of cells are overlaid as gray/navajowhite point plots, exactly
+    as in the GLM original:
+      - matched cells (present in all experience levels): light gray overlay,
+        controlled by ``show_matched`` (default True, matching gvt).
+      - strictly matched cells (last familiar + second novel active): navajowhite,
+        via ``strict_experience_matching``.
+      - cells with full-model variance explained >= ``matched_ve_threshold``:
+        navajowhite, via ``matched_with_variance_explained``; stats are then run on
+        this subset (matching gvt) rather than all cells.
+
+    Each overlay's cell_specimen_ids can either be passed in precomputed
+    (``matched_cells`` / ``strict_matched_cells`` / ``ve_matched_cells``) or computed
+    internally from ``cells_table`` (falls back to loading.get_cell_table() if not
+    given). Pass ``cells_table`` to avoid the internal load.
+
+    plot_type: 'pointplot' (default) or 'boxplot'.
+    Returns the combined stats dataframe across all dropouts.
+    """
+    suffix = _norm_suffix(suffix)
+    data = _prepare_glm_metrics_table(results_pivoted, experiment_table=experiment_table,
+                                      include_4x2_data=include_4x2_data,
+                                      include_zero_cells=include_zero_cells)
+    colors = utils.get_experience_level_colors()
+    order = utils.get_experience_levels()
+    if cell_type_order is None:
+        # platform convention: Excitatory first, Vip last (gvt used the reverse)
+        cell_type_order = utils.get_cell_types()
+    cell_type_colors = {ct: c for ct, c in zip(utils.get_cell_types(), utils.get_cell_type_colors())}
+
+    # ---- resolve the cell_specimen_id sets used for the gray/navajowhite overlays ----
+    _need_cells_table = ((show_matched and matched_cells is None)
+                         or (strict_experience_matching and strict_matched_cells is None)
+                         or (matched_with_variance_explained and ve_matched_cells is None))
+    base_cells_table = None
+    if _need_cells_table:
+        base_cells_table = cells_table
+        if base_cells_table is None:
+            base_cells_table = loading.get_cell_table(platform_paper_only=True,
+                                                      include_4x2_data=include_4x2_data)
+        if 'passive' in base_cells_table.columns:
+            base_cells_table = base_cells_table[base_cells_table.passive == False].copy()  # noqa: E712
+    if show_matched and matched_cells is None:
+        matched_cells = utilities.limit_to_cell_specimen_ids_matched_in_all_experience_levels(
+            base_cells_table).cell_specimen_id.unique()
+    if strict_experience_matching and strict_matched_cells is None:
+        strict_tbl = utilities.limit_to_last_familiar_second_novel_active(base_cells_table)
+        strict_tbl = utilities.limit_to_cell_specimen_ids_matched_in_all_experience_levels(strict_tbl)
+        strict_matched_cells = strict_tbl.cell_specimen_id.unique()
+    if matched_with_variance_explained and ve_matched_cells is None:
+        matched_tbl = utilities.limit_to_cell_specimen_ids_matched_in_all_experience_levels(base_cells_table)
+        ve_matched_cells = _get_matched_cells_with_ve(matched_tbl, results_pivoted, matched_ve_threshold)
+
+    matched_cells = None if matched_cells is None else np.asarray(matched_cells)
+    strict_matched_cells = None if strict_matched_cells is None else np.asarray(strict_matched_cells)
+    ve_matched_cells = None if ve_matched_cells is None else np.asarray(ve_matched_cells)
+
+    # filename disambiguation so S2 / S3A / S3B outputs don't collide (matches gvt)
+    file_suffix = suffix
+    if strict_experience_matching:
+        file_suffix = file_suffix + '_strict_matched'
+    if matched_with_variance_explained:
+        file_suffix = file_suffix + '_matched_with_ve_' + str(matched_ve_threshold)
+
+    n_panels = len(cell_type_order) + (1 if add_combined_panel else 0)
+    combined_stats = pd.DataFrame()
+    for feature in dropouts_to_show:
+        # coding scores are stored as negative fractions; show as positive magnitude
+        data[feature] = data[feature].abs()
+        figsize = (2.6 * n_panels, 2.5)
+        fig, ax = plt.subplots(1, n_panels, figsize=figsize, sharex=False, sharey=True)
+        if n_panels == 1:
+            ax = [ax]
+        stats_data_per_panel = []
+        for i, cell_type in enumerate(cell_type_order):
+            ct_data = data[data.cell_type == cell_type]
+            # all cells, colored by experience level
+            if plot_type == 'boxplot':
+                ax[i] = sns.boxplot(data=ct_data, x='experience_level', y=feature, order=order,
+                                    hue='experience_level', hue_order=order, notch=True, width=0.4,
+                                    palette=colors, fliersize=0, ax=ax[i])
+                for box in ax[i].collections:
+                    box.set_alpha(0.75)
+            else:
+                ax[i] = sns.pointplot(data=ct_data, x='experience_level', y=feature, order=order,
+                                      hue='experience_level', hue_order=order, palette=colors,
+                                      estimator=np.mean, markers='.', markersize=5,
+                                      err_kws={'linewidth': 2}, ax=ax[i])
+            for child in list(ax[i].get_children()):
+                child.set_zorder(1000)
+            # subset overlays (light gray = matched, navajowhite = strict / VE-matched)
+            if matched_cells is not None:
+                md = ct_data[ct_data.cell_specimen_id.isin(matched_cells)]
+                ax[i] = sns.pointplot(data=md, x='experience_level', y=feature, order=order,
+                                      color='lightgray', linestyle='-', ax=ax[i])
+            if strict_matched_cells is not None:
+                sd = ct_data[ct_data.cell_specimen_id.isin(strict_matched_cells)]
+                ax[i] = sns.pointplot(data=sd, x='experience_level', y=feature, order=order,
+                                      color='navajowhite', linestyle='-', ax=ax[i])
+            if ve_matched_cells is not None:
+                vd = ct_data[ct_data.cell_specimen_id.isin(ve_matched_cells)]
+                ax[i] = sns.pointplot(data=vd, x='experience_level', y=feature, order=order,
+                                      color='navajowhite', linestyle='-', ax=ax[i])
+            _legend = ax[i].get_legend()
+            if _legend:
+                _legend.remove()
+            ax[i].set_xlim(-0.5, len(order) - 0.5)
+            # collect the data used for stats (VE subset when requested, else all cells);
+            # stats are added in a second pass below, after the shared y-axis is set
+            if matched_with_variance_explained and ve_matched_cells is not None:
+                stats_data_per_panel.append(ct_data[ct_data.cell_specimen_id.isin(ve_matched_cells)])
+            else:
+                stats_data_per_panel.append(ct_data)
+            ax[i].set_xlabel('')
+            ax[i].set_ylabel('')
+            ax[i].set_title(cell_type, fontsize=14)
+            _format_experience_axis(ax[i], abbreviate=abbreviate_exp)
+        # combined panel: all cell types overlaid, colored by cell type
+        if add_combined_panel:
+            j = len(cell_type_order)
+            ax[j] = sns.pointplot(data=data, x='experience_level', y=feature, order=order,
+                                  hue='cell_type', hue_order=cell_type_order, palette=cell_type_colors,
+                                  estimator=np.mean, markers='.', markersize=5,
+                                  err_kws={'linewidth': 2}, ax=ax[j])
+            _legend = ax[j].get_legend()
+            if _legend:
+                _legend.remove()
+            ax[j].set_title('Combined', fontsize=14)
+            ax[j].set_xlabel('')
+            ax[j].set_ylabel('')
+            ax[j].set_xlim(-0.5, len(order) - 0.5)
+            _format_experience_axis(ax[j], abbreviate=abbreviate_exp)
+        # shared y across all panels: floor at 0 (or use ylims), then add the MLM
+        # significance bars just above the shared data top
+        if ylims is not None:
+            ax[0].set_ylim(ylims)
+        else:
+            ax[0].set_ylim(bottom=0)
+        ymax_shared = ax[0].get_ylim()[1]
+        needed_tops = []
+        for i, cell_type in enumerate(cell_type_order):
+            ax[i], panel_stats = add_stats_to_plot(stats_data_per_panel[i], feature, ax[i],
+                                                   ymax=ymax_shared, compact_bars=True,
+                                                   group_column=group_column,
+                                                   event_type=feature, cell_type=cell_type)
+            needed_tops.append(ax[i].get_ylim()[1])
+            panel_stats = insert_stats_metadata(panel_stats, condition='experience_level')
+            combined_stats = pd.concat([combined_stats, panel_stats])
+        # Each per-panel add_stats() call resets the (shared) y-limit to fit only its
+        # own bars, so the last/shortest panel would clip earlier panels' taller
+        # significance bars (drawn with clip_on=False -> they float off the axis).
+        # Re-apply the tallest required top to the shared axis so every bar is visible.
+        ax[0].set_ylim(top=max(needed_tops))
+        # capitalized y-label; capitalized, feature-colored suptitle
+        ax[0].set_ylabel(ylabel if ylabel else (_clean_dropout_title(feature).capitalize() + '\ncoding score'))
+        feat_title, feat_color = _get_feature_title_and_color(feature)
+        plt.suptitle(suptitle if suptitle else feat_title, x=0.46, y=1.12, fontsize=18, color=feat_color)
+        fig.subplots_adjust(hspace=0.4, wspace=0.4, top=0.82)
+        if save_dir:
+            base = 'coding_score_' + feature + '_distribution' + file_suffix
+            stats_base = 'coding_score_' + feature + file_suffix
+            utils.save_figure(fig, figsize, save_dir, folder, _clean_filename(base))
+            try:
+                stats_suffix = _stats_suffix_for_table(combined_stats)
+                combined_stats.to_csv(os.path.join(save_dir, folder,
+                                                   _clean_filename(stats_base + stats_suffix)))
+                stats = get_descriptive_stats_for_metric(data, feature, ['cell_type', 'experience_level'])
+                stats.to_csv(os.path.join(save_dir, folder,
+                                          _clean_filename(stats_base + '_values.csv')))
+            except BaseException:
+                print('STATS DID NOT SAVE FOR', feature)
+    return combined_stats
+
+
+def plot_coding_score_distribution_legend(save_dir=None, folder='coding_scores_and_kernels',
+                                          include_overlays=True, suffix=''):
+    """
+    Standalone legend figure to accompany ``plot_coding_score_distribution_by_experience``.
+
+    Those plots strip their own legends to stay compact and use two different color
+    schemes -- experience-level colors in the per-cell-type panels and cell-type colors
+    in the 'Combined' panel -- so this produces a single figure with both legends side
+    by side (plus the gray/navajowhite matched-cell overlay entries when
+    ``include_overlays`` is True). Returns (fig, ax).
+    """
+    import matplotlib.lines as mlines
+    import matplotlib.patches as mpatches
+
+    exp_levels = utils.get_experience_levels()
+    exp_colors = utils.get_experience_level_colors()
+    cell_types = utils.get_cell_types()
+    cell_type_colors = utils.get_cell_type_colors()
+
+    exp_handles = [mpatches.Patch(color=c, label=l) for l, c in zip(exp_levels, exp_colors)]
+    if include_overlays:
+        exp_handles += [
+            mlines.Line2D([], [], color='lightgray', marker='o', linestyle='-', label='Matched cells'),
+            mlines.Line2D([], [], color='navajowhite', marker='o', linestyle='-',
+                          label='Strict / VE-matched cells'),
+        ]
+    ct_handles = [mpatches.Patch(color=c, label=l) for l, c in zip(cell_types, cell_type_colors)]
+
+    figsize = (6, 2.5)
+    fig, ax = plt.subplots(1, 2, figsize=figsize)
+    for a in ax:
+        a.axis('off')
+    ax[0].legend(handles=exp_handles, title='Per-cell-type panels', loc='center', frameon=False)
+    ax[1].legend(handles=ct_handles, title='Combined panel', loc='center', frameon=False)
+    if save_dir:
+        utils.save_figure(fig, figsize, save_dir, folder,
+                          _clean_filename('coding_score_distribution_legend' + _norm_suffix(suffix)))
+    return fig, ax
+
+
+def _plot_coding_score_by_hue(results_pivoted, hue, hue_order, palette,
+                              dropouts_to_show, include_zero_cells, equipment,
+                              experiment_table, include_4x2_data, ylabel,
+                              save_dir, folder, suffix, group_column, filename_stub):
+    """
+    Shared implementation for plot_coding_score_by_area / _by_depth: one figure per
+    cell type, a panel per dropout, x = experience level, split by ``hue``
+    (targeted_structure or coarse depth). Stats compare hue values within each
+    experience level via ``add_stats_to_plot_for_hues`` (preserves the gvt
+    area-vs-area / depth-vs-depth comparison, but through the platform MLM code).
+    Returns the combined stats dataframe.
+    """
+    suffix = _norm_suffix(suffix)
+    data = _prepare_glm_metrics_table(results_pivoted, experiment_table=experiment_table,
+                                      include_4x2_data=include_4x2_data,
+                                      include_zero_cells=include_zero_cells)
+    # equipment filter (mesoscope == 'MESO.1'), matching the gvt originals
+    if equipment is not None and 'equipment_name' in data.columns:
+        if equipment == 'mesoscope':
+            data = data[data.equipment_name == 'MESO.1'].copy()
+        else:
+            data = data[data.equipment_name != 'MESO.1'].copy()
+    order = utils.get_experience_levels()
+    cell_types = utils.get_cell_types()
+
+    combined_stats = pd.DataFrame()
+    for cell_type in cell_types:
+        ct_all = data[data.cell_type == cell_type]
+        figsize = (2.5 * len(dropouts_to_show), 2.5)
+        fig, ax = plt.subplots(1, len(dropouts_to_show), figsize=figsize, sharey=False)
+        if len(dropouts_to_show) == 1:
+            ax = [ax]
+        for index, feature in enumerate(dropouts_to_show):
+            ct_data = ct_all.copy()
+            ct_data[feature] = ct_data[feature].abs()
+            ax[index] = sns.pointplot(data=ct_data, x='experience_level', y=feature, order=order,
+                                      hue=hue, hue_order=hue_order, palette=palette,
+                                      dodge=0.1 * len(hue_order), linestyle='none',
+                                      markers='.', markersize=5, err_kws={'linewidth': 2}, ax=ax[index])
+            _legend = ax[index].get_legend()
+            if index != len(dropouts_to_show) - 1:
+                if _legend:
+                    _legend.remove()
+            else:
+                if _legend:
+                    ax[index].legend(title='', fontsize='xx-small', bbox_to_anchor=(1.05, 1))
+            feat_title, feat_color = _get_feature_title_and_color(feature)
+            ax[index].set_title(feat_title, fontsize=16, color=feat_color)
+            ax[index].set_ylim(bottom=0)
+            ax[index].set_xlim(-0.5, len(order) - 0.5)
+            ax[index], panel_stats = add_stats_to_plot_for_hues(ct_data, feature, ax[index],
+                                                                xorder=order, x='experience_level',
+                                                                hue=hue, compact_bars=True,
+                                                                group_column=group_column,
+                                                                event_type=feature, cell_type=cell_type)
+            panel_stats = insert_stats_metadata(panel_stats, condition=hue)
+            combined_stats = pd.concat([combined_stats, panel_stats])
+            ax[index].set_xlabel('')
+            ax[index].set_ylabel('')
+            _format_experience_axis(ax[index], abbreviate=True)
+        ax[0].set_ylabel(ylabel)
+        # raise the cell-type suptitle so it clears the panel titles
+        plt.suptitle(cell_type, fontsize=18, x=0.5, y=1.12)
+        fig.subplots_adjust(wspace=0.5, hspace=0.3)
+        if save_dir:
+            base = filename_stub + '_' + cell_type[0:3] + suffix
+            utils.save_figure(fig, figsize, save_dir, folder, _clean_filename(base))
+            try:
+                stats_suffix = _stats_suffix_for_table(combined_stats)
+                combined_stats.to_csv(os.path.join(save_dir, folder,
+                                                   _clean_filename(filename_stub + suffix + stats_suffix)))
+            except BaseException:
+                print('STATS DID NOT SAVE FOR', filename_stub, cell_type)
+    return combined_stats
+
+
+def plot_coding_score_by_area(results_pivoted,
+                              dropouts_to_show=['all-images', 'omissions', 'behavioral', 'task'],
+                              include_zero_cells=True, equipment='mesoscope', areas=None,
+                              experiment_table=None, include_4x2_data=False, ylabel='Coding score',
+                              save_dir=None, folder='coding_scores_and_kernels', suffix='',
+                              group_column='mouse_id'):
+    """
+    Coding score across experience levels, split by visual area (targeted_structure),
+    one figure per cell type. Platform-style re-implementation of
+    ``gvt.plot_population_averages_by_area``. Stats compare areas within each
+    experience level (``add_stats_to_plot_for_hues``). Returns combined stats.
+    """
+    if areas is None:
+        areas = ['VISp', 'VISl', 'VISam', 'VISal'] if include_4x2_data else ['VISp', 'VISl']
+    palette = {'VISp': 'black', 'VISl': 'gray', 'VISam': 'blue', 'VISal': 'red'}
+    palette = {a: palette.get(a, 'gray') for a in areas}
+    return _plot_coding_score_by_hue(
+        results_pivoted, hue='targeted_structure', hue_order=areas, palette=palette,
+        dropouts_to_show=dropouts_to_show, include_zero_cells=include_zero_cells,
+        equipment=equipment, experiment_table=experiment_table, include_4x2_data=include_4x2_data,
+        ylabel=ylabel, save_dir=save_dir, folder=folder, suffix=suffix,
+        group_column=group_column, filename_stub='coding_score_by_area')
+
+
+def plot_coding_score_by_depth(results_pivoted,
+                               dropouts_to_show=['all-images', 'omissions', 'behavioral', 'task'],
+                               include_zero_cells=True, equipment='mesoscope', area=['VISp', 'VISl'],
+                               experiment_table=None, include_4x2_data=False, ylabel='Coding score',
+                               save_dir=None, folder='coding_scores_and_kernels', suffix='',
+                               group_column='mouse_id'):
+    """
+    Coding score across experience levels, split by coarse cortical depth
+    (upper <250 um / lower >=250 um), one figure per cell type. Platform-style
+    re-implementation of ``gvt.plot_population_averages_by_depth``. Stats compare
+    depths within each experience level (``add_stats_to_plot_for_hues``).
+    Returns combined stats.
+    """
+    suffix = _norm_suffix(suffix)
+    data = _prepare_glm_metrics_table(results_pivoted, experiment_table=experiment_table,
+                                      include_4x2_data=include_4x2_data,
+                                      include_zero_cells=include_zero_cells)
+    # equipment filter (mesoscope == 'MESO.1'), matching the gvt original
+    if equipment is not None and 'equipment_name' in data.columns:
+        if equipment == 'mesoscope':
+            data = data[data.equipment_name == 'MESO.1'].copy()
+        else:
+            data = data[data.equipment_name != 'MESO.1'].copy()
+    if area is not None and 'targeted_structure' in data.columns:
+        data = data[data.targeted_structure.isin(area)].copy()
+    if 'imaging_depth' in data.columns:
+        data['coarse_binned_depth'] = [_coarse_bin_depth(d) for d in data['imaging_depth']]
+    palette = {'upper': 'black', 'lower': 'gray'}
+    # data already filtered/prepped above; pass through the shared plotter without
+    # re-filtering equipment or re-merging (use equipment=None, drop already done)
+    return _plot_coding_score_by_hue(
+        data, hue='coarse_binned_depth', hue_order=['upper', 'lower'], palette=palette,
+        dropouts_to_show=dropouts_to_show, include_zero_cells=True, equipment=None,
+        experiment_table=experiment_table, include_4x2_data=include_4x2_data, ylabel=ylabel,
+        save_dir=save_dir, folder=folder, suffix=suffix, group_column=group_column,
+        filename_stub='coding_score_by_depth')
+
+
+def plot_variance_explained_by_experience(results_pivoted, plot_type='boxplot', include_zero_cells=True,
+                                          experiment_table=None, include_4x2_data=False,
+                                          ylabel='Variance explained (%)', ylims=None, abbreviate_exp=True,
+                                          suptitle=None, save_dir=None, folder='coding_scores_and_kernels',
+                                          suffix='', group_column='mouse_id'):
+    """
+    Full-model variance explained (%) across experience levels for each cell type,
+    with stats across experience levels. Platform-style re-implementation of
+    ``gvt.var_explained_by_experience``. Returns combined stats.
+    """
+    suffix = _norm_suffix(suffix)
+    data = _prepare_glm_metrics_table(results_pivoted, experiment_table=experiment_table,
+                                      include_4x2_data=include_4x2_data,
+                                      include_zero_cells=include_zero_cells)
+    data['variance_explained_percent'] = data['variance_explained_full'] * 100
+    metric = 'variance_explained_percent'
+    colors = utils.get_experience_level_colors()
+    order = utils.get_experience_levels()
+    cell_types = utils.get_cell_types()
+
+    figsize = (8, 2.5)
+    fig, ax = plt.subplots(1, 3, figsize=figsize, sharex=False, sharey=True)
+    combined_stats = pd.DataFrame()
+    panel_data = []
+    for i, cell_type in enumerate(cell_types):
+        ct_data = data[data.cell_type == cell_type]
+        panel_data.append(ct_data)
+        if plot_type == 'pointplot':
+            ax[i] = sns.pointplot(data=ct_data, x='experience_level', y=metric, order=order,
+                                  hue='experience_level', hue_order=order, palette=colors,
+                                  markers='.', markersize=5, err_kws={'linewidth': 2}, ax=ax[i])
+        else:
+            # showfliers=False (not fliersize=0): fliers must be removed, not just hidden,
+            # otherwise they still inflate the autoscaled y-limit and push the stats bars
+            # far above the visible boxes
+            ax[i] = sns.boxplot(data=ct_data, x='experience_level', y=metric, order=order,
+                                hue='experience_level', hue_order=order, palette=colors,
+                                showfliers=False, linewidth=1, ax=ax[i])
+        _legend = ax[i].get_legend()
+        if _legend:
+            _legend.remove()
+        ax[i].set_xlim(-0.5, len(order) - 0.5)
+        ax[i].set_xlabel('')
+        ax[i].set_ylabel('')
+        ax[i].set_title(cell_type, fontsize=14)
+        _format_experience_axis(ax[i], abbreviate=abbreviate_exp)
+    # shared y across panels: floor at 0 (or use ylims), then place the significance
+    # bars just above the shared data top instead of at a fixed ceiling
+    if ylims is not None:
+        ax[0].set_ylim(ylims)
+    else:
+        ax[0].set_ylim(bottom=0)
+    ymax_shared = ax[0].get_ylim()[1]
+    needed_tops = []
+    for i, cell_type in enumerate(cell_types):
+        ax[i], panel_stats = add_stats_to_plot(panel_data[i], metric, ax[i], ymax=ymax_shared,
+                                               compact_bars=True, group_column=group_column,
+                                               event_type='variance_explained', cell_type=cell_type)
+        needed_tops.append(ax[i].get_ylim()[1])
+        panel_stats = insert_stats_metadata(panel_stats, condition='experience_level')
+        combined_stats = pd.concat([combined_stats, panel_stats])
+    # re-apply the tallest required top so the shared axis isn't clipped to the last
+    # (shortest) panel, which would push earlier panels' clip_on=False bars off-axis
+    ax[0].set_ylim(top=max(needed_tops))
+    ax[0].set_ylabel(ylabel)
+    if suptitle:
+        plt.suptitle(suptitle, x=0.52, y=1.02, fontsize=18)
+    fig.subplots_adjust(hspace=0.4, wspace=0.4)
+    if save_dir:
+        base = 'variance_explained_by_experience' + suffix
+        utils.save_figure(fig, figsize, save_dir, folder, _clean_filename(base))
+        try:
+            stats_suffix = _stats_suffix_for_table(combined_stats)
+            combined_stats.to_csv(os.path.join(save_dir, folder, _clean_filename(base + stats_suffix)))
+            stats = get_descriptive_stats_for_metric(data, metric, ['cell_type', 'experience_level'])
+            stats.to_csv(os.path.join(save_dir, folder, _clean_filename(base + '_values.csv')))
+        except BaseException:
+            print('STATS DID NOT SAVE FOR variance_explained_by_experience')
+    return combined_stats
+
+
+def plot_variance_explained_for_matched_cells(results_pivoted, include_4x2_data=False,
+                                              experiment_table=None, cells_table=None,
+                                              ylabel='Variance explained (%)', ylims=None, abbreviate_exp=True,
+                                              figsize=(12, 3.5), suptitle=None, save_dir=None,
+                                              folder='coding_scores_and_kernels',
+                                              suffix='', group_column='mouse_id'):
+    """
+    Full-model variance explained (%) across experience levels for matched vs
+    non-matched cells, one panel per cell type, with stats comparing matched vs
+    non-matched within each experience level. Platform-style re-implementation of
+    ``gvt.var_explained_matched``. Returns combined stats.
+    """
+    suffix = _norm_suffix(suffix)
+    data = _prepare_glm_metrics_table(results_pivoted, experiment_table=experiment_table,
+                                      include_4x2_data=include_4x2_data, include_zero_cells=True)
+    data['variance_explained_percent'] = data['variance_explained_full'] * 100
+    metric = 'variance_explained_percent'
+
+    # identify cells matched across all experience levels
+    if cells_table is None:
+        cells_table = loading.get_cell_table(platform_paper_only=True, include_4x2_data=include_4x2_data)
+    cells_table = cells_table[cells_table.passive == False].copy()  # noqa: E712
+    cells_table = utilities.limit_to_cell_specimen_ids_matched_in_all_experience_levels(cells_table)
+    matched_cells = cells_table.cell_specimen_id.unique()
+    data['matched'] = ['Matched' if csid in np.array(matched_cells) else 'Non-matched'
+                       for csid in data['cell_specimen_id']]
+
+    order = utils.get_experience_levels()
+    hue_order = ['Matched', 'Non-matched']
+    cell_types = utils.get_cell_types()
+    cell_type_colors = {ct: c for ct, c in zip(utils.get_cell_types(), utils.get_cell_type_colors())}
+
+    fig, ax = plt.subplots(1, 3, figsize=figsize, sharex=False, sharey=True)
+    combined_stats = pd.DataFrame()
+    for i, cell_type in enumerate(cell_types):
+        ct_data = data[data.cell_type == cell_type]
+        palette = [cell_type_colors.get(cell_type, 'k'), 'gray']
+        ax[i] = sns.boxplot(data=ct_data, x='experience_level', y=metric, order=order,
+                            hue='matched', hue_order=hue_order, palette=palette,
+                            showfliers=False, linewidth=1, ax=ax[i])
+        if i == len(cell_types) - 1:
+            ax[i].legend(title='', fontsize='xx-small', loc='upper right')
+        else:
+            _legend = ax[i].get_legend()
+            if _legend:
+                _legend.remove()
+        # if ylims is not None:
+        #     ax[i].set_ylim(ylims)
+        ax[i].set_xlim(-0.5, len(order) - 0.5)
+        ax[i], panel_stats = add_stats_to_plot_for_hues(ct_data, metric, ax[i], xorder=order,
+                                                        x='experience_level', hue='matched',
+                                                        compact_bars=True, group_column=group_column,
+                                                        event_type='variance_explained', cell_type=cell_type)
+        panel_stats = insert_stats_metadata(panel_stats, condition='matched')
+        combined_stats = pd.concat([combined_stats, panel_stats])
+        ax[i].set_xlabel(cell_type)
+        ax[i].set_ylabel('')
+        _format_experience_axis(ax[i], abbreviate=abbreviate_exp)
+    ax[0].set_ylabel(ylabel)
+    if suptitle:
+        plt.suptitle(suptitle, x=0.52, y=1.02, fontsize=18)
+    fig.subplots_adjust(hspace=0.4, wspace=0.4)
+    if save_dir:
+        base = 'variance_explained_matched' + suffix
+        utils.save_figure(fig, figsize, save_dir, folder, _clean_filename(base))
+        try:
+            stats_suffix = _stats_suffix_for_table(combined_stats)
+            combined_stats.to_csv(os.path.join(save_dir, folder, _clean_filename(base + stats_suffix)))
+            stats = get_descriptive_stats_for_metric(data, metric, ['cell_type', 'experience_level', 'matched'])
+            stats.to_csv(os.path.join(save_dir, folder, _clean_filename(base + '_values.csv')))
+        except BaseException:
+            print('STATS DID NOT SAVE FOR variance_explained_matched')
+    return combined_stats
+
+
+def plot_dropout_summary_population(results, dropouts_to_show=['all-images', 'omissions', 'behavioral', 'task'],
+                                    plot_type='boxplot', include_zero_cells=True, exclusion_threshold=0.005,
+                                    ylabel='Coding Score', xlabel='Withheld component', suptitle=None,
+                                    save_dir=None, folder='coding_scores_and_kernels', suffix='',
+                                    ax=None, group_column='mouse_id'):
+    """
+    Population dropout (coding score) summary by cell type for a small set of
+    withheld components, aggregated across all cells (no experience-level split).
+    Platform-style re-implementation of ``gvt.plot_dropout_summary_population``.
+
+    Descriptive stats only (grouped by cell_type x dropout) -- this is an overview
+    plot, matching the original which returns descriptive statistics. Returns the
+    descriptive stats dataframe.
+    """
+    suffix = _norm_suffix(suffix)
+    data = _prepare_glm_dropout_long(results, include_zero_cells=include_zero_cells,
+                                     threshold=exclusion_threshold)
+    # The GLM run may store full omissions/hits/misses dropouts as 'all-*' whenever a
+    # 'post-*' split exists; remap the requested names so the columns aren't empty
+    # (matches gvt.plot_dropout_summary_population).
+    present = set(data.dropout.unique())
+    for base_name in ['omissions', 'hits', 'misses', 'passive_change']:
+        if base_name in dropouts_to_show:
+            # use the full 'all-<x>' dropout when the within-session name is absent, or
+            # when a 'post-<x>' split exists (matches gvt) -- as long as 'all-<x>' is there
+            need_all = (base_name not in present) or (('post-' + base_name) in present)
+            if need_all and (('all-' + base_name) in present):
+                dropouts_to_show = ['all-' + base_name if d == base_name else d
+                                    for d in dropouts_to_show]
+    data = data[data.dropout.isin(dropouts_to_show)].copy()
+    cell_type_order = utils.get_cell_types()
+    # dict palette keyed by cell type so colors map by hue value (not data order)
+    cell_type_colors = {ct: c for ct, c in zip(cell_type_order, utils.get_cell_type_colors())}
+
+    if ax is None:
+        figsize = (8, 4)
+        fig, ax = plt.subplots(figsize=figsize)
+        save_fig = True
+    else:
+        fig = ax.get_figure()
+        figsize = fig.get_size_inches()
+        save_fig = False
+    if plot_type == 'violinplot':
+        ax = sns.violinplot(data=data, x='dropout', y='explained_variance', hue='cell_type',
+                            order=dropouts_to_show, hue_order=cell_type_order, palette=cell_type_colors,
+                            dodge=True, inner='quartile', cut=0, linewidth=1, ax=ax)
+    else:
+        ax = sns.boxplot(data=data, x='dropout', y='explained_variance', hue='cell_type',
+                         order=dropouts_to_show, hue_order=cell_type_order, palette=cell_type_colors,
+                         dodge=True, fliersize=0, width=0.7, ax=ax)
+    ax.set_ylim(0, 1)
+    ax.legend(title='', fontsize='xx-small', loc='upper right')
+    ax.set_ylabel(ylabel)
+    ax.set_xlabel(xlabel)
+    ax.set_xticks(np.arange(len(dropouts_to_show)))
+    ax.set_xticklabels([_clean_dropout_title(d) for d in dropouts_to_show], rotation=0)
+    if suptitle:
+        plt.suptitle(suptitle, fontsize=18)
+    descriptive = (get_descriptive_stats_for_metric(data, 'explained_variance', ['cell_type', 'dropout'])
+                   if len(data) else pd.DataFrame())
+    if save_dir:
+        base = 'dropout_summary' + ('' if plot_type == 'violinplot' else '_boxplot') + suffix
+        if save_fig:
+            utils.save_figure(fig, figsize, save_dir, folder, _clean_filename(base))
+        descriptive.to_csv(os.path.join(save_dir, folder, _clean_filename(base + '_values.csv')))
+    return descriptive
+
+
+def plot_dropout_individual_population(results, run_params=None,
+                                       dropouts_to_show=None, plot_type='boxplot',
+                                       include_zero_cells=True, exclusion_threshold=0.005,
+                                       use_single=False, ylabel='Coding Score', suptitle=None,
+                                       figsize=None, save_dir=None, folder='coding_scores_and_kernels',
+                                       suffix='', ax=None, group_column='mouse_id'):
+    """
+    Population dropout (coding score) by cell type for the full set of individual
+    withheld components, aggregated across all cells. Platform-style
+    re-implementation of ``gvt.plot_dropout_individual_population``.
+
+    Descriptive stats only (grouped by cell_type x dropout). ``use_single`` plots the
+    single-component ('single-<name>') dropouts instead. Returns the descriptive
+    stats dataframe.
+    """
+    suffix = _norm_suffix(suffix)
+    if dropouts_to_show is None:
+        dropouts_to_show = ['all-images', 'image0', 'image1', 'image2', 'image3', 'image4',
+                            'image5', 'image6', 'image7', '', 'omissions',
+                            'behavioral', 'licks', 'pupil', 'running', 
+                            'task', 'hits', 'misses', ]
+    if include_zero_cells == True: 
+        exclusion_threshold = 0
+    data = _prepare_glm_dropout_long(results, include_zero_cells=include_zero_cells,
+                                     threshold=exclusion_threshold)
+    # drop all-/post- variants when the post-* split isn't present (matches gvt)
+    # present = set(data.dropout.unique())
+    # for base_name in ['omissions', 'hits', 'misses', 'passive_change']:
+    #     if ('post-' + base_name) not in present:
+    #         dropouts_to_show = [d for d in dropouts_to_show if d not in ['all-' + base_name, 'post-' + base_name]]
+    # keep blank separators and any dropouts actually present in the data
+    # dropouts_to_show = [d for d in dropouts_to_show if (d == '') or (d in present)]
+    if use_single:
+        dropouts_to_show = ['single-' + d for d in dropouts_to_show]
+        # dropouts_to_show = [d for d in dropouts_to_show if (d == '') or (d in present)]
+    data = data[data.dropout.isin(dropouts_to_show)].copy()
+    
+    cell_type_order = utils.get_cell_types()
+    # dict palette keyed by cell type so colors map by hue value (not data order)
+    cell_type_colors = {ct: c for ct, c in zip(cell_type_order, utils.get_cell_type_colors())}
+
+    if ax is None:
+        if figsize is None:
+            # keep both individual-dropout panels compact (override via figsize=)
+            figsize = (16, 4.5)
+        fig, ax = plt.subplots(figsize=figsize)
+        save_fig = True
+    else:
+        fig = ax.get_figure()
+        figsize = fig.get_size_inches()
+        save_fig = False
+    if plot_type == 'violinplot':
+        ax = sns.violinplot(data=data, x='dropout', y='explained_variance', hue='cell_type',
+                            order=dropouts_to_show, hue_order=cell_type_order, palette=cell_type_colors,
+                            dodge=True, inner='quartile', cut=0, linewidth=0, ax=ax)
+        ax.axhline(0, color='k', alpha=0.25)
+    else:
+        ax = sns.boxplot(data=data, x='dropout', y='explained_variance', hue='cell_type',
+                         order=dropouts_to_show, hue_order=cell_type_order, palette=cell_type_colors,
+                         dodge=True, fliersize=0, ax=ax)
+    ax.set_ylim(0, 1)
+    ax.legend(title='', fontsize='xx-small', loc='upper right')
+    ax.set_ylabel(ylabel)
+    ax.set_xlabel('Only component included' if use_single else 'Withheld component')
+    if use_single:
+        ax.set_xticks(np.arange(len(dropouts_to_show)))
+        ax.set_xticklabels([d.replace('single-', '') for d in dropouts_to_show], rotation=90)
+    else:
+        ax.tick_params(axis='x', rotation=90)
+    if suptitle:
+        plt.suptitle(suptitle, fontsize=18)
+    descriptive = (get_descriptive_stats_for_metric(data, 'explained_variance', ['cell_type', 'dropout'])
+                   if len(data) else pd.DataFrame())
+    if save_dir:
+        single_str = '_single' if use_single else ''
+        base = 'dropout_individual' + ('' if plot_type == 'violinplot' else '_boxplot') + single_str + suffix
+        if save_fig:
+            utils.save_figure(fig, figsize, save_dir, folder, _clean_filename(base))
+        descriptive.to_csv(os.path.join(save_dir, folder, _clean_filename(base + '_values.csv')))
+    return descriptive
+
+
+def plot_fraction_cells_coding_by_experience(
+        results_pivoted, features=['all-images', 'omissions', 'behavioral', 'task'],
+        coding_threshold=0.1, variance_explained_threshold=None,
+        experiment_table=None, include_4x2_data=False,
+        ylabel='Fraction of cells\ncoding for', abbreviate_exp=True, suptitle=None,
+        save_dir=None, folder='coding_scores_and_kernels', suffix='', group_column='mouse_id'):
+    """
+    Fraction of cells coding for each GLM feature across experience levels, one line
+    per cell type with binomial 95% confidence-interval error bars; one panel per
+    feature. Documented, platform-style version of the inline "feature coding by
+    experience level" plot that previously lived in figure_4_supplemental.ipynb
+    (analogous to gvt.plot_fraction_summary_population).
+
+    A cell counts as "coding" for a feature when its full model is above
+    ``variance_explained_threshold`` (when provided) AND its (absolute) coding score
+    for that feature exceeds ``coding_threshold``. Feature panel titles are
+    capitalized and colored by feature; experience-level x labels use the standard
+    abbreviated, colored tick labels.
+
+    Returns the per (cell_type, experience_level) summary dataframe (fractions, n, CIs).
+    """
+    suffix = _norm_suffix(suffix)
+    data = _prepare_glm_metrics_table(results_pivoted, experiment_table=experiment_table,
+                                      include_4x2_data=include_4x2_data, include_zero_cells=True)
+    # "codes anything" gate (optional full-model variance-explained threshold)
+    if variance_explained_threshold is not None:
+        data['code_anything'] = data['variance_explained_full'] > variance_explained_threshold
+    else:
+        data['code_anything'] = True
+    code_cols = []
+    for feature in features:
+        col = 'code_' + feature
+        data[col] = data['code_anything'] & (data[feature].abs() > coding_threshold)
+        code_cols.append(col)
+
+    grp = data.groupby(['cell_type', 'experience_level'])
+    summary = grp[code_cols].mean()
+    summary['n'] = grp[code_cols].count()[code_cols[0]]
+    for col in code_cols:
+        summary[col + '_ci'] = 1.96 * np.sqrt((summary[col] * (1 - summary[col])) / summary['n'])
+
+    order = utils.get_experience_levels()
+    cell_types = utils.get_cell_types()
+    cell_type_colors = {ct: c for ct, c in zip(cell_types, utils.get_cell_type_colors())}
+
+    figsize = (2.7 * len(features), 4)
+    fig, ax = plt.subplots(1, len(features), figsize=figsize, sharey=True)
+    if len(features) == 1:
+        ax = [ax]
+    x = np.arange(len(order))
+    for index, feature in enumerate(features):
+        col = 'code_' + feature
+        for cell_type in cell_types:
+            y = [summary.loc[(cell_type, e), col] if (cell_type, e) in summary.index else np.nan
+                 for e in order]
+            yerr = [summary.loc[(cell_type, e), col + '_ci'] if (cell_type, e) in summary.index else np.nan
+                    for e in order]
+            ax[index].errorbar(x, y, yerr=yerr, color=cell_type_colors[cell_type], linewidth=3,
+                               label=cell_type)
+        feat_title, feat_color = _get_feature_title_and_color(feature)
+        ax[index].set_title(feat_title, fontsize=16, color=feat_color)
+        ax[index].set_xlabel('')
+        ax[index].set_ylabel('')
+        ax[index].set_xlim(-0.5, len(order) - 0.5)
+        ax[index].set_ylim(bottom=0)
+        ax[index].set_xticks(x)
+        _format_experience_axis(ax[index], abbreviate=abbreviate_exp)
+        if index == len(features) - 1:
+            ax[index].legend(title='', fontsize='xx-small', bbox_to_anchor=(1.05, 1))
+    ax[0].set_ylabel(ylabel)
+    if suptitle:
+        plt.suptitle(suptitle, x=0.52, y=1.04, fontsize=18)
+    fig.subplots_adjust(wspace=0.4)
+    if save_dir:
+        base = 'feature_coding_by_experience_level' + suffix
+        utils.save_figure(fig, figsize, save_dir, folder, _clean_filename(base))
+        try:
+            summary.to_csv(os.path.join(save_dir, folder, _clean_filename(base + '_values.csv')))
+        except BaseException:
+            print('STATS DID NOT SAVE FOR feature_coding_by_experience_level')
+    return summary
 
 
