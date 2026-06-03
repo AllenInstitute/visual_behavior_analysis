@@ -2542,7 +2542,8 @@ def plot_example_cell_all_panels(cell_specimen_id, ophys_experiment_id, start_ti
 def plot_weights_and_coding_score_heatmaps_for_experience_levels(kernel, weights_df, run_params,
                                                                  row_condition='cre_line', col_condition='experience_level',
                                                                  vmax=0.002, xlabel='Time (s)', suptitle=None,
-                                                                 save_dir=None, folder=None):
+                                                                 save_dir=None, folder=None,
+                                                                 fig=None, bbox=None, add_suptitle=True):
     '''
     Plot a heatmap of kernel weights and coding scores for all cells
     Default values results in a figure with experience levels as columns and cre lines as rows
@@ -2554,6 +2555,12 @@ def plot_weights_and_coding_score_heatmaps_for_experience_levels(kernel, weights
     col_condition: column in weights_df to iterate over for columns
     vmax: value of max and min weights to plot
     xlabel: string to label xaxis with
+    fig: optional existing figure to draw into. If None, a new figure is created (standalone behavior).
+    bbox: optional [x0, y0, x1, y1] sub-rectangle (figure fraction) to confine this panel to when
+          embedding in a composite figure; passed through to utils.placeAxesOnGrid. Defaults to whole figure.
+    add_suptitle: whether to draw the per-kernel suptitle (turn off when embedding in a composite).
+
+    returns the figure handle.
     '''
 
     # get weights for this kernel
@@ -2610,16 +2617,18 @@ def plot_weights_and_coding_score_heatmaps_for_experience_levels(kernel, weights
         figsize = [12, 6]
         sharey = False
 
-    fig = plt.figure(figsize=figsize, facecolor='white')
+    created_fig = fig is None
+    if created_fig:
+        fig = plt.figure(figsize=figsize, facecolor='white')
     # loop through experience levels
     for c, col in enumerate(col_conditions):
         col_weights = kernel_weights[kernel_weights[col_condition] == col]
 
         # create axes for this experience level
         xspan = ((c * .1) * 2.5, ((c * .1) * 2.5) + 0.18)
-        ax = utils.placeAxesOnGrid(fig, dim=(len(row_conditions), 2), 
-                                   xspan=xspan, yspan=(0, 1), wspace=0, hspace=0.2, 
-                                   sharex='col', sharey=False, width_ratios=[8, 1])
+        ax = utils.placeAxesOnGrid(fig, dim=(len(row_conditions), 2),
+                                   xspan=xspan, yspan=(0, 1), wspace=0, hspace=0.2,
+                                   sharex='col', sharey=False, width_ratios=[8, 1], bbox=bbox)
 
         # loop through cre lines
         for r, row in enumerate(row_conditions):
@@ -2699,13 +2708,13 @@ def plot_weights_and_coding_score_heatmaps_for_experience_levels(kernel, weights
     last_x_val = ((c * .1) * 2.5) + 0.2
     xspan = (last_x_val, last_x_val + 0.02)
     # weights colorbar
-    cax = utils.placeAxesOnGrid(fig, dim=(1, 1), xspan=xspan, yspan=(0.4, 0.6))
+    cax = utils.placeAxesOnGrid(fig, dim=(1, 1), xspan=xspan, yspan=(0.4, 0.6), bbox=bbox)
     color_bar = fig.colorbar(cbar_weights, cax=cax)
     color_bar.ax.set_title('Weight', fontsize=16, loc='left')
     # color_bar.set_clim(zlims[0], zlims[1])
     color_bar.ax.tick_params(axis='both', labelsize=12)
     # coding scores colorbar
-    cax = utils.placeAxesOnGrid(fig, dim=(1, 1), xspan=xspan, yspan=(0.8, 1))
+    cax = utils.placeAxesOnGrid(fig, dim=(1, 1), xspan=xspan, yspan=(0.8, 1), bbox=bbox)
     color_bar = fig.colorbar(cbar_coding, cax=cax, extend='min')
     color_bar.ax.set_title('Coding \nscore', fontsize=16, loc='left')
     color_bar.set_ticks([0, .5, 1])
@@ -2718,8 +2727,8 @@ def plot_weights_and_coding_score_heatmaps_for_experience_levels(kernel, weights
         sharey = 'col'
     else:
         sharey=False
-    ax = utils.placeAxesOnGrid(fig, dim=(len(row_conditions), 1), xspan=xspan, yspan=(0, 1), 
-                               wspace=0, hspace=0.2, sharex='col', sharey=sharey)
+    ax = utils.placeAxesOnGrid(fig, dim=(len(row_conditions), 1), xspan=xspan, yspan=(0, 1),
+                               wspace=0, hspace=0.2, sharex='col', sharey=sharey, bbox=bbox)
 
     # plot population average kernels for each cre line & experience level
     for r, row in enumerate(row_conditions):
@@ -2748,13 +2757,16 @@ def plot_weights_and_coding_score_heatmaps_for_experience_levels(kernel, weights
     ax[0].set_title('Average weights')
     ax[r].set_xlabel(xlabel, fontsize=14)
 
-    if suptitle is None: 
-        plt.suptitle(kernel.capitalize() + ' kernels', x=0.4, y=1, fontsize=18)
-    else: 
-        plt.suptitle(suptitle, x=0.4, y=1, fontsize=18)
+    if add_suptitle:
+        if suptitle is None:
+            fig.suptitle(kernel.capitalize() + ' kernels', x=0.4, y=1, fontsize=18)
+        else:
+            fig.suptitle(suptitle, x=0.4, y=1, fontsize=18)
 
     if save_dir:
         utils.save_figure(fig, figsize, save_dir, 'kernel_heatmaps', kernel)
+
+    return fig
 
 
 

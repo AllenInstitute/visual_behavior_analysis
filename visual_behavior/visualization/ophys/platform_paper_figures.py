@@ -25,6 +25,23 @@ from visual_behavior.visualization.ophys.platform_paper_stats import (
 from visual_behavior_glm import GLM_visualization_tools as gvt
 from visual_behavior.ophys.response_analysis.response_analysis import ResponseAnalysis
 
+
+# formatting
+sns.set_context('notebook', font_scale=1.5, rc={'lines.markeredgewidth': 2})
+sns.set_style('white', {'axes.spines.top': False, 'axes.spines.right': False})  # ticks or white
+sns.set_palette('deep')
+
+plt.rcParams['xtick.bottom'] = True
+plt.rcParams['ytick.left'] = True
+
+# Statistics configuration
+# Single switch for the statistical test used by all add_stats_to_plot* functions
+# (and the saved-stats CSV filename suffix). Set to True for hierarchical mixed
+# linear models (with ANOVA/t-test fallback when data are too sparse), or False
+# for the legacy ANOVA + Tukey HSD path. Changing it here applies everywhere.
+USE_MLM = True
+
+
 def _clean_filename(name):
     """
     Collapse runs of underscores to a single underscore and trim boundary
@@ -56,22 +73,6 @@ def _norm_suffix(suffix):
     if not suffix:
         return ''
     return '_' + suffix.lstrip('_')
-
-
-# formatting
-sns.set_context('notebook', font_scale=1.5, rc={'lines.markeredgewidth': 2})
-sns.set_style('white', {'axes.spines.top': False, 'axes.spines.right': False})  # ticks or white
-sns.set_palette('deep')
-
-plt.rcParams['xtick.bottom'] = True
-plt.rcParams['ytick.left'] = True
-
-# Statistics configuration
-# Single switch for the statistical test used by all add_stats_to_plot* functions
-# (and the saved-stats CSV filename suffix). Set to True for hierarchical mixed
-# linear models (with ANOVA/t-test fallback when data are too sparse), or False
-# for the legacy ANOVA + Tukey HSD path. Changing it here applies everywhere.
-USE_MLM = True
 
 
 def _stats_suffix_for_table(stats_table):
@@ -1518,6 +1519,44 @@ def plot_average_metric_value_for_experience_levels_across_containers(df, metric
     return ax
 
 
+def _fit_stat_stars_within_axes(axes, margin_frac=0.03):
+    """
+    After significance bars/stars are drawn, grow an axis' upper y-limit (if needed) so
+    the star *text* artists sit fully inside the axes. Stars are drawn with
+    clip_on=False and their rendered glyph height is not accounted for by the data-based
+    set_ylim, so without this they can poke above the top spine. Accepts a single Axes
+    or an array of Axes. Safe no-op if no renderer / no text is available.
+    """
+    if hasattr(axes, 'get_ylim'):        # a single Axes
+        axes = [axes]
+    else:
+        axes = [a for a in np.atleast_1d(axes).ravel() if a is not None]
+    if not axes:
+        return
+    fig = axes[0].get_figure()
+    try:
+        fig.canvas.draw()
+        renderer = fig.canvas.get_renderer()
+    except Exception:
+        return
+    for ax in axes:
+        if not ax.texts:
+            continue
+        inv = ax.transData.inverted()
+        lo, hi = ax.get_ylim()
+        new_hi = hi
+        for t in ax.texts:
+            try:
+                bb = t.get_window_extent(renderer=renderer)
+                y_top = inv.transform((bb.x0, bb.y1))[1]
+                if np.isfinite(y_top):
+                    new_hi = max(new_hi, y_top)
+            except Exception:
+                pass
+        if new_hi > hi:
+            ax.set_ylim(top=new_hi + margin_frac * (hi - lo))
+
+
 def add_stats_to_plot_for_hues(data, metric, ax, ymax=None, xorder=None, x='experience_level', hue='layer',
                                compact_bars=False,
                                group_column='mouse_id',
@@ -1546,7 +1585,9 @@ def add_stats_to_plot_for_hues(data, metric, ax, ymax=None, xorder=None, x='expe
     scale = 0.05
     fontsize = 15
 
-    ytop = ax.get_ylim()[1]
+    # honor an explicit ymax so that on a SHARED y-axis (one add_stats call per panel)
+    # the star placement doesn't compound: every panel uses the same reference top
+    ytop = ymax if ymax is not None else ax.get_ylim()[1]
     y = ytop - scale
     if compact_bars:
         lo = ax.get_ylim()[0]
@@ -1592,6 +1633,7 @@ def add_stats_to_plot_for_hues(data, metric, ax, ymax=None, xorder=None, x='expe
 
         stats_table = pd.concat([stats_table, panel_stats])
     ax.set_ylim(ymax=final_top)
+    _fit_stat_stars_within_axes(ax)
 
     return ax, stats_table
 
@@ -1700,6 +1742,9 @@ def add_stats_to_plot(data, metric, ax, ymax=None, column_to_compare='experience
     if behavior:
         scale = 0.025
     fontsize = 15
+    # compact mode centers the '*' on the bar (the glyph renders high, so va='bottom'
+    # would float it well above the bar); legacy keeps the original bottom alignment
+    star_va = 'center' if compact_bars else 'bottom'
 
     if ymax is None:
         ytop = ax.get_ylim()[1]
@@ -1714,8 +1759,8 @@ def add_stats_to_plot(data, metric, ax, ymax=None, column_to_compare='experience
         if rng <= 0:
             rng = ytop if ytop > 0 else 1.0
         pad = 0.05 * rng        # gap above data to the first (adjacent) bar
-        step = 0.09 * rng       # extra height for "far" (non-adjacent) comparison bars
-        star_gap = 0.012 * rng  # tiny line -> star gap so the star sits on the bar
+        step = 0.13 * rng       # vertical separation between adjacent and far bars
+        star_gap = 0.02 * rng   # small gap so the star sits just above (not on) the bar
         y1 = ytop + pad
         y1h = y1 + star_gap
         y2 = ytop + pad + step
@@ -1767,7 +1812,7 @@ def add_stats_to_plot(data, metric, ax, ymax=None, column_to_compare='experience
                         color=color, alpha=alpha, clip_on=False)
                 # original
                 ax.text(np.mean([row.x1, row.x2]), yh, label, fontsize=fontsize, horizontalalignment='center',
-                        verticalalignment='bottom')
+                        verticalalignment=star_va)
                 top.append(yh)
                 if np.abs(row.x2 - row.x1) > dist: # if there are x vals more than one apart, make the y scale bigger to fit the sig bars
                     scale_factor = 6
@@ -1786,7 +1831,7 @@ def add_stats_to_plot(data, metric, ax, ymax=None, column_to_compare='experience
                 ax.plot([row.x1 + 0.1, row.x1 + 0.1, row.x2 - 0.1, row.x2 - 0.1], [y, y, y, y], linestyle='-',
                         color=color, alpha=alpha, clip_on=False)
                 ax.text(np.mean([row.x1, row.x2]), yh, label, fontsize=fontsize, horizontalalignment='center',
-                        verticalalignment='bottom')
+                        verticalalignment=star_va)
                 top.append(yh)
             else:
                 if show_ns:
@@ -1802,6 +1847,7 @@ def add_stats_to_plot(data, metric, ax, ymax=None, column_to_compare='experience
     else:
         # ax.set_ylim(ymax=ytop * (1 + (scale * 7))) # 3 works better for non-behavior plots
         ax.set_ylim(ymax=np.amax(top) * (1 + scale*scale_factor))  # scale factor determined by number of sig points # 3 works better for behavior plots, 2 for regular
+    _fit_stat_stars_within_axes(ax)
 
     return ax, stats_table
 
@@ -3264,10 +3310,10 @@ def plot_metric_across_conditions(metrics_table, metric,  title='', xlabel='Imag
             ax[i].set_xticklabels(utils.get_abbreviated_experience_levels())  # F, N, N+
             for xtick, color in zip(ax[i].get_xticklabels(), experience_level_colors):
                 xtick.set_color(color)
-        ax[i].tick_params(axis='x', which='major', labelsize=12)
+        # ax[i].tick_params(axis='x', which='major', labelsize=12)
         ax[i].tick_params(axis='y', which='major', labelsize=12)
         if c == 0: 
-            ax[i].set_title(title, color=x_color)
+            ax[i].set_title(title, color=x_color, fontsize=12)
 
         if c == 1: 
             ax[i].set_ylabel(cell_type+'\nCoding score')
@@ -4012,7 +4058,8 @@ def plot_metric_heatmap_grid_by_cell_type_and_metric(
         groupby_col='binned_depth', exp_col='experience_level',
         ylabel=None, vmax=None, multi_star=False, horiz=False,
         suptitle=None, suffix='', save_dir=None, folder='response_metrics',
-        group_column='mouse_id', event_type='Not specified'):
+        group_column='mouse_id', event_type='Not specified',
+        fig=None, bbox=None):
     """
     Grid of heatmaps: rows = cell types (utils.get_cell_types()), columns = metric_cols (any numeric
     columns of results_pivoted — e.g. coding score columns 'all-images', 'omissions', 'task',
@@ -4169,6 +4216,14 @@ def plot_metric_heatmap_grid_by_cell_type_and_metric(
     # so we invert the relationship so absolute gap is roughly constant across nrows variants.
     cell_type_hspace = 1.4 / max(nrows, 1)
 
+    # Embedding support: when a fig (and optional bbox sub-rectangle, figure fraction, y from the
+    # top) are provided, draw into that figure/region instead of making a new figure, and confine
+    # the outer GridSpec to the bbox. Defaults reproduce standalone behavior.
+    created_fig = fig is None
+    gs_kw = {}
+    if bbox is not None:
+        gs_kw = dict(left=bbox[0], right=bbox[2], top=1 - bbox[1], bottom=1 - bbox[3])
+
     if horiz:
         # rows = metrics, cols = cell types. Per-metric-row cbars on the right.
         fig_w = 2.2 * n_cell_types + 2.1
@@ -4178,8 +4233,9 @@ def plot_metric_heatmap_grid_by_cell_type_and_metric(
         # version unchanged.
         fig_h = 0.22 * nrows * n_metrics + (0.55 if nrows <= 2 else 1.0)
         figsize = (fig_w, fig_h)
-        fig = plt.figure(figsize=figsize)
-        outer = gridspec.GridSpec(1, 2, width_ratios=[1.6, 0.5], wspace=0.4)
+        if created_fig:
+            fig = plt.figure(figsize=figsize)
+        outer = gridspec.GridSpec(1, 2, width_ratios=[1.6, 0.5], wspace=0.4, **gs_kw)
         main_gs = gridspec.GridSpecFromSubplotSpec(n_metrics, n_cell_types, subplot_spec=outer[0],
                                                     hspace=cell_type_hspace, wspace=0.3)
     elif n_metrics == 1:
@@ -4187,8 +4243,9 @@ def plot_metric_heatmap_grid_by_cell_type_and_metric(
         fig_w = 3.6
         fig_h = 0.45 * nrows * n_cell_types + 1.6
         figsize = (fig_w, fig_h)
-        fig = plt.figure(figsize=figsize)
-        outer = gridspec.GridSpec(1, 2, width_ratios=[1.4, 1.0], wspace=0.45)
+        if created_fig:
+            fig = plt.figure(figsize=figsize)
+        outer = gridspec.GridSpec(1, 2, width_ratios=[1.4, 1.0], wspace=0.45, **gs_kw)
         main_gs = gridspec.GridSpecFromSubplotSpec(n_cell_types, n_metrics, subplot_spec=outer[0],
                                                     hspace=cell_type_hspace, wspace=0.0)
     else:
@@ -4196,18 +4253,27 @@ def plot_metric_heatmap_grid_by_cell_type_and_metric(
         fig_w = 1.8 * n_metrics + 2.3
         fig_h = 0.45 * nrows * n_cell_types + 1.4
         figsize = (fig_w, fig_h)
-        fig = plt.figure(figsize=figsize)
-        outer = gridspec.GridSpec(1, 2, width_ratios=[1.5 * n_metrics, 1.2], wspace=0.4)
+        if created_fig:
+            fig = plt.figure(figsize=figsize)
+        outer = gridspec.GridSpec(1, 2, width_ratios=[1.5 * n_metrics, 1.2], wspace=0.4, **gs_kw)
         main_gs = gridspec.GridSpecFromSubplotSpec(n_cell_types, n_metrics, subplot_spec=outer[0],
                                                     hspace=cell_type_hspace, wspace=0.3)
+    # When embedding, the inch->figure-fraction conversions (left margin, label offsets, cbar
+    # sizes) must use the ACTUAL composite figure size, not the standalone figsize computed above.
+    if not created_fig:
+        fig_w, fig_h = fig.get_size_inches()
+
     # ensure enough left margin for the outside label + yticklabels. Multi-metric vert is
     # wider so it needs more absolute margin to keep cell-type labels off the ylabel.
-    if horiz:
-        fig.subplots_adjust(left=max(0.10, 1.10 / fig_w))
-    elif n_metrics == 1:
-        fig.subplots_adjust(left=max(0.10, 1.10 / fig_w))
-    else:
-        fig.subplots_adjust(left=max(0.10, 1.40 / fig_w))
+    # (skip when embedding: subplots_adjust acts on the whole figure and would reflow a composite;
+    # the bbox-constrained GridSpec already positions this panel.)
+    if created_fig:
+        if horiz:
+            fig.subplots_adjust(left=max(0.10, 1.10 / fig_w))
+        elif n_metrics == 1:
+            fig.subplots_adjust(left=max(0.10, 1.10 / fig_w))
+        else:
+            fig.subplots_adjust(left=max(0.10, 1.40 / fig_w))
 
     heat_axes = np.empty((n_cell_types, n_metrics), dtype=object)
     for i, cell_type in enumerate(cell_types):
@@ -4444,7 +4510,7 @@ def plot_metric_heatmap_grid_by_cell_type_and_metric(
                      cbar_labels[cbar_j], rotation=90,
                      ha='right', va='center', fontsize=10)
 
-    if suptitle:
+    if suptitle and created_fig:
         plt.suptitle(suptitle, fontsize=14, y=0.99)
 
     if save_dir:
@@ -8630,7 +8696,7 @@ def plot_coding_score_distribution_by_experience(
         matched_with_variance_explained=False, matched_ve_threshold=0, ve_matched_cells=None,
         add_combined_panel=True, cell_type_order=None,
         ylabel=None, ylims=None, abbreviate_exp=True, suptitle=None,
-        save_dir=None, folder='coding_scores_and_kernels', suffix='', group_column='mouse_id'):
+        save_dir=None, folder='coding_scores_and_kernels', suffix='', ax=None, group_column='mouse_id'):
     """
     Coding score (dropout) across experience levels for each cell type, with stats
     across experience levels (MLM by default, per the ``USE_MLM`` switch).
@@ -8703,103 +8769,120 @@ def plot_coding_score_distribution_by_experience(
         file_suffix = file_suffix + '_matched_with_ve_' + str(matched_ve_threshold)
 
     n_panels = len(cell_type_order) + (1 if add_combined_panel else 0)
+    if ax is not None and len(dropouts_to_show) != 1:
+        raise ValueError('pass a single dropout in dropouts_to_show when providing ax')
     combined_stats = pd.DataFrame()
     for feature in dropouts_to_show:
         # coding scores are stored as negative fractions; show as positive magnitude
         data[feature] = data[feature].abs()
         figsize = (2.6 * n_panels, 2.5)
-        fig, ax = plt.subplots(1, n_panels, figsize=figsize, sharex=False, sharey=True)
-        if n_panels == 1:
-            ax = [ax]
+        if ax is None:
+            fig, axx = plt.subplots(1, n_panels, figsize=figsize, sharex=False, sharey=True)
+            save_fig = True
+        else:
+            axx = ax
+            fig = (axx[0] if hasattr(axx, '__len__') else axx).get_figure()
+            figsize = fig.get_size_inches()
+            save_fig = False
+        if not hasattr(axx, '__len__'):
+            axx = [axx]
         stats_data_per_panel = []
         for i, cell_type in enumerate(cell_type_order):
             ct_data = data[data.cell_type == cell_type]
             # all cells, colored by experience level
             if plot_type == 'boxplot':
-                ax[i] = sns.boxplot(data=ct_data, x='experience_level', y=feature, order=order,
+                axx[i] = sns.boxplot(data=ct_data, x='experience_level', y=feature, order=order,
                                     hue='experience_level', hue_order=order, notch=True, width=0.4,
-                                    palette=colors, fliersize=0, ax=ax[i])
-                for box in ax[i].collections:
+                                    palette=colors, fliersize=0, ax=axx[i])
+                for box in axx[i].collections:
                     box.set_alpha(0.75)
             else:
-                ax[i] = sns.pointplot(data=ct_data, x='experience_level', y=feature, order=order,
+                axx[i] = sns.pointplot(data=ct_data, x='experience_level', y=feature, order=order,
                                       hue='experience_level', hue_order=order, palette=colors,
                                       estimator=np.mean, markers='.', markersize=5,
-                                      err_kws={'linewidth': 2}, ax=ax[i])
-            for child in list(ax[i].get_children()):
+                                      err_kws={'linewidth': 2}, ax=axx[i])
+            for child in list(axx[i].get_children()):
                 child.set_zorder(1000)
             # subset overlays (light gray = matched, navajowhite = strict / VE-matched)
             if matched_cells is not None:
                 md = ct_data[ct_data.cell_specimen_id.isin(matched_cells)]
-                ax[i] = sns.pointplot(data=md, x='experience_level', y=feature, order=order,
-                                      color='lightgray', linestyle='-', ax=ax[i])
+                axx[i] = sns.pointplot(data=md, x='experience_level', y=feature, order=order,
+                                      color='lightgray', linestyle='-', ax=axx[i])
             if strict_matched_cells is not None:
                 sd = ct_data[ct_data.cell_specimen_id.isin(strict_matched_cells)]
-                ax[i] = sns.pointplot(data=sd, x='experience_level', y=feature, order=order,
-                                      color='navajowhite', linestyle='-', ax=ax[i])
+                axx[i] = sns.pointplot(data=sd, x='experience_level', y=feature, order=order,
+                                      color='navajowhite', linestyle='-', ax=axx[i])
             if ve_matched_cells is not None:
                 vd = ct_data[ct_data.cell_specimen_id.isin(ve_matched_cells)]
-                ax[i] = sns.pointplot(data=vd, x='experience_level', y=feature, order=order,
-                                      color='navajowhite', linestyle='-', ax=ax[i])
-            _legend = ax[i].get_legend()
+                axx[i] = sns.pointplot(data=vd, x='experience_level', y=feature, order=order,
+                                      color='navajowhite', linestyle='-', ax=axx[i])
+            _legend = axx[i].get_legend()
             if _legend:
                 _legend.remove()
-            ax[i].set_xlim(-0.5, len(order) - 0.5)
+            axx[i].set_xlim(-0.5, len(order) - 0.5)
             # collect the data used for stats (VE subset when requested, else all cells);
             # stats are added in a second pass below, after the shared y-axis is set
             if matched_with_variance_explained and ve_matched_cells is not None:
                 stats_data_per_panel.append(ct_data[ct_data.cell_specimen_id.isin(ve_matched_cells)])
             else:
                 stats_data_per_panel.append(ct_data)
-            ax[i].set_xlabel('')
-            ax[i].set_ylabel('')
-            ax[i].set_title(cell_type, fontsize=14)
-            _format_experience_axis(ax[i], abbreviate=abbreviate_exp)
+            axx[i].set_xlabel('')
+            axx[i].set_ylabel('')
+            axx[i].set_title(cell_type, fontsize=14)
+            _format_experience_axis(axx[i], abbreviate=abbreviate_exp)
         # combined panel: all cell types overlaid, colored by cell type
         if add_combined_panel:
             j = len(cell_type_order)
-            ax[j] = sns.pointplot(data=data, x='experience_level', y=feature, order=order,
+            axx[j] = sns.pointplot(data=data, x='experience_level', y=feature, order=order,
                                   hue='cell_type', hue_order=cell_type_order, palette=cell_type_colors,
                                   estimator=np.mean, markers='.', markersize=5,
-                                  err_kws={'linewidth': 2}, ax=ax[j])
-            _legend = ax[j].get_legend()
+                                  err_kws={'linewidth': 2}, ax=axx[j])
+            _legend = axx[j].get_legend()
             if _legend:
                 _legend.remove()
-            ax[j].set_title('Combined', fontsize=14)
-            ax[j].set_xlabel('')
-            ax[j].set_ylabel('')
-            ax[j].set_xlim(-0.5, len(order) - 0.5)
-            _format_experience_axis(ax[j], abbreviate=abbreviate_exp)
+            axx[j].set_title('Combined', fontsize=14)
+            axx[j].set_xlabel('')
+            axx[j].set_ylabel('')
+            axx[j].set_xlim(-0.5, len(order) - 0.5)
+            _format_experience_axis(axx[j], abbreviate=abbreviate_exp)
         # shared y across all panels: floor at 0 (or use ylims), then add the MLM
         # significance bars just above the shared data top
         if ylims is not None:
-            ax[0].set_ylim(ylims)
+            axx[0].set_ylim(ylims)
         else:
-            ax[0].set_ylim(bottom=0)
-        ymax_shared = ax[0].get_ylim()[1]
+            axx[0].set_ylim(bottom=0)
+        ymax_shared = axx[0].get_ylim()[1]
         needed_tops = []
         for i, cell_type in enumerate(cell_type_order):
-            ax[i], panel_stats = add_stats_to_plot(stats_data_per_panel[i], feature, ax[i],
+            axx[i], panel_stats = add_stats_to_plot(stats_data_per_panel[i], feature, axx[i],
                                                    ymax=ymax_shared, compact_bars=True,
                                                    group_column=group_column,
                                                    event_type=feature, cell_type=cell_type)
-            needed_tops.append(ax[i].get_ylim()[1])
+            needed_tops.append(axx[i].get_ylim()[1])
             panel_stats = insert_stats_metadata(panel_stats, condition='experience_level')
             combined_stats = pd.concat([combined_stats, panel_stats])
         # Each per-panel add_stats() call resets the (shared) y-limit to fit only its
         # own bars, so the last/shortest panel would clip earlier panels' taller
         # significance bars (drawn with clip_on=False -> they float off the axis).
         # Re-apply the tallest required top to the shared axis so every bar is visible.
-        ax[0].set_ylim(top=max(needed_tops))
+        axx[0].set_ylim(top=max(needed_tops))
         # capitalized y-label; capitalized, feature-colored suptitle
-        ax[0].set_ylabel(ylabel if ylabel else (_clean_dropout_title(feature).capitalize() + '\ncoding score'))
+        axx[0].set_ylabel(ylabel if ylabel else (_clean_dropout_title(feature).capitalize() + '\ncoding score'))
         feat_title, feat_color = _get_feature_title_and_color(feature)
-        plt.suptitle(suptitle if suptitle else feat_title, x=0.46, y=1.12, fontsize=18, color=feat_color)
-        fig.subplots_adjust(hspace=0.4, wspace=0.4, top=0.82)
+        # match the suptitle font size to the y-axis label, and sit it just above the panels
+        ylabel_fontsize = axx[0].yaxis.label.get_fontsize()
+        # suptitle and subplots_adjust act on the whole figure; only apply them when this
+        # function owns the figure (standalone). When embedding (ax passed in, save_fig False)
+        # skip them so they don't reflow a larger composite figure.
+        if save_fig:
+            fig.suptitle(suptitle if suptitle else feat_title, x=0.5, y=1.04,
+                         fontsize=ylabel_fontsize, color=feat_color)
+            fig.subplots_adjust(hspace=0.4, wspace=0.4, top=0.82)
         if save_dir:
             base = 'coding_score_' + feature + '_distribution' + file_suffix
             stats_base = 'coding_score_' + feature + file_suffix
-            utils.save_figure(fig, figsize, save_dir, folder, _clean_filename(base))
+            if save_fig:
+                utils.save_figure(fig, figsize, save_dir, folder, _clean_filename(base))
             try:
                 stats_suffix = _stats_suffix_for_table(combined_stats)
                 combined_stats.to_csv(os.path.join(save_dir, folder,
@@ -8809,7 +8892,7 @@ def plot_coding_score_distribution_by_experience(
                                           _clean_filename(stats_base + '_values.csv')))
             except BaseException:
                 print('STATS DID NOT SAVE FOR', feature)
-    return combined_stats
+    return axx
 
 
 def plot_coding_score_distribution_legend(save_dir=None, folder='coding_scores_and_kernels',
@@ -8855,7 +8938,8 @@ def plot_coding_score_distribution_legend(save_dir=None, folder='coding_scores_a
 def _plot_coding_score_by_hue(results_pivoted, hue, hue_order, palette,
                               dropouts_to_show, include_zero_cells, equipment,
                               experiment_table, include_4x2_data, ylabel,
-                              save_dir, folder, suffix, group_column, filename_stub):
+                              save_dir, folder, suffix, group_column, filename_stub,
+                              ax=None, cell_type=None):
     """
     Shared implementation for plot_coding_score_by_area / _by_depth: one figure per
     cell type, a panel per dropout, x = experience level, split by ``hue``
@@ -8875,57 +8959,68 @@ def _plot_coding_score_by_hue(results_pivoted, hue, hue_order, palette,
         else:
             data = data[data.equipment_name != 'MESO.1'].copy()
     order = utils.get_experience_levels()
-    cell_types = utils.get_cell_types()
+    cell_types = utils.get_cell_types() if cell_type is None else [cell_type]
+    if ax is not None and len(cell_types) != 1:
+        raise ValueError('provide a single cell_type when passing ax')
 
     combined_stats = pd.DataFrame()
-    for cell_type in cell_types:
-        ct_all = data[data.cell_type == cell_type]
+    for cell_type_i in cell_types:
+        ct_all = data[data.cell_type == cell_type_i]
         figsize = (2.5 * len(dropouts_to_show), 2.5)
-        fig, ax = plt.subplots(1, len(dropouts_to_show), figsize=figsize, sharey=False)
-        if len(dropouts_to_show) == 1:
-            ax = [ax]
+        if ax is None:
+            fig, axx = plt.subplots(1, len(dropouts_to_show), figsize=figsize, sharey=False)
+            save_fig = True
+        else:
+            axx = ax
+            fig = (axx[0] if hasattr(axx, '__len__') else axx).get_figure()
+            figsize = fig.get_size_inches()
+            save_fig = False
+        if not hasattr(axx, '__len__'):
+            axx = [axx]
         for index, feature in enumerate(dropouts_to_show):
             ct_data = ct_all.copy()
             ct_data[feature] = ct_data[feature].abs()
-            ax[index] = sns.pointplot(data=ct_data, x='experience_level', y=feature, order=order,
+            axx[index] = sns.pointplot(data=ct_data, x='experience_level', y=feature, order=order,
                                       hue=hue, hue_order=hue_order, palette=palette,
                                       dodge=0.1 * len(hue_order), linestyle='none',
-                                      markers='.', markersize=5, err_kws={'linewidth': 2}, ax=ax[index])
-            _legend = ax[index].get_legend()
+                                      markers='.', markersize=5, err_kws={'linewidth': 2}, ax=axx[index])
+            _legend = axx[index].get_legend()
             if index != len(dropouts_to_show) - 1:
                 if _legend:
                     _legend.remove()
             else:
                 if _legend:
-                    ax[index].legend(title='', fontsize='xx-small', bbox_to_anchor=(1.05, 1))
+                    axx[index].legend(title='', fontsize='xx-small', bbox_to_anchor=(1.05, 1))
             feat_title, feat_color = _get_feature_title_and_color(feature)
-            ax[index].set_title(feat_title, fontsize=16, color=feat_color)
-            ax[index].set_ylim(bottom=0)
-            ax[index].set_xlim(-0.5, len(order) - 0.5)
-            ax[index], panel_stats = add_stats_to_plot_for_hues(ct_data, feature, ax[index],
+            axx[index].set_title(feat_title, fontsize=16, color=feat_color)
+            axx[index].set_ylim(bottom=0)
+            axx[index].set_xlim(-0.5, len(order) - 0.5)
+            axx[index], panel_stats = add_stats_to_plot_for_hues(ct_data, feature, axx[index],
                                                                 xorder=order, x='experience_level',
                                                                 hue=hue, compact_bars=True,
                                                                 group_column=group_column,
-                                                                event_type=feature, cell_type=cell_type)
+                                                                event_type=feature, cell_type=cell_type_i)
             panel_stats = insert_stats_metadata(panel_stats, condition=hue)
             combined_stats = pd.concat([combined_stats, panel_stats])
-            ax[index].set_xlabel('')
-            ax[index].set_ylabel('')
-            _format_experience_axis(ax[index], abbreviate=True)
-        ax[0].set_ylabel(ylabel)
+            axx[index].set_xlabel('')
+            axx[index].set_ylabel('')
+            axx[index].tick_params(axis='y', which='major', labelsize=12)
+            _format_experience_axis(axx[index], abbreviate=True)
+        axx[0].set_ylabel(ylabel)
         # raise the cell-type suptitle so it clears the panel titles
-        plt.suptitle(cell_type, fontsize=18, x=0.5, y=1.12)
+        fig.suptitle(cell_type_i, fontsize=18, x=0.5, y=1.12)
         fig.subplots_adjust(wspace=0.5, hspace=0.3)
         if save_dir:
-            base = filename_stub + '_' + cell_type[0:3] + suffix
-            utils.save_figure(fig, figsize, save_dir, folder, _clean_filename(base))
+            base = filename_stub + '_' + cell_type_i[0:3] + suffix
+            if save_fig:
+                utils.save_figure(fig, figsize, save_dir, folder, _clean_filename(base))
             try:
                 stats_suffix = _stats_suffix_for_table(combined_stats)
                 combined_stats.to_csv(os.path.join(save_dir, folder,
                                                    _clean_filename(filename_stub + suffix + stats_suffix)))
             except BaseException:
-                print('STATS DID NOT SAVE FOR', filename_stub, cell_type)
-    return combined_stats
+                print('STATS DID NOT SAVE FOR', filename_stub, cell_type_i)
+    return axx
 
 
 def plot_coding_score_by_area(results_pivoted,
@@ -8933,7 +9028,7 @@ def plot_coding_score_by_area(results_pivoted,
                               include_zero_cells=True, equipment='mesoscope', areas=None,
                               experiment_table=None, include_4x2_data=False, ylabel='Coding score',
                               save_dir=None, folder='coding_scores_and_kernels', suffix='',
-                              group_column='mouse_id'):
+                              ax=None, cell_type=None, group_column='mouse_id'):
     """
     Coding score across experience levels, split by visual area (targeted_structure),
     one figure per cell type. Platform-style re-implementation of
@@ -8949,7 +9044,7 @@ def plot_coding_score_by_area(results_pivoted,
         dropouts_to_show=dropouts_to_show, include_zero_cells=include_zero_cells,
         equipment=equipment, experiment_table=experiment_table, include_4x2_data=include_4x2_data,
         ylabel=ylabel, save_dir=save_dir, folder=folder, suffix=suffix,
-        group_column=group_column, filename_stub='coding_score_by_area')
+        group_column=group_column, filename_stub='coding_score_by_area', ax=ax, cell_type=cell_type)
 
 
 def plot_coding_score_by_depth(results_pivoted,
@@ -8957,7 +9052,7 @@ def plot_coding_score_by_depth(results_pivoted,
                                include_zero_cells=True, equipment='mesoscope', area=['VISp', 'VISl'],
                                experiment_table=None, include_4x2_data=False, ylabel='Coding score',
                                save_dir=None, folder='coding_scores_and_kernels', suffix='',
-                               group_column='mouse_id'):
+                               ax=None, cell_type=None, group_column='mouse_id'):
     """
     Coding score across experience levels, split by coarse cortical depth
     (upper <250 um / lower >=250 um), one figure per cell type. Platform-style
@@ -8987,14 +9082,14 @@ def plot_coding_score_by_depth(results_pivoted,
         dropouts_to_show=dropouts_to_show, include_zero_cells=True, equipment=None,
         experiment_table=experiment_table, include_4x2_data=include_4x2_data, ylabel=ylabel,
         save_dir=save_dir, folder=folder, suffix=suffix, group_column=group_column,
-        filename_stub='coding_score_by_depth')
+        filename_stub='coding_score_by_depth', ax=ax, cell_type=cell_type)
 
 
 def plot_variance_explained_by_experience(results_pivoted, plot_type='boxplot', include_zero_cells=True,
                                           experiment_table=None, include_4x2_data=False,
                                           ylabel='Variance explained (%)', ylims=None, abbreviate_exp=True,
                                           suptitle=None, save_dir=None, folder='coding_scores_and_kernels',
-                                          suffix='', group_column='mouse_id'):
+                                          suffix='', ax=None, group_column='mouse_id'):
     """
     Full-model variance explained (%) across experience levels for each cell type,
     with stats across experience levels. Platform-style re-implementation of
@@ -9011,7 +9106,13 @@ def plot_variance_explained_by_experience(results_pivoted, plot_type='boxplot', 
     cell_types = utils.get_cell_types()
 
     figsize = (8, 2.5)
-    fig, ax = plt.subplots(1, 3, figsize=figsize, sharex=False, sharey=True)
+    if ax is None:
+        fig, ax = plt.subplots(1, 3, figsize=figsize, sharex=False, sharey=True)
+        save_fig = True
+    else:
+        fig = ax[0].get_figure()
+        figsize = fig.get_size_inches()
+        save_fig = False
     combined_stats = pd.DataFrame()
     panel_data = []
     for i, cell_type in enumerate(cell_types):
@@ -9060,7 +9161,8 @@ def plot_variance_explained_by_experience(results_pivoted, plot_type='boxplot', 
     fig.subplots_adjust(hspace=0.4, wspace=0.4)
     if save_dir:
         base = 'variance_explained_by_experience' + suffix
-        utils.save_figure(fig, figsize, save_dir, folder, _clean_filename(base))
+        if save_fig:
+            utils.save_figure(fig, figsize, save_dir, folder, _clean_filename(base))
         try:
             stats_suffix = _stats_suffix_for_table(combined_stats)
             combined_stats.to_csv(os.path.join(save_dir, folder, _clean_filename(base + stats_suffix)))
@@ -9068,7 +9170,7 @@ def plot_variance_explained_by_experience(results_pivoted, plot_type='boxplot', 
             stats.to_csv(os.path.join(save_dir, folder, _clean_filename(base + '_values.csv')))
         except BaseException:
             print('STATS DID NOT SAVE FOR variance_explained_by_experience')
-    return combined_stats
+    return ax
 
 
 def plot_variance_explained_for_matched_cells(results_pivoted, include_4x2_data=False,
@@ -9076,7 +9178,7 @@ def plot_variance_explained_for_matched_cells(results_pivoted, include_4x2_data=
                                               ylabel='Variance explained (%)', ylims=None, abbreviate_exp=True,
                                               figsize=(12, 3.5), suptitle=None, save_dir=None,
                                               folder='coding_scores_and_kernels',
-                                              suffix='', group_column='mouse_id'):
+                                              suffix='', ax=None, group_column='mouse_id'):
     """
     Full-model variance explained (%) across experience levels for matched vs
     non-matched cells, one panel per cell type, with stats comparing matched vs
@@ -9103,10 +9205,20 @@ def plot_variance_explained_for_matched_cells(results_pivoted, include_4x2_data=
     cell_types = utils.get_cell_types()
     cell_type_colors = {ct: c for ct, c in zip(utils.get_cell_types(), utils.get_cell_type_colors())}
 
-    fig, ax = plt.subplots(1, 3, figsize=figsize, sharex=False, sharey=True)
+    if ax is None:
+        fig, ax = plt.subplots(1, 3, figsize=figsize, sharex=False, sharey=True)
+        save_fig = True
+    else:
+        fig = ax[0].get_figure()
+        figsize = fig.get_size_inches()
+        save_fig = False
     combined_stats = pd.DataFrame()
+    panel_data = []
+    # First pass: draw all boxplots. With sharey, the shared autoscale only fits every
+    # panel's data if no set_ylim runs mid-loop -- so stats are added in a second pass.
     for i, cell_type in enumerate(cell_types):
         ct_data = data[data.cell_type == cell_type]
+        panel_data.append(ct_data)
         palette = [cell_type_colors.get(cell_type, 'k'), 'gray']
         ax[i] = sns.boxplot(data=ct_data, x='experience_level', y=metric, order=order,
                             hue='matched', hue_order=hue_order, palette=palette,
@@ -9117,25 +9229,36 @@ def plot_variance_explained_for_matched_cells(results_pivoted, include_4x2_data=
             _legend = ax[i].get_legend()
             if _legend:
                 _legend.remove()
-        # if ylims is not None:
-        #     ax[i].set_ylim(ylims)
         ax[i].set_xlim(-0.5, len(order) - 0.5)
-        ax[i], panel_stats = add_stats_to_plot_for_hues(ct_data, metric, ax[i], xorder=order,
+        ax[i].set_title(cell_type, fontsize=14)
+        ax[i].set_xlabel('')
+        ax[i].set_ylabel('')
+        _format_experience_axis(ax[i], abbreviate=abbreviate_exp)
+    # all boxplots drawn -> shared autoscale fits every panel; floor at 0, then add stats
+    if ylims is not None:
+        ax[0].set_ylim(ylims)
+    else:
+        ax[0].set_ylim(bottom=0)
+    ymax_shared = ax[0].get_ylim()[1]
+    needed_tops = []
+    for i, cell_type in enumerate(cell_types):
+        ax[i], panel_stats = add_stats_to_plot_for_hues(panel_data[i], metric, ax[i], ymax=ymax_shared,
+                                                        xorder=order,
                                                         x='experience_level', hue='matched',
                                                         compact_bars=True, group_column=group_column,
                                                         event_type='variance_explained', cell_type=cell_type)
         panel_stats = insert_stats_metadata(panel_stats, condition='matched')
         combined_stats = pd.concat([combined_stats, panel_stats])
-        ax[i].set_xlabel(cell_type)
-        ax[i].set_ylabel('')
-        _format_experience_axis(ax[i], abbreviate=abbreviate_exp)
+        needed_tops.append(ax[i].get_ylim()[1])
+    ax[0].set_ylim(top=max(needed_tops))
     ax[0].set_ylabel(ylabel)
     if suptitle:
         plt.suptitle(suptitle, x=0.52, y=1.02, fontsize=18)
     fig.subplots_adjust(hspace=0.4, wspace=0.4)
     if save_dir:
         base = 'variance_explained_matched' + suffix
-        utils.save_figure(fig, figsize, save_dir, folder, _clean_filename(base))
+        if save_fig:
+            utils.save_figure(fig, figsize, save_dir, folder, _clean_filename(base))
         try:
             stats_suffix = _stats_suffix_for_table(combined_stats)
             combined_stats.to_csv(os.path.join(save_dir, folder, _clean_filename(base + stats_suffix)))
@@ -9143,7 +9266,7 @@ def plot_variance_explained_for_matched_cells(results_pivoted, include_4x2_data=
             stats.to_csv(os.path.join(save_dir, folder, _clean_filename(base + '_values.csv')))
         except BaseException:
             print('STATS DID NOT SAVE FOR variance_explained_matched')
-    return combined_stats
+    return ax
 
 
 def plot_dropout_summary_population(results, dropouts_to_show=['all-images', 'omissions', 'behavioral', 'task'],
@@ -9211,7 +9334,7 @@ def plot_dropout_summary_population(results, dropouts_to_show=['all-images', 'om
         if save_fig:
             utils.save_figure(fig, figsize, save_dir, folder, _clean_filename(base))
         descriptive.to_csv(os.path.join(save_dir, folder, _clean_filename(base + '_values.csv')))
-    return descriptive
+    return ax
 
 
 def plot_dropout_individual_population(results, run_params=None,
@@ -9230,6 +9353,8 @@ def plot_dropout_individual_population(results, run_params=None,
     stats dataframe.
     """
     suffix = _norm_suffix(suffix)
+    if suptitle is None:
+        suptitle = 'Single feature model fits' if use_single else 'Dropout scores'
     if dropouts_to_show is None:
         dropouts_to_show = ['all-images', 'image0', 'image1', 'image2', 'image3', 'image4',
                             'image5', 'image6', 'image7', '', 'omissions',
@@ -9284,7 +9409,7 @@ def plot_dropout_individual_population(results, run_params=None,
     else:
         ax.tick_params(axis='x', rotation=90)
     if suptitle:
-        plt.suptitle(suptitle, fontsize=18)
+        fig.suptitle(suptitle, fontsize=18)
     descriptive = (get_descriptive_stats_for_metric(data, 'explained_variance', ['cell_type', 'dropout'])
                    if len(data) else pd.DataFrame())
     if save_dir:
@@ -9293,7 +9418,7 @@ def plot_dropout_individual_population(results, run_params=None,
         if save_fig:
             utils.save_figure(fig, figsize, save_dir, folder, _clean_filename(base))
         descriptive.to_csv(os.path.join(save_dir, folder, _clean_filename(base + '_values.csv')))
-    return descriptive
+    return ax
 
 
 def plot_fraction_cells_coding_by_experience(
@@ -9301,7 +9426,7 @@ def plot_fraction_cells_coding_by_experience(
         coding_threshold=0.1, variance_explained_threshold=None,
         experiment_table=None, include_4x2_data=False,
         ylabel='Fraction of cells\ncoding for', abbreviate_exp=True, suptitle=None,
-        save_dir=None, folder='coding_scores_and_kernels', suffix='', group_column='mouse_id'):
+        save_dir=None, folder='coding_scores_and_kernels', suffix='', ax=None, group_column='mouse_id'):
     """
     Fraction of cells coding for each GLM feature across experience levels, one line
     per cell type with binomial 95% confidence-interval error bars; one panel per
@@ -9341,9 +9466,15 @@ def plot_fraction_cells_coding_by_experience(
     cell_types = utils.get_cell_types()
     cell_type_colors = {ct: c for ct, c in zip(cell_types, utils.get_cell_type_colors())}
 
-    figsize = (2.7 * len(features), 4)
-    fig, ax = plt.subplots(1, len(features), figsize=figsize, sharey=True)
-    if len(features) == 1:
+    figsize = (2.7 * len(features), 3)
+    if ax is None:
+        fig, ax = plt.subplots(1, len(features), figsize=figsize, sharey=True)
+        save_fig = True
+    else:
+        fig = (ax[0] if hasattr(ax, '__len__') else ax).get_figure()
+        figsize = fig.get_size_inches()
+        save_fig = False
+    if not hasattr(ax, '__len__'):
         ax = [ax]
     x = np.arange(len(order))
     for index, feature in enumerate(features):
@@ -9366,16 +9497,21 @@ def plot_fraction_cells_coding_by_experience(
         if index == len(features) - 1:
             ax[index].legend(title='', fontsize='xx-small', bbox_to_anchor=(1.05, 1))
     ax[0].set_ylabel(ylabel)
-    if suptitle:
-        plt.suptitle(suptitle, x=0.52, y=1.04, fontsize=18)
-    fig.subplots_adjust(wspace=0.4)
+    # suptitle and subplots_adjust act on the whole figure; only apply them when this function
+    # owns the figure (standalone). When embedding (ax passed in, save_fig False) skip them so
+    # they don't reflow a larger composite figure.
+    if save_fig:
+        if suptitle:
+            plt.suptitle(suptitle, x=0.52, y=1.04, fontsize=18)
+        fig.subplots_adjust(wspace=0.4)
     if save_dir:
         base = 'feature_coding_by_experience_level' + suffix
-        utils.save_figure(fig, figsize, save_dir, folder, _clean_filename(base))
+        if save_fig:
+            utils.save_figure(fig, figsize, save_dir, folder, _clean_filename(base))
         try:
             summary.to_csv(os.path.join(save_dir, folder, _clean_filename(base + '_values.csv')))
         except BaseException:
             print('STATS DID NOT SAVE FOR feature_coding_by_experience_level')
-    return summary
+    return ax
 
 

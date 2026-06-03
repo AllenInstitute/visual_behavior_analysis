@@ -8,6 +8,7 @@ from scipy.stats import norm, zscore
 from scipy import ndimage
 import datetime
 import os
+import subprocess
 import h5py
 import cv2
 import warnings
@@ -1219,6 +1220,328 @@ def annotate_stimuli(dataset, inplace=False):
 
     if inplace == False:
         return stimulus_presentations
+
+
+def get_stimulus_based_behavior_stats(dataset, per_image=False):
+    '''
+    Compute stimulus-based behavior performance metrics for a single, already-loaded session.
+
+    Like the SDK's get_performance_metrics(), this returns BOTH whole-session and engaged-only
+    metrics as separate columns in one dict: whole-session metrics use the plain name and the
+    engaged-only versions are suffixed '_engaged' (e.g. hit_rate / hit_rate_engaged,
+    dprime_trial_corrected / dprime_trial_corrected_engaged, max_dprime / max_dprime_engaged).
+
+    Differences from the SDK metrics:
+      - false alarms / hits are computed over EVERY stimulus on which a change could have occurred
+        (could_change == True), not just the single designated catch flash per catch trial. This
+        gives a lower-variance false-alarm estimate.
+      - engagement state comes from behavior_formatting.get_annotated_stimulus_presentations(),
+        which marks a stimulus 'engaged' where the rolling reward_rate > 2 rewards/min. The
+        threshold (2/min) matches the SDK, but the reward_rate itself is computed differently:
+        brain_observatory_utilities uses a centered ~50-flash window, whereas the SDK uses a
+        trailing 25-trial window. So the engaged mask (and the '_engaged' columns) will not
+        exactly match the SDK's engaged metrics, nor the legacy stimulus_based_engaged tables.
+      - max_dprime is the peak of the rolling stimulus-based d-prime, the stimulus-based analog of
+        the SDK's max_dprime.
+
+    Parameters
+    ----------
+    dataset : AllenSDK BehaviorSession or BehaviorOphysExperiment object (already loaded)
+        Pass an ophys dataset to guarantee eye_tracking is available for
+        get_annotated_stimulus_presentations; a behavior-only dataset also works.
+    per_image : bool
+        If True, returns {image_name: metrics_dict}; otherwise a single session-level dict.
+        max_dprime / max_dprime_engaged are session-level and only added to the non-per-image output.
+
+    Returns
+    -------
+    dict
+        Whole-session keys: hit_rate, fa_rate, response_latency_*, n_go_opportunities, n_hits,
+        n_catch_opportunities, n_false_alarms, dprime_trial_corrected, dprime_non_trial_corrected;
+        each also present with a '_engaged' suffix computed over engaged stimuli only. Plus
+        behavior_session_id and three fraction-engaged columns (the fraction of stimuli marked
+        'engaged' over three subsets): fraction_engaged_could_change (over the change-detection
+        opportunities, auto_rewarded == False & could_change == True), fraction_engaged_go_trials
+        (over the go opportunities among those, additionally is_change == True), and
+        fraction_engaged (over all non-autorewarded stimulus presentations). For the non-per-image
+        output also max_dprime / mean_dprime (peak and mean of the rolling stimulus-based d-prime
+        over the could_change opportunities) and their engaged-only versions max_dprime_engaged /
+        mean_dprime_engaged (over the could_change opportunities marked engagement_state == 'engaged').
+    '''
+    try:
+        behavior_session_id = int(dataset.behavior_session_id)
+    except AttributeError:
+        behavior_session_id = int(dataset.metadata['behavior_session_id'])
+
+    # full annotated table: adds reward_rate, engagement_state (reward_rate > 2), could_change,
+    # auto_rewarded, licked, lick_latency, epoch
+    sp_full = behavior_formatting.get_annotated_stimulus_presentations(dataset)
+
+    def _opportunity_metrics(sp_subset):
+        go = sp_subset[(sp_subset.auto_rewarded == False) &
+                       (sp_subset.could_change == True) &
+                       (sp_subset.is_change == True)]
+        catch = sp_subset[(sp_subset.auto_rewarded == False) &
+                          (sp_subset.could_change == True) &
+                          (sp_subset.is_change == False)]
+        d = {}
+        d.update({'response_latency_{}'.format(key): value for key, value in
+                  go.query('licked')['lick_latency'].astype(float).describe().to_dict().items()})
+        d['hit_rate'] = go['licked'].mean()
+        d['fa_rate'] = catch['licked'].mean()
+        d['n_go_opportunities'] = len(go)
+        d['n_hits'] = go['licked'].sum()
+        d['n_catch_opportunities'] = len(catch)
+        d['n_false_alarms'] = catch['licked'].sum()
+        d['dprime_trial_corrected'] = dprime(go_trials=go['licked'], catch_trials=catch['licked'], limits=True)
+        d['dprime_non_trial_corrected'] = dprime(go_trials=go['licked'], catch_trials=catch['licked'], limits=False)
+        return d
+
+    def _full_and_engaged(sp_subset):
+        # whole-session metrics under the plain name, engaged-only metrics suffixed '_engaged'
+        sp_engaged = sp_subset[sp_subset['engagement_state'] == 'engaged']
+        out = _opportunity_metrics(sp_subset)
+        out.update({key + '_engaged': value for key, value in _opportunity_metrics(sp_engaged).items()})
+        return out
+
+    def _fraction_engaged(sp_for_fraction):
+        # fraction of stimuli marked 'engaged' (reward_rate > 2/min), over three stimulus subsets:
+        #   could_change : the change-detection opportunities (auto_rewarded == False & could_change)
+        #   go_trials    : the go opportunities among those (additionally is_change == True)
+        #   (plain)      : all non-autorewarded stimulus presentations
+        non_autorewarded = sp_for_fraction[sp_for_fraction.auto_rewarded == False]
+        could_change = non_autorewarded[non_autorewarded.could_change == True]
+        go_trials = could_change[could_change.is_change == True]
+        return {
+            'fraction_engaged_could_change': (could_change['engagement_state'] == 'engaged').mean(),
+            'fraction_engaged_go_trials': (go_trials['engagement_state'] == 'engaged').mean(),
+            'fraction_engaged': (non_autorewarded['engagement_state'] == 'engaged').mean(),
+        }
+
+    if per_image:
+        output = {}
+        for image_name in sp_full.image_name.unique():
+            sp_img = sp_full[sp_full.image_name == image_name]
+            img_dict = {'behavior_session_id': behavior_session_id, 'image_name': image_name}
+            img_dict.update(_full_and_engaged(sp_img))
+            img_dict.update(_fraction_engaged(sp_img))
+            output[image_name] = img_dict
+        return output
+
+    output = {'behavior_session_id': behavior_session_id}
+    output.update(_full_and_engaged(sp_full))
+    output.update(_fraction_engaged(sp_full))
+
+    # max d-prime: peak of the rolling stimulus-based d-prime, whole-session and engaged-only.
+    # Rolling is computed once on the full table so the window slides over opportunities in time
+    # order; the engaged mask is applied to the rolling output for the '_engaged' version.
+    rolling_df = get_stimulus_based_rolling_performance_df(sp_full, response_col='licked')
+    output['max_dprime'] = rolling_df['rolling_dprime'].max()
+    output['mean_dprime'] = rolling_df['rolling_dprime'].mean()
+    if 'engagement_state' in rolling_df.columns:
+        engaged_dprime = rolling_df.loc[rolling_df['engagement_state'] == 'engaged', 'rolling_dprime']
+        output['max_dprime_engaged'] = engaged_dprime.max()
+        output['mean_dprime_engaged'] = engaged_dprime.mean()
+    else:
+        output['max_dprime_engaged'] = np.nan
+        output['mean_dprime_engaged'] = np.nan
+    return output
+
+
+# Description of how reward_rate and engagement_state are defined by
+# brain_observatory_utilities.datasets.behavior.data_formatting.get_annotated_stimulus_presentations(),
+# recorded alongside the commit hashes so the definitions are documented with the output files.
+REWARD_RATE_AND_ENGAGEMENT_STATE_DESCRIPTION = '''\
+reward_rate and engagement_state, as added by
+brain_observatory_utilities.datasets.behavior.data_formatting.get_annotated_stimulus_presentations():
+
+reward_rate:
+  A rolling average of rewards per minute, calculated over trials (not stimulus presentations) and
+  then broadcast onto the stimulus_presentations table. This is the SDK definition, reproduced by
+  add_reward_rate_to_stimulus_presentations() / calculate_reward_rate().
+  For each trial, a sliding window of +/- 25 trials (trial_window=25) around the current trial is
+  taken. Within that window, the number of "correct" trials is counted, where a trial is correct if
+  the response_latency is less than 0.75 s (window=0.75). reward_rate = correct / elapsed_time * 60,
+  i.e. rewards per minute over the window. The first 10 trials (initial_trials=10) are set to np.inf
+  so they are always included. Each non-aborted trial's reward_rate is then assigned to all stimulus
+  presentations that occurred during that trial, and the final stimulus presentations are filled
+  forward with the last value.
+
+engagement_state:
+  A string column, 'engaged' or 'disengaged', derived from reward_rate using a fixed threshold of
+  2 rewards per minute (reward_threshold=2), reproduced by add_engagement_state_to_stimulus_presentations().
+  A stimulus presentation is 'engaged' if reward_rate > 2 (strictly greater than), else 'disengaged'.
+  An accompanying Boolean column 'engaged' is also added (engaged = reward_rate > 2).
+'''
+
+
+def get_repo_commit_info(module):
+    '''
+    Get the git commit hash (and dirty state) of the repository containing an imported module.
+
+    Parameters
+    ----------
+    module : module
+        An imported python module that lives inside a git repository
+        (e.g. visual_behavior or brain_observatory_utilities).
+
+    Returns
+    -------
+    dict with keys:
+        name : the module's top-level package name
+        path : the directory the git commands were run in
+        commit : the full commit hash, or None if it could not be determined
+        has_uncommited_changes : True if the working tree has uncommitted changes, None if unknown
+        error : the error string if git failed, else None
+    '''
+    repo_dir = os.path.dirname(os.path.abspath(module.__file__))
+    info = {'name': module.__name__.split('.')[0], 'path': repo_dir,
+            'commit': None, 'has_uncommited_changes': None, 'error': None}
+    try:
+        info['commit'] = subprocess.check_output(
+            ['git', '-C', repo_dir, 'rev-parse', 'HEAD'],
+            stderr=subprocess.STDOUT).decode().strip()
+        # 'git status --porcelain' prints a line per changed file; empty output means clean
+        status = subprocess.check_output(
+            ['git', '-C', repo_dir, 'status', '--porcelain'],
+            stderr=subprocess.STDOUT).decode().strip()
+        info['has_uncommited_changes'] = len(status) > 0
+    except (subprocess.CalledProcessError, OSError) as e:
+        info['error'] = repr(e)
+    return info
+
+
+def write_commit_hashes_file(filepath, modules=None):
+    '''
+    Write a text file recording the git commit hash of each given module's repository,
+    followed by a description of how reward_rate and engagement_state are defined by
+    get_annotated_stimulus_presentations().
+
+    Used to record exactly which versions of visual_behavior_analysis and
+    brain_observatory_utilities were used to generate a set of output files.
+
+    Parameters
+    ----------
+    filepath : str
+        Path of the text file to write.
+    modules : list of modules or None
+        Modules whose repositories to record. Defaults to
+        [visual_behavior, brain_observatory_utilities].
+    '''
+    if modules is None:
+        import visual_behavior
+        import brain_observatory_utilities
+        modules = [visual_behavior, brain_observatory_utilities]
+
+    lines = ['# git commit hashes of repositories used to generate these files',
+             '# generated {}'.format(datetime.datetime.now().isoformat()), '']
+    for module in modules:
+        info = get_repo_commit_info(module)
+        lines.append('{}:'.format(info['name']))
+        lines.append('  path: {}'.format(info['path']))
+        if info['error'] is None:
+            lines.append('  commit: {}'.format(info['commit']))
+            lines.append('  has_uncommited_changes: {}'.format(info['has_uncommited_changes']))
+        else:
+            lines.append('  error: {}'.format(info['error']))
+        lines.append('')
+
+    lines.append('')
+    lines.append(REWARD_RATE_AND_ENGAGEMENT_STATE_DESCRIPTION)
+
+    with open(filepath, 'w') as f:
+        f.write('\n'.join(lines))
+    print('wrote commit hashes to', filepath)
+
+
+def generate_stimulus_based_behavior_stats_table(sessions_table, save_dir=None,
+                                                 per_image=False, overwrite=False):
+    '''
+    Generate a multi-session stimulus-based behavior stats table.
+
+    Loops through every session/experiment in sessions_table, loads the dataset object, runs
+    get_stimulus_based_behavior_stats(), caches the per-session result to save_dir, then
+    aggregates across sessions and saves the full multi-session table to the same folder.
+
+    Parameters
+    ----------
+    sessions_table : pd.DataFrame
+        A behavior_sessions table (must contain 'behavior_session_id') or an ophys_experiments
+        table (must contain 'ophys_experiment_id', as index or column). Ophys experiments are
+        preferred because the dataset has eye_tracking, which get_annotated_stimulus_presentations
+        uses; behavior-only sessions that lack eye_tracking are collected in problem_ids.
+    save_dir : str or None
+        Folder to write per-session files and the aggregate to. Defaults to a new
+        'stimulus_based_behavior_stats' folder inside the platform analysis cache.
+    per_image : bool
+        Passed through to get_stimulus_based_behavior_stats.
+    overwrite : bool
+        If False (default), per-session files already on disk are reloaded instead of recomputed,
+        so the call is resumable.
+
+    Returns
+    -------
+    (multi_session_df, problem_ids)
+        multi_session_df : concatenation of all per-session tables.
+        problem_ids : list of ids that failed (with the error printed).
+    '''
+    if save_dir is None:
+        save_dir = os.path.join(loading.get_analysis_files_dir(), 'stimulus_based_behavior_stats')
+    if not os.path.exists(save_dir):
+        os.makedirs(save_dir)
+
+    columns = list(sessions_table.reset_index().columns)
+    if 'ophys_experiment_id' in columns:
+        id_col = 'ophys_experiment_id'
+        load_dataset = lambda i: loading.get_ophys_dataset(i)
+    elif 'behavior_session_id' in columns:
+        id_col = 'behavior_session_id'
+        load_dataset = lambda i: loading.get_behavior_dataset(i, from_nwb=True)
+    else:
+        raise ValueError("sessions_table must contain 'ophys_experiment_id' or 'behavior_session_id'")
+
+    ids = sessions_table.reset_index()[id_col].unique()
+
+    def _stats_to_df(stats, session_id):
+        df = pd.DataFrame(stats).T.reset_index(drop=True) if per_image else pd.DataFrame([stats])
+        df[id_col] = session_id
+        return df
+
+    suffix = '_per_image' if per_image else ''
+    session_dfs = []
+    problem_ids = []
+    for session_id in ids:
+        session_id = int(session_id)
+        filepath = os.path.join(save_dir, '{}_{}{}.h5'.format(id_col, session_id, suffix))
+        if os.path.exists(filepath) and not overwrite:
+            session_dfs.append(pd.read_hdf(filepath, key='data'))
+            continue
+        try:
+            dataset = load_dataset(session_id)
+            stats = get_stimulus_based_behavior_stats(dataset, per_image=per_image)
+            session_df = _stats_to_df(stats, session_id)
+            session_df[id_col] = session_id
+            session_df.to_hdf(filepath, key='data')
+            session_dfs.append(session_df)
+        except Exception as e:
+            print(session_id, 'failed:', repr(e))
+            problem_ids.append(session_id)
+
+    multi_session_df = pd.concat(session_dfs, ignore_index=True) if session_dfs else pd.DataFrame()
+    # a behavior session can map to multiple ophys experiments (imaging planes); the stimulus-based
+    # behavior stats are identical across planes, so drop duplicate rows per behavior session
+    if not multi_session_df.empty:
+        dedup_subset = ['behavior_session_id', 'image_name'] if per_image else 'behavior_session_id'
+        multi_session_df = multi_session_df.drop_duplicates(subset=dedup_subset).reset_index(drop=True)
+    all_sessions_filepath = os.path.join(save_dir, 'all_sessions{}.h5'.format(suffix))
+    multi_session_df.to_hdf(all_sessions_filepath, key='data')
+    print('saved {} rows to {} ({} problem ids)'.format(len(multi_session_df), all_sessions_filepath, len(problem_ids)))
+
+    # record the exact commit hashes of the repos used to generate the all_sessions file
+    commit_hashes_filepath = os.path.join(save_dir, 'all_sessions{}_commit_hashes.txt'.format(suffix))
+    write_commit_hashes_file(commit_hashes_filepath)
+
+    return multi_session_df, problem_ids
 
 
 def get_behavior_stats(behavior_session_id, method='stimulus_based', engaged_only=True, per_image=False):

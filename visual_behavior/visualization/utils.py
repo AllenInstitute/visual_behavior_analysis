@@ -47,7 +47,8 @@ def save_figure(fig, figsize, save_dir, folder, fig_title, formats=['.png']):
                     orientation='landscape', dpi=300, facecolor=fig.get_facecolor())
 
 def placeAxesOnGrid(fig, dim=[1, 1], xspan=[0, 1], yspan=[0, 1], wspace=None, hspace=None,
-                    sharex=False, sharey=False, width_ratios=None, height_ratios=None):
+                    sharex=False, sharey=False, width_ratios=None, height_ratios=None,
+                    bbox=None):
     '''
     Takes a figure with a gridspec defined and places an array of sub-axes on a portion of the gridspec
 
@@ -57,11 +58,20 @@ def placeAxesOnGrid(fig, dim=[1, 1], xspan=[0, 1], yspan=[0, 1], wspace=None, hs
         xspan: fraction of figure that the subaxes subtends in the x-direction (0 = left edge, 1 = right edge)
         yspan: fraction of figure that the subaxes subtends in the y-direction (0 = top edge, 1 = bottom edge)
         wspace and hspace: white space between subaxes in vertical and horizontal directions, respectively
+        bbox: optional [x0, y0, x1, y1] sub-rectangle of the figure (figure fraction, y measured from the
+              top edge like yspan) within which xspan/yspan are interpreted. Defaults to the whole figure
+              ([0, 0, 1, 1]), which reproduces the original behavior. Lets a function that lays itself out
+              with full-figure xspan/yspan be confined to one panel of a larger composite figure.
 
     returns:
         subaxes handles
     '''
     import matplotlib.gridspec as gridspec
+
+    if bbox is not None:
+        bx0, by0, bx1, by1 = bbox
+        xspan = [bx0 + xspan[0] * (bx1 - bx0), bx0 + xspan[1] * (bx1 - bx0)]
+        yspan = [by0 + yspan[0] * (by1 - by0), by0 + yspan[1] * (by1 - by0)]
 
     outer_grid = gridspec.GridSpec(100, 100)
     inner_grid = gridspec.GridSpecFromSubplotSpec(dim[0], dim[1],
