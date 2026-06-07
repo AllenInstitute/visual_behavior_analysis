@@ -2696,6 +2696,14 @@ def plot_rolling_metric_over_time_in_session(rolling_df, metric='rolling_dprime'
     data['time_bin'] = ((data['time_in_session'] // bin_size_seconds) * bin_size_seconds) / 60.
     data = data[data['time_bin'] < max_minutes]
 
+    # error bars ACROSS MICE (not across flashes): collapse to one value per
+    # mouse / experience level / time bin before the pointplot, so the CI reflects
+    # between-mouse variability. Requires a 'mouse_id' column; falls back to the
+    # per-flash behavior if it is absent.
+    if 'mouse_id' in data.columns:
+        data = (data.groupby(['mouse_id', 'experience_level', 'time_bin'])[metric]
+                .mean().reset_index())
+
     experience_level_colors = utils.get_experience_level_colors()
     experience_levels = utils.get_new_experience_levels()
 
@@ -2719,6 +2727,137 @@ def plot_rolling_metric_over_time_in_session(rolling_df, metric='rolling_dprime'
     if save_dir:
         utils.save_figure(fig, figsize, save_dir, folder, _clean_filename(metric + '_over_time_in_session'+suffix))
 
+    return ax
+
+
+def plot_metric_in_time_bins_by_experience(rolling_df, metric='rolling_dprime',
+                                           bin_size_minutes=15, max_minutes=60,
+                                           plot_type='boxplot', ylabel='D-prime', title='',
+                                           save_dir=None, folder='within_session_behavior',
+                                           suffix='', ax=None):
+    '''
+    Plot a rolling behavioral metric in equal-width time bins over the course of the session,
+    split by experience level and aggregated to one value per mouse per bin (so the spread
+    reflects variability ACROSS MICE, not across flashes or sessions).
+
+    Time in session is binned into `bin_size_minutes` bins. For each
+    (mouse_id, experience_level, time_bin) the metric is averaged, then plotted one of two ways:
+
+    - plot_type='boxplot' (default): a box per experience level within each time bin showing the
+      distribution across mice, with thin semi-transparent boxes and gray lines connecting each
+      mouse's values across experience levels within a bin.
+    - plot_type='pointplot': mean +/- 95% CI across mice as points connected by lines across
+      time bins, one line per experience level (like plot_rolling_metric_over_time_in_session,
+      but on the per-mouse, coarsely-binned data).
+
+    Parameters
+    ----------
+    rolling_df : pd.DataFrame
+        Rolling performance data with columns 'time_in_session' (seconds), `metric`,
+        'experience_level', and 'mouse_id'. E.g. the output of
+        utilities.get_stimulus_based_rolling_performance_df_for_dataset joined with
+        'experience_level' and 'mouse_id' from the experiments metadata table.
+    metric : str
+        Column to plot on the y-axis (e.g. 'rolling_dprime', 'hit_rate', 'false_alarm_rate').
+        Default 'rolling_dprime'.
+    bin_size_minutes : float
+        Width of the time-in-session bins, in minutes. Default 15.
+    max_minutes : float
+        Only include bins below this many minutes into the session. Default 60.
+    plot_type : str
+        'boxplot' (boxes across mice + gray per-mouse lines) or 'pointplot' (mean +/- CI across
+        mice, connected across time bins). Default 'boxplot'.
+    ylabel : str or None
+        y-axis label. If None, derived from `metric`.
+    title : str
+        Axis title. Default ''.
+    save_dir : str or None
+        If provided, the figure is saved under save_dir/folder via utils.save_figure.
+    folder : str or None
+        Sub-folder within save_dir to save into.
+    suffix : str
+        Appended to the saved filename.
+    ax : matplotlib.axes.Axes or None
+        Axis to plot on. If None, a new figure and axis are created.
+
+    Returns
+    -------
+    matplotlib.axes.Axes
+    '''
+    assert 'mouse_id' in rolling_df.columns, \
+        "rolling_df must contain a 'mouse_id' column to aggregate the metric across mice"
+
+    if ax is None:
+        figsize = (4, 3)
+        fig, ax = plt.subplots(figsize=figsize)
+    else:
+        fig = ax.get_figure()
+        figsize = tuple(fig.get_size_inches())
+
+    data = rolling_df.copy()
+    # time bin labeled by its left edge in minutes
+    data['time_bin_min'] = (data['time_in_session'] // (bin_size_minutes * 60)) * bin_size_minutes
+    data = data[data['time_bin_min'] < max_minutes]
+
+    # collapse to one value per mouse per experience level per time bin
+    per_mouse = (data.groupby(['mouse_id', 'experience_level', 'time_bin_min'])[metric]
+                 .mean().reset_index())
+
+    experience_level_colors = utils.get_experience_level_colors()
+    experience_levels = utils.get_new_experience_levels()
+    bin_order = sorted(per_mouse['time_bin_min'].unique())
+    n_hues = len(experience_levels)
+
+    if plot_type == 'pointplot':
+        # mean +/- CI across mice, lines connect across time bins within each experience level
+        ax = sns.pointplot(data=per_mouse, x='time_bin_min', y=metric, hue='experience_level',
+                      order=bin_order, hue_order=experience_levels, linewidth=1.5, err_kws={'linewidth': 1.5},
+                      palette=experience_level_colors, markers='.', markersize=5,
+                      estimator=np.mean, ax=ax)
+        ax.set_ylim(bottom=0)  # performance metrics are typically bounded at 0, so start y-axis there
+    elif plot_type == 'boxplot':
+        box_width = 0.5  # thinner boxes
+        sns.boxplot(data=per_mouse, x='time_bin_min', y=metric, hue='experience_level',
+                    order=bin_order, hue_order=experience_levels,
+                    palette=experience_level_colors, width=box_width, fliersize=0, ax=ax)
+        # semi-transparent box faces
+        for patch in ax.patches:
+            r, g, b = patch.get_facecolor()[:3]
+            patch.set_facecolor((r, g, b, 0.7))
+
+        # gray lines connecting each mouse across experience levels within each time bin;
+        # reproduce seaborn's dodge geometry to place the points at each box center
+        def _xpos(i, j):
+            return i - box_width / 2 + box_width / (2 * n_hues) + j * box_width / n_hues
+
+        for i, b in enumerate(bin_order):
+            bin_df = per_mouse[per_mouse['time_bin_min'] == b].set_index('mouse_id')
+            for mouse_id in bin_df.index.unique():
+                mvals = (bin_df.loc[[mouse_id]].set_index('experience_level')[metric]
+                         .reindex(experience_levels))
+                xs = [_xpos(i, j) for j, lvl in enumerate(experience_levels)
+                      if not np.isnan(mvals[lvl])]
+                ys = [mvals[lvl] for lvl in experience_levels if not np.isnan(mvals[lvl])]
+                if len(xs) >= 1:
+                    ax.plot(xs, ys, '-', color='gray', lw=0.5, alpha=0.5, marker='o',
+                            markersize=2, markerfacecolor='gray', markeredgecolor='none', zorder=2)
+    else:
+        raise ValueError("plot_type must be 'boxplot' or 'pointplot', got %r" % plot_type)
+
+    # legend outside the axes, upper right, no title
+    handles, labels = ax.get_legend_handles_labels()
+    ax.legend(handles[:n_hues], labels[:n_hues], fontsize='x-small', frameon=False,
+              bbox_to_anchor=(1.02, 1), loc='upper left')
+    ax.set_xticklabels(['%d-%d' % (int(b), int(b) + bin_size_minutes) for b in bin_order])
+    ax.set_xlabel('Time in session (min)')
+    ax.set_ylabel(metric.replace('_', ' ').capitalize() if ylabel is None else ylabel)
+    ax.set_title(title)
+    sns.despine()
+
+    if save_dir:
+        utils.save_figure(fig, figsize, save_dir, folder,
+                          _clean_filename('%s_%dmin_bins_by_experience_%s%s'
+                                          % (metric, bin_size_minutes, plot_type, suffix)))
     return ax
 
 
@@ -6871,11 +7010,11 @@ def plot_behavior_metric_by_experience(stats, metric, title='', ylabel='', ylims
 
     if pointplot:
         ax = sns.pointplot(data=data, x='experience_level', y=metric, order=experience_levels,
-                       orient='v', palette=colors, ax=ax, hue='experience_level', legend=False,
+                       orient='v', palette=colors, ax=ax, hue='experience_level', hue_order=experience_levels,legend=False,
                        markers='.', markersize=8, err_kws={'linewidth': 2},)
     else:
         ax = sns.boxplot(data=data, x='experience_level', y=metric, order=experience_levels,
-                            hue='experience_level', legend=False,
+                            hue='experience_level', legend=False, hue_order=experience_levels,
                            orient='v', palette=colors, width=0.6, boxprops=dict(alpha=0.8), ax=ax)
 
     ax.set_xlim(-0.5, len(experience_levels)-0.5)
@@ -6947,7 +7086,10 @@ def plot_response_rate_by_trial_type(behavior_stats, metric='response_probabilit
 
     # limit to engaged sessions and the trial types of interest, renaming 'could_change' to 'non-change'
     data = behavior_stats.copy()
-    data = data[data.fraction_engaged > fraction_engaged_thresh]
+    # only filter on fraction_engaged when that column is present (the long-form stimulus-based
+    # response_rate_df has one row per session x trial type and carries no fraction_engaged column)
+    if 'fraction_engaged' in data.columns:
+        data = data[data.fraction_engaged > fraction_engaged_thresh]
     data = data[data.trial_type.isin(['change', 'could_change', 'omission', 'post-omission'])]
     data['trial_type'] = ['non-change' if trial_type == 'could_change' else trial_type
                           for trial_type in data.trial_type.values]
@@ -6965,7 +7107,7 @@ def plot_response_rate_by_trial_type(behavior_stats, metric='response_probabilit
                      order=trial_types, palette=utils.get_experience_level_colors(),
                      width=0.6, boxprops=dict(alpha=0.7), ax=ax)
     ax.set_ylabel(ylabel)
-    ax.set_xticklabels(trial_types, rotation=45)
+    ax.set_xticklabels([str(t)[:1].upper() + str(t)[1:] for t in trial_types], rotation=45)
     ax.set_xlabel('')
     if ylims is not None:
         ax.set_ylim(ylims[0], ylims[1])

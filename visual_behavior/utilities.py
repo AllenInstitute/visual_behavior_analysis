@@ -94,7 +94,9 @@ def get_response_rates(df_in, sliding_window=100, apply_trial_number_limit=False
 def get_stimulus_based_rolling_performance_df(stimulus_presentations, sliding_window=100,
                                               response_col='licked',
                                               reward_col='rewarded',
-                                              reward_rate_window=320):
+                                              reward_rate_window=320,
+                                              add_engagement_state=True,
+                                              engagement_threshold=2):
     """
     Computes the rolling hit rate, false alarm rate, d-prime, and reward rate from
     stimulus-based (flash-level) responses, analogous to the SDK's get_rolling_performance_df
@@ -142,6 +144,14 @@ def get_stimulus_based_rolling_performance_df(stimulus_presentations, sliding_wi
     reward_rate_window : int
         Number of stimulus presentations (all flashes) in the triangular reward-rate window.
         Default 320 (~4 min at 0.75 s/flash), matching get_extended_stimulus_presentations.
+    add_engagement_state : bool
+        If True (default), add 'engaged' (bool) and 'engagement_state' ('engaged'/'disengaged')
+        columns derived from the rolling 'reward_rate' in the output (reward_rate >
+        engagement_threshold). If the reward rate could not be computed, the annotated
+        'engagement_state' is carried through from the input instead (if present).
+    engagement_threshold : float
+        Reward-rate threshold (rewards/min) above which a stimulus is marked 'engaged'.
+        Default 2, matching add_engagement_state_to_stimulus_presentations and the SDK.
 
     Returns
     -------
@@ -153,8 +163,9 @@ def get_stimulus_based_rolling_performance_df(stimulus_presentations, sliding_wi
         e.g. 'licked' or 'response_lick'),
         'hit_rate_raw', 'hit_rate', 'false_alarm_rate_raw', 'false_alarm_rate',
         'rolling_dprime', 'n_go_opportunities', 'n_catch_opportunities',
-        'reward_rate' (rewards/min, if computable), and 'engagement_state' (if present in the
-        input). Also preserves the original stimulus_presentations index.
+        'reward_rate' (rewards/min, if computable), and (if add_engagement_state) 'engaged' and
+        'engagement_state' derived from that reward_rate. Also preserves the original
+        stimulus_presentations index.
     """
     # work on a time-ordered copy of the full flash table so the reward rate (a time-based
     # rate over every flash) and the opportunity subset share the same ordering / index
@@ -169,6 +180,16 @@ def get_stimulus_based_rolling_performance_df(stimulus_presentations, sliding_wi
                        .mean() * (60. / 0.75))
     elif 'reward_rate' in sp.columns:
         reward_rate = sp['reward_rate']
+
+    # continuous behavior measures (running speed, pupil width) are per-flash signals, so roll them
+    # over ALL flashes with the same triangular window as the reward rate (NOT the opportunity-based
+    # sliding window used for hit / false-alarm rates), then sample at the opportunity rows below.
+    behavior_rolled = {}
+    for _bcol in ('mean_running_speed', 'mean_pupil_width'):
+        if _bcol in sp.columns:
+            behavior_rolled[_bcol] = (sp[_bcol].astype(float)
+                                      .rolling(window=reward_rate_window, min_periods=1, win_type='triang')
+                                      .mean())
 
     # restrict to the stimuli that were genuine change opportunities (already time-ordered)
     opportunities = sp[
@@ -223,8 +244,21 @@ def get_stimulus_based_rolling_performance_df(stimulus_presentations, sliding_wi
         out.insert(0, 'stimulus_presentations_id', opportunities.index.values)
     if reward_rate is not None:
         out['reward_rate'] = reward_rate.loc[opportunities.index].values
-    if 'engagement_state' in opportunities.columns:
-        out['engagement_state'] = opportunities['engagement_state'].values
+    # sample the rolled continuous behavior measures (running speed, pupil) at the opportunity rows
+    for _bcol, _series in behavior_rolled.items():
+        out[_bcol] = _series.loc[opportunities.index].values
+    # engagement state. By default derive it from the rolling reward_rate IN THIS table
+    # (rewards/min > engagement_threshold), so it is self-consistent with the reward_rate
+    # column above and matches the 2/min definition used by
+    # add_engagement_state_to_stimulus_presentations / get_behavior_stats. If the reward rate
+    # could not be computed, fall back to carrying the annotated engagement_state through.
+    if add_engagement_state:
+        if 'reward_rate' in out.columns:
+            out['engaged'] = out['reward_rate'].values > engagement_threshold
+            out['engagement_state'] = np.where(out['engaged'].values, 'engaged', 'disengaged')
+        elif 'engagement_state' in opportunities.columns:
+            out['engagement_state'] = opportunities['engagement_state'].values
+            out['engaged'] = out['engagement_state'].values == 'engaged'
     return out
 
 
@@ -245,12 +279,15 @@ def get_stimulus_based_rolling_performance_df_for_dataset(stimulus_presentations
         Column used to group sessions (e.g. 'behavior_session_id').
     **kwargs :
         Passed through to get_stimulus_based_rolling_performance_df (sliding_window,
-        response_col, reward_col, reward_rate_window).
+        response_col, reward_col, reward_rate_window, add_engagement_state,
+        engagement_threshold).
 
     Returns
     -------
     pd.DataFrame
         Concatenation of the per-session rolling dataframes, with `session_key` added as a column.
+        Includes 'engaged' / 'engagement_state' columns (derived per session from the rolling
+        reward_rate) unless add_engagement_state=False is passed through.
     """
     dfs = []
     for session_id, session_sp in stimulus_presentations.groupby(session_key):
@@ -1222,6 +1259,144 @@ def annotate_stimuli(dataset, inplace=False):
         return stimulus_presentations
 
 
+def get_stimulus_based_stats_from_presentations(sp_full, behavior_session_id=None):
+    '''
+    Stimulus-based session metrics computed directly from an annotated stimulus-presentations table
+    (e.g. one session's slice of stimulus_behavior_response_df), rather than from a loaded dataset.
+
+    Uses the exact same metric definitions as get_stimulus_based_behavior_stats() -- whole-session
+    metrics under the plain name and engaged-only versions suffixed '_engaged' -- but takes the
+    per-flash table as input so it can run on the cached stimulus_behavior_response_df without
+    reloading datasets. The input table is expected to already carry: auto_rewarded, could_change,
+    is_change, licked, lick_latency, engagement_state, start_time.
+
+    Returns a dict (see get_stimulus_based_behavior_stats for the full key list).
+    '''
+    def _opportunity_metrics(sp_subset):
+        go = sp_subset[(sp_subset.auto_rewarded == False) &
+                       (sp_subset.could_change == True) &
+                       (sp_subset.is_change == True)]
+        catch = sp_subset[(sp_subset.auto_rewarded == False) &
+                          (sp_subset.could_change == True) &
+                          (sp_subset.is_change == False)]
+        d = {}
+        d.update({'response_latency_{}'.format(key): value for key, value in
+                  go.query('licked')['lick_latency'].astype(float).describe().to_dict().items()})
+        d['hit_rate'] = go['licked'].mean()
+        d['fa_rate'] = catch['licked'].mean()
+        d['n_go_opportunities'] = len(go)
+        d['n_hits'] = go['licked'].sum()
+        d['n_catch_opportunities'] = len(catch)
+        d['n_false_alarms'] = catch['licked'].sum()
+        d['dprime_trial_corrected'] = dprime(go_trials=go['licked'], catch_trials=catch['licked'], limits=True)
+        d['dprime_non_trial_corrected'] = dprime(go_trials=go['licked'], catch_trials=catch['licked'], limits=False)
+        return d
+
+    def _full_and_engaged(sp_subset):
+        sp_engaged = sp_subset[sp_subset['engagement_state'] == 'engaged']
+        out = _opportunity_metrics(sp_subset)
+        out.update({key + '_engaged': value for key, value in _opportunity_metrics(sp_engaged).items()})
+        return out
+
+    def _fraction_engaged(sp_for_fraction):
+        non_autorewarded = sp_for_fraction[sp_for_fraction.auto_rewarded == False]
+        could_change = non_autorewarded[non_autorewarded.could_change == True]
+        go_trials = could_change[could_change.is_change == True]
+        return {
+            'fraction_engaged_could_change': (could_change['engagement_state'] == 'engaged').mean(),
+            'fraction_engaged_go_trials': (go_trials['engagement_state'] == 'engaged').mean(),
+            'fraction_engaged': (non_autorewarded['engagement_state'] == 'engaged').mean(),
+        }
+
+    output = {}
+    if behavior_session_id is not None:
+        output['behavior_session_id'] = behavior_session_id
+    output.update(_full_and_engaged(sp_full))
+    output.update(_fraction_engaged(sp_full))
+
+    rolling_df = get_stimulus_based_rolling_performance_df(sp_full, response_col='licked')
+    output['max_dprime'] = rolling_df['rolling_dprime'].max()
+    output['mean_dprime'] = rolling_df['rolling_dprime'].mean()
+    if 'engagement_state' in rolling_df.columns:
+        engaged_dprime = rolling_df.loc[rolling_df['engagement_state'] == 'engaged', 'rolling_dprime']
+        output['max_dprime_engaged'] = engaged_dprime.max()
+        output['mean_dprime_engaged'] = engaged_dprime.mean()
+    else:
+        output['max_dprime_engaged'] = np.nan
+        output['mean_dprime_engaged'] = np.nan
+    return output
+
+
+def generate_stimulus_based_behavior_stats_table_from_presentations(
+        stimulus_presentations, session_key='behavior_session_id', metadata_table=None,
+        merge_columns=('mouse_id', 'experience_level', 'cell_type', 'project_code')):
+    '''
+    Build a one-row-per-session stimulus-based behavior stats table from a multi-session
+    stimulus_behavior_response_df (already trimmed/annotated as desired by the caller), reusing the
+    validated metric definitions in get_stimulus_based_stats_from_presentations().
+
+    This is the response_df-based analog of generate_stimulus_based_behavior_stats_table() (which
+    loops over datasets). Pass the auto-reward-trimmed table for task-performance metrics.
+
+    Parameters
+    ----------
+    stimulus_presentations : pandas.DataFrame
+        multi-session annotated stimulus presentations (must contain session_key).
+    session_key : str
+        column identifying sessions.
+    metadata_table : pandas.DataFrame, optional
+        table with session_key plus columns in merge_columns to merge onto the result.
+    merge_columns : tuple of str
+        metadata columns to merge (those present in metadata_table are used).
+
+    Returns
+    -------
+    pandas.DataFrame
+    '''
+    rows = []
+    for session_id, sp in stimulus_presentations.groupby(session_key):
+        rows.append(get_stimulus_based_stats_from_presentations(sp, behavior_session_id=session_id))
+    table = pd.DataFrame(rows)
+    if metadata_table is not None and session_key in metadata_table.columns:
+        cols = [c for c in merge_columns if c in metadata_table.columns]
+        if cols:
+            meta = metadata_table[[session_key] + cols].drop_duplicates(session_key)
+            table = table.merge(meta, on=session_key, how='left')
+    return table
+
+
+def drop_autorewarded_warmup(stimulus_presentations, session_key='behavior_session_id'):
+    '''
+    Drop the auto-rewarded warm-up period at the start of each session.
+
+    Removes every flash up to and including the last auto-rewarded flash, per session, so that
+    downstream task-performance metrics (hit rate, false alarm rate, d-prime, reward rate,
+    response rate) are not contaminated by the warm-up. Behavioral-state measures that should keep
+    the warm-up (running speed, pupil width) should use the un-trimmed dataframe instead.
+
+    This is the single source of truth for auto-reward trimming: notebooks and downstream code
+    should call this rather than re-implementing the drop, so the behavior is consistent everywhere.
+
+    Parameters
+    ----------
+    stimulus_presentations : pandas.DataFrame
+        flash-wise table with 'auto_rewarded', 'start_time', and session_key columns.
+    session_key : str
+        column identifying individual sessions (default 'behavior_session_id').
+
+    Returns
+    -------
+    pandas.DataFrame
+        stimulus_presentations with the per-session auto-rewarded warm-up removed.
+    '''
+    def _drop(sp):
+        auto = sp[sp['auto_rewarded'] == True]
+        if len(auto) == 0:
+            return sp
+        return sp[sp['start_time'] > auto['start_time'].max()]
+    return stimulus_presentations.groupby(session_key, group_keys=False).apply(_drop)
+
+
 def get_stimulus_based_behavior_stats(dataset, per_image=False):
     '''
     Compute stimulus-based behavior performance metrics for a single, already-loaded session.
@@ -1356,16 +1531,14 @@ reward_rate and engagement_state, as added by
 brain_observatory_utilities.datasets.behavior.data_formatting.get_annotated_stimulus_presentations():
 
 reward_rate:
-  A rolling average of rewards per minute, calculated over trials (not stimulus presentations) and
-  then broadcast onto the stimulus_presentations table. This is the SDK definition, reproduced by
-  add_reward_rate_to_stimulus_presentations() / calculate_reward_rate().
-  For each trial, a sliding window of +/- 25 trials (trial_window=25) around the current trial is
-  taken. Within that window, the number of "correct" trials is counted, where a trial is correct if
-  the response_latency is less than 0.75 s (window=0.75). reward_rate = correct / elapsed_time * 60,
-  i.e. rewards per minute over the window. The first 10 trials (initial_trials=10) are set to np.inf
-  so they are always included. Each non-aborted trial's reward_rate is then assigned to all stimulus
-  presentations that occurred during that trial, and the final stimulus presentations are filled
-  forward with the last value.
+  Rewards per minute, computed at the STIMULUS (flash) level (not over trials), by
+  add_reward_rate_to_stimulus_presentations(). This deliberately differs from the SDK's trial-based
+  reward rate (the SDK rate is still available directly from the SDK if a trial-based value is wanted).
+  For each flash, a boolean marks whether an EARNED reward was delivered within
+  [start_time, start_time + 0.75 s]; auto-delivered (free) rewards are excluded. That per-flash
+  boolean is smoothed with a centered triangular window of 320 flashes (window_flashes=320,
+  ~4 min at 0.75 s/flash) and scaled to rewards/min (x 60 / 0.75). Reward times are taken from
+  dataset.rewards['timestamps'], filtered to rows where auto_rewarded is False.
 
 engagement_state:
   A string column, 'engaged' or 'disengaged', derived from reward_rate using a fixed threshold of

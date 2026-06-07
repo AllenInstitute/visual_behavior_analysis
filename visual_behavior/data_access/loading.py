@@ -88,6 +88,50 @@ def get_rolling_performance_metrics_dir():
 def get_stimulus_behavior_response_dir():
     return os.path.join(get_platform_analysis_cache_dir(), 'visual_behavior_ophys_analysis_files', 'stimulus_behavior_response')
 
+
+def get_stimulus_behavior_response_df(mouse_ids, metadata_table=None, merge_columns=('experience_level', 'cell_type')):
+    """Load and concatenate the per-mouse stimulus_behavior_response_df CSVs into one dataframe.
+
+    This is the single entry point for the stimulus-based behavior data. The auto-rewarded warm-up
+    period is intentionally NOT removed here, so callers that need it (running speed, pupil) get the
+    full record; use visual_behavior.utilities.drop_autorewarded_warmup() to obtain the trimmed
+    version for task-performance metrics.
+
+    Parameters
+    ----------
+    mouse_ids : iterable
+        mouse_ids to load (e.g. platform_experiments.mouse_id.unique()).
+    metadata_table : pandas.DataFrame, optional
+        table with a 'behavior_session_id' column plus any columns listed in merge_columns; when
+        provided, those columns are merged onto the loaded data (one row per behavior_session_id).
+    merge_columns : tuple of str
+        columns from metadata_table to merge on behavior_session_id (default: experience_level, cell_type).
+
+    Returns
+    -------
+    stim_behavior_response_df : pandas.DataFrame
+    problem_mice : list
+        mouse_ids whose csv could not be loaded.
+    """
+    file_dir = get_stimulus_behavior_response_dir()
+    frames = []
+    problem_mice = []
+    for mouse_id in pd.unique(list(mouse_ids)):
+        filepath = os.path.join(file_dir, str(mouse_id) + '_stimulus_behavior_response_df.csv')
+        try:
+            df = pd.read_csv(filepath, index_col=0)
+            df['mouse_id'] = mouse_id
+            frames.append(df)
+        except Exception:
+            problem_mice.append(mouse_id)
+    stim_behavior_response_df = pd.concat(frames) if frames else pd.DataFrame()
+    if metadata_table is not None and len(stim_behavior_response_df) and 'behavior_session_id' in metadata_table.columns:
+        cols = [c for c in merge_columns if c in metadata_table.columns]
+        if cols:
+            meta = metadata_table[['behavior_session_id'] + cols].drop_duplicates('behavior_session_id')
+            stim_behavior_response_df = stim_behavior_response_df.merge(meta, on='behavior_session_id', how='left')
+    return stim_behavior_response_df, problem_mice
+
 def get_stimulus_population_response_dir():
     return os.path.join(get_platform_analysis_cache_dir(), 'visual_behavior_ophys_analysis_files', 'stimulus_population_response')
 
