@@ -3,6 +3,12 @@ Created on Thursday September 23 2021
 
 @author: marinag
 """
+import warnings
+# Harmless third-party import-time warnings from the allensdk -> xarray / requests
+# dependency chain. Filtered here, before those heavy imports run below, so they are
+# not emitted once per joblib worker process when stats are computed in parallel.
+warnings.filterwarnings('ignore', message='pkg_resources is deprecated')
+warnings.filterwarnings('ignore', message='Unable to find acceptable character detection dependency')
 import os
 import re
 import numpy as np
@@ -1600,37 +1606,44 @@ def add_stats_to_plot_for_hues(data, metric, ax, ymax=None, xorder=None, x='expe
         yh = ytop  # * (1 + scale)
         final_top = ytop * (1 + (scale * 5))
 
-    stats_table = pd.DataFrame()
-    # do hierarchical stats (MLM by default) across hue values within each x value
+    # Build independent stats jobs (one per x_value with >=2 hues), then dispatch
+    # through _run_panel_stats_jobs so MLM fits run in parallel across cores.
+    # joblib preserves input order, so results match the serial path exactly.
+    stat_jobs = []
+    job_meta = []  # parallel list of (loc, x_value, n_hues) for star placement after fits
     for loc, x_value in enumerate(xorder):
-        test_data = data[data[x]==x_value]
+        test_data = data[data[x] == x_value]
         hues = test_data[hue].unique()
-        if len(hues) >= 2:
-            panel_stats = compute_stats(test_data, metric, column_to_compare=hue,
-                                        use_mlm=USE_MLM, group_column=group_column,
-                                        event_type=event_type, cell_type=cell_type)
-            # Add `data_subset` in the leading metadata block (right after cell_type)
-            panel_stats = insert_stats_metadata(panel_stats, data_subset=x_value)
-            omnibus_pvalue = panel_stats['omnibus_pvalue'].iloc[0] if len(panel_stats) else 1.0
-            # gate star drawing on the omnibus, but keep the panel_stats either way
-            # so the saved CSV records every comparison that was tested.
-            if omnibus_pvalue < 0.05:
-                for tindex, row in panel_stats.iterrows():
-                    if len(hues) > 2:  # >2 values: use Holm-corrected pairwise reject
-                        if row.reject:
-                            ax.text(loc, yh, '*', fontsize=fontsize, horizontalalignment='center',
-                                    verticalalignment='bottom', color='k')
-                    elif len(hues) == 2:  # 2 values: use the omnibus-aligned p
-                        if row.one_way_anova_p_val < 0.05:
-                            ax.text(loc, yh, '*', fontsize=fontsize, horizontalalignment='center',
-                                    verticalalignment='bottom', color='k')
-        else:
-            # only 1 hue value present at this x — no comparison possible (t-test, ANOVA,
-            # and MLM all require >=2 groups). Skip and record nothing for this x.
+        if len(hues) < 2:
+            # only 1 hue value present at this x -- no comparison possible (t-test,
+            # ANOVA, and MLM all require >=2 groups). Skip and record nothing.
             print(f"add_stats_to_plot_for_hues: skipping {x}={x_value!r} -- only "
                   f"{len(hues)} hue value(s) present, need >=2 to compare.")
-            panel_stats = pd.DataFrame()
+            continue
+        stat_jobs.append(dict(
+            subset=test_data, metric=metric, column_to_compare=hue,
+            use_mlm=USE_MLM, group_column=group_column,
+            event_type=event_type, cell_type=cell_type,
+            metadata=dict(data_subset=x_value),
+        ))
+        job_meta.append((loc, x_value, len(hues)))
 
+    job_results = _run_panel_stats_jobs(stat_jobs)
+
+    stats_table = pd.DataFrame()
+    for (loc, x_value, n_hues), (omnibus_pvalue, panel_stats) in zip(job_meta, job_results):
+        # gate star drawing on the omnibus, but keep the panel_stats either way
+        # so the saved CSV records every comparison that was tested.
+        if omnibus_pvalue < 0.05:
+            for tindex, row in panel_stats.iterrows():
+                if n_hues > 2:  # >2 values: use Holm-corrected pairwise reject
+                    if row.reject:
+                        ax.text(loc, yh, '*', fontsize=fontsize, horizontalalignment='center',
+                                verticalalignment='bottom', color='k')
+                elif n_hues == 2:  # 2 values: use the omnibus-aligned p
+                    if row.one_way_anova_p_val < 0.05:
+                        ax.text(loc, yh, '*', fontsize=fontsize, horizontalalignment='center',
+                                verticalalignment='bottom', color='k')
         stats_table = pd.concat([stats_table, panel_stats])
     ax.set_ylim(ymax=final_top)
     _fit_stat_stars_within_axes(ax)
@@ -1658,7 +1671,11 @@ def add_stats_to_plot_for_hues_along_x(data, metric, ax, yorder=None, y='experie
         x_span = 1
     x_star = x_max - (0.03 * x_span)
 
-    stats_table = pd.DataFrame()
+    # Build independent stats jobs (one per y_value with >=2 hues) and dispatch
+    # through _run_panel_stats_jobs for parallel MLM fits. joblib preserves input
+    # order so star placement and the stats_table match the serial path exactly.
+    stat_jobs = []
+    job_meta = []  # parallel list of (loc, y_value, n_hues)
     for loc, y_value in enumerate(yorder):
         test_data = data[data[y] == y_value]
         hues = test_data[hue].unique()
@@ -1668,17 +1685,23 @@ def add_stats_to_plot_for_hues_along_x(data, metric, ax, yorder=None, y='experie
             print(f"add_stats_to_plot_for_hues_along_x: skipping {y}={y_value!r} -- "
                   f"only {len(hues)} hue value(s) present, need >=2 to compare.")
             continue
+        stat_jobs.append(dict(
+            subset=test_data, metric=metric, column_to_compare=hue,
+            use_mlm=USE_MLM, group_column=group_column,
+            event_type=event_type, cell_type=cell_type,
+            metadata={},
+        ))
+        job_meta.append((loc, y_value, len(hues)))
 
-        panel_stats = compute_stats(test_data, metric, column_to_compare=hue,
-                                    use_mlm=USE_MLM, group_column=group_column,
-                                    event_type=event_type, cell_type=cell_type)
-        omnibus_pvalue = panel_stats['omnibus_pvalue'].iloc[0] if len(panel_stats) else 1.0
+    job_results = _run_panel_stats_jobs(stat_jobs)
 
+    stats_table = pd.DataFrame()
+    for (loc, y_value, n_hues), (omnibus_pvalue, panel_stats) in zip(job_meta, job_results):
         has_sig = False
         if omnibus_pvalue < 0.05 and not panel_stats.empty:
-            if len(hues) > 2 and 'reject' in panel_stats.columns:
+            if n_hues > 2 and 'reject' in panel_stats.columns:
                 has_sig = bool(panel_stats['reject'].any())
-            elif len(hues) == 2 and 'one_way_anova_p_val' in panel_stats.columns:
+            elif n_hues == 2 and 'one_way_anova_p_val' in panel_stats.columns:
                 has_sig = bool((panel_stats['one_way_anova_p_val'] < 0.05).any())
 
         if has_sig:
@@ -2479,7 +2502,7 @@ def plot_metric_distribution_by_experience(metrics_table, metric, event_type, da
             ax[i].axhline(y=0, xmin=0, xmax=1, color='gray', linestyle='--')
         # ax[i].set_title(cell_type)
         if data_type not in ['running_speed', 'pupil_width', 'lick_rate']:
-            # ax[i].set_title(cell_type+'\n(n = '+str(len(ct_data.cell_specimen_id.unique()))+' cells)', fontsize=16)
+            ax[i].set_title(cell_type+'\n(n = '+str(len(ct_data.cell_specimen_id.unique()))+' cells)', fontsize=16)
             ax[i].set_title('')
         else:
             ax[i].set_title('')
@@ -4664,6 +4687,49 @@ def plot_metric_heatmap_grid_by_cell_type_and_metric(
     return heat_axes, stats_table
 
 
+def _panel_stats_job(job):
+    """Run one compute_stats call for a heatmap panel and attach caller metadata.
+
+    Defined at module level (so it is picklable) to allow dispatch to joblib worker
+    processes by _run_panel_stats_jobs. Returns (omnibus_p, panel_stats).
+    """
+    panel_stats = compute_stats(
+        job['subset'], job['metric'], column_to_compare=job['column_to_compare'],
+        use_mlm=job['use_mlm'], group_column=job['group_column'],
+        event_type=job['event_type'], cell_type=job['cell_type'])
+    omnibus_p = _heatmap_omnibus_p(panel_stats)
+    panel_stats = insert_stats_metadata(panel_stats, **job['metadata'])
+    return omnibus_p, panel_stats
+
+
+def _run_panel_stats_jobs(jobs, n_jobs=None):
+    """Run a list of independent panel-stats jobs, in parallel when possible.
+
+    Each MLM fit is independent, so jobs are dispatched across processes with joblib;
+    joblib preserves input order, so the concatenated result is identical to running
+    them serially. Falls back to serial execution if joblib is unavailable, only one
+    worker would be used, or the parallel pool fails to start -- so results are the same
+    either way, only the speed differs. Set n_jobs to control worker count
+    (default: cpu_count - 1).
+    """
+    if not jobs:
+        return []
+    try:
+        from joblib import Parallel, delayed
+    except Exception:
+        return [_panel_stats_job(j) for j in jobs]
+    if n_jobs is None:
+        n_jobs = max(1, (os.cpu_count() or 2) - 1)
+    n_jobs = min(n_jobs, len(jobs))
+    if n_jobs <= 1:
+        return [_panel_stats_job(j) for j in jobs]
+    try:
+        return Parallel(n_jobs=n_jobs, backend='loky')(delayed(_panel_stats_job)(j) for j in jobs)
+    except Exception as e:
+        print('parallel stats failed (', e, ') - running serially')
+        return [_panel_stats_job(j) for j in jobs]
+
+
 def plot_metric_heatmap_area_and_depth_by_cell_type(
         results_pivoted, metric, metric_label=None,
         area_col='targeted_structure', depth_col='binned_depth',
@@ -4725,13 +4791,14 @@ def plot_metric_heatmap_area_and_depth_by_cell_type(
     nrows_per_grouping = [len(go) for go in group_orders]
     total_heatmap_rows = sum(nrows_per_grouping)
 
-    # compute matrices, panel maxes, per-cell n, and ANOVA-based stars per (grouping, cell_type)
+    # compute matrices, panel maxes, per-cell n (cheap, serial), and gather the
+    # independent hierarchical-stats jobs to run in parallel below
     mats = {}
     panel_max = {}
     cell_n = {}
     col_stars = {}
     row_stars = {}
-    pairwise_tables = []
+    stat_jobs = []
     for g, (gcol, _) in enumerate(groupings):
         group_order = group_orders[g]
         for i, cell_type in enumerate(cell_types):
@@ -4758,29 +4825,35 @@ def plot_metric_heatmap_area_and_depth_by_cell_type(
             # experience level?")
             for c, exp in enumerate(exp_levels):
                 col_subset = ct_data[ct_data[exp_col] == exp].dropna(subset=[metric, gcol])
-                panel_stats = compute_stats(col_subset, metric, column_to_compare=gcol,
-                                            use_mlm=USE_MLM, group_column=group_column,
-                                            event_type=event_type, cell_type=cell_type)
-                col_stars[(g, i, c)] = tier_stars(_heatmap_omnibus_p(panel_stats))
-                panel_stats = insert_stats_metadata(panel_stats, grouping=gcol,
-                                                   direction='across_groups_within_exp',
-                                                   held_fixed_col=exp_col,
-                                                   held_fixed_value=exp)
-                pairwise_tables.append(panel_stats)
+                stat_jobs.append(dict(
+                    key=('col', g, i, c), subset=col_subset, metric=metric,
+                    column_to_compare=gcol, use_mlm=USE_MLM, group_column=group_column,
+                    event_type=event_type, cell_type=cell_type,
+                    metadata=dict(grouping=gcol, direction='across_groups_within_exp',
+                                  held_fixed_col=exp_col, held_fixed_value=exp)))
 
             # row-direction: within each grouping bin, hierarchical test (MLM by default)
             # across experience levels (e.g., "do experience levels differ at this depth?")
             for r, d in enumerate(group_order):
                 row_subset = ct_data[ct_data[gcol] == d].dropna(subset=[metric, exp_col])
-                panel_stats = compute_stats(row_subset, metric, column_to_compare=exp_col,
-                                            use_mlm=USE_MLM, group_column=group_column,
-                                            event_type=event_type, cell_type=cell_type)
-                row_stars[(g, i, r)] = tier_stars(_heatmap_omnibus_p(panel_stats))
-                panel_stats = insert_stats_metadata(panel_stats, grouping=gcol,
-                                                   direction='across_exp_within_group',
-                                                   held_fixed_col=gcol,
-                                                   held_fixed_value=d)
-                pairwise_tables.append(panel_stats)
+                stat_jobs.append(dict(
+                    key=('row', g, i, r), subset=row_subset, metric=metric,
+                    column_to_compare=exp_col, use_mlm=USE_MLM, group_column=group_column,
+                    event_type=event_type, cell_type=cell_type,
+                    metadata=dict(grouping=gcol, direction='across_exp_within_group',
+                                  held_fixed_col=gcol, held_fixed_value=d)))
+
+    # run the independent stats jobs in parallel (auto serial fallback). joblib preserves
+    # input order, so col_stars/row_stars and the concatenated table match the serial version.
+    job_results = _run_panel_stats_jobs(stat_jobs)
+    pairwise_tables = []
+    for job, (omnibus_p, panel_stats) in zip(stat_jobs, job_results):
+        kind, g, i, idx = job['key']
+        if kind == 'col':
+            col_stars[(g, i, idx)] = tier_stars(omnibus_p)
+        else:
+            row_stars[(g, i, idx)] = tier_stars(omnibus_p)
+        pairwise_tables.append(panel_stats)
     stats_table = (pd.concat(pairwise_tables, ignore_index=True)
                    if pairwise_tables else pd.DataFrame())
 
@@ -5000,13 +5073,14 @@ def plot_bidirectional_metric_heatmap_area_and_depth_by_cell_type(
     nrows_per_grouping = [len(go) for go in group_orders]
     total_heatmap_rows = sum(nrows_per_grouping)
 
-    # compute matrices (means), per-cell n, panel absmax, and ANOVA-based stars
+    # compute matrices (means), per-cell n, panel absmax (cheap, serial), and gather the
+    # independent hierarchical-stats jobs to run in parallel below
     mats = {}
     panel_absmax = {}
     cell_n = {}
     col_stars = {}
     row_stars = {}
-    pairwise_tables = []
+    stat_jobs = []
     for g, (gcol, _) in enumerate(groupings):
         group_order = group_orders[g]
         for i, cell_type in enumerate(cell_types):
@@ -5027,27 +5101,33 @@ def plot_bidirectional_metric_heatmap_area_and_depth_by_cell_type(
 
             for c, exp in enumerate(exp_levels):
                 col_subset = ct_data[ct_data[exp_col] == exp].dropna(subset=[metric, gcol])
-                panel_stats = compute_stats(col_subset, metric, column_to_compare=gcol,
-                                            use_mlm=USE_MLM, group_column=group_column,
-                                            event_type=event_type, cell_type=cell_type)
-                col_stars[(g, i, c)] = tier_stars(_heatmap_omnibus_p(panel_stats))
-                panel_stats = insert_stats_metadata(panel_stats, grouping=gcol,
-                                                   direction='across_groups_within_exp',
-                                                   held_fixed_col=exp_col,
-                                                   held_fixed_value=exp)
-                pairwise_tables.append(panel_stats)
+                stat_jobs.append(dict(
+                    key=('col', g, i, c), subset=col_subset, metric=metric,
+                    column_to_compare=gcol, use_mlm=USE_MLM, group_column=group_column,
+                    event_type=event_type, cell_type=cell_type,
+                    metadata=dict(grouping=gcol, direction='across_groups_within_exp',
+                                  held_fixed_col=exp_col, held_fixed_value=exp)))
 
             for r, d in enumerate(group_order):
                 row_subset = ct_data[ct_data[gcol] == d].dropna(subset=[metric, exp_col])
-                panel_stats = compute_stats(row_subset, metric, column_to_compare=exp_col,
-                                            use_mlm=USE_MLM, group_column=group_column,
-                                            event_type=event_type, cell_type=cell_type)
-                row_stars[(g, i, r)] = tier_stars(_heatmap_omnibus_p(panel_stats))
-                panel_stats = insert_stats_metadata(panel_stats, grouping=gcol,
-                                                   direction='across_exp_within_group',
-                                                   held_fixed_col=gcol,
-                                                   held_fixed_value=d)
-                pairwise_tables.append(panel_stats)
+                stat_jobs.append(dict(
+                    key=('row', g, i, r), subset=row_subset, metric=metric,
+                    column_to_compare=exp_col, use_mlm=USE_MLM, group_column=group_column,
+                    event_type=event_type, cell_type=cell_type,
+                    metadata=dict(grouping=gcol, direction='across_exp_within_group',
+                                  held_fixed_col=gcol, held_fixed_value=d)))
+
+    # run the independent stats jobs in parallel (auto serial fallback). joblib preserves
+    # input order, so col_stars/row_stars and the concatenated table match the serial version.
+    job_results = _run_panel_stats_jobs(stat_jobs)
+    pairwise_tables = []
+    for job, (omnibus_p, panel_stats) in zip(stat_jobs, job_results):
+        kind, g, i, idx = job['key']
+        if kind == 'col':
+            col_stars[(g, i, idx)] = tier_stars(omnibus_p)
+        else:
+            row_stars[(g, i, idx)] = tier_stars(omnibus_p)
+        pairwise_tables.append(panel_stats)
     stats_table = (pd.concat(pairwise_tables, ignore_index=True)
                    if pairwise_tables else pd.DataFrame())
 
@@ -5714,34 +5794,58 @@ def get_change_in_behavior_and_average_cell_metric_across_mice(cell_metrics_tabl
 def plot_correlation_of_behavior_and_cell_metrics_delta(
         metric_data, behavior_metric, cell_metric,
         metric_label=None, behavior_label=None, suptitle=None,
+        show_fit=False, 
         save_dir=None, folder='physio_behavior_correlation'):
-    
-    '''Plot the difference in metrics (F to N) for behavior vs. neural activity.'''
+
+    '''Plot the difference in metrics (F to N) for behavior vs. neural activity.
+
+    show_fit: if True, overlay a dashed best-fit line per panel. Default False because
+    these data are typically scattered and a fit line implies a relationship the data
+    doesn't support.
+    '''
+    from scipy.stats import pearsonr
+
     x = get_metric_index_name(behavior_metric)
     y = get_metric_index_name(cell_metric)
 
     if metric_label is None:
         metric_label=cell_metric
     if behavior_label is None:
-        behavior_label=behavior_metric  
-    if suptitle is None:
-        suptitle = f'Change in {metric_label} vs. change in {behavior_label}'
+        behavior_label=behavior_metric
+    # if suptitle is None:
+    #     suptitle = f'Change in {metric_label} vs. change in {behavior_label}'
 
     cell_types = utils.get_cell_types()
 
-    figsize = (14, 4)
+    figsize = (12, 3)
     fig, ax = plt.subplots(1, 3, figsize=figsize, sharex=True, sharey=True)
     for i, cell_type in enumerate(cell_types):
-        sns.scatterplot(data=metric_data[metric_data.cell_type == cell_type],
-                        x=x, y=y, ax=ax[i])
-        n_mice = metric_data[metric_data.cell_type == cell_type]['mouse_id'].nunique()
-        ax[i].set_title(cell_type+'\n(n = '+str(n_mice)+' mice)')
+        ct_data = metric_data[metric_data.cell_type == cell_type]
+        sns.scatterplot(data=ct_data, x=x, y=y, ax=ax[i])
+        n_mice = ct_data['mouse_id'].nunique()
+
+        # Pearson r and p across mice (drop NaNs)
+        xy = ct_data[[x, y]].dropna()
+        if len(xy) >= 2 and xy[x].std() > 0 and xy[y].std() > 0:
+            r, p = pearsonr(xy[x].values, xy[y].values)
+            p_str = f"{p:.2e}" if p < 1e-3 else f"{p:.2f}"
+            r_p_str = f"r = {r:.2f}, p = {p_str}"
+            if show_fit:
+                slope, intercept = np.polyfit(xy[x].values, xy[y].values, 1)
+                xf = np.array([xy[x].min(), xy[x].max()])
+                ax[i].plot(xf, slope * xf + intercept, color='black',
+                           linestyle='--', linewidth=1.5)
+        else:
+            r_p_str = "r = nan, p = nan"
+        # ax[i].set_title(f'{cell_type} (n = {n_mice} mice)\n{r_p_str}')
+        ax[i].set_title(f'{cell_type}\n{r_p_str}')
         ax[i].set_xlabel(behavior_label+'\nChange from F to N')
         ax[i].set_ylabel(metric_label+'\nChange from F to N')
         ax[i].axhline(y=0, linestyle='--', color='gray', linewidth=1)
         ax[i].axvline(x=0, linestyle='--', color='gray', linewidth=1)
-    plt.suptitle(suptitle, x=0.5, y=1.11, fontsize=20)
-    plt.subplots_adjust(wspace=0.2)
+    if suptitle is not None: 
+        plt.suptitle(suptitle, x=0.5, y=1.2, fontsize=20)
+    plt.subplots_adjust(wspace=0.3)
 
     if save_dir:
         filename = _clean_filename('difference_' + cell_metric + '_' + behavior_metric)
@@ -5933,6 +6037,39 @@ def find_cells_without_exactly_three_experience_levels(df, cell_id_col='cell_spe
     return bad_cells.sort_values(by=['n_unique_experience_levels', 'n_rows', cell_id_col]).reset_index(drop=True)
 
 
+def collapse_duplicate_cell_rows(df, group_cols, trace_col='mean_trace'):
+    """Collapse rows that share the same `group_cols` into a single averaged row.
+
+    A cell_specimen_id can appear more than once at a given matched condition (e.g. a
+    container with multiple sessions at the same experience level). For cell-matched
+    plotting we need exactly one row per cell per condition, otherwise the heatmap rows
+    no longer correspond to the same cell across columns. Rather than dropping these
+    cells, average their response trace (and any numeric metric columns) so the cell is
+    retained. Non-numeric columns take the first value within each group.
+
+    Returns `df` unchanged if there are no duplicate `group_cols` combinations.
+    """
+    if not df.duplicated(subset=group_cols).any():
+        return df
+
+    has_trace = trace_col in df.columns
+    grouped = df.groupby(group_cols, sort=False)
+
+    # mean for numeric metric columns, first value for everything else
+    agg = {}
+    for col in df.columns:
+        if col in group_cols or (has_trace and col == trace_col):
+            continue
+        agg[col] = 'mean' if pd.api.types.is_numeric_dtype(df[col]) else 'first'
+    collapsed = grouped.agg(agg)
+
+    # average the response trace (array per row) across the duplicate rows
+    if has_trace:
+        collapsed[trace_col] = grouped[trace_col].apply(lambda s: np.mean(np.vstack(s.values), axis=0))
+
+    return collapsed.reset_index()
+
+
 def plot_response_heatmaps_for_conditions(multi_session_df, timestamps, data_type, event_type,
                                           row_condition, col_condition, matched_cells_table=None, 
                                           plot_epochs=False, exp_to_match='Familiar',
@@ -5969,10 +6106,29 @@ def plot_response_heatmaps_for_conditions(multi_session_df, timestamps, data_typ
                 matched_cells_this_ct = matched_cells_table[(matched_cells_table[row_condition] == row)].cell_specimen_id.unique()
             # Limit cre sdf to only matched cells for this cell type
             cre_sdf = cre_sdf[cre_sdf.cell_specimen_id.isin(matched_cells_this_ct)]
-            # Find any cells that dont have exactly 3 exp levels and drop them
-            drop_cells = find_cells_without_exactly_three_experience_levels(cre_sdf)
-            cre_sdf = cre_sdf[cre_sdf.cell_specimen_id.isin(drop_cells.cell_specimen_id.unique())==False]
-        
+
+            # Collapse cells that appear more than once at the same matched condition
+            # (e.g. multiple sessions at one experience level) into a single averaged
+            # row, so the cell is retained instead of dropped and the heatmap rows stay
+            # aligned to the same cell_specimen_id across columns.
+            if plot_epochs:
+                collapse_keys = ['cell_specimen_id', col_condition, 'epoch']
+            else:
+                collapse_keys = ['cell_specimen_id', col_condition]
+            n_before = cre_sdf.cell_specimen_id.nunique()
+            cre_sdf = collapse_duplicate_cell_rows(cre_sdf, collapse_keys)
+
+            # Keep only cells present in every matched condition so reindexing cannot
+            # introduce empty (NaN) rows that would break cell alignment.
+            n_levels = len(col_conditions)
+            levels_per_cell = cre_sdf.groupby('cell_specimen_id')[col_condition].nunique()
+            complete_cells = levels_per_cell[levels_per_cell == n_levels].index
+            n_dropped = n_before - len(complete_cells)
+            if n_dropped > 0:
+                print(f'{row}: dropping {n_dropped} of {n_before} matched cells not present '
+                      f'in all {n_levels} {col_condition} conditions')
+            cre_sdf = cre_sdf[cre_sdf.cell_specimen_id.isin(complete_cells)]
+
             # get cell order based on mean response in novel session
             # use groupby to get one mean_response per cell, ensuring unique ordering regardless of data structure
             if plot_epochs:
@@ -6015,7 +6171,13 @@ def plot_response_heatmaps_for_conditions(multi_session_df, timestamps, data_typ
             
             if match_cells:
                 data = data.reindex(novel_cell_order)
-            
+                # guarantee every heatmap column shows the same cell_specimen_id per row
+                assert np.array_equal(np.asarray(data.index), np.asarray(novel_cell_order)), \
+                    f'Matched-cell order mismatch for {row} / {col}: heatmap rows are not aligned to the matched cell order'
+                if not plot_epochs:
+                    assert not data.isnull().values.any(), \
+                        f'Matched-cell heatmap for {row} / {col} has empty (NaN) rows from missing cells'
+
             n_cells = len(data)
     
             ax[i] = plot_cell_response_heatmap(data, timestamps=timestamps, vmax=vmax, xlabel=xlabel, cbar=cbar,
@@ -7414,7 +7576,7 @@ def plot_behavior_metric_across_stages(data, metric, ylabel=None, ax=None,
     return ax
 
 
-def plot_days_in_stage(behavior_sessions, stage_column, save_dir=None, folder='training_history', suffix=None):
+def plot_days_in_stage(behavior_sessions, stage_column, save_dir=None, folder='training_history', suffix=None, ax=None):
     """
     Plot the number of days in each stage, as a boxplot using stage as the hue and cell types on y-axis
 
@@ -7447,26 +7609,26 @@ def plot_days_in_stage(behavior_sessions, stage_column, save_dir=None, folder='t
     colors = [[c / 255. for c in color] for color in colors]
 
     figsize = (7, 3)
-    fig, ax = plt.subplots(figsize=figsize)
-    # for i, cell_type in enumerate(np.sort(data.cell_type.unique())):
-    #     ct_data = data[data.cell_type==cell_type]
+    created_fig = ax is None
+    if created_fig:
+        fig, ax = plt.subplots(figsize=figsize)
     order = np.sort(data.cell_type.unique())
     ax = sns.boxplot(data=data, x='cell_type', y='days_in_stage', order=order, width=0.8, linewidth=0.8,
                      hue=stage_column, hue_order=behavior_stages, palette=colors, ax=ax)
     ax.set_xlabel('')
     ax.set_ylabel('Days in stage')
-    #     ax[i].set_xticklabels(behavior_stages, rotation=90)
-    #     ax[i].set_title(cell_type)
     ax.legend().remove()
     ax.legend(bbox_to_anchor=(1, 1), fontsize='x-small')
 
-    fig.subplots_adjust(hspace=0.3)
-    if save_dir:
+    if created_fig:
+        fig.subplots_adjust(hspace=0.3)
+    if created_fig and save_dir:
         # save plot
         utils.save_figure(fig, figsize, save_dir, folder, _clean_filename('days_in_stage' + '_' + stage_column + suffix))
         # save stats
         days_in_stage_stats = data.groupby(['cell_type', stage_column]).describe()
         days_in_stage_stats.to_csv(os.path.join(save_dir, folder, _clean_filename('days_in_stage_values.csv')))
+    return ax
 
 
 def plot_prior_exposures_to_image_set_before_platform_ophys_sessions(platform_experiments, behavior_sessions, save_dir=None, folder='stimulus_history', suffix='', ax=None):
@@ -8129,7 +8291,7 @@ def plot_lick_raster_for_trials(trials, title='', legend=False, save_dir=None, f
     return ax
 
 
-def plot_response_probability_heatmaps_for_cohorts(behavior_sessions, save_dir=None):
+def plot_response_probability_heatmaps_for_cohorts(behavior_sessions, save_dir=None, axes=None, cbar_ax=None):
     '''
     Plot a heatmaps of response probability across image transitions for Familiar and Novel images
     for each cohort of mice (mice trained on image set A and mice trained on image set B)
@@ -8159,13 +8321,39 @@ def plot_response_probability_heatmaps_for_cohorts(behavior_sessions, save_dir=N
     familiar_response_probability = familiar_response_probability.merge(behavior_sessions, on='behavior_session_id')
     novel_response_probability = novel_response_probability.merge(behavior_sessions, on='behavior_session_id')
 
+    cmap = 'Greys'
+    colors = utils.get_colors_for_session_numbers()
+
+    # composite mode: draw only the main-cohort (image set A) Familiar and (image set B) Novel
+    # heatmaps into the two provided axes, with a single shared colorbar on the second.
+    if axes is not None:
+        familiar_data = familiar_response_probability[familiar_response_probability.project_code.isin(['VisualBehavior', 'VisualBehaviorMultiscope'])]
+        novel_data = novel_response_probability[novel_response_probability.project_code.isin(['VisualBehavior', 'VisualBehaviorMultiscope'])]
+        familiar_response_matrix = behavior.average_response_probability_across_sessions(familiar_data, sort=True)
+        novel_response_matrix = behavior.average_response_probability_across_sessions(novel_data, sort=True)
+        # both heatmaps drawn without an inline colorbar so they stay the same size; the colorbar
+        # goes in its own cbar_ax. Force all image-name tick labels regardless of axis size.
+        sns.heatmap(familiar_response_matrix, cmap=cmap, vmin=0, vmax=1, square=True, cbar=False,
+                    xticklabels=True, yticklabels=True, ax=axes[0])
+        axes[0].set_xlabel('Change image'); axes[0].set_ylabel('Initial image')
+        axes[0].set_title('Familiar images', color=colors[3])
+        draw_cbar = cbar_ax is not None
+        sns.heatmap(novel_response_matrix, cmap=cmap, vmin=0, vmax=1, square=True,
+                    cbar=draw_cbar, cbar_ax=cbar_ax,
+                    cbar_kws={'label': 'Response probability'} if draw_cbar else None,
+                    xticklabels=True, yticklabels=True, ax=axes[1])
+        axes[1].set_xlabel('Change image'); axes[1].set_ylabel('Initial image')
+        axes[1].set_title('Novel images', color=colors[0])
+        for _a in axes:
+            _a.tick_params(labelsize=7)
+            plt.setp(_a.get_xticklabels(), rotation=90)
+            plt.setp(_a.get_yticklabels(), rotation=0)
+        return axes
+
     # make the plot
     figsize = (10,10)
     fig, ax = plt.subplots(2,2, figsize=figsize)
     ax = ax.ravel()
-
-    cmap = 'Greys'
-    colors = utils.get_colors_for_session_numbers()
 
     # A-B mice
     familiar_data = familiar_response_probability[familiar_response_probability.project_code.isin(['VisualBehavior', 'VisualBehaviorMultiscope'])]
@@ -9657,3 +9845,175 @@ def plot_fraction_cells_coding_by_experience(
     return ax
 
 
+
+
+# ------------------------------------------------------------------
+# Single-axis distributions of running modulation / activity-running
+# correlation. Used by notebooks/platform_paper_figures/running_activity_correlation_control.ipynb
+# ------------------------------------------------------------------
+
+def _draw_box_or_violin_compact(d, x, y, order, hue, hue_order, palette, ax, plot_type='boxplot'):
+    """Internal helper for the *_distribution_single_axis plotters."""
+    if plot_type == 'boxplot':
+        sns.boxplot(
+            data=d, x=x, y=y, order=order,
+            hue=hue, hue_order=hue_order, palette=palette,
+            width=0.6, notch=True, fliersize=0, boxprops=dict(alpha=0.75), ax=ax,
+        )
+    elif plot_type == 'violinplot':
+        sns.violinplot(
+            data=d, x=x, y=y, order=order,
+            hue=hue, hue_order=hue_order, palette=palette,
+            cut=0, linewidth=1, gap=0.1, fill=True, ax=ax,
+            inner='box', inner_kws=dict(box_width=2, whis_width=1, color='k', alpha=0.75),
+        )
+        plt.setp(ax.collections, alpha=0.7)
+    else:
+        raise ValueError(f"plot_type must be 'boxplot' or 'violinplot', got {plot_type!r}")
+
+
+def plot_rmi_distribution_single_axis(metrics_table, metric='running_modulation_all_images',
+                                       x_col='cell_type', hue_col='experience_level',
+                                       plot_type='boxplot', ylabel='Running\nmodulation',
+                                       ylims=(-1.2, 1.2), annot=('Stationary', 'Running'),
+                                       save_dir=None, folder='running_modulation', ax=None):
+    """Single-axis distribution of `metric` with `x_col` on x and `hue_col` as the within-x split.
+    `x_col` and `hue_col` must each be one of {'cell_type', 'experience_level'}.
+
+    Hierarchical stats are computed across hue values within each x value via
+    add_stats_to_plot_for_hues. Y-axis is annotated with `annot` (bottom, top) near
+    ylims (e.g. 'Stationary' near -1, 'Running' near +1). Pass annot=None to skip.
+    """
+    assert {x_col, hue_col} <= {'cell_type', 'experience_level'}, \
+        "x_col and hue_col must each be 'cell_type' or 'experience_level'"
+    assert x_col != hue_col, 'x_col and hue_col must differ'
+
+    cell_types = utils.get_cell_types()
+    cell_type_abbrev = [ct[:3] for ct in cell_types]
+    exp_levels = utils.get_new_experience_levels()
+
+    if x_col == 'cell_type':
+        x_order = cell_types
+        x_labels = cell_type_abbrev
+        hue_order = exp_levels
+        palette = utils.get_experience_level_colors()
+    else:
+        x_order = exp_levels
+        x_labels = exp_levels
+        hue_order = cell_types
+        palette = utils.get_cell_type_colors()
+
+    d = metrics_table.dropna(subset=[metric]).copy()
+
+    if ax is None:
+        figsize = (4, 3)
+        fig, ax = plt.subplots(figsize=figsize)
+    else:
+        fig = ax.figure
+        figsize = fig.get_size_inches()
+
+    _draw_box_or_violin_compact(d, x_col, metric, x_order, hue_col, hue_order, palette, ax, plot_type)
+
+    ax.axhline(0, color='gray', linestyle='--', linewidth=0.8)
+    ax.set_xlabel('')
+    ax.set_ylabel(ylabel)
+    ax.set_ylim(ylims)
+    ax.set_xticks(range(len(x_order)))
+    ax.set_xticklabels(x_labels)
+    xlim = ax.get_xlim()
+    ax.set_xlim(xlim[0] - 0.2, xlim[1] + 0.2)
+    ax.legend(title='', frameon=False, fontsize=9, bbox_to_anchor=(1.05, 1.0))
+
+    if annot is not None:
+        ax.annotate(annot[1], xy=(-0.05, 0.98), xycoords=ax.transAxes,
+                    ha='right', va='top', fontsize=10)
+        ax.annotate(annot[0], xy=(-0.05, -0.05), xycoords=ax.transAxes,
+                    ha='right', va='bottom', fontsize=10)
+
+    try:
+        ax, stats_table = add_stats_to_plot_for_hues(
+            d, metric, ax, ymax=ylims[1], xorder=x_order, x=x_col, hue=hue_col,
+            event_type='all',
+        )
+    except Exception as e:
+        print(f'stats failed: {e}')
+        stats_table = None
+
+    sns.despine()
+
+    if save_dir is not None:
+        save_name = _clean_filename(metric + '_single_axis_' + x_col + '_x_' + hue_col + '_hue')
+        utils.save_figure(fig, figsize, save_dir, folder, save_name)
+        if stats_table is not None:
+            os.makedirs(os.path.join(save_dir, folder), exist_ok=True)
+            stats_table.to_csv(os.path.join(save_dir, folder, save_name + '_stats.csv'))
+    return ax
+
+
+def plot_correlation_distribution_single_axis(metrics_table, metric='activity_running_corr',
+                                               x_col='cell_type', hue_col='experience_level',
+                                               plot_type='boxplot',
+                                               ylabel='Activity vs.running\ncorrelation (pearson r)',
+                                               ylims=None,
+                                               save_dir=None, folder='running_correlation', save_name=None, ax=None):
+    """Sister of plot_rmi_distribution_single_axis for distributions of correlation values.
+    Same layout/stats; no 'Running'/'Stationary' annotation; ylims default to None (autoscale)
+    since correlation distributions are typically narrower than +/-1.
+    """
+    assert {x_col, hue_col} <= {'cell_type', 'experience_level'}, \
+        "x_col and hue_col must each be 'cell_type' or 'experience_level'"
+    assert x_col != hue_col, 'x_col and hue_col must differ'
+
+    cell_types = utils.get_cell_types()
+    cell_type_abbrev = [ct[:3] for ct in cell_types]
+    exp_levels = utils.get_new_experience_levels()
+    exp_abbrev = utils.get_abbreviated_experience_levels()
+
+    if x_col == 'cell_type':
+        x_order, x_labels = cell_types, cell_type_abbrev
+        hue_order, palette = exp_levels, utils.get_experience_level_colors()
+    else:
+        x_order, x_labels = exp_levels, exp_abbrev
+        hue_order, palette = cell_types, utils.get_cell_type_colors()
+
+    d = metrics_table.dropna(subset=[metric]).copy()
+
+    if ax is None:
+        figsize = (4, 3)
+        fig, ax = plt.subplots(figsize=figsize)
+    else:
+        fig = ax.figure
+        figsize = fig.get_size_inches()
+
+    _draw_box_or_violin_compact(d, x_col, metric, x_order, hue_col, hue_order, palette, ax, plot_type)
+
+    ax.axhline(0, color='gray', linestyle='--', linewidth=0.8)
+    ax.set_xlabel('')
+    ax.set_ylabel(ylabel)
+    if ylims is not None:
+        ax.set_ylim(ylims)
+    ax.set_xticks(range(len(x_order)))
+    ax.set_xticklabels(x_labels)
+    xlim = ax.get_xlim()
+    ax.set_xlim(xlim[0] - 0.2, xlim[1] + 0.2)
+    ax.legend(title='', frameon=False, fontsize=9, bbox_to_anchor=(1.05, 1.0))
+
+    try:
+        ax, stats_table = add_stats_to_plot_for_hues(
+            d, metric, ax, ymax=ax.get_ylim()[1], xorder=x_order, x=x_col, hue=hue_col,
+            event_type='all',
+        )
+    except Exception as e:
+        print(f'stats failed: {e}')
+        stats_table = None
+
+    sns.despine()
+
+    if save_dir is not None:
+        if save_name is None:
+            save_name = _clean_filename(metric + '_single_axis_' + x_col + '_x_' + hue_col + '_hue')
+        utils.save_figure(fig, figsize, save_dir, folder, save_name, formats=['.png', '.pdf'])
+        if stats_table is not None:
+            os.makedirs(os.path.join(save_dir, folder), exist_ok=True)
+            stats_table.to_csv(os.path.join(save_dir, folder, save_name + '_stats.csv'))
+    return ax

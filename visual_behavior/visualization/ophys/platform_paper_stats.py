@@ -17,8 +17,6 @@ Statistics for the platform paper. Two entry points:
   Used by the plotters in ``platform_paper_figures.py``.
 """
 import warnings
-import os
-import hashlib
 
 import numpy as np
 import pandas as pd
@@ -672,30 +670,6 @@ def test_significant_metric_averages(data, metric, column_to_compare='experience
     return anova, tukey_table
 
 
-# Optional on-disk cache for compute_stats results. When set to a directory path, compute_stats
-# loads a previously-saved result instead of recomputing (the hierarchical MLM is expensive). The
-# cache key is a hash of the actual inputs (metric/comparison/grouping values + test settings), so
-# a result is only reused for an identical computation. Set back to None to disable.
-STATS_CACHE_DIR = None
-
-
-def _stats_cache_path(data, metric, column_to_compare, use_mlm, group_column,
-                      event_type, cell_type):
-    if STATS_CACHE_DIR is None:
-        return None
-    cols = [c for c in [metric, column_to_compare, group_column] if c in data.columns]
-    try:
-        sub = data.loc[~data[metric].isnull(), cols] if metric in data.columns else data[cols]
-        content = hashlib.md5(
-            pd.util.hash_pandas_object(sub, index=False).values.tobytes()).hexdigest()
-    except Exception:
-        content = str(len(data))
-    key = '|'.join(map(str, [metric, column_to_compare, use_mlm, group_column,
-                             event_type, cell_type, content]))
-    digest = hashlib.md5(key.encode()).hexdigest()
-    return os.path.join(STATS_CACHE_DIR, 'compute_stats_' + digest + '.pkl')
-
-
 def compute_stats(data, metric, column_to_compare='experience_level', *,
                   use_mlm=True, group_column='mouse_id',
                   event_type='Not specified',
@@ -748,12 +722,6 @@ def compute_stats(data, metric, column_to_compare='experience_level', *,
                 RuntimeWarning,
             )
 
-    # on-disk cache: only generate the (slow) stats if an identical result isn't already saved
-    _cache_path = _stats_cache_path(data, metric, column_to_compare, use_mlm,
-                                    group_column, event_type, cell_type)
-    if _cache_path is not None and os.path.exists(_cache_path):
-        return pd.read_pickle(_cache_path)
-
     if use_mlm:
         results = test_significant_metric_averages_mlm(
             data, metric, column_to_compare,
@@ -784,9 +752,6 @@ def compute_stats(data, metric, column_to_compare='experience_level', *,
                 continue
             stats_table.insert(0, col, val)
 
-    if _cache_path is not None:
-        os.makedirs(os.path.dirname(_cache_path), exist_ok=True)
-        stats_table.to_pickle(_cache_path)
     return stats_table
 
 

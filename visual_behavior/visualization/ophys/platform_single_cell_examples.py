@@ -2088,3 +2088,71 @@ def plot_cell_change_and_omission_responses(change_mdf, omission_mdf, cell_speci
         utils.save_figure(fig, figsize, save_dir, folder,
                           str(cell_specimen_id) + '_' + cell_data.cell_type.values[0][:3] + suffix)
 
+
+
+# ------------------------------------------------------------------
+# Running-activity correlation single-cell example plotting
+# Used by notebooks/platform_paper_figures/running_activity_correlation_control.ipynb
+# ------------------------------------------------------------------
+
+def filter_steady_state_presentations(sdf, n_flashes_postchange=4, flash_period=0.75):
+    """Restrict a stimulus_response_df to repeated-image flashes at steady state.
+
+    Excludes omissions, post-omissions, changes, and the n flashes following each change.
+    flash_period is the VBO stim cycle in seconds (default 0.75).
+    """
+    postchange_window = n_flashes_postchange * flash_period
+    mask = (
+        (~sdf['omitted'].astype(bool))
+        & (~sdf['post_omitted'].fillna(False).astype(bool))
+        & (~sdf['is_change'].astype(bool))
+        & (sdf['time_from_last_change'] > postchange_window)
+    )
+    return sdf[mask].copy()
+
+
+def plot_running_example_cell(example_sdf, cell_specimen_id, cell_type, rmi,
+                              run_thresh=2.0, save_dir=None, save_name=None):
+    """Filter `example_sdf` to one cell (+ steady-state), compute Pearson correlation,
+    and plot scatter (mean_response vs mean_running_speed) + trace overlay
+    (run vs stationary trials).
+
+    `example_sdf` must be the output of loading.get_stimulus_response_df(...) for the
+    experiment containing the cell. Returns (fig, (r, p)).
+    """
+    from scipy import stats as scipy_stats
+
+    cell_sdf = example_sdf[example_sdf.cell_specimen_id == cell_specimen_id].copy()
+    cell_sdf = filter_steady_state_presentations(cell_sdf)
+    d = cell_sdf[['mean_response', 'mean_running_speed']].dropna()
+    r, p = scipy_stats.pearsonr(d['mean_response'].values, d['mean_running_speed'].values)
+
+    fig, axes = plt.subplots(1, 2, figsize=(10, 4))
+    axes[0].scatter(cell_sdf['mean_response'], cell_sdf['mean_running_speed'],
+                    s=8, alpha=0.4, color='k')
+    axes[0].set_xlabel('Mean response (events)')
+    axes[0].set_ylabel('Mean running speed (cm/s)')
+    axes[0].set_title(f'{cell_type} cell {cell_specimen_id}\nr = {r:.2f}, p = {p:.2f}')
+
+    run_df = cell_sdf[cell_sdf['mean_running_speed'] > run_thresh]
+    stationary_df = cell_sdf[cell_sdf['mean_running_speed'] < run_thresh]
+    utils.plot_stimulus_response_df_trace(
+        run_df, time_window=[-1, 1], change=False, omitted=False,
+        ylabel='Events', legend_label=f'run > {run_thresh} cm/s (n={len(run_df)})',
+        color='tab:red', ax=axes[1],
+    )
+    utils.plot_stimulus_response_df_trace(
+        stationary_df, time_window=[-1, 1], change=False, omitted=False,
+        ylabel='Events', legend_label=f'stationary < {run_thresh} cm/s (n={len(stationary_df)})',
+        color='tab:blue', ax=axes[1],
+    )
+    axes[1].legend(fontsize=8, frameon=False)
+    axes[1].set_title(f'{cell_type} cell {cell_specimen_id}\nRMI = {rmi:.2f}')
+
+    sns.despine()
+    plt.tight_layout()
+    fig.subplots_adjust(wspace=0.4)
+    if save_dir is not None and save_name is not None:
+        fig.savefig(os.path.join(save_dir, save_name + '.png'), dpi=200, bbox_inches='tight')
+        fig.savefig(os.path.join(save_dir, save_name + '.pdf'), bbox_inches='tight')
+    return fig, (r, p)

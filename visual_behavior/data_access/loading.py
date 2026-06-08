@@ -3002,7 +3002,28 @@ def get_file_name_for_saved_multi_session_df(data_type, event_type, conditions, 
     return filename
 
 
-def load_multi_session_df(data_type, event_type, conditions, inclusion_criteria, 
+def _save_multi_session_df_as_feather(multi_session_df, feather_filename, candidate_dirs):
+    """Cache a multi_session_df as a feather file for faster loading next time.
+
+    Feather is much smaller and faster to read than pickle for these dataframes (the
+    array-valued columns like mean_trace round-trip back to numpy arrays). Feather
+    requires a default RangeIndex, so the index is reset before saving. Writes to the
+    first writable directory in candidate_dirs. Any failure (e.g. missing pyarrow or a
+    read-only data-asset dir) is non-fatal so that loading still succeeds.
+    """
+    for save_dir in candidate_dirs:
+        feather_filepath = os.path.join(save_dir, feather_filename)
+        try:
+            print('saving multi_session_df to feather for faster loading next time at', feather_filepath)
+            multi_session_df.reset_index(drop=True).to_feather(feather_filepath)
+            return feather_filepath
+        except Exception as e:
+            print('could not save feather file to', feather_filepath, '-', e)
+    print('warning: could not cache multi_session_df as feather in any candidate directory')
+    return None
+
+
+def load_multi_session_df(data_type, event_type, conditions, inclusion_criteria,
                     interpolate=True, output_sampling_rate=30, epoch_duration_mins=None, exclude_passive_sessions=True,
                     from_s3_cache=False, from_local_cache=True):
     """
@@ -3040,16 +3061,39 @@ def load_multi_session_df(data_type, event_type, conditions, inclusion_criteria,
                                                                                        epoch_duration_mins)
     print(saved_multi_session_df_filename)
     saved_multi_session_df_filepath = os.path.join(multi_session_df_dir, saved_multi_session_df_filename)
-    # Check the flat multi_session_mean_responses directory as well (Code Ocean data asset layout)
-    saved_multi_session_df_filepath_alt = os.path.join(multi_session_mean_response_dir, saved_multi_session_df_filename)
-    if not os.path.exists(saved_multi_session_df_filepath) and os.path.exists(saved_multi_session_df_filepath_alt):
-        saved_multi_session_df_filepath = saved_multi_session_df_filepath_alt
-    # if mutli session df for these conditions has already been generated and saved, load it
-    if os.path.exists(saved_multi_session_df_filepath):
-        print('loading multi_session_df from saved file at',saved_multi_session_df_filepath)
-        multi_session_df = pd.read_pickle(saved_multi_session_df_filepath)
-    # otherwise generate and save it
-    else:
+
+    # Prefer a feather copy if one exists - it is much smaller and faster to load than
+    # the pickle. Check both the primary cache dir and the flat multi_session_mean_responses
+    # directory (Code Ocean data asset layout) for either format.
+    feather_filename = saved_multi_session_df_filename.replace('.pkl', '.feather')
+    feather_paths = [os.path.join(multi_session_df_dir, feather_filename),
+                     os.path.join(multi_session_mean_response_dir, feather_filename)]
+    pkl_paths = [saved_multi_session_df_filepath,
+                 os.path.join(multi_session_mean_response_dir, saved_multi_session_df_filename)]
+    existing_feather = next((p for p in feather_paths if os.path.exists(p)), None)
+    existing_pkl = next((p for p in pkl_paths if os.path.exists(p)), None)
+
+    multi_session_df = None
+
+    # fastest path: load from a previously cached feather file
+    if existing_feather is not None:
+        try:
+            print('loading multi_session_df from saved feather file at', existing_feather)
+            multi_session_df = pd.read_feather(existing_feather)
+        except Exception as e:
+            print('could not read feather file at', existing_feather, '-', e, '- will reload from pickle')
+            multi_session_df = None
+
+    # if there is no (readable) feather file but a pickle exists, load the pickle and
+    # write a feather copy so that loading is fast the next time this is called
+    if multi_session_df is None and existing_pkl is not None:
+        print('loading multi_session_df from saved file at', existing_pkl)
+        multi_session_df = pd.read_pickle(existing_pkl)
+        _save_multi_session_df_as_feather(multi_session_df, feather_filename,
+                                          [multi_session_df_dir, multi_session_mean_response_dir])
+
+    # otherwise generate it from the per-session files, then save both pickle and feather
+    if multi_session_df is None:
         project_codes = experiments_table.project_code.unique()
         multi_session_df = pd.DataFrame()
         for project_code in project_codes:
@@ -3068,6 +3112,8 @@ def load_multi_session_df(data_type, event_type, conditions, inclusion_criteria,
         # save it
         print('saving multi session df to pkl')
         multi_session_df.to_pickle(saved_multi_session_df_filepath)
+        _save_multi_session_df_as_feather(multi_session_df, feather_filename,
+                                          [multi_session_df_dir, multi_session_mean_response_dir])
 
     return multi_session_df
 
