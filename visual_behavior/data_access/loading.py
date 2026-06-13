@@ -88,6 +88,8 @@ def get_rolling_performance_metrics_dir():
 def get_stimulus_behavior_response_dir():
     return os.path.join(get_platform_analysis_cache_dir(), 'visual_behavior_ophys_analysis_files', 'stimulus_behavior_response')
 
+def get_clustering_results_dir():
+    return os.path.join(get_platform_analysis_cache_dir(), 'visual_behavior_ophys_clustering_results')
 
 def get_stimulus_behavior_response_df(mouse_ids, metadata_table=None, merge_columns=('experience_level', 'cell_type')):
     """Load and concatenate the per-mouse stimulus_behavior_response_df CSVs into one dataframe.
@@ -193,7 +195,7 @@ def limit_stimulus_presentations_to_change_detection(stimulus_presentations):
     limit stimulus presentations table to the change detection block
     '''
     if 'stimulus_block_name' in stimulus_presentations:
-        stimulus_presentations = stimulus_presentations[stimulus_presentations.stimulus_block_name.str.contains('change_detection')]
+        stimulus_presentations = stimulus_presentations[stimulus_presentations.stimulus_block_name.str.contains('change_detection')].copy()
         # change a few columns from type Boolean to bool (they were previously Boolean so they could contain NaNs for non-change detection stim blocks)
         stimulus_presentations = convert_boolean_cols_to_bool(stimulus_presentations)
     return stimulus_presentations
@@ -210,6 +212,7 @@ def convert_boolean_cols_to_bool(stimulus_presentations):
     as many values specific to change_detection task are set to NaN in other stimulus blocks, which
     means that the entire column gets the dtype boolean instead of bool.
     '''
+    stimulus_presentations = stimulus_presentations.copy()
     for column in stimulus_presentations.columns.values:
         try:
             if type(stimulus_presentations[column].dtype).__name__ == 'BooleanDtype':

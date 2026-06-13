@@ -16,6 +16,9 @@ Statistics for the platform paper. Two entry points:
   ``add_stats_to_plot*`` family to consume without branching on the path.
   Used by the plotters in ``platform_paper_figures.py``.
 """
+import os
+import hashlib
+import inspect
 import warnings
 
 import numpy as np
@@ -25,6 +28,72 @@ from scipy import stats
 import statsmodels.formula.api as smf
 import statsmodels.stats.multicomp as mc
 from statsmodels.stats.multitest import multipletests
+
+
+# ---------------------------------------------------------------------------
+# Stats result cache
+# ---------------------------------------------------------------------------
+# The MLM fits in compute_stats dominate the runtime of the composite figures
+# (each call fits two mixed models). The result is a deterministic function of
+# the input data values + parameters, so we memoize it. This keeps the *exact*
+# MLM statistics (nothing is approximated or swapped for a faster test) while
+# making reruns -- e.g. when iterating on figure layout -- near-instant.
+#
+# Correctness: the cache key includes a fingerprint of the stats source code
+# (see _stats_code_fingerprint), so editing the model functions automatically
+# invalidates previously cached results. It also includes a hash of the actual
+# input data values, so changing the data changes the key. The cache therefore
+# can never return results computed from a different model or different data.
+#
+# Disk cache location: set env var PLATFORM_STATS_CACHE_DIR to relocate, or set
+# platform_paper_stats.STATS_CACHE_DIR = None to use the in-memory cache only.
+# Call clear_stats_cache() to wipe it.
+STATS_CACHE_DIR = os.environ.get(
+    'PLATFORM_STATS_CACHE_DIR',
+    os.path.join(os.path.expanduser('~'), '.cache', 'platform_paper_stats'))
+
+_STATS_MEMO = {}        # in-process cache: key -> stats_table DataFrame
+_STATS_CODE_FP = None   # lazily-computed fingerprint of the stats source code
+
+
+def _stats_code_fingerprint():
+    """Hash the source of the functions that determine stats output, so any
+    edit to the model code invalidates previously cached results."""
+    global _STATS_CODE_FP
+    if _STATS_CODE_FP is None:
+        try:
+            src = ''.join(inspect.getsource(fn) for fn in (
+                compute_icc, _run_mlm, test_significant_metric_averages_mlm,
+                test_significant_metric_averages, _compute_stats_impl))
+        except Exception:
+            src = ''
+        _STATS_CODE_FP = hashlib.sha1(src.encode()).hexdigest()[:12]
+    return _STATS_CODE_FP
+
+
+def _stats_cache_key(data, metric, column_to_compare, use_mlm, group_column,
+                     event_type, cell_type):
+    """Deterministic key from the input data values + parameters + code version.
+    Only the columns the test actually reads are hashed."""
+    cols = [c for c in (metric, column_to_compare, group_column) if c in data.columns]
+    h = hashlib.sha1()
+    h.update(pd.util.hash_pandas_object(data[cols], index=False).values.tobytes())
+    h.update(repr((metric, column_to_compare, bool(use_mlm), group_column,
+                   str(event_type), str(cell_type),
+                   _stats_code_fingerprint())).encode())
+    return h.hexdigest()
+
+
+def clear_stats_cache(disk=True):
+    """Empty the in-memory stats cache (and optionally delete the disk cache)."""
+    _STATS_MEMO.clear()
+    if disk and STATS_CACHE_DIR and os.path.isdir(STATS_CACHE_DIR):
+        for f in os.listdir(STATS_CACHE_DIR):
+            if f.endswith('.pkl'):
+                try:
+                    os.remove(os.path.join(STATS_CACHE_DIR, f))
+                except OSError:
+                    pass
 
 
 def compute_icc(data, metric, group_column):
@@ -673,7 +742,62 @@ def test_significant_metric_averages(data, metric, column_to_compare='experience
 def compute_stats(data, metric, column_to_compare='experience_level', *,
                   use_mlm=True, group_column='mouse_id',
                   event_type='Not specified',
-                  cell_type='Not specified'):
+                  cell_type='Not specified',
+                  use_cache=True):
+    """
+    Caching wrapper around :func:`_compute_stats_impl` (which holds the full
+    description of the returned table). Caching is transparent and returns
+    results identical to the uncached call -- it only avoids re-fitting the
+    same MLM. Pass ``use_cache=False`` to force recomputation.
+
+    See module-level ``STATS_CACHE_DIR`` / ``clear_stats_cache`` to relocate,
+    disable, or wipe the cache.
+    """
+    if not use_cache:
+        return _compute_stats_impl(
+            data, metric, column_to_compare, use_mlm=use_mlm,
+            group_column=group_column, event_type=event_type, cell_type=cell_type)
+
+    try:
+        key = _stats_cache_key(data, metric, column_to_compare, use_mlm,
+                               group_column, event_type, cell_type)
+    except Exception:
+        # If hashing fails for any reason, fall back to an uncached compute
+        # rather than erroring -- correctness over speed.
+        return _compute_stats_impl(
+            data, metric, column_to_compare, use_mlm=use_mlm,
+            group_column=group_column, event_type=event_type, cell_type=cell_type)
+
+    if key in _STATS_MEMO:
+        return _STATS_MEMO[key].copy()
+
+    path = os.path.join(STATS_CACHE_DIR, key + '.pkl') if STATS_CACHE_DIR else None
+    if path and os.path.isfile(path):
+        try:
+            table = pd.read_pickle(path)
+            _STATS_MEMO[key] = table
+            return table.copy()
+        except Exception:
+            pass  # corrupt/unreadable -> recompute
+
+    table = _compute_stats_impl(
+        data, metric, column_to_compare, use_mlm=use_mlm,
+        group_column=group_column, event_type=event_type, cell_type=cell_type)
+
+    _STATS_MEMO[key] = table
+    if path:
+        try:
+            os.makedirs(STATS_CACHE_DIR, exist_ok=True)
+            table.to_pickle(path)
+        except Exception:
+            pass  # disk cache is best-effort; in-memory memo still applies
+    return table.copy()
+
+
+def _compute_stats_impl(data, metric, column_to_compare='experience_level', *,
+                        use_mlm=True, group_column='mouse_id',
+                        event_type='Not specified',
+                        cell_type='Not specified'):
     """
     Unified stats entry point for the ``add_stats_to_plot*`` family.
 
