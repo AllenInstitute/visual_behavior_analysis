@@ -80,7 +80,7 @@ from visual_behavior.visualization.utils import placeAxesOnGrid
 # (y-axis labels/tick labels, leftmost x-tick label that overhangs the spine)
 # lives in the larger setback zone, which is invisible and never touches the
 # red.
-DEFAULT_LABEL_GUTTER_PT = (32, 28)        # (left_pt, top_pt)  -- visible red, letter only
+DEFAULT_LABEL_GUTTER_PT = (20, 28)        # (left_pt, top_pt)  -- visible red, letter only (20pt: fits a 24pt bold letter and keeps plots tight to the letter)
 DEFAULT_DECORATION_PT   = (80, 0)         # (left_pt, top_pt)  -- invisible setback (initial placement)
                                           #   Wide enough so the placement step never INTRUDES into
                                           #   the gutter at seaborn font_scale=1.5 (worst case).
@@ -284,6 +284,119 @@ def auto_fit_left(fig, regions, gutter_pt=DEFAULT_LABEL_GUTTER_PT,
                 ax.set_position([new_x0, pos.y0, new_w, pos.height])
         if verbose:
             print(f'  auto_fit_left shifted panel "{owner}" by {shift*72*w:+.1f} pt')
+
+
+def snug_left_to_gutter(fig, regions, only=None, gutter_pt=DEFAULT_LABEL_GUTTER_PT,
+                        pad_pt=2.0, passes=3, verbose=False):
+    """After plotting, RESCALE each panel's x-extent so its leftmost rendered decoration
+    (y-axis label / tick labels / left-side annotations) sits exactly at gutter_right + pad,
+    with the panel's RIGHT edge held fixed.
+
+    Why this and not auto_fit_left: auto_fit_left *grows* each subplot leftward and caps the
+    shift at the inter-subplot gap, so it cannot snug a multi-column or vertically-stacked
+    panel. This instead scales every sub-axes proportionally about the panel's right edge --
+    columns/gaps are preserved, nothing overlaps -- and it MEASURES the rendered label, so
+    there is never a leftover gap or a clipped label regardless of font/label width.
+
+    Annotations pinned to data coords (e.g. cluster-id labels at a fixed data offset) move
+    when the axes is rescaled, so `passes` (default 3) iterates to convergence.
+
+    only : iterable of panel labels to adjust (None = every owner-tagged panel).
+    gutter_pt : the gutter of the targeted panels (pass the same value used in panel()).
+    Panels whose axes aren't tagged with _panel_grid_owner (bbox-embedded grids) are skipped.
+    """
+    w, h = fig.get_size_inches()
+    gx = gutter_pt[0] / 72.0 / w
+    pad = pad_pt / 72.0 / w
+    for _ in range(max(1, passes)):
+        fig.canvas.draw()
+        r = fig.canvas.get_renderer()
+        by_owner = {}
+        for ax in fig.axes:
+            if getattr(ax, '_panel_grid_label_ax', False):
+                continue
+            owner = getattr(ax, '_panel_grid_owner', None)
+            if owner is not None:
+                by_owner.setdefault(owner, []).append(ax)
+        for owner, axes in by_owner.items():
+            if owner not in regions or (only is not None and owner not in only):
+                continue
+            x0, x1 = regions[owner][0], regions[owner][1]
+            gutter_right = x0 + gx
+            try:
+                bboxes = [ax.get_tightbbox(r).transformed(fig.transFigure.inverted())
+                          for ax in axes]
+            except Exception:
+                continue
+            leftmost = min(bb.x0 for bb in bboxes)
+            spine_left = min(ax.get_position().x0 for ax in axes)
+            decoration_w = spine_left - leftmost           # decoration extends this far left of the spine
+            new_spine_left = gutter_right + pad + decoration_w
+            old_span = x1 - spine_left
+            new_span = x1 - new_spine_left
+            if old_span <= 0 or new_span <= 0 or abs(new_span - old_span) < 1e-4:
+                continue
+            scale = new_span / old_span                    # scale about the fixed right edge x1
+            for ax in axes:
+                pos = ax.get_position()
+                ax.set_position([new_spine_left + (pos.x0 - spine_left) * scale,
+                                 pos.y0, pos.width * scale, pos.height])
+            if verbose:
+                print(f'  snug_left "{owner}": spine {spine_left:.4f} -> {new_spine_left:.4f}')
+
+
+def snug_top_to_gutter(fig, regions, only=None, gutter_pt=DEFAULT_LABEL_GUTTER_PT,
+                       pad_pt=2.0, passes=3, verbose=False):
+    """Vertical analog of `snug_left_to_gutter`. Rescales each named panel about its BOTTOM
+    edge so its topmost rendered decoration (axes title / column header) sits just below the
+    top gutter (gutter_bottom - pad). This removes the empty space left when `title_room` /
+    `has_title` reserves more room than the rendered header actually needs, so the content
+    sits right under the panel letter. The bottom edge (x-tick labels / scale bars) stays put.
+
+    Use on `has_title` panels (column headers, titles). One pass converges for axis-relative
+    titles (`ax.set_title`); data-anchored headers (text at a fixed data y, like a heatmap's
+    `ax.text(y=ymax, ...)`) move when the axes is rescaled, so `passes` iterates to converge.
+
+    only / gutter_pt : as in snug_left_to_gutter. Owner-untagged (bbox-embedded) panels skipped.
+    """
+    w, h = fig.get_size_inches()
+    gy = gutter_pt[1] / 72.0 / h
+    pad = pad_pt / 72.0 / h
+    for _ in range(max(1, passes)):
+        fig.canvas.draw()
+        r = fig.canvas.get_renderer()
+        by_owner = {}
+        for ax in fig.axes:
+            if getattr(ax, '_panel_grid_label_ax', False):
+                continue
+            owner = getattr(ax, '_panel_grid_owner', None)
+            if owner is not None:
+                by_owner.setdefault(owner, []).append(ax)
+        for owner, axes in by_owner.items():
+            if owner not in regions or (only is not None and owner not in only):
+                continue
+            gutter_bottom = 1.0 - regions[owner][2] - gy        # lower edge of the top gutter (bottom-up y)
+            try:
+                bboxes = [ax.get_tightbbox(r).transformed(fig.transFigure.inverted())
+                          for ax in axes]
+            except Exception:
+                continue
+            topmost = max(bb.y1 for bb in bboxes)               # topmost rendered point (title/header)
+            axes_top = max(a.get_position().y1 for a in axes)   # spine top of the top row
+            axes_bottom = min(a.get_position().y0 for a in axes)
+            decoration_h = topmost - axes_top                   # how far the title extends above the spine
+            new_axes_top = (gutter_bottom - pad) - decoration_h
+            old_span = axes_top - axes_bottom
+            new_span = new_axes_top - axes_bottom
+            if old_span <= 0 or new_span <= 0 or abs(new_span - old_span) < 1e-4:
+                continue
+            scale = new_span / old_span                         # scale about the fixed bottom edge
+            for ax in axes:
+                pos = ax.get_position()
+                ax.set_position([pos.x0, axes_bottom + (pos.y0 - axes_bottom) * scale,
+                                 pos.width, pos.height * scale])
+            if verbose:
+                print(f'  snug_top "{owner}": axes_top {axes_top:.4f} -> {new_axes_top:.4f}')
 
 
 def auto_fit_bottom(fig, regions, pad_pt=3.0, verbose=False):

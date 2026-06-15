@@ -2244,7 +2244,7 @@ def plot_coding_score_heatmap_matched(cluster_meta, feature_matrix, sort_by='clu
         # ax[i].set_yticklabels((this_cluster_scores.shape[0]+1, ''), rotation=0, fontsize=12)
         n_cluster_cells = this_cluster_scores.shape[0]
         pct = 100 * n_cluster_cells / total_cells if total_cells else 0
-        ax2.set_ylabel('n=' + str(n_cluster_cells)+')',
+        ax2.set_ylabel('n=' + str(n_cluster_cells),
                        fontsize=10, rotation=90, ha='center', va='bottom')
 
         if i == middle_cluster:
@@ -2266,7 +2266,7 @@ def plot_coding_score_heatmap_matched(cluster_meta, feature_matrix, sort_by='clu
 
     # label feature categories on bottom
     rotation = 0
-    fontsize = 16
+    fontsize = 15
     features = processing.get_feature_labels_for_clustering()
     for f, feature in enumerate(features):
         if feature == 'all-images':
@@ -2274,7 +2274,7 @@ def plot_coding_score_heatmap_matched(cluster_meta, feature_matrix, sort_by='clu
 
     feature_colors, feature_labels_dict = get_feature_colors_and_labels()
 
-    fontsize = 16
+    fontsize = 15
     ymin, ymax = ax[0].get_ylim()
     ymax = ymax + (ymax * 0.22)
     ax[0].text(s=features[0].capitalize(), y=ymax, x=1.5, rotation=rotation, color=feature_colors[0], fontsize=fontsize, va='center',
@@ -2548,7 +2548,7 @@ def plot_percent_cells_per_cluster_per_cre(cluster_meta, col_to_group='cre_line'
 
 
 def plot_percent_cells_per_cluster_per_cre_dominant_feature(cluster_meta, col_to_group='cre_line', match_height=False, square=False,
-                                                            cluster_order=None, save_dir=None, folder='cluster_properties'):
+                                                            cluster_order=None, save_dir=None, folder='cluster_properties', ax=None):
     '''
     plots the percent of cells in each cre line belonging to each cluster as a barplot
     with one axis / row per cre line
@@ -2585,7 +2585,12 @@ def plot_percent_cells_per_cluster_per_cre_dominant_feature(cluster_meta, col_to
             wspace = 0.4
         suffix = ''
 
-    fig, ax = plt.subplots(1, 3, figsize=figsize, sharey=True, sharex=True)
+    if ax is None:
+        fig, ax = plt.subplots(1, 3, figsize=figsize, sharey=True, sharex=True)
+        own_fig = True
+    else:
+        fig = np.atleast_1d(ax)[0].get_figure()
+        own_fig = False
 
     # each cre line
     for i, cre_line in enumerate(utils.get_cre_lines()):
@@ -2618,9 +2623,16 @@ def plot_percent_cells_per_cluster_per_cre_dominant_feature(cluster_meta, col_to
 
     ax[1].set_xlabel('% Cells')
     ax[0].set_ylabel('Cluster ID')
-    sns.despine(fig=fig, top=True, right=True, left=False, bottom=False, offset=None, trim=False)
+    # extend the automatic upper xlim by 5 to leave room for the percent text labels
+    for _a in np.atleast_1d(ax):
+        xmin, xmax = _a.get_xlim()
+        _a.set_xlim(xmin, xmax + 5)
+    # despine per-axis (not fig-level) so embedding in a composite leaves sibling panels untouched
+    for _a in np.atleast_1d(ax):
+        sns.despine(ax=_a, top=True, right=True, left=False, bottom=False, offset=None, trim=False)
 
-    plt.subplots_adjust(hspace=0.5, wspace=wspace)
+    if own_fig:
+        plt.subplots_adjust(hspace=0.5, wspace=wspace)
 
     if save_dir:
         utils.save_figure(fig, figsize, save_dir, folder, 'percent_cells_per_cluster_per_cre_dominant_feature'+suffix)
@@ -3623,7 +3635,9 @@ def plot_population_average_response_for_clusters_as_rows_all_response_types(ima
 
 
 def plot_population_average_response_for_clusters_as_rows_split(multi_session_df, event_type, cluster_order=None,
-                                                                with_pre_change=True, ax=None, save_dir=None, suffix=''):
+                                                                with_pre_change=True, ax=None, save_dir=None, suffix='',
+                                                                cluster_id_fontsize=14, fill_alpha=0.4,
+                                                                cluster_id_xoffset=0.9, arrow_label_fontsize=10):
     '''
     Plot population averages on a specified axis, with each experience level as its own column
     add annotations for image presentation time
@@ -3671,10 +3685,13 @@ def plot_population_average_response_for_clusters_as_rows_split(multi_session_df
     else:
         cluster_ids = np.sort(multi_session_df.cluster_id.unique())
 
-    if ax == None:
+    if ax is None:
         figsize = (3*col_size, 10)
         fig, ax = plt.subplots(len(cluster_ids), 3, figsize=figsize, sharey='row', sharex=True)
         ax = ax.ravel()
+        own_fig = True
+    else:
+        own_fig = False
 
     i = 0
     for a, cluster_id in enumerate(cluster_ids):
@@ -3683,7 +3700,7 @@ def plot_population_average_response_for_clusters_as_rows_split(multi_session_df
             traces = cdf.mean_trace.values
             ax[i] = utils.plot_mean_trace(np.asarray(traces), timestamps, ylabel='Calcium events',
                                           legend_label=hue, color=experience_level_colors[c], interval_sec=0.5,
-                                          xlim_seconds=xlim_seconds, ax=ax[i])
+                                          xlim_seconds=xlim_seconds, alpha=fill_alpha, ax=ax[i])
             ax[i] = utils.plot_flashes_on_trace(ax[i], timestamps, change=change, omitted=omitted, alpha=0.15)
 
             if a == 0: # label top row with experience level
@@ -3736,7 +3753,7 @@ def plot_population_average_response_for_clusters_as_rows_split(multi_session_df
     else:
         label = 'image onset'
     ax[i].annotate(label, xy=(0.2, -0.2), xycoords=ax[i].get_xaxis_transform(), ha="left",
-                   va="top", color=label_color, fontsize=10, clip_on=False)
+                   va="top", color=label_color, fontsize=arrow_label_fontsize, clip_on=False)
     ax[i].annotate('', xy=(0.01, -0.4), xycoords=ax[i].get_xaxis_transform(), xytext=(0.01, 0), fontsize=8,
                    arrowprops=dict(arrowstyle="<-", color=label_color, lw=1), clip_on=False)
 
@@ -3744,12 +3761,13 @@ def plot_population_average_response_for_clusters_as_rows_split(multi_session_df
     for x, cluster_id in enumerate(cluster_ids):
         i = (x * 3)
         ymin, ymax = ax[i].get_ylim()
-        ax[i].annotate(str(cluster_id), xy=(xlim_seconds[0] - 0.9, np.round(ymax / 2, 3)),
-                       xycoords='data', xytext=(xlim_seconds[0] - 0.9, np.round(ymax / 2, 3)), ha='right',
-                       va='center', fontsize=14, clip_on=False, annotation_clip=False, rotation=0)
+        ax[i].annotate(str(cluster_id), xy=(xlim_seconds[0] - cluster_id_xoffset, np.round(ymax / 2, 3)),
+                       xycoords='data', xytext=(xlim_seconds[0] - cluster_id_xoffset, np.round(ymax / 2, 3)), ha='right',
+                       va='center', fontsize=cluster_id_fontsize, clip_on=False, annotation_clip=False, rotation=0)
 
 
-    plt.subplots_adjust(hspace=0)
+    if own_fig:
+        plt.subplots_adjust(hspace=0)
     if save_dir:
         fig_title = 'population_average_as_cols_' + event_type + suffix
         utils.save_figure(fig, figsize, save_dir, 'cluster_properties', fig_title)
@@ -9651,7 +9669,7 @@ def _drop_outlier_traces(traces, outlier_threshold):
 def _draw_trace_panel(ax, mdf, cluster_id, cell_type, kernel_name,
                       ordered_exp, color_map, flash_flags, time_windows,
                       ref, total_per_ct, linewidth, show_row_label,
-                      outlier_threshold=None):
+                      outlier_threshold=None, fill_alpha=0.2):
     """Mean response trace overlay across experience levels. Returns True if drawn.
     Pass `outlier_threshold=None` (default) to skip outlier filtering, or a positive
     number to drop traces whose peak |amplitude| exceeds that many robust SDs above
@@ -9682,7 +9700,7 @@ def _draw_trace_panel(ax, mdf, cluster_id, cell_type, kernel_name,
         ax = utils.plot_mean_trace(
             traces, timestamps, ylabel='Response', legend_label=exp_level,
             color=color_map[exp_level], interval_sec=interval_sec,
-            xlim_seconds=xlim_seconds, linewidth=linewidth, alpha=0.2, ax=ax,
+            xlim_seconds=xlim_seconds, linewidth=linewidth, alpha=fill_alpha, ax=ax,
         )
         drew_anything = True
 
@@ -9731,7 +9749,7 @@ def _add_proportion_pie(parent_ax, proportion, color='dimgray'):
     pie_ax.set_aspect('equal')
     parent_ax.text(
         pie_x0 - 0.02, pie_y0 + pie_h / 2, f'{proportion * 100:.0f}%',
-        transform=parent_ax.transAxes, ha='right', va='center', fontsize=7,
+        transform=parent_ax.transAxes, ha='right', va='center', fontsize=8,
     )
 
 
@@ -9862,6 +9880,12 @@ def plot_mean_cluster_response_profiles(
     linewidth=1,
     x_sb_seconds=0.5,
     outlier_threshold=None,
+    fig=None,
+    bbox=None,
+    wspace=0.45,
+    hspace=0.6,
+    fontsize_scale=1.0,
+    fill_alpha=0.2,
 ):
     """
     Compact version of plot_main_cluster_properties showing only the mean response
@@ -9908,7 +9932,16 @@ def plot_mean_cluster_response_profiles(
     # Smaller overall figure since we only have one panel per cluster column
     fig_w = n_cols * 1.4
     fig_h = n_rows * 1.4
-    fig, axes = plt.subplots(n_rows, n_cols, figsize=(fig_w, fig_h), squeeze=False)
+    if fig is None:
+        fig, axes = plt.subplots(n_rows, n_cols, figsize=(fig_w, fig_h), squeeze=False)
+        own_fig = True
+    else:
+        # embed into a sub-region (bbox) of an existing composite figure
+        axes = np.array(
+            utils.placeAxesOnGrid(fig, dim=(n_rows, n_cols), xspan=[0, 1], yspan=[0, 1],
+                                  bbox=bbox, wspace=wspace, hspace=hspace),
+            dtype=object).reshape(n_rows, n_cols)
+        own_fig = False
 
     for r, cell_type in enumerate(cell_types):
         clusters_list, kernels_list = cluster_kernel_pairs[cell_type]
@@ -9924,7 +9957,7 @@ def plot_mean_cluster_response_profiles(
                 kernel_name, ordered_exp, color_map, flash_flags, time_windows,
                 ref, total_per_ct, linewidth,
                 show_row_label=(c == 0),
-                outlier_threshold=outlier_threshold,
+                outlier_threshold=outlier_threshold, fill_alpha=fill_alpha,
             )
             if not drew:
                 ax.axis('off')
@@ -9952,15 +9985,17 @@ def plot_mean_cluster_response_profiles(
                 ax.text(xlim[0] + x_sb_seconds / 2, -0.17, f"{x_sb_seconds:.1f} s",
                         ha='center', va='top', fontsize=8, transform=trans, clip_on=False)
 
-    plt.subplots_adjust(wspace=0.45, hspace=0.6, top=0.80)
+    if own_fig:
+        plt.subplots_adjust(wspace=0.45, hspace=0.6, top=0.80)
 
     # group titles centered over each column
+    title_dy = 0.09 if own_fig else 0.02
     for c, title in enumerate(group_titles[:n_cols]):
         ax = axes[0, c]
-        bbox = ax.get_position()
-        x_center = (bbox.x0 + bbox.x1) / 2
-        fig.text(x_center, bbox.y1 + 0.09, title,
-                 ha='center', va='bottom', fontsize=11, fontweight='bold')
+        pos = ax.get_position()
+        x_center = (pos.x0 + pos.x1) / 2
+        fig.text(x_center, pos.y1 + title_dy, title,
+                 ha='center', va='bottom', fontsize=11 * fontsize_scale, fontweight='bold')
 
     return fig, axes
 

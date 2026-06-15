@@ -1479,8 +1479,9 @@ def get_time_window_for_kernel(kernels, feature):
 
 
 def get_t_array_for_kernel(kernels, feature, frame_rate):
+    import brain_observatory_utilities.utilities.general_utilities as general_utils
     time_window = get_time_window_for_kernel(kernels, feature)
-    t_array = ophys_formatting.get_time_array(t_start=time_window[0], t_end=time_window[1], sampling_rate=frame_rate,
+    t_array = general_utils.get_time_array(t_start=time_window[0], t_end=time_window[1], sampling_rate=frame_rate,
                                       include_endpoint=False)
     if 'image' in feature:
         t_array = t_array[:-1]  # not sure why we have to do this
@@ -1777,7 +1778,129 @@ def plot_coding_scores_for_cell(cell_dropouts, ax=None):
     return ax
 
 
-def plot_matched_roi_and_coding_scores(cell_metadata, cell_dropouts, experiments_table, 
+def plot_coding_scores_for_cell_with_response_inset(cell_dropouts, datasets, data_type='events', window=[-0.25, 0.75],
+                                                    inset_bounds=None, inset_height=0.4, inset_width_per_sec=0.22,
+                                                    scale_bar_label=None, legend=False, ax=None):
+    '''
+    Same as plot_coding_scores_for_cell (coding scores across experience levels as a barplot, features on x-axis)
+    but adds an inset in the upper right showing this cell's average change-triggered response to images,
+    overlaid across experience levels (one mean trace per experience level, colored by experience level),
+    similar to the change response panels but for a single cell.
+
+    The inset is formatted like ppf.plot_population_average_response_for_clusters_as_rows_split: no axis spines,
+    with small scale bars annotating time (x) and response magnitude (y).
+
+    cell_dropouts must be the results_pivoted rows for a single cell_specimen_id with one row per experience level,
+    and must still include the 'ophys_experiment_id', 'cell_specimen_id' and 'experience_level' columns
+    (i.e. do NOT pre-limit it to feature columns only - the feature columns are selected internally).
+
+    datasets must be a dict mapping ophys_experiment_id -> loaded ophys dataset object (so datasets are loaded
+    once outside this function and reused across replots instead of being reloaded each call).
+
+    By default the inset is anchored flush to the top right of the axes, and its width scales with the
+    duration of the time window (inset_width_per_sec fraction of the axes width per second) so the trace
+    aspect stays consistent across windows. Pass inset_bounds=[x0, y0, w, h] to override entirely.
+    '''
+    from visual_behavior.dimensionality_reduction.clustering import processing
+    from visual_behavior.dimensionality_reduction.clustering import plotting
+
+    features = processing.get_features_for_clustering()
+    feature_labels = processing.get_feature_labels_for_clustering()
+    feature_colors, feature_labels_dict = plotting.get_feature_colors_and_labels()
+
+    # unstack coding scores for plot
+    coding_scores = cell_dropouts[features+['experience_level']].set_index('experience_level')
+    coding_scores = pd.DataFrame(coding_scores.unstack(), columns=['coding_score'])
+    coding_scores = coding_scores.reset_index()
+    coding_scores = coding_scores.rename(columns={'level_0':'feature'})
+    coding_scores['coding_score'] = np.abs(coding_scores.coding_score) # make sure they are positive
+
+    experience_levels = utils.get_experience_levels()
+    experience_level_colors = utils.get_experience_level_colors()
+
+    if ax is None:
+        fig, ax = plt.subplots(figsize=(6, 3))
+    ax = sns.barplot(data=coding_scores, x='feature', y='coding_score', order=features,
+                     hue='experience_level', hue_order=experience_levels, palette=experience_level_colors,
+                     alpha=0.7, width=0.7, ax=ax)
+    ax.set_xlabel('')
+    ax.set_xticklabels([label.capitalize() for label in feature_labels])
+    [t.set_color(x) for (x,t) in zip(feature_colors, ax.xaxis.get_ticklabels())]
+    ax.set_ylabel('Coding score')
+    ax.set_ylim(0,1)
+    if legend:
+        # legend in the upper MIDDLE so it does not sit on top of the inset (which is in the upper right)
+        ax.legend(loc='upper center', bbox_to_anchor=(0.5, 1), fontsize='xx-small', title='')
+    else:
+        ax.legend().remove()
+
+    # inset showing this cell's average image response across experience levels
+    ylabel = 'dF/F' if data_type == 'dff' else 'response'
+    # anchor the inset flush to the top right; scale its width with the window duration
+    if inset_bounds is None:
+        inset_w = inset_width_per_sec * (window[1] - window[0])
+        inset_bounds = [1 - inset_w, 1 - inset_height, inset_w, inset_height]
+    inset_ax = ax.inset_axes(inset_bounds)
+    cell_data = None
+    for experience_level, color in zip(experience_levels, experience_level_colors):
+        exp_rows = cell_dropouts[cell_dropouts.experience_level == experience_level]
+        if len(exp_rows) == 0:  # cell not matched in this experience level
+            continue
+        ophys_experiment_id = exp_rows.ophys_experiment_id.values[0]
+        cell_specimen_id = exp_rows.cell_specimen_id.values[0]
+
+        # use pre-loaded dataset and get image-triggered responses for this cell
+        dataset = datasets[ophys_experiment_id]
+        sdf = loading.get_stimulus_response_df(dataset, time_window=window, interpolate=True, output_sampling_rate=30,
+                                               data_type=data_type, event_type='images', load_from_file=True)
+        cell_data = sdf[(sdf.cell_specimen_id == cell_specimen_id) & (sdf.is_change == False)]
+        if len(cell_data) == 0:  # cell has no responses for this experience level
+            continue
+
+        inset_ax = utils.plot_mean_trace(cell_data.trace.values, cell_data.trace_timestamps.values[0],
+                                         ylabel=ylabel, legend_label=None, color=color, interval_sec=0.5,
+                                         xlim_seconds=window, plot_sem=True, ax=inset_ax)
+    # add stimulus / change shading once using the last available timestamps
+    if cell_data is not None:
+        inset_ax = utils.plot_flashes_on_trace(inset_ax, cell_data.trace_timestamps.values[0],
+                                               change=False, omitted=False, alpha=0.15)
+
+    # format inset like the population-average plots: drop all spines/ticks and add scale bars
+    inset_ax.set_xlim(window)
+    ymin, ymax = inset_ax.get_ylim()
+    if ymax < 0.01:
+        ymax = 0.01
+    ymax = ymax * 1.2
+    inset_ax.set_ylim(ymin, ymax)
+    inset_ax.set_xlabel('')
+    inset_ax.set_ylabel('')
+    inset_ax.set_xticks([])
+    inset_ax.set_yticks([])
+    sns.despine(ax=inset_ax, top=True, right=True, left=True, bottom=True)
+    inset_ax.tick_params(which='both', bottom=False, top=False, right=False, left=False,
+                         labelbottom=False, labeltop=False, labelright=False, labelleft=False)
+
+    # y scale bar for response magnitude (vertical bar spanning 0 - 0.4 of axes height)
+    if scale_bar_label is None:
+        scale_bar_label = str(np.round(ymax * 0.4, 3))
+    inset_ax.axvline(x=window[0] - 0.2, ymin=ymin, ymax=0.4, color='k', linewidth=1.3, clip_on=False)
+    inset_ax.annotate(scale_bar_label, xy=(window[0] - 0.25, np.round(ymax / 3, 3)),
+                      xycoords='data', ha='right', va='center',
+                      fontsize=8, clip_on=False, annotation_clip=False, rotation=90)
+
+    # x scale bar for time (0.5 s horizontal bar below the trace)
+    xmax_frac = 0.5 / (np.abs(window[0]) + window[1])  # 0.5 s as a fraction of the total window
+    y_time = (ymax - ymin) * 0.15
+    y_label = -(ymax - ymin) * 0.25
+    inset_ax.axhline(y=-y_time, xmin=0, xmax=xmax_frac, color='k', linewidth=1.3, clip_on=False)
+    inset_ax.annotate('0.5 s', xy=(window[0] - 0.1 + 0.5, y_label),
+                      xycoords='data', ha='center', va='top',
+                      fontsize=8, clip_on=False, annotation_clip=False)
+
+    return ax
+
+
+def plot_matched_roi_and_coding_scores(cell_metadata, cell_dropouts, experiments_table,
                                         folder='single_cell_examples', save_dir=None):
     """
     This function will plot the following panels:
@@ -2112,13 +2235,17 @@ def filter_steady_state_presentations(sdf, n_flashes_postchange=4, flash_period=
 
 
 def plot_running_example_cell(example_sdf, cell_specimen_id, cell_type, rmi,
-                              run_thresh=2.0, save_dir=None, save_name=None):
+                              run_thresh=2.0, save_dir=None, save_name=None, axes=None):
     """Filter `example_sdf` to one cell (+ steady-state), compute Pearson correlation,
     and plot scatter (mean_response vs mean_running_speed) + trace overlay
     (run vs stationary trials).
 
     `example_sdf` must be the output of loading.get_stimulus_response_df(...) for the
     experiment containing the cell. Returns (fig, (r, p)).
+
+    `axes`: optional list/array of two axes [scatter_ax, trace_ax] to draw into (for
+    embedding in a composite). When provided, the function skips figure creation,
+    tight_layout/subplots_adjust, and saving.
     """
     from scipy import stats as scipy_stats
 
@@ -2127,7 +2254,11 @@ def plot_running_example_cell(example_sdf, cell_specimen_id, cell_type, rmi,
     d = cell_sdf[['mean_response', 'mean_running_speed']].dropna()
     r, p = scipy_stats.pearsonr(d['mean_response'].values, d['mean_running_speed'].values)
 
-    fig, axes = plt.subplots(1, 2, figsize=(10, 4))
+    own_fig = axes is None
+    if own_fig:
+        fig, axes = plt.subplots(1, 2, figsize=(10, 4))
+    else:
+        fig = axes[0].figure
     axes[0].scatter(cell_sdf['mean_response'], cell_sdf['mean_running_speed'],
                     s=8, alpha=0.4, color='k')
     axes[0].set_xlabel('Mean response (events)')
@@ -2149,10 +2280,12 @@ def plot_running_example_cell(example_sdf, cell_specimen_id, cell_type, rmi,
     axes[1].legend(fontsize=8, frameon=False)
     axes[1].set_title(f'{cell_type} cell {cell_specimen_id}\nRMI = {rmi:.2f}')
 
-    sns.despine()
-    plt.tight_layout()
-    fig.subplots_adjust(wspace=0.4)
-    if save_dir is not None and save_name is not None:
-        fig.savefig(os.path.join(save_dir, save_name + '.png'), dpi=200, bbox_inches='tight')
-        fig.savefig(os.path.join(save_dir, save_name + '.pdf'), bbox_inches='tight')
+    sns.despine(ax=axes[0])
+    sns.despine(ax=axes[1])
+    if own_fig:
+        plt.tight_layout()
+        fig.subplots_adjust(wspace=0.4)
+        if save_dir is not None and save_name is not None:
+            fig.savefig(os.path.join(save_dir, save_name + '.png'), dpi=200, bbox_inches='tight')
+            fig.savefig(os.path.join(save_dir, save_name + '.pdf'), bbox_inches='tight')
     return fig, (r, p)

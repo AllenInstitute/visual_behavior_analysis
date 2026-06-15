@@ -73,15 +73,10 @@ def placeAxesOnGrid(fig, dim=[1, 1], xspan=[0, 1], yspan=[0, 1], wspace=None, hs
         xspan = [bx0 + xspan[0] * (bx1 - bx0), bx0 + xspan[1] * (bx1 - bx0)]
         yspan = [by0 + yspan[0] * (by1 - by0), by0 + yspan[1] * (by1 - by0)]
 
-    # Use a finer grid when confined to a bbox sub-rectangle: int(100*x) flooring
-    # of a narrow embedded region makes adjacent columns round to unequal cell
-    # counts (e.g. the first heatmap column comes out thinner). 1000 keeps them
-    # even. Full-figure calls (bbox is None) keep the original 100-cell grid.
-    _res = 1000 if bbox is not None else 100
-    outer_grid = gridspec.GridSpec(_res, _res)
+    outer_grid = gridspec.GridSpec(100, 100)
     inner_grid = gridspec.GridSpecFromSubplotSpec(dim[0], dim[1],
-                                                  subplot_spec=outer_grid[int(_res * yspan[0]):int(_res * yspan[1]),
-                                                  int(_res * xspan[0]):int(_res * xspan[1])],
+                                                  subplot_spec=outer_grid[int(100 * yspan[0]):int(100 * yspan[1]),
+                                                  int(100 * xspan[0]):int(100 * xspan[1])],
                                                   wspace=wspace, hspace=hspace,
                                                   width_ratios = width_ratios, height_ratios = height_ratios)  # flake8: noqa: E999
 

@@ -2414,7 +2414,8 @@ def plot_metric_distribution_by_experience(metrics_table, metric, event_type, da
         # loc = 'upper left'
     order = np.sort(metrics_table['experience_level'].unique())
     colors = utils.get_experience_level_colors()
-    if ax is None:
+    own_fig = ax is None
+    if own_fig:
         if horiz:
             figsize = (8, 2.25)
             fig, ax = plt.subplots(1, 3, figsize=figsize, sharex=False, sharey=False)
@@ -2606,7 +2607,8 @@ def plot_metric_distribution_by_experience(metrics_table, metric, event_type, da
             plt.suptitle(suptitle, x=0.52, y=0.98, fontsize=18)
         else:
             plt.suptitle(suptitle, x=0.52, y=0.96, fontsize=18)
-    fig.subplots_adjust(hspace=0.4, wspace=0.4)
+    if own_fig:
+        fig.subplots_adjust(hspace=0.4, wspace=0.4)
     if save_dir:
         filename = _clean_filename(event_type + '_' + data_type + '_' + metric + '_distribution' + suffix)
         stats_filename = _clean_filename(event_type + '_' + data_type + '_' + metric + suffix)
@@ -3310,7 +3312,8 @@ def plot_metric_across_cohorts(metrics_table, metric,  ylabel, x_val='binned_dep
     else:
         width = 7
     i = 0 
-    if ax is None:
+    own_fig = ax is None
+    if own_fig:
         figsize=(width, 8)
         fig, ax = plt.subplots(3, 3, figsize=figsize, gridspec_kw={'width_ratios':width_ratios})
         ax = ax.ravel()
@@ -3370,7 +3373,8 @@ def plot_metric_across_cohorts(metrics_table, metric,  ylabel, x_val='binned_dep
             panel_stats = insert_stats_metadata(panel_stats, cohort=project_code, condition=x_val)
             combined_stats = pd.concat([combined_stats, panel_stats])
             i+=1
-    plt.subplots_adjust(wspace=0.5, hspace=0.35)
+    if own_fig:
+        plt.subplots_adjust(wspace=0.5, hspace=0.35)
 
     if save_dir:
         filename = _clean_filename(metric+'_by_cohort_x_'+x_val)
@@ -4868,7 +4872,9 @@ def plot_metric_heatmap_area_and_depth_by_cell_type(
         exp_col='experience_level', aggregate='mean',
         vmax=None, multi_star=False,
         suptitle=None, suffix='', save_dir=None, folder='response_metrics',
-        group_column='mouse_id', event_type='Not specified'):
+        group_column='mouse_id', event_type='Not specified',
+        fig=None, panel_bbox=None, main_width_ratios=(1.6, 0.5), heatmap_cbar_gap_in=0.55, cbar_width_in=None,
+        cbar_height_in=None, cbar_fontsize=None, annot_fontsize=8):
     """
     Two-row figure with the same panel layout as plot_metric_heatmap_grid_by_cell_type_and_metric
     but groupby_col differs by row:
@@ -5002,8 +5008,17 @@ def plot_metric_heatmap_area_and_depth_by_cell_type(
     # base padding + per-row term that scales with total heatmap rows across both groupings
     fig_h = 0.30 * total_heatmap_rows + 1.4
     figsize = (fig_w, fig_h)
-    fig = plt.figure(figsize=figsize)
-    outer = gridspec.GridSpec(1, 2, width_ratios=[1.6, 0.5], wspace=0.4)
+    own_fig = fig is None
+    if own_fig:
+        fig = plt.figure(figsize=figsize)
+    if panel_bbox is not None:
+        _parent = gridspec.GridSpec(1000, 1000)
+        _bx0, _by0, _bx1, _by1 = panel_bbox
+        _sub = _parent[int(1000 * _by0):int(1000 * _by1), int(1000 * _bx0):int(1000 * _bx1)]
+        outer = gridspec.GridSpecFromSubplotSpec(1, 2, subplot_spec=_sub,
+                                                 width_ratios=list(main_width_ratios), wspace=0.4)
+    else:
+        outer = gridspec.GridSpec(1, 2, width_ratios=list(main_width_ratios), wspace=0.4)
     # 2-row main grid; rows are sized proportionally to nrows of each grouping so cells in the
     # area row and depth row end up roughly the same height.
     main_gs = gridspec.GridSpecFromSubplotSpec(
@@ -5011,7 +5026,9 @@ def plot_metric_heatmap_area_and_depth_by_cell_type(
         height_ratios=nrows_per_grouping,
         hspace=0.35, wspace=0.3)
 
-    fig.subplots_adjust(left=max(0.10, 1.10 / fig_w))
+    if own_fig:
+        fig.subplots_adjust(left=max(0.10, 1.10 / fig_w))
+    fig_w, fig_h = fig.get_size_inches()
 
     heat_axes = np.empty((n_groupings, n_cell_types), dtype=object)
     for g, (gcol, _) in enumerate(groupings):
@@ -5033,11 +5050,11 @@ def plot_metric_heatmap_area_and_depth_by_cell_type(
                     frac = val / vmax_shared if vmax_shared > 0 else 0.0
                     text_color = 'black' if frac < 0.6 else 'white'
                     ax.text(c + 0.5, r + 0.42, f'{val:.2f}',
-                            ha='center', va='center', fontsize=8, color=text_color)
+                            ha='center', va='center', fontsize=annot_fontsize, color=text_color)
                     n = cell_n.get((g, i, r, c), 0)
                     if n:
                         ax.text(c + 0.5, r + 0.72, f'n={n}',
-                                ha='center', va='center', fontsize=6, color=text_color)
+                                ha='center', va='center', fontsize=annot_fontsize - 2, color=text_color)
 
             col_trans = blended_transform_factory(ax.transData, ax.transAxes)
             row_trans = blended_transform_factory(ax.transAxes, ax.transData)
@@ -5064,7 +5081,7 @@ def plot_metric_heatmap_area_and_depth_by_cell_type(
             ax.set_xticks(np.arange(ncols) + 0.5)
             is_bottom_row = (g == n_groupings - 1)
             if is_bottom_row:
-                ax.set_xticklabels(exp_abbrev, fontsize=10)
+                ax.set_xticklabels(exp_abbrev)
                 for lbl, color in zip(ax.get_xticklabels(), exp_colors):
                     lbl.set_color(color)
             else:
@@ -5074,7 +5091,7 @@ def plot_metric_heatmap_area_and_depth_by_cell_type(
             ax.set_yticks(np.arange(nrows_g) + 0.5)
             is_leftmost = (i == 0)
             if is_leftmost:
-                ax.set_yticklabels([str(d) for d in group_order], fontsize=9)
+                ax.set_yticklabels([str(d) for d in group_order])
             else:
                 ax.set_yticklabels([''] * nrows_g)
                 ax.tick_params(labelleft=False)
@@ -5082,7 +5099,7 @@ def plot_metric_heatmap_area_and_depth_by_cell_type(
 
             # cell-type as column title only on top row
             if g == 0:
-                ax.set_title(cell_type, fontsize=12, pad=10)
+                ax.set_title(cell_type, pad=10)
 
             for side in ('top', 'bottom', 'left', 'right'):
                 ax.spines[side].set_visible(True)
@@ -5091,18 +5108,18 @@ def plot_metric_heatmap_area_and_depth_by_cell_type(
 
     # outside-left rotated labels per grouping ("Area", "Depth")
     fig.canvas.draw()
-    ct_offset_inches = 0.55
+    ct_offset_inches = 0.95
     for g, (_, glabel) in enumerate(groupings):
         bbox = heat_axes[g, 0].get_position()
         x_pos = max(bbox.x0 - ct_offset_inches / fig_w, 0.005)
         fig.text(x_pos, (bbox.y0 + bbox.y1) / 2,
-                 glabel, rotation=90, ha='left', va='center', fontsize=12)
+                 glabel, rotation=90, ha='left', va='center')
 
     # single shared cbar set on the right, vertically centered on the full heatmap area
-    cbar_h_in = 0.9
-    cbar_w_in = 0.08
+    cbar_h_in = cbar_height_in if cbar_height_in is not None else 0.9
+    cbar_w_in = cbar_width_in if cbar_width_in is not None else 0.08
     cbar_gap_in = 0.05
-    gap_to_heatmap_in = 0.55
+    gap_to_heatmap_in = heatmap_cbar_gap_in
     cbar_h_frac = cbar_h_in / fig_h
     cbar_w_frac = cbar_w_in / fig_w
     cbar_gap_frac = cbar_gap_in / fig_w
@@ -5127,11 +5144,11 @@ def plot_metric_heatmap_area_and_depth_by_cell_type(
         # as the metric label on the right of the rightmost cbar)
         lax.text(0.5, -0.04, exp_levels[k], transform=lax.transAxes,
                  rotation=270, ha='center', va='top',
-                 fontsize=10, color=exp_colors[k])
+                 fontsize=cbar_fontsize or 10, color=exp_colors[k])
         if k == 0:
             lax.set_yticks([0.0, vmax_shared])
-            lax.set_yticklabels(['0', f'{vmax_shared:.2f}'], fontsize=9)
-            lax.tick_params(labelsize=9)
+            lax.set_yticklabels(['0', f'{vmax_shared:.2f}'], fontsize=cbar_fontsize or 9)
+            lax.tick_params(labelsize=cbar_fontsize or 9)
         else:
             lax.set_yticks([])
         if k == len(exp_levels) - 1:
@@ -5143,7 +5160,14 @@ def plot_metric_heatmap_area_and_depth_by_cell_type(
             lax.spines[side].set_linewidth(0.5)
 
     # metric label as suptitle on top of figure (replaces the previous y-axis "ylabel")
-    fig.suptitle(suptitle if suptitle else metric_label, fontsize=14, x=0.38, y=1.05)
+    if own_fig:
+        fig.suptitle(suptitle if suptitle else metric_label, x=0.38, y=1.05)
+    else:
+        _hx0 = min(heat_axes[0, i].get_position().x0 for i in range(n_cell_types))
+        _hx1 = max(heat_axes[0, i].get_position().x1 for i in range(n_cell_types))
+        _hy1 = max(heat_axes[0, i].get_position().y1 for i in range(n_cell_types))
+        fig.text((_hx0 + _hx1) / 2, _hy1 + 0.020, suptitle if suptitle else metric_label,
+                 ha='center', va='bottom')
 
     if save_dir:
         filename = _clean_filename('metric_heatmap_area_and_depth_' + metric + '_' + aggregate + suffix)
@@ -5417,7 +5441,9 @@ def plot_experience_modulation_heatmap_area_and_depth_by_cell_type(
         area_label='Visual area', depth_label='Imaging depth (um)',
         all_comparisons=True, vmax=None, multi_star=False,
         suptitle=None, suffix='', save_dir=None, folder='response_metrics',
-        group_column='mouse_id'):
+        group_column='mouse_id',
+        fig=None, panel_bbox=None, main_width_ratios=(1.6, 0.5), heatmap_cbar_gap_in=0.55, cbar_width_in=None,
+        cbar_height_in=None, cbar_fontsize=None, annot_fontsize=8):
     """
     Combines plot_experience_modulation_index_depth_heatmap_by_cell_type with the area + depth
     layout of plot_metric_heatmap_area_and_depth_by_cell_type. Two rows of panels:
@@ -5571,13 +5597,24 @@ def plot_experience_modulation_heatmap_area_and_depth_by_cell_type(
     fig_w = 2.2 * n_cell_types + 2.1
     fig_h = 0.30 * total_heatmap_rows + 1.4
     figsize = (fig_w, fig_h)
-    fig = plt.figure(figsize=figsize)
-    outer = gridspec.GridSpec(1, 2, width_ratios=[1.6, 0.5], wspace=0.4)
+    own_fig = fig is None
+    if own_fig:
+        fig = plt.figure(figsize=figsize)
+    if panel_bbox is not None:
+        _parent = gridspec.GridSpec(1000, 1000)
+        _bx0, _by0, _bx1, _by1 = panel_bbox
+        _sub = _parent[int(1000 * _by0):int(1000 * _by1), int(1000 * _bx0):int(1000 * _bx1)]
+        outer = gridspec.GridSpecFromSubplotSpec(1, 2, subplot_spec=_sub,
+                                                 width_ratios=list(main_width_ratios), wspace=0.4)
+    else:
+        outer = gridspec.GridSpec(1, 2, width_ratios=list(main_width_ratios), wspace=0.4)
     main_gs = gridspec.GridSpecFromSubplotSpec(
         n_groupings, n_cell_types, subplot_spec=outer[0],
         height_ratios=nrows_per_grouping,
         hspace=0.35, wspace=0.3)
-    fig.subplots_adjust(left=max(0.10, 1.10 / fig_w))
+    if own_fig:
+        fig.subplots_adjust(left=max(0.10, 1.10 / fig_w))
+    fig_w, fig_h = fig.get_size_inches()
 
     heat_axes = np.empty((n_groupings, n_cell_types), dtype=object)
     for g, (gcol, _) in enumerate(groupings):
@@ -5600,11 +5637,11 @@ def plot_experience_modulation_heatmap_area_and_depth_by_cell_type(
                     frac = abs(val) / vmax_shared if vmax_shared > 0 else 0.0
                     text_color = 'black' if frac < 0.55 else 'white'
                     ax.text(c + 0.5, r + 0.42, f'{val:.2f}',
-                            ha='center', va='center', fontsize=8, color=text_color)
+                            ha='center', va='center', fontsize=annot_fontsize, color=text_color)
                     n = cell_n.get((g, i, r, c), 0)
                     if n:
                         ax.text(c + 0.5, r + 0.72, f'n={n}',
-                                ha='center', va='center', fontsize=6, color=text_color)
+                                ha='center', va='center', fontsize=annot_fontsize - 2, color=text_color)
 
             col_trans = blended_transform_factory(ax.transData, ax.transAxes)
             row_trans = blended_transform_factory(ax.transAxes, ax.transData)
@@ -5633,7 +5670,7 @@ def plot_experience_modulation_heatmap_area_and_depth_by_cell_type(
             if is_bottom_row:
                 # turn 'F N' / 'N+ N' / 'F N+' into 'F vs. N' / 'N+ vs. N' / 'F vs. N+'
                 xtick_labels = [c.split(' ')[0] + ' vs. ' + c.split(' ')[1] for c in value_vars]
-                ax.set_xticklabels(xtick_labels, fontsize=10, rotation=45, ha='right',
+                ax.set_xticklabels(xtick_labels, rotation=45, ha='right',
                                    rotation_mode='anchor')
             else:
                 ax.set_xticklabels([''] * ncols)
@@ -5642,14 +5679,14 @@ def plot_experience_modulation_heatmap_area_and_depth_by_cell_type(
             ax.set_yticks(np.arange(nrows_g) + 0.5)
             is_leftmost = (i == 0)
             if is_leftmost:
-                ax.set_yticklabels([str(d) for d in group_order], fontsize=9)
+                ax.set_yticklabels([str(d) for d in group_order])
             else:
                 ax.set_yticklabels([''] * nrows_g)
                 ax.tick_params(labelleft=False)
             ax.tick_params(left=is_leftmost)
 
             if g == 0:
-                ax.set_title(cell_type, fontsize=12, pad=10)
+                ax.set_title(cell_type, pad=10)
 
             for side in ('top', 'bottom', 'left', 'right'):
                 ax.spines[side].set_visible(True)
@@ -5658,18 +5695,18 @@ def plot_experience_modulation_heatmap_area_and_depth_by_cell_type(
 
     # outside-left rotated labels per grouping ("Visual area", "Imaging depth")
     fig.canvas.draw()
-    ct_offset_inches = 0.55
+    ct_offset_inches = 0.95
     for g, (_, glabel) in enumerate(groupings):
         bbox = heat_axes[g, 0].get_position()
         x_pos = max(bbox.x0 - ct_offset_inches / fig_w, 0.005)
         fig.text(x_pos, (bbox.y0 + bbox.y1) / 2,
-                 glabel, rotation=90, ha='left', va='center', fontsize=12)
+                 glabel, rotation=90, ha='left', va='center')
 
     # right-side cbar set: one vertical cbar per comparison, each with its own diverging cmap.
-    cbar_h_in = 0.81
-    cbar_w_in = 0.072
+    cbar_h_in = cbar_height_in if cbar_height_in is not None else 0.81
+    cbar_w_in = cbar_width_in if cbar_width_in is not None else 0.072
     cbar_gap_in = 0.045
-    gap_to_heatmap_in = 0.55
+    gap_to_heatmap_in = heatmap_cbar_gap_in
     cbar_h_frac = cbar_h_in / fig_h
     cbar_w_frac = cbar_w_in / fig_w
     cbar_gap_frac = cbar_gap_in / fig_w
@@ -5679,11 +5716,6 @@ def plot_experience_modulation_heatmap_area_and_depth_by_cell_type(
     cbar_y0 = (top_bbox.y1 + bot_bbox.y0) / 2 - cbar_h_frac / 2
     rightmost_bbox = heat_axes[0, n_cell_types - 1].get_position()
     cbar_x_start = rightmost_bbox.x1 + gap_to_heatmap_in / fig_w
-    # capture the original left-edge as the label anchor, then nudge the cbars right so the
-    # value tick labels (on the leftmost cbar) have room before the "Experience modulation" label
-    label_anchor_x = cbar_x_start
-    cbar_x_start += 0.02
-
     for k, comp in enumerate(value_vars):
         x = cbar_x_start + k * (cbar_w_frac + cbar_gap_frac)
         lax = fig.add_axes([x, cbar_y0, cbar_w_frac, cbar_h_frac])
@@ -5695,35 +5727,39 @@ def plot_experience_modulation_heatmap_area_and_depth_by_cell_type(
         # rotated 90 so they read bottom-to-top alongside each cbar's vertical orientation
         neg_token, pos_token = comp.split(' ')
         lax.text(0.5, 1.10, full_name[pos_token], transform=lax.transAxes,
-                 ha='center', va='bottom', rotation=90,
-                 fontsize=9, color=color_for[pos_token])
+                 ha='center', va='bottom', rotation=270,
+                 fontsize=cbar_fontsize or 9, color=color_for[pos_token])
         lax.text(0.5, -0.03, full_name[neg_token], transform=lax.transAxes,
-                 ha='center', va='top', rotation=90,
-                 fontsize=9, color=color_for[neg_token])
+                 ha='center', va='top', rotation=270,
+                 fontsize=cbar_fontsize or 9, color=color_for[neg_token])
         if k == 0:
             lax.set_yticks([vmin_shared, 0, vmax_shared])
-            lax.set_yticklabels([f'{vmin_shared:.1f}', '0', f'{vmax_shared:.1f}'], fontsize=8)
-            lax.tick_params(labelsize=8)
+            lax.set_yticklabels([f'{vmin_shared:.1f}', '0', f'{vmax_shared:.1f}'], fontsize=cbar_fontsize or 8)
+            lax.tick_params(labelsize=cbar_fontsize or 8)
         else:
             lax.set_yticks([])
+        if k == len(value_vars) - 1:
+            lax.yaxis.set_label_position('right')
+            lax.set_ylabel('Experience modulation', fontsize=11, rotation=270, labelpad=15)
         for side in ('top', 'bottom', 'left', 'right'):
             lax.spines[side].set_visible(True)
             lax.spines[side].set_color('black')
             lax.spines[side].set_linewidth(0.5)
 
-    # vertical "Experience modulation" label on the LEFT of the cbar group (just outside the
-    # value tick labels of the leftmost cbar). Rotated 90 so it reads bottom-to-top, matching
-    # the experience-level endpoint labels.
-    fig.text(label_anchor_x - 0.02, cbar_y0 + cbar_h_frac / 2,
-             'Experience modulation', rotation=90,
-             ha='right', va='center', fontsize=9)
-
     # map event_type ('images'/'omissions'/'changes') to the singular form used in the title
     event_label_map = {'images': 'image', 'omissions': 'omission', 'changes': 'change',
                        'all-images': 'image'}
     event_label = event_label_map.get(event_type, event_type.rstrip('s'))
-    fig.suptitle(suptitle if suptitle else f'Experience modulation - {event_label} response',
-                 fontsize=14, x=0.38, y=1.05)
+    if own_fig:
+        fig.suptitle(suptitle if suptitle else 'Experience modulation',
+                     x=0.38, y=1.05)
+    else:
+        _hx0 = min(heat_axes[0, i].get_position().x0 for i in range(n_cell_types))
+        _hx1 = max(heat_axes[0, i].get_position().x1 for i in range(n_cell_types))
+        _hy1 = max(heat_axes[0, i].get_position().y1 for i in range(n_cell_types))
+        fig.text((_hx0 + _hx1) / 2, _hy1 + 0.020,
+                 suptitle if suptitle else 'Experience modulation',
+                 ha='center', va='bottom')
 
     if save_dir:
         filename = _clean_filename(('experience_modulation_heatmap_area_and_depth_by_cell_type_'
@@ -5925,14 +5961,18 @@ def get_change_in_behavior_and_average_cell_metric_across_mice(cell_metrics_tabl
 def plot_correlation_of_behavior_and_cell_metrics_delta(
         metric_data, behavior_metric, cell_metric,
         metric_label=None, behavior_label=None, suptitle=None,
-        show_fit=False, 
-        save_dir=None, folder='physio_behavior_correlation'):
+        show_fit=False,
+        save_dir=None, folder='physio_behavior_correlation', ax=None):
 
     '''Plot the difference in metrics (F to N) for behavior vs. neural activity.
 
     show_fit: if True, overlay a dashed best-fit line per panel. Default False because
     these data are typically scattered and a fit line implies a relationship the data
     doesn't support.
+
+    ax: optional list/array of three axes (one per cell type) to draw into (for embedding
+    in a composite). When provided, the function skips figure creation, suptitle,
+    subplots_adjust, and saving.
     '''
     from scipy.stats import pearsonr
 
@@ -5948,8 +5988,10 @@ def plot_correlation_of_behavior_and_cell_metrics_delta(
 
     cell_types = utils.get_cell_types()
 
-    figsize = (12, 3)
-    fig, ax = plt.subplots(1, 3, figsize=figsize, sharex=True, sharey=True)
+    own_fig = ax is None
+    if own_fig:
+        figsize = (12, 3)
+        fig, ax = plt.subplots(1, 3, figsize=figsize, sharex=True, sharey=True)
     for i, cell_type in enumerate(cell_types):
         ct_data = metric_data[metric_data.cell_type == cell_type]
         sns.scatterplot(data=ct_data, x=x, y=y, ax=ax[i])
@@ -5974,13 +6016,14 @@ def plot_correlation_of_behavior_and_cell_metrics_delta(
         ax[i].set_ylabel(metric_label+'\nChange from F to N')
         ax[i].axhline(y=0, linestyle='--', color='gray', linewidth=1)
         ax[i].axvline(x=0, linestyle='--', color='gray', linewidth=1)
-    if suptitle is not None: 
-        plt.suptitle(suptitle, x=0.5, y=1.2, fontsize=20)
-    plt.subplots_adjust(wspace=0.3)
+    if own_fig:
+        if suptitle is not None:
+            plt.suptitle(suptitle, x=0.5, y=1.2, fontsize=20)
+        plt.subplots_adjust(wspace=0.3)
 
-    if save_dir:
-        filename = _clean_filename('difference_' + cell_metric + '_' + behavior_metric)
-        utils.save_figure(fig, figsize, save_dir, folder, _clean_filename(filename))
+        if save_dir:
+            filename = _clean_filename('difference_' + cell_metric + '_' + behavior_metric)
+            utils.save_figure(fig, figsize, save_dir, folder, _clean_filename(filename))
 
 
 

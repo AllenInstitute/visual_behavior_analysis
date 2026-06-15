@@ -2848,6 +2848,19 @@ def plot_weights_and_coding_score_heatmaps_for_experience_levels_main_figure(ker
     standalone = fig is None
     if standalone:
         fig = plt.figure(figsize=figsize, facecolor='white')
+
+    def _cax(_xs, _ys):
+        # Thin colorbars vanish when placeAxesOnGrid's GridSpec(100,100) floors a
+        # ~0.02-wide xspan remapped into a narrow bbox. When embedding (bbox set;
+        # the parent composite called fig_setup, so coords are raw figure fraction),
+        # place the colorbar axes directly to preserve its width. Standalone keeps
+        # the original placeAxesOnGrid path.
+        if bbox is None:
+            return utils.placeAxesOnGrid(fig, dim=(1, 1), xspan=_xs, yspan=_ys, bbox=bbox)
+        _bx0, _by0, _bx1, _by1 = bbox
+        _x = [_bx0 + _xs[0] * (_bx1 - _bx0), _bx0 + _xs[1] * (_bx1 - _bx0)]
+        _y = [_by0 + _ys[0] * (_by1 - _by0), _by0 + _ys[1] * (_by1 - _by0)]
+        return fig.add_axes([_x[0], 1 - _y[1], _x[1] - _x[0], _y[1] - _y[0]])
     # loop through experience levels
     for c, col in enumerate(col_conditions):
         col_weights = kernel_weights[kernel_weights[col_condition] == col]
@@ -2937,13 +2950,13 @@ def plot_weights_and_coding_score_heatmaps_for_experience_levels_main_figure(ker
     last_x_val = ((c * .1) * 2.5) + 0.2
     xspan = (last_x_val, last_x_val + 0.02)
     # weights colorbar
-    cax = utils.placeAxesOnGrid(fig, dim=(1, 1), xspan=xspan, yspan=(0.4, 0.6), bbox=bbox)
+    cax = _cax(xspan, (0.4, 0.6))
     color_bar = fig.colorbar(cbar_weights, cax=cax)
     color_bar.ax.set_title('Weight', loc='left', fontsize=10)
     # color_bar.set_clim(zlims[0], zlims[1])
     color_bar.ax.tick_params(axis='both', labelsize=8, length=tick_legnth, width=tick_width)
     # coding scores colorbar
-    cax = utils.placeAxesOnGrid(fig, dim=(1, 1), xspan=xspan, yspan=(0.8, 1), bbox=bbox)
+    cax = _cax(xspan, (0.8, 1.0))
     color_bar = fig.colorbar(cbar_coding, cax=cax, extend='min')
     color_bar.ax.set_title('Coding \nscore', loc='left', fontsize=10)
     color_bar.set_ticks([0, .5, 1])
@@ -2955,7 +2968,10 @@ def plot_weights_and_coding_score_heatmaps_for_experience_levels_main_figure(ker
         sharey = 'col'
     else:
         sharey = False
-    xspan = (((c * .1) * 2.5) + 0.08, ((c * .1) * 2.5) + 0.24)
+    if bbox is not None:
+        xspan = (0.85, 1.0)   # average-weights column when embedded: starts right of the colorbar labels, right edge at the panel edge
+    else:
+        xspan = (((c * .1) * 2.5) + 0.08, ((c * .1) * 2.5) + 0.24)
     ax = utils.placeAxesOnGrid(fig, dim=(len(row_conditions), 1),
                                xspan=xspan, yspan=(0, 1), wspace=0, hspace=0.2,
                                sharex='col', sharey=sharey, bbox=bbox)

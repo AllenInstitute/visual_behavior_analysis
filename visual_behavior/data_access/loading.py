@@ -311,6 +311,25 @@ def get_platform_paper_experiment_table(add_extra_columns=True, limit_to_closest
 
 
     """
+    # Fast path: the fully-processed platform experiments table is also saved as a
+    # CSV in the metadata tables dir. For the canonical platform configuration
+    # (closest-active/matched, extra columns added, 4x2 + Ai94 + flagged removed)
+    # load that file directly to skip the slow cache query, column-adding, and
+    # filtering steps below. Any other parameter combination falls through to the
+    # full build so callers that need different filtering still get the right table.
+    _canonical_platform_config = (add_extra_columns and limit_to_closest_active
+                                  and not include_4x2_data and remove_flagged and remove_Ai94)
+    if _canonical_platform_config:
+        try:
+            metadata_tables_dir = get_metadata_tables_dir()
+            platform_experiments = pd.read_csv(
+                os.path.join(metadata_tables_dir, 'platform_paper_ophys_experiments_table.csv'),
+                index_col=0)
+            return platform_experiments
+        except Exception as e:
+            print('could not load pre-saved platform experiments table (', e,
+                  ') - building it from the cache instead')
+
     cache = _get_cache()
 
     experiment_table = cache.get_ophys_experiment_table()
