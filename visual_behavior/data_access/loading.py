@@ -3024,6 +3024,15 @@ def get_file_name_for_saved_multi_session_df(data_type, event_type, conditions, 
     return filename
 
 
+# Skip the feather conversion above this in-memory size. Converting to feather builds a
+# full second (Arrow) copy of the dataframe, and the array-valued object columns
+# (mean_trace etc.) must be boxed element-by-element, so peak memory is well over the
+# dataframe's own size. For the very large epoch dataframes (the omission-epoch events df
+# is ~12 GB on disk) this OOMs and kills the kernel. Caching such dfs as feather is not
+# worth the crash; they still load fine from the existing pickle.
+_MAX_FEATHER_CONVERT_BYTES = 6 * 1024 ** 3  # 6 GB
+
+
 def _save_multi_session_df_as_feather(multi_session_df, feather_filename, candidate_dirs):
     """Cache a multi_session_df as a feather file for faster loading next time.
 
@@ -3032,15 +3041,32 @@ def _save_multi_session_df_as_feather(multi_session_df, feather_filename, candid
     requires a default RangeIndex, so the index is reset before saving. Writes to the
     first writable directory in candidate_dirs. Any failure (e.g. missing pyarrow or a
     read-only data-asset dir) is non-fatal so that loading still succeeds.
+
+    Dataframes larger than _MAX_FEATHER_CONVERT_BYTES in memory are skipped, because the
+    conversion's peak memory would risk an out-of-memory kernel kill (see note above).
+    The write goes to a temporary file that is atomically renamed into place, so an
+    interrupted/killed write never leaves a truncated 0-byte file behind.
     """
+    df_bytes = multi_session_df.memory_usage(deep=True).sum()
+    if df_bytes > _MAX_FEATHER_CONVERT_BYTES:
+        print('multi_session_df is %.1f GB in memory - skipping feather caching to avoid an '
+              'out-of-memory kernel crash during conversion' % (df_bytes / 1024 ** 3))
+        return None
     for save_dir in candidate_dirs:
         feather_filepath = os.path.join(save_dir, feather_filename)
+        tmp_filepath = feather_filepath + '.tmp'
         try:
             print('saving multi_session_df to feather for faster loading next time at', feather_filepath)
-            multi_session_df.reset_index(drop=True).to_feather(feather_filepath)
+            multi_session_df.reset_index(drop=True).to_feather(tmp_filepath)
+            os.replace(tmp_filepath, feather_filepath)
             return feather_filepath
         except Exception as e:
             print('could not save feather file to', feather_filepath, '-', e)
+            if os.path.exists(tmp_filepath):
+                try:
+                    os.remove(tmp_filepath)
+                except OSError:
+                    pass
     print('warning: could not cache multi_session_df as feather in any candidate directory')
     return None
 
@@ -3092,10 +3118,13 @@ def load_multi_session_df(data_type, event_type, conditions, inclusion_criteria,
                      os.path.join(multi_session_mean_response_dir, feather_filename)]
     pkl_paths = [saved_multi_session_df_filepath,
                  os.path.join(multi_session_mean_response_dir, saved_multi_session_df_filename)]
-    existing_feather = next((p for p in feather_paths if os.path.exists(p)), None)
-    existing_pkl = next((p for p in pkl_paths if os.path.exists(p)), None)
+    # ignore 0-byte files: a previously killed (e.g. OOM'd) write can leave a truncated
+    # feather/pickle behind, which would otherwise be picked up here and fail (or trigger
+    # the failing reconversion) on every subsequent load.
+    existing_feather = next((p for p in feather_paths if os.path.exists(p) and os.path.getsize(p) > 0), None)
+    existing_pkl = next((p for p in pkl_paths if os.path.exists(p) and os.path.getsize(p) > 0), None)
 
-    multi_session_df = None
+    multi_session_df = None 
 
     # fastest path: load from a previously cached feather file
     if existing_feather is not None:

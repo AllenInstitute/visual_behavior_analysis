@@ -1314,8 +1314,14 @@ def compute_experience_modulation_index(metrics_table, metric, cells_table):
     metric_data[exp_level_2 + ' % of ' + exp_level_1] = (metric_data[exp_level_2]) / (metric_data[exp_level_1])
 
     # add cell type
-    metric_data = metric_data.merge(cells_table[['cell_specimen_id', 'ophys_experiment_id', 'cell_type', 'layer',
+    metric_data = metric_data.merge(cells_table[['cell_specimen_id', 'ophys_experiment_id', 'mouse_id', 'cell_type', 'layer',
                                                  'binned_depth', 'targeted_structure', 'project_code']], on='cell_specimen_id')
+
+    # one row per cell: the metadata merge above attaches per-session rows, but the
+    # experience-modulation index is a single per-cell value. Collapse to one row per
+    # cell so duplicated rows don't inflate N or bias the per-mouse MLM. (Callers that
+    # previously did this drop_duplicates themselves now get it for free.)
+    metric_data = metric_data.drop_duplicates(subset='cell_specimen_id')
 
     return metric_data
 
@@ -1377,8 +1383,14 @@ def compute_experience_modulation_index_new(metrics_table, metric, cells_table):
     metric_data[exp_level_2 + ' % of ' + exp_level_1] = (metric_data[exp_level_2]) / (metric_data[exp_level_1])
 
     # add cell type
-    metric_data = metric_data.merge(cells_table[['cell_specimen_id', 'ophys_experiment_id', 'cell_type', 'layer',
+    metric_data = metric_data.merge(cells_table[['cell_specimen_id', 'ophys_experiment_id', 'mouse_id', 'cell_type', 'layer',
                                                  'binned_depth', 'targeted_structure', 'project_code']], on='cell_specimen_id')
+
+    # one row per cell: the metadata merge above attaches per-session rows, but the
+    # experience-modulation index is a single per-cell value. Collapse to one row per
+    # cell so duplicated rows don't inflate N or bias the per-mouse MLM. (Callers that
+    # previously did this drop_duplicates themselves now get it for free.)
+    metric_data = metric_data.drop_duplicates(subset='cell_specimen_id')
 
     return metric_data
 

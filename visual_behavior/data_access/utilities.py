@@ -2099,6 +2099,14 @@ def count_mice_expts_containers_cells(df, conditions_to_group=['cell_type', 'exp
     counts = counts.merge(cells, on=conditions_to_group)
     if include_matched_cells:
         counts = counts.merge(matched_cells, on=conditions_to_group)
+
+    # add a row at the bottom with the total of all numeric (count) columns
+    count_columns = [col for col in counts.columns if col not in conditions_to_group]
+    totals = {col: counts[col].sum() for col in count_columns}
+    for col in conditions_to_group:
+        totals[col] = ''
+    totals_row = pd.DataFrame([totals], index=['Total'])[counts.columns]
+    counts = pd.concat([counts, totals_row])
     return counts
 
 

@@ -742,7 +742,7 @@ def plot_model_fits_example_cell(cell_specimen_id, dataset, cell_results_df, dro
     if include_events:
         suffix = '_events'
         ax.plot(fit['fit_trace_timestamps'][time_vec],
-                fit['events'][time_vec], label='calcium events',
+                fit['events'][time_vec], #label='calcium events',
                 linewidth=linewidth,
                 color='dimgray') # sns.color_palette()[4])
 
@@ -789,12 +789,13 @@ def plot_model_fits_example_cell(cell_specimen_id, dataset, cell_results_df, dro
                 # label='without ' + kernel + ' kernels\n' +
                 # label='without ' + kernel + ', coding score: ' + str(cs) + '\n' + str(
                 #     np.round(dropout, 1)) + '% reduction in VE',
-                label = 'without '+ kernel + '\n' +  str(np.round(dropout, 1)) + '% reduction in VE',
+                # label = 'without '+ kernel + '\n' +  str(np.round(dropout, 1)) + '% reduction in VE',
+                label = str(np.round(dropout, 1)) + '% drop in VE\nwithout '+ kernel,
                 linewidth=linewidth, color=sns.color_palette()[2]) #sns.color_palette()[2])
         ax.spines['right'].set_visible(False)
 
     # ax.legend(bbox_to_anchor=(1,1), fontsize='xx-small')
-    ax.legend(loc='upper right', fontsize=8)
+    ax.legend(loc='upper right', fontsize=fontsize)
 
     ax.set_xlim(xlim_seconds)
 
@@ -2527,7 +2528,7 @@ def plot_example_cell_all_panels(cell_specimen_id, ophys_experiment_id, start_ti
                                  save_dir=save_dir, folder=folder, ax=None, suffix=suffix)
 
     plot_model_fits_example_cell(cell_specimen_id, dataset, cell_results_df, dropouts, expt_results,
-                                 'all-images', title=cell_label + ' model fit',
+                                 'all-images', title=cell_label + ' model fit', fontsize=10,
                                  twinx=False, include_events=True, include_dff=False,
                                  times=xlim_seconds, save_dir=save_dir, folder=folder)
 
@@ -2546,7 +2547,8 @@ def plot_weights_and_coding_score_heatmaps_for_experience_levels(kernel, weights
                                                                  row_condition='cre_line', col_condition='experience_level',
                                                                  vmax=0.002, xlabel='Time (s)', suptitle=None,
                                                                  save_dir=None, folder=None,
-                                                                 fig=None, bbox=None, add_suptitle=True):
+                                                                 fig=None, bbox=None, add_suptitle=True,
+                                                                 zero_values_to_black=False):
     '''
     Plot a heatmap of kernel weights and coding scores for all cells
     Default values results in a figure with experience levels as columns and cre lines as rows
@@ -2558,6 +2560,8 @@ def plot_weights_and_coding_score_heatmaps_for_experience_levels(kernel, weights
     col_condition: column in weights_df to iterate over for columns
     vmax: value of max and min weights to plot
     xlabel: string to label xaxis with
+    zero_values_to_black: bool, if True, cells with a zero coding score are shown as black
+        (the previous behavior); if False (default), they are shown as white
     fig: optional existing figure to draw into. If None, a new figure is created (standalone behavior).
     bbox: optional [x0, y0, x1, y1] sub-rectangle (figure fraction) to confine this panel to when
           embedding in a composite figure; passed through to utils.placeAxesOnGrid. Defaults to whole figure.
@@ -2646,7 +2650,7 @@ def plot_weights_and_coding_score_heatmaps_for_experience_levels(kernel, weights
             data = pd.DataFrame(np.vstack(row_weights[kernel + '_weights'].values), columns=timestamps)
             cbar_weights = ax[r][0].imshow(data.values, aspect='auto', cmap='PRGn', vmin=-vmax, vmax=vmax, extent=[timestamps[0], timestamps[-1], 0, np.shape(data)[0]])
             ax[r][0].set_yticks([0, len(data)])
-            ax[r][0].set_yticklabels((len(data), 0), fontsize=12)
+            ax[r][0].set_yticklabels((len(data), 0), fontsize=10)
             ax[r][0].tick_params(axis='y', labelsize=14)
 
             ax[r][0].set_xticks(xticklabels)
@@ -2698,13 +2702,18 @@ def plot_weights_and_coding_score_heatmaps_for_experience_levels(kernel, weights
                     cmap = plt.get_cmap('Reds')
                 elif c == 2:
                     cmap = plt.get_cmap('Purples')
-            cmap.set_under('black')
+            cmap.set_under('black' if zero_values_to_black else 'white')
             cbar_coding = ax[r][1].imshow(coding_scores, aspect='auto', cmap=cmap, vmin=1e-10, vmax=1)
             ax[r][1].set_yticks([0, len(data)])
             ax[r][1].set_xticks([])
             ax[r][1].set_yticklabels([])
             # ax[r][1].set_ylabel(utils.convert_cre_line_to_cell_type(row))
             ax[r][1].set_xticklabels([])
+            # outline the coding score heatmap so zero (white) cells stay visible
+            for _spine in ax[r][1].spines.values():
+                _spine.set_visible(True)
+                _spine.set_color('black')
+                _spine.set_linewidth(1)
 
         ax[0][0].set_title(utils.convert_experience_level(col), color=palette[c])
 
@@ -2777,7 +2786,11 @@ def plot_weights_and_coding_score_heatmaps_for_experience_levels_main_figure(ker
                                                                  row_condition='cre_line', col_condition='experience_level',
                                                                  vmax=0.002, xlabel='Time (s)', suptitle=None,
                                                                  save_dir=None, folder=None,
-                                                                 fig=None, bbox=None, add_suptitle=True):
+                                                                 fig=None, bbox=None, add_suptitle=True,
+                                                                 zero_values_to_black=False,
+                                                                 xtick_fontsize=8, cell_count_fontsize=6,
+                                                                 avg_ytick_fontsize=8, colorbar_title_fontsize=10,
+                                                                 colorbar_tick_fontsize=8, ytick_pad=None):
     '''
     Plot a heatmap of kernel weights and coding scores for all cells
     Default values results in a figure with experience levels as columns and cre lines as rows
@@ -2789,6 +2802,14 @@ def plot_weights_and_coding_score_heatmaps_for_experience_levels_main_figure(ker
     col_condition: column in weights_df to iterate over for columns
     vmax: value of max and min weights to plot
     xlabel: string to label xaxis with
+    zero_values_to_black: bool, if True, cells with a zero coding score are shown as black
+        (the previous behavior); if False (default), they are shown as white
+    xtick_fontsize: font size for the time x-tick labels (heatmaps + average-weights panel)
+    cell_count_fontsize: font size for the cell-count y-tick labels on the weight heatmaps
+    avg_ytick_fontsize: font size for the average-weights panel y-tick labels
+    colorbar_title_fontsize: font size for the 'Weight' / 'Coding score' colorbar titles
+    colorbar_tick_fontsize: font size for the colorbar tick labels
+    ytick_pad: if not None, padding between the cell-count y-tick labels and the heatmap axis
     '''
 
     # get weights for this kernel
@@ -2885,8 +2906,10 @@ def plot_weights_and_coding_score_heatmaps_for_experience_levels_main_figure(ker
             data = pd.DataFrame(np.vstack(row_weights[kernel + '_weights'].values), columns=timestamps)
             cbar_weights = ax[r][0].imshow(data.values, aspect='auto', cmap='PRGn', vmin=-vmax, vmax=vmax, extent=[timestamps[0], timestamps[-1], 0, np.shape(data)[0]])
             ax[r][0].set_yticks([0, len(data)])
-            ax[r][0].set_yticklabels((len(data), ''), fontsize=8)
+            ax[r][0].set_yticklabels((len(data), ''), fontsize=cell_count_fontsize)
             ax[r][0].tick_params(axis='both', which='major', length=tick_legnth, width=tick_width)
+            if ytick_pad is not None:
+                ax[r][0].tick_params(axis='y', pad=ytick_pad)
             sns.despine(ax=ax[r][0], left=False, bottom=False, right=False, top=False)
             
             # ax[r][0].set_xlims(xlim_seconds)
@@ -2912,7 +2935,7 @@ def plot_weights_and_coding_score_heatmaps_for_experience_levels_main_figure(ker
                     xticklabels = [int(x) for x in xticklabels]
                 else: 
                     xticklabels = [np.round(x, 2) for x in xticklabels]
-                ax[r][0].set_xticklabels(xticklabels, fontsize=8)
+                ax[r][0].set_xticklabels(xticklabels, fontsize=xtick_fontsize)
                 # ax[r][0].xaxis.get_label().set_fontsize(14)
                 # ax[r][0].tick_params(axis='x', labelsize=14)
                 if c == 1: 
@@ -2937,13 +2960,18 @@ def plot_weights_and_coding_score_heatmaps_for_experience_levels_main_figure(ker
                     cmap = plt.get_cmap('Reds')
                 elif c == 2:
                     cmap = plt.get_cmap('Purples')
-            cmap.set_under('black')
+            cmap.set_under('black' if zero_values_to_black else 'white')
             cbar_coding = ax[r][1].imshow(coding_scores, aspect='auto', cmap=cmap, vmin=1e-10, vmax=1)
             ax[r][1].set_yticks([0, len(data)])
             ax[r][1].set_xticks([])
             ax[r][1].set_yticklabels([])
             # ax[r][1].set_ylabel(utils.convert_cre_line_to_cell_type(row))
             ax[r][1].set_xticklabels([])
+            # outline the coding score heatmap so zero (white) cells stay visible
+            for _spine in ax[r][1].spines.values():
+                _spine.set_visible(True)
+                _spine.set_color('black')
+                _spine.set_linewidth(1)
 
         ax[0][0].set_title(utils.convert_experience_level(col), color=palette[c], fontsize=16)
 
@@ -2952,15 +2980,15 @@ def plot_weights_and_coding_score_heatmaps_for_experience_levels_main_figure(ker
     # weights colorbar
     cax = _cax(xspan, (0.4, 0.6))
     color_bar = fig.colorbar(cbar_weights, cax=cax)
-    color_bar.ax.set_title('Weight', loc='left', fontsize=10)
+    color_bar.ax.set_title('Weight', loc='left', fontsize=colorbar_title_fontsize)
     # color_bar.set_clim(zlims[0], zlims[1])
-    color_bar.ax.tick_params(axis='both', labelsize=8, length=tick_legnth, width=tick_width)
+    color_bar.ax.tick_params(axis='both', labelsize=colorbar_tick_fontsize, length=tick_legnth, width=tick_width)
     # coding scores colorbar
     cax = _cax(xspan, (0.8, 1.0))
     color_bar = fig.colorbar(cbar_coding, cax=cax, extend='min')
-    color_bar.ax.set_title('Coding \nscore', loc='left', fontsize=10)
+    color_bar.ax.set_title('Coding \nscore', loc='left', fontsize=colorbar_title_fontsize)
     color_bar.set_ticks([0, .5, 1])
-    color_bar.ax.tick_params(axis='both', labelsize=8, length=tick_legnth, width=tick_width)
+    color_bar.ax.tick_params(axis='both', labelsize=colorbar_tick_fontsize, length=tick_legnth, width=tick_width)
 
     # create axes for population averages
     c += 1
@@ -2990,8 +3018,8 @@ def plot_weights_and_coding_score_heatmaps_for_experience_levels_main_figure(ker
             # ax.legend(loc='upper right', fontsize='xx-small')
         ax[r].set_xlim(xlim_seconds)
         ax[r].yaxis.set_label_position("right")
-        ax[r].tick_params(axis='y', labelsize=8)
-        ax[r].tick_params(axis='x', labelsize=8)
+        ax[r].tick_params(axis='y', labelsize=avg_ytick_fontsize)
+        ax[r].tick_params(axis='x', labelsize=xtick_fontsize)
         ax[r].yaxis.tick_right()
         if r < len(row_conditions)-1:
             ax[r].set_xlabel('')

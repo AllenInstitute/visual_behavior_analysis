@@ -5883,7 +5883,7 @@ def plot_cluster_depth_distribution_by_cre_lines(cluster_meta, location, metric,
     return ax
 
 
-def plot_cluster_depth_distribution_by_cre_line_separately(cluster_meta, location, cluster_order=None,
+def plot_cluster_depth_distribution_by_cre_line_separately(cluster_meta, location, cluster_order=None, horiz=True, size_threshold=None,
                                                             metric='fraction_cells_location', ylabel='Fraction cells',
                                                             legend_title='', save_dir=None, folder=''):
     """
@@ -5904,6 +5904,8 @@ def plot_cluster_depth_distribution_by_cre_line_separately(cluster_meta, locatio
 
     n_cells_table = processing.get_cluster_proportion_stats_for_locations(cluster_meta, location=location)
     n_cells_table = n_cells_table.reset_index()
+    if size_threshold is not None:
+        n_cells_table = n_cells_table[n_cells_table['n_cells_cluster'] >= size_threshold]
 
     hue = location
     hue_order = np.sort(n_cells_table[hue].unique())[::-1]
@@ -5933,24 +5935,45 @@ def plot_cluster_depth_distribution_by_cre_line_separately(cluster_meta, locatio
             order = cre_data.drop_duplicates('cluster_id').sort_values(by='fraction_cells_cluster', ascending=False).cluster_id.values
 
         # fraction of cells per cluster
-        figsize = (0.5 * len(order), 2)
-        fig, ax = plt.subplots(figsize=figsize)
-        ax = sns.barplot(data=cre_data, x='cluster_id', order=order, y=metric,
-                            hue=hue, hue_order=hue_order, palette=palette, width=0.7, ax=ax)
-        ax.set_ylabel(ylabel)
-        ax.set_xlabel('Cluster ID')
+        if horiz:
+            figsize = (0.5 * len(order), 2)
+            fig, ax = plt.subplots(figsize=figsize)
 
+            ax = sns.barplot(data=cre_data, x='cluster_id', order=order, y=metric,
+                        hue=hue, hue_order=hue_order, palette=palette, width=0.7, ax=ax)
+            ax.set_ylabel(ylabel)
+            ax.set_xlabel('Cluster ID')
 
-        # significance
-        for x_loc, cluster_id in enumerate(order):
-            cre_cluster_data = cre_data[cre_data['cluster_id']==cluster_id]
-            if cre_cluster_data[significance_col].any():
-                y_loc = cre_cluster_data[metric].max()
-                ax.text(x_loc, y_loc, '*', fontsize=24, color=sns.color_palette()[3],
-                            horizontalalignment='center', verticalalignment='center')
+            # significance
+            for x_loc, cluster_id in enumerate(order):
+                cre_cluster_data = cre_data[cre_data['cluster_id']==cluster_id]
+                if cre_cluster_data[significance_col].any():
+                    y_loc = cre_cluster_data[metric].max()
+                    ax.text(x_loc, y_loc, '*', fontsize=24, color=sns.color_palette()[3],
+                                horizontalalignment='center', verticalalignment='center')
+            ax.legend(loc='upper right', fontsize=fontsize, title_fontsize=fontsize, title=legend_title)
+        else: 
+            figsize = (2, 1 * len(order))
+            fig, ax = plt.subplots(figsize=figsize)
+
+            ax = sns.barplot(data=cre_data, y='cluster_id', order=order, x=metric, orient='h',
+                        hue=hue, hue_order=hue_order, palette=palette, width=0.7, ax=ax)
+            ax.set_ylabel('Cluster ID')
+            ax.set_xlabel(ylabel)
+
+            # significance
+            for y_loc, cluster_id in enumerate(order):
+                cre_cluster_data = cre_data[cre_data['cluster_id']==cluster_id]
+                if cre_cluster_data[significance_col].any():
+                    x_loc = cre_cluster_data[metric].max()+0.02
+                    ax.text(x_loc, y_loc, '*', fontsize=24, color=sns.color_palette()[3],
+                                horizontalalignment='center', verticalalignment='top')
+            ax.legend(loc='lower right', fontsize=fontsize, title_fontsize=fontsize, title=legend_title)
+
+    
 
         ax.set_title(utils.convert_cre_line_to_cell_type(cre_line))
-        ax.legend(loc='upper right', fontsize=fontsize, title_fontsize=fontsize, title=legend_title)
+       
         sns.despine(fig=fig, top=True, right=True, left=False, bottom=False, offset=None, trim=False)
 
         if save_dir:
@@ -7564,7 +7587,7 @@ def plot_difference_of_means_and_universal_CI(tukey_results, all_groups=None, gr
         else:
             figsize = (2, 5)
         fig, ax = plt.subplots(figsize=figsize)
-    markersize = 5
+    markersize = 4
 
     # Get universal confidence intervals
     tukey_results._simultaneous_ci()
@@ -7603,12 +7626,18 @@ def plot_difference_of_means_and_universal_CI(tukey_results, all_groups=None, gr
 
     # If not higlighting a specific group
     if group_to_compare is None:
-        if as_row:
-            ax.errorbar(lrange(len(means)), means, yerr=universal_cis, markersize=markersize,
-                        marker='o', linestyle='None', color=color, ecolor=color)
+        # color points by their (preferred experience level) group color if provided, else single color
+        if group_colors is not None:
+            point_colors = group_colors
         else:
-            ax.errorbar(means, lrange(len(means)), xerr=universal_cis, markersize=markersize,
-                    marker='o', linestyle='None', color=color, ecolor=color)
+            point_colors = [color] * len(means)
+        for i in range(len(means)):
+            if as_row:
+                ax.errorbar(i, means[i], yerr=universal_cis[i], markersize=markersize,
+                            marker='o', linestyle='None', color=point_colors[i], ecolor=point_colors[i])
+            else:
+                ax.errorbar(means[i], i, xerr=universal_cis[i], markersize=markersize,
+                            marker='o', linestyle='None', color=point_colors[i], ecolor=point_colors[i])
     # Otherwise color the highlighted group in a specific way
     else:
         # Check if group_to_compare exists in groups
@@ -7725,9 +7754,43 @@ def plot_difference_of_means_and_universal_CI(tukey_results, all_groups=None, gr
     return ax
 
 
+def _tukey_results_to_dataframe(tukey_results):
+    """Convert a statsmodels TukeyHSDResults object into a tidy DataFrame with
+    one row per pairwise cluster comparison (columns: group1, group2, meandiff,
+    p-adj, lower, upper, reject)."""
+    table = tukey_results.summary()
+    return pd.DataFrame(table.data[1:], columns=table.data[0])
+
+
+def _save_tukey_all_pairwise_stats(stats_table, save_dir, folder, filename):
+    """Save the full all-pairwise Tukey HSD stats table plus a companion CSV
+    documenting how to interpret it. This all-pairwise table is distinct from
+    the reference-cluster comparisons used elsewhere in the paper, so the README
+    is saved alongside it to make the difference explicit."""
+    stats_dir = os.path.join(save_dir, folder)
+    if not os.path.exists(stats_dir):
+        os.makedirs(stats_dir)
+    stats_table.to_csv(os.path.join(stats_dir, filename + '_all_pairwise_stats.csv'), index=False)
+
+    readme = pd.DataFrame([
+        ('analysis', 'Tukey HSD all-pairwise comparison of cluster means (one row per pair of clusters).'),
+        ('scope', 'Computed separately within each cell type (cre line); every cluster is compared to every other cluster.'),
+        ('distinct_from_paper', 'Other cluster stats in the paper compare each cluster to a single reference cluster (group_to_compare). This table instead reports ALL pairwise cluster comparisons with family-wise (Tukey) correction, and is produced when no reference cluster is specified.'),
+        ('cell_type', 'Cell type (cre line) the comparison was computed within (or "all" when not split by cre line).'),
+        ('group1', 'Cluster ID of the first cluster in the pair.'),
+        ('group2', 'Cluster ID of the second cluster in the pair.'),
+        ('meandiff', 'Difference in mean metric value (group2 mean minus group1 mean).'),
+        ('p-adj', 'Tukey family-wise-corrected p-value for the difference in means.'),
+        ('lower', 'Lower bound of the 95% simultaneous confidence interval on meandiff.'),
+        ('upper', 'Upper bound of the 95% simultaneous confidence interval on meandiff.'),
+        ('reject', 'True if the null hypothesis of equal means is rejected at alpha=0.05 (clusters differ significantly).'),
+    ], columns=['field', 'description'])
+    readme.to_csv(os.path.join(stats_dir, filename + '_all_pairwise_stats_README.csv'), index=False)
+
+
 def plot_tukey_diff_in_means_for_metric(response_metrics, metric, cluster_meta=None, title='', xlabel=None, lims=None,
                                         split_by_cre=True, match_clusters=True, min_cluster_fraction=None,
-                                        horiz=False, group_to_compare=None, pref_exp_level=False, save_dir=None):
+                                        horiz=False, group_to_compare=None, pref_exp_level=False, save_dir=None, ax=None):
     '''
     Runs Tukey HSD multiple comparisons test across clusters
     Averages metric value across experience level before computing stats, unless
@@ -7746,6 +7809,8 @@ def plot_tukey_diff_in_means_for_metric(response_metrics, metric, cluster_meta=N
 
     suffix = ''
     cre_lines = utils.get_cre_lines()
+
+    own_fig = ax is None
 
     if xlabel is None:
         xlabel = metric
@@ -7776,22 +7841,26 @@ def plot_tukey_diff_in_means_for_metric(response_metrics, metric, cluster_meta=N
             cre_widths.append(len(keep)*0.5)    
 
 
+    # when no reference cluster is used, collect the full all-pairwise Tukey comparisons to save out
+    all_pairwise_stats = []
+
     if split_by_cre:
-        if horiz:
-            if not match_clusters:
-                figsize = (8, 2.5)
-                fig, ax = plt.subplots(1, len(cre_lines), figsize=figsize, sharey=True, sharex=match_clusters, gridspec_kw={'width_ratios': cre_widths})
-                suffix = suffix+'_matched'
+        if own_fig:
+            if horiz:
+                if not match_clusters:
+                    figsize = (8, 2.5)
+                    fig, ax = plt.subplots(1, len(cre_lines), figsize=figsize, sharey=True, sharex=match_clusters, gridspec_kw={'width_ratios': cre_widths})
+                    suffix = suffix+'_matched'
+                else:
+                    figsize = (20, 2.5)
+                    fig, ax = plt.subplots(1, len(cre_lines), figsize=figsize, sharey=True, sharex=match_clusters)
+                suffix = suffix + '_horiz'
             else:
-                figsize = (20, 2.5)
-                fig, ax = plt.subplots(1, len(cre_lines), figsize=figsize, sharey=True, sharex=match_clusters)
-            suffix = suffix + '_horiz'
-        else:
-            suffix = ''
-            figsize = (6, 6)
-            fig, ax = plt.subplots(1, 3, figsize=figsize, sharey=True, sharex=True)
-        
-        
+                suffix = ''
+                figsize = (6, 6)
+                fig, ax = plt.subplots(1, 3, figsize=figsize, sharey=True, sharex=True)
+
+
         for i, cre_line in enumerate(cre_lines):
             data = response_metrics_clean[response_metrics_clean.cre_line == cre_line]
             # if cluster_meta is provided, limit data to clusters over a size threshold
@@ -7811,6 +7880,10 @@ def plot_tukey_diff_in_means_for_metric(response_metrics, metric, cluster_meta=N
 
             multi_comp = MultiComparison(data[metric], data['cluster_id'])
             tukey_results = multi_comp.tukeyhsd()
+            if group_to_compare is None:
+                cre_stats = _tukey_results_to_dataframe(tukey_results)
+                cre_stats.insert(0, 'cell_type', utils.convert_cre_line_to_cell_type(cre_line))
+                all_pairwise_stats.append(cre_stats)
             if horiz:
                 ax[i] = plot_difference_of_means_and_universal_CI(tukey_results, all_groups=order,
                                                                   group_to_compare=group_to_compare,
@@ -7821,7 +7894,8 @@ def plot_tukey_diff_in_means_for_metric(response_metrics, metric, cluster_meta=N
                     ax[i].set_ylabel('')
                 if lims is not None:
                     ax[i].set_ylim(lims)
-                plt.subplots_adjust(hspace=0.3, wspace=0.05)
+                if own_fig:
+                    plt.subplots_adjust(hspace=0.3, wspace=0.05)
             else:
                 ax[i] = plot_difference_of_means_and_universal_CI(tukey_results, all_groups=order,
                                                               group_to_compare=group_to_compare,
@@ -7834,7 +7908,8 @@ def plot_tukey_diff_in_means_for_metric(response_metrics, metric, cluster_meta=N
                     ax[i].set_xlabel('')
                 if lims is not None:
                     ax[i].set_xlim(lims)
-                plt.subplots_adjust(hspace=0.3, wspace=0.2)
+                if own_fig:
+                    plt.subplots_adjust(hspace=0.3, wspace=0.2)
             
             colors = [cluster_colors_dict[k] for k in order]
             ax[i].set_xticklabels(order)
@@ -7844,6 +7919,10 @@ def plot_tukey_diff_in_means_for_metric(response_metrics, metric, cluster_meta=N
     else:
         multi_comp = MultiComparison(response_metrics_clean[metric], response_metrics_clean['cluster_id'])
         tukey_results = multi_comp.tukeyhsd()
+        if group_to_compare is None:
+            across_stats = _tukey_results_to_dataframe(tukey_results)
+            across_stats.insert(0, 'cell_type', 'all')
+            all_pairwise_stats.append(across_stats)
         if horiz:
             figsize = (6, 2)
             fig, ax = plt.subplots(figsize=figsize)
@@ -7858,8 +7937,14 @@ def plot_tukey_diff_in_means_for_metric(response_metrics, metric, cluster_meta=N
                                                       group_colors=colors, color='k', title=title,
                                                       xlabel=xlabel, ylabel='Cluster ID', ax=ax)
 
-    if save_dir:
-        filename = metric + 'dif_of_means_pref_exp_' + str(pref_exp_level) + '_split_by_cre_' + str(split_by_cre) + suffix
+    filename = metric + 'dif_of_means_pref_exp_' + str(pref_exp_level) + '_split_by_cre_' + str(split_by_cre) + suffix
+
+    # when no reference cluster is used, save the full all-pairwise Tukey stats table + interpretation README
+    if group_to_compare is None and save_dir is not None and len(all_pairwise_stats) > 0:
+        stats_table = pd.concat(all_pairwise_stats, ignore_index=True)
+        _save_tukey_all_pairwise_stats(stats_table, save_dir, 'response_metrics', filename)
+
+    if save_dir and own_fig:
         utils.save_figure(fig, figsize, save_dir, 'response_metrics', filename)
 
     return ax
@@ -9073,7 +9158,7 @@ def plot_response_metrics_boxplot(response_metrics, metric=None, ylabel=None, pl
 
 
 def plot_response_metrics_boxplot_by_cre(response_metrics, metric=None, cluster_meta=None, min_cluster_fraction=0.04,
-                                        ylabel=None, line_val=None, match_clusters=True,
+                                        ylabel=None, line_val=None, match_clusters=True, ylims=None,
                                         horiz=False, pointplot=False, save_dir=None, suffix='', ax=None):
     """
     Plot running modulation for different cell types and experience levels.
@@ -9089,6 +9174,8 @@ def plot_response_metrics_boxplot_by_cre(response_metrics, metric=None, cluster_
         ylabel = metric
 
     cluster_colors_dict = get_cluster_colors_dict()
+
+    own_fig = ax is None
 
     order = np.sort(response_metrics.cluster_id.unique())
     n_clusters = len(order)
@@ -9157,21 +9244,25 @@ def plot_response_metrics_boxplot_by_cre(response_metrics, metric=None, cluster_
         ax[i].spines[['right', 'top']].set_visible(False)
         if line_val is not None:
             ax[i].axhline(y=line_val, xmin=0, xmax=1, color='gray', linestyle='--', linewidth=1)
+        if ylims is not None:
+            ax[i].set_ylim(ylims)
 
     ax[i].set_xlabel('Cluster ID')
     if horiz:
         ax[0].set_ylabel(ylabel)
         for i in range(3):
             ax[i].set_xlabel('Cluster ID')
-        plt.subplots_adjust(wspace=0.05)
+        if own_fig:
+            plt.subplots_adjust(wspace=0.05)
     else:
         ax[1].set_ylabel(ylabel)
-        plt.subplots_adjust(hspace=0.5, wspace=0.05)
+        if own_fig:
+            plt.subplots_adjust(hspace=0.5, wspace=0.05)
     # ax[1].legend(loc='upper right', fontsize='xx-small', title_fontsize='xx-small')
     # plt.suptitle(metric.replace("_", " "), x=0.51, y=0.95)
-    
 
-    if save_dir:
+
+    if save_dir and own_fig:
         utils.save_figure(fig, figsize, save_dir, 'response_metrics', metric+suffix)
 
     return ax
@@ -9636,9 +9727,11 @@ def _default_cluster_kernel_pairs():
     # }
 
     return {
-        "Excitatory":     ([2, 3, 4, 11], ["all-images", "all-images", "all-images", "hits", ]),
+        "Excitatory":     ([2, 3, 4, 10], ["all-images", "all-images", "all-images", "hits", ]),
         "Sst Inhibitory": ([6, 3, 4, 10], ["all-images", "all-images", "all-images", "hits", ]),
         "Vip Inhibitory": ([2, 9, 8, 11], ["all-images",  "omissions", "omissions",  "hits",]),
+
+        # "Vip Inhibitory": ([2, 9, 8, 11], ["all-images",  "all-images", "all-images",  "hits",]),
     }
 
 
@@ -9688,8 +9781,18 @@ def _draw_trace_panel(ax, mdf, cluster_id, cell_type, kernel_name,
     xlim_seconds = time_windows[kernel_name]
     interval_sec = 0.2 if np.max(timestamps) < 0.7 else (0.5 if np.max(timestamps) < 1 else 1)
 
+    # Draw back-to-front so specific experience levels sit on top: Novel foremost,
+    # then Familiar, then Novel+ behind (later-drawn traces overlay earlier ones).
+    def _zorder_key(lvl):
+        if lvl.startswith('Novel') and '+' in lvl:
+            return 0  # Novel+ farthest back (drawn first)
+        if lvl.startswith('Novel'):
+            return 2  # Novel foremost (drawn last)
+        return 1      # Familiar in the middle
+    draw_order = sorted(ordered_exp, key=_zorder_key)
+
     drew_anything = False
-    for exp_level in ordered_exp:
+    for exp_level in draw_order:
         traces = _stack_traces(sub_df[sub_df['experience_level'] == exp_level])
         if traces is None:
             continue
