@@ -688,14 +688,53 @@ def plot_flashes_on_trace(ax, timestamps, change=None, omitted=False, alpha=0.25
     return ax
 
 
-def plot_mean_trace(traces, timestamps, ylabel='dF/F', legend_label=None, color='k', alpha=0.4,
-                    interval_sec=1, xlim_seconds=[-2, 2], linewidth=1, plot_sem=True, ax=None):
+def get_peak_threshold(data_type):
+    '''
+    Peak-amplitude outlier threshold to use for a given data_type, or None if no threshold applies.
+    events / filtered_events -> 0.4 ; dff -> 4 ; behavioral or any other data_type -> None.
+    Single source of truth for the data_type -> threshold policy.
+    '''
+    if data_type in ('events', 'filtered_events'):
+        return 0.4
+    if data_type == 'dff':
+        return 4
+    return None
+
+
+def get_peak_outlier_cells(multi_session_df, peak_threshold=None, data_type=None,
+                           trace_col='mean_trace', cell_col='cell_specimen_id'):
+    '''
+    Cell ids whose mean response trace peak |amplitude| exceeds peak_threshold in ANY row
+    (global / per-cell removal). Provide peak_threshold directly, or a data_type to look it up
+    via get_peak_threshold. Returns an empty array when no threshold applies (e.g. behavioral
+    data_types), so callers can unconditionally exclude the result.
+    '''
+    if peak_threshold is None and data_type is not None:
+        peak_threshold = get_peak_threshold(data_type)
+    if peak_threshold is None:
+        return np.array([])
+    df = multi_session_df
+    peaks = df[trace_col].apply(
+        lambda t: np.nanmax(np.abs(np.asarray(t)))
+        if t is not None and not (isinstance(t, float) and np.isnan(t)) else np.nan)
+    return df.loc[peaks > peak_threshold, cell_col].unique()
+
+
+def plot_mean_trace(traces, timestamps, ylabel='dF/F', legend_label=None, color='k', alpha=0.25,
+                    interval_sec=1, xlim_seconds=[-2, 2], linewidth=1, plot_sem=True, ax=None,
+                    peak_threshold=None):
     '''
     compute average and SEM of traces array and plot it on the specified axis
     produces x-axis timestamps based on the xlim_seconds range provided, incremented by the value of interval_sec
+    peak_threshold: if not None, drop rows (cells) whose peak |amplitude| exceeds it before
+        averaging. Note this is a per-array (per-panel) drop; for global per-cell removal across
+        all panels, filter the source dataframe with get_peak_outlier_cells before plotting.
     '''
     if ax is None:
         fig, ax = plt.subplots()
+    if peak_threshold is not None and len(traces) > 0:
+        traces = np.asarray(traces)
+        traces = traces[np.nanmax(np.abs(traces), axis=1) <= peak_threshold]
     if len(traces) > 0:
         trace = np.mean(traces, axis=0)
         sem = (np.std(traces)) / np.sqrt(float(len(traces)))

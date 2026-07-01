@@ -530,6 +530,7 @@ def plot_population_averages_for_condition(multi_session_df, data_type, event_ty
                                             title=None, suptitle=None, xlabel='Time (s)', ylabel='Response',
                                             horizontal=True, xlim_seconds=None, interval_sec=1, legend=False,
                                             linewidth=1, remove_outliers=True,
+                                            apply_peak_threshold=False,
                                             save_dir=None, folder='population_activity', suffix='', ax=None):
     '''
     Function to plot a population average response across for a single condition from a dataframe containing event aligned timeseries,
@@ -558,6 +559,11 @@ def plot_population_averages_for_condition(multi_session_df, data_type, event_ty
         palette = utils.get_experience_level_colors()
 
     sdf = multi_session_df.copy()
+
+    if apply_peak_threshold:
+        outlier_cells = utils.get_peak_outlier_cells(sdf, data_type=data_type)
+        if len(outlier_cells):
+            sdf = sdf[~sdf.cell_specimen_id.isin(outlier_cells)]
 
     # get timestamps
     if 'trace_timestamps' in sdf.keys():
@@ -660,7 +666,8 @@ def plot_population_averages_for_conditions(multi_session_df, data_type, event_t
                                             project_code=None, timestamps=None, palette=None, sharey=False,
                                             title=None, suptitle=None, xlabel='Time (s)', ylabel='Response',
                                             horizontal=True, xlim_seconds=None, interval_sec=1, legend=False,
-                                            linewidth=1, save_dir=None, folder='population_activity', suffix='', ax=None):
+                                            linewidth=1, apply_peak_threshold=False,
+                                            save_dir=None, folder='population_activity', suffix='', ax=None):
     '''
     Function to plot a population average response across multiple conditions from a dataframe containing event aligned timeseries,
     where axes_column defines the axes conditions and hue_column defines the colors of traces within each axes condition.
@@ -688,6 +695,11 @@ def plot_population_averages_for_conditions(multi_session_df, data_type, event_t
         palette = utils.get_experience_level_colors()
 
     sdf = multi_session_df.copy()
+
+    if apply_peak_threshold:
+        outlier_cells = utils.get_peak_outlier_cells(sdf, data_type=data_type)
+        if len(outlier_cells):
+            sdf = sdf[~sdf.cell_specimen_id.isin(outlier_cells)]
 
     # get timestamps
     if 'trace_timestamps' in sdf.keys():
@@ -816,6 +828,7 @@ def plot_population_averages_for_conditions(multi_session_df, data_type, event_t
 
 def plot_population_averages_for_cell_types_across_experience(multi_session_df, xlim_seconds=[-1.25, 1.5], xlabel='time (s)',
                                                               ylabel='population average',  data_type='events', event_type='changes', interval_sec=1,
+                                                              apply_peak_threshold=False,
                                                               save_dir=None, folder='population_activity', suffix=None, ax=None):
     # get important information
     suffix = _norm_suffix(suffix)
@@ -867,12 +880,14 @@ def plot_population_averages_for_cell_types_across_experience(multi_session_df, 
                                                                             xlim_seconds=xlim_seconds,
                                                                             interval_sec=interval_sec,
                                                                             palette=palette,
+                                                                            apply_peak_threshold=apply_peak_threshold,
                                                                             ax=ax[i * 3:(i * 3 + 3)])
         else:
             ax[i] = plot_population_averages_for_conditions(df, data_type, event_type,
                                                             axes_column, hue_column, horizontal=True, legend=False,
                                                             xlim_seconds=xlim_seconds, interval_sec=interval_sec,
-                                                            palette=palette, ax=ax[i])
+                                                            palette=palette,
+                                                            apply_peak_threshold=apply_peak_threshold, ax=ax[i])
             ax[i].set_xlabel('')
             ax[i].set_ylabel('')
 

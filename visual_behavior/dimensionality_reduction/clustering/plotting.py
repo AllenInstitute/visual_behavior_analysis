@@ -2148,7 +2148,7 @@ def plot_coding_score_heatmap_remapped(cluster_meta, feature_matrix, sort_by='cl
 
 def plot_coding_score_heatmap_matched(cluster_meta, feature_matrix, sort_by='cluster_id',
                                       cluster_order=None, session_colors=True, experience_index=None, title='',
-                                      save_dir=None, folder=None, suffix='', ax=None):
+                                      save_dir=None, folder=None, suffix='', ax=None, cluster_id_label_x=-2):
     """
     Plot heatmap of all cells coding scores, sorted by cluster_id (or some other column of cluster_meta)
     with each cluster on its own axis so all clusters are the same size.
@@ -2249,7 +2249,7 @@ def plot_coding_score_heatmap_matched(cluster_meta, feature_matrix, sort_by='clu
 
         if i == middle_cluster:
             # ax[i].text(s='  Cells', y=this_cluster_scores.shape[0]/2, x=14, ha='center', va='bottom', rotation=90)
-            ax[i].text(s='Cluster ID', y=this_cluster_scores.shape[0] / 2, x=-2, ha='center', rotation=90)
+            ax[i].text(s='Cluster ID', y=this_cluster_scores.shape[0] / 2, x=cluster_id_label_x, ha='center', rotation=90)
 
         ax[i].set_xticklabels('')
         ax[i].set_ylim(0, this_cluster_scores.shape[0])
@@ -2852,7 +2852,7 @@ def plot_percent_cells_per_cluster_per_cre_dominant_feature_xaxis(cluster_meta, 
 
             i += 1
 
-    ax[int(len(order) / 2) * 3].set_ylabel('Percent of cells in each cluster', ha='center', fontsize=16, va='bottom')
+    ax[int(len(order) / 2) * 3].set_ylabel('Percent of cells in each cluster', ha='center', fontsize=14, va='bottom')
     # ax[0].set_ylabel('Cluster ID')
     # sns.despine(fig=fig, top=True, right=True, left=False, bottom=False, offset=None, trim=False)
 
@@ -3405,7 +3405,10 @@ def plot_population_averages_for_clusters_grid(multi_session_df, event_type, axe
 
 def plot_population_average_response_for_clusters_as_rows_all_response_types(image_mdf, change_mdf, omission_mdf, cell_type='all',
                                                                              suptitle=None, cluster_order=None, outlier_threshold=5,
-                                                                             familiar_only=False, suffix='', save_dir=None, ax=None):
+                                                                             familiar_only=False, suffix='', save_dir=None, ax=None,
+                                                                             scalebar_y_shift=0.0, show_response_labels=True,
+                                                                             response_panel_title=None,
+                                                                             apply_peak_threshold=False, data_type='events'):
     '''
     Plot population averages for each cluster, with separate columns for images, changes, and omissions
     will use same ymax for all columns of each row
@@ -3414,7 +3417,16 @@ def plot_population_average_response_for_clusters_as_rows_all_response_types(ima
 
     multi_session_dfs must have 'cluster_id' as a column
 
+    apply_peak_threshold: if True, drop peak-outlier cells globally (per-cell, across the three
+        response dfs) using the data_type-specific threshold from utils.get_peak_threshold.
     '''
+
+    if apply_peak_threshold:
+        outlier_cells = utils.get_peak_outlier_cells(
+            pd.concat([image_mdf, change_mdf, omission_mdf]), data_type=data_type)
+        image_mdf = image_mdf[~image_mdf.cell_specimen_id.isin(outlier_cells)]
+        change_mdf = change_mdf[~change_mdf.cell_specimen_id.isin(outlier_cells)]
+        omission_mdf = omission_mdf[~omission_mdf.cell_specimen_id.isin(outlier_cells)]
 
     tmp = image_mdf.copy()
     timestamps = tmp.trace_timestamps.values[0]
@@ -3488,7 +3500,7 @@ def plot_population_average_response_for_clusters_as_rows_all_response_types(ima
 
         ax[i] = utils.plot_flashes_on_trace(ax[i], timestamps, change=False, omitted=False, alpha=0.25)
 
-        if x == 0:
+        if x == 0 and show_response_labels:
             # plot response type on top row
             ax[i].annotate('image', xy=(0.1, 1.35), xycoords=ax[i].get_xaxis_transform(), ha='left',
                            va='top', color='gray', fontsize=10, clip_on=False)
@@ -3513,7 +3525,7 @@ def plot_population_average_response_for_clusters_as_rows_all_response_types(ima
                                           xlim_seconds=change_xlim, ax=ax[i])
             # ax[i].set_xlim(change_xlim)
         ax[i] = utils.plot_flashes_on_trace(ax[i], timestamps, change=True, omitted=False, alpha=0.25)
-        if x == 0:
+        if x == 0 and show_response_labels:
             # plot response type on top row
             ax[i].annotate('change', xy=(0.1, 1.35), xycoords=ax[i].get_xaxis_transform(), ha='left',
                            va='top', color=sns.color_palette()[0], fontsize=10, clip_on=False)
@@ -3538,7 +3550,7 @@ def plot_population_average_response_for_clusters_as_rows_all_response_types(ima
                                           xlim_seconds=omission_xlim, ax=ax[i])
             # ax[i].set_xlim(omission_xlim)
         ax[i] = utils.plot_flashes_on_trace(ax[i], timestamps, change=False, omitted=True, alpha=0.25)
-        if x == 0:
+        if x == 0 and show_response_labels:
             # plot response type on top row
             ax[i].annotate('omission', xy=(0.12, 1.35), xycoords=ax[i].get_xaxis_transform(), ha='left',
                            va='top', color=sns.color_palette()[9], fontsize=10, clip_on=False)
@@ -3571,6 +3583,11 @@ def plot_population_average_response_for_clusters_as_rows_all_response_types(ima
                            va='center',
                            fontsize=8, clip_on=False, annotation_clip=False, rotation=90)
 
+    # panel-D title over the center (change) column of the top row (added after the
+    # tick-clearing loop so set_title('') above doesn't wipe it)
+    if response_panel_title is not None:
+        ax[1].set_title(response_panel_title, fontsize=14, pad=6)
+
     # label Clusters IDs on y axis
     for x, cluster_id in enumerate(cluster_ids):
         i = (x * 3) + 2
@@ -3580,18 +3597,17 @@ def plot_population_average_response_for_clusters_as_rows_all_response_types(ima
         ax[i].annotate(str(cluster_id), xy=(image_xlim[1] + 1.1, np.round(ymax / 2, 3)),
                        xycoords='data', xytext=(image_xlim[1] + 1.21, np.round(ymax / 2, 3)), ha='left',
                        va='center', fontsize=14, clip_on=False, annotation_clip=False, rotation=0)
-    ymin, ymax = ax[2].get_ylim()
-    ax[2].text(s='Cluster ID', x=(image_xlim[1] + 1.1), y=ymax, fontsize=14, ha='left', va='bottom')
         # ax[i].set_ylabel('Cluster ' + str(cluster_id), fontsize=10, ha='center', va='bottom')
 
-    # Label x-axis with  on bottom row
+    # Label x-axis with  on bottom row.  scalebar_y_shift lowers BOTH the scale-bar
+    # line (-y_time) and the '0.5 s' label (y_label) together (fraction of the y-range).
     # images
     i = n_panels - 3
     ymin, ymax = ax[i].get_ylim()
     xlim_seconds = image_xlim
     xmax = 0.5 / (np.abs(xlim_seconds[0]) + xlim_seconds[1])  # 0.5 / of total time
-    y_time = (ymax - ymin) * 0.15
-    y_label = -(ymax - ymin) * 0.25
+    y_time = (ymax - ymin) * (0.15 + scalebar_y_shift)
+    y_label = -(ymax - ymin) * (0.25 + scalebar_y_shift)
     ax[i].axhline(y=-y_time, xmin=0, xmax=xmax, color='k', linewidth=1.3, clip_on=False)
     ax[i].annotate('0.5 s', xy=(xlim_seconds[0], y_label),
                    xycoords='data', xytext=(xlim_seconds[0] + 0.5, y_label), ha='center', va='top',
@@ -3601,8 +3617,8 @@ def plot_population_average_response_for_clusters_as_rows_all_response_types(ima
     i = n_panels - 2
     xlim_seconds = change_xlim
     xmax = 0.5 / (np.abs(xlim_seconds[0]) + xlim_seconds[1])  # 0.5 / of total time
-    y_time = (ymax - ymin) * 0.15
-    y_label = -(ymax - ymin) * 0.25
+    y_time = (ymax - ymin) * (0.15 + scalebar_y_shift)
+    y_label = -(ymax - ymin) * (0.25 + scalebar_y_shift)
     ax[i].axhline(y=-y_time, xmin=0, xmax=xmax, color='k', linewidth=1.3, clip_on=False)
     ax[i].annotate('0.5 s', xy=(xlim_seconds[0], y_label),
                    xycoords='data', xytext=(xlim_seconds[0] + 0.5, y_label), ha='center', va='top',
@@ -3613,8 +3629,8 @@ def plot_population_average_response_for_clusters_as_rows_all_response_types(ima
     i = n_panels - 1
     xlim_seconds = omission_xlim
     xmax = 0.5 / (np.abs(xlim_seconds[0]) + xlim_seconds[1])  # 0.5 / of total time
-    y_time = (ymax - ymin) * 0.15
-    y_label = -(ymax - ymin) * 0.25
+    y_time = (ymax - ymin) * (0.15 + scalebar_y_shift)
+    y_label = -(ymax - ymin) * (0.25 + scalebar_y_shift)
     ax[i].axhline(y=-y_time, xmin=0, xmax=xmax, color='k', linewidth=1.3, clip_on=False)
     ax[i].annotate('0.5 s', xy=(xlim_seconds[0], y_label),
                    xycoords='data', xytext=(xlim_seconds[0] + 0.5, y_label), ha='center', va='top',
@@ -3636,8 +3652,9 @@ def plot_population_average_response_for_clusters_as_rows_all_response_types(ima
 
 def plot_population_average_response_for_clusters_as_rows_split(multi_session_df, event_type, cluster_order=None,
                                                                 with_pre_change=True, ax=None, save_dir=None, suffix='',
-                                                                cluster_id_fontsize=14, fill_alpha=0.4,
-                                                                cluster_id_xoffset=0.9, arrow_label_fontsize=10):
+                                                                cluster_id_fontsize=14, fill_alpha=0.25,
+                                                                cluster_id_xoffset=0.9, arrow_label_fontsize=10,
+                                                                apply_peak_threshold=False, data_type='events'):
     '''
     Plot population averages on a specified axis, with each experience level as its own column
     add annotations for image presentation time
@@ -3645,7 +3662,12 @@ def plot_population_average_response_for_clusters_as_rows_split(multi_session_df
 
     multi_session_df must have 'cluster_id' as a column
 
+    apply_peak_threshold: if True, drop peak-outlier cells globally (per-cell) using the
+        data_type-specific threshold from utils.get_peak_threshold.
     '''
+    if apply_peak_threshold:
+        outlier_cells = utils.get_peak_outlier_cells(multi_session_df, data_type=data_type)
+        multi_session_df = multi_session_df[~multi_session_df.cell_specimen_id.isin(outlier_cells)]
     if event_type == 'changes':
         if with_pre_change:
             xlim_seconds = [-1, 0.75]
@@ -3774,11 +3796,85 @@ def plot_population_average_response_for_clusters_as_rows_split(multi_session_df
     return ax
 
 
+def _plot_cluster_depth_column_as_rows(cluster_meta, cre_line, cluster_order, ax,
+                                       location='binned_depth', metric='fraction_cells_location',
+                                       show_legend=False, top_title=None):
+    '''
+    Plot one cluster's depth distribution per row (ax[i] for cluster_order[i]), so the depth column
+    shares the same dim=(n_clusters,1) grid as the cluster heatmaps and every cluster lands on the
+    same row across panels. Horizontal bars: y=depth bin (shallow at top), x=fraction of cells.
+    Marks clusters whose depth distribution differs from chance (bh_significant) with a '*'.
+    '''
+    n_cells_table = processing.get_cluster_proportion_stats_for_locations(cluster_meta, location=location)
+    n_cells_table = n_cells_table.reset_index()
+    cre_data = n_cells_table[n_cells_table.cre_line == cre_line] if cre_line != 'all' else n_cells_table
+    cre_data = cre_data.copy()
+    cre_data['percent_cells'] = cre_data[metric] * 100        # plot % (matches panel C '% Cells')
+    pmetric = 'percent_cells'
+    hue_order = np.sort(cre_data[location].unique())          # binned_depth ascending -> shallow at top
+    palette = sns.color_palette('gray', len(hue_order))
+    xmax = (cre_data[pmetric].max() * 1.18) if len(cre_data) else 1.0
+
+    n = len(cluster_order)
+    for i, cluster_id in enumerate(cluster_order):
+        d = cre_data[cre_data.cluster_id == cluster_id]
+        sns.barplot(data=d, y=location, x=pmetric, order=hue_order, orient='h',
+                    hue=location, hue_order=hue_order, palette=palette, legend=False,
+                    width=0.8, ax=ax[i])
+        ax[i].set_xlim(0, xmax)
+        ax[i].set_ylabel('')
+        ax[i].set_xlabel('')
+        ax[i].set_yticks([])
+        # pad the category axis so the bar group doesn't fill the whole row -> visual gap
+        # between clusters while keeping hspace=0 (rows stay aligned with panel C)
+        _y0, _y1 = ax[i].get_ylim()
+        _lo, _hi = min(_y0, _y1), max(_y0, _y1)
+        _pad = (_hi - _lo) * 0.18
+        ax[i].set_ylim((_hi + _pad, _lo - _pad) if _y0 > _y1 else (_lo - _pad, _hi + _pad))
+        sns.despine(ax=ax[i], top=True, right=True, left=False, bottom=False)
+        # significance '*' just right of the tallest (max %) depth bar for this cluster
+        if 'bh_significant' in d.columns and d['bh_significant'].any():
+            vals = d.set_index(location)[pmetric].reindex(hue_order).values
+            if np.isfinite(vals).any():
+                jmax = int(np.nanargmax(vals))
+                y_center = (len(hue_order) - 1) / 2.0   # vertically centered between the middle bins
+                ax[i].text(vals[jmax] + xmax * 0.02, y_center, '*', ha='left', va='center',
+                           fontsize=18, color=sns.color_palette()[3], clip_on=False)
+        # hide tick marks AND labels on every row except the bottom one
+        # (NB: don't set_xticklabels([]) -- with sharex=True that blanks the bottom row too)
+        if i != n - 1:
+            ax[i].tick_params(bottom=False, labelbottom=False)
+    ax[n - 1].set_xlabel('% Cells', fontsize=12)
+    ax[n - 1].tick_params(axis='x', labelsize=10)   # match panel C xticklabel size
+    if top_title is not None:
+        ax[0].set_title(top_title, fontsize=12)
+
+    if show_legend:
+        import matplotlib.patches as mpatches
+        handles = [mpatches.Patch(facecolor=palette[j], edgecolor='none', label=str(hue_order[j]))
+                   for j in range(len(hue_order))]
+        ax[0].legend(handles=handles, title='Depth (µm)', loc='upper left',
+                     bbox_to_anchor=(1.15, 1.3), fontsize=11, title_fontsize=11, frameon=False)
+    return ax
+
+
 def plot_cluster_properties_combined(cluster_meta, feature_matrix, cre_line,
                                      image_mdf, change_mdf, omission_mdf, familiar_only=False,
-                                     sort_by=None, cluster_order=None, save_dir=None, folder=None):
+                                     sort_by=None, cluster_order=None, save_dir=None, folder=None,
+                                     add_depth=True, show_suptitle=True, scalebar_y_shift=0.0,
+                                     show_response_labels=True, response_panel_title=None,
+                                     depth_top_title=None, percent_cells_by_feature=False,
+                                     percent_cells_xspan=(0.434, 0.55),
+                                     heatmap_xspan=(0, 0.27), means_xspan=(0.334, 0.389),
+                                     response_xspan=(0.569, 0.85), response_wspace=0.4,
+                                     heatmap_ylabel_x=-2,
+                                     apply_peak_threshold=False, data_type='events'):
     '''
-    Plots cluster heatmap, % cells per cluster, cluster average heatmaps, and population averages for clusters
+    Plots cluster heatmap, % cells per cluster, cluster average heatmaps, population averages,
+    and (add_depth) a per-cluster depth-distribution column on the right, all sharing the same
+    cluster rows so a given cluster is the same row across every panel.
+    apply_peak_threshold: if True, additionally drop peak-outlier cells globally (per-cell, across
+        the three response dfs) using the data_type-specific threshold from utils.get_peak_threshold.
     '''
 
     suffix = ''
@@ -3805,6 +3901,13 @@ def plot_cluster_properties_combined(cluster_meta, feature_matrix, cre_line,
     change_mdf_clean, change_outliers = processing.remove_outliers(change_mdf, threshold_percentile)
     omission_mdf_clean, omission_outliers = processing.remove_outliers(omission_mdf, threshold_percentile)
 
+    if apply_peak_threshold:
+        peak_outliers = utils.get_peak_outlier_cells(
+            pd.concat([image_mdf_clean, change_mdf_clean, omission_mdf_clean]), data_type=data_type)
+        image_mdf_clean = image_mdf_clean[~image_mdf_clean.cell_specimen_id.isin(peak_outliers)]
+        change_mdf_clean = change_mdf_clean[~change_mdf_clean.cell_specimen_id.isin(peak_outliers)]
+        omission_mdf_clean = omission_mdf_clean[~omission_mdf_clean.cell_specimen_id.isin(peak_outliers)]
+
     if cluster_order is None:  # if cluster_order not provided, sort by original cluster_id
         if sort_by is None:
             cluster_order = np.sort(cluster_meta[cluster_meta.cre_line == cre_line].cluster_id.unique())
@@ -3821,17 +3924,18 @@ def plot_cluster_properties_combined(cluster_meta, feature_matrix, cre_line,
     n_clusters = len(cluster_ids)
     print(n_clusters)
 
-    figsize = [16, n_clusters*0.9]
+    figsize = [18, n_clusters*0.9]
     fig = plt.figure(figsize=figsize, facecolor='white')
 
     if familiar_only:
         # coding scores per cluster
-        ax = utils.placeAxesOnGrid(fig, dim=(n_clusters, 1), xspan=(0, 0.3), yspan=(0, 1), sharex=True, wspace=0,
+        ax = utils.placeAxesOnGrid(fig, dim=(n_clusters, 1), xspan=heatmap_xspan, yspan=(0, 1), sharex=True, wspace=0,
                                    hspace=0)
         ax = plot_coding_score_heatmap_matched(cluster_meta_copy, feature_matrix, cluster_order=cluster_order,
-                                               session_colors=False, experience_index=0, title='', ax=ax)
+                                               session_colors=False, experience_index=0, title='', ax=ax,
+                                               cluster_id_label_x=heatmap_ylabel_x)
         # plot average coding scores
-        ax = utils.placeAxesOnGrid(fig, dim=(n_clusters, 1), xspan=(0.37, 0.43), yspan=(0, 1), sharex=True, sharey=True,
+        ax = utils.placeAxesOnGrid(fig, dim=(n_clusters, 1), xspan=means_xspan, yspan=(0, 1), sharex=True, sharey=True,
                                    wspace=0, hspace=0.2)
         ax = plot_mean_cluster_heatmaps_remapped(feature_matrix, cluster_meta_copy, fontsize=9,
                                                  cluster_order=cluster_order, sort_by=None,
@@ -3840,33 +3944,39 @@ def plot_cluster_properties_combined(cluster_meta, feature_matrix, cre_line,
                                                  abbreviate_features=True, plot_as_rows=True, ax=ax)
     else:
         # coding scores per cluster
-        ax = utils.placeAxesOnGrid(fig, dim=(n_clusters, 1), xspan=(0, 0.3), yspan=(0, 1), sharex=True, wspace=0, hspace=0)
+        ax = utils.placeAxesOnGrid(fig, dim=(n_clusters, 1), xspan=(0, 0.27), yspan=(0, 1), sharex=True, wspace=0, hspace=0)
         ax = plot_coding_score_heatmap_matched(cluster_meta_copy, feature_matrix, cluster_order=cluster_order,
                                                         session_colors=True, experience_index=None, title='', ax=ax)
 
         # plot average coding scores
-        ax = utils.placeAxesOnGrid(fig, dim=(n_clusters, 1), xspan=(0.37, 0.43), yspan=(0, 1), sharex=True, sharey=True,
+        ax = utils.placeAxesOnGrid(fig, dim=(n_clusters, 1), xspan=means_xspan, yspan=(0, 1), sharex=True, sharey=True,
                                    wspace=0, hspace=0.2)
         ax = plot_mean_cluster_heatmaps_remapped(feature_matrix, cluster_meta_copy, fontsize=9,
                                                  cluster_order=cluster_order, sort_by=None,
                                                  abbreviate_features=True, plot_as_rows=True, ax=ax)
 
 
-    # if cre_line == 'all':
-    #     # percent cells for each cluster
-    #     ax = utils.placeAxesOnGrid(fig, dim=(n_clusters, 1), xspan=(0.51, 0.59), yspan=(0, 1), sharex=False, wspace=0,
-    #                                hspace=0)
-    #     ax = plot_percent_cells_per_cluster_per_cre_dominant_feature_xaxis(cluster_meta_copy, col_to_group='cre_line', match_height=True,
-    #                                                             cluster_order=None, save_dir=None, ax=ax)
-    # else:
     # percent cells for each cluster
-    ax = utils.placeAxesOnGrid(fig, dim=(n_clusters, 1), xspan=(0.48, 0.56), yspan=(0, 1), sharex=False, wspace=0,
-                               hspace=0)
-    ax = plot_percent_cells_per_cluster_per_cre_as_rows(cluster_meta_copy, cre_line=cre_line, familiar_only=familiar_only,
-                                                        cluster_order=cluster_order, sort_by=None, ax=ax)
+    if percent_cells_by_feature:
+        # Exc/Sst/Vip bars per cluster (one sub-axis per cre line), colored by dominant feature.
+        # Needs a (n_clusters, 3) grid because the function indexes ax[i] for n_clusters*3 axes.
+        ax = utils.placeAxesOnGrid(fig, dim=(n_clusters, 3), xspan=percent_cells_xspan, yspan=(0, 1),
+                                   sharex=False, sharey=False, wspace=0, hspace=0)
+        ax = np.asarray(ax).ravel()
+        # NB: use the original cluster_meta (real cre_line values); cluster_meta_copy
+        # has cre_line overwritten to 'all' when cre_line='all', which would empty the
+        # per-cre (Exc/Sst/Vip) breakdown this function draws.
+        ax = plot_percent_cells_per_cluster_per_cre_dominant_feature_xaxis(
+            cluster_meta, col_to_group='cre_line', match_height=True,
+            cluster_order=cluster_order, sort_by=None, ax=ax)
+    else:
+        ax = utils.placeAxesOnGrid(fig, dim=(n_clusters, 1), xspan=(0.434, 0.506), yspan=(0, 1), sharex=False, wspace=0,
+                                   hspace=0)
+        ax = plot_percent_cells_per_cluster_per_cre_as_rows(cluster_meta_copy, cre_line=cre_line, familiar_only=familiar_only,
+                                                            cluster_order=cluster_order, sort_by=None, ax=ax)
 
-    ax = utils.placeAxesOnGrid(fig, dim=(n_clusters, 3), xspan=(0.63, 0.94), yspan=(0, 1), sharey='row',
-                               wspace=0.4, hspace=0.2, width_ratios=[0.8, 1.25, 1.25])
+    ax = utils.placeAxesOnGrid(fig, dim=(n_clusters, 3), xspan=response_xspan, yspan=(0, 1), sharey='row',
+                               wspace=response_wspace, hspace=0.2, width_ratios=[0.8, 1.25, 1.25])
     ax = np.asarray(ax).ravel()
     ax = plot_population_average_response_for_clusters_as_rows_all_response_types(image_mdf_clean,
                                                                            change_mdf_clean,
@@ -3874,16 +3984,32 @@ def plot_cluster_properties_combined(cluster_meta, feature_matrix, cre_line,
                                                                            suptitle=None,
                                                                            cluster_order=cluster_order,
                                                                            familiar_only=familiar_only,
+                                                                           scalebar_y_shift=scalebar_y_shift,
+                                                                           show_response_labels=show_response_labels,
+                                                                           response_panel_title=response_panel_title,
                                                                            ax=ax);
 
-    plt.suptitle('Cluster properties for ' + cell_type + ' matched cells',
-                 x=0.5, y=0.97, fontsize=16)
+    # depth-distribution column: same dim=(n_clusters,1) grid -> aligned row-for-row with the heatmaps
+    if add_depth:
+        ax_depth = utils.placeAxesOnGrid(fig, dim=(n_clusters, 1), xspan=(0.91, 0.99), yspan=(0, 1),
+                                         sharex=True, wspace=0, hspace=0)   # hspace=0 -> rows align with panel C
+        ax_depth = np.atleast_1d(np.asarray(ax_depth)).ravel().tolist()
+        _plot_cluster_depth_column_as_rows(cluster_meta_copy, cre_line, cluster_order, ax_depth,
+                                           location='binned_depth',
+                                           show_legend=(cre_line == 'Slc17a7-IRES2-Cre'),
+                                           top_title=depth_top_title)
+
+    if show_suptitle:
+        plt.suptitle('Cluster properties for ' + cell_type + ' matched cells',
+                     x=0.5, y=0.97, fontsize=16)
 
     if save_dir:
         if folder is None:
             folder = 'clustering_results'
         utils.save_figure(fig, figsize, save_dir, folder,
                           'cluster_properties_combined_' + cre_line[:3]+suffix)
+
+    return fig
 
 
 def plot_response_heatmap_for_concatenated_traces(multi_session_df, event_type='images', cell_order=None,
@@ -7790,7 +7916,8 @@ def _save_tukey_all_pairwise_stats(stats_table, save_dir, folder, filename):
 
 def plot_tukey_diff_in_means_for_metric(response_metrics, metric, cluster_meta=None, title='', xlabel=None, lims=None,
                                         split_by_cre=True, match_clusters=True, min_cluster_fraction=None,
-                                        horiz=False, group_to_compare=None, pref_exp_level=False, save_dir=None, ax=None):
+                                        horiz=False, group_to_compare=None, pref_exp_level=False, save_dir=None, ax=None,
+                                        line_val=None):
     '''
     Runs Tukey HSD multiple comparisons test across clusters
     Averages metric value across experience level before computing stats, unless
@@ -7890,6 +8017,8 @@ def plot_tukey_diff_in_means_for_metric(response_metrics, metric, cluster_meta=N
                                                                   group_colors=colors, color='k', as_row=True,
                                                                   title=utils.convert_cre_line_to_cell_type(cre_line),
                                                                   ylabel=xlabel, xlabel='Cluster ID', ax=ax[i])
+                if line_val is not None:
+                    ax[i].axhline(y=line_val, xmin=0, xmax=1, color='gray', linestyle='--', linewidth=1)
                 if i > 0:
                     ax[i].set_ylabel('')
                 if lims is not None:
@@ -7902,6 +8031,8 @@ def plot_tukey_diff_in_means_for_metric(response_metrics, metric, cluster_meta=N
                                                               group_colors=colors, color='k', as_row=False,
                                                               title=utils.convert_cre_line_to_cell_type(cre_line),
                                                               xlabel=xlabel, ylabel='Cluster ID', ax=ax[i])
+                if line_val is not None:
+                    ax[i].axvline(x=line_val, ymin=0, ymax=1, color='gray', linestyle='--', linewidth=1)
                 if i > 0:
                     ax[i].set_ylabel('')
                 if i != 1:
@@ -8483,10 +8614,23 @@ def prepare_and_plot_concatenated_image_kernels(
         kernel_cols = [f'image{i}_weights' for i in range(8)]
         required_cols = index_cols + ['experience_level'] + kernel_cols
         kernel_name = 'concatenated_image'
+        # per-cell coding score for the concatenated image kernels is the combined
+        # 'all-images' coding score (same column Figure 4 uses)
+        coding_source_cols = ['all-images']
     else:
         kernel_name = '_'.join(kernel_names) if len(kernel_names) > 1 else kernel_names[0]
         kernel_cols = [f'{name}_weights' for name in kernel_names]
         required_cols = kernel_cols + index_cols + ['experience_level']
+        # each plotted kernel has a coding-score column named like the kernel (e.g.
+        # 'omissions', 'hits', 'misses'); for multiple kernels they are summed into one
+        # combined coding score
+        coding_source_cols = list(kernel_names)
+
+    # carry the real per-cell coding score(s) through the reformatting so the coding-score
+    # heatmap shows true values instead of a placeholder. Keep only columns that exist.
+    coding_source_cols = [c for c in coding_source_cols if c in weights_df.columns]
+    has_coding_score = len(coding_source_cols) > 0
+    required_cols = required_cols + [c for c in coding_source_cols if c not in required_cols]
 
     weights_subset = weights_df[required_cols].copy()
     weights_subset = weights_subset.dropna(subset=index_cols + ['experience_level'])
@@ -8567,7 +8711,42 @@ def prepare_and_plot_concatenated_image_kernels(
         }
     )
     melted_weights_df[f'{kernel_name}_weights'] = melted_weights_df[f'{kernel_name}_weights'].apply(np.asarray)
-    melted_weights_df[kernel_name] = 1
+
+    # attach the real per-cell coding score, pivoted/melted in parallel with the weights so
+    # each cell's (weights, coding score) pair stays aligned per experience level. The
+    # plotting function expects the coding-score column to hold the same (negative) values
+    # as Figure 4, since it computes sqrt(value * -1). For multiple kernels the per-kernel
+    # coding scores are summed into one combined score. A coding score of 0 renders blank
+    # (vs NaN, which the plotting function's dropna would drop -- crashing if a whole group
+    # were NaN, as happened with the all-NaN placeholder).
+    if has_coding_score:
+        weights_complete = weights_complete.copy()
+        # default sum is skipna with min_count=0, so an all-NaN row becomes 0 (never NaN)
+        weights_complete['_coding_score'] = weights_complete[coding_source_cols].sum(axis=1)
+        coding_pivot = (
+            weights_complete
+            .pivot_table(
+                index=index_cols,
+                columns='experience_level',
+                values='_coding_score',
+                aggfunc='first',
+            )
+            .reindex(columns=ordered_experience_levels)
+            .reset_index()
+        )
+        melted_coding = coding_pivot.melt(
+            id_vars=['cell_specimen_id', 'cluster_id', 'cell_type'],
+            value_vars=ordered_experience_levels,
+        ).rename(columns={'variable': 'experience_level', 'value': kernel_name})
+        melted_weights_df = melted_weights_df.merge(
+            melted_coding,
+            on=['cell_specimen_id', 'cluster_id', 'cell_type', 'experience_level'],
+            how='left',
+        )
+        melted_weights_df[kernel_name] = melted_weights_df[kernel_name].fillna(0)
+    else:
+        # no coding-score columns available; 0 -> blank bars and avoids the dropna crash
+        melted_weights_df[kernel_name] = 0
 
     run_params_tmp = copy.deepcopy(run_params)
 
@@ -9983,18 +10162,22 @@ def plot_mean_cluster_response_profiles(
     linewidth=1,
     x_sb_seconds=0.5,
     outlier_threshold=None,
+    apply_peak_threshold=False,
+    data_type='events',
     fig=None,
     bbox=None,
     wspace=0.45,
     hspace=0.6,
     fontsize_scale=1.0,
-    fill_alpha=0.2,
+    fill_alpha=0.25,
 ):
     """
     Compact version of plot_main_cluster_properties showing only the mean response
     trace overlays for each (cell_type, cluster_id), with group titles on top.
     Reuses the `_draw_trace_panel` and `_add_proportion_pie` helpers defined alongside
     plot_main_cluster_properties.
+    apply_peak_threshold: if True, drop peak-outlier cells globally (per-cell, across all three
+        response dfs) using the data_type-specific threshold from utils.get_peak_threshold.
     """
     if cluster_kernel_pairs is None:
         cluster_kernel_pairs = _default_cluster_kernel_pairs()
@@ -10004,6 +10187,13 @@ def plot_mean_cluster_response_profiles(
     image_mdf = _clean(image_mdf)
     change_mdf = _clean(change_mdf)
     omission_mdf = _clean(omission_mdf)
+
+    if apply_peak_threshold:
+        outlier_cells = utils.get_peak_outlier_cells(
+            pd.concat([image_mdf, change_mdf, omission_mdf]), data_type=data_type)
+        image_mdf = image_mdf[~image_mdf['cell_specimen_id'].isin(outlier_cells)]
+        change_mdf = change_mdf[~change_mdf['cell_specimen_id'].isin(outlier_cells)]
+        omission_mdf = omission_mdf[~omission_mdf['cell_specimen_id'].isin(outlier_cells)]
 
     mdf_for_kernel = {"all-images": change_mdf, "omissions": omission_mdf,
                       "hits": change_mdf, "pupil": omission_mdf}
@@ -10199,12 +10389,16 @@ def plot_mean_cluster_response_profiles_transposed(
     linewidth=1,
     x_sb_seconds=0.5,
     outlier_threshold=None,
+    apply_peak_threshold=False,
+    data_type='events',
 ):
     """
     Transposed version of plot_mean_cluster_response_profiles:
         rows    = cluster categories (e.g. "Familiar selective", "Novelty modulated", ...)
         columns = cell types (Excitatory, Sst Inhibitory, Vip Inhibitory)
     Reuses `_draw_trace_panel` from the helpers cell.
+    apply_peak_threshold: if True, drop peak-outlier cells globally (per-cell, across all three
+        response dfs) using the data_type-specific threshold from utils.get_peak_threshold.
     """
     if cluster_kernel_pairs is None:
         cluster_kernel_pairs = _default_cluster_kernel_pairs()
@@ -10214,6 +10408,13 @@ def plot_mean_cluster_response_profiles_transposed(
     image_mdf = _clean(image_mdf)
     change_mdf = _clean(change_mdf)
     omission_mdf = _clean(omission_mdf)
+
+    if apply_peak_threshold:
+        outlier_cells = utils.get_peak_outlier_cells(
+            pd.concat([image_mdf, change_mdf, omission_mdf]), data_type=data_type)
+        image_mdf = image_mdf[~image_mdf['cell_specimen_id'].isin(outlier_cells)]
+        change_mdf = change_mdf[~change_mdf['cell_specimen_id'].isin(outlier_cells)]
+        omission_mdf = omission_mdf[~omission_mdf['cell_specimen_id'].isin(outlier_cells)]
 
     mdf_for_kernel = {"all-images": change_mdf, "omissions": omission_mdf,
                       "hits": change_mdf, "pupil": omission_mdf}
@@ -10474,6 +10675,8 @@ def plot_main_cluster_properties(
     x_sb_seconds=0.5,
     outlier_threshold=None,
     dashed_line_at=0.5,
+    apply_peak_threshold=False,
+    data_type='events',
 ):
     """
     For each (cell_type, cluster_id) cell in the layout, draws a triplet of panels:
@@ -10483,6 +10686,8 @@ def plot_main_cluster_properties(
     Metric panels use a fixed y-range of (0, 1); depth panels use (0, 0.4).
     Only the rightmost metric/depth panels in each row carry tick labels and y-axis labels,
     placed on the right to avoid overlap with the trace panels.
+    apply_peak_threshold: if True, drop peak-outlier cells globally (per-cell, across the three
+        response dfs) using the data_type-specific threshold from utils.get_peak_threshold.
     """
     import seaborn as sns
     from matplotlib.patches import Patch
@@ -10497,6 +10702,13 @@ def plot_main_cluster_properties(
     image_mdf = _clean(image_mdf)
     change_mdf = _clean(change_mdf)
     omission_mdf = _clean(omission_mdf)
+
+    if apply_peak_threshold:
+        outlier_cells = utils.get_peak_outlier_cells(
+            pd.concat([image_mdf, change_mdf, omission_mdf]), data_type=data_type)
+        image_mdf = image_mdf[~image_mdf['cell_specimen_id'].isin(outlier_cells)]
+        change_mdf = change_mdf[~change_mdf['cell_specimen_id'].isin(outlier_cells)]
+        omission_mdf = omission_mdf[~omission_mdf['cell_specimen_id'].isin(outlier_cells)]
 
     # ---- per-kernel lookup tables ----
     mdf_for_kernel = {"all-images": change_mdf, "omissions": omission_mdf,
