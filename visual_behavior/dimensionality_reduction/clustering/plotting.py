@@ -2866,7 +2866,8 @@ def plot_percent_cells_per_cluster_per_cre_dominant_feature_xaxis(cluster_meta, 
 
 
 def plot_percent_cells_per_cluster_per_cre_as_rows(cluster_meta, cre_line='Slc17a7-IRES2-Cre', save_dir=None,
-                                                   familiar_only=True, cluster_order=None, sort_by='cluster_id', folder=None, ax=None):
+                                                   familiar_only=True, cluster_order=None, sort_by='cluster_id', folder=None, ax=None,
+                                                   size_label_offset=1, size_label_fontsize=10):
     '''
     Plots the percent of cells in each cre line belonging to each cluster as a barplot
     with one axis / row per cre line
@@ -2942,8 +2943,8 @@ def plot_percent_cells_per_cluster_per_cre_as_rows(cluster_meta, cre_line='Slc17
         cluster_data = cre_data[cre_data.cluster_id == cluster_id]
 
         percent_cells = np.round(cluster_data.percent_cells.values[0], 1)
-        ax[i].text(s=str(percent_cells)+' %', y=0, x=percent_cells+1,
-                   va='center', ha='left', fontsize=10)
+        ax[i].text(s=str(percent_cells)+' %', y=0, x=percent_cells+size_label_offset,
+                   va='center', ha='left', fontsize=size_label_fontsize)
 
 
     if cre_line == 'all':
@@ -3404,11 +3405,11 @@ def plot_population_averages_for_clusters_grid(multi_session_df, event_type, axe
 
 
 def plot_population_average_response_for_clusters_as_rows_all_response_types(image_mdf, change_mdf, omission_mdf, cell_type='all',
-                                                                             suptitle=None, cluster_order=None, outlier_threshold=5,
+                                                                             suptitle=None, cluster_order=None,
                                                                              familiar_only=False, suffix='', save_dir=None, ax=None,
                                                                              scalebar_y_shift=0.0, show_response_labels=True,
                                                                              response_panel_title=None,
-                                                                             apply_peak_threshold=False, data_type='events'):
+                                                                             apply_peak_threshold=False, peak_scope='trace', data_type='events'):
     '''
     Plot population averages for each cluster, with separate columns for images, changes, and omissions
     will use same ymax for all columns of each row
@@ -3422,11 +3423,8 @@ def plot_population_average_response_for_clusters_as_rows_all_response_types(ima
     '''
 
     if apply_peak_threshold:
-        outlier_cells = utils.get_peak_outlier_cells(
-            pd.concat([image_mdf, change_mdf, omission_mdf]), data_type=data_type)
-        image_mdf = image_mdf[~image_mdf.cell_specimen_id.isin(outlier_cells)]
-        change_mdf = change_mdf[~change_mdf.cell_specimen_id.isin(outlier_cells)]
-        omission_mdf = omission_mdf[~omission_mdf.cell_specimen_id.isin(outlier_cells)]
+        image_mdf, change_mdf, omission_mdf = utils.drop_peak_outliers_across(
+            [image_mdf, change_mdf, omission_mdf], data_type=data_type, scope=peak_scope)
 
     tmp = image_mdf.copy()
     timestamps = tmp.trace_timestamps.values[0]
@@ -3479,7 +3477,6 @@ def plot_population_average_response_for_clusters_as_rows_all_response_types(ima
         #         trace_type, experience_levels, experience_level_colors, flash_flags, time_windows,
         #         ref, total_per_ct, linewidth=1,
         #         show_row_label=False,
-        #         outlier_threshold=outlier_threshold,
         #     )
         
         # for a, axis in enumerate(axes_conditions):
@@ -3488,10 +3485,8 @@ def plot_population_average_response_for_clusters_as_rows_all_response_types(ima
             cdf = image_mdf[(image_mdf['cluster_id'] == cluster_id) & (image_mdf[hue_column] == hue)]
             traces = cdf.mean_trace.values
             traces = np.vstack(traces)
-            if outlier_threshold is not None:
-                traces = _drop_outlier_traces(traces, outlier_threshold=outlier_threshold)
-                if len(traces) == 0:
-                    continue
+            if len(traces) == 0:
+                continue
             timestamps = cdf.trace_timestamps.values[0]
             ax[i] = utils.plot_mean_trace(traces, timestamps, ylabel=ylabel, linewidth=1,
                                           legend_label=hue, color=experience_level_colors[c], interval_sec=0.5,
@@ -3514,10 +3509,8 @@ def plot_population_average_response_for_clusters_as_rows_all_response_types(ima
             cdf = change_mdf[(change_mdf['cluster_id'] == cluster_id) & (change_mdf[hue_column] == hue)]
             traces = cdf.mean_trace.values
             traces = np.vstack(traces)
-            if outlier_threshold is not None:
-                traces = _drop_outlier_traces(traces, outlier_threshold=outlier_threshold)
-                if len(traces) == 0:
-                    continue
+            if len(traces) == 0:
+                continue
             timestamps = cdf.trace_timestamps.values[0]
             # xlim_seconds=[-1, 0.75]
             ax[i] = utils.plot_mean_trace(np.asarray(traces), timestamps, ylabel=ylabel, linewidth=1,
@@ -3539,10 +3532,8 @@ def plot_population_average_response_for_clusters_as_rows_all_response_types(ima
             cdf = omission_mdf[(omission_mdf['cluster_id'] == cluster_id) & (omission_mdf[hue_column] == hue)]
             traces = cdf.mean_trace.values
             traces = np.vstack(traces)
-            if outlier_threshold is not None:
-                traces = _drop_outlier_traces(traces, outlier_threshold=outlier_threshold)
-                if len(traces) == 0:
-                    continue
+            if len(traces) == 0:
+                continue
             timestamps = cdf.trace_timestamps.values[0]
             # xlim_seconds=[-1, 1.5]
             ax[i] = utils.plot_mean_trace(np.asarray(traces), timestamps, ylabel=ylabel, linewidth=1,
@@ -3561,8 +3552,8 @@ def plot_population_average_response_for_clusters_as_rows_all_response_types(ima
     n_panels = len(cluster_ids) * 3
     for i in range(n_panels):
         ymin, ymax = ax[i].get_ylim()
-        if ymax < 0.015:
-            ymax = 0.015
+        if ymax < 0.005:
+            ymax = 0.005
         ax[i].set_ylim(ymin, ymax)
         ax[i].set_xticks((0, 0.5))
         ax[i].set_yticks((0, 0.01))
@@ -3654,7 +3645,7 @@ def plot_population_average_response_for_clusters_as_rows_split(multi_session_df
                                                                 with_pre_change=True, ax=None, save_dir=None, suffix='',
                                                                 cluster_id_fontsize=14, fill_alpha=0.25,
                                                                 cluster_id_xoffset=0.9, arrow_label_fontsize=10,
-                                                                apply_peak_threshold=False, data_type='events'):
+                                                                apply_peak_threshold=False, peak_scope='trace', data_type='events'):
     '''
     Plot population averages on a specified axis, with each experience level as its own column
     add annotations for image presentation time
@@ -3666,8 +3657,7 @@ def plot_population_average_response_for_clusters_as_rows_split(multi_session_df
         data_type-specific threshold from utils.get_peak_threshold.
     '''
     if apply_peak_threshold:
-        outlier_cells = utils.get_peak_outlier_cells(multi_session_df, data_type=data_type)
-        multi_session_df = multi_session_df[~multi_session_df.cell_specimen_id.isin(outlier_cells)]
+        multi_session_df = utils.drop_peak_outliers(multi_session_df, data_type=data_type, scope=peak_scope)
     if event_type == 'changes':
         if with_pre_change:
             xlim_seconds = [-1, 0.75]
@@ -3868,7 +3858,7 @@ def plot_cluster_properties_combined(cluster_meta, feature_matrix, cre_line,
                                      heatmap_xspan=(0, 0.27), means_xspan=(0.334, 0.389),
                                      response_xspan=(0.569, 0.85), response_wspace=0.4,
                                      heatmap_ylabel_x=-2,
-                                     apply_peak_threshold=False, data_type='events'):
+                                     apply_peak_threshold=True, peak_scope='trace', data_type='events'):
     '''
     Plots cluster heatmap, % cells per cluster, cluster average heatmaps, population averages,
     and (add_depth) a per-cluster depth-distribution column on the right, all sharing the same
@@ -3895,18 +3885,15 @@ def plot_cluster_properties_combined(cluster_meta, feature_matrix, cre_line,
         cluster_meta_copy['cre_line'] = 'all'
         cell_type = 'all'
 
-    # remove outliers for plotting clarity
-    threshold_percentile = 99.8
-    image_mdf_clean, image_outliers = processing.remove_outliers(image_mdf, threshold_percentile)
-    change_mdf_clean, change_outliers = processing.remove_outliers(change_mdf, threshold_percentile)
-    omission_mdf_clean, omission_outliers = processing.remove_outliers(omission_mdf, threshold_percentile)
+    # # remove outliers for plotting clarity
+    # threshold_percentile = 99.8
+    # image_mdf, image_outliers = processing.remove_outliers(image_mdf, threshold_percentile)
+    # change_mdf, change_outliers = processing.remove_outliers(change_mdf, threshold_percentile)
+    # omission_mdf, omission_outliers = processing.remove_outliers(omission_mdf, threshold_percentile)
 
     if apply_peak_threshold:
-        peak_outliers = utils.get_peak_outlier_cells(
-            pd.concat([image_mdf_clean, change_mdf_clean, omission_mdf_clean]), data_type=data_type)
-        image_mdf_clean = image_mdf_clean[~image_mdf_clean.cell_specimen_id.isin(peak_outliers)]
-        change_mdf_clean = change_mdf_clean[~change_mdf_clean.cell_specimen_id.isin(peak_outliers)]
-        omission_mdf_clean = omission_mdf_clean[~omission_mdf_clean.cell_specimen_id.isin(peak_outliers)]
+        image_mdf, change_mdf, omission_mdf = utils.drop_peak_outliers_across(
+            [image_mdf, change_mdf, omission_mdf], data_type=data_type, scope=peak_scope)
 
     if cluster_order is None:  # if cluster_order not provided, sort by original cluster_id
         if sort_by is None:
@@ -3978,9 +3965,9 @@ def plot_cluster_properties_combined(cluster_meta, feature_matrix, cre_line,
     ax = utils.placeAxesOnGrid(fig, dim=(n_clusters, 3), xspan=response_xspan, yspan=(0, 1), sharey='row',
                                wspace=response_wspace, hspace=0.2, width_ratios=[0.8, 1.25, 1.25])
     ax = np.asarray(ax).ravel()
-    ax = plot_population_average_response_for_clusters_as_rows_all_response_types(image_mdf_clean,
-                                                                           change_mdf_clean,
-                                                                           omission_mdf_clean,
+    ax = plot_population_average_response_for_clusters_as_rows_all_response_types(image_mdf,
+                                                                           change_mdf,
+                                                                           omission_mdf,
                                                                            suptitle=None,
                                                                            cluster_order=cluster_order,
                                                                            familiar_only=familiar_only,
@@ -4117,9 +4104,9 @@ def plot_cell_response_heatmaps_for_clusters(multi_session_df, data_type='events
 
     tmp = multi_session_df.copy()
 
-    threshold_percentile = 99.8
-    tmp, outliers = processing.remove_outliers(tmp, threshold_percentile)
-    print(len(outliers), 'total removed')
+    # threshold_percentile = 99.8
+    # tmp, outliers = processing.remove_outliers(tmp, threshold_percentile)
+    # print(len(outliers), 'total removed')
 
     # xlim_seconds = [-0.3, 0.8]
     timestamps = tmp.trace_timestamps.values[0]
@@ -8400,7 +8387,6 @@ def plot_cluster_kernel_overlays_by_experience(
     cell_type=None,
     show_all_clusters=False,
     min_cluster_fraction=0.04,
-    remove_outliers=False,
 ):
     """
     Plot mean kernel weights with one row per cluster and one column per kernel.
@@ -8411,6 +8397,8 @@ def plot_cluster_kernel_overlays_by_experience(
         clusters that have any cells of that cell type; if True, show every
         cluster but blank rows where the cluster has fewer than
         min_cluster_fraction of that cell type's total cells.
+        In both cases, clusters are ordered by descending within-cell-type
+        fraction (largest first).
     share_y_across: "col" (default) or "row".
     """
     if kernels_to_plot is None:
@@ -8424,8 +8412,12 @@ def plot_cluster_kernel_overlays_by_experience(
         df_ct = df[df["cell_type"] == cell_type]
         ct_total = len(df_ct)
         cluster_counts = df_ct.groupby("cluster_id").size()
+        cluster_fraction = (cluster_counts / ct_total) if ct_total > 0 else cluster_counts * 0
         if show_all_clusters:
-            clusters = np.sort(df["cluster_id"].unique())
+            all_clusters = np.sort(df["cluster_id"].unique())
+            cluster_fraction_all = pd.Series(0.0, index=all_clusters)
+            cluster_fraction_all.loc[cluster_fraction.index.values] = cluster_fraction.values
+            clusters = cluster_fraction_all.sort_values(ascending=False).index.values
             if ct_total > 0:
                 clusters_to_blank = {
                     cid for cid in clusters
@@ -8434,7 +8426,7 @@ def plot_cluster_kernel_overlays_by_experience(
             else:
                 clusters_to_blank = set(clusters)
         else:
-            clusters = np.sort(cluster_counts.index.values)
+            clusters = cluster_fraction.sort_values(ascending=False).index.values
         df = df_ct
     else:
         clusters = np.sort(df["cluster_id"].unique())
@@ -8511,18 +8503,6 @@ def plot_cluster_kernel_overlays_by_experience(
                     continue
                 traces = np.vstack(traces)
 
-                if remove_outliers:
-                    peak_abs = np.nanmax(np.abs(traces), axis=1)
-                    med = np.median(peak_abs)
-                    mad = np.median(np.abs(peak_abs - med))
-                    if mad > 0:
-                        keep = peak_abs <= med + 50 * 1.4826 * mad
-                        n_removed = int(np.sum(~keep))
-                        if n_removed:
-                            # print(f"Removed {n_removed} outlier trace(s): kernel={kernel_name}, cluster={int(cluster_id)}, experience={exp_level}")
-                            traces = traces[keep]
-                    if len(traces) == 0:
-                        continue
 
                 ax = utils.plot_mean_trace(
                     traces, timestamps,
@@ -9693,7 +9673,6 @@ def plot_cluster_kernel_overlays_summary(
     linewidth=1.4,
     share_y_across=True,
     x_sb_seconds=0.5,
-    remove_outliers=False,
 ):
     """
     Summary grid: rows = cell types, columns = selected (cluster, kernel) pairs
@@ -9796,19 +9775,6 @@ def plot_cluster_kernel_overlays_summary(
                 if not traces:
                     continue
                 traces = np.vstack(traces)
-
-                if remove_outliers:
-                    peak_abs = np.nanmax(np.abs(traces), axis=1)
-                    med = np.median(peak_abs)
-                    mad = np.median(np.abs(peak_abs - med))
-                    if mad > 0:
-                        keep = peak_abs <= med + 50 * 1.4826 * mad
-                        n_removed = int(np.sum(~keep))
-                        if n_removed:
-                            # print(f"Removed {n_removed} outlier trace(s): kernel={kernel_name}, cluster={int(cluster_id)}, cell_type={cell_type}, experience={exp_level}")
-                            traces = traces[keep]
-                    if len(traces) == 0:
-                        continue
 
                 ax = utils.plot_mean_trace(
                     traces, timestamps,
@@ -9925,28 +9891,13 @@ def _stack_traces(exp_df):
     return np.vstack(vals)
 
 
-def _drop_outlier_traces(traces, outlier_threshold):
-    """Drop traces whose peak |amplitude| is > outlier_threshold robust SDs above
-    the median (MAD-based). Caller is expected to skip this when threshold is None.
-    """
-    peak_abs = np.nanmax(np.abs(traces), axis=1)
-    med = np.median(peak_abs)
-    mad = np.median(np.abs(peak_abs - med))
-    if mad <= 0:
-        return traces
-    keep = peak_abs <= med + outlier_threshold * 1.4826 * mad
-    return traces[keep]
 
 
 def _draw_trace_panel(ax, mdf, cluster_id, cell_type, kernel_name,
                       ordered_exp, color_map, flash_flags, time_windows,
                       ref, total_per_ct, linewidth, show_row_label,
-                      outlier_threshold=None, fill_alpha=0.2):
-    """Mean response trace overlay across experience levels. Returns True if drawn.
-    Pass `outlier_threshold=None` (default) to skip outlier filtering, or a positive
-    number to drop traces whose peak |amplitude| exceeds that many robust SDs above
-    the median.
-    """
+                      fill_alpha=0.2):
+    """Mean response trace overlay across experience levels. Returns True if drawn."""
     if mdf is None:
         return False
     sub_df = mdf[(mdf['cluster_id'] == cluster_id) & (mdf['cell_type'] == cell_type)]
@@ -9975,8 +9926,6 @@ def _draw_trace_panel(ax, mdf, cluster_id, cell_type, kernel_name,
         traces = _stack_traces(sub_df[sub_df['experience_level'] == exp_level])
         if traces is None:
             continue
-        if outlier_threshold is not None:
-            traces = _drop_outlier_traces(traces, outlier_threshold=outlier_threshold)
             if len(traces) == 0:
                 continue
         ax = utils.plot_mean_trace(
@@ -10161,8 +10110,7 @@ def plot_mean_cluster_response_profiles(
     cluster_kernel_pairs=None,
     linewidth=1,
     x_sb_seconds=0.5,
-    outlier_threshold=None,
-    apply_peak_threshold=False,
+    apply_peak_threshold=False, peak_scope='trace',
     data_type='events',
     fig=None,
     bbox=None,
@@ -10189,11 +10137,8 @@ def plot_mean_cluster_response_profiles(
     omission_mdf = _clean(omission_mdf)
 
     if apply_peak_threshold:
-        outlier_cells = utils.get_peak_outlier_cells(
-            pd.concat([image_mdf, change_mdf, omission_mdf]), data_type=data_type)
-        image_mdf = image_mdf[~image_mdf['cell_specimen_id'].isin(outlier_cells)]
-        change_mdf = change_mdf[~change_mdf['cell_specimen_id'].isin(outlier_cells)]
-        omission_mdf = omission_mdf[~omission_mdf['cell_specimen_id'].isin(outlier_cells)]
+        image_mdf, change_mdf, omission_mdf = utils.drop_peak_outliers_across(
+            [image_mdf, change_mdf, omission_mdf], data_type=data_type, scope=peak_scope)
 
     mdf_for_kernel = {"all-images": change_mdf, "omissions": omission_mdf,
                       "hits": change_mdf, "pupil": omission_mdf}
@@ -10250,7 +10195,7 @@ def plot_mean_cluster_response_profiles(
                 kernel_name, ordered_exp, color_map, flash_flags, time_windows,
                 ref, total_per_ct, linewidth,
                 show_row_label=(c == 0),
-                outlier_threshold=outlier_threshold, fill_alpha=fill_alpha,
+                fill_alpha=fill_alpha,
             )
             if not drew:
                 ax.axis('off')
@@ -10388,8 +10333,7 @@ def plot_mean_cluster_response_profiles_transposed(
     cluster_kernel_pairs=None,
     linewidth=1,
     x_sb_seconds=0.5,
-    outlier_threshold=None,
-    apply_peak_threshold=False,
+    apply_peak_threshold=False, peak_scope='trace',
     data_type='events',
 ):
     """
@@ -10410,11 +10354,8 @@ def plot_mean_cluster_response_profiles_transposed(
     omission_mdf = _clean(omission_mdf)
 
     if apply_peak_threshold:
-        outlier_cells = utils.get_peak_outlier_cells(
-            pd.concat([image_mdf, change_mdf, omission_mdf]), data_type=data_type)
-        image_mdf = image_mdf[~image_mdf['cell_specimen_id'].isin(outlier_cells)]
-        change_mdf = change_mdf[~change_mdf['cell_specimen_id'].isin(outlier_cells)]
-        omission_mdf = omission_mdf[~omission_mdf['cell_specimen_id'].isin(outlier_cells)]
+        image_mdf, change_mdf, omission_mdf = utils.drop_peak_outliers_across(
+            [image_mdf, change_mdf, omission_mdf], data_type=data_type, scope=peak_scope)
 
     mdf_for_kernel = {"all-images": change_mdf, "omissions": omission_mdf,
                       "hits": change_mdf, "pupil": omission_mdf}
@@ -10463,7 +10404,6 @@ def plot_mean_cluster_response_profiles_transposed(
                 kernel_name, ordered_exp, color_map, flash_flags, time_windows,
                 ref, total_per_ct, linewidth,
                 show_row_label=False,
-                outlier_threshold=outlier_threshold,
             )
             if not drew:
                 ax.axis('off')
@@ -10673,9 +10613,8 @@ def plot_main_cluster_properties(
     linewidth=1,
     share_y_across=True,
     x_sb_seconds=0.5,
-    outlier_threshold=None,
     dashed_line_at=0.5,
-    apply_peak_threshold=False,
+    apply_peak_threshold=False, peak_scope='trace',
     data_type='events',
 ):
     """
@@ -10704,11 +10643,8 @@ def plot_main_cluster_properties(
     omission_mdf = _clean(omission_mdf)
 
     if apply_peak_threshold:
-        outlier_cells = utils.get_peak_outlier_cells(
-            pd.concat([image_mdf, change_mdf, omission_mdf]), data_type=data_type)
-        image_mdf = image_mdf[~image_mdf['cell_specimen_id'].isin(outlier_cells)]
-        change_mdf = change_mdf[~change_mdf['cell_specimen_id'].isin(outlier_cells)]
-        omission_mdf = omission_mdf[~omission_mdf['cell_specimen_id'].isin(outlier_cells)]
+        image_mdf, change_mdf, omission_mdf = utils.drop_peak_outliers_across(
+            [image_mdf, change_mdf, omission_mdf], data_type=data_type, scope=peak_scope)
 
     # ---- per-kernel lookup tables ----
     mdf_for_kernel = {"all-images": change_mdf, "omissions": omission_mdf,
@@ -10806,7 +10742,6 @@ def plot_main_cluster_properties(
                 kernel_name, ordered_exp, color_map, flash_flags, time_windows,
                 ref, total_per_ct, linewidth,
                 show_row_label=is_leftmost,
-                outlier_threshold=outlier_threshold,
             )
             if not drew:
                 ax_trace.axis('off')

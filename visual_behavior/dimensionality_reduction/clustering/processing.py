@@ -227,11 +227,13 @@ def remove_outliers(multi_session_df, threshold_percentile=99.9):
 
     '''
     outlier_cells = []
-    for cre_line in multi_session_df.cre_line.unique():
-        cre_df = multi_session_df[(multi_session_df.cre_line==cre_line)]
-        outlier_cells_tmp = cre_df[(cre_df.mean_response>np.percentile(cre_df.mean_response.values, threshold_percentile)) &
-                                         (cre_df.mean_baseline>np.percentile(cre_df.mean_baseline.values, threshold_percentile)) ].cell_specimen_id.unique()
-        outlier_cells = np.hstack((outlier_cells, outlier_cells_tmp))
+    # Percentile-based outlier removal DISABLED (per-cre threshold on mean_response & mean_baseline).
+    # Peak-amplitude filtering (Method C) is now applied separately by the plotting functions.
+    # for cre_line in multi_session_df.cre_line.unique():
+    #     cre_df = multi_session_df[(multi_session_df.cre_line==cre_line)]
+    #     outlier_cells_tmp = cre_df[(cre_df.mean_response>np.percentile(cre_df.mean_response.values, threshold_percentile)) &
+    #                                      (cre_df.mean_baseline>np.percentile(cre_df.mean_baseline.values, threshold_percentile)) ].cell_specimen_id.unique()
+    #     outlier_cells = np.hstack((outlier_cells, outlier_cells_tmp))
     # These cells have abnormally high dF/F values and throw off the meam
     bad_cells = [1120091750,  1120094237, 1086580238, 1086551540, 1086553602,  # Sst
                 1086514682, 1086515397, 1086673279, # Vip

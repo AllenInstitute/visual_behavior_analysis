@@ -325,7 +325,8 @@ def plot_reliable_example_cells(multi_session_mean_df, cells_to_plot, cell_type,
 
 
 def plot_selected_cell_examples(multi_session_mean_df, cells_to_plot, event_type='changes',
-                                xlim_seconds=None, linewidth=1, save_dir=None, folder=None, suffix=''):
+                                xlim_seconds=None, linewidth=1, save_dir=None, folder=None, suffix='',
+                                ax=None, show_metadata_col=True):
     '''
     Plot mean response for each experience level for a subset of cells that are reliably responsive
 
@@ -372,15 +373,18 @@ def plot_selected_cell_examples(multi_session_mean_df, cells_to_plot, event_type
 
     # # set this here so there is something to compare to for the first cell
 
-    n_cols = 4
+    # 4th column holds cell metadata text; drop it for composite figures (show_metadata_col=False)
+    n_cols = 4 if show_metadata_col else 3
     n_rows = len(cells_to_plot)
 
-
-    figsize = (n_cols*col_size, n_rows)
-    # figsize = (n_cols*1.5, len(cells_to_plot))
-    # figsize = (n_cols*col_size*2,  n_rows * 1.5)
-    fig, ax = plt.subplots(len(cells_to_plot), n_cols, figsize=figsize, sharey='row')
-    ax = ax.ravel()
+    own_fig = ax is None
+    if own_fig:
+        figsize = (n_cols*col_size, n_rows)
+        fig, ax = plt.subplots(len(cells_to_plot), n_cols, figsize=figsize, sharey='row')
+        ax = ax.ravel()
+    else:
+        # ax passed in as a flat, row-major list/array of len == n_rows*n_cols
+        ax = np.array(ax).ravel()
     i = 0
     cell_data = sdf[(sdf.cell_specimen_id == cells_to_plot[0]) & (sdf.experience_level == experience_levels[0])]
     prior_cell_type = cell_data.cell_type.values[0][:3]
@@ -424,16 +428,17 @@ def plot_selected_cell_examples(multi_session_mean_df, cells_to_plot, event_type
             sns.despine(ax=ax[i], top=True, right=True, left=True, bottom=True)
             ax[i].tick_params(bottom=False, left=False, right=False, top=False, labelsize=7, pad=-1, )
 
-        # 4th column with cell metadata
-        i = (c * n_cols) + 3
-        ylims = ax[i].get_ylim()
-        ax[i].axhline(y=ylims[1], xmin=0, xmax=1)
-        ax[i].set_xlim(0, 1)
-            # ax[(i*n_cols)+3].set_ylim(0,2)
-        ax[i].text(s='csid:' + str(cell_specimen_id) + '\nctype:' + str(cell_type), x=0, y=0, fontsize=8)
-        sns.despine(ax=ax[i], top=True, right=True, left=True, bottom=True)
-        ax[i].tick_params(bottom=False, left=False, right=False, top=False)
-        ax[i].set_xticklabels([])
+        # 4th column with cell metadata (omitted for composite figures)
+        if show_metadata_col:
+            i = (c * n_cols) + 3
+            ylims = ax[i].get_ylim()
+            ax[i].axhline(y=ylims[1], xmin=0, xmax=1)
+            ax[i].set_xlim(0, 1)
+                # ax[(i*n_cols)+3].set_ylim(0,2)
+            ax[i].text(s='csid:' + str(cell_specimen_id) + '\nctype:' + str(cell_type), x=0, y=0, fontsize=8)
+            sns.despine(ax=ax[i], top=True, right=True, left=True, bottom=True)
+            ax[i].tick_params(bottom=False, left=False, right=False, top=False)
+            ax[i].set_xticklabels([])
 
     # scale y lim and add time bar
     for c, cell_specimen_id in enumerate(cells_to_plot):
@@ -453,9 +458,10 @@ def plot_selected_cell_examples(multi_session_mean_df, cells_to_plot, event_type
 
 
     # ax[1].set_title(cell_type, fontsize=14)
-    plt.subplots_adjust(hspace=0)
+    if own_fig:
+        plt.subplots_adjust(hspace=0)
 
-    if save_dir:
+    if save_dir and own_fig:
         utils.save_figure(fig, figsize, save_dir, folder, 'selected_example_cells_' + event_type + suffix)
 
 
@@ -1898,6 +1904,95 @@ def plot_coding_scores_for_cell_with_response_inset(cell_dropouts, datasets, dat
                       fontsize=8, clip_on=False, annotation_clip=False)
 
     return ax
+
+
+
+def plot_matched_rois(cell_specimen_id, platform_cells_table,
+                                        folder='matched_rois', save_dir=None, ax=None):
+    """
+    This function will plot cell ROI masks matched across sessions for a given cell_specimen_id,
+    Plots the ROI masks and coding scores barplot for a cell matched across sessions
+    experiments_table should have experience levels as [Familiar, Novel, Novel +]
+    all input dataframes must be limited to last familiar and second novel active (i.e. max of one session per type)
+    if one session type is missing, the max projection but no ROI will be plotted and the traces and weights will be missing for that experience level
+    """
+
+    import visual_behavior.visualization.ophys.summary_figures as sf
+
+    # set up plotting for each experience level
+    experience_levels = ['Familiar', 'Novel', 'Novel +']
+    colors = utils.get_experience_level_colors()
+    n_exp_levels = len(experience_levels)
+    # get relevant info for this cell
+    cell_metadata = platform_cells_table[platform_cells_table.cell_specimen_id == cell_specimen_id]
+    cell_metadata = cell_metadata.sort_values(by='experience_level')
+    ophys_container_id = cell_metadata.ophys_container_id.unique()[0]
+    # need to get all experiments for this container, not just for this cell
+    ophys_experiment_ids = cell_metadata[cell_metadata.ophys_container_id == ophys_container_id].ophys_experiment_id.values
+    n_expts = len(ophys_experiment_ids)
+    if n_expts > 3:
+        print('There are more than 3 experiments for this cell. There should be a max of 1 experiment per experience level')
+        print('Please limit input to only one experiment per experience level')
+
+    n_cols = n_exp_levels
+    own_fig = ax is None
+    if own_fig:
+        figsize = (6, 2.5)
+        fig, ax = plt.subplots(1, n_cols, figsize=figsize)
+        ax = ax.ravel()
+    else:
+        ax = np.array(ax).ravel()
+
+    print('cell_specimen_id:', cell_specimen_id)
+    # loop through experience levels for this cell
+    for e, experience_level in enumerate(experience_levels):
+        print('experience_level:', experience_level)
+
+        # get ophys_experiment_id for this experience level
+        # platform_cells_table must only include one experiment per experience level for a given container
+        ophys_experiment_id = cell_metadata[(cell_metadata.ophys_container_id == ophys_container_id) &
+                                                   (cell_metadata.experience_level == experience_level)].ophys_experiment_id.values[0]
+        print('ophys_experiment_id:', ophys_experiment_id)
+        ind = experience_levels.index(experience_level)
+        color = colors[ind]
+
+        # load dataset for this experiment
+        dataset = loading.get_ophys_dataset(ophys_experiment_id, get_extended_stimulus_presentations=False)
+
+        try:  # attempt to generate plots for this cell in this this experience level. if cell does not have this exp level, skip
+            # plot ROI mask for this experiment
+            ct = dataset.cell_specimen_table.copy()
+            cell_roi_id = ct.loc[cell_specimen_id].cell_roi_id  # typically will fail here if the cell_specimen_id isnt in the session
+            roi_masks = dataset.roi_masks.copy()  # save this to get approx ROI position if subsequent session is missing the ROI (fails if the first session is the one missing the ROI)
+            ax[e] = sf.plot_cell_zoom(dataset.roi_masks, dataset.max_projection, cell_roi_id,
+                                        spacex=50, spacey=50, show_mask=False, ax=ax[e])
+            ax[e].set_title(experience_level, color=color)
+
+        except BaseException:  # plot area of max projection where ROI would have been if it was in this session
+            # plot the max projection image with the xy location of the previous ROI
+            # this will fail if the familiar session is the one without the cell matched
+            print('no cell ROI for', experience_level)
+            ax[e] = sf.plot_cell_zoom(roi_masks, dataset.max_projection, cell_roi_id,
+                                        spacex=50, spacey=50, show_mask=False, ax=ax[e])
+            ax[e].set_title(experience_level)
+
+        except:
+            print('could not plot GLM kernels for', experience_level)
+
+    metadata_string = utils.get_container_metadata_string(dataset.metadata)
+
+    if own_fig:
+        # fig.tight_layout()
+        fig.subplots_adjust(wspace=0.2)
+        fig.suptitle(str(cell_specimen_id) + '_' + metadata_string, x=0.53, y=1.1,
+                        horizontalalignment='center', fontsize=16)
+
+    if save_dir and own_fig:
+        print('saving plot for', cell_specimen_id)
+        utils.save_figure(fig, figsize, save_dir, folder,
+                          str(cell_specimen_id) + '_' + metadata_string)
+        print('saved')
+
 
 
 def plot_matched_roi_and_coding_scores(cell_metadata, cell_dropouts, experiments_table,

@@ -720,6 +720,57 @@ def get_peak_outlier_cells(multi_session_df, peak_threshold=None, data_type=None
     return df.loc[peaks > peak_threshold, cell_col].unique()
 
 
+def drop_peak_outliers(multi_session_df, peak_threshold=None, data_type=None, scope='global',
+                       trace_col='mean_trace', cell_col='cell_specimen_id'):
+    '''
+    Return multi_session_df with peak-amplitude outliers removed. No-op (returns df unchanged)
+    when no threshold applies (behavioral data_types).
+    scope='global': drop a cell from ALL its rows if its peak exceeds threshold in ANY row (per-cell).
+    scope='trace' : drop only the individual rows (cell x condition/experience) whose OWN peak
+                    exceeds threshold -- identical to the per-trace Method C in
+                    kernels_and_responses_for_clusters_eval_outliers.ipynb.
+    '''
+    if peak_threshold is None and data_type is not None:
+        peak_threshold = get_peak_threshold(data_type)
+    if peak_threshold is None:
+        return multi_session_df
+    df = multi_session_df
+    peaks = df[trace_col].apply(
+        lambda t: np.nanmax(np.abs(np.asarray(t)))
+        if t is not None and not (isinstance(t, float) and np.isnan(t)) else np.nan)
+    if scope == 'trace':
+        return df[~(peaks > peak_threshold)]
+    if scope == 'global':
+        outlier_cells = df.loc[peaks > peak_threshold, cell_col].unique()
+        return df[~df[cell_col].isin(outlier_cells)]
+    raise ValueError(f"scope must be 'global' or 'trace', got {scope!r}")
+
+
+def drop_peak_outliers_across(mdfs, peak_threshold=None, data_type=None, scope='global',
+                              trace_col='mean_trace', cell_col='cell_specimen_id'):
+    '''
+    Filter a list of response dataframes together and return the filtered list.
+    scope='global': pool all dfs, drop any cell exceeding threshold anywhere from EVERY df (per-cell,
+                    pooled across response types -- e.g. image/change/omission).
+    scope='trace' : drop per-row by each row's own peak, in each df independently.
+    No-op when no threshold applies.
+    '''
+    mdfs = list(mdfs)
+    if peak_threshold is None and data_type is not None:
+        peak_threshold = get_peak_threshold(data_type)
+    if peak_threshold is None:
+        return mdfs
+    if scope == 'trace':
+        return [drop_peak_outliers(m, peak_threshold=peak_threshold, scope='trace',
+                                   trace_col=trace_col, cell_col=cell_col) for m in mdfs]
+    if scope == 'global':
+        pooled = pd.concat(mdfs)
+        outlier_cells = get_peak_outlier_cells(pooled, peak_threshold=peak_threshold,
+                                               trace_col=trace_col, cell_col=cell_col)
+        return [m[~m[cell_col].isin(outlier_cells)] for m in mdfs]
+    raise ValueError(f"scope must be 'global' or 'trace', got {scope!r}")
+
+
 def plot_mean_trace(traces, timestamps, ylabel='dF/F', legend_label=None, color='k', alpha=0.25,
                     interval_sec=1, xlim_seconds=[-2, 2], linewidth=1, plot_sem=True, ax=None,
                     peak_threshold=None):
