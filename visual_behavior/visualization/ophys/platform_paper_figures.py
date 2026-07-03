@@ -3308,7 +3308,7 @@ def add_experience_stats_over_time(rolling_df, metric, ax, *,
 # Methods-section description of the across-time stats (also embedded in the data dictionary CSV)
 OVER_TIME_STATS_METHODS = (
     "Within-session behavioral and physiological metrics (e.g. rolling d-prime, hit rate, "
-    "false alarm rate, reward rate, running speed, pupil width) were quantified as a function of "
+    "false alarm rate, reward rate, running speed, pupil diameter) were quantified as a function of "
     "time in the session and compared across experience levels (Familiar, Novel, Novel+) at each "
     "time point. For each metric, values were binned over time in the session -- 2-minute bins for "
     "the within-session rolling panels (Fig. 2D uses 15-minute bins; the pupil/running panels in "
@@ -7352,7 +7352,7 @@ def plot_behavior_timeseries_stacked(dataset, start_time, fontsize=12,
     running_speed = running_speed[start_ind:stop_ind]
     running_timestamps = running_timestamps[start_ind:stop_ind]
 
-    # get pupil width trace and timestamps
+    # get pupil diameter trace and timestamps
     eye_tracking = dataset.eye_tracking.copy()
     pupil_diameter = eye_tracking.pupil_width.values
     pupil_diameter[eye_tracking.likely_blink == True] = np.nan
@@ -7495,7 +7495,7 @@ def plot_behavior_and_physio_timeseries_stacked(dataset, start_time, duration_se
     running_speed = running_speed[start_ind:stop_ind]
     running_timestamps = running_timestamps[start_ind:stop_ind]
 
-    # get pupil width trace and timestamps
+    # get pupil diameter trace and timestamps
     eye_tracking = dataset.eye_tracking.copy()
     pupil_diameter = eye_tracking.pupil_width.values
     pupil_diameter[eye_tracking.likely_blink == True] = np.nan

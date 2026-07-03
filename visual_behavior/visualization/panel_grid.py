@@ -179,6 +179,43 @@ def panel(fig, xspan, yspan, label=None, has_title=False, title_lines=1,
     return ax
 
 
+def panel_title(fig, x_span, text, y_top=None, y_frac=None,
+                gutter_pt=DEFAULT_LABEL_GUTTER_PT, fontsize=16,
+                fontweight='normal', dy_pt=0.0, ha='center', **kw):
+    """Section title centered horizontally over x_span (figure fraction).
+
+    Draws a descriptive title on the panel-letter line so it reads as a section
+    header beside the letter, WITHOUT displacing the plot -- panel() already
+    seats the axes below the top label gutter, so the title occupies that gutter
+    line next to the letter.
+
+    x_span   : (x0, x1) figure-fraction horizontal extent to center over. Pass a
+               single panel's [x0, x1], or (left_panel_x0, right_panel_x1) to
+               span several panels with one title.
+    y_top    : the panel region's TOP edge (top-down fraction). The title is
+               centered vertically in that panel's top gutter (same line as the
+               letter). Ignored if y_frac is given.
+    y_frac   : an explicit top-down fraction for the title's vertical center --
+               use to float a spanning title in the gap ABOVE a row of panels
+               (e.g. one title over two side-by-side panels whose letters would
+               otherwise sit under a centered header).
+    dy_pt    : nudge down (+) / up (-) in points.
+
+    Returns the matplotlib Text artist. (fig.text is not tracked by
+    check_label_overlap, which only inspects axes -- placement is by geometry.)
+    """
+    x0, x1 = x_span
+    w, h = fig.get_size_inches()
+    if y_frac is not None:
+        y_td = y_frac
+    else:
+        y_td = y_top + (gutter_pt[1] / 72.0 / h) / 2.0
+    y_td += dy_pt / 72.0 / h
+    _x = {'left': x0, 'right': x1}.get(ha, (x0 + x1) / 2.0)
+    return fig.text(_x, 1.0 - y_td, text, ha=ha, va='center',
+                    fontsize=fontsize, fontweight=fontweight, **kw)
+
+
 def show_label_gutters(fig, regions, gutter_pt=DEFAULT_LABEL_GUTTER_PT,
                        color='red', alpha=0.18, edgecolor='red', lw=1.5):
     """Overlay translucent red rectangles for every region's LABEL GUTTER
