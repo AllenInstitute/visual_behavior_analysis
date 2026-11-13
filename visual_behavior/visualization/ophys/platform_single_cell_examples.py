@@ -114,7 +114,7 @@ def plot_matched_roi_mask_zoom(cell_specimen_id, ophys_cells_table, ophys_experi
 
 
 def plot_reliable_example_cells(multi_session_mean_df, cells_to_plot, cell_type, event_type='changes',
-                                xlim_seconds=None, linewidth=1, save_dir=None, folder=None, suffix=''):
+                                xlim_seconds=None, linewidth=1, suptitle=None, save_dir=None, folder=None, suffix=''):
     '''
     Plot mean response for each experience level for a subset of cells that are reliably responsive
 
@@ -317,7 +317,9 @@ def plot_reliable_example_cells(multi_session_mean_df, cells_to_plot, cell_type,
 
 
     # ax[1].set_title(cell_type, fontsize=14)
-    plt.suptitle(cell_type, x=0.4, y=1, fontsize=14)
+    if suptitle is None:
+        suptitle = cell_type
+    plt.suptitle(suptitle, x=0.4, y=1, fontsize=14)
     plt.subplots_adjust(hspace=0)
 
     if save_dir:

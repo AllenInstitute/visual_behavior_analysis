@@ -129,7 +129,9 @@ def _resolve_stats_dir(save_dir, stats_dir, folder):
         os.makedirs(stats_dir, exist_ok=True)
         return stats_dir
     if save_dir is not None:
-        return os.path.join(save_dir, folder)
+        out = os.path.join(save_dir, folder)
+        os.makedirs(out, exist_ok=True)
+        return out
     return None
 
 
@@ -1355,7 +1357,7 @@ def get_fraction_responsive_cells(multi_session_df, conditions=['cell_type', 'ex
 
 def plot_percent_responsive_cells_by_depth(multi_session_df, event_type, experiments_table,
                                            responsiveness_threshold=0.1, ylabel=None,
-                                           save_dir=None, folder='response_metrics', suffix='', ax=None):
+                                           save_dir=None, stats_dir=None, folder='response_metrics', suffix='', ax=None):
     """
     Percent of responsive cells by imaging depth, one subplot per cell type, hue = experience level.
 
@@ -1429,14 +1431,17 @@ def plot_percent_responsive_cells_by_depth(multi_session_df, event_type, experim
             tukey_table['cell_type'] = cell_type
             stats_table = pd.concat([stats_table, tukey_table], ignore_index=True)
 
+    filename = _clean_filename('percent_' + event_type + '_responsive_cells_by_depth' + suffix)
     if own_fig:
         plt.subplots_adjust(wspace=0.1)
         if save_dir:
-            filename = _clean_filename('percent_' + event_type + '_responsive_cells_by_depth' + suffix)
             utils.save_figure(fig, figsize, save_dir, folder, filename)
-            if len(stats_table):
-                stats_suffix = _stats_suffix_for_table(stats_table)
-                stats_table.to_csv(os.path.join(save_dir, folder, _clean_filename(filename + stats_suffix)))
+    # stats saving decoupled from figure saving so composites (embedding, own_fig=False)
+    # still capture per-panel stats when stats_dir is passed
+    _stats_out = _resolve_stats_dir(save_dir, stats_dir, folder)
+    if _stats_out and len(stats_table):
+        stats_suffix = _stats_suffix_for_table(stats_table)
+        stats_table.to_csv(os.path.join(_stats_out, _clean_filename(filename + stats_suffix)))
     return ax, stats_table
 
 
@@ -1510,7 +1515,7 @@ def plot_fraction_responsive_cells(multi_session_df, responsiveness_threshold=0.
 
 
 def plot_percent_responsive_cells(multi_session_df, responsiveness_threshold=0.1, horizontal=True, ylim=(0, 100), stats_max=80,
-                                   ylabel='% responsive', save_dir=None, folder='response_metrics', suffix='', ax=None,
+                                   ylabel='% responsive', save_dir=None, stats_dir=None, folder='response_metrics', suffix='', ax=None,
                                    group_column='mouse_id', event_type='Not specified'):
     """
     Plots the fraction of responsive cells across cre lines
@@ -1595,19 +1600,20 @@ def plot_percent_responsive_cells(multi_session_df, responsiveness_threshold=0.1
         ax[1].set_ylabel(ylabel)
 
 
+    fig_title = _clean_filename('percent_responsive_cells' + suffix)
     if save_dir:
         fig.subplots_adjust(hspace=0.4, wspace=0.2)
-        fig_title = _clean_filename('percent_responsive_cells' + suffix)
         utils.save_figure(fig, figsize, save_dir, folder, _clean_filename(fig_title))
-        # try:
+    # stats saving is decoupled from figure saving so composites can capture per-panel
+    # stats (pass stats_dir) without re-saving the standalone figure
+    _stats_out = _resolve_stats_dir(save_dir, stats_dir, folder)
+    if _stats_out:
         stats_suffix = _stats_suffix_for_table(combined_stats)
-        combined_stats.to_csv(os.path.join(save_dir, folder, _clean_filename(fig_title + stats_suffix)))
+        combined_stats.to_csv(os.path.join(_stats_out, _clean_filename(fig_title + stats_suffix)))
         # save descriptive stats
         cols_to_groupby = ['cell_type', 'experience_level']
         stats = get_descriptive_stats_for_metric(fraction_responsive, metric, cols_to_groupby)
-        stats.to_csv(os.path.join(save_dir, folder, _clean_filename(fig_title + '_values.csv')))
-        # except BaseException:
-        #     print('STATS DID NOT SAVE FOR', metric)
+        stats.to_csv(os.path.join(_stats_out, _clean_filename(fig_title + '_values.csv')))
     return ax
 
 
@@ -2124,7 +2130,7 @@ def add_stats_to_plot_yaxis(data, metric, ax, ymax=None, column_to_compare='expe
 def add_stats_to_plot_xaxis(data, metric, ax, xmax=None, column_to_compare='experience_level',
                       show_ns=False, hue_only=False,
                       group_column='mouse_id',
-                      event_type='Not specified', cell_type='Not specified'):
+                      event_type='Not specified', cell_type='Not specified', order=None):
     """
     add stars to axis indicating across experience level statistics
     x-axis of plots must be experience_levels or cell_types
@@ -2146,6 +2152,11 @@ def add_stats_to_plot_xaxis(data, metric, ax, xmax=None, column_to_compare='expe
                                 use_mlm=USE_MLM, group_column=group_column,
                                 event_type=event_type, cell_type=cell_type)
     omnibus_pvalue = stats_table['omnibus_pvalue'].iloc[0] if len(stats_table) else 1.0
+    if order is not None and len(stats_table):
+        # compute_stats numbers groups alphabetically; put each bar at the group's plotted position instead
+        order = list(order)
+        stats_table['x1'] = [order.index(g) for g in stats_table['group1']]
+        stats_table['x2'] = [order.index(g) for g in stats_table['group2']]
     if hue_only: # makes things from -0.25 to 0.25
         stats_table['x1'] = stats_table['x1'] - 1
         stats_table['x2'] = stats_table['x2'] - 1
@@ -2479,7 +2490,7 @@ def plot_metric_distribution_by_experience_no_cell_type(metrics_table, metric, e
 def plot_metric_distribution_by_experience(metrics_table, metric, event_type, data_type, hue=None,
                                                plot_type='pointplot', legend=True, show_containers=False, estimator=np.mean,
                                                add_zero_line=False, show_ns=False, ylabel=None, ylims=None, horiz=True,
-                                               abbreviate_exp=True, suptitle=None, save_dir=None, folder='response_metrics', ax=None, suffix='',
+                                               abbreviate_exp=True, suptitle=None, save_dir=None, stats_dir=None, folder='response_metrics', ax=None, suffix='',
                                                group_column='mouse_id'):
     """
     plot metric distribution across experience levels for each cell_type in metrics_table, with stats across experience levels
@@ -2737,18 +2748,20 @@ def plot_metric_distribution_by_experience(metrics_table, metric, event_type, da
             plt.suptitle(suptitle, x=0.52, y=0.96, fontsize=18)
     if own_fig:
         fig.subplots_adjust(hspace=0.4, wspace=0.4)
+    filename = _clean_filename(event_type + '_' + data_type + '_' + metric + '_distribution' + suffix)
+    stats_filename = _clean_filename(event_type + '_' + data_type + '_' + metric + suffix)
     if save_dir:
-        filename = _clean_filename(event_type + '_' + data_type + '_' + metric + '_distribution' + suffix)
-        stats_filename = _clean_filename(event_type + '_' + data_type + '_' + metric + suffix)
         utils.save_figure(fig, figsize, save_dir, folder, _clean_filename(filename))
+    _stats_out = _resolve_stats_dir(save_dir, stats_dir, folder)
+    if _stats_out:
         try:
             # save stats: '_mlm.csv' when MLM was used, '_tukey.csv' for the legacy path
             stats_suffix = _stats_suffix_for_table(combined_stats)
-            combined_stats.to_csv(os.path.join(save_dir, folder, _clean_filename(stats_filename + stats_suffix)))
+            combined_stats.to_csv(os.path.join(_stats_out, _clean_filename(stats_filename + stats_suffix)))
             # save descriptive stats
             cols_to_groupby = ['cell_type', 'experience_level']
             stats = get_descriptive_stats_for_metric(data, metric, cols_to_groupby)
-            stats.to_csv(os.path.join(save_dir, folder, _clean_filename(stats_filename + '_values.csv')))
+            stats.to_csv(os.path.join(_stats_out, _clean_filename(stats_filename + '_values.csv')))
         except BaseException:
             print('STATS DID NOT SAVE FOR', metric, hue)
     return ax
@@ -3567,7 +3580,7 @@ def plot_metric_across_stimuli_by_experience_level(stimulus_response_df, metric,
 def plot_modulation_index_distribution(metrics_table, metric, x_axis_col=None, x_axis_label=None,
                                        label=None, lims=(-1.1, 1.1), horiz=False, plot_type='violinplot',
                                        metric_on_y=True, annot=('left', 'right'), abbreviate_exp=True, suptitle=None,
-                                       fill=True, save_dir=None, folder='response_metrics', suffix='', ax=None,
+                                       fill=True, save_dir=None, stats_dir=None, folder='response_metrics', suffix='', ax=None,
                                        group_column='mouse_id', event_type='Not specified'):
     '''
     Plots distribution of metric values split by experience level.
@@ -3783,27 +3796,31 @@ def plot_modulation_index_distribution(metrics_table, metric, x_axis_col=None, x
     if own_fig:
         fig.subplots_adjust(hspace=0.3, wspace=wspace)
 
+    if horiz:
+        suffix = suffix + 'horiz'
+    if metric_on_y:
+        suffix = suffix + 'yaxis'
+    filename = _clean_filename(metric + '_distribution' + suffix)
+    stats_filename = _clean_filename(metric + suffix)
     if save_dir:
-        if horiz:
-            suffix = suffix + 'horiz'
-        if metric_on_y:
-            suffix = suffix + 'yaxis'
-        filename = _clean_filename(metric + '_distribution' + suffix)
-        stats_filename = _clean_filename(metric + suffix)
         utils.save_figure(fig, figsize, save_dir, folder, _clean_filename(filename))
+    # stats saving is decoupled from figure saving so composites can capture per-panel
+    # stats (pass stats_dir) without re-saving the standalone figure
+    _stats_out = _resolve_stats_dir(save_dir, stats_dir, folder)
+    if _stats_out:
         try:
             stats_suffix = _stats_suffix_for_table(combined_stats)
-            combined_stats.to_csv(os.path.join(save_dir, folder, _clean_filename(stats_filename + stats_suffix)))
+            combined_stats.to_csv(os.path.join(_stats_out, _clean_filename(stats_filename + stats_suffix)))
             cols_to_groupby = ['cell_type', 'experience_level']
             stats = get_descriptive_stats_for_metric(data, metric, cols_to_groupby)
-            stats.to_csv(os.path.join(save_dir, folder, _clean_filename(stats_filename + '_values.csv')))
+            stats.to_csv(os.path.join(_stats_out, _clean_filename(stats_filename + '_values.csv')))
         except BaseException:
             print('STATS DID NOT SAVE FOR', metric)
     return ax
 
 
 def plot_metric_across_cohorts(metrics_table, metric,  ylabel, x_val='binned_depth', plot_type='barplot',
-                               event_type='Not specified', save_dir=None, folder='response_metrics', ax=None,
+                               event_type='Not specified', save_dir=None, stats_dir=None, folder='response_metrics', ax=None,
                                group_column='mouse_id'):
     '''
     Plot metric distributions across cre lines, with a unique axis for each cohort / project code, 
@@ -3896,15 +3913,17 @@ def plot_metric_across_cohorts(metrics_table, metric,  ylabel, x_val='binned_dep
     if own_fig:
         plt.subplots_adjust(wspace=0.5, hspace=0.35)
 
+    filename = _clean_filename(metric+'_by_cohort_x_'+x_val)
     if save_dir:
-        filename = _clean_filename(metric+'_by_cohort_x_'+x_val)
         utils.save_figure(fig, figsize, save_dir, folder, _clean_filename(filename))
+    _stats_out = _resolve_stats_dir(save_dir, stats_dir, folder)
+    if _stats_out:
         try:
             stats_suffix = _stats_suffix_for_table(combined_stats)
-            combined_stats.to_csv(os.path.join(save_dir, folder, _clean_filename(filename + stats_suffix)))
+            combined_stats.to_csv(os.path.join(_stats_out, _clean_filename(filename + stats_suffix)))
             cols_to_groupby = ['cell_type', 'experience_level']
             stats = get_descriptive_stats_for_metric(data, metric, cols_to_groupby)
-            stats.to_csv(os.path.join(save_dir, folder, _clean_filename(filename + '_values.csv')))
+            stats.to_csv(os.path.join(_stats_out, _clean_filename(filename + '_values.csv')))
         except BaseException:
             print('STATS DID NOT SAVE FOR', metric)
     return ax
@@ -4288,7 +4307,7 @@ def plot_experience_modulation_index(metric_data, event_type, hue=None, plot_typ
 
 def plot_experience_modulation_index_annotated(metrics_table, event_type, metric, cells_table,
                                                horiz=False, xlims=(-1.1, 1.1), xlabel='Experience modulation',
-                                               suptitle=None, suffix='', save_dir=None, folder='response_metrics', ax=None,
+                                               suptitle=None, suffix='', save_dir=None, stats_dir=None, folder='response_metrics', ax=None,
                                                group_column='mouse_id'):
     """
     plots experience modulation for some event_type, which is the mean repsonse in familiar vs. novel 1 over the sum,
@@ -4400,19 +4419,23 @@ def plot_experience_modulation_index_annotated(metrics_table, event_type, metric
     if own_fig:
         fig.subplots_adjust(hspace=0.4, wspace=0.4)
 
+    if horiz:
+        suffix = suffix + '_horiz'
+    filename = _clean_filename('experience_modulation_annot_' + event_type + '_' + suffix)
+    stats_filename = _clean_filename('experience_modulation_' + event_type + '_' + suffix)
     if save_dir:
-        if horiz:
-            suffix = suffix + '_horiz'
-        filename = _clean_filename('experience_modulation_annot_' + event_type + '_' + suffix)
-        stats_filename = _clean_filename('experience_modulation_' + event_type + '_' + suffix)
         utils.save_figure(fig, figsize, save_dir, folder, _clean_filename(filename))
+    # stats saving is decoupled from figure saving so composites can capture per-panel
+    # stats (pass stats_dir) without re-saving the standalone figure
+    _stats_out = _resolve_stats_dir(save_dir, stats_dir, folder)
+    if _stats_out:
         try:
             stats_suffix = _stats_suffix_for_table(combined_stats)
-            combined_stats.to_csv(os.path.join(save_dir, folder, _clean_filename(stats_filename + stats_suffix)))
+            combined_stats.to_csv(os.path.join(_stats_out, _clean_filename(stats_filename + stats_suffix)))
             # save descriptive stats
             cols_to_groupby = ['cell_type']
             stats = get_descriptive_stats_for_metric(data, metric, cols_to_groupby)
-            stats.to_csv(os.path.join(save_dir, folder, _clean_filename(stats_filename + '_values.csv')))
+            stats.to_csv(os.path.join(_stats_out, _clean_filename(stats_filename + '_values.csv')))
         except BaseException:
             print('STATS DID NOT SAVE FOR', metric)
     return ax
@@ -4421,8 +4444,8 @@ def plot_experience_modulation_index_annotated(metrics_table, event_type, metric
 def plot_experience_modulation_index_annotated_by_cell_type(metrics_table, event_type, metric, cells_table,
                                                             xlims=(-1.1, 1.1), xlabel='Experience modulation',
                                                             all_comparisons=True, horiz=False,
-                                                            suptitle=None, suffix='', save_dir=None, folder='response_metrics', ax=None,
-                                                            group_column='mouse_id'):
+                                                            suptitle=None, suffix='', save_dir=None, stats_dir=None, folder='response_metrics', ax=None,
+                                                            group_column='mouse_id', comparisons=None):
     """
     plots experience modulation for some event_type, which is the mean repsonse in familiar vs. novel 1 over the sum,
     and the mean response in novel 1 vs. novel >1 over the sum, giving a value between -1 and 1
@@ -4440,7 +4463,10 @@ def plot_experience_modulation_index_annotated_by_cell_type(metrics_table, event
     exp_mod = cm.compute_experience_modulation_index_new(metrics_table, metric, cells_table)
     exp_mod = exp_mod.drop_duplicates(subset='cell_specimen_id')
 
-    if all_comparisons:
+    if comparisons is not None:   # explicit subset, e.g. ['F N', 'F N+'] (top-to-bottom order)
+        value_vars = list(comparisons)[::-1]
+        titles = list(comparisons)
+    elif all_comparisons:
         value_vars = ['F N', 'N+ N', 'F N+'][::-1]
         titles = ['Novel vs. Familiar', 'Novel vs. Novel +', 'Novel + vs. Familiar']
     else:
@@ -4509,7 +4535,7 @@ def plot_experience_modulation_index_annotated_by_cell_type(metrics_table, event
                     color = colors[2]
                 return color
 
-            if all_comparisons:
+            if len(value_vars) == 3:
                 xy_0 = (-1.25, x / 3 + 0.15)
                 xy_1 = (1.4, x / 3 + 0.15)
             else:
@@ -4529,7 +4555,8 @@ def plot_experience_modulation_index_annotated_by_cell_type(metrics_table, event
                                                          xmax=xlims[1],
                                                          column_to_compare='comparison',
                                                          group_column=group_column,
-                                                         event_type=event_type, cell_type=cell_type)
+                                                         event_type=event_type, cell_type=cell_type,
+                                                         order=value_vars)
             combined_stats = pd.concat([combined_stats, panel_stats])
 
         ax[i].invert_yaxis()
@@ -4547,19 +4574,21 @@ def plot_experience_modulation_index_annotated_by_cell_type(metrics_table, event
     if own_fig:
         fig.subplots_adjust(hspace=0.4, wspace=0.4)
 
+    if horiz:
+        suffix = suffix + '_horiz'
+    filename = _clean_filename('experience_modulation_annot_by_cell_type_' + event_type + '_' + suffix)
+    stats_filename = _clean_filename('experience_modulation_by_cell_type_' + event_type + '_' + suffix)
     if save_dir:
-        if horiz:
-            suffix = suffix + '_horiz'
-        filename = _clean_filename('experience_modulation_annot_by_cell_type_' + event_type + '_' + suffix)
-        stats_filename = _clean_filename('experience_modulation_by_cell_type_' + event_type + '_' + suffix)
         utils.save_figure(fig, figsize, save_dir, folder, _clean_filename(filename))
+    _stats_out = _resolve_stats_dir(save_dir, stats_dir, folder)
+    if _stats_out:
         try:
             stats_suffix = _stats_suffix_for_table(combined_stats)
-            combined_stats.to_csv(os.path.join(save_dir, folder, _clean_filename(stats_filename + stats_suffix)))
+            combined_stats.to_csv(os.path.join(_stats_out, _clean_filename(stats_filename + stats_suffix)))
             # save descriptive stats
             cols_to_groupby = ['cell_type']
             stats = get_descriptive_stats_for_metric(data, metric, cols_to_groupby)
-            stats.to_csv(os.path.join(save_dir, folder, _clean_filename(stats_filename + '_values.csv')))
+            stats.to_csv(os.path.join(_stats_out, _clean_filename(stats_filename + '_values.csv')))
         except BaseException:
             print('STATS DID NOT SAVE FOR', metric)
     return ax
@@ -5394,7 +5423,7 @@ def plot_metric_heatmap_area_and_depth_by_cell_type(
         area_label='Visual area', depth_label='Imaging depth (um)',
         exp_col='experience_level', aggregate='mean',
         vmax=None, multi_star=False,
-        suptitle=None, suffix='', save_dir=None, folder='response_metrics',
+        suptitle=None, suffix='', save_dir=None, stats_dir=None, folder='response_metrics',
         group_column='mouse_id', event_type='Not specified',
         fig=None, panel_bbox=None, main_width_ratios=(1.6, 0.5), heatmap_cbar_gap_in=0.55, cbar_width_in=None,
         cbar_height_in=None, cbar_fontsize=None, annot_fontsize=8):
@@ -5692,11 +5721,13 @@ def plot_metric_heatmap_area_and_depth_by_cell_type(
         fig.text((_hx0 + _hx1) / 2, _hy1 + 0.020, suptitle if suptitle else metric_label,
                  ha='center', va='bottom')
 
+    filename = _clean_filename('metric_heatmap_area_and_depth_' + metric + '_' + aggregate + suffix)
     if save_dir:
-        filename = _clean_filename('metric_heatmap_area_and_depth_' + metric + '_' + aggregate + suffix)
         utils.save_figure(fig, figsize, save_dir, folder, _clean_filename(filename))
+    _stats_out = _resolve_stats_dir(save_dir, stats_dir, folder)
+    if _stats_out:
         stats_suffix = _stats_suffix_for_table(stats_table)
-        stats_table.to_csv(os.path.join(save_dir, folder, _clean_filename(filename + stats_suffix)), index=False)
+        stats_table.to_csv(os.path.join(_stats_out, _clean_filename(filename + stats_suffix)), index=False)
 
     return heat_axes, stats_table
 
@@ -5963,7 +5994,7 @@ def plot_experience_modulation_heatmap_area_and_depth_by_cell_type(
         area_col='targeted_structure', depth_col='binned_depth',
         area_label='Visual area', depth_label='Imaging depth (um)',
         all_comparisons=True, vmax=None, multi_star=False,
-        suptitle=None, suffix='', save_dir=None, folder='response_metrics',
+        suptitle=None, suffix='', save_dir=None, stats_dir=None, folder='response_metrics',
         group_column='mouse_id',
         fig=None, panel_bbox=None, main_width_ratios=(1.6, 0.5), heatmap_cbar_gap_in=0.55, cbar_width_in=None,
         cbar_height_in=None, cbar_fontsize=None, annot_fontsize=8):
@@ -6285,12 +6316,14 @@ def plot_experience_modulation_heatmap_area_and_depth_by_cell_type(
                  suptitle if suptitle else 'Experience modulation',
                  ha='center', va='bottom')
 
+    filename = _clean_filename(('experience_modulation_heatmap_area_and_depth_by_cell_type_'
+                + event_type + suffix))
     if save_dir:
-        filename = _clean_filename(('experience_modulation_heatmap_area_and_depth_by_cell_type_'
-                    + event_type + suffix))
         utils.save_figure(fig, figsize, save_dir, folder, _clean_filename(filename))
+    _stats_out = _resolve_stats_dir(save_dir, stats_dir, folder)
+    if _stats_out:
         stats_suffix = _stats_suffix_for_table(stats_table)
-        stats_table.to_csv(os.path.join(save_dir, folder, _clean_filename(filename + stats_suffix)),
+        stats_table.to_csv(os.path.join(_stats_out, _clean_filename(filename + stats_suffix)),
                            index=False)
 
     return heat_axes, stats_table
@@ -7939,7 +7972,7 @@ def plot_behavior_metric_by_experience(stats, metric, title='', ylabel='', ylims
 
 def plot_response_rate_by_trial_type(behavior_stats, metric='response_probability', fraction_engaged_thresh=0.7,
                                      title='', ylabel='Response rate', ylims=(-0.01, 1),
-                                     save_dir=None, folder='behavior_metrics', suffix='', ax=None,
+                                     save_dir=None, stats_dir=None, folder='behavior_metrics', suffix='', ax=None,
                                      group_column='mouse_id'):
     """
     plots response rate across trial types (change, non-change, omission, post-omission), split by experience level,
@@ -7999,16 +8032,17 @@ def plot_response_rate_by_trial_type(behavior_stats, metric='response_probabilit
     stats_table = insert_stats_metadata(stats_table, condition='experience_level')
 
     plt.subplots_adjust(top=0.96)
-    if save_dir:
-        filename = _clean_filename(metric + '_by_trial_type' + suffix)
-        if save_fig:
-            utils.save_figure(fig, figsize, save_dir, folder, filename)
+    filename = _clean_filename(metric + '_by_trial_type' + suffix)
+    if save_dir and save_fig:
+        utils.save_figure(fig, figsize, save_dir, folder, filename)
+    _stats_out = _resolve_stats_dir(save_dir, stats_dir, folder)
+    if _stats_out:
         stats_suffix = _stats_suffix_for_table(stats_table)
-        stats_table.to_csv(os.path.join(save_dir, folder, _clean_filename(filename + '_stats' + stats_suffix)))
+        stats_table.to_csv(os.path.join(_stats_out, _clean_filename(filename + '_stats' + stats_suffix)))
         # save descriptive metric values
         cols_to_groupby = ['trial_type', 'experience_level']
         descriptive_stats = get_descriptive_stats_for_metric(data, metric, cols_to_groupby)
-        descriptive_stats.to_csv(os.path.join(save_dir, folder, _clean_filename(filename + '_stats_values.csv')))
+        descriptive_stats.to_csv(os.path.join(_stats_out, _clean_filename(filename + '_stats_values.csv')))
     return ax
 
 
@@ -8258,7 +8292,7 @@ def plot_behavior_metric_by_cohort(stats, metric, title='', ylabel='', ylims=Non
 
 
 def plot_behavior_metric_across_stages(data, metric, ylabel=None, ax=None,
-                                       save_dir=None, folder='behavior_metrics', suffix=''):
+                                       save_dir=None, stats_dir=None, folder='behavior_metrics', suffix=''):
     """
     generate boxplot of metric values across behavior stages (gratings flashed, gratings static, familiar, novel)
     with cre line on x-axis and behavior stages as hue
@@ -8295,14 +8329,15 @@ def plot_behavior_metric_across_stages(data, metric, ylabel=None, ax=None,
     if save_fig and save_dir:
         fig.subplots_adjust(hspace=0.3)
         utils.save_figure(fig, figsize, save_dir, folder, _clean_filename('metric_across_stages_' + metric + suffix))
-    if save_dir:
+    _stats_out = _resolve_stats_dir(save_dir, stats_dir, folder)
+    if _stats_out is not None:
         # save stats
         stats = data.groupby(['cell_type', 'behavior_stage']).describe()[[metric]]
-        stats.to_csv(os.path.join(save_dir, folder, _clean_filename('metric_across_stages_' + metric + suffix + '_values.csv')))
+        stats.to_csv(os.path.join(_stats_out, _clean_filename('metric_across_stages_' + metric + suffix + '_values.csv')))
     return ax
 
 
-def plot_days_in_stage(behavior_sessions, stage_column, save_dir=None, folder='training_history', suffix=None, ax=None):
+def plot_days_in_stage(behavior_sessions, stage_column, save_dir=None, stats_dir=None, folder='training_history', suffix=None, ax=None):
     """
     Plot the number of days in each stage, as a boxplot using stage as the hue and cell types on y-axis
 
@@ -8352,14 +8387,16 @@ def plot_days_in_stage(behavior_sessions, stage_column, save_dir=None, folder='t
     if created_fig and save_dir:
         # save plot
         utils.save_figure(fig, figsize, save_dir, folder, _clean_filename('days_in_stage' + '_' + stage_column + suffix))
+    _stats_out = _resolve_stats_dir(save_dir, stats_dir, folder)
+    if _stats_out is not None:
         # save stats
         days_in_stage_stats = data.groupby(['cell_type', stage_column]).describe()
-        days_in_stage_stats.to_csv(os.path.join(save_dir, folder, _clean_filename('days_in_stage_values.csv')))
+        days_in_stage_stats.to_csv(os.path.join(_stats_out, _clean_filename('days_in_stage_values.csv')))
     return ax
 
 
 def plot_prior_exposures_to_image_set_before_platform_ophys_sessions(platform_experiments, behavior_sessions, 
-                        title='Stimulus exposure', save_dir=None, folder='stimulus_history', suffix='', ax=None):
+                        title='Stimulus exposure', save_dir=None, stats_dir=None, folder='stimulus_history', suffix='', ax=None):
     """
     Creates a boxplot showing the number of prior exposures to each image set for each experience level (Familiar, Novel, Novel +)
     for the set of mice and sessions in platform_experiments
@@ -8411,13 +8448,14 @@ def plot_prior_exposures_to_image_set_before_platform_ophys_sessions(platform_ex
     if save_fig and save_dir:
         # save plot
         utils.save_figure(fig, figsize, save_dir, folder, _clean_filename('stimulus_exposures_before_platform_expts_boxplot' + suffix))
-    if save_dir:
+    _stats_out = _resolve_stats_dir(save_dir, stats_dir, folder)
+    if _stats_out is not None:
         # save stats
         stats = exposures.groupby(['experience_level']).describe()[['prior_exposures_to_image_set']]
-        stats.to_csv(os.path.join(save_dir, folder, _clean_filename('stimulus_exposures_before_platform_expts_values.csv')))
+        stats.to_csv(os.path.join(_stats_out, _clean_filename('stimulus_exposures_before_platform_expts_values.csv')))
 
 
-def plot_prior_exposures_per_cell_type_for_novel_plus(platform_experiments, behavior_sessions, save_dir=None,
+def plot_prior_exposures_per_cell_type_for_novel_plus(platform_experiments, behavior_sessions, save_dir=None, stats_dir=None,
                                                       folder='stimulus_history', suffix='', ax=None, show_ns=True,
                                                       group_column='mouse_id'):
     """
@@ -8488,12 +8526,13 @@ def plot_prior_exposures_per_cell_type_for_novel_plus(platform_experiments, beha
     if save_fig and save_dir:
         # save plot
         utils.save_figure(fig, figsize, save_dir, folder, _clean_filename('stimulus_exposures_before_novel_plus' + suffix))
-    if save_dir:
+    _stats_out = _resolve_stats_dir(save_dir, stats_dir, folder)
+    if _stats_out is not None:
         # save stats
         stats_suffix = _stats_suffix_for_table(stats_table)
-        stats_table.to_csv(os.path.join(save_dir, folder, _clean_filename('stimulus_exposures_before_novel_plus' + stats_suffix)))
+        stats_table.to_csv(os.path.join(_stats_out, _clean_filename('stimulus_exposures_before_novel_plus' + stats_suffix)))
         descriptive_stats = exposures.groupby(['cell_type', 'experience_level']).describe()[['prior_exposures_to_image_set']]
-        descriptive_stats.to_csv(os.path.join(save_dir, folder, _clean_filename('stimulus_exposures_before_novel_plus_values.csv')))
+        descriptive_stats.to_csv(os.path.join(_stats_out, _clean_filename('stimulus_exposures_before_novel_plus_values.csv')))
 
 
 def plot_prior_exposures_to_image_set_before_platform_ophys_sessions_horiz(platform_experiments, behavior_sessions, save_dir=None, folder='stimulus_history', suffix='', ax=None):
@@ -8556,7 +8595,7 @@ def plot_prior_exposures_to_image_set_before_platform_ophys_sessions_horiz(platf
         stats = exposures.groupby(['experience_level']).describe()[['prior_exposures_to_image_set']]
         stats.to_csv(os.path.join(save_dir, folder, _clean_filename('stimulus_exposures_before_platform_expts_values.csv')))
 
-def plot_total_stimulus_exposures(behavior_sessions, save_dir=None, folder='stimulus_history', suffix='', ax=None):
+def plot_total_stimulus_exposures(behavior_sessions, save_dir=None, stats_dir=None, folder='stimulus_history', suffix='', ax=None):
     """
     Creates a boxplot showing the number of sessions for each experience level (Familiar, Novel, Novel +)
     for the set of mice included in behavior_sessions
@@ -8610,14 +8649,15 @@ def plot_total_stimulus_exposures(behavior_sessions, save_dir=None, folder='stim
 
     if save_fig and save_dir:
         utils.save_figure(fig, figsize, save_dir, folder, _clean_filename('total_stimulus_exposures_all_sessions_boxplot' + suffix))
-    if save_dir:
+    _stats_out = _resolve_stats_dir(save_dir, stats_dir, folder)
+    if _stats_out is not None:
         # save stats
         stats = exposures.groupby(['experience_level']).describe()[['n_sessions']]
-        stats.to_csv(os.path.join(save_dir, folder, _clean_filename('total_stimulus_exposures_all_sessions_values.csv')))
+        stats.to_csv(os.path.join(_stats_out, _clean_filename('total_stimulus_exposures_all_sessions_values.csv')))
 
 
 def plot_stimulus_exposure_prior_to_imaging(behavior_sessions, column_to_group='behavior_stage', title='Stimulus exposure\nduring training', 
-                                            save_dir=None, folder='stimulus_history', suffix='', ax=None):
+                                            save_dir=None, stats_dir=None, folder='stimulus_history', suffix='', ax=None):
     """
     Creates a boxplot showing the number of sessions for each experience level or session type
     prior to the start of 2P imaging, for the set of mice included in behavior_sessions
@@ -8674,10 +8714,11 @@ def plot_stimulus_exposure_prior_to_imaging(behavior_sessions, column_to_group='
 
     if save_fig and save_dir:
         utils.save_figure(fig, figsize, save_dir, folder, _clean_filename('stimulus_exposure_prior_to_imaging_boxplot_'+ column_to_group + suffix))
-    if save_dir:
+    _stats_out = _resolve_stats_dir(save_dir, stats_dir, folder)
+    if _stats_out is not None:
         # save stats
         stats = exposures.groupby(column_to_group).describe()[['n_sessions']]
-        stats.to_csv(os.path.join(save_dir, folder, _clean_filename('stimulus_exposure_prior_to_imaging_'+column_to_group+'_values.csv')))
+        stats.to_csv(os.path.join(_stats_out, _clean_filename('stimulus_exposure_prior_to_imaging_'+column_to_group+'_values.csv')))
 
 def plot_training_history_for_mice(behavior_sessions, color_column='session_type', color_map=sns.color_palette(),
                                    group_by_cre_line=True, save_dir=None, folder='training_history', suffix='', ax=None):
@@ -9268,9 +9309,9 @@ def compute_feature_coding_fractions(results_pivoted, run_params, coding_thresh=
     return fractions
 
 
-def plot_percent_cells_coding_for_features(fractions, save_dir=None, folder='coding_properties',
+def plot_percent_cells_coding_for_features(fractions, save_dir=None, stats_dir=None, folder='coding_properties',
                                            filename='percent_cells_coding_feature', suffix='',
-                                           fig=None, bbox=None):
+                                           fig=None, bbox=None, vertical=False, hspace=0.3):
     """
     Bar plot of the percent of cells coding for each feature, one panel per cell type.
 
@@ -9280,6 +9321,12 @@ def plot_percent_cells_coding_for_features(fractions, save_dir=None, folder='cod
     Embedding: pass `fig` (and an optional figure-fraction `bbox` sub-rectangle)
     to draw into an existing composite figure; in that mode the standalone
     side effects (figure creation, subplots_adjust, save) are skipped.
+
+    vertical: if True, stack the cell types as ROWS (one column) so the panel lines up
+        with row-per-cell-type panels (e.g. the coding-score box-plot grid). The
+        y-label sits on the middle row (spanning all rows); feature x-tick labels show
+        on the bottom row only.
+    hspace: row spacing when vertical=True (match the neighboring grid's hspace).
     """
     from visual_behavior.dimensionality_reduction.clustering import plotting
     from visual_behavior.dimensionality_reduction.clustering import processing as processing
@@ -9288,15 +9335,17 @@ def plot_percent_cells_coding_for_features(fractions, save_dir=None, folder='cod
     features = processing.get_feature_labels_for_clustering()
     feature_colors, _ = plotting.get_feature_colors_and_labels()
 
-    figsize = (8, 2.5)
+    grid = (len(cell_types), 1) if vertical else (1, len(cell_types))
+    figsize = (2.8, 7) if vertical else (8, 2.5)
     standalone = fig is None
     if standalone:
-        fig, ax = plt.subplots(1, len(cell_types), figsize=figsize, sharey=True, sharex=True)
+        fig, ax = plt.subplots(*grid, figsize=figsize, sharey=True, sharex=True)
         ax = ax.ravel()
     else:
-        ax = utils.placeAxesOnGrid(fig, dim=(1, len(cell_types)),
+        ax = utils.placeAxesOnGrid(fig, dim=grid,
                                    xspan=(0, 1), yspan=(0, 1),
-                                   wspace=0.3, sharey=True, sharex=True, bbox=bbox)
+                                   wspace=0.3, hspace=hspace if vertical else None,
+                                   sharey=True, sharex=True, bbox=bbox)
         ax = np.array(ax).ravel()
 
     for i, cell_type in enumerate(cell_types):
@@ -9310,9 +9359,13 @@ def plot_percent_cells_coding_for_features(fractions, save_dir=None, folder='cod
         ax[i].set_xlabel('')
         ax[i].set_ylabel('')
         ax[i].set_ylim(0, 100)
-        if i == 0:
-            ax[i].set_ylabel('Percent of cells\ncoding for feature')
-        ax[i].set_title(cell_type)
+        if vertical:
+            if i == len(cell_types) // 2:   # middle row: one y-label spanning all rows
+                ax[i].set_ylabel('Percent of cells coding for feature')
+        else:
+            if i == 0:
+                ax[i].set_ylabel('Percent of cells\ncoding for feature')
+            ax[i].set_title(cell_type)
 
         for x, feature in enumerate(features):
             pct = ct_data[ct_data['feature'] == feature].percent.values[0]
@@ -9322,11 +9375,20 @@ def plot_percent_cells_coding_for_features(fractions, save_dir=None, folder='cod
         ax[i].set_xticks(range(len(features)))
         ax[i].set_xticklabels(features, rotation=45, ha='right', fontsize=14)
         [t.set_color(c) for (c, t) in zip(feature_colors[:len(features)], ax[i].xaxis.get_ticklabels())]
+        if vertical and i < len(cell_types) - 1:
+            ax[i].tick_params(labelbottom=False)
 
     if standalone:
         fig.subplots_adjust(hspace=0.3, wspace=0.3)
         if save_dir:
             utils.save_figure(fig, figsize, save_dir, folder, filename + suffix)
+    # this panel runs no significance test -- save the descriptive percent-coding
+    # values (one value per cell_type/feature) so composites can capture them
+    # (pass stats_dir); decoupled from figure saving.
+    _stats_out = _resolve_stats_dir(save_dir, stats_dir, folder)
+    if _stats_out:
+        values = fractions[['cell_type', 'feature', 'percent']].drop_duplicates()
+        values.to_csv(os.path.join(_stats_out, _clean_filename(filename + suffix + '_values.csv')), index=False)
     return fig, ax
 
 
@@ -10680,7 +10742,7 @@ def plot_rmi_distribution_single_axis(metrics_table, metric='running_modulation_
                                        x_col='cell_type', hue_col='experience_level',
                                        plot_type='boxplot', ylabel='Running\nmodulation',
                                        ylims=(-1.2, 1.25), annot=('Stationary', 'Running'),
-                                       save_dir=None, folder='running_modulation', ax=None):
+                                       save_dir=None, stats_dir=None, folder='running_modulation', ax=None):
     """Single-axis distribution of `metric` with `x_col` on x and `hue_col` as the within-x split.
     `x_col` and `hue_col` must each be one of {'cell_type', 'experience_level'}.
 
@@ -10749,12 +10811,12 @@ def plot_rmi_distribution_single_axis(metrics_table, metric='running_modulation_
 
     sns.despine()
 
+    save_name = _clean_filename(metric + '_single_axis_' + x_col + '_x_' + hue_col + '_hue')
     if save_dir is not None:
-        save_name = _clean_filename(metric + '_single_axis_' + x_col + '_x_' + hue_col + '_hue')
         utils.save_figure(fig, figsize, save_dir, folder, save_name)
-        if stats_table is not None:
-            os.makedirs(os.path.join(save_dir, folder), exist_ok=True)
-            stats_table.to_csv(os.path.join(save_dir, folder, save_name + '_stats.csv'))
+    _stats_out = _resolve_stats_dir(save_dir, stats_dir, folder)
+    if _stats_out and stats_table is not None:
+        stats_table.to_csv(os.path.join(_stats_out, save_name + '_stats.csv'))
     return ax
 
 
@@ -10763,7 +10825,7 @@ def plot_correlation_distribution_single_axis(metrics_table, metric='activity_ru
                                                plot_type='boxplot',
                                                ylabel='Activity vs.running\ncorrelation (pearson r)',
                                                ylims=None,
-                                               save_dir=None, folder='running_correlation', save_name=None, ax=None):
+                                               save_dir=None, stats_dir=None, folder='running_correlation', save_name=None, ax=None):
     """Sister of plot_rmi_distribution_single_axis for distributions of correlation values.
     Same layout/stats; no 'Running'/'Stationary' annotation; ylims default to None (autoscale)
     since correlation distributions are typically narrower than +/-1.
@@ -10820,13 +10882,13 @@ def plot_correlation_distribution_single_axis(metrics_table, metric='activity_ru
 
     sns.despine()
 
+    if save_name is None:
+        save_name = _clean_filename(metric + '_single_axis_' + x_col + '_x_' + hue_col + '_hue')
     if save_dir is not None:
-        if save_name is None:
-            save_name = _clean_filename(metric + '_single_axis_' + x_col + '_x_' + hue_col + '_hue')
         utils.save_figure(fig, figsize, save_dir, folder, save_name, formats=['.png', '.pdf'])
-        if stats_table is not None:
-            os.makedirs(os.path.join(save_dir, folder), exist_ok=True)
-            stats_table.to_csv(os.path.join(save_dir, folder, save_name + '_stats.csv'))
+    _stats_out = _resolve_stats_dir(save_dir, stats_dir, folder)
+    if _stats_out and stats_table is not None:
+        stats_table.to_csv(os.path.join(_stats_out, save_name + '_stats.csv'))
     return ax
 
 

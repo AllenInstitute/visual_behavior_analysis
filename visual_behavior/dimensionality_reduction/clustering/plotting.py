@@ -613,8 +613,8 @@ def plot_umap_for_clusters(cluster_meta, feature_matrix, umap_df=None, label_col
         else:
             ax=axes[i]
         ax = sns.scatterplot(data=umap_df, x='x', y='y', hue='labels', s=6, ax=ax, palette=palette)
-        ax.set_xlabel('UMAP 0')
-        ax.set_ylabel('UMAP 1')
+        ax.set_xlabel('UMAP 1')
+        ax.set_ylabel('UMAP 2')
         ax.legend(fontsize='xx-small', title=label_col, title_fontsize='xx-small', bbox_to_anchor=(1, 1))
         ax.set_title(get_cell_type_for_cre_line(cre_line, cluster_meta))
 
@@ -660,8 +660,8 @@ def plot_umap_for_clusters_separately(cluster_meta, feature_matrix, umap_df=None
         palette = [[0.8, 0.8, 0.8], color2]
         umap_df['labels'] = labels
         ax[i] = sns.scatterplot(data=umap_df, x='x', y='y', hue='labels', s=4, ax=ax[i], palette=palette)
-        ax[i].set_xlabel('UMAP 0')
-        ax[i].set_ylabel('UMAP 1')
+        ax[i].set_xlabel('UMAP 1')
+        ax[i].set_ylabel('UMAP 2')
         ax[i].set_title('cluster ' + str(cluster_id))
         ax[i].get_legend().remove()
         i += 1
@@ -710,8 +710,8 @@ def plot_umap_for_features_separately(cluster_meta, feature_matrix, umap_df=None
         palette = [cmap[i]]
         umap_df['labels'] = labels
         ax[i] = sns.scatterplot(data=umap_df, x='x', y='y', hue='labels', s=4, ax=ax[i], palette=palette, zorder=1000000)
-        ax[i].set_xlabel('UMAP 0')
-        ax[i].set_ylabel('UMAP 1')
+        ax[i].set_xlabel('UMAP 1')
+        ax[i].set_ylabel('UMAP 2')
         ax[i].set_title(axes_label)
         ax[i].get_legend().remove()
         i += 1
@@ -3788,7 +3788,8 @@ def plot_population_average_response_for_clusters_as_rows_split(multi_session_df
 
 def _plot_cluster_depth_column_as_rows(cluster_meta, cre_line, cluster_order, ax,
                                        location='binned_depth', metric='fraction_cells_location',
-                                       show_legend=False, top_title=None):
+                                       show_legend=False, top_title=None, legend_title='Depth (µm)',
+                                       legend_bbox=(1.15, 1.3), legend_bbox_transform=None):
     '''
     Plot one cluster's depth distribution per row (ax[i] for cluster_order[i]), so the depth column
     shares the same dim=(n_clusters,1) grid as the cluster heatmaps and every cluster lands on the
@@ -3843,8 +3844,9 @@ def _plot_cluster_depth_column_as_rows(cluster_meta, cre_line, cluster_order, ax
         import matplotlib.patches as mpatches
         handles = [mpatches.Patch(facecolor=palette[j], edgecolor='none', label=str(hue_order[j]))
                    for j in range(len(hue_order))]
-        ax[0].legend(handles=handles, title='Depth (µm)', loc='upper left',
-                     bbox_to_anchor=(1.15, 1.3), fontsize=11, title_fontsize=11, frameon=False)
+        ax[0].legend(handles=handles, title=legend_title, loc='upper left',
+                     bbox_to_anchor=legend_bbox, bbox_transform=legend_bbox_transform,
+                     fontsize=11, title_fontsize=11, frameon=False)
     return ax
 
 
@@ -3853,7 +3855,8 @@ def plot_cluster_properties_combined(cluster_meta, feature_matrix, cre_line,
                                      sort_by=None, cluster_order=None, save_dir=None, folder=None,
                                      add_depth=True, show_suptitle=True, scalebar_y_shift=0.0,
                                      show_response_labels=True, response_panel_title=None,
-                                     depth_top_title=None, percent_cells_by_feature=False,
+                                     depth_top_title=None, add_area=False, area_top_title=None,
+                                     percent_cells_by_feature=False,
                                      percent_cells_xspan=(0.434, 0.55),
                                      heatmap_xspan=(0, 0.27), means_xspan=(0.334, 0.389),
                                      response_xspan=(0.569, 0.85), response_wspace=0.4,
@@ -3912,7 +3915,16 @@ def plot_cluster_properties_combined(cluster_meta, feature_matrix, cre_line,
     print(n_clusters)
 
     figsize = [18, n_clusters*0.9]
+    # area column (F) sits right of the depth column (E). Widen the figure and pin the
+    # subplot region to the same inches as the 18-in default, so A-E don't move.
+    AREA_GAP_IN, AREA_W_IN, AREA_RIGHT_MARGIN_IN = 0.5, 0.9, 1.5
+    if add_area:
+        _left_in, _right_in = 0.125 * 18, 0.9 * 18      # default subplotpars of the 18-in figure
+        _depth_x1_in = _left_in + 0.99 * (_right_in - _left_in)   # depth xspan right edge
+        figsize[0] = _depth_x1_in + AREA_GAP_IN + AREA_W_IN + AREA_RIGHT_MARGIN_IN
     fig = plt.figure(figsize=figsize, facecolor='white')
+    if add_area:
+        fig.subplots_adjust(left=_left_in / figsize[0], right=_right_in / figsize[0])
 
     if familiar_only:
         # coding scores per cluster
@@ -3981,10 +3993,32 @@ def plot_cluster_properties_combined(cluster_meta, feature_matrix, cre_line,
         ax_depth = utils.placeAxesOnGrid(fig, dim=(n_clusters, 1), xspan=(0.91, 0.99), yspan=(0, 1),
                                          sharex=True, wspace=0, hspace=0)   # hspace=0 -> rows align with panel C
         ax_depth = np.atleast_1d(np.asarray(ax_depth)).ravel().tolist()
+        show_legends = (cre_line == 'Slc17a7-IRES2-Cre')
+        if add_area:
+            # area column: one axis per cluster row, copying each depth row's y-extent -> exact row alignment
+            W = figsize[0]
+            ax_area = []
+            for i, a_d in enumerate(ax_depth):
+                p = a_d.get_position()
+                ax_area.append(fig.add_axes([p.x1 + AREA_GAP_IN / W, p.y0, AREA_W_IN / W, p.height],
+                                            sharex=ax_area[0] if i else None))
+            # stack both legends (depth on top, area below) to the right of the area column
+            p0 = ax_area[0].get_position()
+            leg_x = p0.x1 + 0.15 * AREA_W_IN / W
+            leg_y = p0.y1 + 0.3 * p0.height
+            depth_legend = dict(legend_bbox=(leg_x, leg_y), legend_bbox_transform=fig.transFigure)
+            area_legend = dict(legend_bbox=(leg_x, leg_y - 1.4 / figsize[1]), legend_bbox_transform=fig.transFigure)
+        else:
+            depth_legend = {}
         _plot_cluster_depth_column_as_rows(cluster_meta_copy, cre_line, cluster_order, ax_depth,
                                            location='binned_depth',
-                                           show_legend=(cre_line == 'Slc17a7-IRES2-Cre'),
-                                           top_title=depth_top_title)
+                                           show_legend=show_legends,
+                                           top_title=depth_top_title, **depth_legend)
+        if add_area:
+            _plot_cluster_depth_column_as_rows(cluster_meta_copy, cre_line, cluster_order, ax_area,
+                                               location='targeted_structure',
+                                               show_legend=show_legends, legend_title='Area',
+                                               top_title=area_top_title, **area_legend)
 
     if show_suptitle:
         plt.suptitle('Cluster properties for ' + cell_type + ' matched cells',
@@ -7903,7 +7937,7 @@ def _save_tukey_all_pairwise_stats(stats_table, save_dir, folder, filename):
 
 def plot_tukey_diff_in_means_for_metric(response_metrics, metric, cluster_meta=None, title='', xlabel=None, lims=None,
                                         split_by_cre=True, match_clusters=True, min_cluster_fraction=None,
-                                        horiz=False, group_to_compare=None, pref_exp_level=False, save_dir=None, ax=None,
+                                        horiz=False, group_to_compare=None, pref_exp_level=False, save_dir=None, stats_dir=None, ax=None,
                                         line_val=None):
     '''
     Runs Tukey HSD multiple comparisons test across clusters
@@ -8057,10 +8091,15 @@ def plot_tukey_diff_in_means_for_metric(response_metrics, metric, cluster_meta=N
 
     filename = metric + 'dif_of_means_pref_exp_' + str(pref_exp_level) + '_split_by_cre_' + str(split_by_cre) + suffix
 
-    # when no reference cluster is used, save the full all-pairwise Tukey stats table + interpretation README
-    if group_to_compare is None and save_dir is not None and len(all_pairwise_stats) > 0:
+    # when no reference cluster is used, save the full all-pairwise Tukey stats table + interpretation README.
+    # stats saving is decoupled from figure saving so composites can capture the per-panel stats
+    # (pass stats_dir -> written there directly) without re-saving the standalone figure.
+    if group_to_compare is None and (save_dir is not None or stats_dir is not None) and len(all_pairwise_stats) > 0:
         stats_table = pd.concat(all_pairwise_stats, ignore_index=True)
-        _save_tukey_all_pairwise_stats(stats_table, save_dir, 'response_metrics', filename)
+        if stats_dir is not None:
+            _save_tukey_all_pairwise_stats(stats_table, stats_dir, '', filename)
+        else:
+            _save_tukey_all_pairwise_stats(stats_table, save_dir, 'response_metrics', filename)
 
     if save_dir and own_fig:
         utils.save_figure(fig, figsize, save_dir, 'response_metrics', filename)
@@ -9316,14 +9355,72 @@ def plot_response_metrics_boxplot(response_metrics, metric=None, ylabel=None, pl
     return ax
 
 
+def experience_stats_fdr(groups, metric, alpha=0.05, group_column='mouse_id', event_type='Not specified'):
+    """
+    Test for a difference across experience levels (F/N/N+) within each group, treating all
+    groups as ONE family with Benjamini-Hochberg FDR correction across groups.
+
+    Each group is tested with the same machinery as ppf.add_stats_to_plot_for_hues
+    (compute_stats: MLM with random intercept for group_column, ANOVA fallback, Holm-corrected
+    pairwise). A group is significant if its BH-corrected overall p < alpha AND at least one
+    pairwise comparison is significant (same pairwise rule as add_stats_to_plot_for_hues).
+
+    groups: list of (data, cell_type, metadata_dict), one per group (e.g. cluster or cluster x feature).
+    Returns (sig: list of bool aligned with groups, stats_table with added columns
+    'omnibus_pvalue_fdr_bh' and 'significant_fdr_bh').
+    """
+    from statsmodels.stats.multitest import multipletests
+    from visual_behavior.visualization.ophys import platform_paper_figures as ppf
+
+    jobs, idx = [], []
+    for i, (data, cell_type, metadata) in enumerate(groups):
+        if data['experience_level'].nunique() < 2:
+            continue
+        jobs.append(dict(subset=data, metric=metric, column_to_compare='experience_level',
+                         use_mlm=ppf.USE_MLM, group_column=group_column, event_type=event_type,
+                         cell_type=cell_type, metadata=metadata))
+        idx.append(i)
+    results = ppf._run_panel_stats_jobs(jobs)
+
+    sig = [False] * len(groups)
+    tables = []
+    if results:
+        p = np.array([r[0] for r in results], dtype=float)
+        p_bh = np.full_like(p, np.nan)
+        ok = np.isfinite(p)
+        if ok.any():
+            p_bh[ok] = multipletests(p[ok], method='fdr_bh')[1]
+        for i, (_, panel_stats), pb in zip(idx, results, p_bh):
+            n_levels = groups[i][0]['experience_level'].nunique()
+            pair_sig = False
+            if not panel_stats.empty:
+                if n_levels > 2 and 'reject' in panel_stats.columns:
+                    pair_sig = bool(panel_stats['reject'].any())
+                elif n_levels == 2 and 'one_way_anova_p_val' in panel_stats.columns:
+                    pair_sig = bool((panel_stats['one_way_anova_p_val'] < alpha).any())
+            sig[i] = bool(np.isfinite(pb) and pb < alpha and pair_sig)
+            panel_stats = panel_stats.copy()
+            panel_stats['omnibus_pvalue_fdr_bh'] = pb
+            panel_stats['significant_fdr_bh'] = sig[i]
+            tables.append(panel_stats)
+    stats_table = pd.concat(tables, ignore_index=True) if tables else pd.DataFrame()
+    return sig, stats_table
+
+
 def plot_response_metrics_boxplot_by_cre(response_metrics, metric=None, cluster_meta=None, min_cluster_fraction=0.04,
                                         ylabel=None, line_val=None, match_clusters=True, ylims=None,
-                                        horiz=False, pointplot=False, save_dir=None, suffix='', ax=None):
+                                        horiz=False, pointplot=False, save_dir=None, stats_dir=None, suffix='', ax=None,
+                                        show_stats=False, notch=False, box_alpha=0.7):
     """
     Plot running modulation for different cell types and experience levels.
     
     Parameters:
     - response_metrics (DataFrame): DataFrame containing response metrics
+    - show_stats (bool): if True, test for differences across experience levels within each
+      cluster (per cell type) via experience_stats_fdr (MLM, mouse random intercept; ANOVA fallback;
+      Holm-corrected pairwise; Benjamini-Hochberg FDR across all clusters x cell types for this
+      metric) and draw one asterisk above a cluster's boxes when significant.
+    - notch, box_alpha: boxplot style (defaults unchanged; S21 uses notch=True, box_alpha=0.75 to match S20) The stats table is saved to stats_dir / save_dir. Default False (unchanged).
     """
     experience_level_colors = utils.get_experience_level_colors()
     experience_levels = utils.get_new_experience_levels()
@@ -9338,6 +9435,9 @@ def plot_response_metrics_boxplot_by_cre(response_metrics, metric=None, cluster_
 
     order = np.sort(response_metrics.cluster_id.unique())
     n_clusters = len(order)
+
+    _plotted = []   # collect the per-cre data actually plotted, for descriptive-value saving
+    _orders = []    # x order (cluster ids) per cre, for placing stats stars
 
     # if match_clusters is False, set axis widths to be proportional to the number of clusters per cre
     cre_widths = []
@@ -9375,8 +9475,10 @@ def plot_response_metrics_boxplot_by_cre(response_metrics, metric=None, cluster_
                 keep = keep.append(pd.Index([12]))
             data = data[data.cluster_id.isin(keep)]
 
+        _plotted.append(data)
+        _orders.append(order if match_clusters else np.sort(data.cluster_id.unique()))
 
-        if match_clusters == False: 
+        if match_clusters == False:
             order = np.sort(data.cluster_id.unique())
 
         if pointplot:
@@ -9387,7 +9489,7 @@ def plot_response_metrics_boxplot_by_cre(response_metrics, metric=None, cluster_
         else:
             ax[i] = sns.boxplot(data=data, x='cluster_id', y=metric, order=order, showfliers=False,
                                hue='experience_level', hue_order=experience_levels, palette=experience_level_colors,
-                               width=0.6, boxprops=dict(alpha=.7), ax=ax[i])
+                               width=0.6, notch=notch, boxprops=dict(alpha=box_alpha), ax=ax[i])
 
         colors = [cluster_colors_dict[k] for k in order]
         ax[i].set_xticklabels(order)
@@ -9406,6 +9508,32 @@ def plot_response_metrics_boxplot_by_cre(response_metrics, metric=None, cluster_
         if ylims is not None:
             ax[i].set_ylim(ylims)
 
+    # experience-level stats per cluster: one star above a cluster's boxes if significant.
+    # All cluster x cell-type tests for this metric form one family -> Benjamini-Hochberg FDR
+    # on the overall (omnibus) p. Drawn after all panels so shared-y panels use the same top.
+    stats_table = pd.DataFrame()
+    if show_stats and horiz and not pointplot:
+        groups, where = [], []
+        for j, (cre_line, data, cre_order) in enumerate(zip(cre_lines, _plotted, _orders)):
+            if 'mouse_id' not in data.columns and cluster_meta is not None and 'mouse_id' in cluster_meta.columns:
+                data = data.copy()
+                data['mouse_id'] = data['cell_specimen_id'].map(cluster_meta['mouse_id'])
+            cell_type = utils.convert_cre_line_to_cell_type(cre_line)
+            for loc, cid in enumerate(cre_order):
+                groups.append((data[data.cluster_id == cid], cell_type, dict(condition='cluster_id', data_subset=cid)))
+                where.append((j, loc))
+        sig, stats_table = experience_stats_fdr(groups, metric)
+        ytop = ylims[1] if ylims is not None else max(a.get_ylim()[1] for a in np.atleast_1d(ax))
+        ylo = ax[0].get_ylim()[0]
+        rng = ytop - min(ylo, 0.0) if ytop - min(ylo, 0.0) > 0 else 1.0
+        for (j, loc), is_sig in zip(where, sig):
+            if is_sig:
+                ax[j].text(loc, ytop + 0.03 * rng, '*', fontsize=15, ha='center', va='bottom', color='k')
+        for a in np.atleast_1d(ax):
+            a.set_ylim(top=ytop + 0.10 * rng)
+        from visual_behavior.visualization.ophys import platform_paper_figures as ppf
+        ppf._fit_stat_stars_within_axes(ax)
+
     ax[i].set_xlabel('Cluster ID')
     if horiz:
         ax[0].set_ylabel(ylabel)
@@ -9423,6 +9551,23 @@ def plot_response_metrics_boxplot_by_cre(response_metrics, metric=None, cluster_
 
     if save_dir and own_fig:
         utils.save_figure(fig, figsize, save_dir, 'response_metrics', metric+suffix)
+
+    # this panel runs no significance test -- save the descriptive metric values
+    # (per cre line / cluster / experience level) so composites can capture them.
+    # stats_dir (composite embedding) writes there directly; else fall back to save_dir.
+    _stats_out = stats_dir if stats_dir is not None else (
+        os.path.join(save_dir, 'response_metrics') if save_dir is not None else None)
+    if _stats_out is not None and len(_plotted) > 0:
+        if not os.path.exists(_stats_out):
+            os.makedirs(_stats_out)
+        values = pd.concat(_plotted, ignore_index=True)
+        values = (values.groupby(['cre_line', 'cluster_id', 'experience_level'])[metric]
+                  .describe().reset_index())
+        values.to_csv(os.path.join(_stats_out, metric + suffix + '_values.csv'), index=False)
+    if _stats_out is not None and len(stats_table):
+        from visual_behavior.visualization.ophys import platform_paper_figures as ppf
+        stats_table.to_csv(os.path.join(_stats_out, metric + suffix + '_by_cluster'
+                                        + ppf._stats_suffix_for_table(stats_table)), index=False)
 
     return ax
 

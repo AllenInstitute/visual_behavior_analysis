@@ -26,7 +26,7 @@ def get_figures_save_dir():
     """Directory for saving generated figures.
     Set the VBA_FIGURES_DIR environment variable to override the default path.
     """
-    default = r'/Users/marinag/Library/CloudStorage/Dropbox/JupyterNotebooks/Figures/'
+    default = r'/Users/marinag/Library/CloudStorage/Dropbox/JupyterNotebooks/Final Figures/'
     path = os.environ.get('VBA_FIGURES_DIR', default)
     os.makedirs(path, exist_ok=True)
     return path
@@ -3802,7 +3802,7 @@ def get_multi_session_df_for_conditions(data_type, event_type, conditions, inclu
 
     if data_type not in ['running_speed', 'pupil_width', 'lick_rate']:
         ### Remove abberant outlier cells
-        csids = [1086560073, 1086562892, 1086577313, 1086560671]
+        csids = [1086560073, 1086562892, 1086577313, 1086560671, 1086557434, 1086547630]
         multi_session_df = multi_session_df[multi_session_df.cell_specimen_id.isin(csids) == False]
 
     print('there are', len(multi_session_df.ophys_experiment_id.unique()),

@@ -2790,7 +2790,8 @@ def plot_weights_and_coding_score_heatmaps_for_experience_levels_main_figure(ker
                                                                  zero_values_to_black=False,
                                                                  xtick_fontsize=8, cell_count_fontsize=6,
                                                                  avg_ytick_fontsize=8, colorbar_title_fontsize=10,
-                                                                 colorbar_tick_fontsize=8, ytick_pad=None):
+                                                                 colorbar_tick_fontsize=8, ytick_pad=None, hspace=0.2,
+                                                                 avg_xspan=None):
     '''
     Plot a heatmap of kernel weights and coding scores for all cells
     Default values results in a figure with experience levels as columns and cre lines as rows
@@ -2810,6 +2811,9 @@ def plot_weights_and_coding_score_heatmaps_for_experience_levels_main_figure(ker
     colorbar_title_fontsize: font size for the 'Weight' / 'Coding score' colorbar titles
     colorbar_tick_fontsize: font size for the colorbar tick labels
     ytick_pad: if not None, padding between the cell-count y-tick labels and the heatmap axis
+    hspace: vertical spacing between rows (match a neighboring row-per-cell-type grid to align rows)
+    avg_xspan: (x0, x1) of the average-weights column as a fraction of bbox width when embedded
+        (default (0.85, 1.0)); x1 > 1 lets it extend past the bbox right edge without shrinking the heatmaps
     '''
 
     # get weights for this kernel
@@ -2889,7 +2893,7 @@ def plot_weights_and_coding_score_heatmaps_for_experience_levels_main_figure(ker
         # create axes for this experience level
         xspan = ((c * .1) * 2.5, ((c * .1) * 2.5) + 0.18)
         ax = utils.placeAxesOnGrid(fig, dim=(len(row_conditions), 2),
-                                    xspan=xspan, yspan=(0, 1), wspace=0, hspace=0.2,
+                                    xspan=xspan, yspan=(0, 1), wspace=0, hspace=hspace,
                                     sharex='col', sharey=False, width_ratios=[8, 1],
                                     bbox=bbox)
 
@@ -2997,11 +3001,11 @@ def plot_weights_and_coding_score_heatmaps_for_experience_levels_main_figure(ker
     else:
         sharey = False
     if bbox is not None:
-        xspan = (0.85, 1.0)   # average-weights column when embedded: starts right of the colorbar labels, right edge at the panel edge
+        xspan = avg_xspan if avg_xspan is not None else (0.85, 1.0)   # average-weights column when embedded: starts right of the colorbar labels, right edge at the panel edge
     else:
         xspan = (((c * .1) * 2.5) + 0.08, ((c * .1) * 2.5) + 0.24)
     ax = utils.placeAxesOnGrid(fig, dim=(len(row_conditions), 1),
-                               xspan=xspan, yspan=(0, 1), wspace=0, hspace=0.2,
+                               xspan=xspan, yspan=(0, 1), wspace=0, hspace=hspace,
                                sharex='col', sharey=sharey, bbox=bbox)
 
     # plot population average kernels for each cre line & experience level

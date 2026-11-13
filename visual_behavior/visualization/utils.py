@@ -37,14 +37,14 @@ def describe_df(df):
 
 def save_figure(fig, figsize, save_dir, folder, fig_title, formats=['.png']):
     fig_dir = os.path.join(save_dir, folder)
-    if not os.path.exists(fig_dir):
-        os.mkdir(fig_dir)
+    os.makedirs(fig_dir, exist_ok=True)
     filename = os.path.join(fig_dir, fig_title)
     mpl.rcParams['pdf.fonttype'] = 42
     fig.set_size_inches(figsize)
     for f in formats:
         fig.savefig(filename + f, bbox_inches="tight", transparent=True,
                     orientation='landscape', dpi=300, facecolor=fig.get_facecolor())
+
 
 def placeAxesOnGrid(fig, dim=[1, 1], xspan=[0, 1], yspan=[0, 1], wspace=None, hspace=None,
                     sharex=False, sharey=False, width_ratios=None, height_ratios=None,
@@ -696,7 +696,7 @@ def get_peak_threshold(data_type):
     Single source of truth for the data_type -> threshold policy.
     '''
     if data_type in ('events', 'filtered_events'):
-        return 0.4
+        return 0.39
     if data_type == 'dff':
         return 4
     return None
@@ -789,7 +789,7 @@ def plot_mean_trace(traces, timestamps, ylabel='dF/F', legend_label=None, color=
         traces = traces[np.nanmax(np.abs(traces), axis=1) <= peak_threshold]
     if len(traces) > 0:
         trace = np.mean(traces, axis=0)
-        sem = (np.std(traces)) / np.sqrt(float(len(traces)))
+        sem = np.std(traces, axis=0) / np.sqrt(float(len(traces)))
         ax.plot(timestamps, trace, label=legend_label, linewidth=linewidth, color=color)
         if plot_sem:
             ax.fill_between(timestamps, trace + sem, trace - sem, alpha=alpha, color=color)

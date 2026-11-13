@@ -71,3 +71,6 @@ figures/
 .vscode/
 
 \.DS_Store
+
+# Secrets / local env
+.env

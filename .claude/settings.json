@@ -2,7 +2,18 @@
   "permissions": {
     "allow": [
       "Read(//tmp/**)",
-      "Read(//private/tmp/**)"
+      "Read(//private/tmp/**)",
+      "Bash(jupyter nbconvert --to script *)",
+      "Read(//Users/marinag/Documents/Code/visual_behavior/visualization/ophys/**)",
+      "Read(//Users/marinag/Documents/Code/visual_behavior_glm/visual_behavior_glm/**)",
+      "Read(//Users/marinag/Documents/Code/brain_observatory_utilities/brain_observatory_utilities/datasets/behavior/**)",
+      "Read(//Users/marinag/Documents/Analysis/Experimental Planning/**)"
+    ],
+    "additionalDirectories": [
+      "/tmp",
+      "/private/tmp",
+      "/Users/marinag/Documents/Code/brain_observatory_utilities/brain_observatory_utilities/datasets/behavior",
+      "/Users/marinag/Documents/Analysis/Experimental Planning"
     ]
   }
 }
