@@ -22,14 +22,33 @@ config = configp.ConfigParser()
 
 #  RELEVANT DIRECTORIES
 
+def _on_code_ocean():
+    """True when running in a Code Ocean capsule (/code, /data and /results all exist)."""
+    return all(os.path.isdir(d) for d in ('/code', '/data', '/results'))
+
+
 def get_figures_save_dir():
     """Directory for saving generated figures.
     Set the VBA_FIGURES_DIR environment variable to override the default path.
     """
-    default = r'/Users/marinag/Library/CloudStorage/Dropbox/JupyterNotebooks/Final Figures/'
+    if _on_code_ocean():
+        default = '/results/'
+    else:
+        default = r'/Users/marinag/Library/CloudStorage/Dropbox/JupyterNotebooks/Final Figures/'
     path = os.environ.get('VBA_FIGURES_DIR', default)
     os.makedirs(path, exist_ok=True)
     return path
+
+def get_schematics_dir():
+    """Directory holding the schematic images used in the paper figures, one subfolder per figure
+    (e.g. 'Figure 1', 'Figure 2').
+    Defaults to notebooks/platform_paper_figures/schematics in this repo.
+    Set the VBA_SCHEMATICS_DIR environment variable to override the default path.
+    """
+    # default: the schematics folder that ships with this repo, notebooks/platform_paper_figures/schematics
+    repo_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    default = os.path.join(repo_root, 'notebooks', 'platform_paper_figures', 'schematics')
+    return os.environ.get('VBA_SCHEMATICS_DIR', default)
 
 def get_platform_analysis_cache_dir():
     """
@@ -37,7 +56,10 @@ def get_platform_analysis_cache_dir():
     clustering results, etc.).
     Set the VBA_CACHE_DIR environment variable to override the default path.
     """
-    default = r'/Users/marinag/Library/CloudStorage/Dropbox/JupyterNotebooks/FinalDataAssetsforCodeOcean/'
+    if _on_code_ocean():
+        default = '/data/'   # data assets mounted at /data/<asset folder name> (default mount names)
+    else:
+        default = r'/Users/marinag/Library/CloudStorage/Dropbox/JupyterNotebooks/FinalDataAssetsforCodeOcean/'
     return os.environ.get('VBA_CACHE_DIR', default)
 
 def get_sdk_cache_dir():
@@ -47,13 +69,19 @@ def get_sdk_cache_dir():
     Defaults to a 'visual_behavior_sdk_cache' subdirectory of the platform
     analysis cache dir, so setting VBA_CACHE_DIR alone is usually sufficient.
     """
-    default = os.path.join(get_platform_analysis_cache_dir(), 'visual_behavior_sdk_cache')
+    if _on_code_ocean():
+        # /data is read-only on Code Ocean, so any S3 download goes to scratch space
+        default = os.path.join('/scratch' if os.path.isdir('/scratch') else '/tmp', 'visual_behavior_sdk_cache')
+    else:
+        default = os.path.join(get_platform_analysis_cache_dir(), 'visual_behavior_sdk_cache')
     return os.environ.get('VBA_SDK_CACHE_DIR', default)
 
 def _get_cache():
     """
     Get the VisualBehaviorOphysProjectCache, trying local static cache first,
     then falling back to S3 cache (which will download data if needed).
+    On Code Ocean the local cache is the Allen VBO S3 dataset asset mounted at
+    /data/visual-behavior-ophys (cache_dir = /data/).
 
     Returns:
         VisualBehaviorOphysProjectCache instance
@@ -3067,16 +3095,28 @@ def _save_multi_session_df_as_feather(multi_session_df, feather_filename, candid
                     os.remove(tmp_filepath)
                 except OSError:
                     pass
-    print('warning: could not cache multi_session_df as feather in any candidate directory')
+    print('warning: could not save the feather file in any candidate directory (the data directory may be '
+          'read-only, e.g. /data on Code Ocean); continuing with the dataframe in memory')
     return None
+
+
+def get_multi_session_dfs_all_dir():
+    """Full local set of multi-session dataframes (pickles + feathers), kept for reference.
+    The figures read only the feather files in get_multi_session_df_dir()."""
+    return os.path.join(get_platform_analysis_cache_dir(), 'visual_behavior_ophys_multi_session_dfs_all')
 
 
 def load_multi_session_df(data_type, event_type, conditions, inclusion_criteria,
                     interpolate=True, output_sampling_rate=30, epoch_duration_mins=None, exclude_passive_sessions=True,
-                    from_s3_cache=False, from_local_cache=True):
+                    from_s3_cache=False, from_local_cache=True, allow_pickle_fallback=False, save_feather=False):
     """
-    Loops through all experiments in the provided experiments_table and loads pre-generated dataframes containing
-    trial averaged responses for each cell in each session, for the provided set of conditions, data_type, and event_type.
+    Load a saved multi-session dataframe: trial-averaged responses for each cell in each session, for the
+    provided set of conditions, data_type, and event_type.
+
+    The figures read .feather files from get_multi_session_df_dir() (visual_behavior_ophys_multi_session_dfs).
+    If the feather file is missing, a FileNotFoundError names the expected path, unless allow_pickle_fallback=True,
+    in which case the matching pickle is loaded from visual_behavior_ophys_multi_session_dfs_all or
+    visual_behavior_ophys_multi_session_mean_responses (or, failing that, rebuilt from per-session h5 files).
 
     :param data_type: 'dff', 'events', 'filtered_events', 'running_speed', 'lick_rate', 'pupil_width'
     :param event_type: 'all', 'omissions', 'changes'
@@ -3084,87 +3124,60 @@ def load_multi_session_df(data_type, event_type, conditions, inclusion_criteria,
     :param interpolate: Bool
     :param output_sampling_rate: frame rate for resampling traces
     :param epoch_duration_mins: epoch duration used when creating stim response df 'epoch' column
+    :param allow_pickle_fallback: if True, load the pickle (or rebuild) when no feather file exists
+    :param save_feather: if True, write a feather copy after loading from pickle (off by default; data dirs
+                         may be read-only, e.g. /data on Code Ocean)
     :return:
     """
-    cache = _get_cache()
-    experiments_table = cache.get_ophys_experiment_table()
-    print(len(experiments_table))
-    # remove familiar session that was actually novel
-    # experiments_table = experiments_table[experiments_table.ophys_session_id!=919888953]
-    if exclude_passive_sessions:
-        session_types = experiments_table.session_type.unique()
-        filtered_session_types = [s for s in session_types if 'passive' not in s]
-    else:
-        filtered_session_types = experiments_table.session_type.unique()
-
     multi_session_df_dir = get_multi_session_df_dir(interpolate=interpolate, output_sampling_rate=output_sampling_rate, event_type=event_type)
-    print('loading files from', multi_session_df_dir)
-
-    # Also check for pre-saved files in the multi_session_mean_responses directory (flat structure from data assets)
-    multi_session_mean_response_dir = get_multi_session_mean_response_df()
-
     saved_multi_session_df_filename = get_file_name_for_saved_multi_session_df(data_type, event_type,
-                                                                                       conditions,
-                                                                                       inclusion_criteria,
-                                                                                       epoch_duration_mins)
-    print(saved_multi_session_df_filename)
-    saved_multi_session_df_filepath = os.path.join(multi_session_df_dir, saved_multi_session_df_filename)
-
-    # Prefer a feather copy if one exists - it is much smaller and faster to load than
-    # the pickle. Check both the primary cache dir and the flat multi_session_mean_responses
-    # directory (Code Ocean data asset layout) for either format.
+                                                                               conditions,
+                                                                               inclusion_criteria,
+                                                                               epoch_duration_mins)
     feather_filename = saved_multi_session_df_filename.replace('.pkl', '.feather')
-    feather_paths = [os.path.join(multi_session_df_dir, feather_filename),
-                     os.path.join(multi_session_mean_response_dir, feather_filename)]
-    pkl_paths = [saved_multi_session_df_filepath,
-                 os.path.join(multi_session_mean_response_dir, saved_multi_session_df_filename)]
-    # ignore 0-byte files: a previously killed (e.g. OOM'd) write can leave a truncated
-    # feather/pickle behind, which would otherwise be picked up here and fail (or trigger
-    # the failing reconversion) on every subsequent load.
-    existing_feather = next((p for p in feather_paths if os.path.exists(p) and os.path.getsize(p) > 0), None)
+    feather_path = os.path.join(multi_session_df_dir, feather_filename)
+
+    # default path: feather file in visual_behavior_ophys_multi_session_dfs
+    # (ignore 0-byte files left behind by a killed write)
+    if os.path.exists(feather_path) and os.path.getsize(feather_path) > 0:
+        print('loading multi_session_df from', feather_path)
+        return pd.read_feather(feather_path)
+
+    if not allow_pickle_fallback:
+        raise FileNotFoundError('multi_session_df feather file not found: ' + feather_path +
+                                '\nPass allow_pickle_fallback=True to load the pickle version instead.')
+
+    # explicit fallback: pickle from the full local set or the pickle data asset
+    all_dir = get_multi_session_dfs_all_dir()
+    pkl_paths = [os.path.join(d, saved_multi_session_df_filename)
+                 for d in [all_dir, get_multi_session_mean_response_df(), multi_session_df_dir]]
     existing_pkl = next((p for p in pkl_paths if os.path.exists(p) and os.path.getsize(p) > 0), None)
 
-    multi_session_df = None 
-
-    # fastest path: load from a previously cached feather file
-    if existing_feather is not None:
-        try:
-            print('loading multi_session_df from saved feather file at', existing_feather)
-            multi_session_df = pd.read_feather(existing_feather)
-        except Exception as e:
-            print('could not read feather file at', existing_feather, '-', e, '- will reload from pickle')
-            multi_session_df = None
-
-    # if there is no (readable) feather file but a pickle exists, load the pickle and
-    # write a feather copy so that loading is fast the next time this is called
-    if multi_session_df is None and existing_pkl is not None:
-        print('loading multi_session_df from saved file at', existing_pkl)
+    if existing_pkl is not None:
+        print('feather file not found; loading multi_session_df from pickle at', existing_pkl)
         multi_session_df = pd.read_pickle(existing_pkl)
-        _save_multi_session_df_as_feather(multi_session_df, feather_filename,
-                                          [multi_session_df_dir, multi_session_mean_response_dir])
-
-    # otherwise generate it from the per-session files, then save both pickle and feather
-    if multi_session_df is None:
-        project_codes = experiments_table.project_code.unique()
+    else:
+        # last resort: rebuild from the per-session h5 files
+        print('no feather or pickle found; rebuilding multi_session_df from per-session files in', all_dir)
+        cache = _get_cache()
+        experiments_table = cache.get_ophys_experiment_table()
+        if exclude_passive_sessions:
+            filtered_session_types = [s for s in experiments_table.session_type.unique() if 'passive' not in s]
+        else:
+            filtered_session_types = experiments_table.session_type.unique()
         multi_session_df = pd.DataFrame()
-        for project_code in project_codes:
-            experiments = experiments_table[(experiments_table.project_code == project_code)]
-            if project_code == 'VisualBehaviorMultiscope':
-                experiments = experiments[experiments.session_type != 'OPHYS_2_images_B_passive']
+        for project_code in experiments_table.project_code.unique():
             for session_type in tqdm(np.sort(filtered_session_types)):
                 try:
                     filename = get_file_name_for_multi_session_df(data_type, event_type, project_code, session_type,
                                                                   conditions, epoch_duration_mins)
-                    print(filename)
-                    df = pd.read_hdf(os.path.join(multi_session_df_dir, filename), key='df')
+                    df = pd.read_hdf(os.path.join(all_dir, filename), key='df')
                     multi_session_df = pd.concat([multi_session_df, df])
                 except BaseException:
                     print('no multi_session_df for', project_code, session_type)
-        # save it
-        print('saving multi session df to pkl')
-        multi_session_df.to_pickle(saved_multi_session_df_filepath)
-        _save_multi_session_df_as_feather(multi_session_df, feather_filename,
-                                          [multi_session_df_dir, multi_session_mean_response_dir])
+
+    if save_feather:
+        _save_multi_session_df_as_feather(multi_session_df, feather_filename, [multi_session_df_dir])
 
     return multi_session_df
 
